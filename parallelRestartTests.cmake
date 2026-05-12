@@ -2,7 +2,7 @@
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-restart-regressionTest.sh "")
 add_test_compare_parallel_restarted_simulation(CASENAME spe1
                                                FILENAME SPE1CASE2_ACTNUM
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL ${abs_tol_restart}
                                                REL_TOL ${rel_tol_restart}
                                                RESTART_STEP 6
@@ -10,7 +10,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME spe1
 
 add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                                FILENAME 2D_OW_CTAQUIFER
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL ${abs_tol_restart}
                                                REL_TOL ${rel_tol_restart}
                                                RESTART_STEP 15
@@ -19,7 +19,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
 
 add_test_compare_parallel_restarted_simulation(CASENAME fetkovich_2d
                                                FILENAME 2D_FETKOVICHAQUIFER
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL ${abs_tol_restart}
                                                REL_TOL ${rel_tol_restart}
                                                RESTART_STEP 30
@@ -28,7 +28,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME fetkovich_2d
 
 add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                                FILENAME 3D_2AQU_NUM
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL 0.12
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 3
@@ -37,7 +37,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_2aq
 
 add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                                FILENAME 3D_1AQU_3CELLS
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL 0.12
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 3
@@ -46,7 +46,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aq
 
 add_test_compare_parallel_restarted_simulation(CASENAME aquflux_01
                                                FILENAME AQUFLUX-01
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL ${abs_tol_restart}
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 3
@@ -55,7 +55,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME aquflux_01
 
 add_test_compare_parallel_restarted_simulation(CASENAME aquflux_02
                                                FILENAME AQUFLUX-02
-                                               SIMULATOR flow
+                                               SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                ABS_TOL ${abs_tol_restart}
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 50
@@ -68,7 +68,7 @@ if(HDF5_FOUND)
   add_test_compare_parallel_restarted_simulation(CASENAME spe1_serialized
                                                  DIR spe1
                                                  FILENAME SPE1CASE1
-                                                 SIMULATOR flow
+                                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                                  TEST_NAME compareParallelSerializedSim_flow+spe1
                                                  ABS_TOL 2e-2
                                                  REL_TOL 1e-5

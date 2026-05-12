@@ -18,11 +18,12 @@ then
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\t\t -u <name>     Reference simulator directory to compare against"
   exit 1
 fi
 
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:e:d:h:" OPT
+while getopts "i:r:b:f:a:t:c:e:d:h:u:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -35,10 +36,15 @@ do
     e) EXE_NAME=${OPTARG} ;;
     d) ;; # Ignored
     h) ;; # Ignored
+    u) REFERENCE_EXE_NAME=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
+
+if [ -z "${REFERENCE_EXE_NAME}" ]; then
+  REFERENCE_EXE_NAME=${EXE_NAME}
+fi
 
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
@@ -47,11 +53,11 @@ ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_
 cd ..
 
 ecode=0
-${COMPARE_ECL_COMMAND} -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${REFERENCE_EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} -a -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} -a -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${REFERENCE_EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 exit $ecode

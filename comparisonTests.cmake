@@ -12,7 +12,7 @@ add_test_compareSeparateECLFiles(CASENAME spe1_metric_vfp1_multiliner_vs_oneline
                                  FILENAME1 SPE1CASE1_METRIC_VFP1_MULTILINER
                                  DIR2 vfpprod_spe1_oneliner
                                  FILENAME2 SPE1CASE1_METRIC_VFP1_ONELINER
-                                 SIMULATOR flow
+                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH

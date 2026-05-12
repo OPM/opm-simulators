@@ -7,14 +7,14 @@ set(coarse_rel_tol_parallel 1e-2)
 
 add_test_compare_parallel_simulation(CASENAME spe1
                                      FILENAME SPE1CASE2
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 add_test_compare_parallel_simulation(CASENAME spe1_gaswater
                                      FILENAME SPE1CASE2_GASWATER
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      DIR spe1
@@ -22,7 +22,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_gaswater
 
 add_test_compare_parallel_simulation(CASENAME spe9
                                      FILENAME SPE9_CP_SHORT
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
@@ -137,7 +137,7 @@ add_test_compare_parallel_simulation(CASENAME msw-model-1-short
 
 add_test_compare_parallel_simulation(CASENAME spe9group
                                      FILENAME SPE9_CP_GROUP
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
@@ -146,7 +146,7 @@ add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltan
                                      FILENAME SPE3CASE1
                                      POSTFIX partition_method_zoltan
                                      DIR spe3
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=zoltan)
@@ -155,34 +155,34 @@ add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltanwell
                                      FILENAME SPE3CASE1
                                      POSTFIX partition_method_zoltanwell
                                      DIR spe3
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
 
 add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                      FILENAME SPE1CASE2_SOLVENT
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 add_test_compare_parallel_simulation(CASENAME polymer_simple2D
                                      FILENAME 2D_THREEPHASE_POLY_HETER
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
 add_test_compare_parallel_simulation(CASENAME spe1_foam
                                      FILENAME SPE1FOAM
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel})
 
 add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                      FILENAME SPE1CASE2_THERMAL
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR spe1
@@ -190,7 +190,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal
 
 add_test_compare_parallel_simulation(CASENAME spe1_temp
                                      FILENAME SPE1CASE2_TEMP
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR spe1
@@ -199,7 +199,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_temp
 
 add_test_compare_parallel_simulation(CASENAME spe1_thermal_onephase
                                      FILENAME SPE1CASE2_THERMAL_ONEPHASE
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR spe1
@@ -207,7 +207,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal_onephase
 
 add_test_compare_parallel_simulation(CASENAME spe1_water
                                      FILENAME SPE1CASE1_WATER
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR spe1
@@ -215,14 +215,14 @@ add_test_compare_parallel_simulation(CASENAME spe1_water
 
 add_test_compare_parallel_simulation(CASENAME spe1_brine
                                      FILENAME SPE1CASE1_BRINE
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
 add_test_compare_parallel_simulation(CASENAME fetkovich_2d
                                      FILENAME 2D_FETKOVICHAQUIFER
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      DIR aquifer-fetkovich
@@ -230,7 +230,7 @@ add_test_compare_parallel_simulation(CASENAME fetkovich_2d
 
 add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
                                      FILENAME 2D_OW_CTAQUIFER
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      DIR aquifer-oilwater
@@ -238,7 +238,7 @@ add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
 
 add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      FILENAME 3D_TRAN_OPERATOR
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 0.0003
                                      DIR parallel_fieldprops
@@ -246,7 +246,7 @@ add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      FILENAME 3D_2AQU_NUM
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL 0.17
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifer-num
@@ -254,7 +254,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
 
 add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL 0.06
                                      DIR aquifers
@@ -262,7 +262,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
 
 add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      FILENAME AQUFLUX-02
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifers
@@ -270,7 +270,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_02
 
 add_test_compare_parallel_simulation(CASENAME network_balance_01
                                      FILENAME NETWORK-01
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR network
@@ -278,7 +278,7 @@ add_test_compare_parallel_simulation(CASENAME network_balance_01
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 0.05
                                      DIR aquifer-num
@@ -286,7 +286,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
 
 add_test_compare_parallel_simulation(CASENAME 6_uda_model5_stdw
   FILENAME 6_UDA_MODEL5_STDW
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol_parallel}
   REL_TOL ${rel_tol_parallel}
   DIR model5
@@ -295,7 +295,7 @@ add_test_compare_parallel_simulation(CASENAME 6_uda_model5_stdw
 
 add_test_compare_parallel_simulation(CASENAME GSATPROD6
   FILENAME GSATPROD6
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol_parallel}
   REL_TOL ${rel_tol_parallel}
   DIR satellite
@@ -305,7 +305,7 @@ add_test_compare_parallel_simulation(CASENAME GSATPROD6
 foreach(templ_case RANGE 1 6)
   add_test_compare_parallel_simulation(CASENAME actionx_well_templ_0${templ_case}
     FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
-    SIMULATOR flow
+    SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
     ABS_TOL ${abs_tol_parallel}
     REL_TOL ${rel_tol_parallel}
     DIR actionx
@@ -314,7 +314,7 @@ endforeach()
 
 add_test_compare_parallel_simulation(CASENAME WCYCLE-0
                                      FILENAME WCYCLE-0
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      DIR wcycle
@@ -322,7 +322,7 @@ add_test_compare_parallel_simulation(CASENAME WCYCLE-0
 
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR udq_actionx
@@ -330,7 +330,7 @@ add_test_compare_parallel_simulation(CASENAME actionx_m1
 
 add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
                                      FILENAME UDQ_REG-01
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR udq_actionx
@@ -338,7 +338,7 @@ add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
 
 add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      FILENAME WINJMULT_MSW
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR winjmult
@@ -346,7 +346,7 @@ add_test_compare_parallel_simulation(CASENAME winjmult_msw
 
 add_test_compare_parallel_simulation(CASENAME winjdam_msw
                                      FILENAME WINJDAM_MSW
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
                                      DIR winjdam
@@ -354,7 +354,7 @@ add_test_compare_parallel_simulation(CASENAME winjdam_msw
 
 add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 1.0e-3
                                      DIR model2
@@ -362,7 +362,7 @@ add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
 
 add_test_compare_parallel_simulation(CASENAME rxft
                                      FILENAME TEST_RXFT
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 1.0e-3
                                      DIR rxft_smry
@@ -370,7 +370,7 @@ add_test_compare_parallel_simulation(CASENAME rxft
 
 add_test_compare_parallel_simulation(CASENAME gconinje_resv_gas_01
                                      FILENAME GCONINJE_RESV_GAS-01
-                                     SIMULATOR flow
+                                     SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
                                      DIR resv_ctrl
@@ -383,7 +383,7 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_1_proc
                                  FILENAME1 COMPDAT_SHORT
                                  DIR2 actionx
                                  FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
+                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH
@@ -394,7 +394,7 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_2_procs
                                  FILENAME1 COMPDAT_SHORT
                                  DIR2 actionx
                                  FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
+                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH
@@ -405,7 +405,7 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_1_proc
                                  FILENAME1 COMPDAT_SHORT
                                  DIR2 actionx
                                  FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
+                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH
@@ -417,7 +417,7 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_2_procs
                                  FILENAME1 COMPDAT_SHORT
                                  DIR2 actionx
                                  FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
+                                 SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH

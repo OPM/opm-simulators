@@ -17,12 +17,13 @@ then
   echo -e "\t\t -e <filename> Simulator binary to use"
   echo -e "\tOptional options:"
   echo -e "\t\t -n <procs>    Number of MPI processes to use"
+  echo -e "\t\t -u <name>     Reference simulator directory to compare against"
   exit 1
 fi
 
 MPI_PROCS=4
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:e:n:" OPT
+while getopts "i:r:b:f:a:t:c:e:n:u:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -34,10 +35,15 @@ do
     c) H5DIFF_COMMAND=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
     n) MPI_PROCS=${OPTARG} ;;
+    u) REFERENCE_EXE_NAME=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
+
+if [ -z "${REFERENCE_EXE_NAME}" ]; then
+  REFERENCE_EXE_NAME=${EXE_NAME}
+fi
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
@@ -49,10 +55,10 @@ echo "=== Executing comparison for files if these exists in reference folder ===
 for fname in `ls ${RESULT_PATH}/${FILENAME}*.h5`
 do
   fname=`basename $fname`
-  if test -f ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname}
+  if test -f ${INPUT_DATA_PATH}/opm-simulation-reference/${REFERENCE_EXE_NAME}/${fname}
   then
     echo -e "\t - ${fname}"
-    h5diffout=$(${H5DIFF_COMMAND} --relative=${REL_TOL} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname} ${RESULT_PATH}/${fname})
+    h5diffout=$(${H5DIFF_COMMAND} --relative=${REL_TOL} ${INPUT_DATA_PATH}/opm-simulation-reference/${REFERENCE_EXE_NAME}/${fname} ${RESULT_PATH}/${fname})
     if [ -n "${h5diffout}" ]; then
         exit 1
     fi

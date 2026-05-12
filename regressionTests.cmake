@@ -22,7 +22,7 @@ add_test_compareECLFiles(CASENAME 1dcompositional
 
 add_test_compareECLFiles(CASENAME spe12
                          FILENAME SPE1CASE2
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          RESTART_SCHED false
@@ -46,7 +46,7 @@ set(_spe1_tests
 add_multiple_tests(
   _spe1_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR spe1
@@ -61,7 +61,7 @@ set(_spe1_coarse_tests
 add_multiple_tests(
   _spe1_coarse_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${coarse_rel_tol}
   DIR spe1
@@ -76,7 +76,7 @@ set(_spe1_brine_tests
 add_multiple_tests(
   _spe1_brine_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR spe1_brine
@@ -90,7 +90,7 @@ set(_spe1_precsalt_tests
 add_multiple_tests(
   _spe1_precsalt_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR spe1_precsalt
@@ -98,7 +98,7 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME gasoil_precsalt
                          FILENAME GASCONDENSATE_VAPWAT_PRECSALT_REGRESSION
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_precsalt
@@ -112,7 +112,7 @@ set(_network_tuning_tests
 add_multiple_tests(
   _network_tuning_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR network
@@ -127,7 +127,7 @@ set(_network_tuning_local_switch_tests
 add_multiple_tests(
   _network_tuning_local_switch_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR network
@@ -136,7 +136,7 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME network_01_wtest
                          FILENAME NETWORK-01-WTEST
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR network
@@ -144,28 +144,28 @@ add_test_compareECLFiles(CASENAME network_01_wtest
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1)
 
 add_test_compareECLFiles(CASENAME spe1_spider
                          FILENAME SPIDER_CAKESLICE
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR radial_grid)
 
 add_test_compareECLFiles(CASENAME spe1_radial
                          FILENAME RADIAL_CAKESLICE
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR radial_grid)
 
 add_test_compareECLFiles(CASENAME jfunc_01
                          FILENAME JFUNC-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR jfunc
@@ -173,21 +173,21 @@ add_test_compareECLFiles(CASENAME jfunc_01
 
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-oilwater)
 
 add_test_compareECLFiles(CASENAME fetkovich_2d
                          FILENAME 2D_FETKOVICHAQUIFER
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-fetkovich)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          FILENAME 3D_2AQU_NUM
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
@@ -195,7 +195,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          FILENAME 3D_1AQU_3CELLS
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
@@ -203,7 +203,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
 
 add_test_compareECLFiles(CASENAME aquflux_01
                          FILENAME AQUFLUX-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifers
@@ -211,7 +211,7 @@ add_test_compareECLFiles(CASENAME aquflux_01
 
 add_test_compareECLFiles(CASENAME aquflux_02
                          FILENAME AQUFLUX-02
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifers
@@ -219,86 +219,86 @@ add_test_compareECLFiles(CASENAME aquflux_02
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS --tolerance-wells=1e-6)
 
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          RESTART_STEP 10)
 
 add_test_compareECLFiles(CASENAME spe9group
                          FILENAME SPE9_CP_GROUP
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME spe9group_resv
                          FILENAME SPE9_CP_GROUP_RESV
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe9group)
 
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          TEST_ARGS --tolerance-pressure-ms-wells=10)
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME polymer_injectivity
                          FILENAME 2D_POLYMER_INJECTIVITY
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          TEST_ARGS --tolerance-wells=1.e-6)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS --tolerance-mb-relaxed=1.e-7)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME spe5_co2eor
                          FILENAME SPE5CASE1_DYN
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME wecon_wtest
                          FILENAME 3D_WECON
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME msw_model_1
                          FILENAME MSW_MODEL_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1
@@ -306,14 +306,14 @@ add_test_compareECLFiles(CASENAME msw_model_1
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1)
 
 add_test_compareECLFiles(CASENAME faults_model_1
                          FILENAME FAULTS_MODEL_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1
@@ -321,7 +321,7 @@ add_test_compareECLFiles(CASENAME faults_model_1
 
 add_test_compareECLFiles(CASENAME base_model2_welpi
                          FILENAME 0B_WELPI_MODEL2
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -329,7 +329,7 @@ add_test_compareECLFiles(CASENAME base_model2_welpi
 
 add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
                          FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -337,7 +337,7 @@ add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
 
 add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
                          FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -345,7 +345,7 @@ add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
 
 add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
                          FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -353,7 +353,7 @@ add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
 
 add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
                          FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -361,7 +361,7 @@ add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
 
 add_test_compareECLFiles(CASENAME udq_actionx
                          FILENAME UDQ_ACTIONX
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
@@ -369,14 +369,14 @@ add_test_compareECLFiles(CASENAME udq_actionx
 
 add_test_compareECLFiles(CASENAME udq_wconprod
                          FILENAME UDQ_WCONPROD
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
 add_test_compareECLFiles(CASENAME actionx_m1
                          FILENAME ACTIONX_M1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
@@ -384,49 +384,49 @@ add_test_compareECLFiles(CASENAME actionx_m1
 
 add_test_compareECLFiles(CASENAME waghyst1
                          FILENAME WAGHYSTR-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR waghystr)
 
 add_test_compareECLFiles(CASENAME waghyst2
                          FILENAME WAGHYSTR-02
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR waghystr)
 
 add_test_compareECLFiles(CASENAME gpmaint11
                          FILENAME GPMAINT-11
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
 add_test_compareECLFiles(CASENAME 3dwecon9
                          FILENAME 3D_WECON_9
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wecon_wtest)
 
 add_test_compareECLFiles(CASENAME gconinje_resv_gas_01
                          FILENAME GCONINJE_RESV_GAS-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR resv_ctrl)
 
 add_test_compareECLFiles(CASENAME gconinje_resv1
                          FILENAME GCONINJE-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR gconinje)
 
 add_test_compareECLFiles(CASENAME gconinje_resv2
                          FILENAME GCONINJE-02
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR gconinje)
@@ -441,7 +441,7 @@ set(_gconprod_cases
 add_multiple_tests(
   _gconprod_cases
   gconprod_
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR gconprod
@@ -475,7 +475,7 @@ set(_pinch_cases
 add_multiple_tests(
   _pinch_cases
   pinch_
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR pinch
@@ -491,7 +491,7 @@ set(_udt_cases
 add_multiple_tests(
   _udt_cases
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   TEST_ARGS --enable-tuning=true
@@ -503,7 +503,7 @@ add_multiple_test_range(
   6
   EQUALREG-0
   equalreg_multy
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR mult
@@ -514,7 +514,7 @@ add_multiple_test_range(
   6
   ACTIONX_WELL_TEMPL-0
   actionx_well_templ
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR actionx
@@ -525,7 +525,7 @@ add_multiple_test_range(
   8
   WCYCLE-
   WCYCLE
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR wcycle
@@ -534,7 +534,7 @@ add_multiple_test_range(
 
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
@@ -542,21 +542,21 @@ add_test_compareECLFiles(CASENAME udq_uadd
 
 add_test_compareECLFiles(CASENAME udq_undefined
                          FILENAME UDQ_M2
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
 add_test_compareECLFiles(CASENAME udq_in_actionx
                          FILENAME UDQ_M3
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
 add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
                          FILENAME UDQ_REG-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
@@ -566,7 +566,7 @@ add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
 # ACTIONX blocks.
 add_test_compareECLFiles(CASENAME group_udq
                          FILENAME UDQ_GRP-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
@@ -585,7 +585,7 @@ set(_actionx_tests
 add_multiple_tests(
   _actionx_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR actionx
@@ -596,7 +596,7 @@ add_multiple_test_range(
   5
   CSKIN-0
   cskin
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR cskin
@@ -615,7 +615,7 @@ set(_co2store_cases
 add_multiple_tests(
   _co2store_cases
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR co2store
@@ -632,7 +632,7 @@ set(_h2store_cases
 add_multiple_tests(
   _h2store_cases
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR h2store
@@ -647,7 +647,7 @@ set(_tpsa_cases
 add_multiple_tests(
   _tpsa_cases
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR tpsa
@@ -656,7 +656,7 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR ppcwmax)
@@ -665,7 +665,7 @@ get_property(opm-common_EMBEDDED_PYTHON TARGET opmcommon PROPERTY EMBEDDED_PYTHO
 if(opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
-                           SIMULATOR flow
+                           SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR udq_actionx
@@ -722,7 +722,7 @@ set(_model2_tests
 add_multiple_tests(
   _model2_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR model2
@@ -730,7 +730,7 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME multflt_model2
                         FILENAME 3_MULTFLT_MODEL2
-                        SIMULATOR flow
+                        SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                         ABS_TOL ${abs_tol}
                         REL_TOL ${rel_tol}
                         DIR model2
@@ -738,7 +738,7 @@ add_test_compareECLFiles(CASENAME multflt_model2
 
 add_test_compareECLFiles(CASENAME multpvv_model2
                          FILENAME 4_MINPVV_MODEL2
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -746,7 +746,7 @@ add_test_compareECLFiles(CASENAME multpvv_model2
 
 add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
                          FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
@@ -754,53 +754,53 @@ add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
 
 add_test_compareECLFiles(CASENAME model4_udq_group
                          FILENAME MOD4_UDQ_ACTIONX
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model4)
 
 add_test_compareECLFiles(CASENAME model4_gefac
                          FILENAME MOD4_GRP_GEFAC
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model4)
 
 add_test_compareECLFiles(CASENAME model6_msw
                          FILENAME 1_MSW_MODEL6
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME wsegsicd
                          FILENAME TEST_WSEGSICD
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegaicd
                          FILENAME BASE_MSW_WSEGAICD
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegvalv
                          FILENAME BASE_MSW_WSEGVALV
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME wsegvalv_2d_vert
                          FILENAME  MSW-2D-VERT-02
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR msw)
 
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR editnnc
@@ -808,14 +808,14 @@ add_test_compareECLFiles(CASENAME nnc
 
 add_test_compareECLFiles(CASENAME nonnc
                          FILENAME NONNC
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR editnnc)
 
 add_test_compareECLFiles(CASENAME nnc_overlapping_editnnc
                          FILENAME NNC_OVERLAPPING_EDITNNC
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR editnnc
@@ -823,7 +823,7 @@ add_test_compareECLFiles(CASENAME nnc_overlapping_editnnc
 
 add_test_compareECLFiles(CASENAME nnc_overlapping_editnncr_multregt
                          FILENAME NNC_OVERLAPPING_EDITNNCR_MULTREGT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR editnnc
@@ -831,28 +831,28 @@ add_test_compareECLFiles(CASENAME nnc_overlapping_editnncr_multregt
 
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_foam)
 
 add_test_compareECLFiles(CASENAME spe1_solvent_foam
                          FILENAME SPE1CASE2_SOLVENT_FOAM
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent)
 
 add_test_compareECLFiles(CASENAME spe1_gaswater_solvent
                          FILENAME SPE1CASE2_GASWATER_SOLVENT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent)
 
 add_test_compareECLFiles(CASENAME spe1_co2sol
                          FILENAME SPE1CASE2_CO2SOL
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent
@@ -860,7 +860,7 @@ add_test_compareECLFiles(CASENAME spe1_co2sol
 
 add_test_compareECLFiles(CASENAME spe1_h2sol
                          FILENAME SPE1CASE2_H2SOL
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent
@@ -868,14 +868,14 @@ add_test_compareECLFiles(CASENAME spe1_h2sol
 
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR bc_lab)
 
 add_test_compareECLFiles(CASENAME norne_reperf
                          FILENAME NORNE_ATW2013_B1H_RE-PERF
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR norne
@@ -883,14 +883,14 @@ add_test_compareECLFiles(CASENAME norne_reperf
 
 add_test_compareECLFiles(CASENAME compl_smry
                          FILENAME COMPL_SMRY
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR compl_smry)
 
 add_test_compareECLFiles(CASENAME 3d_tran_operator
                          FILENAME 3D_TRAN_OPERATOR
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops
@@ -898,7 +898,7 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
 
 add_test_compareECLFiles(CASENAME h2store_biofilm
                          FILENAME H2STORE_BIOFILM
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR h2store
@@ -906,7 +906,7 @@ add_test_compareECLFiles(CASENAME h2store_biofilm
 
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR micp
@@ -914,28 +914,28 @@ add_test_compareECLFiles(CASENAME micp
 
 add_test_compareECLFiles(CASENAME 0_base_model6
                          FILENAME 0_BASE_MODEL6
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME 0a_aquct_model6
                          FILENAME 0A_AQUCT_MODEL6
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME 0b_rocktab_model6
                          FILENAME 0B_ROCKTAB_MODEL6
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME base_wt_tracer
                          FILENAME BASE_WT_TRACER
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR tracer
@@ -943,7 +943,7 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
 
 add_test_compareECLFiles(CASENAME tracer_multiphase
                          FILENAME TRACER_2WT_2GT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR tracer)
@@ -953,7 +953,7 @@ add_multiple_test_range(
   3
   MIN_BHP_
   min_bhp
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR wtest/bhp_min
@@ -962,7 +962,7 @@ add_multiple_test_range(
 
 add_test_compareECLFiles(CASENAME min_thp_1
                          FILENAME MIN_THP_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/thp_min
@@ -970,7 +970,7 @@ add_test_compareECLFiles(CASENAME min_thp_1
 
 add_test_compareECLFiles(CASENAME max_gor_1
                          FILENAME MAX_GOR_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/wecon_gor_max
@@ -978,7 +978,7 @@ add_test_compareECLFiles(CASENAME max_gor_1
 
 add_test_compareECLFiles(CASENAME min_gasrate_1
                          FILENAME MIN_GASRATE_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/wecon_qg_min
@@ -986,7 +986,7 @@ add_test_compareECLFiles(CASENAME min_gasrate_1
 
 add_test_compareECLFiles(CASENAME min_qoil_1
                          FILENAME MIN_QOIL_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/wecon_qo_min
@@ -997,7 +997,7 @@ add_multiple_test_range(
   4
   MAX_WATERCUT_
   max_watercut
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR wtest/wecon_wct_max
@@ -1006,7 +1006,7 @@ add_multiple_test_range(
 
 add_test_compareECLFiles(CASENAME max_wgr_1
                          FILENAME MAX_WGR_1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/wecon_wgr_max
@@ -1014,7 +1014,7 @@ add_test_compareECLFiles(CASENAME max_wgr_1
 
 add_test_compareECLFiles(CASENAME rxft_smry
                          FILENAME TEST_RXFT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR rxft_smry
@@ -1022,21 +1022,21 @@ add_test_compareECLFiles(CASENAME rxft_smry
 
 add_test_compareECLFiles(CASENAME bo_diffusion
                          FILENAME BO_DIFFUSE_CASE1
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR diffusion )
 
 add_test_compareECLFiles(CASENAME fpr_nonhc
                          FILENAME WATER2F
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR water-1ph)
 
 add_test_compareECLFiles(CASENAME actionx_wpimult
                          FILENAME ACTIONX_WPIMULT
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR actionx
@@ -1044,7 +1044,7 @@ add_test_compareECLFiles(CASENAME actionx_wpimult
 
 add_test_compareECLFiles(CASENAME wvfpexp_02
                          FILENAME WVFPEXP-02
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wvfpexp)
@@ -1061,7 +1061,7 @@ set(_krnum_tests
 add_multiple_tests(
   _krnum_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR krnum
@@ -1079,7 +1079,7 @@ set(_gridunit_tests
 add_multiple_tests(
   _gridunit_tests
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR gridunit
@@ -1087,7 +1087,7 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME 01_wgrupcon
                          FILENAME 01-WGRUPCON
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wgrupcon
@@ -1095,49 +1095,49 @@ add_test_compareECLFiles(CASENAME 01_wgrupcon
 
 add_test_compareECLFiles(CASENAME 02_wgrupcon
                          FILENAME 02-WGRUPCON
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wgrupcon
                          TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME winjmult_stdw
                          FILENAME WINJMULT_STDW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR winjmult
                          TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME winjmult_msw
                          FILENAME WINJMULT_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR winjmult
                          TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME winjdam_stdw
                          FILENAME WINJDAM_STDW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR winjdam
                          TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME winjdam_msw
                          FILENAME WINJDAM_MSW
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR winjdam
                          TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME 01_vappars
                          FILENAME VAPPARS-01
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vappars)
 
 add_test_compareECLFiles(CASENAME 6_uda_model5_stdw
   FILENAME 6_UDA_MODEL5_STDW
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR model5
@@ -1160,7 +1160,7 @@ set(_mult_cases
 add_multiple_tests(
   _mult_cases
   ""
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
   DIR mult
@@ -1168,14 +1168,14 @@ add_multiple_tests(
 
 add_test_compareECLFiles(CASENAME gsatprod
                          FILENAME GSATPROD2
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR satellite)
 
 add_test_compareECLFiles(CASENAME gsatprod6
                          FILENAME GSATPROD6
-                         SIMULATOR flow
+                         SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR satellite)

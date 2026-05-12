@@ -6,7 +6,7 @@ set(rel_tol_restart 4e-4)
 
 add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 6
@@ -14,7 +14,7 @@ add_test_compare_restarted_simulation(CASENAME spe1
 
 add_test_compare_restarted_simulation(CASENAME spe9
                                       FILENAME SPE9_CP_SHORT
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 15
@@ -22,7 +22,7 @@ add_test_compare_restarted_simulation(CASENAME spe9
 
 add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                       FILENAME 2D_OW_CTAQUIFER
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       DIR aquifer-oilwater
@@ -31,7 +31,7 @@ add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
 
 add_test_compare_restarted_simulation(CASENAME fetkovich_2d
                                       FILENAME 2D_FETKOVICHAQUIFER
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 30
@@ -40,7 +40,7 @@ add_test_compare_restarted_simulation(CASENAME fetkovich_2d
 
 add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                       FILENAME 3D_1AQU_3CELLS
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL 0.4
                                       REL_TOL 4.0e-3
                                       RESTART_STEP 3
@@ -49,7 +49,7 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
 
 add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                       FILENAME 3D_2AQU_NUM
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL 0.4
                                       REL_TOL 4.0e-3
                                       RESTART_STEP 3
@@ -58,7 +58,7 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
 
 add_test_compare_restarted_simulation(CASENAME aquflux_01
                                       FILENAME AQUFLUX-01
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL 3.0e-3
                                       RESTART_STEP 3
@@ -67,7 +67,7 @@ add_test_compare_restarted_simulation(CASENAME aquflux_01
 
 add_test_compare_restarted_simulation(CASENAME aquflux_02
                                       FILENAME AQUFLUX-02
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 50
@@ -76,7 +76,7 @@ add_test_compare_restarted_simulation(CASENAME aquflux_02
 
 add_test_compare_restarted_simulation(CASENAME network_01_restart
                                       FILENAME NETWORK-01-RESTART
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 5
@@ -85,7 +85,7 @@ add_test_compare_restarted_simulation(CASENAME network_01_restart
 
 add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
                                       FILENAME NETWORK-01-REROUTE-RESTART
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 5
@@ -94,7 +94,7 @@ add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
 
 add_test_compare_restarted_simulation(CASENAME spe1_temp
                                       FILENAME SPE1CASE2_TEMP
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL 5.0e-2
                                       RESTART_STEP 3
@@ -106,7 +106,7 @@ add_test_compare_restarted_simulation(CASENAME spe1_temp
 # limit in restart files.
 add_test_compare_restarted_simulation(CASENAME udq_reg_02
   FILENAME UDQ_REG-02
-  SIMULATOR flow
+  SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
   ABS_TOL ${abs_tol_restart}
   REL_TOL ${rel_tol_restart}
   RESTART_STEP 2
@@ -123,7 +123,7 @@ set(rel_tol_restart_msw 1e-3)
 
 add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       FILENAME 3D_MSW
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       ABS_TOL ${abs_tol_restart_msw}
                                       REL_TOL ${rel_tol_restart_msw}
                                       RESTART_STEP 10
@@ -136,7 +136,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-summary-restart-regressionTe
 
 add_test_compare_restarted_simulation(CASENAME spe1_actnum
                                       FILENAME SPE1CASE2_ACTNUM
-                                      SIMULATOR flow
+                                      SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                       TEST_NAME restart_spe1_summary
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
@@ -150,7 +150,7 @@ if(HDF5_FOUND)
   add_test_compare_restarted_simulation(CASENAME spe1_serialized
                                         DIR spe1
                                         FILENAME SPE1CASE1
-                                        SIMULATOR flow
+                                        SIMULATOR ${OPM_BLACKOIL_TEST_SIMULATOR}
                                         TEST_NAME compareSerializedSim_flow+spe1
                                         ABS_TOL 2e-2
                                         REL_TOL 1e-5
