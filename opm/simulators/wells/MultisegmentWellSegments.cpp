@@ -21,6 +21,8 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellSegments.hpp>
 
+#include "examples/problems/co2injectionproblem.hh"
+
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/AICD.hpp>
@@ -45,6 +47,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -56,7 +59,7 @@
 namespace {
 
 template <typename FluidSystem>
-std::vector<typename FluidSystem::Scalar> surfaceDensities(const int pvt_region, const std::size_t num_quantities)
+std::vector<typename FluidSystem::Scalar> getSurfaceDensities(const int pvt_region, const std::size_t num_quantities)
 {
     using Scalar = typename FluidSystem::Scalar;
     auto surf_dens = std::vector<Scalar>(num_quantities);
@@ -91,7 +94,7 @@ MultisegmentWellSegments(const int numSegments,
     // local information. This is an exception and intentionally, since here, we only need the local entries.
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
-    , surface_densities_(surfaceDensities<FluidSystem>(well.pvtRegionIdx(), well.numConservationQuantities()))
+    , surface_densities_(getSurfaceDensities<FluidSystem>(well.pvtRegionIdx(), well.numConservationQuantities()))
     , densities_(numSegments, 0.0)
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
@@ -99,6 +102,7 @@ MultisegmentWellSegments(const int numSegments,
     , phase_densities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
     , phase_fractions_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
     , phase_viscosities_(numSegments, std::vector<EvalWell>(well.numConservationQuantities(), 0.0)) // number of phase here?
+    , volume_ratios_(numSegments, 0.0)
     , well_(well)
 {
     // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
@@ -161,51 +165,26 @@ MultisegmentWellSegments(const int numSegments,
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellSegments<FluidSystem,Indices>::
-computeFluidProperties(const EvalWell& temperature,
-                       const EvalWell& saltConcentration,
-                       const PrimaryVariables& primary_variables,
-                       DeferredLogger& deferred_logger)
+updateFluidProperties(const std::vector<std::vector<EvalWell>>& phase_densities,
+                      const std::vector<std::vector<EvalWell>>& phase_viscosities,
+                      const std::vector<std::vector<EvalWell>>& phase_fractions,
+                      const std::vector<EvalWell>& viscosities,
+                      const std::vector<EvalWell>& densities,
+                      const std::vector<EvalWell>& mass_rates)
 {
-    const int num_quantities = well_.numConservationQuantities();
-    PhaseCalcResult result(static_cast<size_t>(num_quantities));
+    assert(phase_densities.size() == phase_densities_.size());
+    assert(phase_viscosities.size() == phase_viscosities_.size());
+    assert(phase_fractions.size() == phase_fractions_.size());
+    assert(viscosities.size() == viscosities_.size());
+    assert(densities.size() == densities_.size());
+    assert(mass_rates.size() == mass_rates_.size());
 
-    for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
-        calculatePhaseProperties(result, temperature, saltConcentration,
-                                 primary_variables, seg, true, deferred_logger);
-
-        phase_densities_[seg] = result.phase_densities;
-        phase_viscosities_[seg] = result.phase_viscosities;
-
-        const auto& mix = result.mix;
-        const auto& mix_s = result.mix_s;
-        const auto& b = result.b;
-        const auto& volrat = result.vol_ratio;
-
-        viscosities_[seg] = 0.;
-        // calculate the average viscosity
-        for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-            const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
-            // TODO: a little more work needs to be done to handle the negative fractions here
-            phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
-            viscosities_[seg] += phase_viscosities_[seg][comp_idx] * phase_fractions_[seg][comp_idx];
-        }
-
-        EvalWell density(0.0);
-        for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-            density += surface_densities_[comp_idx] * mix_s[comp_idx];
-        }
-        densities_[seg] = density / volrat;
-
-        // calculate the mass rates
-        mass_rates_[seg] = 0.;
-        for (int comp_idx = 0; comp_idx < well_.numConservationQuantities(); ++comp_idx) {
-            const int upwind_seg = upwinding_segments_[seg];
-            const EvalWell rate = primary_variables.getSegmentRateUpwinding(seg,
-                                                                            upwind_seg,
-                                                                            comp_idx);
-            mass_rates_[seg] += rate * surface_densities_[comp_idx];
-        }
-    }
+    phase_densities_ = phase_densities;
+    phase_viscosities_ = phase_viscosities;
+    phase_fractions_ = phase_fractions;
+    viscosities_ = viscosities;
+    densities_ = densities;
+    mass_rates_ = mass_rates;
 }
 
 template<class FluidSystem, class Indices>
@@ -254,21 +233,16 @@ getPressureDiffSegLocalPerf(const int seg,
 template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices>::
-getSurfaceVolume(const EvalWell& temperature,
-                 const EvalWell& saltConcentration,
-                 const PrimaryVariables& primary_variables,
-                 const int seg_idx,
+getSurfaceVolume(const int seg_idx,
                  DeferredLogger& deferred_logger) const
 {
-    PhaseCalcResult result(static_cast<size_t>(well_.numConservationQuantities()));
-    calculatePhaseProperties(result, temperature, saltConcentration,
-                             primary_variables, seg_idx, false, deferred_logger);
-
-    const EvalWell& vol_ratio = result.vol_ratio;
-
-    // We increase the segment volume with a factor 10 to stabilize the system.
     const Scalar volume = well_.wellEcl().getSegments()[seg_idx].volume();
-
+    const auto& vol_ratio = volume_ratios_[seg_idx];
+    if (vol_ratio.value() == 0.) {
+        deferred_logger.warning(fmt::format("Volume ratio for segment {} for well {} is zero, "
+                                                     "returning segment volume as surface volume.", seg_idx, this->well_.name()));
+        return volume;
+    }
     return volume / vol_ratio;
 }
 
@@ -764,158 +738,6 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
     }
 
     return mixDens;
-}
-
-template<class FluidSystem, class Indices>
-void
-MultisegmentWellSegments<FluidSystem, Indices>::
-calculatePhaseProperties(PhaseCalcResult& result,
-                         const EvalWell& temperature,
-                         const EvalWell& saltConcentration,
-                         const PrimaryVariables& primary_variables,
-                         const int seg,
-                         const bool update_visc_and_den,
-                         DeferredLogger& deferred_logger) const
-{
-    result.clear();
-
-    auto& b = result.b;
-    auto& mix_s = result.mix_s;
-    auto& mix = result.mix;
-    auto& vol_ratio = result.vol_ratio;
-    auto& phase_viscosities = result.phase_viscosities;
-    auto& phase_densities = result.phase_densities;
-
-    // we might use reference here
-    const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg);
-
-    const int num_quantities = well_.numConservationQuantities();
-    for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-        mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg, comp_idx);
-    }
-
-    const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
-    const bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    const bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-
-    const int waterActiveCompIdx = waterActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx) : -1;
-    const int gasActiveCompIdx = gasActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx) : -1;
-    const int oilActiveCompIdx = oilActive ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx) : -1;
-
-    const int pvt_region_index = well_.pvtRegionIdx();
-
-    // water phase
-    if (waterActive) {
-        // rsw is only for interface usage
-        const EvalWell rsw{0.};
-        b[waterActiveCompIdx] = FluidSystem::waterPvt().inverseFormationVolumeFactor(
-                                             pvt_region_index, temperature, seg_pressure, rsw, saltConcentration);
-        if (update_visc_and_den) {
-            // TODO: should not we use phaseIndex here?
-            phase_viscosities[waterActiveCompIdx] = FluidSystem::waterPvt().viscosity(
-                                             pvt_region_index, temperature, seg_pressure, rsw, saltConcentration);
-            phase_densities[waterActiveCompIdx] = b[waterActiveCompIdx] * surface_densities_[waterActiveCompIdx];
-        }
-    }
-
-    EvalWell rv {0.};
-    // gas phase
-    if (gasActive) {
-        // rvw is only for interface usage
-        const EvalWell rvw{0.};
-        const bool oil_exist = oilActive && mix_s[oilActiveCompIdx] > 0.0;
-        if (oil_exist) {
-            const EvalWell rvmax = max(
-                    FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure),
-                    0.);
-            if (mix_s[gasActiveCompIdx] > 0.0) {
-                rv = std::clamp(mix_s[oilActiveCompIdx] / mix_s[gasActiveCompIdx], EvalWell{0.}, rvmax);
-            }
-            b[gasActiveCompIdx] = FluidSystem::gasPvt().inverseFormationVolumeFactor(
-                                               pvt_region_index, temperature, seg_pressure, rv, rvw);
-            if (update_visc_and_den) {
-                phase_viscosities[gasActiveCompIdx] = FluidSystem::gasPvt().viscosity(
-                                                 pvt_region_index, temperature, seg_pressure, rv, rvw);
-                phase_densities[gasActiveCompIdx] = b[gasActiveCompIdx] * surface_densities_[gasActiveCompIdx]
-                                                    + rv * b[gasActiveCompIdx] * surface_densities_[oilActiveCompIdx];
-            }
-        } else { // no oil here
-            b[gasActiveCompIdx] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(
-                                                  pvt_region_index, temperature, seg_pressure);
-            if (update_visc_and_den) {
-                phase_viscosities[gasActiveCompIdx] = FluidSystem::gasPvt().saturatedViscosity(
-                                                       pvt_region_index, temperature, seg_pressure);
-                phase_densities[gasActiveCompIdx] = b[gasActiveCompIdx] * surface_densities_[gasActiveCompIdx];
-            }
-        }
-    }
-
-    EvalWell rs {0.};
-    // oil phase
-    if (oilActive) {
-        const bool gas_exist = gasActive && mix_s[gasActiveCompIdx] > 0.0;
-        if (gas_exist) {
-            const EvalWell rsmax = max(
-                    FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure),
-                    0.);
-            if (mix_s[oilActiveCompIdx] > 0.0) {
-                rs = std::clamp(mix_s[gasActiveCompIdx] / mix_s[oilActiveCompIdx], EvalWell{0.}, rsmax);
-            }
-            b[oilActiveCompIdx] = FluidSystem::oilPvt().inverseFormationVolumeFactor(
-                                                        pvt_region_index, temperature, seg_pressure, rs);
-            if (update_visc_and_den) {
-                phase_viscosities[oilActiveCompIdx] = FluidSystem::oilPvt().viscosity(pvt_region_index, temperature,
-                                                                                      seg_pressure, rs);
-                phase_densities[oilActiveCompIdx] = b[oilActiveCompIdx] * surface_densities_[oilActiveCompIdx]
-                                              + rs * b[oilActiveCompIdx] * surface_densities_[gasActiveCompIdx];
-            }
-        } else { // no gas phase
-            b[oilActiveCompIdx] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index,
-                                                                                              temperature, seg_pressure);
-            if (update_visc_and_den) {
-                phase_viscosities[oilActiveCompIdx] = FluidSystem::oilPvt().saturatedViscosity(pvt_region_index,
-                                                                                               temperature, seg_pressure);
-                phase_densities[oilActiveCompIdx] = b[oilActiveCompIdx] * surface_densities_[oilActiveCompIdx];
-            }
-        }
-    }
-
-    mix = mix_s;
-    if (oilActive && gasActive) {
-        const EvalWell d = 1.0 - rs * rv;
-        if (d <= 0.0) {
-            const std::string str =
-                fmt::format("Problematic d value {} obtained for well {} during segment density calculations "
-                            "with rs {}, rv {} and pressure {}. Continue as if no dissolution (rs = 0) and "
-                            "vaporization (rv = 0) for this connection.",
-                            d, well_.name(), rs, rv, seg_pressure);
-            deferred_logger.debug(str);
-        } else {
-            if (rs > 0.0) {
-                mix[gasActiveCompIdx] = (mix_s[gasActiveCompIdx] - mix_s[oilActiveCompIdx] * rs) / d;
-            }
-            if (rv > 0.0) {
-                mix[oilActiveCompIdx] = (mix_s[oilActiveCompIdx] - mix_s[gasActiveCompIdx] * rv) / d;
-            }
-        }
-    }
-
-    for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
-        vol_ratio += mix[comp_idx] / b[comp_idx];
-    }
-}
-
-template<typename FluidSystem, typename Indices>
-void
-MultisegmentWellSegments<FluidSystem, Indices>::
-PhaseCalcResult::clear()
-{
-    std::ranges::fill(b, 0.0);
-    std::ranges::fill(mix, 0.0);
-    std::ranges::fill(mix_s, 0.0);
-    std::ranges::fill(phase_viscosities, 0.0);
-    std::ranges::fill(phase_densities, 0.0);
-    vol_ratio = 0.0;
 }
 
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>

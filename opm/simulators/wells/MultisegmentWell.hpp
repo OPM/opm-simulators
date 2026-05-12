@@ -27,6 +27,8 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
+#include <string_view>
+
 namespace Opm {
 
     class DeferredLogger;
@@ -56,6 +58,8 @@ namespace Opm {
 
         using Base::has_solvent;
         using Base::has_polymer;
+        using Base::has_energy;
+        using Base::has_brine;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
@@ -71,7 +75,15 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
+        // it contains the temperature and salt concentration of the first perforation
+        // TODO: kind of temporary measure, will evolve or be replaced based on future development and understanding
         using FSInfo = std::tuple<Scalar, Scalar>;
+
+        // a fluid state to calculate the properties inside the wellbore for each segment
+        // it will be probably used for more things, but at the moment, it is for the enthalpy
+        // calculation in the wellbore.
+        template <typename ValueType>
+        using SegmentFluidState = Base::template BlackOilFluidStateType<ValueType>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
@@ -173,6 +185,16 @@ namespace Opm {
 
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<Scalar> > segment_fluid_initial_;
+        // total energy inside the segments at the beginning of the time step
+        std::vector<Scalar> segment_initial_energy_;
+
+        // segment fluid state
+        std::vector<SegmentFluidState<EvalWell>> segment_fluid_state_;
+
+        // fluid state under the wellhead condition, it is used to calculate the enthalpy
+        // under operation condition for energy injection
+        // because BHP will be involved, we use EvalWell type here
+        SegmentFluidState<EvalWell> wellhead_fluid_state_;
 
         mutable int debug_cost_counter_ = 0;
 
@@ -184,7 +206,7 @@ namespace Opm {
                              const Scalar relaxation_factor = 1.0);
 
         // computing the accumulation term for later use in well mass equations
-        void computeInitialSegmentFluids(const Simulator& simulator, DeferredLogger& deferred_logger);
+        void computeInitialSegmentFluids(DeferredLogger& deferred_logger);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -289,10 +311,6 @@ namespace Opm {
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
-        EvalWell getSegmentSurfaceVolume(const Simulator& simulator,
-                                         const int seg_idx,
-                                         DeferredLogger& deferred_logger) const;
-
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
         // we turn on crossflow to avoid singular well equations. It can result in wrong-signed
@@ -332,9 +350,62 @@ namespace Opm {
                        DeferredLogger& deferred_logger) const override;
 
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+        // this function can potentially be shared between multisegment wells and standard wells
+        // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
+        template <typename ValueType = EvalWell>
+        SegmentFluidState<ValueType>
+        createFluidState(const std::vector<ValueType>& fluid_composition,
+                         const ValueType& pressure,
+                         const ValueType& temperature,
+                         const ValueType& saltConcentration,
+                         ValueType& volume_ratio,
+                         DeferredLogger& deferred_logger) const;
+
+        SegmentFluidState<EvalWell>
+        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger);
+
+        void computeInitialSegmentEnergy();
+
+        // assemble the energy equation contribution for a single perforation/connection
+        void assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
+                                         const std::vector<EvalWell>& cq_s,
+                                         const int seg,
+                                         const int local_perf_index,
+                                         DeferredLogger& deferred_logger);
+
+        void updateWellHeadCondition(const Simulator& simulator, const FSInfo& info, DeferredLogger& deferred_logger);
+
+        void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
+
+        template <typename ValueType = EvalWell>
+        ValueType computeSegmentEnergy(int seg) const;
+
+        // Convert per-component surface volumetric rates to a phase reservoir
+        // volumetric rate using the upwind segment fluid state. Handles the
+        // dissolved-gas/vaporized-oil coupling (rs/rv). When the determinant
+        // (1 - rs*rv) is non-positive, falls back to the no-dissolution case
+        // and logs a debug message tagged with @p context.
+        // @return the reservoir volumetric rate of @p phaseIdx.
+        EvalWell surfaceToReservoirRate(unsigned phaseIdx,
+                                        const SegmentFluidState<EvalWell>& segment_fs,
+                                        const std::vector<EvalWell>& surface_rates,
+                                        int seg,
+                                        std::string_view context,
+                                        DeferredLogger& deferred_logger) const;
+
+        // Compute the energy flux carried by fluid flowing from segment
+        // @p seg toward its outlet, using @p upwind_fs as the upwind
+        // fluid state. @p context is used in diagnostic messages.
+        // @return the energy flux as sum_phases(reservoir_rate * enthalpy * density).
+        EvalWell computeSegmentEnergyRate(int seg,
+                                          int upwind_seg,
+                                          const SegmentFluidState<EvalWell>& upwind_fs,
+                                          std::string_view context,
+                                          DeferredLogger& deferred_logger) const;
     };
 
-}
+} // namespace Opm
 
 #include "MultisegmentWell_impl.hpp"
 
