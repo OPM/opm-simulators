@@ -123,10 +123,11 @@ prepareStep(const SimulatorTimerInterface& timer)
                                 "- the previous step succeeded on some ranks but failed on others.");
     }
     if (lastStepFailed) {
-        simulator_.model().updateFailed();
+        simulator_.problem().updateFailed();
+        simulator_.model().newtonMethod().eraseMatrix();
     }
     else {
-        simulator_.model().advanceTimeLevel();
+        simulator_.problem().advanceTimeLevel();
     }
 
     // Set the timestep size and episode index for the model explicitly.
@@ -143,6 +144,7 @@ prepareStep(const SimulatorTimerInterface& timer)
     unsigned numDof = simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+    simulator_.model().newtonMethod().resetPrimaryVariableSwitches();
 
     if (param_.update_equations_scaling_) {
         OpmLog::error("Equation scaling not supported");

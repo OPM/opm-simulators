@@ -141,12 +141,21 @@ public:
 
     /**
      * \copydoc AbstractISTLSolver::eraseMatrix
-     *
-     * \note This method will not do anything.
      */
     void eraseMatrix() override
     {
-        // Nothing, this is the same as the ISTLSolver
+        m_lastSeenIterations = 0;
+        m_solveCount = 0;
+        m_matrix.reset();
+        m_gpuSolver.reset();
+        m_rhs.reset();
+        m_x.reset();
+        m_pinnedMatrixMemory.reset();
+        m_pinnedRhsMemory.reset();
+        m_pinnedXMemory.reset();
+        m_pinnedWeightsMemory.reset();
+        m_weights.reset();
+        m_diagonalIndices.reset();
     }
 
     /**

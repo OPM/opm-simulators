@@ -96,6 +96,11 @@ public:
     void beginTimeStep();
     void beginIteration();
 
+     // FlowProblem calls these lifecycle hooks for well models.
+     // Compositional wells currently keep no extra timestep snapshot state.
+     void updateFailed() {}
+     void advanceTimeLevel() {}
+
     void init();
     void endIteration() const {}
     void endTimeStep() {}
