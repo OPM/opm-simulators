@@ -244,7 +244,17 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
 function(add_test_compare_parallel_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR POSTFIX MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    POSTFIX
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -262,6 +272,10 @@ function(add_test_compare_parallel_simulation)
     set(MPI_PROCS ${PARAM_MPI_PROCS})
   else()
     set(MPI_PROCS 4)
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL MPI_PROCS)
