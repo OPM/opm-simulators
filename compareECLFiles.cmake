@@ -193,11 +193,24 @@ endfunction()
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
 function(add_test_compare_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR TEST_NAME ABS_TOL REL_TOL DIR RESTART_STEP)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    TEST_NAME
+    ABS_TOL
+    REL_TOL
+    DIR
+    RESTART_STEP
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   if (PARAM_TEST_NAME)
     set(TEST_NAME ${PARAM_TEST_NAME})
