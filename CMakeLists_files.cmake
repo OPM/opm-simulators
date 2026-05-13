@@ -944,11 +944,12 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp
   opm/simulators/flow/NonlinearSystemBlackOilReservoir_impl.hpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp
-  opm/simulators/flow/BlackoilModelNldd.hpp
+  opm/simulators/flow/NonlinearSystemNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/BlackoilModelProperties.hpp
-  opm/simulators/flow/BlackoilModelTPSA.hpp
+  opm/simulators/flow/NonlinearSystemBlackOilReservoirTPSA.hpp
   opm/simulators/flow/NonlinearSystem.hpp
+  opm/simulators/flow/NonlinearSystem_impl.hpp
   opm/simulators/flow/CO2H2Container.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp

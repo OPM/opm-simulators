@@ -99,10 +99,11 @@ public:
     void beginReportStep(unsigned report_step);
     void beginTimeStep();
     void beginIteration();
+     void restoreLastValidState();
 
     void init();
     void endIteration() const {}
-    void endTimeStep() {}
+     void endTimeStep();
     void endEpisode() {}
 
     void computeTotalRatesForDof(RateVector& /*rate*/, unsigned /*globalIdx*/) const;
@@ -161,6 +162,9 @@ private:
 
      // we will need two to handle the changes between time stepping
      CompWellState<FluidSystem> comp_well_states_;
+
+          // saved state at beginning of report step, used to restore on failed timestep
+          CompWellState<FluidSystem> last_valid_comp_well_states_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;

@@ -21,8 +21,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
-#define OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#ifndef OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
+#define OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
 
 #include <dune/common/timer.hh>
 #include <dune/istl/istlexception.hh>
@@ -79,9 +79,9 @@ namespace Opm {
 
 template<class TypeTag> class NonlinearSystemBlackOilReservoir;
 
-/// A NLDD implementation for three-phase black oil.
+/// A NLDD implementation used by the reservoir nonlinear system.
 template <class TypeTag>
-class BlackoilModelNldd
+class NonlinearSystemNldd
 {
 public:
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -89,7 +89,7 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using ModelParameters = BlackoilModelParameters<Scalar>;
+    using ModelParameters = typename NonlinearSystemBlackOilReservoir<TypeTag>::ModelParameters;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
     using BVector = typename NonlinearSystemBlackOilReservoir<TypeTag>::BVector;
@@ -100,10 +100,8 @@ public:
     static constexpr int numEq = Indices::numEq;
 
     //! \brief The constructor sets up the subdomains.
-    //! \param model BlackOil model to solve for
-    //! \param param param Model parameters
-    //! \param compNames Names of the solution components
-    explicit BlackoilModelNldd(NonlinearSystemBlackOilReservoir<TypeTag>& model)
+    //! \param model Owning nonlinear system to solve for
+    explicit NonlinearSystemNldd(NonlinearSystemBlackOilReservoir<TypeTag>& model)
         : model_(model)
         , wellModel_(model.wellModel())
         , rank_(model_.simulator().vanguard().grid().comm().rank())
@@ -1231,4 +1229,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#endif // OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED

@@ -47,20 +47,19 @@ namespace Opm {
 template<int numComp, bool EnableWater>
 int dispatchFlowComp(int argc, char** argv);
 
-template <class TypeTag>
-class FlowCompNewtonMethod : public Opm::NewtonMethod<TypeTag>
-{
-public:
-    using ParentType = Opm::NewtonMethod<TypeTag>;
-
-    using ParentType::ParentType;
-    using ParentType::preSolve_;
-    using ParentType::update_;
-};
-
-}
+} // namespace Opm
 
 namespace Opm::Properties {
+
+template <class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod;
+
+template <class TypeTag, class MyTypeTag>
+struct WellModel;
+
+template <class TypeTag, class MyTypeTag>
+struct TracerModel;
+
 namespace TTag {
 
 template<int NumComp, bool EnableWater>
@@ -82,11 +81,8 @@ public:
     using type = typename Linear::IstlSparseMatrixAdapter<Block>;
 };
 
-template<class TypeTag, int NumComp, bool EnableWater>
-struct NewtonMethod<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
-{
-    using type = Opm::FlowCompNewtonMethod<TypeTag>;
-};
+// NOTE: Do NOT override NewtonMethod here.
+// The inherited model configuration decides the solver implementation.
 
 #if 0
 template<class TypeTag>
@@ -289,7 +285,6 @@ template<int numComp, bool EnableWater>
 int dispatchFlowComp(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowCompProblem<numComp, EnableWater>;
-
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     const auto ret = mainObject->runStatic<TypeTag>();
     mainObject.reset();
