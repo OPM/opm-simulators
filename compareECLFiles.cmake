@@ -775,11 +775,20 @@ if(MPI_FOUND)
 
   # Single test to verify that we treat custom communicators correctly.
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-split-comm-test.sh "")
-  add_test_split_comm(CASENAME spe1
-                      FILENAME SPE1CASE2
-                      SIMULATOR flow
-                      ABS_TOL 0.0
-                      REL_TOL 0.0)
+  add_test_split_comm(
+    CASENAME
+      spe1
+    FILENAME
+      SPE1CASE2
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      0.0
+    REL_TOL
+      0.0
+  )
 
   # Single test for damaris
   if(Damaris_FOUND AND USE_DAMARIS_LIB)
