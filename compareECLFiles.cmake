@@ -59,7 +59,19 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    DIR_PREFIX
+    PREFIX
+    RESTART_STEP
+    RESTART_SCHED
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -83,6 +95,10 @@ function(add_test_compareECLFiles)
   endif()
   if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
     list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
+  endif()
+  list(APPEND DRIVER_ARGS -u ${PARAM_SIMULATOR})
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -512,6 +528,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
 add_test_compareECLFiles(CASENAME norne
                          FILENAME NORNE_ATW2013
                          SIMULATOR flow
+                         DEV_SIMULATOR flow_blackoil
                          ABS_TOL 1e-5
                          REL_TOL 1e-8
                          PREFIX comparePORV
