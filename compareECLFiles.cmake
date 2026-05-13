@@ -399,7 +399,16 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to that of a parallel simulation running with a custom communicator.
 function(add_test_split_comm)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -411,6 +420,10 @@ function(add_test_split_comm)
     set(MPI_PROCS ${PARAM_MPI_PROCS})
   else()
     set(MPI_PROCS 4)
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelSplitComm/${PARAM_SIMULATOR}+${PARAM_CASENAME})
