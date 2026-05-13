@@ -19,7 +19,7 @@
 #include <flow/flow_blackoil_legacyassembly.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 namespace Opm {

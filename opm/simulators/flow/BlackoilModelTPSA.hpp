@@ -28,7 +28,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -42,9 +42,9 @@ namespace Opm {
 * \brief Black oil model for coupling Flow simulations with TPSA geomechanics
 */
 template <class TypeTag>
-class BlackoilModelTPSA : public BlackoilModel<TypeTag>
+class BlackoilModelTPSA : public NonlinearSystemBlackOilReservoir<TypeTag>
 {
-    using ParentType = BlackoilModel<TypeTag>;
+    using ParentType = NonlinearSystemBlackOilReservoir<TypeTag>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;

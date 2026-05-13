@@ -95,7 +95,7 @@ public:
     /** \brief Callback invoked at the start of each substep to apply
      *         TUNING, NEXTSTEP (via ACTIONX), and WCYCLE updates.
      *
-     * Called once by `SimulatorFullyImplicitBlackoil::runStep` at the
+     * Called once by `SimulatorFullyImplicit::runStep` at the
      * start of a report step, and once per substep inside
      * \ref SubStepIteration::maybeUpdateTuningAndTimeStep_ (plus equivalent
      * sites in the reservoir-coupling loops).  The callback may adjust
@@ -280,7 +280,7 @@ private:
          * \note The name is a historical artefact: by this point in the
          *       report step, TUNING_CHANGE/TUNINGDP_CHANGE events have
          *       already been cleared by the initial callback invocation
-         *       in `SimulatorFullyImplicitBlackoil::runStep`, so what
+         *       in `SimulatorFullyImplicit::runStep`, so what
          *       actually runs here is the WCYCLE/NEXTSTEP branch of the
          *       callback.
          */
@@ -350,7 +350,7 @@ public:
      *
      * Splits the report step into a sequence of smaller substeps whose
      * lengths are chosen adaptively, invoking `solver` once per substep.
-     * Called from `SimulatorFullyImplicitBlackoil::runStep` in place of a
+     * Called from `SimulatorFullyImplicit::runStep` in place of a
      * direct `Solver::step()` call on the non-adaptive path.  The actual
      * substep loop lives one layer down in \ref SubStepper::run(); this
      * method just constructs a \ref SubStepper and delegates.
