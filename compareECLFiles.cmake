@@ -314,12 +314,27 @@ endfunction()
 #   - This test class compares the output from a restarted parallel simulation
 #     to that of a non-restarted parallel simulation.
 function(add_test_compare_parallel_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP TEST_NAME)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    MPI_PROCS
+    RESTART_STEP
+    TEST_NAME
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   if (PARAM_TEST_NAME)
