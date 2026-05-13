@@ -94,7 +94,7 @@ struct Problem<TypeTag, TTag::FlowWaterOnlyProblemTPSA>
 
 template <class TypeTag>
 struct NonlinearSystem<TypeTag, TTag::FlowWaterOnlyProblemTPSA>
-{ using type = BlackoilModelTPSA<TypeTag>; };
+{ using type = NonlinearSystemBlackOilReservoirTPSA<TypeTag>; };
 
 }  // namespace Opm::Properties
 

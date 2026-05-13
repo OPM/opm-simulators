@@ -146,6 +146,21 @@ update_producer_targets(const Well& well,
 }
 
 template <typename FluidSystem>
+void SingleCompWellState<FluidSystem>::
+copyRuntimeStateFrom(const SingleCompWellState& other)
+{
+    status = other.status;
+    bhp = other.bhp;
+    surface_phase_rates = other.surface_phase_rates;
+    phase_fractions = other.phase_fractions;
+    reservoir_phase_rates = other.reservoir_phase_rates;
+    total_molar_fractions = other.total_molar_fractions;
+    phase_molar_fractions = other.phase_molar_fractions;
+    injection_cmode = other.injection_cmode;
+    production_cmode = other.production_cmode;
+}
+
+template <typename FluidSystem>
 typename SingleCompWellState<FluidSystem>::Scalar
 SingleCompWellState<FluidSystem>::
 get_total_surface_rate() const

@@ -66,7 +66,7 @@ public:
     void initialLinearization(SimulatorReportSingle& report,
                               int minIter,
                               int maxIter,
-                              const SimulatorTimerInterface& timer);
+                              const SimulatorTimerInterface& timer) override;
 
     template <class NonlinearSolverType>
     SimulatorReportSingle nonlinearIteration(const SimulatorTimerInterface& timer,
@@ -76,23 +76,12 @@ public:
     SimulatorReportSingle nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                                                    NonlinearSolverType& nonlinearSolver);
 
-    SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& timer);
-
     Scalar relativeChange() const;
-
-    const ModelParameters& param() const
-    { return param_; }
 
     int linearIterationsLastSolve() const
     { return this->simulator_.model().newtonMethod().linearSolver().iterations(); }
 
     void solveJacobianSystem(BVector& x);
-
-    void updateSolution(const BVector& dx);
-
-    void updateTUNING(const Tuning& tuning);
-
-    void updateTUNINGDP(const TuningDp& tuning_dp);
 
     bool hasNlddSolver() const
     { return false; }
@@ -120,20 +109,9 @@ public:
 
     void writePartitions(const std::filesystem::path&) const {}
 
-    CompWellModel<TypeTag>& wellModel()
-    { return well_model_; }
-
-    const CompWellModel<TypeTag>& wellModel() const
-    { return well_model_; }
-
 private:
     std::vector<Scalar> reservoirResidualMetrics() const;
 
-    ModelParameters param_;
-    CompWellModel<TypeTag>& well_model_;
-    std::vector<std::vector<Scalar>> residual_norms_history_;
-    Scalar current_relaxation_;
-    BVector dx_old_;
     double linear_solve_setup_time_ = 0.0;
 };
 

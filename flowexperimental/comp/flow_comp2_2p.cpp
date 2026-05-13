@@ -19,18 +19,11 @@
 
 #include "config.h"
 
-#include <memory>
-
-#include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
 #include "flow_comp.hpp"
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::FlowCompProblem<2, false>;
-
-    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
-    const auto ret = mainObject->runStatic<TypeTag>();
-    mainObject.reset();
-    return ret;
+    return Opm::dispatchFlowComp<2, false>(argc, argv);
 }

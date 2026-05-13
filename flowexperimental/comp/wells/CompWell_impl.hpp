@@ -563,6 +563,8 @@ updateWellControl(const SummaryState& summary_state,
         if (injection_controls.hasControl(Well::InjectorCMode::BHP) && current_control != WellInjectorCMode::BHP) {
             const Scalar bhp_limit = injection_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
+            OpmLog::debug(fmt::format("Well {} BHP control check: current_bhp={:.6e}, bhp_limit={:.6e}, exceeds_limit={}",
+                                      this->well_ecl_.name(), current_bhp, bhp_limit, (current_bhp > bhp_limit)));
             if (current_bhp > bhp_limit) {
                 well_state.bhp = bhp_limit;
                 well_state.injection_cmode = WellInjectorCMode::BHP;
@@ -575,7 +577,12 @@ updateWellControl(const SummaryState& summary_state,
             // TODO: hack to get the injection rate
             const Scalar current_rate = std::accumulate(well_state.surface_phase_rates.begin(),
                                                         well_state.surface_phase_rates.end(), 0.0);
+            OpmLog::debug(fmt::format("Well {} RATE control check: current_rate={:.6e}, rate_limit={:.6e}, bhp={:.6e}, phase_rates=[{:.6e},{:.6e},{:.6e}]",
+                                      this->well_ecl_.name(), current_rate, rate_limit, well_state.bhp,
+                                      well_state.surface_phase_rates[0], well_state.surface_phase_rates[1], well_state.surface_phase_rates[2]));
             if (current_rate > rate_limit) {
+                OpmLog::info(fmt::format("Well {} RATE control TRIGGERED: current_rate={:.6e} > rate_limit={:.6e}",
+                                         this->well_ecl_.name(), current_rate, rate_limit));
                 well_state.injection_cmode = WellInjectorCMode::RATE;
                 changed = true;
             }
