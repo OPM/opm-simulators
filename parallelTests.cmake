@@ -5,376 +5,946 @@ set(abs_tol_parallel 0.02)
 set(rel_tol_parallel 8e-5)
 set(coarse_rel_tol_parallel 1e-2)
 
-add_test_compare_parallel_simulation(CASENAME spe1
-                                     FILENAME SPE1CASE2
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe1_gaswater
-                                     FILENAME SPE1CASE2_GASWATER
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     DIR spe1
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe9
-                                     FILENAME SPE9_CP_SHORT
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-# A test for distributed standard wells. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME spe9_dist_z
-                                     FILENAME SPE9_CP_SHORT
-                                     DIR spe9
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-# A test for distributed standard wells with 8 processes. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME spe9_dist_z_8
-                                     FILENAME SPE9_CP_SHORT
-                                     POSTFIX 8
-                                     DIR spe9
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     MPI_PROCS 8
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-# A test for distributed multisegment wells. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple
-                                     FILENAME MSW-SIMPLE # this file contains one Multisegment well without branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
-
-# A test for distributed multisegment wells. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple-9-perfs-1-seg
-                                     FILENAME MSW-SIMPLE-9-PERFS-1-SEG # this file contains one Multisegment well without branches where 9 perforations belong to the same segment
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=10 --allow-distributed-wells=true)
-
-# A test for distributed multisegment wells with one shut perforation at the process border. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple-1-shut-perforation-border
-                                     FILENAME MSW-SIMPLE-1-SHUT-PERFORATION-BORDER # this file contains one Multisegment well without branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
-
-
-# A test for distributed multisegment wells with only one open perforation. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple-shut-perforations
-                                     FILENAME MSW-SIMPLE-SHUT-PERFORATIONS # this file contains one Multisegment well without branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
-
-# A test for distributed multisegment wells with only shut perforations on rank 0, where the well is distributed across ranks 0 and 1. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple-5-shut-perforations
-                                     FILENAME MSW-SIMPLE-5-SHUT-PERFORATIONS # this file contains one Multisegment well without branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=10 --allow-distributed-wells=true)
-
-# A test for distributed multisegment wells with only shut perforations on rank 1, where the well is distributed across ranks 0 and 1. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME msw-simple-7-shut-perforations
-                                     FILENAME MSW-SIMPLE-7-SHUT-PERFORATIONS # this file contains one Multisegment well without branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-5
-                                     MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
-
-add_test_compare_parallel_simulation(CASENAME msw-3d
-                                     FILENAME MSW-3D # this file contains one Multisegment well with branches that is distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-4
-                                     MPI_PROCS 4
-                                     TEST_ARGS --allow-distributed-wells=true)
-
-add_test_compare_parallel_simulation(CASENAME msw-3d-two-producers
-                                     FILENAME MSW-3D-TWO-PRODUCERS # this file contains two Multisegment wells with branches that are distributed across several processes
-                                     DIR msw
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-4
-                                     MPI_PROCS 4
-                                     TEST_ARGS --allow-distributed-wells=true)
-
-add_test_compare_parallel_simulation(CASENAME msw-model-1-short
-                                     FILENAME MSW_MODEL_1_SHORT
-                                     DIR model1
-                                     SIMULATOR flow_distribute_z
-                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
-                                     REL_TOL 1e-4
-                                     MPI_PROCS 4
-                                     TEST_ARGS --allow-distributed-wells=true)
-
-add_test_compare_parallel_simulation(CASENAME spe9group
-                                     FILENAME SPE9_CP_GROUP
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltan
-                                     FILENAME SPE3CASE1
-                                     POSTFIX partition_method_zoltan
-                                     DIR spe3
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=zoltan)
-
-add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltanwell
-                                     FILENAME SPE3CASE1
-                                     POSTFIX partition_method_zoltanwell
-                                     DIR spe3
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
-
-add_test_compare_parallel_simulation(CASENAME spe1_solvent
-                                     FILENAME SPE1CASE2_SOLVENT
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME polymer_simple2D
-                                     FILENAME 2D_THREEPHASE_POLY_HETER
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe1_foam
-                                     FILENAME SPE1FOAM
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel})
-
-add_test_compare_parallel_simulation(CASENAME spe1_thermal
-                                     FILENAME SPE1CASE2_THERMAL
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR spe1
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe1_temp
-                                     FILENAME SPE1CASE2_TEMP
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR spe1
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-
-add_test_compare_parallel_simulation(CASENAME spe1_thermal_onephase
-                                     FILENAME SPE1CASE2_THERMAL_ONEPHASE
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${rel_tol}
-                                     DIR spe1
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-
-add_test_compare_parallel_simulation(CASENAME spe1_water
-                                     FILENAME SPE1CASE1_WATER
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${rel_tol}
-                                     DIR spe1
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
-
-add_test_compare_parallel_simulation(CASENAME spe1_brine
-                                     FILENAME SPE1CASE1_BRINE
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
-
-add_test_compare_parallel_simulation(CASENAME fetkovich_2d
-                                     FILENAME 2D_FETKOVICHAQUIFER
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     DIR aquifer-fetkovich
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
-
-add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
-                                     FILENAME 2D_OW_CTAQUIFER
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     DIR aquifer-oilwater
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
-
-add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
-                                     FILENAME 3D_TRAN_OPERATOR
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 0.0003
-                                     DIR parallel_fieldprops
-                                     TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
-
-add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
-                                     FILENAME 3D_2AQU_NUM
-                                     SIMULATOR flow
-                                     ABS_TOL 0.17
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes --relaxed-max-pv-fraction=0.0)
-
-add_test_compare_parallel_simulation(CASENAME aquflux_01
-                                     FILENAME AQUFLUX-01
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL 0.06
-                                     DIR aquifers
-                                     TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0)
-
-add_test_compare_parallel_simulation(CASENAME aquflux_02
-                                     FILENAME AQUFLUX-02
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR aquifers
-                                     TEST_ARGS --enable-tuning=true)
-
-add_test_compare_parallel_simulation(CASENAME network_balance_01
-                                     FILENAME NETWORK-01
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR network
-                                     TEST_ARGS --enable-tuning=true)
-
-add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
-                                     FILENAME 3D_1AQU_3CELLS
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 0.05
-                                     DIR aquifer-num
-                                     TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --relaxed-max-pv-fraction=0.0)
-
-add_test_compare_parallel_simulation(CASENAME 6_uda_model5_stdw
-  FILENAME 6_UDA_MODEL5_STDW
-  SIMULATOR flow
-  ABS_TOL ${abs_tol_parallel}
-  REL_TOL ${rel_tol_parallel}
-  DIR model5
-  TEST_ARGS --enable-tuning=true
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1
+  FILENAME
+    SPE1CASE2
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
 )
 
-add_test_compare_parallel_simulation(CASENAME GSATPROD6
-  FILENAME GSATPROD6
-  SIMULATOR flow
-  ABS_TOL ${abs_tol_parallel}
-  REL_TOL ${rel_tol_parallel}
-  DIR satellite
-  TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_gaswater
+  FILENAME
+    SPE1CASE2_GASWATER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe9
+  FILENAME
+    SPE9_CP_SHORT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+# A test for distributed standard wells. We load distribute only along the z-axis
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe9_dist_z
+  FILENAME
+    SPE9_CP_SHORT
+  DIR
+    spe9
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+# A test for distributed standard wells with 8 processes. We load distribute only along the z-axis
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe9_dist_z_8
+  FILENAME
+    SPE9_CP_SHORT
+  POSTFIX
+    8
+  DIR
+    spe9
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  MPI_PROCS
+    8
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+# A test for distributed multisegment wells.
+# We load distribute only along the z-axis
+# This file contains one Multisegment well
+# without branches that is distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple
+  FILENAME
+    MSW-SIMPLE
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=15
+    --allow-distributed-wells=true
+)
+
+# A test for distributed multisegment wells.
+# We load distribute only along the z-axis,
+# this file contains one Multisegment well without
+# branches where 9 perforations belong to the same segment
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple-9-perfs-1-seg
+  FILENAME
+    MSW-SIMPLE-9-PERFS-1-SEG
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=10
+    --allow-distributed-wells=true
+)
+
+# A test for distributed multisegment wells with one shut perforation
+# at the process border. We load distribute only along the z-axis.
+# This file contains one Multisegment well without branches that
+# is distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple-1-shut-perforation-border
+  FILENAME
+    MSW-SIMPLE-1-SHUT-PERFORATION-BORDER
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=15
+    --allow-distributed-wells=true
+)
+
+# A test for distributed multisegment wells with only one open perforation
+# . We load distribute only along the z-axis
+# This file contains one Multisegment well without branches that is
+# distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple-shut-perforations
+  FILENAME
+    MSW-SIMPLE-SHUT-PERFORATIONS
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=15
+    --allow-distributed-wells=true
+)
+
+# A test for distributed multisegment wells with only shut perforations on rank 0,
+# where the well is distributed across ranks 0 and 1.
+# We load distribute only along the z-axis.
+# This file contains one Multisegment well without branches that
+# is distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple-5-shut-perforations
+  FILENAME
+    MSW-SIMPLE-5-SHUT-PERFORATIONS
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=10
+    --allow-distributed-wells=true
+)
+
+# A test for distributed multisegment wells with only shut perforations on rank 1,
+# where the well is distributed across ranks 0 and 1.
+# We load distribute only along the z-axis.
+# This file contains one Multisegment well without branches
+# that is distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-simple-7-shut-perforations
+  FILENAME
+    MSW-SIMPLE-7-SHUT-PERFORATIONS
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --solver-max-time-step-in-days=15
+    --allow-distributed-wells=true
+)
+
+# This file contains one Multisegment well with branches that
+# is distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-3d
+  FILENAME
+    MSW-3D
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-4
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --allow-distributed-wells=true
+)
+
+# this file contains two Multisegment wells with branches that
+# are distributed across several processes.
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-3d-two-producers
+  FILENAME
+    MSW-3D-TWO-PRODUCERS
+  DIR
+    msw
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-4
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --allow-distributed-wells=true
+)
+
+# The absolute tolerance is pretty high here,
+# we are only interested in the relative tolerance.
+add_test_compare_parallel_simulation(
+  CASENAME
+    msw-model-1-short
+  FILENAME
+    MSW_MODEL_1_SHORT
+  DIR
+    model1
+  SIMULATOR
+    flow_distribute_z
+  ABS_TOL
+    1e4
+  REL_TOL
+    1e-4
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --allow-distributed-wells=true
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe9group
+  FILENAME
+    SPE9_CP_GROUP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe3_partition_method_zoltan
+  FILENAME
+    SPE3CASE1
+  POSTFIX
+    partition_method_zoltan
+  DIR
+    spe3
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+    --tolerance-wells=1e-7
+    --partition-method=zoltan
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe3_partition_method_zoltanwell
+  FILENAME
+    SPE3CASE1
+  POSTFIX
+    partition_method_zoltanwell
+  DIR
+    spe3
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+    --tolerance-wells=1e-7
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_solvent
+  FILENAME
+    SPE1CASE2_SOLVENT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_solvent
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    polymer_simple2D
+  FILENAME
+    2D_THREEPHASE_POLY_HETER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_polymer
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_foam
+  FILENAME
+    SPE1FOAM
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_foam
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_thermal
+  FILENAME
+    SPE1CASE2_THERMAL
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_energy
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_temp
+  FILENAME
+    SPE1CASE2_TEMP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil_temp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_thermal_onephase
+  FILENAME
+    SPE1CASE2_THERMAL_ONEPHASE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase_energy
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_water
+  FILENAME
+    SPE1CASE1_WATER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-8
+    --tolerance-wells=1e-7
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1_brine
+  FILENAME
+    SPE1CASE1_BRINE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_brine
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-6
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    fetkovich_2d
+  FILENAME
+    2D_FETKOVICHAQUIFER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    aquifer-fetkovich
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-6
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    ctaquifer_2d_oilwater
+  FILENAME
+    2D_OW_CTAQUIFER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    aquifer-oilwater
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-6
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    3d_tran_operator
+  FILENAME
+    3D_TRAN_OPERATOR
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    0.0003
+  DIR
+    parallel_fieldprops
+  TEST_ARGS
+    --enable-tuning=true
+    --relaxed-max-pv-fraction=0
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    numerical_aquifer_3d_2aqu
+  FILENAME
+    3D_2AQU_NUM
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    0.17
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    aquifer-num
+  TEST_ARGS
+    --tolerance-cnv=0.000003
+    --time-step-control=pid
+    --linear-solver=cpr_trueimpes
+    --relaxed-max-pv-fraction=0.0
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    aquflux_01
+  FILENAME
+    AQUFLUX-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    0.06
+  DIR
+    aquifers
+  TEST_ARGS
+    --enable-tuning=true
+    --relaxed-max-pv-fraction=0
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    aquflux_02
+  FILENAME
+    AQUFLUX-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    aquifers
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    network_balance_01
+  FILENAME
+    NETWORK-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    network
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    numerical_aquifer_3d_1aqu
+  FILENAME
+    3D_1AQU_3CELLS
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    0.05
+  DIR
+    aquifer-num
+  TEST_ARGS
+    --enable-tuning=true
+    --tolerance-cnv=0.00003
+    --time-step-control=pid
+    --linear-solver=cpr_trueimpes
+    --relaxed-max-pv-fraction=0.0
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    6_uda_model5_stdw
+  FILENAME
+    6_UDA_MODEL5_STDW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    model5
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
+    GSATPROD6
+  FILENAME
+    GSATPROD6
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    satellite
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
 )
 
 foreach(templ_case RANGE 1 6)
-  add_test_compare_parallel_simulation(CASENAME actionx_well_templ_0${templ_case}
-    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol_parallel}
-    REL_TOL ${rel_tol_parallel}
-    DIR actionx
+  add_test_compare_parallel_simulation(
+    CASENAME
+      actionx_well_templ_0${templ_case}
+    FILENAME
+      ACTIONX_WELL_TEMPL-0${templ_case}
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      ${abs_tol_parallel}
+    REL_TOL
+      ${rel_tol_parallel}
+    DIR
+      actionx
   )
 endforeach()
 
-add_test_compare_parallel_simulation(CASENAME WCYCLE-0
-                                     FILENAME WCYCLE-0
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     DIR wcycle
-                                     TEST_ARGS --enable-tuning=true)
+add_test_compare_parallel_simulation(
+  CASENAME
+    WCYCLE-0
+  FILENAME
+    WCYCLE-0
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    wcycle
+  TEST_ARGS
+    --enable-tuning=true
+)
 
-add_test_compare_parallel_simulation(CASENAME actionx_m1
-                                     FILENAME ACTIONX_M1
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR udq_actionx
-                                     TEST_ARGS --solver-max-time-step-in-days=0.2 --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+add_test_compare_parallel_simulation(
+  CASENAME
+    actionx_m1
+  FILENAME
+    ACTIONX_M1
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    udq_actionx
+  TEST_ARGS
+    --solver-max-time-step-in-days=0.2
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=5e-6
+    --tolerance-mb=1e-6
+)
 
-add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
-                                     FILENAME UDQ_REG-01
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     DIR udq_actionx
-                                     TEST_ARGS --enable-tuning=true --time-step-control=pid)
+add_test_compare_parallel_simulation(
+  CASENAME
+    reg_smry_in_fld_udq
+  FILENAME
+    UDQ_REG-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    udq_actionx
+  TEST_ARGS
+    --enable-tuning=true
+    --time-step-control=pid
+)
 
-add_test_compare_parallel_simulation(CASENAME winjmult_msw
-                                     FILENAME WINJMULT_MSW
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${rel_tol}
-                                     DIR winjmult
-                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
+add_test_compare_parallel_simulation(
+  CASENAME
+    winjmult_msw
+  FILENAME
+    WINJMULT_MSW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    winjmult
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
 
-add_test_compare_parallel_simulation(CASENAME winjdam_msw
-                                     FILENAME WINJDAM_MSW
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol}
-                                     REL_TOL ${rel_tol}
-                                     DIR winjdam
-                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
+add_test_compare_parallel_simulation(
+  CASENAME
+    winjdam_msw
+  FILENAME
+    WINJDAM_MSW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    winjdam
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
 
-add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
-                                     FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 1.0e-3
-                                     DIR model2
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=1.0e-3 --tolerance-cnv-relaxed=1.0e-3 --tolerance-mb=1e-8  --tolerance-mb-relaxed=1.0e-8 --newton-max-iterations=30)
+add_test_compare_parallel_simulation(
+  CASENAME
+    3_a_mpi_multflt_mod2
+  FILENAME
+    3_A_MPI_MULTFLT_SCHED_MODEL2
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    1.0e-3
+  DIR
+    model2
+  TEST_ARGS
+    --linear-solver-reduction=1e-7
+    --tolerance-cnv=1.0e-3
+    --tolerance-cnv-relaxed=1.0e-3
+    --tolerance-mb=1e-8
+    --tolerance-mb-relaxed=1.0e-8
+    --newton-max-iterations=30
+)
 
-add_test_compare_parallel_simulation(CASENAME rxft
-                                     FILENAME TEST_RXFT
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 1.0e-3
-                                     DIR rxft_smry
-                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
+add_test_compare_parallel_simulation(
+  CASENAME
+    rxft
+  FILENAME
+    TEST_RXFT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    1.0e-3
+  DIR
+    rxft_smry
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
 
-add_test_compare_parallel_simulation(CASENAME gconinje_resv_gas_01
-                                     FILENAME GCONINJE_RESV_GAS-01
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-                                     DIR resv_ctrl
-                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
+add_test_compare_parallel_simulation(
+  CASENAME
+    gconinje_resv_gas_01
+  FILENAME
+    GCONINJE_RESV_GAS-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    resv_ctrl
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
