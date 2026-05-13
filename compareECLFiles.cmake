@@ -807,12 +807,22 @@ if(MPI_FOUND)
   # Single test for damaris
   if(Damaris_FOUND AND USE_DAMARIS_LIB)
       opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-damaris-regressionTest.sh "")
-      add_test_compareDamarisFiles(CASENAME spe1_damaris
-                      FILENAME SPE1CASE1
-                      SIMULATOR flow
-                      ABS_TOL ${abs_tol}
-                      REL_TOL 0.01
-                      DIR spe1)
+      add_test_compareDamarisFiles(
+        CASENAME
+          spe1_damaris
+        FILENAME
+          SPE1CASE1
+        SIMULATOR
+          flow
+        DEV_SIMULATOR
+          flow_blackoil
+        ABS_TOL
+          ${abs_tol}
+        REL_TOL
+          0.01
+        DIR
+          spe1
+      )
     endif()
 
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
