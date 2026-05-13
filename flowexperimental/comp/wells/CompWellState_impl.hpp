@@ -35,12 +35,19 @@ init(const std::vector<Well>& wells_ecl,
      const std::vector<std::vector<Scalar>>& cell_mole_fractions,
      const std::vector<std::vector<CompConnectionData> >& well_connection_data,
      const SummaryState& summary_state,
-     const CompWellState* /*prev_well_state*/)
+     const CompWellState* prev_well_state)
 {
     this->base_init(wells_ecl, cell_pressures, temperature, cell_mole_fractions, well_connection_data, summary_state);
 
-    // TODO: for the simple case we have, I think we can just copy from the prev_well_state
-    // let us see how we gonna use it though
+    if (!prev_well_state) {
+        return;
+    }
+
+    for (const auto& well_name : this->wells_.wells()) {
+        if (prev_well_state->wells_.has(well_name)) {
+            this->wells_[well_name].copyRuntimeStateFrom(prev_well_state->wells_[well_name]);
+        }
+    }
 }
 
 template <typename FluidSystem>

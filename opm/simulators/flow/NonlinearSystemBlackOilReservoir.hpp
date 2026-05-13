@@ -29,7 +29,7 @@
 #include <opm/simulators/flow/NonlinearSystem.hpp>
 
 #include <opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp>
-#include <opm/simulators/flow/BlackoilModelNldd.hpp>
+#include <opm/simulators/flow/NonlinearSystemNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelProperties.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
@@ -76,6 +76,7 @@ public:
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GlobalEqVector = typename ParentType::GlobalEqVector;
     using ModelParameters = BlackoilModelParameters<Scalar>;
 
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
@@ -157,7 +158,7 @@ public:
     void initialLinearization(SimulatorReportSingle& report,
                               const int minIter,
                               const int maxIter,
-                              const SimulatorTimerInterface& timer);
+                              const SimulatorTimerInterface& timer) override;
 
     /// Called once per nonlinear iteration.
     /// This model will perform a Newton-Raphson update, changing reservoir_state
@@ -174,9 +175,6 @@ public:
     SimulatorReportSingle nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                                                    NonlinearSolverType& nonlinear_solver);
 
-    /// Assemble the residual and Jacobian of the nonlinear system.
-    SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& timer);
-
     // compute the "relative" change of the solution between time steps
     Scalar relativeChange() const;
 
@@ -192,12 +190,10 @@ public:
     /// r is the residual.
     void solveJacobianSystem(BVector& x);
 
-    /// Apply an update to the primary variables.
-    void updateSolution(const BVector& dx);
-
     /// Get solution update vector as a PrimaryVariable
-    void prepareStoringSolutionUpdate();
-    void storeSolutionUpdate(const BVector& dx);
+    bool shouldStoreSolutionUpdate() const override;
+    void prepareSolutionUpdate() override;
+    void storeSolutionUpdate(const GlobalEqVector& dx) override;
     MaxSolutionUpdateData getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
 
     std::tuple<Scalar,Scalar>
@@ -229,9 +225,6 @@ public:
                             const double dt,
                             const double tol_cnv,
                             const double tol_cnv_energy);
-
-    void updateTUNING(const Tuning& tuning);
-    void updateTUNINGDP(const TuningDp& tuning_dp);
 
     ConvergenceReport
     getReservoirConvergence(const double reportTime,
@@ -273,19 +266,10 @@ public:
     void popLastConvergenceReport()
     {
         this->popLastStepReport();
-        residual_norms_history_.pop_back();
+        this->residual_norms_history_.pop_back();
     }
 
     void writePartitions(const std::filesystem::path& odir) const;
-
-    /// return the StandardWells object
-    BlackoilWellModel<TypeTag>&
-    wellModel()
-    { return well_model_; }
-
-    const BlackoilWellModel<TypeTag>&
-    wellModel() const
-    { return well_model_; }
 
     template<class FluidState, class Residual>
     void getMaxCoeff(const unsigned cell_idx,
@@ -298,10 +282,6 @@ public:
                      std::vector<Scalar>& maxCoeff,
                      std::vector<int>& maxCoeffCell);
 
-    //! \brief Returns const reference to model parameters.
-    const ModelParameters& param() const
-    { return param_; }
-
     //! \brief Returns true if an NLDD solver exists
     bool hasNlddSolver() const
     { return nlddSolver_ != nullptr; }
@@ -309,11 +289,16 @@ public:
 protected:
     using ParentType::compNames_;
     using ParentType::convergence_reports_;
+    using ParentType::current_relaxation_;
+    using ParentType::dx_old_;
     using ParentType::failureReport_;
     using ParentType::grid_;
+    using ParentType::param_;
     using ParentType::popLastStepReport;
+    using ParentType::residual_norms_history_;
     using ParentType::simulator_;
     using ParentType::terminal_output_;
+    using ParentType::well_model_;
 
     // ---------  Data members  ---------
     static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
@@ -326,21 +311,12 @@ protected:
     static constexpr bool has_bioeffects_ = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp_ = Indices::enableMICP;
 
-    ModelParameters                 param_;
-
-    // Well Model
-    BlackoilWellModel<TypeTag>& well_model_;
-
     /// \brief The number of cells of the global grid.
     long int global_nc_;
 
-    std::vector<std::vector<Scalar>> residual_norms_history_;
-    Scalar current_relaxation_;
-    BVector dx_old_;
-
     SolutionVector solUpd_;
 
-    std::unique_ptr<BlackoilModelNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
+    std::unique_ptr<NonlinearSystemNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
     BlackoilModelConvergenceMonitor<Scalar> conv_monitor_;
 
 private:

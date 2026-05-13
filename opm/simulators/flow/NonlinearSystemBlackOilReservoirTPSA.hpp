@@ -22,8 +22,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef BLACK_OIL_MODEL_TPSA_HPP
-#define BLACK_OIL_MODEL_TPSA_HPP
+#ifndef OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_TPSA_HPP
+#define OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_TPSA_HPP
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -39,10 +39,10 @@
 namespace Opm {
 
 /*!
-* \brief Black oil model for coupling Flow simulations with TPSA geomechanics
+* \brief Nonlinear system for coupling Flow simulations with TPSA geomechanics
 */
 template <class TypeTag>
-class BlackoilModelTPSA : public NonlinearSystemBlackOilReservoir<TypeTag>
+class NonlinearSystemBlackOilReservoirTPSA : public NonlinearSystemBlackOilReservoir<TypeTag>
 {
     using ParentType = NonlinearSystemBlackOilReservoir<TypeTag>;
 
@@ -60,7 +60,7 @@ public:
     * \param well_model Refenerence to well model
     * \param terminal_output Bool for terminal output
     */
-    explicit BlackoilModelTPSA(Simulator& simulator,
+    explicit NonlinearSystemBlackOilReservoirTPSA(Simulator& simulator,
                                const ModelParameters& param,
                                BlackoilWellModel<TypeTag>& well_model,
                                const bool terminal_output)
@@ -223,8 +223,8 @@ public:
 
 private:
     int seqIter_{0};
-};  // class BlackoilModelTPSA
+};  // class NonlinearSystemBlackOilReservoirTPSA
 
 }  // namespace Opm
 
-#endif
+#endif // OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_TPSA_HPP
