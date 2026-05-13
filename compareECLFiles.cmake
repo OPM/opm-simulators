@@ -136,7 +136,20 @@ endfunction()
 # Details:
 #   - This test class compares two separate simulations
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME1
+    FILENAME2
+    DIR1
+    DIR2
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    IGNORE_EXTRA_KW
+    DIR_PREFIX
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
@@ -149,6 +162,9 @@ function(add_test_compareSeparateECLFiles)
   endif()
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
