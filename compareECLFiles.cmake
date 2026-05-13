@@ -525,40 +525,70 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
-add_test_compareECLFiles(CASENAME norne
-                         FILENAME NORNE_ATW2013
-                         SIMULATOR flow
-                         DEV_SIMULATOR flow_blackoil
-                         ABS_TOL 1e-5
-                         REL_TOL 1e-8
-                         PREFIX comparePORV
-                         DIR_PREFIX /porv)
+add_test_compareECLFiles(
+  CASENAME
+    norne
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    1e-5
+  REL_TOL
+    1e-8
+  PREFIX
+    comparePORV
+  DIR_PREFIX
+    /porv
+)
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
-
-add_test_compareECLFiles(CASENAME norne_init
-                         FILENAME NORNE_ATW2013
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         PREFIX compareECLInitFiles
-                         DIR norne
-                         DIR_PREFIX /init)
+add_test_compareECLFiles(
+  CASENAME
+    norne_init
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  PREFIX
+    compareECLInitFiles
+  DIR
+    norne
+  DIR_PREFIX
+    /init
+)
 
 set(_operate_work_tests
   OPERATE_ENDPOINTS-01
   OPERATER_ENDPOINTS-01
 )
 
-add_multiple_tests(_operate_work_tests
+add_multiple_tests(
+  _operate_work_tests
   "operate_work_"
-  SIMULATOR flow
-  ABS_TOL ${abs_tol}
-  REL_TOL ${rel_tol}
-  PREFIX compareECLInitFiles
-  DIR operate
-  DIR_PREFIX /init
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  PREFIX
+    compareECLInitFiles
+  DIR
+    operate
+  DIR_PREFIX
+    /init
 )
 
 # This is not a proper regression test; the test will load a norne case prepared
