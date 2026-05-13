@@ -948,48 +948,66 @@ add_test_compare_parallel_simulation(
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
-add_test_compareSeparateECLFiles(CASENAME actionx_compdat_1_proc
-                                 DIR1 actionx
-                                 FILENAME1 COMPDAT_SHORT
-                                 DIR2 actionx
-                                 FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
-                                 ABS_TOL ${abs_tol}
-                                 REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH
-                                 MPI_PROCS 1)
+add_test_compareSeparateECLFiles(
+  CASENAME actionx_compdat_1_proc
+  DIR1 actionx
+  FILENAME1 COMPDAT_SHORT
+  DIR2 actionx
+  FILENAME2 ACTIONX_COMPDAT_SHORT
+  SIMULATOR flow
+  DEV_SIMULATOR flow_blackoil
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  IGNORE_EXTRA_KW BOTH
+  MPI_PROCS 1
+)
 
-add_test_compareSeparateECLFiles(CASENAME actionx_compdat_2_procs
-                                 DIR1 actionx
-                                 FILENAME1 COMPDAT_SHORT
-                                 DIR2 actionx
-                                 FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
-                                 ABS_TOL ${abs_tol}
-                                 REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH
-                                 MPI_PROCS 2)
+add_test_compareSeparateECLFiles(
+  CASENAME actionx_compdat_2_procs
+  DIR1 actionx
+  FILENAME1 COMPDAT_SHORT
+  DIR2 actionx
+  FILENAME2 ACTIONX_COMPDAT_SHORT
+  SIMULATOR flow
+  DEV_SIMULATOR flow_blackoil
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  IGNORE_EXTRA_KW BOTH
+  MPI_PROCS 2
+)
 
-add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_1_proc
-                                 DIR1 actionx
-                                 FILENAME1 COMPDAT_SHORT
-                                 DIR2 actionx
-                                 FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
-                                 ABS_TOL ${abs_tol}
-                                 REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH
-                                 MPI_PROCS 1
-                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true --linear-solver=ilu0)
+add_test_compareSeparateECLFiles(
+  CASENAME actionx_compdat_nldd_1_proc
+  DIR1 actionx
+  FILENAME1 COMPDAT_SHORT
+  DIR2 actionx
+  FILENAME2 ACTIONX_COMPDAT_SHORT
+  SIMULATOR flow
+  DEV_SIMULATOR flow_blackoil
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  IGNORE_EXTRA_KW BOTH
+  MPI_PROCS 1
+  TEST_ARGS
+    --nonlinear-solver=nldd
+    --matrix-add-well-contributions=true
+    --linear-solver=ilu0
+)
 
-add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_2_procs
-                                 DIR1 actionx
-                                 FILENAME1 COMPDAT_SHORT
-                                 DIR2 actionx
-                                 FILENAME2 ACTIONX_COMPDAT_SHORT
-                                 SIMULATOR flow
-                                 ABS_TOL ${abs_tol}
-                                 REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH
-                                 MPI_PROCS 2
-                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true --linear-solver=ilu0)
+add_test_compareSeparateECLFiles(
+  CASENAME actionx_compdat_nldd_2_procs
+  DIR1 actionx
+  FILENAME1 COMPDAT_SHORT
+  DIR2 actionx
+  FILENAME2 ACTIONX_COMPDAT_SHORT
+  SIMULATOR flow
+  DEV_SIMULATOR flow_blackoil
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  IGNORE_EXTRA_KW BOTH
+  MPI_PROCS 2
+  TEST_ARGS
+    --nonlinear-solver=nldd
+    --matrix-add-well-contributions=true
+    --linear-solver=ilu0
+)
