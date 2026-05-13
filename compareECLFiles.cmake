@@ -21,7 +21,17 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 # Details:
 #   - This test class simply runs a simulation.
 function(add_test_runSimulator)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR DIR DIR_PREFIX PROCS CONFIGURATION POST_COMMAND)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    DIR
+    DIR_PREFIX
+    PROCS
+    CONFIGURATION
+    POST_COMMAND
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -39,11 +49,14 @@ function(add_test_runSimulator)
  if(PARAM_POST_COMMAND)
    list(APPEND DRIVER_ARGS -p "${PARAM_POST_COMMAND}")
  endif()
-  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS}
-               CONFIGURATION ${PARAM_CONFIGURATION})
+ if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+   set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+ endif()
+ opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
+              EXE_NAME ${PARAM_SIMULATOR}
+              DRIVER_ARGS ${DRIVER_ARGS}
+              TEST_ARGS ${TEST_ARGS}
+              CONFIGURATION ${PARAM_CONFIGURATION})
  if(PARAM_PROCS)
     set_tests_properties(runSimulator/${PARAM_CASENAME} PROPERTIES PROCESSORS ${PARAM_PROCS})
   endif()
