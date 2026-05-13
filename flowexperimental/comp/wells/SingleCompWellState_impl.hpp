@@ -146,6 +146,22 @@ update_producer_targets(const Well& well,
 }
 
 template <typename FluidSystem>
+void SingleCompWellState<FluidSystem>::
+copyRuntimeStateFrom(const SingleCompWellState& other)
+{
+    // Keep the freshly initialized schedule-derived status, controls, and
+    // injector targets from base_init(); only reuse the dynamic state.
+    bhp = other.bhp;
+    surface_phase_rates = other.surface_phase_rates;
+    phase_fractions = other.phase_fractions;
+    reservoir_phase_rates = other.reservoir_phase_rates;
+    if (producer) {
+        total_molar_fractions = other.total_molar_fractions;
+        phase_molar_fractions = other.phase_molar_fractions;
+    }
+}
+
+template <typename FluidSystem>
 typename SingleCompWellState<FluidSystem>::Scalar
 SingleCompWellState<FluidSystem>::
 get_total_surface_rate() const
