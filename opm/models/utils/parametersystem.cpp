@@ -424,6 +424,23 @@ void Hide_(const std::string& paramName)
     paramInfo.isHidden = true;
 }
 
+bool HideIfRegistered_(const std::string& paramName)
+{
+    if (!MetaData::registrationOpen()) {
+        throw std::logic_error("Parameter '" + paramName + "' declared as hidden"
+                               " when parameter registration was already closed.");
+    }
+
+    auto paramInfoIt = MetaData::mutableRegistry().find(paramName);
+    if (paramInfoIt == MetaData::mutableRegistry().end()) {
+        return false;
+    }
+
+    auto& paramInfo = paramInfoIt->second;
+    paramInfo.isHidden = true;
+    return true;
+}
+
 bool IsSet_(const std::string& paramName, bool errorIfNotRegistered)
 {
     if (errorIfNotRegistered) {
