@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
-#define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
+#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_HEADER_INCLUDED
+#define OPM_SIMULATOR_FULLY_IMPLICIT_HEADER_INCLUDED
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
@@ -83,7 +83,7 @@ void logTuning(const Tuning& tuning);
 
 namespace Opm {
 
-/** \brief Top-level driver for a fully implicit black-oil simulation.
+/** \brief Top-level driver for a fully implicit flow simulation.
  *
  * Owns the per-report-step loop: \ref run repeatedly invokes
  * \ref runStep until `timer.done()` is reached.  Each \ref runStep
@@ -372,6 +372,6 @@ protected:
 
 } // namespace Opm
 
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil_impl.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit_impl.hpp>
 
-#endif // OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
+#endif // OPM_SIMULATOR_FULLY_IMPLICIT_HEADER_INCLUDED

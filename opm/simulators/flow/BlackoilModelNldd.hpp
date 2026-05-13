@@ -77,7 +77,7 @@
 
 namespace Opm {
 
-template<class TypeTag> class BlackoilModel;
+template<class TypeTag> class NonlinearSystemBlackOilReservoir;
 
 /// A NLDD implementation for three-phase black oil.
 template <class TypeTag>
@@ -92,10 +92,10 @@ public:
     using ModelParameters = BlackoilModelParameters<Scalar>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
-    using BVector = typename BlackoilModel<TypeTag>::BVector;
+    using BVector = typename NonlinearSystemBlackOilReservoir<TypeTag>::BVector;
     using Domain = SubDomain<Grid>;
     using ISTLSolverType = ISTLSolver<TypeTag>;
-    using Mat = typename BlackoilModel<TypeTag>::Mat;
+    using Mat = typename NonlinearSystemBlackOilReservoir<TypeTag>::Mat;
 
     static constexpr int numEq = Indices::numEq;
 
@@ -103,7 +103,7 @@ public:
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
-    explicit BlackoilModelNldd(BlackoilModel<TypeTag>& model)
+    explicit BlackoilModelNldd(NonlinearSystemBlackOilReservoir<TypeTag>& model)
         : model_(model)
         , wellModel_(model.wellModel())
         , rank_(model_.simulator().vanguard().grid().comm().rank())
@@ -849,22 +849,18 @@ private:
             CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                     CR::ReservoirFailure::Type::Cnv };
             Scalar tol[2] = { tol_mb, tol_cnv };
-            for (int ii : {0, 1}) {
-                if (std::isnan(res[ii])) {
-                    report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                    logger.debug("NaN residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] > model_.param().max_residual_allowed_) {
-                    report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                    logger.debug("Too large residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] < 0.0) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    logger.debug("Negative residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] > tol[ii]) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                }
-
-                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
-            }
+            model_.addReservoirConvergenceMetrics(
+                report,
+                compIdx,
+                model_.compNames().name(compIdx),
+                std::span<const Scalar>{res},
+                std::span<const CR::ReservoirFailure::Type>{types},
+                std::span<const Scalar>{tol},
+                model_.param().max_residual_allowed_,
+                [&logger](const std::string& message)
+                {
+                    logger.debug(message);
+                });
         }
 
         // Output of residuals. If converged at initial state, log nothing.
@@ -1218,7 +1214,7 @@ private:
         return false;
     }
 
-    BlackoilModel<TypeTag>& model_; //!< Reference to model
+    NonlinearSystemBlackOilReservoir<TypeTag>& model_; //!< Reference to model
     BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain

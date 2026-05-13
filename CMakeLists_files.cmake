@@ -73,6 +73,7 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/BlackOilEnergyIntensiveQuantitiesGlobalIndex.hpp
   flowexperimental/BlackOilIntensiveQuantitiesGlobalIndex.hpp
   flowexperimental/comp/EmptyModel.hpp
+  flowexperimental/comp/flow_comp.hpp
   flowexperimental/comp/flowexp_comp.hpp
   flowexperimental/comp/wells/CompWellModel.hpp
   flowexperimental/comp/wells/CompWellModel_impl.hpp
@@ -156,12 +157,14 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NlddReporting.cpp
   opm/simulators/flow/NonlinearSolver.cpp
+  opm/simulators/flow/NonlinearSystemCompositional.hpp
+  opm/simulators/flow/NonlinearSystemCompositional_impl.hpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RFTContainer.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
   opm/simulators/flow/SimulatorConvergenceOutput.cpp
-  opm/simulators/flow/SimulatorFullyImplicitBlackoil.cpp
+  opm/simulators/flow/SimulatorFullyImplicit.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
@@ -938,13 +941,14 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BaseAquiferModel.hpp
   opm/simulators/flow/BioeffectsContainer.hpp
-  opm/simulators/flow/BlackoilModel.hpp
-  opm/simulators/flow/BlackoilModel_impl.hpp
+  opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp
+  opm/simulators/flow/NonlinearSystemBlackOilReservoir_impl.hpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/BlackoilModelProperties.hpp
   opm/simulators/flow/BlackoilModelTPSA.hpp
+  opm/simulators/flow/NonlinearSystem.hpp
   opm/simulators/flow/CO2H2Container.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
@@ -1013,8 +1017,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
   opm/simulators/flow/SimulatorConvergenceOutput.hpp
-  opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
-  opm/simulators/flow/SimulatorFullyImplicitBlackoil_impl.hpp
+  opm/simulators/flow/SimulatorFullyImplicit.hpp
+  opm/simulators/flow/SimulatorFullyImplicit_impl.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/SolutionContainers.hpp

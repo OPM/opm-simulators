@@ -79,6 +79,9 @@ ParamType Get_(const std::string& paramName, ParamType defaultValue,
 void Hide_(const std::string& paramName);
 
 //! \brief Private implementation.
+bool HideIfRegistered_(const std::string& paramName);
+
+//! \brief Private implementation.
 bool IsSet_(const std::string& paramName, bool errorIfNotRegistered);
 
 //! \brief Private implementation.
@@ -311,6 +314,17 @@ template <class Param>
 void Hide()
 {
     detail::Hide_(detail::getParamName<Param>());
+}
+
+/*!
+ * \brief Indicate that a given parameter should not be mentioned in the help message if present.
+ *
+ * This is useful for parameters that are only registered for some models or output modules.
+ */
+template <class Param>
+bool HideIfRegistered()
+{
+    return detail::HideIfRegistered_(detail::getParamName<Param>());
 }
 
 /*!

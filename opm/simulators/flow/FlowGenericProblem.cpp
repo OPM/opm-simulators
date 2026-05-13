@@ -29,6 +29,7 @@
 #include <opm/grid/LookUpData.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
@@ -40,16 +41,30 @@
 
 namespace Opm {
 
+using CpLeafGridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
+
 #define INSTANTIATE_TYPE(T)                                               \
     template class FlowGenericProblem<                                    \
-                      Dune::GridView<                                     \
-                          Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, \
+            CpLeafGridView,                                     \
                       BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>>;
 
+#define INSTANTIATE_COMP_TYPE(T, N, W)                                    \
+  template class FlowGenericProblem<                                    \
+            CpLeafGridView,                                     \
+            GenericOilGasWaterFluidSystem<T, N, W>>;
+
 INSTANTIATE_TYPE(double)
+INSTANTIATE_COMP_TYPE(double, 2, false)
+INSTANTIATE_COMP_TYPE(double, 2, true)
+INSTANTIATE_COMP_TYPE(double, 3, false)
+INSTANTIATE_COMP_TYPE(double, 3, true)
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
+INSTANTIATE_COMP_TYPE(float, 2, false)
+INSTANTIATE_COMP_TYPE(float, 2, true)
+INSTANTIATE_COMP_TYPE(float, 3, false)
+INSTANTIATE_COMP_TYPE(float, 3, true)
 #endif
 
 #if HAVE_DUNE_FEM
@@ -58,9 +73,25 @@ using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            false>;
 template class FlowGenericProblem<GV,
                                   BlackOilFluidSystem<double, BlackOilDefaultFluidSystemIndices>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<double, 2, false>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<double, 2, true>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<double, 3, false>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<double, 3, true>>;
 #if FLOW_INSTANTIATE_FLOAT
 template class FlowGenericProblem<GV,
                                   BlackOilFluidSystem<float, BlackOilDefaultFluidSystemIndices>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<float, 2, false>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<float, 2, true>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<float, 3, false>>;
+template class FlowGenericProblem<GV,
+                  GenericOilGasWaterFluidSystem<float, 3, true>>;
 #endif
 
 #endif // HAVE_DUNE_FEM

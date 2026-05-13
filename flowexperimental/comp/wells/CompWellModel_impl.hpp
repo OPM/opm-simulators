@@ -52,6 +52,7 @@ CompWellModel<TypeTag>::
 beginReportStep(unsigned report_step)
 {
     // TODO: not considering the parallel running yet
+    report_step_start_events_ = schedule_[report_step].wellgroup_events();
     wells_ecl_ = schedule_.getWells(report_step);
     initWellConnectionData();
     initWellState();
