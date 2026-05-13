@@ -81,6 +81,7 @@ function(add_test_compareECLFiles)
     FILENAME
     DEV_SIMULATOR
     SIMULATOR
+    REFERENCE_SIMULATOR
     ABS_TOL
     REL_TOL
     DIR
@@ -112,7 +113,11 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
     list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
-  list(APPEND DRIVER_ARGS -u ${PARAM_SIMULATOR})
+  set(reference_simulator ${PARAM_SIMULATOR})
+  if(PARAM_REFERENCE_SIMULATOR)
+    set(reference_simulator ${PARAM_REFERENCE_SIMULATOR})
+  endif()
+  list(APPEND DRIVER_ARGS -u ${reference_simulator})
   if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
@@ -151,6 +156,7 @@ function(add_test_compareSeparateECLFiles)
     DIR2
     DEV_SIMULATOR
     SIMULATOR
+    REFERENCE_SIMULATOR
     ABS_TOL
     REL_TOL
     IGNORE_EXTRA_KW
@@ -187,7 +193,10 @@ function(add_test_compareSeparateECLFiles)
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME}
+  if(PARAM_REFERENCE_SIMULATOR)
+    list(APPEND DRIVER_ARGS -l ${PARAM_REFERENCE_SIMULATOR})
+  endif()
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -675,6 +684,16 @@ add_test_runSimulator(
     --enable-ecl-output=false
     --enable-vtk-output=true
 )
+
+add_test_runSimulator(CASENAME 1dcompositional_flowexp_comp3_2p
+                      FILENAME 1D_COMP
+                      SIMULATOR flowexp_comp3_2p
+                      DIR compositional)
+
+add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
+                      FILENAME 1D_COMP
+                      SIMULATOR flow_comp3_2p
+                      DIR compositional)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(

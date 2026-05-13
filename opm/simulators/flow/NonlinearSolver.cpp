@@ -120,7 +120,12 @@ using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
     INSTANTIATE(T,3)                                                        \
     INSTANTIATE(T,4)                                                        \
     INSTANTIATE(T,5)                                                        \
-    INSTANTIATE(T,6)
+    INSTANTIATE(T,6)                                                        \
+    INSTANTIATE(T,7)                                                        \
+    INSTANTIATE(T,8)                                                        \
+    INSTANTIATE(T,9)                                                        \
+    INSTANTIATE(T,10)                                                       \
+    INSTANTIATE(T,11)
 
 INSTANTIATE_TYPE(double)
 

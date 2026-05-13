@@ -43,6 +43,7 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/io/vtkblackoilparams.hpp>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -53,6 +54,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <fstream>
+#include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -91,6 +95,12 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
 
 public:
+    static void registerParameters()
+    {
+        BaseType::registerParameters();
+        VtkBlackoilParams::registerParameters();
+    }
+
     template <class CollectDataToIORankType>
     OutputCompositionalModule(const Simulator& simulator,
                               const SummaryConfig& smryCfg,
@@ -180,6 +190,92 @@ public:
     {
         this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
         BaseType::assignToSolution(sol);
+    }
+
+    void outputFipAndResvLog(const Inplace& inplace,
+                             const std::size_t reportStepNum,
+                             double elapsed,
+                             boost::posix_time::ptime currentDate,
+                             const bool substep,
+                             const Parallel::Communication& comm)
+    {
+        if (comm.rank() != 0) {
+            return;
+        }
+
+        std::unique_ptr<FIPConfig> fipSched;
+        if (reportStepNum > 0) {
+            const auto& rpt = this->schedule_[reportStepNum - 1].rpt_config.get();
+            fipSched = std::make_unique<FIPConfig>(rpt);
+        }
+
+        const FIPConfig& fipc = reportStepNum == 0
+            ? this->eclState_.getEclipseConfig().fip()
+            : *fipSched;
+
+        if (!substep && !this->forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
+            this->logOutput_.timeStamp("BALANCE", elapsed, reportStepNum, currentDate);
+
+            const auto& initial_inplace = *this->initialInplace();
+            this->logOutput_.fip(inplace, initial_inplace, "");
+
+            if (fipc.output(FIPConfig::OutputField::FIPNUM)) {
+                this->logOutput_.fip(inplace, initial_inplace, "FIPNUM");
+
+                if (fipc.output(FIPConfig::OutputField::RESV)) {
+                    this->logOutput_.fipResv(inplace, "FIPNUM");
+                }
+            }
+
+            if (fipc.output(FIPConfig::OutputField::FIP)) {
+                for (const auto& reg : this->regions_) {
+                    if (reg.first != "FIPNUM") {
+                        std::ostringstream ss;
+                        ss << "BAL" << reg.first.substr(3);
+                        this->logOutput_.timeStamp(ss.str(), elapsed, reportStepNum, currentDate);
+                        this->logOutput_.fip(inplace, initial_inplace, reg.first);
+
+                        if (fipc.output(FIPConfig::OutputField::RESV)) {
+                            this->logOutput_.fipResv(inplace, reg.first);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void outputFipAndResvLogToCSV(const std::size_t reportStepNum,
+                                  const bool substep,
+                                  const Parallel::Communication& comm)
+    {
+        if (comm.rank() != 0) {
+            return;
+        }
+
+        if ((reportStepNum == 0) && (!substep) &&
+            (this->schedule_.initialReportConfiguration().has_value()) &&
+            (this->schedule_.initialReportConfiguration()->contains("CSVFIP"))) {
+
+            std::ostringstream csv_stream;
+
+            this->logOutput_.csv_header(csv_stream);
+
+            const auto& initial_inplace = *this->initialInplace();
+
+            this->logOutput_.fip_csv(csv_stream, initial_inplace, "FIPNUM");
+
+            for (const auto& reg : this->regions_) {
+                if (reg.first != "FIPNUM") {
+                    this->logOutput_.fip_csv(csv_stream, initial_inplace, reg.first);
+                }
+            }
+
+            const IOConfig& io = this->eclState_.getIOConfig();
+            auto csv_fname = io.getOutputDir() + "/" + io.getBaseName() + ".CSV";
+
+            std::ofstream outputFile(csv_fname);
+            outputFile << csv_stream.str();
+        }
     }
 
     //! \brief Setup list of active element-level data extractors

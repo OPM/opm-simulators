@@ -57,7 +57,16 @@ public:
 
     SingleWellState& operator[](const std::string& well_name);
 
+    bool has(const std::string& well_name) const
+    { return wells_.has(well_name); }
+
     data::Wells report() const;
+
+    // Copy dynamic well variables while keeping each instance's own config reference.
+    void copyDynamicStateFrom(const CompWellState& other)
+    {
+      wells_ = other.wells_;
+    }
 
 private:
     WellContainer<SingleWellState> wells_;
