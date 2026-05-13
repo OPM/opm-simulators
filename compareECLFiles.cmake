@@ -465,68 +465,163 @@ endif()
 
 # Simple execution tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-test.sh "")
-add_test_runSimulator(CASENAME norne
-                      FILENAME NORNE_ATW2013
-                      SIMULATOR flow
-                      CONFIGURATION extra)
+add_test_runSimulator(
+  CASENAME
+    norne
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  CONFIGURATION
+    extra
+)
 
-add_test_runSimulator(CASENAME norne_parallel
-                      FILENAME NORNE_ATW2013
-                      SIMULATOR flow
-                      DIR norne
-                      PROCS 4
-                      CONFIGURATION extra)
+add_test_runSimulator(
+  CASENAME
+    norne_parallel
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    norne
+  PROCS
+    4
+  CONFIGURATION
+    extra
+)
 
-add_test_runSimulator(CASENAME spe1case1_carfin
-                      FILENAME SPE1CASE1_CARFIN
-                      SIMULATOR flow
-                      DIR lgr
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    spe1case1_carfin
+  FILENAME
+    SPE1CASE1_CARFIN
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  TEST_ARGS
+    --parsing-strictness=low
+    --enable-ecl-output=true
+    --enable-vtk-output=true
+)
 
-add_test_runSimulator(CASENAME spe1case1_carfin_gr
-                      FILENAME SPE1CASE1_CARFIN_GR
-                      SIMULATOR flow
-                      DIR lgr
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    spe1case1_carfin_gr
+  FILENAME
+    SPE1CASE1_CARFIN_GR
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  TEST_ARGS
+    --parsing-strictness=low
+    --enable-ecl-output=true
+    --enable-vtk-output=true
+)
 
 if(MPI_FOUND)
-  add_test_runSimulator(CASENAME spe1case1_carfin_parallel
-                        FILENAME SPE1CASE1_CARFIN
-                        SIMULATOR flow
-                        DIR lgr
-                        PROCS 4
-                        TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+  add_test_runSimulator(
+    CASENAME
+      spe1case1_carfin_parallel
+    FILENAME
+      SPE1CASE1_CARFIN
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    DIR
+      lgr
+    PROCS
+      4
+    TEST_ARGS
+      --parsing-strictness=low
+      --enable-ecl-output=false
+      --enable-vtk-output=true
+  )
 endif()
 
-add_test_runSimulator(CASENAME dryrun
-                      FILENAME CO2STORE_PRECSALT
-                      SIMULATOR flow
-                      DIR co2store
-                      TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    dryrun
+  FILENAME
+    CO2STORE_PRECSALT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_brine_precsalt_vapwat
+  DIR
+    co2store
+  TEST_ARGS
+    --enable-dry-run=true
+    --enable-ecl-output=false
+    --enable-vtk-output=true
+)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
-add_test_runSimulator(CASENAME tuning_trgmbe
-                      FILENAME 01_TUNING_TRGMBE
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=true
-                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
+add_test_runSimulator(
+  CASENAME
+    tuning_trgmbe
+  FILENAME
+    01_TUNING_TRGMBE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --output-extra-convergence-info=iterations
+    --enable-tuning=true
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_trgmbe>
+)
 
-add_test_runSimulator(CASENAME notuning_trgmbe
-                      FILENAME 01_TUNING_TRGMBE
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=false
-                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
+add_test_runSimulator(
+  CASENAME
+    notuning_trgmbe
+  FILENAME
+    01_TUNING_TRGMBE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --output-extra-convergence-info=iterations
+    --enable-tuning=false
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_trgmbe>
+)
 
 set_tests_properties(runSimulator/notuning_trgmbe PROPERTIES WILL_FAIL TRUE)
 
-add_test_runSimulator(CASENAME tuning_tsinit_nextstep
-                      FILENAME 02_TUNING_TSINIT_NEXTSTEP
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --enable-tuning=true
-                      POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
+add_test_runSimulator(
+  CASENAME
+    tuning_tsinit_nextstep
+  FILENAME
+    02_TUNING_TSINIT_NEXTSTEP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --enable-tuning=true
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_tsinit_nextstep>
+)
 
 get_property(opm-common_EMBEDDED_PYTHON TARGET opmcommon PROPERTY EMBEDDED_PYTHON)
 if (opm-common_EMBEDDED_PYTHON)
