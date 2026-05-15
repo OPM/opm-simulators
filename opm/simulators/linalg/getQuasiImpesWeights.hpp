@@ -312,6 +312,290 @@ namespace Amg
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
+
+    /// \brief Compute Coats pressure-equation weights for the blackoil model.
+    ///
+    /// Based on Coats (1980), the pressure equation is formed by taking a linear
+    /// combination of the component mass-balance equations with coefficients that
+    /// convert them into a total reservoir-volume balance:
+    ///
+    ///   sum_i  w_i * (component i mass balance) = d(total pore volume)/dt + flux terms
+    ///
+    /// For a 3-phase blackoil system the weights are derived by solving:
+    ///
+    ///   | invBw      0        Rsw*invBw | | ww |   | 1 |
+    ///   | 0          invBo    Rs*invBo  | | wo | = | 1 |
+    ///   | Rvw*invBg  Rv*invBg invBg     | | wg |   | 1 |
+    ///
+    /// giving (with D = 1 - Rs*Rv - Rvw*Rsw):
+    ///   ww = [ Bw*(1 - Rs*Rv) - Rsw*(Bg - Rv*Bo) ] / D
+    ///   wo = [ Bo*(1 - Rvw*Rsw) - Rs*(Bg - Rvw*Bw) ] / D
+    ///   wg = ( Bg - Rvw*Bw - Rv*Bo ) / D
+    ///
+    /// where B_alpha = 1/invB_alpha.  The function handles all active-phase
+    /// combinations and the optional dissolved-gas-in-water (Rsw) and
+    /// vaporized-water-in-gas (Rvw) extensions.
+    template<class Vector, class ElementContext, class Model, class ElementChunksType>
+    void getCoatsWeightsBlackoil(int /*pressureVarIndex*/,
+                                 Vector& weights,
+                                 const ElementContext& elemCtx,
+                                 const Model& model,
+                                 const ElementChunksType& element_chunks,
+                                 [[maybe_unused]] bool enable_thread_parallel)
+    {
+        using FluidSystem = typename Model::FluidSystem;
+        using LhsEval = double;
+        using PrimaryVariables = typename Model::PrimaryVariables;
+        using VectorBlockType = typename Vector::block_type;
+        using Evaluation =
+            typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>::block_type;
+        using Toolbox = MathToolbox<Evaluation>;
+
+        const auto& solution = model.solution(/*timeIdx=*/0);
+        VectorBlockType bweights;
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#endif
+        for (const auto& chunk : element_chunks) {
+            ElementContext localElemCtx(elemCtx.simulator());
+
+            for (const auto& elem : chunk) {
+                localElemCtx.updatePrimaryStencil(elem);
+                localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+                const auto& priVars = solution[index];
+
+                bweights = 0.0;
+
+                const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+                const bool oilActive   = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+                const bool gasActive   = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+
+                // Formation volume factors  B_alpha = 1 / invB_alpha
+                const double Bw = waterActive
+                    ? Toolbox::template decay<LhsEval>(1.0 / fs.invB(FluidSystem::waterPhaseIdx))
+                    : 0.0;
+                const double Bo = oilActive
+                    ? Toolbox::template decay<LhsEval>(1.0 / fs.invB(FluidSystem::oilPhaseIdx))
+                    : 0.0;
+                const double Bg = gasActive
+                    ? Toolbox::template decay<LhsEval>(1.0 / fs.invB(FluidSystem::gasPhaseIdx))
+                    : 0.0;
+
+                // Solution-gas/vaporized-oil ratios.  Zero out if the primary
+                // variable encodes the saturated value instead (switching variables).
+                double rs = 0.0, rv = 0.0, rsw = 0.0, rvw = 0.0;
+
+                if (oilActive && gasActive) {
+                    if (FluidSystem::enableDissolvedGas()) {
+                        rs = Toolbox::template decay<double>(fs.Rs());
+                        // When the gas primary variable represents Rv (oil vaporized in gas),
+                        // the oil phase is undersaturated, so Rs should be treated as zero.
+                        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                            rs = 0.0;
+                        }
+                    }
+                    if (FluidSystem::enableVaporizedOil()) {
+                        rv = Toolbox::template decay<double>(fs.Rv());
+                        // When the gas primary variable represents Rs (gas dissolved in oil),
+                        // the gas phase is undersaturated, so Rv should be treated as zero.
+                        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                            rv = 0.0;
+                        }
+                    }
+                }
+                if (waterActive && gasActive) {
+                    if (FluidSystem::enableDissolvedGasInWater()) {
+                        rsw = Toolbox::template decay<double>(fs.Rsw());
+                    }
+                    if (FluidSystem::enableVaporizedWater()) {
+                        rvw = Toolbox::template decay<double>(fs.Rvw());
+                    }
+                }
+
+                // Denominator D = 1 - Rs*Rv - Rvw*Rsw
+                const double D = 1.0 - rs * rv - rvw * rsw;
+
+                // Compute weights by solving the linear system derived from the
+                // requirement that sum_i w_i * M_i = total reservoir saturation.
+                //
+                // 3-phase (w, o, g) with full cross-terms:
+                //   ww = [ Bw*(1 - Rs*Rv) - Rsw*(Bg - Rv*Bo) ] / D
+                //   wo = [ Bo*(1 - Rvw*Rsw) - Rs*(Bg - Rvw*Bw) ] / D
+                //   wg = ( Bg - Rvw*Bw - Rv*Bo ) / D
+                //
+                // Degenerate (fewer active phases) cases collapse correctly:
+                //   water-only:    ww = Bw
+                //   gas+oil:       wo = (Bo - Rs*Bg)/(1-Rs*Rv),  wg = (Bg - Rv*Bo)/(1-Rs*Rv)
+                //   water+gas:     ww = (Bw - Rsw*Bg)/(1-Rsw*Rvw), wg = (Bg - Rvw*Bw)/(1-Rsw*Rvw)
+                //   water+oil:     ww = Bw, wo = Bo  (no cross-dissolution)
+
+                if (waterActive) {
+                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                        FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
+                    bweights[activeCompIdx] = static_cast<LhsEval>(
+                        (Bw * (1.0 - rs * rv) - rsw * (Bg - rv * Bo)) / D);
+                }
+                if (oilActive) {
+                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                    bweights[activeCompIdx] = static_cast<LhsEval>(
+                        (Bo * (1.0 - rvw * rsw) - rs * (Bg - rvw * Bw)) / D);
+                }
+                if (gasActive) {
+                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                        FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                    bweights[activeCompIdx] = static_cast<LhsEval>(
+                        (Bg - rvw * Bw - rv * Bo) / D);
+                }
+
+                // Normalize so that the maximum absolute weight equals one.
+                const double abs_max =
+                    *std::ranges::max_element(bweights,
+                                              [](double a, double b)
+                                              { return std::fabs(a) < std::fabs(b); });
+                if (std::fabs(abs_max) > 0.0) {
+                    bweights /= std::fabs(abs_max);
+                }
+
+                weights[index] = bweights;
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("getCoatsWeightsBlackoil() failed: ",
+                                    elemCtx.simulator().vanguard().grid().comm());
+    }
+
+    /// \brief Compute Coats pressure-equation weights for the compositional (ptflash) model.
+    ///
+    /// Based on Coats (1980), the pressure equation is obtained by forming a
+    /// volumetric balance from the component mass balances.  For each hydrocarbon
+    /// component i with mass-based storage term
+    ///
+    ///   M_i = phi * sum_{alpha in HC} omega_{alpha,i} * rho_alpha * S_alpha
+    ///
+    /// the Coats weight is chosen so that
+    ///
+    ///   sum_i  w_i * M_i = phi * (S_o + S_g)   (total HC pore volume)
+    ///
+    /// which is satisfied by taking
+    ///
+    ///   w_i = (sum_{alpha in HC} omega_{alpha,i} * S_alpha)
+    ///         / (sum_{alpha in HC} omega_{alpha,i} * rho_alpha * S_alpha)
+    ///       = saturation-weighted mass fraction / saturation-weighted mass density
+    ///
+    /// For the water equation (if present):  w_water = 1 / rho_w
+    ///
+    /// The energy equation (if present) is left with zero weight because
+    /// temperature preconditioning is handled separately.
+    template<class Vector, class ElementContext, class Model, class ElementChunksType>
+    void getCoatsWeightsCompositional(int /*pressureVarIndex*/,
+                                      Vector& weights,
+                                      const ElementContext& elemCtx,
+                                      const Model& model,
+                                      const ElementChunksType& element_chunks,
+                                      [[maybe_unused]] bool enable_thread_parallel)
+    {
+        using FluidSystem = typename Model::FluidSystem;
+        using LhsEval = double;
+        using VectorBlockType = typename Vector::block_type;
+        using Evaluation =
+            typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>::block_type;
+        using Toolbox = MathToolbox<Evaluation>;
+        using Indices = typename Model::Indices;
+
+        constexpr int numComponents = Model::numComponents;
+        constexpr int numPhases     = Model::numPhases;
+        constexpr bool waterEnabled = Indices::waterEnabled;
+
+        VectorBlockType bweights;
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#endif
+        for (const auto& chunk : element_chunks) {
+            ElementContext localElemCtx(elemCtx.simulator());
+
+            for (const auto& elem : chunk) {
+                localElemCtx.updatePrimaryStencil(elem);
+                localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                bweights = 0.0;
+
+                // Iterate over HC components (equations conti0EqIdx + 0 .. numComponents-1).
+                // For each component i compute:
+                //   num_i = sum_{alpha in HC} massFraction(alpha,i) * saturation(alpha)
+                //   den_i = sum_{alpha in HC} massFraction(alpha,i) * density(alpha) * saturation(alpha)
+                //   w_i   = num_i / den_i   (= saturation-weighted specific volume)
+                //
+                // When den_i is zero (component absent from all HC phases), set w_i = 0.
+
+                for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+                    double num_i = 0.0;
+                    double den_i = 0.0;
+
+                    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        // Skip the immiscible water phase for HC component weights
+                        if (waterEnabled &&
+                            phaseIdx == static_cast<int>(FluidSystem::waterPhaseIdx))
+                        {
+                            continue;
+                        }
+                        const double S_alpha =
+                            Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx));
+                        const double omega_ai =
+                            Toolbox::template decay<LhsEval>(fs.massFraction(phaseIdx, compIdx));
+                        const double rho_alpha =
+                            Toolbox::template decay<LhsEval>(fs.density(phaseIdx));
+
+                        num_i += omega_ai * S_alpha;
+                        den_i += omega_ai * rho_alpha * S_alpha;
+                    }
+
+                    const int eqIdx = Indices::conti0EqIdx + compIdx;
+                    bweights[eqIdx] = (den_i > 0.0) ? static_cast<LhsEval>(num_i / den_i)
+                                                    : static_cast<LhsEval>(0.0);
+                }
+
+                // Water equation weight: w_water = 1 / rho_w  (ensures phi*S_w contribution)
+                if constexpr (waterEnabled) {
+                    const int waterEqIdx = Indices::conti0EqIdx + numComponents;
+                    const double rho_w =
+                        Toolbox::template decay<LhsEval>(
+                            fs.density(FluidSystem::waterPhaseIdx));
+                    bweights[waterEqIdx] = (rho_w > 0.0)
+                        ? static_cast<LhsEval>(1.0 / rho_w)
+                        : static_cast<LhsEval>(0.0);
+                }
+
+                // Energy equation (if present, numEq > numComponents + waterEnabled):
+                // left at zero -- temperature preconditioning is a separate task.
+
+                // Normalize so that the maximum absolute weight equals one.
+                const double abs_max =
+                    *std::ranges::max_element(bweights,
+                                              [](double a, double b)
+                                              { return std::fabs(a) < std::fabs(b); });
+                if (std::fabs(abs_max) > 0.0) {
+                    bweights /= std::fabs(abs_max);
+                }
+
+                weights[index] = bweights;
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("getCoatsWeightsCompositional() failed: ",
+                                    elemCtx.simulator().vanguard().grid().comm());
+    }
+
 } // namespace Amg
 
 } // namespace Opm

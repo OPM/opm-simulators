@@ -632,11 +632,49 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                             );
                             return weights;
                         };
+                } else if (weightsType == "coatsblackoil") {
+                    // Coats (1980) pressure-equation weights for the blackoil model.
+                    // Extends the analytic formula to include vaporized water (Rvw)
+                    // and dissolved gas in water (Rsw) cross-terms.
+                    weightsCalculator =
+                        [this, pressIndex, enableThreadParallel]
+                        {
+                            Vector weights(rhs_->size());
+                            ElementContext elemCtx(simulator_);
+                            Amg::getCoatsWeightsBlackoil(pressIndex,
+                                                         weights,
+                                                         elemCtx,
+                                                         simulator_.model(),
+                                                         *element_chunks_,
+                                                         enableThreadParallel
+                            );
+                            return weights;
+                        };
+                } else if (weightsType == "coatscompositional") {
+                    // Coats (1980) pressure-equation weights for the compositional
+                    // (ptflash) model.  Uses saturation-weighted specific volumes as
+                    // weights so that the weighted sum of component mass balances
+                    // yields the total pore-volume (volumetric) balance.
+                    weightsCalculator =
+                        [this, pressIndex, enableThreadParallel]
+                        {
+                            Vector weights(rhs_->size());
+                            ElementContext elemCtx(simulator_);
+                            Amg::getCoatsWeightsCompositional(pressIndex,
+                                                              weights,
+                                                              elemCtx,
+                                                              simulator_.model(),
+                                                              *element_chunks_,
+                                                              enableThreadParallel
+                            );
+                            return weights;
+                        };
                 } else {
                     OPM_THROW(std::invalid_argument,
                               "Weights type " + weightsType +
                               "not implemented for cpr."
-                              " Please use quasiimpes, trueimpes or trueimpesanalytic.");
+                              " Please use quasiimpes, trueimpes, trueimpesanalytic,"
+                              " coatsblackoil or coatscompositional.");
                 }
             }
             return weightsCalculator;
