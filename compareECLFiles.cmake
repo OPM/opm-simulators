@@ -21,7 +21,17 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 # Details:
 #   - This test class simply runs a simulation.
 function(add_test_runSimulator)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR DIR DIR_PREFIX PROCS CONFIGURATION POST_COMMAND)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    DIR
+    DIR_PREFIX
+    PROCS
+    CONFIGURATION
+    POST_COMMAND
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -39,11 +49,14 @@ function(add_test_runSimulator)
  if(PARAM_POST_COMMAND)
    list(APPEND DRIVER_ARGS -p "${PARAM_POST_COMMAND}")
  endif()
-  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS}
-               CONFIGURATION ${PARAM_CONFIGURATION})
+ if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+   set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+ endif()
+ opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
+              EXE_NAME ${PARAM_SIMULATOR}
+              DRIVER_ARGS ${DRIVER_ARGS}
+              TEST_ARGS ${TEST_ARGS}
+              CONFIGURATION ${PARAM_CONFIGURATION})
  if(PARAM_PROCS)
     set_tests_properties(runSimulator/${PARAM_CASENAME} PROPERTIES PROCESSORS ${PARAM_PROCS})
   endif()
@@ -59,7 +72,19 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    DIR_PREFIX
+    PREFIX
+    RESTART_STEP
+    RESTART_SCHED
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -84,6 +109,10 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
     list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
+  list(APPEND DRIVER_ARGS -u ${PARAM_SIMULATOR})
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+  endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
@@ -107,7 +136,20 @@ endfunction()
 # Details:
 #   - This test class compares two separate simulations
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME1
+    FILENAME2
+    DIR1
+    DIR2
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    IGNORE_EXTRA_KW
+    DIR_PREFIX
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
@@ -120,6 +162,9 @@ function(add_test_compareSeparateECLFiles)
   endif()
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
@@ -164,11 +209,24 @@ endfunction()
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
 function(add_test_compare_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR TEST_NAME ABS_TOL REL_TOL DIR RESTART_STEP)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    TEST_NAME
+    ABS_TOL
+    REL_TOL
+    DIR
+    RESTART_STEP
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   if (PARAM_TEST_NAME)
     set(TEST_NAME ${PARAM_TEST_NAME})
@@ -202,7 +260,17 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
 function(add_test_compare_parallel_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR POSTFIX MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    POSTFIX
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -220,6 +288,10 @@ function(add_test_compare_parallel_simulation)
     set(MPI_PROCS ${PARAM_MPI_PROCS})
   else()
     set(MPI_PROCS 4)
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL MPI_PROCS)
@@ -258,12 +330,27 @@ endfunction()
 #   - This test class compares the output from a restarted parallel simulation
 #     to that of a non-restarted parallel simulation.
 function(add_test_compare_parallel_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP TEST_NAME)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    MPI_PROCS
+    RESTART_STEP
+    TEST_NAME
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   if (PARAM_TEST_NAME)
@@ -312,7 +399,16 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to that of a parallel simulation running with a custom communicator.
 function(add_test_split_comm)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -324,6 +420,10 @@ function(add_test_split_comm)
     set(MPI_PROCS ${PARAM_MPI_PROCS})
   else()
     set(MPI_PROCS 4)
+  endif()
+
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelSplitComm/${PARAM_SIMULATOR}+${PARAM_CASENAME})
@@ -357,7 +457,18 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareDamarisFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX MPI_PROCS)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    DIR_PREFIX
+    PREFIX
+    MPI_PROCS
+  )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -370,6 +481,9 @@ function(add_test_compareDamarisFiles)
     set(MPI_PROCS ${PARAM_MPI_PROCS})
   else()
     set(MPI_PROCS 4)
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
@@ -436,68 +550,163 @@ endif()
 
 # Simple execution tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-test.sh "")
-add_test_runSimulator(CASENAME norne
-                      FILENAME NORNE_ATW2013
-                      SIMULATOR flow
-                      CONFIGURATION extra)
+add_test_runSimulator(
+  CASENAME
+    norne
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  CONFIGURATION
+    extra
+)
 
-add_test_runSimulator(CASENAME norne_parallel
-                      FILENAME NORNE_ATW2013
-                      SIMULATOR flow
-                      DIR norne
-                      PROCS 4
-                      CONFIGURATION extra)
+add_test_runSimulator(
+  CASENAME
+    norne_parallel
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    norne
+  PROCS
+    4
+  CONFIGURATION
+    extra
+)
 
-add_test_runSimulator(CASENAME spe1case1_carfin
-                      FILENAME SPE1CASE1_CARFIN
-                      SIMULATOR flow
-                      DIR lgr
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    spe1case1_carfin
+  FILENAME
+    SPE1CASE1_CARFIN
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  TEST_ARGS
+    --parsing-strictness=low
+    --enable-ecl-output=true
+    --enable-vtk-output=true
+)
 
-add_test_runSimulator(CASENAME spe1case1_carfin_gr
-                      FILENAME SPE1CASE1_CARFIN_GR
-                      SIMULATOR flow
-                      DIR lgr
-                      TEST_ARGS --parsing-strictness=low --enable-ecl-output=true --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    spe1case1_carfin_gr
+  FILENAME
+    SPE1CASE1_CARFIN_GR
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  TEST_ARGS
+    --parsing-strictness=low
+    --enable-ecl-output=true
+    --enable-vtk-output=true
+)
 
 if(MPI_FOUND)
-  add_test_runSimulator(CASENAME spe1case1_carfin_parallel
-                        FILENAME SPE1CASE1_CARFIN
-                        SIMULATOR flow
-                        DIR lgr
-                        PROCS 4
-                        TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+  add_test_runSimulator(
+    CASENAME
+      spe1case1_carfin_parallel
+    FILENAME
+      SPE1CASE1_CARFIN
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    DIR
+      lgr
+    PROCS
+      4
+    TEST_ARGS
+      --parsing-strictness=low
+      --enable-ecl-output=false
+      --enable-vtk-output=true
+  )
 endif()
 
-add_test_runSimulator(CASENAME dryrun
-                      FILENAME CO2STORE_PRECSALT
-                      SIMULATOR flow
-                      DIR co2store
-                      TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
+add_test_runSimulator(
+  CASENAME
+    dryrun
+  FILENAME
+    CO2STORE_PRECSALT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_brine_precsalt_vapwat
+  DIR
+    co2store
+  TEST_ARGS
+    --enable-dry-run=true
+    --enable-ecl-output=false
+    --enable-vtk-output=true
+)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
-add_test_runSimulator(CASENAME tuning_trgmbe
-                      FILENAME 01_TUNING_TRGMBE
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=true
-                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
+add_test_runSimulator(
+  CASENAME
+    tuning_trgmbe
+  FILENAME
+    01_TUNING_TRGMBE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --output-extra-convergence-info=iterations
+    --enable-tuning=true
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_trgmbe>
+)
 
-add_test_runSimulator(CASENAME notuning_trgmbe
-                      FILENAME 01_TUNING_TRGMBE
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=false
-                      POST_COMMAND $<TARGET_FILE:test_tuning_trgmbe>)
+add_test_runSimulator(
+  CASENAME
+    notuning_trgmbe
+  FILENAME
+    01_TUNING_TRGMBE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --output-extra-convergence-info=iterations
+    --enable-tuning=false
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_trgmbe>
+)
 
 set_tests_properties(runSimulator/notuning_trgmbe PROPERTIES WILL_FAIL TRUE)
 
-add_test_runSimulator(CASENAME tuning_tsinit_nextstep
-                      FILENAME 02_TUNING_TSINIT_NEXTSTEP
-                      SIMULATOR flow
-											DIR tuning
-                      TEST_ARGS --enable-tuning=true
-                      POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
+add_test_runSimulator(
+  CASENAME
+    tuning_tsinit_nextstep
+  FILENAME
+    02_TUNING_TSINIT_NEXTSTEP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    tuning
+  TEST_ARGS
+    --enable-tuning=true
+  POST_COMMAND
+    $<TARGET_FILE:test_tuning_tsinit_nextstep>
+)
 
 get_property(opm-common_EMBEDDED_PYTHON TARGET opmcommon PROPERTY EMBEDDED_PYTHON)
 if (opm-common_EMBEDDED_PYTHON)
@@ -509,68 +718,111 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
-add_test_compareECLFiles(CASENAME norne
-                         FILENAME NORNE_ATW2013
-                         SIMULATOR flow
-                         ABS_TOL 1e-5
-                         REL_TOL 1e-8
-                         PREFIX comparePORV
-                         DIR_PREFIX /porv)
+add_test_compareECLFiles(
+  CASENAME
+    norne
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    1e-5
+  REL_TOL
+    1e-8
+  PREFIX
+    comparePORV
+  DIR_PREFIX
+    /porv
+)
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
-
-add_test_compareECLFiles(CASENAME norne_init
-                         FILENAME NORNE_ATW2013
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         PREFIX compareECLInitFiles
-                         DIR norne
-                         DIR_PREFIX /init)
+add_test_compareECLFiles(
+  CASENAME
+    norne_init
+  FILENAME
+    NORNE_ATW2013
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  PREFIX
+    compareECLInitFiles
+  DIR
+    norne
+  DIR_PREFIX
+    /init
+)
 
 set(_operate_work_tests
   OPERATE_ENDPOINTS-01
   OPERATER_ENDPOINTS-01
 )
 
-add_multiple_tests(_operate_work_tests
+add_multiple_tests(
+  _operate_work_tests
   "operate_work_"
-  SIMULATOR flow
-  ABS_TOL ${abs_tol}
-  REL_TOL ${rel_tol}
-  PREFIX compareECLInitFiles
-  DIR operate
-  DIR_PREFIX /init
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  PREFIX
+    compareECLInitFiles
+  DIR
+    operate
+  DIR_PREFIX
+    /init
 )
-
-# This is not a proper regression test; the test will load a norne case prepared
-# for restart and run one single timestep - of length one day. The results are not
-# verified in any way.
-add_test(NAME NORNE_RESTART
-         COMMAND flow --output-dir=${BASE_RESULT_PATH}/norne-restart ${OPM_TESTS_ROOT}/norne/NORNE_ATW2013_RESTART.DATA)
-
 
 if(MPI_FOUND)
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
 
   # Single test to verify that we treat custom communicators correctly.
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-split-comm-test.sh "")
-  add_test_split_comm(CASENAME spe1
-                      FILENAME SPE1CASE2
-                      SIMULATOR flow
-                      ABS_TOL 0.0
-                      REL_TOL 0.0)
+  add_test_split_comm(
+    CASENAME
+      spe1
+    FILENAME
+      SPE1CASE2
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      0.0
+    REL_TOL
+      0.0
+  )
 
   # Single test for damaris
   if(Damaris_FOUND AND USE_DAMARIS_LIB)
       opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-damaris-regressionTest.sh "")
-      add_test_compareDamarisFiles(CASENAME spe1_damaris
-                      FILENAME SPE1CASE1
-                      SIMULATOR flow
-                      ABS_TOL ${abs_tol}
-                      REL_TOL 0.01
-                      DIR spe1)
+      add_test_compareDamarisFiles(
+        CASENAME
+          spe1_damaris
+        FILENAME
+          SPE1CASE1
+        SIMULATOR
+          flow
+        DEV_SIMULATOR
+          flow_blackoil
+        ABS_TOL
+          ${abs_tol}
+        REL_TOL
+          0.01
+        DIR
+          spe1
+      )
     endif()
 
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)

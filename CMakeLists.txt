@@ -34,6 +34,7 @@ option(USE_AMGX "Enable AMGX support?" OFF)
 option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
+option(USE_DEV_SIMULATOR_IN_TESTS "Use the development simulator binaries in tests?" OFF)
 
 # Wrapper for opm_add_target_options that also adds
 # compile definitions and target links from the library
