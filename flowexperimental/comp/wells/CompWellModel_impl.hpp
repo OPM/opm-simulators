@@ -42,6 +42,7 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator)
     , comm_(simulator.gridView().comm())
     , comp_config_(ecl_state_.compositionalConfig())
     , comp_well_states_(comp_config_)
+    , last_valid_comp_well_states_(comp_config_)
 {
     local_num_cells_ = simulator.gridView().size(0);
 }
@@ -52,9 +53,12 @@ CompWellModel<TypeTag>::
 beginReportStep(unsigned report_step)
 {
     // TODO: not considering the parallel running yet
+    report_step_start_events_ = schedule_[report_step].wellgroup_events();
     wells_ecl_ = schedule_.getWells(report_step);
     initWellConnectionData();
     initWellState();
+    // Save the initial accepted state for this report step.
+    last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
 }
 
 template <typename TypeTag>
@@ -64,6 +68,24 @@ beginTimeStep()
 {
     createWellContainer();
     initWellContainer();
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+restoreLastValidState()
+{
+    comp_well_states_.copyDynamicStateFrom(last_valid_comp_well_states_);
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+endTimeStep()
+{
+    // Persist the accepted well state so failed retries restart from the last
+    // successful timestep rather than from the beginning of the report step.
+    last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
 }
 
 template <typename TypeTag>
@@ -180,11 +202,12 @@ initWellState()
     OPM_END_PARALLEL_TRY_CATCH("ComposotionalWellModel::initializeWellState() failed: ",
                            this->simulator_.vanguard().grid().comm());
 
-    /* TODO: no prev well state for now */
-    // \Note:: we are not supporting dynamic temperature, so the temperature is constant, so we just pass in a single value
+    // Carry accepted well runtime state across report-step reinitialization while
+    // still rebuilding static schedule-derived data for the new episode.
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, cell_temperature[0], cell_mole_fractions, this->well_connection_data_,
-                                 this->summary_state_);
+                                 this->summary_state_,
+                                 &this->last_valid_comp_well_states_);
 }
 
 

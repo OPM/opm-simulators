@@ -321,7 +321,7 @@ namespace Opm
             // Note regarding the CNV pore-volume split: We depend on the
             // fact that the quantities have already been aggregated across
             // all MPI ranks--see the implementation of member function
-            // BlackoilModel::getReservoirConvergence() for details--and are
+            // NonlinearSystemBlackOilReservoir::getReservoirConvergence() for details--and are
             // therefore equal on all ranks.  Consequently, we simply assign
             // 'other's values here, if it is non-empty.  Empty splits
             // typically come from well contributions.

@@ -59,7 +59,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR REFERENCE_SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -84,6 +84,9 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
     list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
+  if(PARAM_REFERENCE_SIMULATOR)
+    list(APPEND DRIVER_ARGS -u ${PARAM_REFERENCE_SIMULATOR})
+  endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
@@ -107,7 +110,7 @@ endfunction()
 # Details:
 #   - This test class compares two separate simulations
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
+  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR REFERENCE_SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
@@ -135,6 +138,9 @@ function(add_test_compareSeparateECLFiles)
                   -n ${MPI_PROCS})
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
+  endif()
+  if(PARAM_REFERENCE_SIMULATOR)
+    list(APPEND DRIVER_ARGS -l ${PARAM_REFERENCE_SIMULATOR})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -474,6 +480,16 @@ add_test_runSimulator(CASENAME dryrun
                       SIMULATOR flow
                       DIR co2store
                       TEST_ARGS --enable-dry-run=true --enable-ecl-output=false --enable-vtk-output=true)
+
+add_test_runSimulator(CASENAME 1dcompositional_flowexp_comp3_2p
+                      FILENAME 1D_COMP
+                      SIMULATOR flowexp_comp3_2p
+                      DIR compositional)
+
+add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
+                      FILENAME 1D_COMP
+                      SIMULATOR flow_comp3_2p
+                      DIR compositional)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_trgmbe

@@ -20,7 +20,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
