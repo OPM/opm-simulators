@@ -24,7 +24,7 @@
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreSetup.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreSetup.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreUtils.hpp>
 
 // Fix conflict with Dune's matrixmarket.hh header - HYPRE defines MM_MAX_LINE_LENGTH as macro

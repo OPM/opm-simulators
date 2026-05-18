@@ -109,20 +109,20 @@ public:
         use_gpu_backend_ = prm.get<bool>("use_gpu", Opm::gpuistl::is_gpu_type<M>::value);
 
         // Initialize Hypre library with backend configuration
-        HypreInterface::initialize(use_gpu_backend_);
+        ::Opm::linalg::HypreInterface::initialize(use_gpu_backend_);
 
         // Create solver
-        solver_ = HypreInterface::createAMGSolver();
-        HypreInterface::setSolverParameters(solver_, prm, use_gpu_backend_);
+        solver_ = ::Opm::linalg::HypreInterface::createAMGSolver();
+        ::Opm::linalg::HypreInterface::setSolverParameters(solver_, prm, use_gpu_backend_);
 
         // Setup parallel info and mappings
-        par_info_ = HypreInterface::setupHypreParallelInfo(comm_, A_);
+        par_info_ = ::Opm::linalg::HypreInterface::setupHypreParallelInfo(comm_, A_);
 
         // Setup sparsity pattern
-        sparsity_pattern_ = HypreInterface::setupSparsityPattern(A_, par_info_, par_info_.owner_first);
+        sparsity_pattern_ = ::Opm::linalg::HypreInterface::setupSparsityPattern(A_, par_info_, par_info_.owner_first);
 
         // Setup host arrays
-        host_arrays_.row_indexes = HypreInterface::computeRowIndexes(
+        host_arrays_.row_indexes = ::Opm::linalg::HypreInterface::computeRowIndexes(
             A_, sparsity_pattern_.ncols, par_info_.local_dune_to_local_hypre, par_info_.owner_first);
 
         // Create indices for vector operations - simple sequential indices for owned DOFs
@@ -159,9 +159,9 @@ public:
         }
 
         // Create Hypre matrix and vectors
-        A_hypre_ = HypreInterface::createMatrix(par_info_.N_owned, par_info_.dof_offset, comm_);
-        x_hypre_ = HypreInterface::createVector(par_info_.N_owned, par_info_.dof_offset, comm_);
-        b_hypre_ = HypreInterface::createVector(par_info_.N_owned, par_info_.dof_offset, comm_);
+        A_hypre_ = ::Opm::linalg::HypreInterface::createMatrix(par_info_.N_owned, par_info_.dof_offset, comm_);
+        x_hypre_ = ::Opm::linalg::HypreInterface::createVector(par_info_.N_owned, par_info_.dof_offset, comm_);
+        b_hypre_ = ::Opm::linalg::HypreInterface::createVector(par_info_.N_owned, par_info_.dof_offset, comm_);
 
         // Perform initial update
         update();
@@ -201,10 +201,10 @@ public:
 #endif
         }
 
-        HypreInterface::destroySolver(solver_);
-        HypreInterface::destroyVector(x_hypre_);
-        HypreInterface::destroyVector(b_hypre_);
-        HypreInterface::destroyMatrix(A_hypre_);
+        ::Opm::linalg::HypreInterface::destroySolver(solver_);
+        ::Opm::linalg::HypreInterface::destroyVector(x_hypre_);
+        ::Opm::linalg::HypreInterface::destroyVector(b_hypre_);
+        ::Opm::linalg::HypreInterface::destroyMatrix(A_hypre_);
     }
 
     /**
