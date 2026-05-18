@@ -20,7 +20,7 @@
 #ifndef OPM_HYPRE_INTERFACE_HPP
 #define OPM_HYPRE_INTERFACE_HPP
 
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreCpuTransfers.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreCpuTransfers.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
@@ -178,7 +178,8 @@ namespace HypreInterface
         } else
 #endif
         {
-            transferCpuVectorToHypre(vec, hypre_vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+            linalg::HypreInterface::transferCpuVectorToHypre(vec, hypre_vec, host_arrays,
+                                                             device_arrays, par_info, use_gpu_backend);
         }
     }
 
@@ -196,7 +197,8 @@ namespace HypreInterface
         } else
 #endif
         {
-            transferHypreToCpuVector(hypre_vec, vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+            linalg::HypreInterface::transferHypreToCpuVector(hypre_vec, vec, host_arrays, device_arrays,
+                                                             par_info, use_gpu_backend);
         }
     }
 
@@ -215,7 +217,7 @@ namespace HypreInterface
         } else
 #endif
         {
-            updateMatrixFromCpuMatrix(
+            linalg::HypreInterface::updateMatrixFromCpuMatrix(
                 matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
         }
     }
