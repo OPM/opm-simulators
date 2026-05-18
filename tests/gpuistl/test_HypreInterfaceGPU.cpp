@@ -29,7 +29,7 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/parallel/mpihelper.hh>

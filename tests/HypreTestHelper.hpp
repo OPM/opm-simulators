@@ -33,7 +33,7 @@
 #include <opm/simulators/linalg/HyprePreconditioner.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 
 #if HAVE_CUDA
 #if USE_HIP
@@ -342,8 +342,8 @@ void testVectorTransfer(bool use_gpu_backend)
     parallel_info.local_hypre_to_local_dune.clear(); // Empty for owner_first = true
 
     // Test transfer to HYPRE
-    ::Opm::gpuistl::HypreInterface::transferVectorToHypre(input_vec, hypre_vec, host_arrays,
-                                                          device_arrays, parallel_info, use_gpu_backend);
+    HypreInterface::transferVectorToHypre(input_vec, hypre_vec, host_arrays,
+                                          device_arrays, parallel_info, use_gpu_backend);
 
     // Test transfer back from HYPRE
     VectorType result_vec = [&]() {
@@ -358,8 +358,8 @@ void testVectorTransfer(bool use_gpu_backend)
 #endif
     }();
 
-    ::Opm::gpuistl::HypreInterface::transferVectorFromHypre(hypre_vec, result_vec, host_arrays,
-                                                            device_arrays, parallel_info, use_gpu_backend);
+    HypreInterface::transferVectorFromHypre(hypre_vec, result_vec, host_arrays,
+                                            device_arrays, parallel_info, use_gpu_backend);
 
     // Verify values
     if constexpr (std::is_same_v<VectorType, Dune::BlockVector<Dune::FieldVector<double, 1>>>) {
@@ -454,13 +454,13 @@ void testMatrixTransfer(bool use_gpu_backend)
     auto hypre_matrix = HypreInterface::createMatrix(3, 0, comm);
 
     // Setup arrays for HypreInterface
-    ::Opm::gpuistl::HypreInterface::SparsityPattern sparsity_pattern;
+    HypreInterface::SparsityPattern sparsity_pattern;
     sparsity_pattern.ncols = ncols;
     sparsity_pattern.rows = rows;
     sparsity_pattern.cols = cols;
     sparsity_pattern.nnz = cols.size();
 
-    ::Opm::gpuistl::HypreInterface::HostArrays host_arrays;
+    HypreInterface::HostDataArrays host_arrays;
     std::vector<int> local_dune_to_local_hypre(3);
     for (int i = 0; i < 3; ++i) {
         local_dune_to_local_hypre[i] = i;
@@ -491,7 +491,8 @@ void testMatrixTransfer(bool use_gpu_backend)
     }
 
     // Test matrix update
-    ::Opm::gpuistl::HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
+    HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern,
+                                       host_arrays, device_arrays, use_gpu_backend);
 
     // Verify values
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, use_gpu_backend);

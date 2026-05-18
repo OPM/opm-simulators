@@ -28,7 +28,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
 
 #include <dune/common/fmatrix.hh>

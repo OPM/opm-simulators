@@ -25,7 +25,7 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -42,7 +42,7 @@
 namespace Hypre
 {
 
-namespace HypreInterface = Opm::gpuistl::HypreInterface;
+namespace HypreInterface = ::Opm::linalg::HypreInterface;
 
 /**
  * @brief Wrapper for Hypre's BoomerAMG preconditioner.
@@ -324,8 +324,8 @@ private:
     // Parallel information and sparsity pattern from HypreInterface
     HypreInterface::ParallelInfo par_info_;
     HypreInterface::SparsityPattern sparsity_pattern_;
-    HypreInterface::HostArrays host_arrays_;
-    HypreInterface::DeviceArrays device_arrays_;
+    HypreInterface::HostDataArrays host_arrays_;
+    HypreInterface::DeviceDataArrays device_arrays_;
 
     // Hypre handles
     HYPRE_Solver solver_ = nullptr;
