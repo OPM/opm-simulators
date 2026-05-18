@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace Opm::gpuistl::HypreInterface
+namespace Opm::linalg::HypreInterface
 {
 /**
  * @brief Get matrix values from Hypre matrix

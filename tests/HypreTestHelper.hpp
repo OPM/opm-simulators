@@ -399,10 +399,10 @@ void testVectorTransfer(bool use_gpu_backend)
 template<typename MatrixType>
 void testMatrixTransfer(bool use_gpu_backend)
 {
-    using namespace Opm::gpuistl;
+    using namespace Opm::linalg;
 
     // Initialize HypreInterface
-    HypreInterface::initialize(use_gpu_backend);
+    ::Opm::gpuistl::HypreInterface::initialize(use_gpu_backend);
 
     // Create test matrix - start with CPU matrix
     using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
@@ -448,24 +448,24 @@ void testMatrixTransfer(bool use_gpu_backend)
 
     // Create HYPRE matrix
     Dune::Amg::SequentialInformation comm;
-    auto hypre_matrix = HypreInterface::createMatrix(3, 0, comm);
+    auto hypre_matrix = ::Opm::gpuistl::HypreInterface::createMatrix(3, 0, comm);
 
     // Setup arrays for HypreInterface
-    HypreInterface::SparsityPattern sparsity_pattern;
+    ::Opm::gpuistl::HypreInterface::SparsityPattern sparsity_pattern;
     sparsity_pattern.ncols = ncols;
     sparsity_pattern.rows = rows;
     sparsity_pattern.cols = cols;
     sparsity_pattern.nnz = cols.size();
 
-    HypreInterface::HostArrays host_arrays;
+    ::Opm::gpuistl::HypreInterface::HostArrays host_arrays;
     std::vector<int> local_dune_to_local_hypre(3);
     for (int i = 0; i < 3; ++i) {
         local_dune_to_local_hypre[i] = i;
     }
     bool owner_first = true;
-    host_arrays.row_indexes = HypreInterface::computeRowIndexes(matrix, ncols, local_dune_to_local_hypre, owner_first);
+    host_arrays.row_indexes = ::Opm::gpuistl::HypreInterface::computeRowIndexes(matrix, ncols, local_dune_to_local_hypre, owner_first);
 
-    HypreInterface::DeviceArrays device_arrays;
+    ::Opm::gpuistl::HypreInterface::DeviceArrays device_arrays;
 
     // Allocate device arrays if using GPU backend
     if (use_gpu_backend) {
@@ -488,7 +488,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     }
 
     // Test matrix update
-    HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
+    ::Opm::gpuistl::HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
 
     // Verify values
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, use_gpu_backend);
@@ -510,7 +510,7 @@ void testMatrixTransfer(bool use_gpu_backend)
 #endif
     }
 
-    HypreInterface::destroyMatrix(hypre_matrix);
+    ::Opm::gpuistl::HypreInterface::destroyMatrix(hypre_matrix);
 }
 
 /**
