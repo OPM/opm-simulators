@@ -262,7 +262,11 @@ void testHyprePreconditioner(const MatrixType& matrix, bool use_gpu)
     prm.put("use_gpu", use_gpu ? 1 : 0);
 
     // Create preconditioner
-    auto prec = std::make_shared<Hypre::HyprePreconditioner<MatrixType, VectorType, VectorType, Dune::Amg::SequentialInformation>>(matrix, prm, Dune::Amg::SequentialInformation());
+    using HyprePC = Opm::linalg::HyprePreconditioner<MatrixType,
+                                                     VectorType,
+                                                     VectorType,
+                                                     Dune::Amg::SequentialInformation>;
+    auto prec = std::make_shared<HyprePC>(matrix, prm, Dune::Amg::SequentialInformation());
 
     // Create solver
     double reduction = 1e-8;
