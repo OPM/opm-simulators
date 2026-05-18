@@ -25,7 +25,7 @@
 #include <_hypre_utilities.h>
 #include <vector>
 
-namespace Opm::gpuistl
+namespace Opm::linalg::HypreInterface
 {
 
 /**
@@ -154,6 +154,7 @@ struct HypreDeviceDataArrays {
      */
     HYPRE_Real* matrix_buffer_device = nullptr;
 };
-} // namespace Opm::gpuistl
+
+} // namespace Opm::linalg::HypreInterface
 
 #endif // OPM_HYPRE_DATA_STRUCTURES_HPP

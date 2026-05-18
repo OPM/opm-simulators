@@ -21,7 +21,7 @@
 #define OPM_HYPRE_INTERFACE_HPP
 
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreCpuTransfers.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreDataStructures.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreSetup.hpp>
@@ -59,10 +59,10 @@ namespace Opm::gpuistl
  */
 namespace HypreInterface
 {
-    using HostArrays = ::Opm::gpuistl::HypreHostDataArrays;
-    using DeviceArrays = ::Opm::gpuistl::HypreDeviceDataArrays;
-    using ParallelInfo = ::Opm::gpuistl::ParallelInfo;
-    using SparsityPattern = ::Opm::gpuistl::SparsityPattern;
+    using HostArrays = ::Opm::linalg::HypreInterface::HypreHostDataArrays;
+    using DeviceArrays = ::Opm::linalg::HypreInterface::HypreDeviceDataArrays;
+    using ParallelInfo = ::Opm::linalg::HypreInterface::ParallelInfo;
+    using SparsityPattern = ::Opm::linalg::HypreInterface::SparsityPattern;
 
     /**
      * @brief Initialize the Hypre library and set memory/execution policy
@@ -110,13 +110,17 @@ namespace HypreInterface
      * @brief Setup parallel information for Hypre (automatically detects serial/parallel)
      */
     template <typename CommType, typename MatrixType>
-    ParallelInfo setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix);
+    linalg::HypreInterface::ParallelInfo
+    setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix);
 
     /**
      * @brief Setup sparsity pattern from matrix (automatically detects CPU/GPU type)
      */
     template <typename MatrixType>
-    SparsityPattern setupSparsityPattern(const MatrixType& matrix, const ParallelInfo& par_info, bool owner_first);
+    linalg::HypreInterface::SparsityPattern
+    setupSparsityPattern(const MatrixType& matrix,
+                         const linalg::HypreInterface::ParallelInfo& par_info,
+                         bool owner_first);
 
     /**
      * @brief Compute row indexes for HYPRE_IJMatrixSetValues2

@@ -22,7 +22,7 @@
 
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreDataStructures.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
@@ -51,24 +51,28 @@ namespace Opm::gpuistl::HypreInterface
 
 // GPU-specific helper functions
 template <typename T, bool ForceLegacy>
-SparsityPattern setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
-                                                  const ParallelInfo& par_info,
-                                                  bool owner_first);
+linalg::HypreInterface::SparsityPattern
+setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
+                                  const linalg::HypreInterface::ParallelInfo& par_info,
+                                  bool owner_first);
 
 template <typename T, bool ForceLegacy>
 std::vector<HYPRE_Int> computeRowIndexesWithMappingGpu(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
                                                        const std::vector<int>& local_dune_to_local_hypre);
 
 // Serial helper functions
-ParallelInfo setupHypreParallelInfoSerial(HYPRE_Int N);
+ linalg::HypreInterface::ParallelInfo setupHypreParallelInfoSerial(HYPRE_Int N);
 
 // Parallel helper functions
 template <typename CommType, typename MatrixType>
-ParallelInfo setupHypreParallelInfoParallel(const CommType& comm, const MatrixType& matrix);
+linalg::HypreInterface::ParallelInfo
+setupHypreParallelInfoParallel(const CommType& comm, const MatrixType& matrix);
 
 template <typename MatrixType>
-SparsityPattern
-setupSparsityPatternFromCpuMatrix(const MatrixType& matrix, const ParallelInfo& par_info, bool owner_first);
+linalg::HypreInterface::SparsityPattern
+setupSparsityPatternFromCpuMatrix(const MatrixType& matrix,
+                                  const linalg::HypreInterface::ParallelInfo& par_info,
+                                  bool owner_first);
 
 template <typename MatrixType>
 std::vector<HYPRE_Int> computeRowIndexesWithMappingCpu(const MatrixType& matrix,
@@ -259,7 +263,7 @@ destroyVector(HYPRE_IJVector vector)
  * @return ParallelInfo structure containing mappings and offsets
  */
 template <typename CommType, typename MatrixType>
-ParallelInfo
+linalg::HypreInterface::ParallelInfo
 setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix)
 {
     if constexpr (std::is_same_v<CommType, Dune::Amg::SequentialInformation>) {
@@ -275,10 +279,10 @@ setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix)
  * @param N Number of rows
  * @return ParallelInfo structure containing mappings and offsets
  */
-inline ParallelInfo
+inline linalg::HypreInterface::ParallelInfo
 setupHypreParallelInfoSerial(HYPRE_Int N)
 {
-    ParallelInfo info;
+    linalg::HypreInterface::ParallelInfo info;
     info.N_owned = N;
 
     info.local_dune_to_local_hypre.resize(N);
@@ -359,10 +363,10 @@ setupHypreParallelInfoSerial(HYPRE_Int N)
  * @note May modify comm if index set holes are detected (rare in OPM)
  */
 template <typename CommType, typename MatrixType>
-inline ParallelInfo
+linalg::HypreInterface::ParallelInfo
 setupHypreParallelInfoParallel(const CommType& comm, const MatrixType& matrix)
 {
-    ParallelInfo info;
+    linalg::HypreInterface::ParallelInfo info;
     const auto& collective_comm = comm.communicator();
 
     // Initialize mapping arrays to not owned (-1) state
@@ -463,8 +467,10 @@ setupHypreParallelInfoParallel(const CommType& comm, const MatrixType& matrix)
  * @return Sparsity pattern information
  */
 template <typename MatrixType>
-SparsityPattern
-setupSparsityPattern(const MatrixType& matrix, const ParallelInfo& par_info, bool owner_first)
+ linalg::HypreInterface::SparsityPattern
+setupSparsityPattern(const MatrixType& matrix,
+                     const linalg::HypreInterface::ParallelInfo& par_info,
+                     bool owner_first)
 {
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
     if constexpr (is_gpu_type<MatrixType>::value) {
@@ -485,10 +491,12 @@ setupSparsityPattern(const MatrixType& matrix, const ParallelInfo& par_info, boo
  * @return Sparsity pattern information
  */
 template <typename MatrixType>
-SparsityPattern
-setupSparsityPatternFromCpuMatrix(const MatrixType& matrix, const ParallelInfo& par_info, bool owner_first)
+linalg::HypreInterface::SparsityPattern
+setupSparsityPatternFromCpuMatrix(const MatrixType& matrix,
+                                  const linalg::HypreInterface::ParallelInfo& par_info,
+                                  bool owner_first)
 {
-    SparsityPattern pattern;
+    linalg::HypreInterface::SparsityPattern pattern;
 
     // Determine the size for cols array based on owner_first
     if (owner_first) {
@@ -550,12 +558,12 @@ setupSparsityPatternFromCpuMatrix(const MatrixType& matrix, const ParallelInfo& 
  * @return Sparsity pattern information
  */
 template <typename T, bool ForceLegacy>
-SparsityPattern
+linalg::HypreInterface::SparsityPattern
 setupSparsityPatternFromGpuMatrix(const GpuSparseMatrixWrapper<T, ForceLegacy>& gpu_matrix,
-                                  const ParallelInfo& par_info,
+                                  const linalg::HypreInterface::ParallelInfo& par_info,
                                   bool owner_first)
 {
-    SparsityPattern pattern;
+    linalg::HypreInterface::SparsityPattern pattern;
 
     // Determine the size for cols array based on owner_first
     if (owner_first) {

@@ -20,7 +20,7 @@
 #ifndef OPM_HYPRE_CPU_TRANSFERS_HPP
 #define OPM_HYPRE_CPU_TRANSFERS_HPP
 
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreDataStructures.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
 
 #include <HYPRE.h>
@@ -66,9 +66,9 @@ template <typename VectorType>
 void
 transferCpuVectorToHypre(const VectorType& cpu_vec,
                          HYPRE_IJVector hypre_vec,
-                         HypreHostDataArrays& host_arrays,
-                         [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
-                         const ParallelInfo& par_info,
+                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
+                         [[maybe_unused]] const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         const linalg::HypreInterface::ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
     const int N = static_cast<int>(host_arrays.indices.size());
@@ -126,9 +126,9 @@ template <typename VectorType>
 void
 transferHypreToCpuVector(HYPRE_IJVector hypre_vec,
                          VectorType& cpu_vec,
-                         HypreHostDataArrays& host_arrays,
-                         [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
-                         const ParallelInfo& par_info,
+                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
+                         [[maybe_unused]] const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         const linalg::HypreInterface::ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
     const int N = static_cast<int>(host_arrays.indices.size());
@@ -186,9 +186,9 @@ template <typename MatrixType>
 void
 updateMatrixFromCpuMatrix(const MatrixType& cpu_matrix,
                           HYPRE_IJMatrix hypre_matrix,
-                          const SparsityPattern& sparsity_pattern,
-                          const HypreHostDataArrays& host_arrays,
-                          [[maybe_unused]] const HypreDeviceDataArrays& device_arrays,
+                          const linalg::HypreInterface::SparsityPattern& sparsity_pattern,
+                          const linalg::HypreInterface::HypreHostDataArrays& host_arrays,
+                          [[maybe_unused]] const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
                           bool use_gpu_backend)
 {
     const auto N = sparsity_pattern.rows.size();
