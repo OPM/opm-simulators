@@ -318,11 +318,11 @@ void testVectorTransfer(bool use_gpu_backend)
     auto hypre_vec = HypreInterface::createVector(5, 0, comm);
 
     // Setup helper arrays
-    HypreInterface::HypreHostDataArrays host_arrays;
+    HypreInterface::HostDataArrays host_arrays;
     host_arrays.indices.resize(5);
     std::iota(host_arrays.indices.begin(), host_arrays.indices.end(), 0);
 
-    HypreInterface::HypreDeviceDataArrays device_arrays;
+    HypreInterface::DeviceDataArrays device_arrays;
 
     // Allocate device arrays if using GPU backend
     if (use_gpu_backend) {
@@ -468,7 +468,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     bool owner_first = true;
     host_arrays.row_indexes = HypreInterface::computeRowIndexes(matrix, ncols, local_dune_to_local_hypre, owner_first);
 
-    HypreInterface::HypreDeviceDataArrays device_arrays;
+    HypreInterface::DeviceDataArrays device_arrays;
 
     // Allocate device arrays if using GPU backend
     if (use_gpu_backend) {

@@ -57,8 +57,8 @@ template <typename VectorType>
 void
 transferGpuVectorToHypre(const VectorType& gpu_vec,
                          HYPRE_IJVector hypre_vec,
-                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
-                         const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         linalg::HypreInterface::HostDataArrays& host_arrays,
+                         const linalg::HypreInterface::DeviceDataArrays& device_arrays,
                          const linalg::HypreInterface::ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
@@ -114,8 +114,8 @@ template <typename VectorType>
 void
 transferHypreToGpuVector(HYPRE_IJVector hypre_vec,
                          VectorType& gpu_vec,
-                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
-                         const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         linalg::HypreInterface::HostDataArrays& host_arrays,
+                         const linalg::HypreInterface::DeviceDataArrays& device_arrays,
                          const linalg::HypreInterface::ParallelInfo& par_info,
                          bool use_gpu_backend)
 {
@@ -173,8 +173,8 @@ void
 updateMatrixFromGpuSparseMatrix(const MatrixType& gpu_matrix,
                                 HYPRE_IJMatrix hypre_matrix,
                                 const linalg::HypreInterface::SparsityPattern& sparsity_pattern,
-                                const linalg::HypreInterface::HypreHostDataArrays& host_arrays,
-                                const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                                const linalg::HypreInterface::HostDataArrays& host_arrays,
+                                const linalg::HypreInterface::DeviceDataArrays& device_arrays,
                                 bool use_gpu_backend)
 {
     const auto N = sparsity_pattern.rows.size();

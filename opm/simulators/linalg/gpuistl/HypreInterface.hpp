@@ -59,8 +59,8 @@ namespace Opm::gpuistl
  */
 namespace HypreInterface
 {
-    using HostArrays = ::Opm::linalg::HypreInterface::HypreHostDataArrays;
-    using DeviceArrays = ::Opm::linalg::HypreInterface::HypreDeviceDataArrays;
+    using HostArrays = ::Opm::linalg::HypreInterface::HostDataArrays;
+    using DeviceArrays = ::Opm::linalg::HypreInterface::DeviceDataArrays;
     using ParallelInfo = ::Opm::linalg::HypreInterface::ParallelInfo;
     using SparsityPattern = ::Opm::linalg::HypreInterface::SparsityPattern;
 

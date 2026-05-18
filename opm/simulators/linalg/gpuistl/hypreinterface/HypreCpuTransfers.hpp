@@ -66,8 +66,8 @@ template <typename VectorType>
 void
 transferCpuVectorToHypre(const VectorType& cpu_vec,
                          HYPRE_IJVector hypre_vec,
-                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
-                         const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         linalg::HypreInterface::HostDataArrays& host_arrays,
+                         const linalg::HypreInterface::DeviceDataArrays& device_arrays,
                          const linalg::HypreInterface::ParallelInfo& par_info)
 {
     const int N = static_cast<int>(host_arrays.indices.size());
@@ -103,8 +103,8 @@ template <typename VectorType>
 void
 transferHypreToCpuVector(HYPRE_IJVector hypre_vec,
                          VectorType& cpu_vec,
-                         linalg::HypreInterface::HypreHostDataArrays& host_arrays,
-                         const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays,
+                         linalg::HypreInterface::HostDataArrays& host_arrays,
+                         const linalg::HypreInterface::DeviceDataArrays& device_arrays,
                          const linalg::HypreInterface::ParallelInfo& par_info)
 {
     const int N = static_cast<int>(host_arrays.indices.size());
@@ -143,7 +143,7 @@ void
 updateMatrixFromCpuMatrix(const MatrixType& cpu_matrix,
                           HYPRE_IJMatrix hypre_matrix,
                           const linalg::HypreInterface::SparsityPattern& sparsity_pattern,
-                          const linalg::HypreInterface::HypreDeviceDataArrays& device_arrays)
+                          const linalg::HypreInterface::DeviceDataArrays& device_arrays)
 {
     const auto N = sparsity_pattern.rows.size();
 
