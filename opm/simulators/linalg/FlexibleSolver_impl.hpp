@@ -34,6 +34,7 @@
 
 #if HAVE_AVX2_EXTENSION
 #include <opm/simulators/linalg/mixed/wrapper.hpp>
+#include <opm/simulators/linalg/mixed/SolverAdapter.hpp>
 #endif
 
 #include <dune/common/fmatrix.hh>
@@ -193,7 +194,7 @@ namespace Dune
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for single precision.");
             } else {
                 const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
-                bool use_mixed_dilu= (prec_type=="mixed-dilu");
+                bool use_mixed_dilu= (prec_type=="legacy-mixed-dilu");
                 using MatrixType = decltype(linearoperator_for_solver_->getmat());
                 linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
                                                                             linearoperator_for_solver_->getmat(),
@@ -202,6 +203,15 @@ namespace Dune
                                                                             use_mixed_dilu
                                                                         );
             }
+            // mixed-solver adapter starts here
+          } else if (solver_type == "mixed-precision") {
+                linsolver_ = std::make_shared<Dune::MixedAdapter<Comm,Operator,VectorType>>(linearoperator_for_solver_,
+                                                                            scalarproduct_,
+                                                                            preconditioner_,
+                                                                            tol, // desired residual reduction factor
+                                                                            maxiter, // maximum number of iterations
+                                                                            verbosity,
+                                                                            comm);
 #endif
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
