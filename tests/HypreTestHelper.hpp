@@ -32,7 +32,8 @@
 
 #include <opm/simulators/linalg/HyprePreconditioner.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/gpuistl/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 
 #if HAVE_CUDA
 #if USE_HIP
@@ -261,7 +262,11 @@ void testHyprePreconditioner(const MatrixType& matrix, bool use_gpu)
     prm.put("use_gpu", use_gpu ? 1 : 0);
 
     // Create preconditioner
-    auto prec = std::make_shared<Hypre::HyprePreconditioner<MatrixType, VectorType, VectorType, Dune::Amg::SequentialInformation>>(matrix, prm, Dune::Amg::SequentialInformation());
+    using HyprePC = Opm::linalg::HyprePreconditioner<MatrixType,
+                                                     VectorType,
+                                                     VectorType,
+                                                     Dune::Amg::SequentialInformation>;
+    auto prec = std::make_shared<HyprePC>(matrix, prm, Dune::Amg::SequentialInformation());
 
     // Create solver
     double reduction = 1e-8;
@@ -288,7 +293,7 @@ void testHyprePreconditioner(const MatrixType& matrix, bool use_gpu)
 template<typename VectorType>
 void testVectorTransfer(bool use_gpu_backend)
 {
-    using namespace Opm::gpuistl;
+    using namespace Opm::linalg;
 
     // Initialize HypreInterface
     HypreInterface::initialize(use_gpu_backend);
@@ -317,11 +322,11 @@ void testVectorTransfer(bool use_gpu_backend)
     auto hypre_vec = HypreInterface::createVector(5, 0, comm);
 
     // Setup helper arrays
-    HypreInterface::HostArrays host_arrays;
+    HypreInterface::HostDataArrays host_arrays;
     host_arrays.indices.resize(5);
     std::iota(host_arrays.indices.begin(), host_arrays.indices.end(), 0);
 
-    HypreInterface::DeviceArrays device_arrays;
+    HypreInterface::DeviceDataArrays device_arrays;
 
     // Allocate device arrays if using GPU backend
     if (use_gpu_backend) {
@@ -341,7 +346,8 @@ void testVectorTransfer(bool use_gpu_backend)
     parallel_info.local_hypre_to_local_dune.clear(); // Empty for owner_first = true
 
     // Test transfer to HYPRE
-    HypreInterface::transferVectorToHypre(input_vec, hypre_vec, host_arrays, device_arrays, parallel_info, use_gpu_backend);
+    HypreInterface::transferVectorToHypre(input_vec, hypre_vec, host_arrays,
+                                          device_arrays, parallel_info, use_gpu_backend);
 
     // Test transfer back from HYPRE
     VectorType result_vec = [&]() {
@@ -356,7 +362,8 @@ void testVectorTransfer(bool use_gpu_backend)
 #endif
     }();
 
-    HypreInterface::transferVectorFromHypre(hypre_vec, result_vec, host_arrays, device_arrays, parallel_info, use_gpu_backend);
+    HypreInterface::transferVectorFromHypre(hypre_vec, result_vec, host_arrays,
+                                            device_arrays, parallel_info, use_gpu_backend);
 
     // Verify values
     if constexpr (std::is_same_v<VectorType, Dune::BlockVector<Dune::FieldVector<double, 1>>>) {
@@ -399,7 +406,7 @@ void testVectorTransfer(bool use_gpu_backend)
 template<typename MatrixType>
 void testMatrixTransfer(bool use_gpu_backend)
 {
-    using namespace Opm::gpuistl;
+    using namespace Opm::linalg;
 
     // Initialize HypreInterface
     HypreInterface::initialize(use_gpu_backend);
@@ -457,7 +464,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     sparsity_pattern.cols = cols;
     sparsity_pattern.nnz = cols.size();
 
-    HypreInterface::HostArrays host_arrays;
+    HypreInterface::HostDataArrays host_arrays;
     std::vector<int> local_dune_to_local_hypre(3);
     for (int i = 0; i < 3; ++i) {
         local_dune_to_local_hypre[i] = i;
@@ -465,7 +472,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     bool owner_first = true;
     host_arrays.row_indexes = HypreInterface::computeRowIndexes(matrix, ncols, local_dune_to_local_hypre, owner_first);
 
-    HypreInterface::DeviceArrays device_arrays;
+    HypreInterface::DeviceDataArrays device_arrays;
 
     // Allocate device arrays if using GPU backend
     if (use_gpu_backend) {
@@ -488,7 +495,8 @@ void testMatrixTransfer(bool use_gpu_backend)
     }
 
     // Test matrix update
-    HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
+    HypreInterface::updateMatrixValues(matrix, hypre_matrix, sparsity_pattern,
+                                       host_arrays, device_arrays, use_gpu_backend);
 
     // Verify values
     auto values_hypre = HypreInterface::getMatrixValues(hypre_matrix, ncols, rows, cols, use_gpu_backend);
@@ -518,7 +526,7 @@ void testMatrixTransfer(bool use_gpu_backend)
  */
 inline void testResourceManagement(bool use_gpu_backend)
 {
-    using namespace Opm::gpuistl;
+    using namespace Opm::linalg;
 
     // Initialize HypreInterface
     HypreInterface::initialize(use_gpu_backend);
@@ -540,15 +548,15 @@ inline void testResourceManagement(bool use_gpu_backend)
  */
 inline void testErrorHandling(bool use_gpu_backend)
 {
-    using namespace Opm::gpuistl;
+    using namespace Opm::linalg;
 
     // Initialize HypreInterface
     HypreInterface::initialize(use_gpu_backend);
 
     // Test that errors are properly thrown
     Dune::Amg::SequentialInformation comm;
-    BOOST_CHECK_THROW(HypreInterface::createMatrix(-1, 0, comm), Opm::gpuistl::HypreError);
-    BOOST_CHECK_THROW(HypreInterface::createVector(-1, 0, comm), Opm::gpuistl::HypreError);
+    BOOST_CHECK_THROW(HypreInterface::createMatrix(-1, 0, comm), Opm::linalg::HypreInterface::HypreError);
+    BOOST_CHECK_THROW(HypreInterface::createVector(-1, 0, comm), Opm::linalg::HypreInterface::HypreError);
 
     // Test null pointer handling (should not throw)
     HypreInterface::destroySolver(nullptr);

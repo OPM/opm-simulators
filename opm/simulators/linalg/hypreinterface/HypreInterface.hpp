@@ -20,12 +20,11 @@
 #ifndef OPM_HYPRE_INTERFACE_HPP
 #define OPM_HYPRE_INTERFACE_HPP
 
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreCpuTransfers.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreSetup.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreUtils.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreCpuTransfers.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreSetup.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreUtils.hpp>
 
 // Fix conflict with Dune's matrixmarket.hh header - HYPRE defines MM_MAX_LINE_LENGTH as macro
 // but Dune expects it as enum value
@@ -33,10 +32,13 @@
 #undef MM_MAX_LINE_LENGTH
 #endif
 
+#if HYPRE_USING_CUDA
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
-
-namespace Opm::gpuistl
-{
+#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
+#elif HYPRE_USING_HIP
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_type_detection.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/hypreinterface/HypreGpuTransfers.hpp>
+#endif
 
 /**
  * @brief Unified interface for Hypre operations with both CPU and GPU data structures
@@ -57,12 +59,8 @@ namespace Opm::gpuistl
  * @note Error handling: All functions throw HypreError exceptions when Hypre operations fail.
  * @note This is a consolidated version that includes all functionality across multiple files.
  */
-namespace HypreInterface
+namespace Opm::linalg::HypreInterface
 {
-    using HostArrays = ::Opm::gpuistl::HypreHostDataArrays;
-    using DeviceArrays = ::Opm::gpuistl::HypreDeviceDataArrays;
-    using ParallelInfo = ::Opm::gpuistl::ParallelInfo;
-    using SparsityPattern = ::Opm::gpuistl::SparsityPattern;
 
     /**
      * @brief Initialize the Hypre library and set memory/execution policy
@@ -110,13 +108,17 @@ namespace HypreInterface
      * @brief Setup parallel information for Hypre (automatically detects serial/parallel)
      */
     template <typename CommType, typename MatrixType>
-    ParallelInfo setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix);
+    ParallelInfo
+    setupHypreParallelInfo(const CommType& comm, const MatrixType& matrix);
 
     /**
      * @brief Setup sparsity pattern from matrix (automatically detects CPU/GPU type)
      */
     template <typename MatrixType>
-    SparsityPattern setupSparsityPattern(const MatrixType& matrix, const ParallelInfo& par_info, bool owner_first);
+    SparsityPattern
+    setupSparsityPattern(const MatrixType& matrix,
+                         const ParallelInfo& par_info,
+                         bool owner_first);
 
     /**
      * @brief Compute row indexes for HYPRE_IJMatrixSetValues2
@@ -133,8 +135,8 @@ namespace HypreInterface
     template <typename VectorType>
     void transferVectorToHypre(const VectorType& vec,
                                HYPRE_IJVector hypre_vec,
-                               HostArrays& host_arrays,
-                               const DeviceArrays& device_arrays,
+                               HostDataArrays& host_arrays,
+                               const DeviceDataArrays& device_arrays,
                                const ParallelInfo& par_info,
                                bool use_gpu_backend);
 
@@ -144,8 +146,8 @@ namespace HypreInterface
     template <typename VectorType>
     void transferVectorFromHypre(HYPRE_IJVector hypre_vec,
                                  VectorType& vec,
-                                 HostArrays& host_arrays,
-                                 const DeviceArrays& device_arrays,
+                                 HostDataArrays& host_arrays,
+                                 const DeviceDataArrays& device_arrays,
                                  const ParallelInfo& par_info,
                                  bool use_gpu_backend);
 
@@ -156,43 +158,47 @@ namespace HypreInterface
     void updateMatrixValues(const MatrixType& matrix,
                             HYPRE_IJMatrix hypre_matrix,
                             const SparsityPattern& sparsity_pattern,
-                            const HostArrays& host_arrays,
-                            const DeviceArrays& device_arrays,
+                            const HostDataArrays& host_arrays,
+                            const DeviceDataArrays& device_arrays,
                             bool use_gpu_backend);
 
     template <typename VectorType>
     void transferVectorToHypre(const VectorType& vec,
                                HYPRE_IJVector hypre_vec,
-                               HostArrays& host_arrays,
-                               const DeviceArrays& device_arrays,
+                               HostDataArrays& host_arrays,
+                               const DeviceDataArrays& device_arrays,
                                const ParallelInfo& par_info,
                                bool use_gpu_backend)
     {
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-        if constexpr (is_gpu_type<VectorType>::value) {
-            transferGpuVectorToHypre(vec, hypre_vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+        if constexpr (gpuistl::is_gpu_type<VectorType>::value) {
+            gpuistl::HypreInterface::transferGpuVectorToHypre(vec, hypre_vec, host_arrays,
+                                                              device_arrays, par_info, use_gpu_backend);
         } else
 #endif
         {
-            transferCpuVectorToHypre(vec, hypre_vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+            transferCpuVectorToHypre(vec, hypre_vec, host_arrays,
+                                     device_arrays, par_info, use_gpu_backend);
         }
     }
 
     template <typename VectorType>
     void transferVectorFromHypre(HYPRE_IJVector hypre_vec,
                                  VectorType& vec,
-                                 HostArrays& host_arrays,
-                                 const DeviceArrays& device_arrays,
+                                 HostDataArrays& host_arrays,
+                                 const DeviceDataArrays& device_arrays,
                                  const ParallelInfo& par_info,
                                  bool use_gpu_backend)
     {
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-        if constexpr (is_gpu_type<VectorType>::value) {
-            transferHypreToGpuVector(hypre_vec, vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+        if constexpr (gpuistl::is_gpu_type<VectorType>::value) {
+            gpuistl::HypreInterface::transferHypreToGpuVector(hypre_vec, vec, host_arrays,
+                                                              device_arrays, par_info, use_gpu_backend);
         } else
 #endif
         {
-            transferHypreToCpuVector(hypre_vec, vec, host_arrays, device_arrays, par_info, use_gpu_backend);
+            transferHypreToCpuVector(hypre_vec, vec, host_arrays, device_arrays,
+                                     par_info, use_gpu_backend);
         }
     }
 
@@ -200,24 +206,26 @@ namespace HypreInterface
     void updateMatrixValues(const MatrixType& matrix,
                             HYPRE_IJMatrix hypre_matrix,
                             const SparsityPattern& sparsity_pattern,
-                            const HostArrays& host_arrays,
-                            const DeviceArrays& device_arrays,
+                            const HostDataArrays& host_arrays,
+                            const DeviceDataArrays& device_arrays,
                             bool use_gpu_backend)
     {
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
-        if constexpr (is_gpu_type<MatrixType>::value) {
-            updateMatrixFromGpuSparseMatrix(
-                matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
+        if constexpr (gpuistl::is_gpu_type<MatrixType>::value) {
+            gpuistl::HypreInterface::updateMatrixFromGpuSparseMatrix(matrix,
+                                                                     hypre_matrix,
+                                                                     sparsity_pattern,
+                                                                     host_arrays,
+                                                                     device_arrays,
+                                                                     use_gpu_backend);
         } else
 #endif
         {
-            updateMatrixFromCpuMatrix(
-                matrix, hypre_matrix, sparsity_pattern, host_arrays, device_arrays, use_gpu_backend);
+            updateMatrixFromCpuMatrix(matrix, hypre_matrix, sparsity_pattern,
+                                      host_arrays, device_arrays, use_gpu_backend);
         }
     }
 
-} // namespace HypreInterface
-
-} // namespace Opm::gpuistl
+} // namespace Opm::linalg::HypreInterface
 
 #endif // OPM_HYPRE_INTERFACE_HPP

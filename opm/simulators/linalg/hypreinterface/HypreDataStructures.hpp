@@ -25,7 +25,7 @@
 #include <_hypre_utilities.h>
 #include <vector>
 
-namespace Opm::gpuistl
+namespace Opm::linalg::HypreInterface
 {
 
 /**
@@ -103,7 +103,7 @@ struct SparsityPattern {
  * Pre-computed arrays to efficiently transfer data to/from HYPRE without
  * repeated calculations during solve operations.
  */
-struct HypreHostDataArrays {
+struct HostDataArrays {
     /** @brief Pre-computed row start indexes for HYPRE_IJMatrixSetValues2
      *
      * For owner_first=true: prefix sum of ncols (contiguous data)
@@ -134,7 +134,7 @@ struct HypreHostDataArrays {
  * These arrays mirror the host data but reside in GPU memory. All pointers are
  * managed manually using HYPRE's memory management functions.
  */
-struct HypreDeviceDataArrays {
+struct DeviceDataArrays {
     /** @brief Mirrors host data arrays */
     HYPRE_Int* ncols_device = nullptr;
     HYPRE_BigInt* rows_device = nullptr;
@@ -154,6 +154,7 @@ struct HypreDeviceDataArrays {
      */
     HYPRE_Real* matrix_buffer_device = nullptr;
 };
-} // namespace Opm::gpuistl
+
+} // namespace Opm::linalg::HypreInterface
 
 #endif // OPM_HYPRE_DATA_STRUCTURES_HPP

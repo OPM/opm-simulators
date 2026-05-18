@@ -259,7 +259,7 @@ struct StandardPreconditioners
                           && std::is_same_v<HYPRE_Real, typename V::field_type>) {
                 F::addCreator(
                     "hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-                        return std::make_shared<Hypre::HyprePreconditioner<M, V, V, C>>(op.getmat(), prm, comm);
+                        return std::make_shared<linalg::HyprePreconditioner<M, V, V, C>>(op.getmat(), prm, comm);
                     });
             }
 #endif
