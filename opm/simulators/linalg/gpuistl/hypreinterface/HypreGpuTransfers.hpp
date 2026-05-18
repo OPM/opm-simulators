@@ -21,7 +21,7 @@
 #define OPM_HYPRE_GPU_TRANSFERS_HPP
 
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 
 #if HAVE_CUDA
 #if USE_HIP

@@ -27,7 +27,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace Opm::gpuistl
+namespace Opm::linalg::HypreInterface
 {
 
 /**
@@ -93,7 +93,7 @@ hypreSafeCall(
  * OPM_HYPRE_SAFE_CALL(HYPRE_BoomerAMGCreate(&solver));
  * @endcode
  */
-#define OPM_HYPRE_SAFE_CALL(expr) ::Opm::gpuistl::hypreSafeCall((expr), #expr, __FILE__, __func__, __LINE__)
+#define OPM_HYPRE_SAFE_CALL(expr) ::Opm::linalg::HypreInterface::hypreSafeCall((expr), #expr, __FILE__, __func__, __LINE__)
 
 /**
  * @brief Short form macro for Hypre function calls (for backward compatibility)
@@ -102,6 +102,6 @@ hypreSafeCall(
 #define HYPRE_SAFE_CALL(expr) OPM_HYPRE_SAFE_CALL(expr)
 #endif
 
-} // namespace Opm::gpuistl
+} // namespace Opm::linalg::HypreInterface
 
 #endif // OPM_HYPRE_ERROR_HANDLING_HPP

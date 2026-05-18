@@ -26,7 +26,7 @@
 #undef MM_MAX_LINE_LENGTH
 #endif
 
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 
 #include <HYPRE.h>
 #include <_hypre_utilities.h>

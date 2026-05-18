@@ -547,8 +547,8 @@ inline void testErrorHandling(bool use_gpu_backend)
 
     // Test that errors are properly thrown
     Dune::Amg::SequentialInformation comm;
-    BOOST_CHECK_THROW(HypreInterface::createMatrix(-1, 0, comm), Opm::gpuistl::HypreError);
-    BOOST_CHECK_THROW(HypreInterface::createVector(-1, 0, comm), Opm::gpuistl::HypreError);
+    BOOST_CHECK_THROW(HypreInterface::createMatrix(-1, 0, comm), Opm::linalg::HypreInterface::HypreError);
+    BOOST_CHECK_THROW(HypreInterface::createVector(-1, 0, comm), Opm::linalg::HypreInterface::HypreError);
 
     // Test null pointer handling (should not throw)
     HypreInterface::destroySolver(nullptr);

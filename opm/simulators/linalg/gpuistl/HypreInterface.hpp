@@ -22,7 +22,7 @@
 
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreCpuTransfers.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreGpuTransfers.hpp>
 #include <opm/simulators/linalg/gpuistl/hypreinterface/HypreSetup.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreUtils.hpp>

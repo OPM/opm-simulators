@@ -21,7 +21,7 @@
 #define OPM_HYPRE_CPU_TRANSFERS_HPP
 
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 
 #include <HYPRE.h>
 #include <_hypre_utilities.h>

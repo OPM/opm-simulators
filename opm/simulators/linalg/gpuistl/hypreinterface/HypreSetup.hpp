@@ -23,7 +23,7 @@
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
-#include <opm/simulators/linalg/gpuistl/hypreinterface/HypreErrorHandling.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/graph.hh>

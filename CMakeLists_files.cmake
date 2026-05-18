@@ -396,7 +396,6 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg AmgxInterface.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg HypreInterface.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg hypreinterface/HypreCpuTransfers.hpp)
-  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg hypreinterface/HypreErrorHandling.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg hypreinterface/HypreGpuTransfers.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg hypreinterface/HypreSetup.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg PinnedMemoryHolder.hpp)
@@ -1421,6 +1420,7 @@ if(HYPRE_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/HyprePreconditioner.hpp
     opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp
+    opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp
     opm/simulators/linalg/hypreinterface/HypreUtils.hpp
   )
 endif()
