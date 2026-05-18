@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/Preconditioner2InverseOperator.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
@@ -244,6 +245,12 @@ namespace Dune
                                                                                         maxiter, // maximum number of iterations
                                                                                         verbosity);
             }
+        } else if (solver_type == "preconditioner2inverseoperator") {
+            if (!preconditioner_) {
+                OPM_THROW(std::invalid_argument,
+                          "Properties: Solver preconditioner2inverseoperator requires a preconditioner.");
+            }
+            linsolver_ = std::make_shared<Dune::Preconditioner2InverseOperator<VectorType>>(preconditioner_);
         } else {
             if constexpr (!Opm::is_gpu_operator_v<Operator> && !Opm::detail::is_multi_type_block_vector_v<VectorType>) {
 #if HAVE_SUITESPARSE_UMFPACK
