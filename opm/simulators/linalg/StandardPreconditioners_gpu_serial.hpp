@@ -17,7 +17,11 @@
 #ifndef OPM_STANDARDPRECONDITIONERS_GPU_SERIAL_HEADER
 #define OPM_STANDARDPRECONDITIONERS_GPU_SERIAL_HEADER
 
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_preconditioner_utils.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/detail/gpu_preconditioner_utils.hpp>
+#endif
 
 #include <dune/istl/bcrsmatrix.hh>
 
