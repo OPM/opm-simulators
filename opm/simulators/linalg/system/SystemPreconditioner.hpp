@@ -53,8 +53,9 @@ public:
                          int pressureIndex,
                          const Opm::PropertyTree& prm)
         : S_(S)
+        , pressureIndex_(pressureIndex)
     {
-        initSubSolvers(prm, weightsCalculator, pressureIndex);
+        initSubSolvers(prm, weightsCalculator);
         initWorkVectors();
     }
 
@@ -67,14 +68,16 @@ public:
                          const ResComm& resComm)
         : S_(S)
         , resComm_(&resComm)
+        , pressureIndex_(pressureIndex)
     {
-        initSubSolvers(prm, weightsCalculator, pressureIndex);
+        initSubSolvers(prm, weightsCalculator);
         initWorkVectors();
     }
 
     void pre(SystemVectorT<Scalar>&, SystemVectorT<Scalar>&) override
     {
     }
+
     void post(SystemVectorT<Scalar>&) override
     {
     }
@@ -94,6 +97,14 @@ public:
         wellSolver_->preconditioner().update();
     }
 
+    void updateForChangedWellStructure()
+    {
+        resSolver_->preconditioner().update();
+        resSmoother_->preconditioner().update();
+        initWellSolver();
+        resizeWellWorkVectors();
+    }
+
     bool hasPerfectUpdate() const override
     {
         return true;
@@ -105,7 +116,6 @@ public:
         const auto& C = S_[_1][_0];
         const auto& B = S_[_0][_1];
         const auto& D = S_[_1][_1];
-
         resRes_ = d[_0];
         wRes_ = d[_1];
         resSol_ = 0.0;
@@ -159,6 +169,8 @@ public:
 private:
     const SystemMatrixT<Scalar>& S_;
     const ResComm* resComm_ = nullptr;
+    int pressureIndex_ = 0;
+    Opm::PropertyTree wellprm_;
 
     std::unique_ptr<ResOp> rop_;
     std::unique_ptr<WellOperator> wop_;
@@ -182,46 +194,59 @@ private:
         }
     }
 
+    void initWellSolver()
+    {
+        wop_ = std::make_unique<WellOperator>(S_[_1][_1]);
+        std::function<WellVectorT<Scalar>()> weightsCalculatorWell;
+        wellSolver_ = std::make_unique<WellFlexibleSolverType>(
+            *wop_, wellprm_, weightsCalculatorWell, pressureIndex_);
+    }
+
     void initSubSolvers(const Opm::PropertyTree& prm,
-                        const std::function<ResVectorT<Scalar>()>& weightsCalculator,
-                        int pressureIndex)
+                        const std::function<ResVectorT<Scalar>()>& weightsCalculator)
     {
         auto resprm = prm.get_child("reservoir_solver");
         auto resprmsmoother = prm.get_child("reservoir_smoother");
-        auto wellprm = prm.get_child("well_solver");
+        wellprm_ = prm.get_child("well_solver");
 
         if constexpr (isParallel) {
             rop_ = std::make_unique<ResOp>(S_[_0][_0], *resComm_);
             resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, *resComm_, resprm, weightsCalculator, pressureIndex);
+                *rop_, *resComm_, resprm, weightsCalculator, pressureIndex_);
             resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, *resComm_, resprmsmoother, weightsCalculator, pressureIndex);
+                *rop_, *resComm_, resprmsmoother, weightsCalculator, pressureIndex_);
         } else {
             rop_ = std::make_unique<ResOp>(S_[_0][_0]);
             resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, resprm, weightsCalculator, pressureIndex);
+                *rop_, resprm, weightsCalculator, pressureIndex_);
             resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, resprmsmoother, weightsCalculator, pressureIndex);
+                *rop_, resprmsmoother, weightsCalculator, pressureIndex_);
         }
 
-        auto wop = std::make_unique<WellOperator>(S_[_1][_1]);
-        std::function<WellVectorT<Scalar>()> weightsCalculatorWell;
-        wellSolver_ = std::make_unique<WellFlexibleSolverType>(
-            *wop, wellprm, weightsCalculatorWell, pressureIndex);
-        wop_ = std::move(wop);
+        initWellSolver();
     }
 
     void initWorkVectors()
     {
+        resizeReservoirWorkVectors();
+        resizeWellWorkVectors();
+    }
+
+    void resizeReservoirWorkVectors()
+    {
         const auto numRes = S_[_0][_0].N();
-        const auto numWell = S_[_1][_1].N();
-        wSol_.resize(numWell);
         resSol_.resize(numRes);
         dresSol_.resize(numRes);
-        dwSol_.resize(numWell);
         tmp_resRes_.resize(numRes);
-        tmp_wRes_.resize(numWell);
         resRes_.resize(numRes);
+    }
+
+    void resizeWellWorkVectors()
+    {
+        const auto numWell = S_[_1][_1].N();
+        wSol_.resize(numWell);
+        dwSol_.resize(numWell);
+        tmp_wRes_.resize(numWell);
         wRes_.resize(numWell);
     }
 };

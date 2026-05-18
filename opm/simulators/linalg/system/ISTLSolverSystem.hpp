@@ -78,15 +78,17 @@ public:
         OPM_TIMEBLOCK(istlSolverSolve);
         ++this->solveCount_;
 
-        const size_t numRes = Parent::matrix_->N();
+        const std::size_t numRes = Parent::matrix_->N();
+        const std::size_t numWell = cachedWellStructure_.totalWellDofs;
+
         sysX_[_0].resize(numRes);
         sysX_[_0] = 0.0;
-        sysX_[_1].resize(cachedWellDofs_);
+        sysX_[_1].resize(numWell);
         sysX_[_1] = 0.0;
 
         sysRhs_[_0].resize(numRes);
         sysRhs_[_0] = *Parent::rhs_;
-        sysRhs_[_1].resize(cachedWellDofs_);
+        sysRhs_[_1].resize(numWell);
         sysRhs_[_1] = 0.0;
 
         Dune::InverseOperatorResult result;
@@ -100,7 +102,13 @@ public:
 
 private:
     bool sysInitialized_ = false;
-    size_t cachedWellDofs_ = 0;
+    WellMatrixStructure cachedWellStructure_;
+
+    // Current per-well B/C/D blocks for the explicit 2x2 system matrix.
+    std::vector<WRMatrixT<Scalar>> wellBMatrices_;
+    std::vector<RWMatrixT<Scalar>> wellCMatrices_;
+    std::vector<WWMatrixT<Scalar>> wellDMatrices_;
+    std::vector<std::vector<int>> wellCells_;
 
     // Owned storage for merged well matrices; SystemMatrix points into these.
     WRMatrixT<Scalar> mergedB_;
@@ -126,6 +134,10 @@ private:
 
     using SysSolverType = Dune::InverseOperator<SystemVectorT<Scalar>, SystemVectorT<Scalar>>;
     using SysPrecondType = Dune::PreconditionerWithUpdate<SystemVectorT<Scalar>, SystemVectorT<Scalar>>;
+    using SeqSysPrecondType = SystemPreconditioner<Scalar, SeqResOperatorT<Scalar>>;
+#if HAVE_MPI
+    using ParSysPrecondType = SystemPreconditioner<Scalar, ParResOperatorT<Scalar>, ParResComm>;
+#endif
     SysSolverType* sysSolver_ = nullptr;
     SysPrecondType* sysPrecond_ = nullptr;
 
@@ -133,53 +145,78 @@ private:
     {
         OPM_TIMEBLOCK(flexibleSolverPrepare);
 
-        std::vector<WRMatrixT<Scalar>> b_matrices;
-        std::vector<RWMatrixT<Scalar>> c_matrices;
-        std::vector<WWMatrixT<Scalar>> d_matrices;
-        std::vector<std::vector<int>> wcells;
+        wellBMatrices_.clear();
+        wellCMatrices_.clear();
+        wellDMatrices_.clear();
+        wellCells_.clear();
 
         this->simulator_.problem().wellModel().addBCDMatrix(
-            b_matrices, c_matrices, d_matrices, wcells);
+            wellBMatrices_, wellCMatrices_, wellDMatrices_, wellCells_);
 
-        Opm::WellMatrixMerger<Scalar> merger(Parent::matrix_->N());
-        for (size_t i = 0; i < b_matrices.size(); ++i) {
-            merger.addWell(b_matrices[i],
-                           c_matrices[i],
-                           d_matrices[i],
-                           wcells[i],
-                           static_cast<int>(i),
-                           "Well" + std::to_string(i + 1));
-        }
-        merger.finalize();
+        const Opm::WellMatrixMerger<Scalar> merger(
+            Parent::matrix_->N(), wellBMatrices_, wellCMatrices_, wellDMatrices_, wellCells_);
 
-        const size_t newWellDofs = merger.getMergedD().N();
-        const bool localNeedRebuild = !sysInitialized_ || (newWellDofs != cachedWellDofs_);
+        const bool localStructureChanged = !sysInitialized_
+            || !merger.hasSameStructure(cachedWellStructure_);
 
-        // All ranks must agree: rebuild if ANY rank needs it, since
-        // create and update take different MPI-collective code paths
-        // (AMG hierarchy construction vs. update).
-        const bool needRebuild
-            = this->comm_->communicator().max(static_cast<int>(localNeedRebuild)) > 0;
-
-        mergedB_ = std::move(merger.getMergedB());
-        mergedC_ = std::move(merger.getMergedC());
-        mergedD_ = std::move(merger.getMergedD());
-        sysMatrix_.A = Parent::matrix_;
-        sysMatrix_.B = &mergedB_;
-        sysMatrix_.C = &mergedC_;
-        sysMatrix_.D = &mergedD_;
-        cachedWellDofs_ = newWellDofs;
+        // All ranks must agree on whether to take the structure-change path,
+        // because the distributed solver create and update paths use different
+        // MPI-collective sequences.
+        const bool needStructureRefresh = !sysInitialized_
+            || this->comm_->communicator().max(static_cast<int>(localStructureChanged)) > 0;
 
         const auto& prm = this->prm_[this->activeSolverNum_];
 
-        if (needRebuild) {
+        if (needStructureRefresh) {
             OPM_TIMEBLOCK(flexibleSolverCreate);
-            createSystemSolver(prm);
+            merger.buildMatrices(mergedB_, mergedC_, mergedD_);
+            sysMatrix_.A = Parent::matrix_;
+            sysMatrix_.B = &mergedB_;
+            sysMatrix_.C = &mergedC_;
+            sysMatrix_.D = &mergedD_;
+            cachedWellStructure_ = merger.buildStructure();
+
+            refreshSystemSolverForChangedWellStructure(prm);
             sysInitialized_ = true;
         } else {
             OPM_TIMEBLOCK(flexibleSolverUpdate);
+            // Pattern unchanged: write fresh values into the existing merged
+            // matrices without any (de)allocation.
+            merger.updateValues(mergedB_, mergedC_, mergedD_);
+
+            // Refresh A pointer in case the reservoir matrix was reallocated.
+            sysMatrix_.A = Parent::matrix_;
+            sysMatrix_.B = &mergedB_;
+            sysMatrix_.C = &mergedC_;
+            sysMatrix_.D = &mergedD_;
             sysPrecond_->update();
         }
+    }
+
+    void refreshSystemSolverForChangedWellStructure(const Opm::PropertyTree& prm)
+    {
+        if (!sysInitialized_ || !sysPrecond_) {
+            createSystemSolver(prm);
+            return;
+        }
+
+#if HAVE_MPI
+        if (this->comm_->communicator().size() > 1) {
+            if (auto* precond = dynamic_cast<ParSysPrecondType*>(sysPrecond_)) {
+                precond->updateForChangedWellStructure();
+                return;
+            }
+            createSystemSolver(prm);
+            return;
+        }
+#endif
+
+        if (auto* precond = dynamic_cast<SeqSysPrecondType*>(sysPrecond_)) {
+            precond->updateForChangedWellStructure();
+            return;
+        }
+
+        createSystemSolver(prm);
     }
 
     void createSystemSolver(const Opm::PropertyTree& prm)
