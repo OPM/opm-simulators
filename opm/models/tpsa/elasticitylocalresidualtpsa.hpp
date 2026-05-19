@@ -32,7 +32,9 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/materialstates/MaterialStateTPSA.hpp>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
+#include <opm/models/utils/basicproperties.hh>
 
 #include <opm/simulators/flow/FacePropertiesTPSA.hpp>
 
