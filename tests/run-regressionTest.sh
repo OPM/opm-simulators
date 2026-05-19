@@ -27,6 +27,7 @@ fi
 RESTART_STEP=""
 OPTIND=1
 while getopts "i:r:b:f:a:t:c:d:s:e:u:h:" OPT
+do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
     r) RESULT_PATH=${OPTARG} ;;
@@ -40,7 +41,6 @@ while getopts "i:r:b:f:a:t:c:d:s:e:u:h:" OPT
     e) EXE_NAME=${OPTARG} ;;
     u) REFERENCE_EXE_NAME=${OPTARG} ;;
     h) RESTART_SCHED=${OPTARG} ;;
-    u) REF_EXE_NAME=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -114,8 +114,7 @@ do
     echo "=== Executing comparison for UNSMRY files for restarted run ==="
   else
     echo "=== Executing comparison for EGRID, INIT, UNRST, UNSMRY and RFT files for restarted run ==="
-   fi
-<<<<<<< HEAD
+  fi
    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
    if [ $? -ne 0 ]
    then

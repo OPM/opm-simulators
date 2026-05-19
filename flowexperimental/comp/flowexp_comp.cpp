@@ -30,9 +30,39 @@
 
 #include <array>
 #include <cstdlib>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 #include <tuple>
 
 #include "flowexp_comp.hpp"
+
+namespace {
+std::string deckFilenameFromArgv(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view arg{argv[i]};
+        constexpr std::string_view key = "--ecl-deck-file-name";
+
+        if (arg == key) {
+            if (i + 1 < argc) {
+                return argv[i + 1];
+            }
+            throw std::runtime_error("Missing value for --ecl-deck-file-name");
+        }
+
+        if (arg.starts_with(key) && arg.size() > key.size() && arg[key.size()] == '=') {
+            return std::string(arg.substr(key.size() + 1));
+        }
+
+        if (!arg.empty() && arg.front() != '-') {
+            return std::string(arg);
+        }
+    }
+
+    throw std::runtime_error("No deck filename provided on the command line");
+}
+} // namespace
 
 template <int compileTimeComponent>
 std::tuple<bool, int>
@@ -80,16 +110,8 @@ runComponent(int runtimecomponent, bool water, int argc, char** argv)
 int
 main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0, true>;
-    Opm::registerEclTimeSteppingParameters<double>();
-
-    // At the moment, this is probably as optimal as can be.
-    // We only read the RUNSPEC of the Deck file to get the numComp,
-    // and for this we need to first read the CLI arguments.
-    Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
-
-    auto inputFilename
-        = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
+    // We only need the deck path for early RUNSPEC inspection.
+    const auto inputFilename = Opm::FlowGenericVanguard::canonicalDeckPath(deckFilenameFromArgv(argc, argv));
 
     // Only read the RUNSPEC section of the deck
     const auto deck
