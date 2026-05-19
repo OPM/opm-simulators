@@ -341,10 +341,10 @@ namespace Amg
                 double rv = Toolbox::template decay<double>(fs.Rv());
                 const auto& priVars = solution[index];
                 if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                    rs = 0.0;
+                    rs = 0.0;// then oil saturation is zero an rs undetermined, in simulator it is saturated 
                 }
                 if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    rv = 0.0;
+                    rv = 0.0;// then gas saturation is zero but rv is undetermined, in simulator it is saturated
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                     && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -365,6 +365,9 @@ namespace Amg
                         (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
                         / denominator);
                 }
+                // in the understaturated case it is possible to modify the weights between saturated and undersaturated equation.
+                // a natural since bouth only depend on one saturation.
+
 
                 weights[index] = bweights;
             }
