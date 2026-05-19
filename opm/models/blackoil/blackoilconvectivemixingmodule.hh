@@ -35,6 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
@@ -164,10 +165,8 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     using Toolbox = MathToolbox<Evaluation>;
     using ConvectiveMixingModuleParamT = ConvectiveMixingModuleParam<Scalar>;
 
-    enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { dimWorld = GridView::dimensionworld };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
+    static constexpr int conti0EqIdx = Indices::conti0EqIdx;
+    static constexpr int dimWorld = GridView::dimensionworld;
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
@@ -200,6 +199,10 @@ public:
                                                  const IntensiveQuantities& intQuantsEx,
                                                  const unsigned phaseIdx,
                                                  const CMMParam& info) {
+        // Local constexpr aliases avoid nvcc's failure to resolve class-scope
+        // static constexpr members in device code.
+        constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+        constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
 
         if (info.active_.empty()) {
             return;
@@ -214,9 +217,9 @@ public:
         }
 
         const auto& liquidPhaseIdx =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
-               ? fsys.waterPhaseIdx
-               : fsys.oilPhaseIdx;
+            fsys.phaseIsActive(waterPhaseIdx)
+               ? waterPhaseIdx
+               : oilPhaseIdx;
 
         // Compute avg density based on pure water
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
@@ -309,6 +312,11 @@ public:
                                                         const Scalar faceArea,
                                                         const CMMParam& info)
     {
+        // Local constexpr aliases avoid nvcc's failure to resolve class-scope
+        // static constexpr members in device code.
+        constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+        constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
         if (info.active_.empty()) {
@@ -320,9 +328,9 @@ public:
         }
 
         const auto& liquidPhaseIdx =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
-                ? fsys.waterPhaseIdx
-                : fsys.oilPhaseIdx;
+            fsys.phaseIsActive(waterPhaseIdx)
+                ? waterPhaseIdx
+                : oilPhaseIdx;
 
         // interiour
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
@@ -331,14 +339,14 @@ public:
         const auto& salt_in = intQuantsIn.fluidState().saltSaturation();
 
         const auto bLiquidSatIn =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
+            fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                        t_in, p_in, rssat_in, salt_in)
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsIn.pvtRegionIndex(),
                                                                      t_in, p_in, rssat_in);
 
         const auto& densityLiquidIn =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
+            fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().waterReferenceDensity(intQuantsIn.pvtRegionIndex())
                 : fsys.oilPvt().oilReferenceDensity(intQuantsIn.pvtRegionIndex());
 
@@ -354,14 +362,14 @@ public:
         const auto rssat_ex = Opm::getValue(intQuantsEx.saturatedDissolutionFactor());
         const auto salt_ex = Opm::getValue(intQuantsEx.fluidState().saltSaturation());
         const auto bLiquidSatEx =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
+            fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                        t_ex, p_ex, rssat_ex, salt_ex)
                 : fsys.oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
                                                                      t_ex, p_ex, rssat_ex);
 
         const auto& densityLiquidEx =
-            fsys.phaseIsActive(fsys.waterPhaseIdx)
+            fsys.phaseIsActive(waterPhaseIdx)
                 ? fsys.waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex())
                 : fsys.oilPvt().oilReferenceDensity(intQuantsEx.pvtRegionIndex());
 
@@ -389,7 +397,7 @@ public:
             const auto& rssat_up = (upIdx == interiorDofIdx) ? rssat_in : rssat_ex;
             unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;
             const auto& Rsup =
-                fsys.phaseIsActive(fsys.waterPhaseIdx)
+                fsys.phaseIsActive(waterPhaseIdx)
                     ? up.fluidState().Rsw()
                     : up.fluidState().Rs();
 

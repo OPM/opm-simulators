@@ -833,6 +833,9 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
+    std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
+    { return thermalLawManager_; }
+
     template <class FluidState, class ...Args>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,

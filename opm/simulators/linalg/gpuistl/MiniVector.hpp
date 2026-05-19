@@ -181,6 +181,12 @@ public:
         return Dimension;
     }
 
+    /** @return Always \c false; a fixed‑size vector is never empty. */
+    OPM_HOST_DEVICE static constexpr bool empty() noexcept
+    {
+        return Dimension == 0;
+    }
+
 
     /**
      * @brief Fill every component with the supplied value.

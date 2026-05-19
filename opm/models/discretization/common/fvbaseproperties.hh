@@ -46,6 +46,12 @@ namespace TTag {
 struct FvBaseDiscretization
 { using InheritsFrom = std::tuple<FvBaseNewtonMethod, ImplicitModel>; };
 
+template<class TypeTag, template<class> class Storage>
+struct to_gpu_type {};
+
+template<class TypeTag, template <class> class Storage>
+using to_gpu_type_t = typename to_gpu_type<TypeTag, Storage>::type;
+
 } // namespace TTag
 
 
@@ -131,6 +137,11 @@ struct PrimaryVariables { using type = UndefinedProperty; };
 //! The secondary variables within a sub-control volume
 template<class TypeTag, class MyTypeTag>
 struct IntensiveQuantities { using type = UndefinedProperty; };
+
+//! The blackoilmodel that is tailored for GPU compatibility
+template<class TypeTag, class MyTypeTag>
+struct GpuFIBlackOilModel { using type = UndefinedProperty; };
+
 //! The discretization specific part of the intensive quantities
 
 template<class TypeTag, class MyTypeTag>
