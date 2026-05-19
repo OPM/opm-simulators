@@ -852,9 +852,9 @@ add_test_compare_parallel_simulation(
   DEV_SIMULATOR
     flow_blackoil
   ABS_TOL
-    ${abs_tol}
+    ${abs_tol_parallel}
   REL_TOL
-    ${rel_tol}
+    ${rel_tol_parallel}
   DIR
     winjmult
   TEST_ARGS
@@ -872,9 +872,9 @@ add_test_compare_parallel_simulation(
   DEV_SIMULATOR
     flow_blackoil
   ABS_TOL
-    ${abs_tol}
+    ${abs_tol_parallel}
   REL_TOL
-    ${rel_tol}
+    ${rel_tol_parallel}
   DIR
     winjdam
   TEST_ARGS
