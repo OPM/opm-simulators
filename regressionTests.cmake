@@ -809,6 +809,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    base_model_1_addzcorn
+  FILENAME
+    BASE_MODEL_1_ADDZCORN
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    model1
+)
+
+add_test_compareECLFiles(
+  CASENAME
     base_model2_welpi
   FILENAME
     0B_WELPI_MODEL2

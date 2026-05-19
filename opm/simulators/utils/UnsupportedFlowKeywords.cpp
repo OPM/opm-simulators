@@ -36,7 +36,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"ACTIONW", {true, std::nullopt}},
         {"ACTPARAM", {true, std::nullopt}},
         {"ADSALNOD", {true, std::nullopt}},
-        {"ADDZCORN", {true, std::nullopt}},
         {"ADSORP", {true, std::nullopt}},
         {"AITS", {false, std::nullopt}},
         {"AITSOFF", {false, std::nullopt}},
