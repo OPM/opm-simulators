@@ -210,8 +210,7 @@ struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::Forchheim
  * 0 \stackrel{!}{=}
  *  f_\alpha = \left\{
  *  \begin{array}{cl}
- *    S_\alpha&  \quad \text{if phase }\alpha\text{ is not present} \    \
- *    1 - \sum_\kappa x_\alpha^\kappa&  \quad \text{else}
+ *    S_\alpha&  \quad \text{if phase }\alpha\text{ is not present} \\ 1 - \sum_\kappa x_\alpha^\kappa&  \quad \text{else}
  *  \end{array}
  *  \right.
  * \f]
