@@ -54,6 +54,7 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
@@ -97,11 +98,15 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsageInfo<IndexTraits>& pu,
-                         const Parallel::Communication& comm)
+                         const Parallel::Communication& comm,
+                         const BlackoilModelParameters<Scalar>& param,
+                         const NewtonIterationContext& iter_ctx)
     : schedule_(schedule)
     , summaryState_(summaryState)
     , eclState_(eclState)
     , comm_(comm)
+    , param_(param)
+    , iter_ctx_(iter_ctx)
     , gen_gaslift_(gaslift)
     , wbp_(*this)
     , phase_usage_info_(pu)
@@ -208,7 +213,6 @@ void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 initFromRestartFile(const RestartValue& restartValues,
                     std::unique_ptr<WellTestState> wtestState,
                     const std::size_t numCells,
-                    bool handle_ms_well,
                     bool enable_distributed_wells)
 {
     // The restart step value is used to identify wells present at the given
@@ -226,7 +230,7 @@ initFromRestartFile(const RestartValue& restartValues,
     this->initializeWellProdIndCalculators();
     initializeWellPerfData();
 
-    handle_ms_well &= anyMSWellOpenLocal();
+    bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
     // Resize for restart step
     this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                              this->schedule(), handle_ms_well, numCells,
@@ -262,7 +266,7 @@ initFromRestartFile(const RestartValue& restartValues,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
-prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_well, bool enable_distributed_wells)
+prepareDeserialize(int report_step, const std::size_t numCells, bool enable_distributed_wells)
 {
     // wells_ecl_ should only contain wells on this processor.
     wells_ecl_ = getLocalWells(report_step);
@@ -272,7 +276,7 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_w
     initializeWellPerfData();
 
     if (! this->wells_ecl_.empty()) {
-        handle_ms_well &= anyMSWellOpenLocal();
+        const bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
         this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                                  this->schedule(), handle_ms_well, numCells,
                                  this->well_perf_data_, this->summaryState_, enable_distributed_wells);
@@ -630,10 +634,10 @@ bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 checkGroupHigherConstraints(const Group& group,
                             DeferredLogger& deferred_logger,
                             const int reportStepIdx,
-                            const int max_number_of_group_switch,
                             const bool update_group_switching_log)
 {
 
+    const int max_number_of_group_switch = param_.max_number_of_group_switches_;
     bool changed = false;
     auto [fipnum, pvtreg] = this->getGroupFipnumAndPvtreg();
 
@@ -1213,8 +1217,6 @@ groupAndNetworkData(const int reportStepIdx) const
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
-                              const NewtonIterationContext& iterCtx,
-                              const Scalar tol_nupcol,
                               const bool update_wellgrouptarget)
 {
     OPM_TIMEFUNCTION();
@@ -1222,7 +1224,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
     // Update accumulated group consumption/import rates for current report step
-    if (iterCtx.isFirstGlobalIteration()) {
+    if (iter_ctx_.isFirstGlobalIteration()) {
         this->groupState().update_gconsump(schedule(), reportStepIdx, this->summaryState_);
     }
 
@@ -1239,7 +1241,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().updateGlobalIsGrup(comm_, well_status);
 
     GroupStateHelperType &group_state_helper = this->groupStateHelper();
-    if (iterCtx.withinNupcol(nupcol)) {
+    if (iter_ctx_.withinNupcol(nupcol)) {
         OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
@@ -1283,13 +1285,14 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                         Scalar small_rate = 1e-12; // m3/s
                         Scalar denominator = (0.5*gr_rate_nupcol + 0.5*gr_rate);
                         Scalar rel_change = denominator > small_rate ? std::abs( (gr_rate_nupcol - gr_rate) / denominator) : 0.0;
+                        const Scalar tol_nupcol = param_.nupcol_group_rate_tolerance_;
                         if ( rel_change > tol_nupcol) {
                             this->updateNupcolWGState();
                             if (comm_.rank() == 0) {
                                 const std::string control_str = is_vrep? "VREP" : "REIN";
                                 const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
                                                         "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
-                                                        rel_change, tol_nupcol, iterCtx.iteration(), control_str, gr_name, nupcol);
+                                                        rel_change, tol_nupcol, iter_ctx_.iteration(), control_str, gr_name, nupcol);
                                 group_state_helper.deferredLogger().debug(msg);
                             }
                         }
@@ -1325,7 +1328,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
 
-    if (iterCtx.isFirstGlobalIteration()) {
+    if (iter_ctx_.isFirstGlobalIteration()) {
         group_state_helper.updatePreviousGroupProductionRates(fieldGroup);
     }
 

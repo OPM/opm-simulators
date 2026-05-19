@@ -52,6 +52,14 @@ ReservoirCouplingSlaveReportStep(
 template <class Scalar>
 bool
 ReservoirCouplingSlaveReportStep<Scalar>::
+hasMasterGroupNodePressure(const std::string& gname) const
+{
+    return this->master_group_node_pressures_.count(gname) > 0;
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlaveReportStep<Scalar>::
 hasMasterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     return this->master_injection_targets_.count({phase, gname}) > 0;
@@ -71,6 +79,14 @@ ReservoirCouplingSlaveReportStep<Scalar>::
 hasMasterProductionTarget(const std::string& gname) const
 {
     return this->master_production_targets_.count(gname) > 0;
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingSlaveReportStep<Scalar>::
+masterGroupNodePressure(const std::string& gname) const
+{
+    return this->master_group_node_pressures_.at(gname);
 }
 
 template <class Scalar>
@@ -95,6 +111,39 @@ ReservoirCouplingSlaveReportStep<Scalar>::
 masterProductionTarget(const std::string& gname) const
 {
     return this->master_production_targets_.at(gname);
+}
+
+// Receive the master's single-bool flag telling the slave whether the master
+// will iterate the cross-rescoup network exchange this sync timestep.
+// Mirrored into `last_received_master_group_node_pressures_is_final_`:
+// is_final = !active, so when the master is active the slave's outer-loop
+// gate sees "not final" and participates in the per-iteration node-pressure
+// receive in updateWellControlsAndNetworkIteration.
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveCoupledNetworkActiveStatusFromMaster()
+{
+    std::size_t payload = 0u;
+    if (this->comm().rank() == 0) {
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            &payload,
+            /*count=*/1,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::CoupledNetworkActiveStatus),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+    }
+    this->comm().broadcast(&payload, /*count=*/1, /*emitter_rank=*/0);
+    const bool active = payload != 0u;
+    this->last_received_master_group_node_pressures_is_final_ = !active;
+    this->logger().debug(fmt::format(
+        "Received coupled-network active status (active={}) from master process",
+        active));
 }
 
 template <class Scalar>
@@ -139,6 +188,45 @@ receiveInjectionGroupTargetsFromMaster(std::size_t num_targets)
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures)
+{
+    std::vector<MasterGroupNodePressure> pressures(num_pressures);
+    if (this->comm().rank() == 0) {
+        auto MPI_MASTER_GROUP_NODE_PRESSURE_TYPE =
+            Dune::MPITraits<MasterGroupNodePressure>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            pressures.data(),
+            /*count=*/num_pressures,
+            /*datatype=*/MPI_MASTER_GROUP_NODE_PRESSURE_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::MasterGroupNodePressures),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+        this->logger().debug(fmt::format(
+            "Received {} master group node pressures from master process rank 0",
+            num_pressures
+        ));
+    }
+    this->comm().broadcast(
+        pressures.data(), num_pressures, /*emitter_rank=*/0
+    );
+    // Clear old pressures before storing new ones from master
+    this->master_group_node_pressures_.clear();
+    for (const auto& entry : pressures) {
+        const auto& group_name = this->slave_.slaveGroupIdxToGroupName(entry.group_name_idx);
+        this->setMasterGroupNodePressure(group_name, entry.pressure);
+        this->logger().debug(fmt::format(
+            "Stored master group node pressure for group '{}': pressure={}",
+            group_name, entry.pressure
+        ));
+    }
+}
+
+template <class Scalar>
 std::pair<std::size_t, std::size_t>
 ReservoirCouplingSlaveReportStep<Scalar>::
 receiveNumGroupConstraintsFromMaster() const {
@@ -164,6 +252,37 @@ receiveNumGroupConstraintsFromMaster() const {
                              "production constraints: {} from master process",
                              num_injection_targets, num_production_constraints));
     return std::make_pair(num_injection_targets, num_production_constraints);
+}
+
+template <class Scalar>
+std::pair<std::size_t, bool>
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveNumMasterGroupNodePressuresFromMaster()
+{
+    std::vector<std::size_t> header(2);
+    if (this->comm().rank() == 0) {
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            header.data(),
+            /*count=*/2,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::NumMasterGroupNodePressures),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+        this->logger().debug("Received master-group-node-pressures header from master process rank 0");
+    }
+    this->comm().broadcast(header.data(), /*count=*/2, /*emitter_rank=*/0);
+    const auto num_pressures = header[0];
+    const bool is_final = header[1] != 0u;
+    this->last_received_master_group_node_pressures_is_final_ = is_final;
+    this->logger().debug(fmt::format(
+        "Received master-group-node-pressures header (count={}, is_final={}) from master process",
+        num_pressures, is_final
+    ));
+    return {num_pressures, is_final};
 }
 
 template <class Scalar>
@@ -231,6 +350,14 @@ sendProductionDataToMaster(
 ) const
 {
     sendDataToMaster_(production_data, MessageTag::SlaveProductionData, "production data");
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+setMasterGroupNodePressure(const std::string& gname, const Scalar pressure)
+{
+    this->master_group_node_pressures_[gname] = pressure;
 }
 
 template <class Scalar>

@@ -132,10 +132,13 @@ private:
 };
 
 enum class MessageTag : int {
+    CoupledNetworkActiveStatus,
     InjectionGroupTargets,
     MasterGroupNames,
     MasterGroupNamesSize,
+    MasterGroupNodePressures,
     MasterStartOfReportStep,
+    NumMasterGroupNodePressures,
     NumSlaveGroupConstraints,
     ProductionGroupConstraints,
     SlaveActivationDate,
@@ -266,6 +269,20 @@ struct MasterProductionLimits {
     Scalar gas_limit{-1};
     Scalar liquid_limit{-1};
     Scalar resv_limit{-1};
+};
+
+/// @brief Master-computed network-leaf node pressure for a single master group.
+///
+/// The slave applies the pressure as a dynamic THP limit to every producer
+/// in the corresponding master group.
+///
+/// Only emitted for master groups that are leaf nodes in the master's extended network.
+template <class Scalar>
+struct MasterGroupNodePressure {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar pressure;              // Network-leaf node pressure (SI units, Pa)
 };
 
 // Helper functions

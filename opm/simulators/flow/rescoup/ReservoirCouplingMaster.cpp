@@ -437,12 +437,43 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+sendMasterGroupNodePressuresToSlave(std::size_t slave_idx,
+                                    const std::vector<MasterGroupNodePressure>& pressures) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendMasterGroupNodePressuresToSlave(slave_idx, pressures);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendCoupledNetworkActiveStatusToSlave(std::size_t slave_idx, bool active) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendCoupledNetworkActiveStatusToSlave(slave_idx, active);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 sendNumGroupConstraintsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
                            std::size_t num_production_constraints) const
 {
     assert(this->report_step_data_);
     this->report_step_data_->sendNumGroupConstraintsToSlave(slave_idx, num_injection_targets, num_production_constraints);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendNumMasterGroupNodePressuresToSlave(std::size_t slave_idx,
+                                       std::size_t num_pressures,
+                                       bool is_final) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendNumMasterGroupNodePressuresToSlave(
+        slave_idx, num_pressures, is_final);
 }
 
 template <class Scalar>

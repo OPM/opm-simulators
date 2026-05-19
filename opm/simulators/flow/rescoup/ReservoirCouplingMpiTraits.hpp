@@ -231,6 +231,15 @@ struct MPITraits<
         &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::liquid_limit,
         &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::resv_limit> { };
 
+// Trait for MasterGroupNodePressure
+template<class Scalar>
+struct MPITraits<
+        ::Opm::ReservoirCoupling::MasterGroupNodePressure<Scalar>>
+  : detail::StructMPITraits<
+        ::Opm::ReservoirCoupling::MasterGroupNodePressure<Scalar>,
+        &::Opm::ReservoirCoupling::MasterGroupNodePressure<Scalar>::group_name_idx,
+        &::Opm::ReservoirCoupling::MasterGroupNodePressure<Scalar>::pressure> { };
+
 /// @brief MPI datatype trait for SlaveGroupProductionData structure
 ///
 /// This specialization enables SlaveGroupProductionData to be sent via MPI

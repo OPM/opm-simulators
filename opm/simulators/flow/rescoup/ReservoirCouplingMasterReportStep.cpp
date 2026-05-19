@@ -227,6 +227,36 @@ receiveProductionDataFromSlaves()
     }
 }
 
+// Send a single boolean telling the slave whether the master will iterate the
+// cross-rescoup network exchange this sync timestep.  Encoded as a single
+// size_t (0 = inactive, 1 = active) so the slave can mirror the value into its
+// `last_received_master_group_node_pressures_is_final_` flag.
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendCoupledNetworkActiveStatusToSlave(std::size_t slave_idx, bool active) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI
+    // communicator do not participate in master-slave communication.
+    if (this->comm().rank() == 0) {
+        std::size_t payload = active ? 1u : 0u;
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            &payload,
+            /*count=*/1,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::CoupledNetworkActiveStatus),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().debug(fmt::format(
+            "Sent coupled-network active status (active={}) to {}",
+            active, this->slaveName(slave_idx)
+        ));
+    }
+}
+
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
@@ -250,6 +280,34 @@ sendInjectionTargetsToSlave(std::size_t slave_idx,
         this->logger().debug(fmt::format(
             "Sent {} injection targets to {}",
             num_injection_targets, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendMasterGroupNodePressuresToSlave(std::size_t slave_idx,
+                                    const std::vector<MasterGroupNodePressure>& pressures) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        auto num_pressures = pressures.size();
+        auto MPI_MASTER_GROUP_NODE_PRESSURE_TYPE =
+            Dune::MPITraits<MasterGroupNodePressure>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            pressures.data(),
+            /*count=*/num_pressures,
+            /*datatype=*/MPI_MASTER_GROUP_NODE_PRESSURE_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::MasterGroupNodePressures),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().debug(fmt::format(
+            "Sent {} master group node pressures to {}",
+            num_pressures, this->slaveName(slave_idx)
         ));
     }
 }
@@ -281,6 +339,42 @@ sendNumGroupConstraintsToSlave(std::size_t slave_idx,
         this->logger().debug(fmt::format(
             "Sent constraint counts (inj={}, prod={}) to {}",
             num_injection_targets, num_production_constraints, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+// The slave process will use this information to determine how many node
+// pressures to expect, and whether the master is sending its final pressure
+// update for the current sync timestep (is_final = 1) or expects another
+// round of slave rates back (is_final = 0).  Carries both values in a
+// 2-element size_t vector to keep the wire format symmetric with
+// sendNumGroupConstraintsToSlave.
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendNumMasterGroupNodePressuresToSlave(std::size_t slave_idx,
+                                       std::size_t num_pressures,
+                                       bool is_final) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        std::vector<std::size_t> header(2);
+        header[0] = num_pressures;
+        header[1] = is_final ? 1u : 0u;
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            header.data(),
+            /*count=*/2,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::NumMasterGroupNodePressures),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().debug(fmt::format(
+            "Sent master-group-node-pressure header (count={}, is_final={}) to {}",
+            num_pressures, is_final, this->slaveName(slave_idx)
         ));
     }
 }

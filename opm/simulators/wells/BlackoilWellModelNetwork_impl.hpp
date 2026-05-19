@@ -62,7 +62,9 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     auto& well_state = well_model_.wellState();
 
     const bool changed_well_group =
-        well_model_.updateWellControlsAndNetwork(true, dt, deferred_logger);
+        well_model_.updateWellControlsAndNetwork(/*mandatory_network_balance=*/true,
+                                                 dt,
+                                                 deferred_logger);
     well_model_.assembleWellEqWithoutIteration(dt);
     const bool converged =
         well_model_.getWellConvergence(well_model_.B_avg(), true).converged() &&
@@ -93,16 +95,15 @@ update(const bool mandatory_network_balance,
     const int episodeIdx = well_model_.simulator().episodeIndex();
     const auto& network = well_model_.schedule()[episodeIdx].network();
     if (!well_model_.wellsActive() && !network.active()) {
-        return {false, 0.0};
+        return {/*more_network_update=*/false, /*network_imbalance=*/0.0};
     }
 
-    const auto& iterCtx = well_model_.simulator().problem().iterationContext();
     const auto& comm = well_model_.simulator().vanguard().grid().comm();
 
     // network related
     Scalar network_imbalance = 0.0;
     bool more_network_update = false;
-    if (this->shouldBalance(episodeIdx, iterCtx) || mandatory_network_balance) {
+    if (this->shouldBalance(episodeIdx) || mandatory_network_balance) {
         OPM_TIMEBLOCK(BalanceNetwork);
         const double dt = well_model_.simulator().timeStepSize();
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
@@ -143,10 +144,7 @@ update(const bool mandatory_network_balance,
                                                       well_model_.wellState());
                 }
             }
-            well_model_.updateAndCommunicateGroupData(episodeIdx,
-                                                      iterCtx,
-                                                      well_model_.param().nupcol_group_rate_tolerance_,
-                                                      /*update_wellgrouptarget*/ true);
+            well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
         }
         more_network_update = more_network_sub_update || well_group_thp_updated;
     }

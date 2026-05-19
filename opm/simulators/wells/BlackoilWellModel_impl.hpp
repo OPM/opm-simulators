@@ -48,13 +48,6 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
-#include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
-#include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
-#endif
-
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #if HAVE_MPI
 #include <opm/simulators/utils/MPIPacker.hpp>
@@ -76,7 +69,7 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& simulator)
+    BlackoilWellModel(Simulator& simulator, const NewtonIterationContext& iter_ctx)
         : WellConnectionModule(*this, simulator.gridView().comm())
         , BlackoilWellModelGeneric<Scalar, IndexTraits>(simulator.vanguard().schedule(),
                                                         gaslift_,
@@ -84,7 +77,9 @@ namespace Opm {
                                                         simulator.vanguard().summaryState(),
                                                         simulator.vanguard().eclState(),
                                                         FluidSystem::phaseUsage(),
-                                                        simulator.gridView().comm())
+                                                        simulator.gridView().comm(),
+                                                        param_,
+                                                        iter_ctx)
         , simulator_(simulator)
         , guide_rate_handler_{
             *this,
@@ -94,6 +89,9 @@ namespace Opm {
         }
         , gaslift_(this->terminal_output_)
         , network_(*this)
+#ifdef RESERVOIR_COUPLING_ENABLED
+        , rescoupHelper_(*this)
+#endif
     {
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -336,7 +334,7 @@ namespace Opm {
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        auto rescoup_logger_guard = this->setupRescoupScopedLogger(local_deferredLogger);
+        auto rescoup_logger_guard = this->rescoupHelper_.setupScopedLogger(local_deferredLogger);
 #endif
 
         this->switched_prod_groups_.clear();
@@ -373,7 +371,6 @@ namespace Opm {
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
-        const auto& iterCtx = simulator_.problem().iterationContext();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
@@ -385,16 +382,14 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->isReservoirCouplingMaster()) {
                 if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                    this->receiveSlaveGroupData();
+                    this->rescoupHelper_.receiveSlaveGroupData();
                 }
             }
 #endif
 
             // we need to update the group data after the well is created
             // to make sure we get the correct mapping.
-            this->updateAndCommunicateGroupData(reportStepIdx,
-                                    iterCtx,
-                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
@@ -473,16 +468,17 @@ namespace Opm {
         );
         bool slave_needs_well_solution = false;
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingSlave()) {
-            if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
-                this->sendSlaveGroupDataToMaster();
-                this->receiveGroupConstraintsFromMaster();
-                this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
-                this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
-                    this->schedule_, reportStepIdx);
-                slave_needs_well_solution = true;
-            }
+    if (this->isReservoirCouplingSlave()) {
+        if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
+            this->rescoupHelper_.receiveCoupledNetworkActiveStatus();
+            this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+            this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
+                this->schedule_, reportStepIdx);
+            slave_needs_well_solution = true;
         }
+    }
 #endif
         std::string exc_msg;
         auto exc_type = ExceptionType::NONE;
@@ -501,10 +497,7 @@ namespace Opm {
             OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         }
 
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                    iterCtx,
-                                    param_.nupcol_group_rate_tolerance_,
-                                    /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -538,22 +531,16 @@ namespace Opm {
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingSlave()) {
-            if (slave_needs_well_solution) {
-                this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ false);
-                this->sendSlaveGroupDataToMaster();
-            }
+        if (slave_needs_well_solution) {  // isReservoirCouplingSlave()
+            // Need to update group data based on new well solution.
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
         }
-#endif
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingMaster()) {
+        else if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
-                this->sendMasterGroupConstraintsToSlaves();
-                this->receiveSlaveGroupData();
+                this->rescoupHelper_.sendMasterGroupConstraintsToSlaves();
+                this->rescoupHelper_.sendCoupledNetworkActiveStatus();
+                this->rescoupHelper_.receiveSlaveGroupData();
             }
         }
 #endif
@@ -568,115 +555,6 @@ namespace Opm {
                                          exc_type, "beginTimeStep() failed: " + exc_msg, this->terminal_output_, comm);
 
     }
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-    // Automatically manages the lifecycle of the DeferredLogger pointer
-    // in the reservoir coupling logger. Ensures the logger is properly
-    // cleared when it goes out of scope, preventing dangling pointer issues:
-    //
-    // - The ScopedLoggerGuard constructor sets the logger pointer
-    // - When the guard goes out of scope, the destructor clears the pointer
-    // - Move semantics transfer ownership safely when returning from this function
-    //    - The moved-from guard is "nullified" and its destructor does nothing
-    //    - Only the final guard in the caller will clear the logger
-    template<typename TypeTag>
-    std::optional<ReservoirCoupling::ScopedLoggerGuard>
-    BlackoilWellModel<TypeTag>::
-    setupRescoupScopedLogger(DeferredLogger& local_logger) {
-        if (this->isReservoirCouplingMaster()) {
-            return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingMaster().logger(),
-                &local_logger
-            };
-        } else if (this->isReservoirCouplingSlave()) {
-            return ReservoirCoupling::ScopedLoggerGuard{
-                this->reservoirCouplingSlave().logger(),
-                &local_logger
-            };
-        }
-        return std::nullopt;
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    receiveSlaveGroupData()
-    {
-        OPM_TIMEFUNCTION();
-        assert(this->isReservoirCouplingMaster());
-        RescoupReceiveSlaveGroupData<Scalar, IndexTraits> slave_group_data_receiver{
-            this->groupStateHelper(),
-        };
-        slave_group_data_receiver.receiveSlaveGroupData();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    sendSlaveGroupDataToMaster()
-    {
-        OPM_TIMEFUNCTION();
-        assert(this->isReservoirCouplingSlave());
-        RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{this->groupStateHelper()};
-        slave_group_data_sender.sendSlaveGroupDataToMaster();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    sendMasterGroupConstraintsToSlaves()
-    {
-        OPM_TIMEFUNCTION();
-        // This function is called by the master process to send the group constraints to the slaves.
-        RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
-            this->guide_rate_handler_,
-            this->groupStateHelper()
-        };
-        constraints_calculator.calculateMasterGroupConstraintsAndSendToSlaves();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    receiveGroupConstraintsFromMaster()
-    {
-        OPM_TIMEFUNCTION();
-        RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
-            this->guide_rate_handler_,
-            this->groupStateHelper()
-        };
-        constraint_receiver.receiveGroupConstraintsFromMaster();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    rescoupSyncSummaryData()
-    {
-        // Reservoir coupling: exchange production data between slaves and master.
-        //
-        // Master side: after its first substep, the master blocks here until all
-        // slaves have completed the sync step and sent their production data.
-        // This ensures evalSummaryState() (called next in endTimeStep) and all
-        // subsequent master substeps have correct slave production rates.
-        //
-        // Slave side: on the last substep of the sync step, the slave sends its
-        // production data to the master.  The master is already waiting at this
-        // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
-        if (this->isReservoirCouplingMaster()) {
-            if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
-                this->receiveSlaveGroupData();
-                this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
-            }
-        }
-        if (this->isReservoirCouplingSlave()) {
-            if (this->reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
-                this->sendSlaveGroupDataToMaster();
-            }
-        }
-    }
-
-#endif // RESERVOIR_COUPLING_ENABLED
 
     template<typename TypeTag>
     void
@@ -832,7 +710,7 @@ namespace Opm {
         this->groupStateHelper().updateNONEProductionGroups();
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-        this->rescoupSyncSummaryData();
+        this->rescoupHelper_.rescoupSyncSummaryData();
 #endif
         this->commitWGState();
 
@@ -1230,6 +1108,9 @@ namespace Opm {
         this->closed_offending_wells_.clear();
 
         {
+            if (iterCtx.needsTimestepInit()) {
+                this->updateNetworkActiveState_();
+            }
             const int episodeIdx = simulator_.episodeIndex();
             const auto& network = this->schedule()[episodeIdx].network();
             if (!this->wellsActive() && !network.active()) {
@@ -1254,7 +1135,10 @@ namespace Opm {
                                            this->terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = updateWellControlsAndNetwork(false, dt, local_deferredLogger);
+        const bool well_group_control_changed = updateWellControlsAndNetwork(
+                            /*mandatory_network_balance=*/false,
+                            dt,
+                            local_deferredLogger);
 
         // even when there is no wells active, the network nodal pressure still need to be updated through updateWellControlsAndNetwork()
         // but there is no need to assemble the well equations
@@ -1294,11 +1178,11 @@ namespace Opm {
         std::size_t network_update_iteration = 0;
         network_needs_more_balancing_force_another_newton_iteration_ = false;
         while (do_network_update) {
-            if (network_update_iteration >= max_iteration ) {
+            if (!this->isRescoupSlaveCoupledNetworkIteration_()
+                && network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
-                const auto& iterCtx = simulator_.problem().iterationContext();
-                if (this->network_.willBalanceOnNextIteration(episodeIdx, iterCtx)) {
+                if (this->network_.willBalanceOnNextIteration(episodeIdx)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
                             "and try again after the next Newton iteration (imbalance = {:.2e} bar)",
@@ -1328,6 +1212,9 @@ namespace Opm {
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, optimize_gas_lift, dt,local_deferredLogger);
             ++network_update_iteration;
         }
+        if (this->isRescoupMasterCoupledNetworkIteration_()) {
+            this->sendSlaveNetworkLoopTerminationSignal_();
+        }
         return well_group_control_changed;
     }
 
@@ -1344,10 +1231,14 @@ namespace Opm {
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        const auto& iterCtx = simulator_.problem().iterationContext();
         const int reportStepIdx = simulator_.episodeIndex();
-        this->updateAndCommunicateGroupData(reportStepIdx, iterCtx,
-            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true);
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isRescoupSlaveCoupledNetworkIteration_()) {
+            this->rescoupHelper_.receiveMasterGroupNodePressuresFromMaster();
+        }
+#endif
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
@@ -1357,6 +1248,17 @@ namespace Opm {
                 this->network_.update(mandatory_network_balance,
                                       local_deferredLogger,
                                       relax_network_tolerance);
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isRescoupMasterCoupledNetworkIteration_()) {
+            const bool is_final = !more_inner_network_update;
+            // send the pressures freshly computed by network_.update() to all activated slaves
+            this->rescoupHelper_.sendMasterGroupNodePressuresToSlaves(is_final);
+            if (!is_final) {
+                // receive slaves' updated network_surface_rates for the next outer iteration.
+                this->rescoupHelper_.receiveSlaveGroupData();
+            }
+        }
+#endif
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1364,7 +1266,7 @@ namespace Opm {
             if (optimize_gas_lift) {
                 // we need to update the potentials if the thp limit as been modified by
                 // the network balancing
-                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx, iterCtx) ||
+                const bool updatePotentials = (this->network_.shouldBalance(reportStepIdx) ||
                                                mandatory_network_balance);
                 alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
@@ -1393,8 +1295,13 @@ namespace Opm {
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
-        const bool more_network_update = this->network_.shouldBalance(reportStepIdx, iterCtx) &&
+        bool more_network_update = this->network_.shouldBalance(reportStepIdx) &&
                     (more_inner_network_update || alq_updated);
+
+        if (this->isRescoupSlaveOnSyncStepFirstSubstep_()) {
+            more_network_update = this->maybeSendSlaveGroupFlowToMaster_(reportStepIdx);
+        }
+
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
 
@@ -1782,11 +1689,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateAndCommunicate(const int reportStepIdx)
     {
-        const auto& iterCtx = simulator_.problem().iterationContext();
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -1805,10 +1708,7 @@ namespace Opm {
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
-        this->updateAndCommunicateGroupData(reportStepIdx,
-                                            iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
-                                            /*update_wellgrouptarget*/ true);
+        this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
     }
 
     template<typename TypeTag>
@@ -1832,9 +1732,9 @@ namespace Opm {
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
-        const int max_number_of_group_switches = param_.max_number_of_group_switches_;
         const bool update_group_switching_log = !iterCtx.withinNupcol(nupcol);
-        const bool changed_hc = this->checkGroupHigherConstraints(group, deferred_logger, reportStepIdx, max_number_of_group_switches, update_group_switching_log);
+        const bool changed_hc = this->checkGroupHigherConstraints(
+            group, deferred_logger, reportStepIdx, update_group_switching_log);
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx);
@@ -1844,7 +1744,7 @@ namespace Opm {
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
-                                             max_number_of_group_switches,
+                                             param_.max_number_of_group_switches_,
                                              update_group_switching_log,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
@@ -2034,14 +1934,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        // Check if there is a network with active prediction wells at this time step.
         const auto episodeIdx = simulator_.episodeIndex();
-        this->network_.updateActiveState(episodeIdx);
 
-        // Rebalance the network initially if any wells in the network have status changes
-        // (Need to check this before clearing events)
-        const bool do_prestep_network_rebalance =
-            param_.pre_solve_network_ && this->network_.needPreStepRebalance(episodeIdx);
+        // Need to check this before clearing events
+        const bool do_prestep_network_rebalance = this->shouldDoPreStepNetworkRebalance_(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
@@ -2269,32 +2165,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::
-    assignWellTracerRates(data::Wells& wsrpt) const
-    {
-        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
-        const auto& trMod = this->simulator_.problem().tracerModel();
-
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
-
-        this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
-    }
-
-    template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::
-    assignWellSpeciesRates(data::Wells& wsrpt) const
-    {
-        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
-        const auto& geochemMod = this->simulator_.problem().geochemistryModel();
-
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
-
-        this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
-    }
-
-    template <typename TypeTag>
     [[nodiscard]] auto BlackoilWellModel<TypeTag>::rsConstInfo() const
         -> typename WellState<Scalar,IndexTraits>::RsConstInfo
     {
@@ -2316,6 +2186,160 @@ namespace Opm {
         const auto rsConst = rsConstTables[0].getColumn(0).front();
 
         return { true, static_cast<Scalar>(rsConst) };
+    }
+
+    // Private helper methods (alphabetical order)
+    // --------------------------------------------
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellTracerRates_(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& trMod = this->simulator_.problem().tracerModel();
+
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellSpeciesRates_(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& geochemMod = this->simulator_.problem().geochemistryModel();
+
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupMasterCoupledNetworkIteration_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingMaster()
+            && this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()
+            && this->rescoupHelper_.masterNetworkHasMasterGroupLeaves()
+            && !this->rescoupHelper_.lastSentMasterGroupNodePressuresIsFinal();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveCoupledNetworkIteration_() const
+    {
+        // True when the slave is on the first substep of a sync step AND the
+        // master has not yet signaled termination.  Gates the per-iteration
+        // master->slave node-pressure receive at the top of
+        // updateWellControlsAndNetworkIteration().  The outer loop exit on
+        // the slave is driven by the master's is_final flag (propagated to
+        // local variable "more_network_update" at the end of updateWellControlsAndNetworkIteration(),
+        // not by the slave's local network convergence.  The master's own max_iter
+        // bounds the iteration count from above, so the slave skips the local max_iter check entirely
+        // and lets the master signal termination.
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isRescoupSlaveOnSyncStepFirstSubstep_()
+            && !this->reservoirCouplingSlave().lastReceivedMasterGroupNodePressuresIsFinal();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveOnSyncStepFirstSubstep_() const
+    {
+        // True when the slave is on the first substep of a sync step,
+        // regardless of is_final state.  Gates post-Newton handling at the
+        // end of updateWellControlsAndNetworkIteration(), which must run on
+        // the terminating iteration too (so the slave can set
+        // more_network_update = false and exit its outer loop).
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::
+    maybeSendSlaveGroupFlowToMaster_([[maybe_unused]] const int reportStepIdx)
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // For a rescoup slave: after the well-solve in
+        // prepareWellsBeforeAssembling() has produced fresh rates under the
+        // new THP, ship them back to the master and force one more outer
+        // iteration so we re-enter updateWellControlsAndNetworkIteration() to receive the next pressures.
+        // When the just-received message had is_final = true, we skip the
+        // send and let the slave's outer loop exit naturally.
+        assert(this->isReservoirCouplingSlave());
+        const bool is_final =
+            this->reservoirCouplingSlave().lastReceivedMasterGroupNodePressuresIsFinal();
+        if (!is_final) {
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget=*/false);
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            return /*more_network_update=*/true;
+        }
+        return /*more_network_update=*/false;
+#else
+        return /*more_network_update=*/false;
+#endif
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    sendSlaveNetworkLoopTerminationSignal_()
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // When the master's outer loop exits without having sent is_final = true (e.g. max_iter
+        // exceeded with the network still unconverged), the slave is stuck
+        // waiting on its next receive.  Fire one final pressure send to
+        // unblock it.
+        assert(this->isReservoirCouplingMaster());
+        this->rescoupHelper_.sendMasterGroupNodePressuresToSlaves(/*is_final=*/true);
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::
+    shouldDoPreStepNetworkRebalance_(const int episodeIdx) const
+    {
+        // Rebalance the network initially if any wells in the network have status changes
+        //
+        // In reservoir-coupling mode this rebalance is skipped: its inner
+        // updateWellControlsAndNetwork call would run the cross-rescoup
+        // pressure/rate exchange, but needPreStepRebalance is collectivised
+        // only over the local OPM communicator -- not across the rescoup
+        // boundary -- so master and slave may disagree on whether to enter the
+        // rebalance, deadlocking the exchange.  Re-enabling the rebalance
+        // under rescoup is left to a follow-up PR that collectivises the
+        // decision across the rescoup boundary.
+        return param_.pre_solve_network_
+            && this->network_.needPreStepRebalance(episodeIdx)
+            && !this->isReservoirCouplingMaster()
+            && !this->isReservoirCouplingSlave();
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    updateNetworkActiveState_()
+    {
+        // Refresh the network's cached `active_` flag once per timestep
+        // init.  updateActiveState's inputs (Schedule network, well list,
+        // per-well groupName/predictionMode, and rescoup master groups)
+        // are constant within a substep; ACTIONX-driven well structure
+        // changes propagate via wellStructureChangedDynamically_ at the
+        // top of beginTimeStep, before the first assemble() of the new
+        // substep.  Doing this in assemble() rather than only in
+        // prepareTimeStep() covers the case of a rescoup master with no
+        // local wells, where prepareTimeStep() is skipped (gated on wellsActive()).
+        const int episodeIdx = this->simulator_.episodeIndex();
+        this->network_.updateActiveState(episodeIdx);
     }
 
 } // namespace Opm
