@@ -141,7 +141,7 @@ template<class Scalar> class WellContributions;
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
 
-            explicit BlackoilWellModel(Simulator& simulator);
+            BlackoilWellModel(Simulator& simulator, const NewtonIterationContext& iter_ctx);
 
             void init();
             void initWellContainer(const int reportStepIdx) override;
@@ -192,7 +192,6 @@ template<class Scalar> class WellContributions;
                 initFromRestartFile(restartValues,
                                     this->simulator_.vanguard().transferWTestState(),
                                     grid().size(0),
-                                    param_.use_multisegment_well_,
                                     this->simulator_.vanguard().enableDistributedWells());
             }
 
@@ -200,7 +199,6 @@ template<class Scalar> class WellContributions;
             void prepareDeserialize(const int report_step)
             {
                 prepareDeserialize(report_step, grid().size(0),
-                                   param_.use_multisegment_well_,
                                    this->simulator_.vanguard().enableDistributedWells());
             }
 

@@ -58,6 +58,7 @@
 
 
 namespace Opm {
+    template<class Scalar> struct BlackoilModelParameters;
     class DeferredLogger;
     class EclipseState;
     template<typename Scalar, typename IndexTraits> class BlackoilWellModelGasLiftGeneric;
@@ -103,7 +104,9 @@ public:
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
-                             const Parallel::Communication& comm);
+                             const Parallel::Communication& comm,
+                             const BlackoilModelParameters<Scalar>& param,
+                             const NewtonIterationContext& iter_ctx);
 
     virtual ~BlackoilWellModelGeneric() = default;
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
@@ -194,12 +197,10 @@ public:
     void initFromRestartFile(const RestartValue& restartValues,
                              std::unique_ptr<WellTestState> wtestState,
                              const std::size_t numCells,
-                             bool handle_ms_well,
                              bool enable_distributed_wells);
 
     void prepareDeserialize(int report_step,
                             const std::size_t numCells,
-                            bool handle_ms_well,
                             bool enable_distributed_wells);
 
     /*
@@ -305,11 +306,12 @@ public:
     }
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const NewtonIterationContext& iterCtx,
-                                       const Scalar tol_nupcol,
                                        // we only want to update the wellgroup target
                                        // after the groups have found their controls
                                        const bool update_wellgrouptarget);
+
+    const NewtonIterationContext& iterationContext() const
+    { return iter_ctx_; }
 
     const EclipseState& eclState() const
     { return eclState_; }
@@ -448,7 +450,6 @@ protected:
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx,
-                                     const int max_number_of_group_switch,
                                      const bool update_group_switching_log);
 
     void inferLocalShutWells();
@@ -514,6 +515,8 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    const BlackoilModelParameters<Scalar>& param_;
+    const NewtonIterationContext& iter_ctx_;
     BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar, IndexTraits> wbp_;
 
