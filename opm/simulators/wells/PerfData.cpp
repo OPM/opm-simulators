@@ -49,6 +49,8 @@ PerfData<Scalar>::PerfData(const std::size_t num_perf,
     , connection_compaction_tmult(num_perf)
     , satnum_id(num_perf)
     , ecl_index(num_perf)
+    , lgr_grid(num_perf)
+    , lgr_cell_index(num_perf)
     , gas_mass_rates(num_perf)
     , wat_mass_rates(num_perf)
 {
@@ -89,6 +91,8 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
     result.connection_compaction_tmult.assign(1, 21.75);
     result.satnum_id = {22, 23};
     result.ecl_index = {24};
+    result.lgr_grid = {1, 0, 2};
+    result.lgr_cell_index = {17, 0, 42};
     result.water_throughput = {25.0, 26.0};
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
@@ -166,6 +170,8 @@ bool PerfData<Scalar>::operator==(const PerfData& rhs) const
         && (this->connection_compaction_tmult == rhs.connection_compaction_tmult)
         && (this->satnum_id == rhs.satnum_id)
         && (this->ecl_index == rhs.ecl_index)
+        && (this->lgr_grid == rhs.lgr_grid)
+        && (this->lgr_cell_index == rhs.lgr_cell_index)
         && (this->water_throughput == rhs.water_throughput)
         && (this->skin_pressure == rhs.skin_pressure)
         && (this->water_velocity == rhs.water_velocity)

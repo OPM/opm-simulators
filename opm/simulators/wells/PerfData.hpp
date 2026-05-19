@@ -73,6 +73,8 @@ public:
         serializer(connection_compaction_tmult);
         serializer(satnum_id);
         serializer(ecl_index);
+        serializer(lgr_grid);
+        serializer(lgr_cell_index);
         serializer(water_throughput);
         serializer(skin_pressure);
         serializer(water_velocity);
@@ -107,6 +109,8 @@ public:
     std::vector<Scalar> connection_compaction_tmult{};
     std::vector<int> satnum_id{};
     std::vector<std::size_t> ecl_index{};
+    std::vector<int> lgr_grid{};
+    std::vector<std::size_t> lgr_cell_index{};
     std::vector<Scalar> gas_mass_rates{};
     std::vector<Scalar> wat_mass_rates{};
 
