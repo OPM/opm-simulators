@@ -187,7 +187,7 @@ public:
                 storage[contiZfracEqIdx - 1] += regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.zFraction());
             }
             else {
-                throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
+                OPM_THROW(std::runtime_error, "Only component conservation in terms of surface volumes is implemented. ");
             }
         }
     }

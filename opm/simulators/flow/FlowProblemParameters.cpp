@@ -81,6 +81,13 @@ void registerFlowProblemParameters()
         ("Conserve inner energy and not enthalpy "
          "even if THERMAL is used.");
 
+#if HAVE_CUDA
+    Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+        ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
+         "via the GpuBlackoilIntensiveQuantitiesDispatcher. Only takes "
+         "effect for CO2STORE-compatible TypeTags; ignored otherwise.");
+#endif
+
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
     // after it simulated the last episode specified in the deck.)
