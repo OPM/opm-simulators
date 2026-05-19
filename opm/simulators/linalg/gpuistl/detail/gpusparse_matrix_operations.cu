@@ -221,4 +221,10 @@ INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 5)
 INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 6)
 INSTANTIATE_GET_DIAG_PTRS_TYPED(double, 7)
 
+#define INSTANTIATE_GET_DIAG_PTRS(T) \
+    template Opm::gpuistl::GpuBuffer<T*> Opm::gpuistl::detail::getDiagPtrsTyped<T, T>(GpuSparseMatrixWrapper<T>&);
+
+INSTANTIATE_GET_DIAG_PTRS(float)
+INSTANTIATE_GET_DIAG_PTRS(double)
+
 } // namespace Opm::gpuistl::detail
