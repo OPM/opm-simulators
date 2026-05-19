@@ -68,11 +68,11 @@ FlowGenericProblem(const EclipseState& eclState,
     // we need to update the FluidSystem based on EclipseState before it is passed around
     this->initFluidSystem_();
 
-    enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
-    enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
-    initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
+    enableTuning_ = Parameters::Get<Parameters::EnableTuning>(/*errorIfNotRegistered=*/false);
+    enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>(/*errorIfNotRegistered=*/false);
+    initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>(/*errorIfNotRegistered=*/false);
     maxTimeStepAfterWellEvent_ = unit::convert::from
-        (Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>(), unit::day);
+        (Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>(/*errorIfNotRegistered=*/false), unit::day);
 
     // The value N for this parameter is defined in the following order of precedence:
     //
@@ -81,11 +81,11 @@ FlowGenericProblem(const EclipseState& eclState,
     // 2. EQLDIMS item 2.  Default value from
     //    opm-common/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
 
-    numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>()
-        ? Parameters::Get<Parameters::NumPressurePointsEquil>()
+    numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>(/*errorIfNotRegistered=*/false)
+        ? Parameters::Get<Parameters::NumPressurePointsEquil>(/*errorIfNotRegistered=*/false)
         : eclState.getTableManager().getEqldims().getNumDepthNodesP();
 
-    explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
+    explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>(/*errorIfNotRegistered=*/false);
 }
 
 template<class GridView, class FluidSystem>
