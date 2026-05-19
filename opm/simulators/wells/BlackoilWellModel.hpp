@@ -51,6 +51,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelNetwork.hpp>
+#include <opm/simulators/wells/BlackoilWellModelRescoup.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
@@ -141,7 +142,7 @@ template<class Scalar> class WellContributions;
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
 
-            explicit BlackoilWellModel(Simulator& simulator);
+            BlackoilWellModel(Simulator& simulator, const NewtonIterationContext& iter_ctx);
 
             void init();
             void initWellContainer(const int reportStepIdx) override;
@@ -192,7 +193,6 @@ template<class Scalar> class WellContributions;
                 initFromRestartFile(restartValues,
                                     this->simulator_.vanguard().transferWTestState(),
                                     grid().size(0),
-                                    param_.use_multisegment_well_,
                                     this->simulator_.vanguard().enableDistributedWells());
             }
 
@@ -200,7 +200,6 @@ template<class Scalar> class WellContributions;
             void prepareDeserialize(const int report_step)
             {
                 prepareDeserialize(report_step, grid().size(0),
-                                   param_.use_multisegment_well_,
                                    this->simulator_.vanguard().enableDistributedWells());
             }
 
@@ -373,6 +372,12 @@ template<class Scalar> class WellContributions;
             void setNlddAdapter(BlackoilWellModelNldd<TypeTag>* mod)
             { nldd_ = mod; }
 
+            GuideRateHandler<Scalar, IndexTraits>& guideRateHandler()
+            { return guide_rate_handler_; }
+
+            const GuideRateHandler<Scalar, IndexTraits>& guideRateHandler() const
+            { return guide_rate_handler_; }
+
             // === Reservoir Coupling ===
 
             /// @brief Get the reservoir coupling proxy
@@ -434,27 +439,6 @@ template<class Scalar> class WellContributions;
                 this->guide_rate_handler_.setReservoirCouplingSlave(slave);
                 this->groupStateHelper().setReservoirCouplingSlave(slave);
             }
-
-            /// \brief Send comprehensive slave group data to master
-            void sendSlaveGroupDataToMaster();
-
-            /// \brief Receive comprehensive slave group data from slaves
-            void receiveSlaveGroupData();
-
-            void receiveGroupConstraintsFromMaster();
-            void sendMasterGroupConstraintsToSlaves();
-            void rescoupSyncSummaryData();
-
-            /// \brief Setup RAII guard for reservoir coupling logger
-            ///
-            /// Creates a scoped logger guard that automatically clears the logger
-            /// when it goes out of scope. This eliminates the need for manual cleanup.
-            ///
-            /// @param local_logger The local DeferredLogger to bind to the reservoir coupling logger
-            /// @return An optional containing the ScopedLoggerGuard if reservoir coupling is active,
-            ///         or std::nullopt if not active
-            std::optional<ReservoirCoupling::ScopedLoggerGuard>
-                setupRescoupScopedLogger(DeferredLogger& local_logger);
 #endif
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
@@ -628,6 +612,9 @@ template<class Scalar> class WellContributions;
         private:
             BlackoilWellModelGasLift<TypeTag> gaslift_;
             BlackoilWellModelNetwork<TypeTag> network_;
+#ifdef RESERVOIR_COUPLING_ENABLED
+            BlackoilWellModelRescoup<TypeTag> rescoupHelper_;
+#endif
             BlackoilWellModelNldd<TypeTag>* nldd_ = nullptr; //!< NLDD well model adapter (not owned)
 
             // These members are used to avoid reallocation in specific functions
