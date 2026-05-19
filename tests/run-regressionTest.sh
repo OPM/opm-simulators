@@ -17,6 +17,7 @@ then
   echo -e "\t\t -d <path>     Path to restart deck tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
   echo -e "\tOptional options:"
+  echo -e "\t\t -u <filename> Reference simulator directory name"
   echo -e "\t\t -s <step>     Step to do restart testing from"
   echo -e "\t\t -h value      sched_restart value to use in restart test"
   echo -e "\t\t -u <filename> Simulator binary for reference data"
@@ -25,7 +26,7 @@ fi
 
 RESTART_STEP=""
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:d:s:e:h:u:" OPT
+while getopts "i:r:b:f:a:t:c:d:s:e:u:h:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -38,14 +39,14 @@ do
     d) RST_DECK_COMMAND=${OPTARG} ;;
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    u) REFERENCE_EXE_NAME=${OPTARG} ;;
     h) RESTART_SCHED=${OPTARG} ;;
-    u) REF_EXE_NAME=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
-REF_EXE_NAME=${REF_EXE_NAME:-${EXE_NAME}}
+REF_EXE_NAME=${REFERENCE_EXE_NAME:-${EXE_NAME}}
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
@@ -114,12 +115,12 @@ do
   else
     echo "=== Executing comparison for EGRID, INIT, UNRST, UNSMRY and RFT files for restarted run ==="
   fi
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
-  if [ $? -ne 0 ]
-  then
-    ecode=1
-    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} -a ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
-  fi
+   ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
+   if [ $? -ne 0 ]
+   then
+     ecode=1
+     ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} -a ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
+   fi
 done
 
 exit $ecode

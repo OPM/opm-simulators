@@ -35,7 +35,7 @@
 #include <string_view>
 #include <tuple>
 
-#include "flowexp_comp.hpp"
+#include "flow_comp.hpp"
 
 namespace {
 std::string deckFilenameFromArgv(int argc, char** argv)
@@ -70,9 +70,9 @@ runComponent(int runtimeComponent, bool water, int argc, char** argv)
 {
     if (runtimeComponent == compileTimeComponent) {
         if (water)
-            return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent, true>(argc, argv));
+            return std::make_tuple(true, Opm::dispatchFlowComp<compileTimeComponent, true>(argc, argv));
         else
-            return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent, false>(argc, argv));
+            return std::make_tuple(true, Opm::dispatchFlowComp<compileTimeComponent, false>(argc, argv));
     }
     return std::make_tuple(false, EXIT_FAILURE);
 }
@@ -100,9 +100,9 @@ runComponent(int runtimecomponent, bool water, int argc, char** argv)
 {
     if (currentCompileTimeComponent == runtimecomponent) {
         if (water)
-            return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent, true>(argc, argv));
+            return std::make_tuple(true, Opm::dispatchFlowComp<currentCompileTimeComponent, true>(argc, argv));
         else
-            return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent, false>(argc, argv));
+            return std::make_tuple(true, Opm::dispatchFlowComp<currentCompileTimeComponent, false>(argc, argv));
     }
     return runComponent<nextComponent, components...>(runtimecomponent, water, argc, argv);
 }

@@ -46,7 +46,7 @@ namespace ReservoirCoupling {
 /// providing mode queries that work regardless of MPI availability. This eliminates the need
 /// for #ifdef RESERVOIR_COUPLING_ENABLED guards in consumer code.
 ///
-/// The proxy does not own the master/slave objects - they are owned by SimulatorFullyImplicitBlackoil.
+/// The proxy does not own the master/slave objects - they are owned by SimulatorFullyImplicit.
 /// Pointers are set after construction via setMaster()/setSlave().
 ///
 /// Master and slave modes are mutually exclusive - setting one clears the other.

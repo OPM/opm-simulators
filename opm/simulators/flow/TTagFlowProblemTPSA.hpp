@@ -38,7 +38,7 @@
 #include <opm/models/tpsa/tpsamodel.hpp>
 #include <opm/models/tpsa/tpsanewtonmethod.hpp>
 
-#include <opm/simulators/flow/BlackoilModelTPSA.hpp>
+#include <opm/simulators/flow/NonlinearSystemBlackOilReservoirTPSA.hpp>
 #include <opm/simulators/flow/FlowProblemTPSA.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ISTLSolverTPSA.hpp>

@@ -19,18 +19,11 @@
 
 #include "config.h"
 
-#include <opm/models/utils/start.hh>
-
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
-#include "flowexp_comp.hpp"
+#include "flow_comp.hpp"
 
-namespace Opm {
-
-template<>
-int dispatchFlowExpComp<6, true>(int argc, char** argv)
+int main(int argc, char** argv)
 {
-    return start<Properties::TTag::FlowExpCompProblem<6, true>>(argc, argv, true);
-}
-
+    return Opm::dispatchFlowComp<2, false>(argc, argv);
 }

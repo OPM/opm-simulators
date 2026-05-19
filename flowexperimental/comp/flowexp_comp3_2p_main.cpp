@@ -21,16 +21,19 @@
 
 #include <opm/models/utils/start.hh>
 
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
 #include "flowexp_comp.hpp"
 
-namespace Opm {
-
-template<>
-int dispatchFlowExpComp<6, true>(int argc, char** argv)
+int main(int argc, char** argv)
 {
-    return start<Properties::TTag::FlowExpCompProblem<6, true>>(argc, argv, true);
-}
+  using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<3, false>;
 
+  Opm::Parameters::Register<Opm::Parameters::EnableAdaptiveTimeStepping>
+    ("Use adaptive time stepping between report steps");
+  Opm::registerEclTimeSteppingParameters<double>();
+  Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
+
+  return Opm::start<TypeTag>(argc, argv, false);
 }

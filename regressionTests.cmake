@@ -27,6 +27,8 @@ add_test_compareECLFiles(
   FILENAME
     1D_COMP
   SIMULATOR
+    flowexp_comp3_2p
+  REFERENCE_SIMULATOR
     flowexp_comp
   ABS_TOL
     ${abs_tol}

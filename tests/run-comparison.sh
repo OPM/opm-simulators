@@ -17,6 +17,7 @@ then
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\t\t -l <filename> Second simulator binary to use"
   echo -e "\t\t -n <procs>    Number of MPI processes to use"
   exit 1
 fi
@@ -24,7 +25,7 @@ fi
 RESTART_STEP=""
 MPI_PROCS=1
 OPTIND=1
-while getopts "i:j:f:g:r:b:a:t:c:e:y:n:" OPT
+while getopts "i:j:f:g:r:b:a:t:c:e:l:y:n:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH1=${OPTARG} ;;
@@ -37,6 +38,7 @@ do
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    l) REFERENCE_EXE_NAME=${OPTARG} ;;
     y) IGNORE_EXTRA_KW=${OPTARG} ;;
     n) MPI_PROCS=${OPTARG} ;;
   esac
@@ -44,13 +46,29 @@ done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
-mkdir -p ${RESULT_PATH}
-cd ${RESULT_PATH}
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH1}/${FILENAME1} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+RUN1_RESULT_PATH=${RESULT_PATH}
+RUN2_RESULT_PATH=${RESULT_PATH}
+if test -n "${REFERENCE_EXE_NAME}"
+then
+  RUN1_RESULT_PATH=${RESULT_PATH}/first
+  RUN2_RESULT_PATH=${RESULT_PATH}/second
+else
+  REFERENCE_EXE_NAME=${EXE_NAME}
+fi
+
+WORK_DIR=$(pwd)
+
+mkdir -p ${RUN1_RESULT_PATH}
+cd ${RUN1_RESULT_PATH}
+mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH1}/${FILENAME1} ${TEST_ARGS} --output-dir=${RUN1_RESULT_PATH}
 test $? -eq 0 || exit 1
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH2}/${FILENAME2} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+cd ${WORK_DIR}
+
+mkdir -p ${RUN2_RESULT_PATH}
+cd ${RUN2_RESULT_PATH}
+mpirun -np ${MPI_PROCS} ${BINPATH}/${REFERENCE_EXE_NAME} ${INPUT_DATA_PATH2}/${FILENAME2} ${TEST_ARGS} --output-dir=${RUN2_RESULT_PATH}
 test $? -eq 0 || exit 1
-cd ..
+cd ${WORK_DIR}
 
 
 ecode=0
@@ -67,11 +85,11 @@ then
 fi
 
 echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files if these exists in reference folder ==="
-${COMPARE_ECL_COMMAND} -t SMRY ${ignore_extra_kw} ${RESULT_PATH}/${FILENAME1} ${RESULT_PATH}/${FILENAME2} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} -t SMRY ${ignore_extra_kw} ${RUN1_RESULT_PATH}/${FILENAME1} ${RUN2_RESULT_PATH}/${FILENAME2} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} -t SMRY ${ignore_extra_kw} -a ${RESULT_PATH}/${FILENAME1} ${RESULT_PATH}/${FILENAME2} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} -t SMRY ${ignore_extra_kw} -a ${RUN1_RESULT_PATH}/${FILENAME1} ${RUN2_RESULT_PATH}/${FILENAME2} ${ABS_TOL} ${REL_TOL}
 fi
 
 exit $ecode
