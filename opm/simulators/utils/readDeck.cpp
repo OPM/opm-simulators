@@ -275,6 +275,9 @@ namespace {
                                 const int stepIdx,
                                 const bool isInj)
     {
+        if (!schedule.hasGroup(parentname, stepIdx)) {
+            return false;
+        }
         const auto& parent = schedule.getGroup(parentname, stepIdx);
         if (isInj) {
             if (parent.isInjectionGroup()) {
@@ -310,7 +313,7 @@ namespace {
             const auto& group = schedule.getGroup(groupname, sz - 1);
             if (group.hasSatelliteProduction()) {
                 for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (schedule.hasGroup(group.parent(), stepIdx) && parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
+                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
                         OPM_THROW(std::logic_error,
                             fmt::format("Satellite production group {} is not allowed to have parent group controlled by RESV", groupname));
                         return;
@@ -319,7 +322,7 @@ namespace {
             }
             if (group.hasSatelliteInjection()) {
                 for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (schedule.hasGroup(group.parent(), stepIdx) && parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
+                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
                         OPM_THROW(std::logic_error,
                             fmt::format("Satellite injection group {} is not allowed to have parent group controlled by RESV/VREP", groupname));
                         return;
