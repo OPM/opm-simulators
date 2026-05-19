@@ -62,6 +62,8 @@ SingleWellState(const std::string& name_,
         this->perf_data.connection_d_factor[perf] = perf_input[perf].connection_d_factor;
         this->perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
         this->perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
+        this->perf_data.grid_id[perf] = perf_input[perf].grid_id;
+        this->perf_data.global_index[perf] = perf_input[perf].global_index;
     }
 }
 
