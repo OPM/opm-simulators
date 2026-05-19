@@ -32,7 +32,9 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/materialstates/MaterialStateTPSA.hpp>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
+#include <opm/models/utils/basicproperties.hh>
 
 #include <opm/simulators/flow/FacePropertiesTPSA.hpp>
 
@@ -48,13 +50,12 @@ namespace Opm {
 * conservation of linear momentum:
 *
 * \f{eqnarray*}{
-*   \sigma &=& 2\mu\epsilon(u) + \lambda(\nabla\cdot u)I,
-*   -\nabla\cdot(\sigma - \alpha(p_f - p_0)I) &=& f_u,
+*   \sigma &=& 2\mu\epsilon(u) + \lambda(\nabla\cdot u)I, \\ -\nabla\cdot(\sigma - \alpha(p_f - p_0)I) &=& f_u,
 * \f}
 *
-* where \f&\sigma\f& is Cauchy stress tensor, \f&u\f& is displacement, \f&\epsilon(\cdot)\f& is thesymmetric gradient,
-* \f&\mu\f& and \f&\lambda\f& are Lame's first (aka shear modulus) and second parameters, \f&\alpha\f& is the
-* Biot-Willis parameter, \f&(p_f-p_0)\f& is fluid pressure difference wrt hydrostatic, and \f&f_u\f& are body forces.
+* where \f$\sigma\f$ is Cauchy stress tensor, \f$u\f$ is displacement, \f$\epsilon(\cdot)\f$ is the symmetric gradient,
+* \f$\mu\f$ and \f$\lambda\f$ are Lame's first (aka shear modulus) and second parameters, \f$\alpha\f$ is the
+* Biot-Willis parameter, \f$(p_f-p_0)\f$ is fluid pressure difference wrt hydrostatic, and \f$f_u\f$ are body forces.
 *
 * The equations are discretized using two-point stress approximation following Boon et al. (2025), Solving Biot
 * poroelasticity by coupling OPM Flow with the two-point stress approximation finite volume method, arXiv:2510.23432v1.
