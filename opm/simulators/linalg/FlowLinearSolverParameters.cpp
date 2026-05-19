@@ -135,7 +135,7 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::LinearSolver>
         ("Configuration of solver. Valid options are: cprw (default), "
          "ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, "
-         "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
+         "cpr_trueimpes, cpr_trueimpesanalytic, cpr_coatsblackoil, cpr_coatscompositional, amg or hybrid (experimental). "
          "Alternatively, you can request a configuration to be read from a "
          "JSON file by giving the filename here, ending with '.json'");
     Parameters::Register<Parameters::NlddLocalLinearSolver>
