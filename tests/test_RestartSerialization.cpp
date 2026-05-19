@@ -372,7 +372,7 @@ public:
 
 private:
     BlackoilWellModelNetworkGeneric<double, IndexTraits> network_;
-    BlackoilModelParameters<double> params_;
+    BlackoilWellModelGenericParameters<double> params_;
     ParallelWellInfo<double> dummy;
 };
 

@@ -33,6 +33,7 @@
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGenericParameters.hpp>
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
@@ -58,7 +59,6 @@
 
 
 namespace Opm {
-    template<class Scalar> struct BlackoilModelParameters;
     class DeferredLogger;
     class EclipseState;
     template<typename Scalar, typename IndexTraits> class BlackoilWellModelGasLiftGeneric;
@@ -105,7 +105,7 @@ public:
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
                              const Parallel::Communication& comm,
-                             const BlackoilModelParameters<Scalar>& param);
+                             const BlackoilWellModelGenericParameters<Scalar>& param);
 
     virtual ~BlackoilWellModelGeneric() = default;
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
@@ -512,7 +512,7 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
-    const BlackoilModelParameters<Scalar>& param_;
+    const BlackoilWellModelGenericParameters<Scalar> param_;
     BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar, IndexTraits> wbp_;
 

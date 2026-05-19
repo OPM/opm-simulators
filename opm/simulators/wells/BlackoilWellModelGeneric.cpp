@@ -54,7 +54,6 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
@@ -99,7 +98,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          const EclipseState& eclState,
                          const PhaseUsageInfo<IndexTraits>& pu,
                          const Parallel::Communication& comm,
-                         const BlackoilModelParameters<Scalar>& param)
+                         const BlackoilWellModelGenericParameters<Scalar>& param)
     : schedule_(schedule)
     , summaryState_(summaryState)
     , eclState_(eclState)
