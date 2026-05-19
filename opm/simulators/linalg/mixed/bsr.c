@@ -91,9 +91,9 @@ void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y)
             int j = colidx[k];
             __m256d vx = _mm256_loadu_pd(x+b*j);
 
-            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(AA+0))*_mm256_permute4x64_pd(vx,0b00000000); //0b01010101
-            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(AA+3))*_mm256_permute4x64_pd(vx,0b01010101); //0b01010101
-            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(AA+6))*_mm256_permute4x64_pd(vx,0b10101010); //0b01010101
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(AA+0))*_mm256_permute4x64_pd(vx,0x00);
+            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(AA+3))*_mm256_permute4x64_pd(vx,0x55); // 0b01010101
+            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(AA+6))*_mm256_permute4x64_pd(vx,0xAA); // 0b10101010
         }
 
         // sum over columns
@@ -128,9 +128,9 @@ void bsr_vdspmv3(bsr_matrix *A, const double *x, double *y)
             int j = colidx[k];
             __m256d vx = _mm256_loadu_pd(x+b*j);
 
-            vA[0] += _mm256_loadu_pd(AA+0)*_mm256_permute4x64_pd(vx,0b00000000); //0b01010101
-            vA[1] += _mm256_loadu_pd(AA+3)*_mm256_permute4x64_pd(vx,0b01010101); //0b01010101
-            vA[2] += _mm256_loadu_pd(AA+6)*_mm256_permute4x64_pd(vx,0b10101010); //0b01010101
+            vA[0] += _mm256_loadu_pd(AA+0)*_mm256_permute4x64_pd(vx,0x00);
+            vA[1] += _mm256_loadu_pd(AA+3)*_mm256_permute4x64_pd(vx,0x55); // 0b01010101
+            vA[2] += _mm256_loadu_pd(AA+6)*_mm256_permute4x64_pd(vx,0xAA); // 0b10101010
         }
 
         // sum over columns

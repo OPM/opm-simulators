@@ -228,9 +228,9 @@ void mat3_rmul(double *A, double const *B)
 
         // multiply matrix A with column j of matrix B
         __m256d vAB[3];
-        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
-        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
-        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0x00);
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0x55); // 0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0xAA); // 0b10101010
 
         __m256d vz = vAB[0] + vAB[1] + vAB[2];
 
@@ -264,9 +264,9 @@ void mat3_lmul(double const *A, double *B)
 
         // multiply matrix A with column j of matrix B
         __m256d vAB[3];
-        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
-        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
-        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0x00);
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0x55); // 0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0xAA); // 0b10101010
 
         __m256d vz = vAB[0] + vAB[1] + vAB[2];
 
@@ -301,9 +301,9 @@ void mat3_vfms(double *C, double const *A, double const *B)
 
         // multiply matrix A with column j of matrix B
         __m256d vAB[3];
-        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0b00000000); //0b01010101
-        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0b01010101); //0b01010101
-        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0b10101010); //0b01010101
+        vAB[0] = vA[0]*_mm256_permute4x64_pd(vbj,0x00);
+        vAB[1] = vA[1]*_mm256_permute4x64_pd(vbj,0x55); // 0b01010101
+        vAB[2] = vA[2]*_mm256_permute4x64_pd(vbj,0xAA); // 0b10101010
 
         __m256d vz = vAB[0] + vAB[1] + vAB[2];
 
@@ -529,9 +529,9 @@ void prec_mapply3c(prec_t *restrict P, double *x)
         double *xi = x+b*i;
         __m256d vxi = _mm256_loadu_pd(xi);
 
-        vx[0] = _mm256_permute4x64_pd(vxi,0b00000000); //0b01010101
-        vx[1] = _mm256_permute4x64_pd(vxi,0b01010101); //0b01010101
-        vx[2] = _mm256_permute4x64_pd(vxi,0b10101010); //0b01010101
+        vx[0] = _mm256_permute4x64_pd(vxi,0x00);
+        vx[1] = _mm256_permute4x64_pd(vxi,0x55); // 0b01010101
+        vx[2] = _mm256_permute4x64_pd(vxi,0xAA); // 0b10101010
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
             const float *A = L->flt+k*bb;
@@ -571,9 +571,9 @@ void prec_mapply3c(prec_t *restrict P, double *x)
             const float *A = U->flt+k*bb;
             int j=U->colidx[k];
             __m256d vxj = _mm256_loadu_pd(x+b*j);
-            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(A+0))*_mm256_permute4x64_pd(vxj,0b00000000); //0b01010101
-            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(A+3))*_mm256_permute4x64_pd(vxj,0b01010101); //0b01010101
-            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(A+6))*_mm256_permute4x64_pd(vxj,0b10101010); //0b01010101
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(A+0))*_mm256_permute4x64_pd(vxj,0x00);
+            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(A+3))*_mm256_permute4x64_pd(vxj,0x55); // 0b01010101
+            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(A+6))*_mm256_permute4x64_pd(vxj,0xAA); // 0b10101010
         }
         double *xi = x+b*(i-1);
         __m256d vxi = _mm256_loadu_pd(xi);
@@ -602,9 +602,9 @@ void prec_dapply3c(prec_t *restrict P, double *x)
         double *xi = x+b*i;
         __m256d vxi = _mm256_loadu_pd(xi);
 
-        vx[0] = _mm256_permute4x64_pd(vxi,0b00000000); //0b01010101
-        vx[1] = _mm256_permute4x64_pd(vxi,0b01010101); //0b01010101
-        vx[2] = _mm256_permute4x64_pd(vxi,0b10101010); //0b01010101
+        vx[0] = _mm256_permute4x64_pd(vxi,0x00);
+        vx[1] = _mm256_permute4x64_pd(vxi,0x55); // 0b01010101
+        vx[2] = _mm256_permute4x64_pd(vxi,0xAA); // 0b10101010
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
             const double *A = L->dbl+k*bb;
@@ -644,9 +644,9 @@ void prec_dapply3c(prec_t *restrict P, double *x)
             const double *A = U->dbl+k*bb;
             int j=U->colidx[k];
             __m256d vxj = _mm256_loadu_pd(x+b*j);
-            vA[0] += _mm256_loadu_pd(A+0)*_mm256_permute4x64_pd(vxj,0b00000000); //0b01010101
-            vA[1] += _mm256_loadu_pd(A+3)*_mm256_permute4x64_pd(vxj,0b01010101); //0b01010101
-            vA[2] += _mm256_loadu_pd(A+6)*_mm256_permute4x64_pd(vxj,0b10101010); //0b01010101
+            vA[0] += _mm256_loadu_pd(A+0)*_mm256_permute4x64_pd(vxj,0x00);
+            vA[1] += _mm256_loadu_pd(A+3)*_mm256_permute4x64_pd(vxj,0x55); // 0b01010101
+            vA[2] += _mm256_loadu_pd(A+6)*_mm256_permute4x64_pd(vxj,0xAA); // 0b10101010
         }
         double *xi = x+b*(i-1);
         __m256d vxi = _mm256_loadu_pd(xi);
