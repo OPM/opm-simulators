@@ -162,6 +162,20 @@ public:
         return this->active_wgstate_.well_state;
     }
 
+    WellState<Scalar, IndexTraits>& potentialWellState()
+    {
+        const bool needs_init = !this->potential_well_state_;
+        const bool size_mismatch = !needs_init
+            && (this->potential_well_state_->size() != this->wellState().size());
+
+        if (needs_init || this->wellStructureChangedDynamically_ || size_mismatch)
+        {
+            this->potential_well_state_ = this->wellState();
+        }
+
+        return *this->potential_well_state_;
+    }
+
     /*
       Will return the currently active nupcolWellState; must update
       the internal nupcol wellstate with updateNupcolWGState() first.
@@ -318,9 +332,9 @@ protected:
     /*
       The dynamic state of the well model is maintained with an instance
       of the WellState class. Currently we have
-      three different wellstate instances:
+      four different well state instances:
 
-       1. The currently active wellstate is in the active_well_state_
+       1. The currently active well state is in the active_well_state_
           member. That is the state which is mutated by the simulator.
 
        2. In the case timestep fails to converge and we must go back and
@@ -329,10 +343,14 @@ protected:
           last_valid_well_state_ member and the functions
           commitWGState() and resetWellState().
 
-        3. For the NUPCOL functionality we should either use the
-           currently active wellstate or a wellstate frozen at max
-           nupcol iterations. This is handled with the member
-           nupcol_well_state_ and the updateNupcolWGState() function.
+       3. Potential calculations keep a separate well state with
+          its own updated primary variables and rates so later
+          potential solves can start from a better guess.
+
+       4. For the NUPCOL functionality we should either use the
+          currently active well state or a well state frozen at max
+          nupcol iterations. This is handled with the member
+          nupcol_well_state_ and the updateNupcolWGState() function.
     */
 
     /*
@@ -360,6 +378,10 @@ protected:
     void commitWGState(WGState<Scalar, IndexTraits> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
+        // The potential state is only an initial-guess cache for local
+        // potential solves, so it must be rebuilt from the newly accepted
+        // active state after committing a time step.
+        this->potential_well_state_.reset();
     }
 
     /*
@@ -370,6 +392,9 @@ protected:
     void resetWGState()
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
+        // Failed-step potential solve guesses may no longer match the
+        // restored active state, so drop the cache and rebuild it lazily.
+        this->potential_well_state_.reset();
         this->genNetwork_.resetState();
         // Update helper pointers to reference the restored active state
         this->group_state_helper_.updateState(this->wellState(), this->groupState());
@@ -456,7 +481,7 @@ protected:
     void setRepRadiusPerfLength();
 
     virtual void computePotentials(const std::size_t widx,
-                                   const WellState<Scalar, IndexTraits>& well_state_copy,
+                                   WellState<Scalar, IndexTraits>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type) = 0;
 
@@ -569,6 +594,7 @@ protected:
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
+    std::optional<WellState<Scalar, IndexTraits>> potential_well_state_;
     GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
