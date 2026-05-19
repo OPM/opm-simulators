@@ -494,6 +494,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
+  tests/test_impesweights.cpp
   tests/test_injection_topup_phase_validation.cpp
   tests/test_interregflows.cpp
   tests/test_invert.cpp

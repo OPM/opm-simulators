@@ -176,7 +176,7 @@ Injection multiplier oscillation threshold (used for multiplier dampening). Defa
 Set compatibility mode for the SKIP100/SKIP300 keywords. Options are 100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP) [default], 300 (skip SKIP300..ENDSKIP, keep SKIP100..ENDSKIP) and all (skip both SKIP100..ENDSKIP and SKIP300..ENDSKIP) . Default: "100"
 .TP
 \fB\-\-linear\-solver\fR=\fI\,STRING\/\fR
-Configuration of solver. Valid options are: cprw (default), ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'. Default: "cprw"
+Configuration of solver. Valid options are: cprw (default), ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, cpr_trueimpes, cpr_trueimpesanalytic, cpr_coatsblackoil, cpr_coatscompositional, amg or hybrid (experimental). Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'. Default: "cprw"
 .TP
 \fB\-\-linear\-solver\-ignore\-convergence\-failure\fR=\fI\,BOOLEAN\/\fR
 Continue with the simulation like nothing happened after the linear solver did not converge. Default: false

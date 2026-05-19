@@ -204,7 +204,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 
     // Use CPR configuration.
     if (!tpsaSetup) {
-        if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {
+        if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")
+            || (conf == "cpr_coatsblackoil") || (conf == "cpr_coatscompositional")) {
             if (!linearSolverMaxIterSet) {
                 // Use our own default unless it was explicitly overridden by user.
                 p.linear_solver_maxiter_ = 20;
@@ -273,7 +274,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     else {
         OPM_THROW(std::invalid_argument,
                 conf + " is not a valid setting for --linear-solver-configuration."
-                " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic or isai");
+                " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes,"
+                " cpr_trueimpesanalytic, cpr_coatsblackoil, cpr_coatscompositional or isai");
     }
 }
 
@@ -330,6 +332,10 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
         prm.put("preconditioner.weight_type", "quasiimpes"s);
     } else if (conf == "cpr_trueimpes") {
         prm.put("preconditioner.weight_type", "trueimpes"s);
+    } else if (conf == "cpr_coatsblackoil") {
+        prm.put("preconditioner.weight_type", "coatsblackoil"s);
+    } else if (conf == "cpr_coatscompositional") {
+        prm.put("preconditioner.weight_type", "coatscompositional"s);
     } else {
         prm.put("preconditioner.weight_type", "trueimpesanalytic"s);
     }

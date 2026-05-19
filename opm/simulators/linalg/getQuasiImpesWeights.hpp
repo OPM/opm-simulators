@@ -157,6 +157,31 @@ namespace Amg
     }
 #endif
 
+    /// \brief Compute IMPES pressure-equation weights via AD storage Jacobian (derivative-based).
+    ///
+    /// For each cell, the storage Jacobian dM/dx (where M_i is the accumulation term
+    /// for equation i and x_j is primary variable j) is assembled from the automatic
+    /// differentiation (AD) derivatives of the storage residual.  The transposed system
+    ///
+    ///   (dM/dx)^T  w = e_pressure
+    ///
+    /// is then solved for the weight vector w.  This is the "numerical" or
+    /// derivative-based IMPES approach: it works for any blackoil extension
+    /// (dissolved gas in water, vaporised water, thermal, solvents, etc.)
+    /// without requiring a closed-form analytic formula.
+    ///
+    /// This method is more expensive than the analytic alternatives
+    /// (getTrueImpesWeightsAnalytic, getCoatsWeightsBlackoil) because it
+    /// requires an element-context update and a small dense solve per cell.
+    ///
+    /// References:
+    ///   - Wallis, J.R. (1983). "Incomplete Gaussian Elimination as a
+    ///     Preconditioning for Generalized Conjugate Gradient Acceleration."
+    ///     SPE-12265-MS. https://doi.org/10.2118/12265-MS
+    ///   - Cao, H., Tchelepi, H.A., Wallis, J.R., Yardumian, H. (2005).
+    ///     "Parallel Scalable Unstructured CPR-Type Linear Solver for
+    ///     Reservoir Simulation." SPE-96809-MS.
+    ///     https://doi.org/10.2118/96809-MS
     template<class Vector, class ElementContext, class Model, class ElementChunksType>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights,
                              const ElementContext& elemCtx,
@@ -224,6 +249,40 @@ namespace Amg
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
 
+    /// \brief Compute analytic IMPES/Coats pressure-equation weights for the blackoil model.
+    ///
+    /// Equivalent to getCoatsWeightsBlackoil() for the standard blackoil model
+    /// (no dissolved gas in water, no vaporised water).  The weights are:
+    ///
+    ///   w_water = B_w
+    ///   w_oil   = (B_o - R_s B_g) / (1 - R_s R_v)
+    ///   w_gas   = (B_g - R_v B_o) / (1 - R_s R_v)
+    ///
+    /// where B_alpha = 1/invB_alpha is the formation-volume factor.
+    /// These weights satisfy the volumetric-balance linear system
+    ///
+    ///   | invBw   0       0       | | w_w |   | 1 |
+    ///   | 0       invBo   Rs*invBo| | w_o | = | 1 |
+    ///   | 0       Rv*invBg invBg  | | w_g |   | 1 |
+    ///
+    /// so that the weighted sum of the component mass balances equals the
+    /// total reservoir pore-volume balance  phi*(S_w + S_o + S_g).
+    ///
+    /// Undersaturation is handled by switching off the appropriate ratio:
+    ///   - gas dissolved only (GasMeaning::Rs): set R_v = 0
+    ///   - oil vaporised only (GasMeaning::Rv): set R_s = 0
+    ///
+    /// For the extended blackoil model with dissolved gas in water (R_sw)
+    /// and vaporised water in gas (R_vw), use getCoatsWeightsBlackoil()
+    /// instead, which adds the full cross-terms.
+    ///
+    /// References:
+    ///   - Wallis, J.R. (1983). "Incomplete Gaussian Elimination as a
+    ///     Preconditioning for Generalized Conjugate Gradient Acceleration."
+    ///     SPE-12265-MS. https://doi.org/10.2118/12265-MS
+    ///   - Coats, K.H. (1980). "An Equation of State Compositional Model."
+    ///     SPE Journal, 20(5), 363-376. SPE-8284-PA.
+    ///     https://doi.org/10.2118/8284-PA
     template <class Vector, class ElementContext, class Model, class ElementChunksType>
     void getTrueImpesWeightsAnalytic(int /*pressureVarIndex*/,
                                      Vector& weights,
@@ -234,10 +293,10 @@ namespace Amg
     {
         // The sequential residual is a linear combination of the
         // mass balance residuals, with coefficients equal to (for
-        // water, oil, gas):
-        //    1/bw,
-        //    (1/bo - rs/bg)/(1-rs*rv)
-        //    (1/bg - rv/bo)/(1-rs*rv)
+        // water, oil, gas) -- here bw means B_w (formation-volume factor):
+        //    B_w                         = 1/invBw
+        //    (B_o - Rs*B_g)/(1-Rs*Rv)   = (1/invBo - Rs/invBg)/(1-Rs*Rv)
+        //    (B_g - Rv*B_o)/(1-Rs*Rv)   = (1/invBg - Rv/invBo)/(1-Rs*Rv)
         // These coefficients must be applied for both the residual and
         // Jacobian.
         using FluidSystem = typename Model::FluidSystem;
@@ -313,13 +372,18 @@ namespace Amg
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
 
-    /// \brief Compute Coats pressure-equation weights for the blackoil model.
+    /// \brief Compute Coats pressure-equation weights for the blackoil model,
+    ///        including the extended Rsw/Rvw cross terms.
     ///
     /// Based on Coats (1980), the pressure equation is formed by taking a linear
     /// combination of the component mass-balance equations with coefficients that
     /// convert them into a total reservoir-volume balance:
     ///
     ///   sum_i  w_i * (component i mass balance) = d(total pore volume)/dt + flux terms
+    ///
+    /// The weights ensure that the weighted combination of storage terms satisfies
+    ///
+    ///   w_w * invBw * S_w  +  w_o * invBo * S_o  +  w_g * invBg * S_g  =  S_w + S_o + S_g
     ///
     /// For a 3-phase blackoil system the weights are derived by solving:
     ///
@@ -335,6 +399,20 @@ namespace Amg
     /// where B_alpha = 1/invB_alpha.  The function handles all active-phase
     /// combinations and the optional dissolved-gas-in-water (Rsw) and
     /// vaporized-water-in-gas (Rvw) extensions.
+    ///
+    /// Without Rsw and Rvw this formula reduces to getTrueImpesWeightsAnalytic().
+    ///
+    /// Undersaturation is handled by switching off the appropriate ratio:
+    ///   - oil undersaturated (GasMeaning::Rv encoding): set R_s = 0
+    ///   - gas undersaturated (GasMeaning::Rs encoding): set R_v = 0
+    ///
+    /// References:
+    ///   - Coats, K.H. (1980). "An Equation of State Compositional Model."
+    ///     SPE Journal, 20(5), 363-376. SPE-8284-PA.
+    ///     https://doi.org/10.2118/8284-PA
+    ///   - Coats, K.H. (1999). "A Note on IMPES and Some IMPES-Based
+    ///     Simulation Models." SPE Journal, 5(3), 245-251. SPE-65998-PA.
+    ///     https://doi.org/10.2118/65998-PA
     template<class Vector, class ElementContext, class Model, class ElementChunksType>
     void getCoatsWeightsBlackoil(int /*pressureVarIndex*/,
                                  Vector& weights,
@@ -473,7 +551,17 @@ namespace Amg
     /// \brief Compute Coats pressure-equation weights for the compositional (ptflash) model.
     ///
     /// Based on Coats (1980), the pressure equation is obtained by forming a
-    /// volumetric balance from the component mass balances.  For each hydrocarbon
+    /// volumetric balance from the component mass balances.  Unlike the blackoil
+    /// formulation (getCoatsWeightsBlackoil), the compositional model uses
+    /// saturation-weighted specific volumes derived from the phase compositions
+    /// and densities provided by the ptflash equilibrium calculation.
+    ///
+    /// References:
+    ///   - Coats, K.H. (1980). "An Equation of State Compositional Model."
+    ///     SPE Journal, 20(5), 363-376. SPE-8284-PA.
+    ///     https://doi.org/10.2118/8284-PA
+    ///
+    /// For each hydrocarbon
     /// component i with mass-based storage term
     ///
     ///   M_i = phi * sum_{alpha in HC} omega_{alpha,i} * rho_alpha * S_alpha
@@ -508,8 +596,8 @@ namespace Amg
         using Toolbox = MathToolbox<Evaluation>;
         using Indices = typename Model::Indices;
 
-        constexpr int numComponents = Model::numComponents;
-        constexpr int numPhases     = Model::numPhases;
+        constexpr int numComponents = FluidSystem::numComponents;
+        constexpr int numPhases     = FluidSystem::numPhases;
         constexpr bool waterEnabled = Indices::waterEnabled;
 
         VectorBlockType bweights;
