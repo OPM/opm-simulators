@@ -279,7 +279,8 @@ public:
      */
     SimulatorReport finalize();
 
-    const Grid& grid() const { return simulator_.vanguard().grid(); }
+    const Grid& grid() const
+    { return simulator_.vanguard().grid(); }
 
     /// Serialize the parts of this class needed for OPMRST round-tripping
     /// (the surrounding simulator state, the report, and the adaptive

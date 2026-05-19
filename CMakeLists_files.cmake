@@ -235,6 +235,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/BlackoilWellModelWBP.cpp
   opm/simulators/wells/ConnFiltrateData.cpp
   opm/simulators/wells/GuideRateHandler.cpp
+  opm/simulators/wells/ConnFractureData.cpp
   opm/simulators/wells/FractionCalculator.cpp
   opm/simulators/wells/GasLiftCommon.cpp
   opm/simulators/wells/GasLiftGroupInfo.cpp
@@ -1180,6 +1181,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/ConnectionIndexMap.hpp
   opm/simulators/wells/ConnFiltrateData.hpp
   opm/simulators/wells/ConnFracStatistics.hpp
+  opm/simulators/wells/ConnFractureData.hpp
   opm/simulators/wells/FractionCalculator.hpp
   opm/simulators/wells/GasLiftCommon.hpp
   opm/simulators/wells/GasLiftGroupInfo.hpp
