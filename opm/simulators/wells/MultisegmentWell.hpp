@@ -24,6 +24,7 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
@@ -73,6 +74,10 @@ namespace Opm {
         using typename Base::PressureMatrix;
         using FSInfo = std::tuple<Scalar, Scalar>;
 
+        using BMatrix = typename Base::BMatrix;
+        using CMatrix = typename Base::CMatrix;
+        using DMatrix = typename Base::DMatrix;
+        using WVector = typename Base::WVector;
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
                          const int time_step,
@@ -163,6 +168,21 @@ namespace Opm {
         std::vector<Scalar> getPrimaryVars() const override;
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
+        void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                          std::vector<CMatrix>& c_matrices,
+                          std::vector<DMatrix>& d_matrices,
+                          std::vector<std::vector<int>>& wcells) const override
+        {
+            // System solver is only supported when well DOF dimensions
+            // match between WellInterface and MultisegmentWellEval (standard 3-phase blackoil).
+            if constexpr (Base::numWellDofs == MSWEval::numWellDofs) {
+                MSWEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
+            } else {
+                OPM_THROW(std::runtime_error,
+                          "System solver with multisegment wells is only supported for standard "
+                          "3-phase blackoil (Indices::numEq == 3). This model has different equation count.");
+            }
+        }
 
         void getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
                                     DeferredLogger& deferred_logger) const override;

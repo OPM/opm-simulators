@@ -491,7 +491,6 @@ namespace Opm
                                   stopped_or_zero_target);
         }
 
-        // do the local inversion of D.
         try {
             this->linSys_.invert();
         } catch( ... ) {
@@ -1499,8 +1498,6 @@ namespace Opm
         this->linSys_.recoverSolutionWell(x, xw);
         updateWellState(simulator, xw, groupStateHelper, well_state);
     }
-
-
 
 
     template<typename TypeTag>
@@ -2528,7 +2525,8 @@ namespace Opm
                 }
             }
 
-            assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state, solving_with_zero_rate);
+            assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
+                                           well_state, solving_with_zero_rate);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;

@@ -192,6 +192,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory7.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/system/SystemPreconditioner.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
@@ -525,6 +526,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
+  tests/test_WellMatrixMerger.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp

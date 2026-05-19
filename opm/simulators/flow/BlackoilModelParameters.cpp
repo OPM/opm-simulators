@@ -20,6 +20,8 @@
 #include <config.h>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/nonlinear/newtonmethodparams.hpp>
@@ -78,6 +80,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     update_equations_scaling_ = Parameters::Get<Parameters::UpdateEquationsScaling>();
     use_update_stabilization_ = Parameters::Get<Parameters::UseUpdateStabilization>();
     matrix_add_well_contributions_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
+    use_system_solver_ = Parameters::Get<Parameters::UseSystemSolver>();
     check_well_operability_ = Parameters::Get<Parameters::EnableWellOperabilityCheck>();
     check_well_operability_iter_ = Parameters::Get<Parameters::EnableWellOperabilityCheckIter>();
     max_number_of_well_switches_ = Parameters::Get<Parameters::MaximumNumberOfWellSwitches>();
@@ -240,6 +243,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::MatrixAddWellContributions>
         ("Explicitly specify the influences of wells between cells in "
          "the Jacobian and preconditioner matrices");
+    Parameters::Register<Parameters::UseSystemSolver>
+        ("Use the coupled reservoir-well system solver");
     Parameters::Register<Parameters::EnableWellOperabilityCheck>
         ("Enable the well operability checking");
     Parameters::Register<Parameters::EnableWellOperabilityCheckIter>

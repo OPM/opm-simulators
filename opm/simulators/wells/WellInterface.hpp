@@ -97,6 +97,13 @@ public:
     using BVector = Dune::BlockVector<VectorBlockType>;
     using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
+    static constexpr int numResDofs = Indices::numEq;
+    static constexpr int numWellDofs = numResDofs + 1;  // NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
@@ -366,6 +373,11 @@ public:
     virtual void updateIPRImplicit(const Simulator& simulator,
                                    const GroupStateHelperType& groupStateHelper,
                                    WellStateType& well_state) = 0;
+
+    virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+        std::vector<CMatrix>& c_matrices,
+        std::vector<DMatrix>& d_matrices,
+        std::vector<std::vector<int>>& wcells) const = 0;
 
 protected:
     // simulation parameters
