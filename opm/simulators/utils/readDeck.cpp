@@ -275,6 +275,9 @@ namespace {
                                 const int stepIdx,
                                 const bool isInj)
     {
+        if (!schedule.hasGroup(parentname, stepIdx)) {
+            return false;
+        }
         const auto& parent = schedule.getGroup(parentname, stepIdx);
         if (isInj) {
             if (parent.isInjectionGroup()) {
