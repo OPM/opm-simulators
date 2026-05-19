@@ -86,6 +86,9 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
     check_group_constraints_inner_well_iterations_ = Parameters::Get<Parameters::CheckGroupConstraintsInnerWellIterations>();
+    local_well_eq_linear_solver_ = Parameters::Get<Parameters::LocalWellEqLinearSolver>();
+    local_well_eq_reuse_preconditioner_ = Parameters::Get<Parameters::LocalWellEqReusePreconditioner>();
+    local_well_eq_use_legacy_global_operator_ = Parameters::Get<Parameters::LocalWellEqUseLegacyGlobalOperator>();
     nonlinear_solver_ = Parameters::Get<Parameters::NonlinearSolver>();
     const auto approach = Parameters::Get<Parameters::LocalSolveApproach>();
     if (approach == "jacobi") {
@@ -256,6 +259,15 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Compute implict IPR for stability checks and stable solution search");
     Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
         ("Allow checking of group constraints during inner well iterations");
+    Parameters::Register<Parameters::LocalWellEqLinearSolver>
+        ("Linear solver preset or JSON file path for multisegment well equations. "
+         "Default is 'umfpack'. Use a filename ending in '.json' to provide a full solver configuration.");
+    Parameters::Register<Parameters::LocalWellEqReusePreconditioner>
+        ("If true, reuse the multisegment-well flexible solver and only update preconditioner "
+         "when matrix structure is unchanged. Default false recreates the solver each iteration.");
+    Parameters::Register<Parameters::LocalWellEqUseLegacyGlobalOperator>
+        ("If true, use the legacy UMFPACK-based multisegment-well implementation for the global ISTL operator path. "
+         "Default true keeps previous behavior for apply/recover/extract while local well solves use the configured flexible solver.");
     Parameters::Register<Parameters::NetworkMaxStrictOuterIterations>
         ("Maximum outer iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxOuterIterations>
