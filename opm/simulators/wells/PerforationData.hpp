@@ -34,6 +34,21 @@ struct PerforationData
     int satnum_id{};
     /// \brief The original index of the perforation in ECL Schedule
     std::size_t ecl_index{};
+    /// \brief LGR grid level for this perforation (0 = global grid,
+    ///        > 0 = numeric LGR level matching
+    ///        data::Connection::lgr_grid).
+    int lgr_grid{};
+    /// \brief Linearised Cartesian cell index relative to the cell's own
+    ///        grid origin.  For non-LGR perforations (lgr_grid == 0) this is
+    ///        the global-grid Cartesian index; for LGR perforations
+    ///        (lgr_grid > 0) this is the LGR-local Cartesian index.
+    ///
+    /// Together with lgr_grid this forms the (lgr_grid, lgr_cell_index)
+    /// pair that uniquely identifies any cell in the deck -- including
+    /// refined siblings under a common coarse parent, which would otherwise
+    /// alias if identified via the active-cell-derived global cartesian
+    /// returned by CpGrid::globalCell()[active_idx].
+    std::size_t lgr_cell_index{};
 };
 
 template<class Scalar>

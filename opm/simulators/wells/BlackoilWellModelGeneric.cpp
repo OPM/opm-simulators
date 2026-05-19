@@ -395,6 +395,27 @@ initializeWellPerfData()
                     pd.connection_transmissibility_factor = connection.CF();
                     pd.satnum_id = connection.satTableId();
                     pd.ecl_index = connection_index;
+                    // Carry the deck-side LGR id (0 = global grid, 1..N = LGR
+                    // in CARFIN declaration order) into restart output via
+                    // data::Connection::lgr_grid. This is the opm-common
+                    // numbering rooted in EclipseGrid::all_lgr_labels and must
+                    // not be substituted with CpGrid::getLgrNameToLevel()
+                    // values -- those live in a separate level namespace
+                    // used only for CpGrid-internal cell lookup.
+                    pd.lgr_grid = connection.get_lgr_level();
+                    // Source the Cartesian identity from the schedule
+                    // connection.  Schedule::Connection::global_index() is
+                    // documented (see CompletedCells::Cell) as the
+                    // "Linearised Cartesian cell index relative to grid
+                    // origin -- e.g., in an LGR or in the main grid."
+                    // For global-grid connections this is the global
+                    // Cartesian; for LGR connections it is the LGR-local
+                    // Cartesian.  Together with lgr_grid above this is the
+                    // (lgr_grid, lgr_cell_index) identity pair carried into
+                    // data::Connection at report() time -- avoiding the
+                    // CpGrid::globalCell()-derived parent-cartesian
+                    // aliasing for refined sibling cells.
+                    pd.lgr_cell_index = connection.global_index();
 
                     parallelWellInfo.pushBackEclIndex(connection_index_above,
                                                       connection_index);
