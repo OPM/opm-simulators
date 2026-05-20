@@ -296,11 +296,6 @@ macro(opm-simulators_sources_hook)
   if(QuadMath_FOUND)
     get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
     get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
-    if(qm_defs)
-      list(APPEND qm_defs HAVE_QUAD=1)
-    else()
-      set(qm_defs HAVE_QUAD=1)
-    endif()
     foreach(source opm/models/nonlinear/newtonmethodparams.cpp
                    opm/models/utils/parametersystem.cpp
                    opm/models/utils/simulatorutils.cpp
@@ -633,7 +628,6 @@ macro(opm-simulators_targets_hook)
           examples/${tapp}.cpp
       )
       target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
-      target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
     endforeach()
   endif()
 
