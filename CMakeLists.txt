@@ -913,8 +913,8 @@ endmacro()
 if(OPM_COMPILE_COMPONENTS STREQUAL "")
   message(FATAL_ERROR "OPM_COMPILE_COMPONENTS must contain at least one component.")
 endif()
-# Check that OPM_COMPILE_COMPONENTS is a subset of 2,3,4,5,6,7
-set(valid_components "2;3;4;5;6;7")
+# Check that OPM_COMPILE_COMPONENTS is a subset of 2,3,4,5,6,7,8,9,10
+set(valid_components "2;3;4;5;6;7;8;9;10")
 foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
   list(FIND valid_components ${component} index)
   if(index EQUAL -1)
