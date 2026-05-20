@@ -52,7 +52,7 @@ add_test_compareSeparateECLFiles(
   REL_TOL
     ${rel_tol}
   TEST_ARGS
-    --enable-adaptive-time-stepping=false
+    --solver-max-time-step-in-days=0.4
   MPI_PROCS
     1
 )
@@ -77,7 +77,7 @@ add_test_compareSeparateECLFiles(
   REL_TOL
     ${rel_tol}
   TEST_ARGS
-    --enable-adaptive-time-stepping=false
+    --solver-max-time-step-in-days=0.4
   MPI_PROCS
     1
 )
