@@ -104,8 +104,7 @@ public:
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
-                             const Parallel::Communication& comm,
-                             const BlackoilWellModelGenericParameters<Scalar>& param);
+                             const Parallel::Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,

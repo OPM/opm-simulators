@@ -97,13 +97,11 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsageInfo<IndexTraits>& pu,
-                         const Parallel::Communication& comm,
-                         const BlackoilWellModelGenericParameters<Scalar>& param)
+                         const Parallel::Communication& comm)
     : schedule_(schedule)
     , summaryState_(summaryState)
     , eclState_(eclState)
     , comm_(comm)
-    , param_(param)
     , gen_gaslift_(gaslift)
     , wbp_(*this)
     , phase_usage_info_(pu)

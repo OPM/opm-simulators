@@ -84,8 +84,7 @@ namespace Opm {
                                                         simulator.vanguard().summaryState(),
                                                         simulator.vanguard().eclState(),
                                                         FluidSystem::phaseUsage(),
-                                                        simulator.gridView().comm(),
-                                                        BlackoilWellModelGenericParameters<Scalar>{})
+                                                        simulator.gridView().comm())
         , simulator_(simulator)
         , guide_rate_handler_{
             *this,
