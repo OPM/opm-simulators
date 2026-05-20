@@ -53,47 +53,69 @@ using CpLeafGridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGr
             CpLeafGridView,                                     \
             GenericOilGasWaterFluidSystem<T, N, W>>;
 
+#define INSTANTIATE_COMP_VARIANTS(T, N)                                   \
+  INSTANTIATE_COMP_TYPE(T, N, false)                                    \
+  INSTANTIATE_COMP_TYPE(T, N, true)
+
+#define INSTANTIATE_FLOW_GENERIC_COMPONENTS(T)                            \
+  INSTANTIATE_COMP_VARIANTS(T, 2)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 3)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 4)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 5)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 6)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 7)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 8)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 9)                                       \
+  INSTANTIATE_COMP_VARIANTS(T, 10)
+
 INSTANTIATE_TYPE(double)
-INSTANTIATE_COMP_TYPE(double, 2, false)
-INSTANTIATE_COMP_TYPE(double, 2, true)
-INSTANTIATE_COMP_TYPE(double, 3, false)
-INSTANTIATE_COMP_TYPE(double, 3, true)
+INSTANTIATE_FLOW_GENERIC_COMPONENTS(double)
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
-INSTANTIATE_COMP_TYPE(float, 2, false)
-INSTANTIATE_COMP_TYPE(float, 2, true)
-INSTANTIATE_COMP_TYPE(float, 3, false)
-INSTANTIATE_COMP_TYPE(float, 3, true)
+INSTANTIATE_FLOW_GENERIC_COMPONENTS(float)
 #endif
 
 #if HAVE_DUNE_FEM
 using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
+
+#define INSTANTIATE_DUNE_FEM_COMP_TYPE(T, N, W)                           \
+template class FlowGenericProblem<GV,                                     \
+                  GenericOilGasWaterFluidSystem<T, N, W>>;
+
+#define INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, N)                          \
+  INSTANTIATE_DUNE_FEM_COMP_TYPE(T, N, false)                           \
+  INSTANTIATE_DUNE_FEM_COMP_TYPE(T, N, true)
+
+#define INSTANTIATE_DUNE_FEM_FLOW_GENERIC_COMPONENTS(T)                   \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 2)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 3)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 4)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 5)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 6)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 7)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 8)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 9)                              \
+  INSTANTIATE_DUNE_FEM_COMP_VARIANTS(T, 10)
+
 template class FlowGenericProblem<GV,
                                   BlackOilFluidSystem<double, BlackOilDefaultFluidSystemIndices>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<double, 2, false>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<double, 2, true>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<double, 3, false>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<double, 3, true>>;
+INSTANTIATE_DUNE_FEM_FLOW_GENERIC_COMPONENTS(double)
 #if FLOW_INSTANTIATE_FLOAT
 template class FlowGenericProblem<GV,
                                   BlackOilFluidSystem<float, BlackOilDefaultFluidSystemIndices>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<float, 2, false>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<float, 2, true>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<float, 3, false>>;
-template class FlowGenericProblem<GV,
-                  GenericOilGasWaterFluidSystem<float, 3, true>>;
+INSTANTIATE_DUNE_FEM_FLOW_GENERIC_COMPONENTS(float)
 #endif
 
+#undef INSTANTIATE_DUNE_FEM_FLOW_GENERIC_COMPONENTS
+#undef INSTANTIATE_DUNE_FEM_COMP_VARIANTS
+#undef INSTANTIATE_DUNE_FEM_COMP_TYPE
+
 #endif // HAVE_DUNE_FEM
+
+#undef INSTANTIATE_FLOW_GENERIC_COMPONENTS
+#undef INSTANTIATE_COMP_VARIANTS
 
 } // end namespace Opm

@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include <opm/input/eclipse/Schedule/Tuning.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>

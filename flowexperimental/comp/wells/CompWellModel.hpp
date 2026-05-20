@@ -135,7 +135,7 @@ public:
      const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
      const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
      const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
-     bool forceShutWellByName(const std::string&, double, bool) { return false; }
+     bool forceShutWellByName(const std::string& well_name, double simulation_time, bool dont_shut_grup_wells);
 
      template <class ReservoirCouplingSlave>
      void setReservoirCouplingSlave(ReservoirCouplingSlave*) {}

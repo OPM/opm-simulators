@@ -17,6 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -577,9 +580,9 @@ updateWellControl(const SummaryState& summary_state,
             // TODO: hack to get the injection rate
             const Scalar current_rate = std::accumulate(well_state.surface_phase_rates.begin(),
                                                         well_state.surface_phase_rates.end(), 0.0);
-            OpmLog::debug(fmt::format("Well {} RATE control check: current_rate={:.6e}, rate_limit={:.6e}, bhp={:.6e}, phase_rates=[{:.6e},{:.6e},{:.6e}]",
+            OpmLog::debug(fmt::format("Well {} RATE control check: current_rate={:.6e}, rate_limit={:.6e}, bhp={:.6e}, phase_rates=[{}]",
                                       this->well_ecl_.name(), current_rate, rate_limit, well_state.bhp,
-                                      well_state.surface_phase_rates[0], well_state.surface_phase_rates[1], well_state.surface_phase_rates[2]));
+                                      fmt::join(well_state.surface_phase_rates, ", ")));
             if (current_rate > rate_limit) {
                 OpmLog::info(fmt::format("Well {} RATE control TRIGGERED: current_rate={:.6e} > rate_limit={:.6e}",
                                          this->well_ecl_.name(), current_rate, rate_limit));
