@@ -32,7 +32,7 @@ option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
 option(SUPPRESS_HIPIFY_WARNINGS "Suppress warnings in hipify?" ON)
 option(USE_AMGX "Enable AMGX support?" OFF)
 option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
-set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
+set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7;8;9;10" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 option(USE_DEV_SIMULATOR_IN_TESTS "Use the development simulator binaries in tests?" OFF)
 
