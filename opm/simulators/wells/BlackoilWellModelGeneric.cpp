@@ -225,7 +225,7 @@ initFromRestartFile(const RestartValue& restartValues,
     this->initializeWellProdIndCalculators();
     initializeWellPerfData();
 
-    bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
+    const bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
     // Resize for restart step
     this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                              this->schedule(), handle_ms_well, numCells,
