@@ -33,6 +33,7 @@
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGenericParameters.hpp>
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
@@ -194,12 +195,10 @@ public:
     void initFromRestartFile(const RestartValue& restartValues,
                              std::unique_ptr<WellTestState> wtestState,
                              const std::size_t numCells,
-                             bool handle_ms_well,
                              bool enable_distributed_wells);
 
     void prepareDeserialize(int report_step,
                             const std::size_t numCells,
-                            bool handle_ms_well,
                             bool enable_distributed_wells);
 
     /*
@@ -306,7 +305,6 @@ public:
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const NewtonIterationContext& iterCtx,
-                                       const Scalar tol_nupcol,
                                        // we only want to update the wellgroup target
                                        // after the groups have found their controls
                                        const bool update_wellgrouptarget);
@@ -448,7 +446,6 @@ protected:
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx,
-                                     const int max_number_of_group_switch,
                                      const bool update_group_switching_log);
 
     void inferLocalShutWells();
@@ -514,6 +511,7 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    const BlackoilWellModelGenericParameters<Scalar> param_;
     BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar, IndexTraits> wbp_;
 

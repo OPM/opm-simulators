@@ -394,7 +394,7 @@ namespace Opm {
             // to make sure we get the correct mapping.
             this->updateAndCommunicateGroupData(reportStepIdx,
                                     iterCtx,
-                                    param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ false);
+                                    /*update_wellgrouptarget*/ false);
 
             // Wells are active if they are active wells on at least one process.
             const Grid& grid = simulator_.vanguard().grid();
@@ -503,7 +503,6 @@ namespace Opm {
 
         this->updateAndCommunicateGroupData(reportStepIdx,
                                     iterCtx,
-                                    param_.nupcol_group_rate_tolerance_,
                                     /*update_wellgrouptarget*/ true);
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
@@ -542,7 +541,6 @@ namespace Opm {
             if (slave_needs_well_solution) {
                 this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
                                             /*update_wellgrouptarget*/ false);
                 this->sendSlaveGroupDataToMaster();
             }
@@ -1347,7 +1345,7 @@ namespace Opm {
         const auto& iterCtx = simulator_.problem().iterationContext();
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx, iterCtx,
-            param_.nupcol_group_rate_tolerance_, /*update_wellgrouptarget*/ true);
+            /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
@@ -1785,7 +1783,6 @@ namespace Opm {
         const auto& iterCtx = simulator_.problem().iterationContext();
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
                                             /*update_wellgrouptarget*/ true);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
@@ -1807,7 +1804,6 @@ namespace Opm {
                                    simulator_.gridView().comm())
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             iterCtx,
-                                            param_.nupcol_group_rate_tolerance_,
                                             /*update_wellgrouptarget*/ true);
     }
 
@@ -1832,9 +1828,9 @@ namespace Opm {
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
-        const int max_number_of_group_switches = param_.max_number_of_group_switches_;
         const bool update_group_switching_log = !iterCtx.withinNupcol(nupcol);
-        const bool changed_hc = this->checkGroupHigherConstraints(group, deferred_logger, reportStepIdx, max_number_of_group_switches, update_group_switching_log);
+        const bool changed_hc = this->checkGroupHigherConstraints(
+            group, deferred_logger, reportStepIdx, update_group_switching_log);
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx);
@@ -1844,7 +1840,7 @@ namespace Opm {
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
-                                             max_number_of_group_switches,
+                                             param_.max_number_of_group_switches_,
                                              update_group_switching_log,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
