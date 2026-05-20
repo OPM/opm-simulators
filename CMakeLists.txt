@@ -590,31 +590,34 @@ macro(opm-simulators_targets_hook)
   # multiple compile units in order to ensure that eWoms code can be
   # used within libraries that use the same type tag within multiple
   # compile units.
-  opm_add_test(lens_immiscible_ecfv_ad_mcu
-    ONLY_COMPILE
+  opm_add_executable(
+    TARGET
+      lens_immiscible_ecfv_ad_mcu
     SOURCES
      examples/lens_immiscible_ecfv_ad_cu1.cpp
      examples/lens_immiscible_ecfv_ad_cu2.cpp
      examples/lens_immiscible_ecfv_ad_main.cpp
     LIBRARIES
       opmsimulators
-      opmcommon
   )
 
-  opm_add_test(test_tuning_trgmbe
-    ONLY_COMPILE
+  opm_add_executable(
+    TARGET
+      test_tuning_trgmbe
     SOURCES
       tests/test_tuning_TRGMBE.cpp
     LIBRARIES
       Boost::unit_test_framework
   )
 
-  opm_add_test(test_tuning_tsinit_nextstep
-    ONLY_COMPILE
+  opm_add_executable(
+    TARGET
+      test_tuning_tsinit_nextstep
     SOURCES
       tests/test_tuning_TSINIT_NEXTSTEP.cpp
      LIBRARIES
-      Boost::unit_test_framework opmcommon
+      opmcommon
+      Boost::unit_test_framework
   )
 
   if(QuadMath_FOUND)
@@ -622,17 +625,15 @@ macro(opm-simulators_targets_hook)
                  co2injection_flash_ni_vcfv
                  co2injection_flash_ecfv
                  co2injection_flash_vcfv)
-      opm_add_test(${tapp}_quad
-        ONLY_COMPILE
-        LIBRARIES
-          opmsimulators
-          opmcommon
-        EXE_NAME
+      opm_add_executable(
+        TARGET
           ${tapp}_quad
+        LIBRARIES
+          QuadMath::QuadMath
+          opmsimulators
         SOURCES
           examples/${tapp}.cpp
       )
-      target_link_libraries(${tapp}_quad PRIVATE QuadMath::QuadMath)
       target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
     endforeach()
   endif()
@@ -738,47 +739,40 @@ macro(opm-simulators_targets_hook)
     list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
     list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})
 
-    opm_add_test(flow_${OBJ}
-      ONLY_COMPILE
+    opm_add_executable(
+      TARGET
+        flow_${OBJ}
       SOURCES
         flow/flow_${OBJ}_main.cpp
         $<TARGET_OBJECTS:moduleVersion>
         $<TARGET_OBJECTS:flow_lib${OBJ}>
-      EXE_NAME
-        flow_${OBJ}
-      DEPENDS
-        opmsimulators
       LIBRARIES
         opmsimulators
     )
   endforeach()
 
-  opm_add_test(flow
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
-    LIBRARIES
-      opmsimulators
+  opm_add_executable(
+    TARGET
+      flow
     SOURCES
       flow/flow.cpp
       ${FLOW_TGTS}
       $<TARGET_OBJECTS:moduleVersion>
       $<TARGET_OBJECTS:MainDispatchDynamic>
-  )
-
-  opm_add_test(flow_distribute_z
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
     LIBRARIES
       opmsimulators
+  )
+
+  opm_add_executable(
+    TARGET
+      flow_distribute_z
     SOURCES
       flow/flow_distribute_z.cpp
       ${FLOW_TGTS}
       $<TARGET_OBJECTS:moduleVersion>
       $<TARGET_OBJECTS:MainDispatchDynamic>
+    LIBRARIES
+      opmsimulators
   )
 
   if(OPM_ENABLE_PYTHON)
@@ -805,17 +799,15 @@ macro(opm-simulators_targets_hook)
   # this will be used in a template argument pack.
   string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
-  opm_add_test(flowexp_comp
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
-    LIBRARIES
-      opmsimulators
+  opm_add_executable(
+    TARGET
+      flowexp_comp
     SOURCES
       flowexperimental/comp/flowexp_comp.cpp
       ${FLOWEXP_COMPONENTS_SOURCES}
       $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
   )
   target_compile_definitions(flowexp_comp
     PRIVATE
@@ -823,56 +815,48 @@ macro(opm-simulators_targets_hook)
   )
 
   if(BUILD_FLOW_FLOAT_VARIANTS)
-    opm_add_test(flow_blackoil_float
-      ONLY_COMPILE
-      ALWAYS_ENABLE
-      DEPENDS
-        opmsimulators
-      LIBRARIES
-        opmsimulators
+    opm_add_executable(
+      TARGET
+        flow_blackoil_float
       SOURCES
         flow/flow_blackoil_float_main.cpp
         $<TARGET_OBJECTS:moduleVersion>
+      LIBRARIES
+        opmsimulators
     )
   endif()
 
-  opm_add_test(flowexp_blackoil
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
-    LIBRARIES
-      opmsimulators
+  opm_add_executable(
+    TARGET
+      flowexp_blackoil
     SOURCES
       flowexperimental/flowexp_blackoil.cpp
       $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
   )
 
   if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
-    opm_add_test(flow_blackoil_alugrid
-      ONLY_COMPILE
-      ALWAYS_ENABLE
-      DEPENDS
-        opmsimulators
-      LIBRARIES
-        opmsimulators
+    opm_add_executable(
+      TARGET
+        flow_blackoil_alugrid
       SOURCES
         flow/flow_blackoil_alugrid.cpp
         $<TARGET_OBJECTS:moduleVersion>
+      LIBRARIES
+        opmsimulators
     )
   endif()
 
   if(BUILD_FLOW_POLY_GRID)
-    opm_add_test(flow_blackoil_polyhedralgrid
-      ONLY_COMPILE
-      ALWAYS_ENABLE
-      DEPENDS
-        opmsimulators
-      LIBRARIES
-        opmsimulators
+    opm_add_executable(
+      TARGET
+        flow_blackoil_polyhedralgrid
       SOURCES
         flow/flow_blackoil_polyhedralgrid.cpp
         $<TARGET_OBJECTS:moduleVersion>
+      LIBRARIES
+        opmsimulators
     )
   endif()
 
