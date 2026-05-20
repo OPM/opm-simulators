@@ -35,4 +35,8 @@ BlackoilWellModelGenericParameters<Scalar>::BlackoilWellModelGenericParameters()
 
 template struct BlackoilWellModelGenericParameters<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template struct BlackoilWellModelGenericParameters<float>;
+#endif
+
 } // namespace Opm
