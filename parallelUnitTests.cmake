@@ -58,14 +58,15 @@ foreach(NPROC 2 3 4)
   )
 endforeach()
 
-opm_add_test(test_parallel_wbp_calculation
+opm_add_executable(
+  TARGET
+    test_parallel_wbp_calculation
   SOURCES
     tests/test_parallel_wbp_calculation.cpp
   LIBRARIES
     opmcommon
     opmsimulators
     Boost::unit_test_framework
-  ONLY_COMPILE
 )
 
 opm_add_test(test_parallel_wbp_calculation_create
