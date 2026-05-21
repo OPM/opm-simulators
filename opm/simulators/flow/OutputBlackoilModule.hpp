@@ -1833,24 +1833,23 @@ private:
         // Geochemistry
         if constexpr (getPropValue<TypeTag, Properties::EnableGeochemistry>()) {
             if (this->geochemC_.allocated()) {
-                this->extractors_.push_back(
-                    Entry{
-                        [&gC = this->geochemC_,
-                         &gM = this->simulator_.problem().geochemistryModel()](const Context& ectx)
-                        {
-                            gC.assignSpeciesConcentrations(
-                                ectx.globalDofIdx,
-                                [gIdx = ectx.globalDofIdx, &gM](const unsigned speciesIdx)
-                                    { return gM.speciesConcentration(speciesIdx, gIdx); }
-                            );
-                            gC.assignMineralConcentrations(
-                                ectx.globalDofIdx,
-                                [gIdx = ectx.globalDofIdx, &gM](const unsigned mineralIdx)
-                                    { return gM.mineralConcentration(mineralIdx, gIdx); }
-                            );
-                            gC.assignPH(ectx.globalDofIdx, gM.PH(ectx.globalDofIdx));
-                        }
-                    }
+                this->extractors_.emplace_back(
+                    [&gC = this->geochemC_,
+                     &gM = this->simulator_.problem().geochemistryModel()](const Context& ectx)
+                    {
+                        gC.assignSpeciesConcentrations(
+                            ectx.globalDofIdx,
+                            [gIdx = ectx.globalDofIdx, &gM](const unsigned speciesIdx)
+                                { return gM.speciesConcentration(speciesIdx, gIdx); }
+                        );
+                        gC.assignMineralConcentrations(
+                            ectx.globalDofIdx,
+                            [gIdx = ectx.globalDofIdx, &gM](const unsigned mineralIdx)
+                                { return gM.mineralConcentration(mineralIdx, gIdx); }
+                        );
+                        gC.assignPH(ectx.globalDofIdx, gM.PH(ectx.globalDofIdx));
+                    },
+                    true
                 );
             }
         }
@@ -1858,36 +1857,36 @@ private:
         // Geomechanics
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
             if (this->mech_.allocated()) {
-                this->extractors_.push_back(
-                    Entry{[&mech = this->mech_,
-                           &model = simulator_.problem().geoMechModel()](const Context& ectx)
-                           {
-                              mech.assignDelStress(ectx.globalDofIdx,
-                                                   model.delstress(ectx.globalDofIdx));
+                this->extractors_.emplace_back(
+                    [&mech = this->mech_,
+                     &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                    {
+                        mech.assignDelStress(ectx.globalDofIdx,
+                                             model.delstress(ectx.globalDofIdx));
 
-                              mech.assignDisplacement(ectx.globalDofIdx,
-                                                      model.disp(ectx.globalDofIdx, /*include_fracture*/true));
+                        mech.assignDisplacement(ectx.globalDofIdx,
+                                                model.disp(ectx.globalDofIdx, /*include_fracture*/true));
 
-                              // is the tresagii stress which make rock fracture
-                              mech.assignFracStress(ectx.globalDofIdx,
-                                                    model.fractureStress(ectx.globalDofIdx));
+                        // is the tresagii stress which make rock fracture
+                        mech.assignFracStress(ectx.globalDofIdx,
+                                              model.fractureStress(ectx.globalDofIdx));
 
-                              mech.assignLinStress(ectx.globalDofIdx,
-                                                   model.linstress(ectx.globalDofIdx));
+                        mech.assignLinStress(ectx.globalDofIdx,
+                                             model.linstress(ectx.globalDofIdx));
 
-                              mech.assignPotentialForces(ectx.globalDofIdx,
-                                                         model.mechPotentialForce(ectx.globalDofIdx),
-                                                         model.mechPotentialPressForce(ectx.globalDofIdx),
-                                                         model.mechPotentialTempForce(ectx.globalDofIdx));
+                        mech.assignPotentialForces(ectx.globalDofIdx,
+                                                   model.mechPotentialForce(ectx.globalDofIdx),
+                                                   model.mechPotentialPressForce(ectx.globalDofIdx),
+                                                   model.mechPotentialTempForce(ectx.globalDofIdx));
 
-                              mech.assignStrain(ectx.globalDofIdx,
-                                                model.strain(ectx.globalDofIdx, /*include_fracture*/true));
+                        mech.assignStrain(ectx.globalDofIdx,
+                                          model.strain(ectx.globalDofIdx, /*include_fracture*/true));
 
-                              // Total stress is not stored but calculated result is Voigt notation
-                              mech.assignStress(ectx.globalDofIdx,
-                                                model.stress(ectx.globalDofIdx, /*include_fracture*/true));
-                           }
-                    }
+                        // Total stress is not stored but calculated result is Voigt notation
+                        mech.assignStress(ectx.globalDofIdx,
+                                          model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                    },
+                    true
                 );
             }
         }
