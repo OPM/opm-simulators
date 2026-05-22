@@ -12,7 +12,6 @@ then
   echo -e "\t\t -g value      Second deck file name"
   echo -e "\t\t -y value      Ignore extra keywords in the run. For -y 'BOTH', extra keywords in both runs will be ignored. For -y 'SECOND', extra keywords in the second deck will be ignored."
   echo -e "\t\t -r <path>     Path to store results in"
-  echo -e "\t\t -b <path>     Path to simulator binary"
   echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
@@ -24,7 +23,7 @@ fi
 RESTART_STEP=""
 MPI_PROCS=1
 OPTIND=1
-while getopts "i:j:f:g:r:b:a:t:c:e:y:n:" OPT
+while getopts "i:j:f:g:r:a:t:c:e:y:n:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH1=${OPTARG} ;;
@@ -32,7 +31,6 @@ do
     f) FILENAME1=${OPTARG} ;;
     g) FILENAME2=${OPTARG} ;;
     r) RESULT_PATH=${OPTARG} ;;
-    b) BINPATH=${OPTARG} ;;
     a) ABS_TOL=${OPTARG} ;;
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
@@ -46,12 +44,11 @@ TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH1}/${FILENAME1} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+mpirun -np ${MPI_PROCS} "${EXE_NAME}" ${INPUT_DATA_PATH1}/${FILENAME1} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH2}/${FILENAME2} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+mpirun -np ${MPI_PROCS} "${EXE_NAME}" ${INPUT_DATA_PATH2}/${FILENAME2} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ..
-
 
 ecode=0
 

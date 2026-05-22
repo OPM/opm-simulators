@@ -41,22 +41,26 @@ function(add_test_runSimulator)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME})
- if(PARAM_PROCS)
-   list(APPEND DRIVER_ARGS -n ${PARAM_PROCS})
- endif()
- if(PARAM_POST_COMMAND)
-   list(APPEND DRIVER_ARGS -p "${PARAM_POST_COMMAND}")
- endif()
- if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
-   set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
- endif()
- opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
-              EXE_NAME ${PARAM_SIMULATOR}
-              DRIVER_ARGS ${DRIVER_ARGS}
-              TEST_ARGS ${TEST_ARGS}
-              CONFIGURATION ${PARAM_CONFIGURATION})
+  if(PARAM_PROCS)
+    list(APPEND DRIVER_ARGS -n ${PARAM_PROCS})
+  endif()
+  if(PARAM_POST_COMMAND)
+    list(APPEND DRIVER_ARGS -p "${PARAM_POST_COMMAND}")
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+  endif()
+  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${TEST_ARGS}
+    CONFIGURATION
+      ${PARAM_CONFIGURATION}
+  )
  if(PARAM_PROCS)
     set_tests_properties(runSimulator/${PARAM_CASENAME} PROPERTIES PROCESSORS ${PARAM_PROCS})
   endif()
@@ -97,7 +101,6 @@ function(add_test_compareECLFiles)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
@@ -114,9 +117,13 @@ function(add_test_compareECLFiles)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS})
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${TEST_ARGS}
+  )
   set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} PROPERTIES
                         DIRNAME ${PARAM_DIR}
                         FILENAME ${PARAM_FILENAME}
@@ -173,7 +180,6 @@ function(add_test_compareSeparateECLFiles)
                   -f ${PARAM_FILENAME1}
                   -g ${PARAM_FILENAME2}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
                   -c $<TARGET_FILE:compareECL>
@@ -182,9 +188,13 @@ function(add_test_compareSeparateECLFiles)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS})
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${TEST_ARGS}
+  )
   set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} PROPERTIES
                         DIRNAME ${PARAM_DIR}
                         FILENAME1 ${PARAM_FILENAME1}
@@ -236,17 +246,20 @@ function(add_test_compare_restarted_simulation)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   opm_add_test(${TEST_NAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                           -r ${RESULT_PATH}
-                           -b ${PROJECT_BINARY_DIR}/bin
-                           -f ${PARAM_FILENAME}
-                           -a ${PARAM_ABS_TOL}
-                           -t ${PARAM_REL_TOL}
-                           -c $<TARGET_FILE:compareECL>
-                           -d $<TARGET_FILE:rst_deck>
-                           -s ${PARAM_RESTART_STEP}
-               TEST_ARGS ${PARAM_TEST_ARGS})
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+      -r ${RESULT_PATH}
+      -f ${PARAM_FILENAME}
+      -a ${PARAM_ABS_TOL}
+      -t ${PARAM_REL_TOL}
+      -c $<TARGET_FILE:compareECL>
+      -d $<TARGET_FILE:rst_deck>
+      -s ${PARAM_RESTART_STEP}
+    TEST_ARGS
+      ${PARAM_TEST_ARGS}
+  )
 endfunction()
 
 ###########################################################################
@@ -301,7 +314,6 @@ function(add_test_compare_parallel_simulation)
 
     set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                     -r ${RESULT_PATH}
-                    -b ${PROJECT_BINARY_DIR}/bin
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
@@ -310,9 +322,13 @@ function(add_test_compare_parallel_simulation)
 
     # Add test that runs flow_mpi and outputs the results to file
     opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
-                 EXE_NAME ${PARAM_SIMULATOR}
-                 DRIVER_ARGS ${DRIVER_ARGS}
-                 TEST_ARGS ${TEST_ARGS})
+      EXE_TARGET
+        ${PARAM_SIMULATOR}
+      DRIVER_ARGS
+        ${DRIVER_ARGS}
+      TEST_ARGS
+        ${TEST_ARGS}
+    )
     set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
                          PROPERTIES PROCESSORS ${MPI_PROCS})
   endif()
@@ -370,7 +386,6 @@ function(add_test_compare_parallel_restarted_simulation)
     set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
     set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                     -r ${RESULT_PATH}
-                    -b ${PROJECT_BINARY_DIR}/bin
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
@@ -380,9 +395,13 @@ function(add_test_compare_parallel_restarted_simulation)
                     -n ${MPI_PROCS})
 
     opm_add_test(${TEST_NAME} NO_COMPILE
-                 EXE_NAME ${PARAM_SIMULATOR}
-                 DRIVER_ARGS ${DRIVER_ARGS}
-                 TEST_ARGS ${PARAM_TEST_ARGS})
+      EXE_TARGET
+        ${PARAM_SIMULATOR}
+      DRIVER_ARGS
+        ${DRIVER_ARGS}
+      TEST_ARGS
+        ${PARAM_TEST_ARGS}
+    )
     set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
   endif()
 endfunction()
@@ -429,17 +448,19 @@ function(add_test_split_comm)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelSplitComm/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c $<TARGET_FILE:compareECL>
-                  -n ${MPI_PROCS})
+                  -c $<TARGET_FILE:compareECL>)
 
   opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${PARAM_TEST_ARGS})
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${PARAM_TEST_ARGS}
+  )
   set_tests_properties(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
@@ -489,7 +510,6 @@ function(add_test_compareDamarisFiles)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
@@ -497,9 +517,13 @@ function(add_test_compareDamarisFiles)
                   -n ${MPI_PROCS})
   set(TEST_NAME ${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME})
   opm_add_test(${TEST_NAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${DRIVER_ARGS}
-               TEST_ARGS ${TEST_ARGS})
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${TEST_ARGS}
+  )
   set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS}
                                     DIRNAME ${PARAM_DIR}
                                     FILENAME ${PARAM_FILENAME}

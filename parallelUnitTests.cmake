@@ -14,7 +14,6 @@ opm_add_test(test_gatherconvergencereport
     tests/test_gatherconvergencereport.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -29,17 +28,15 @@ opm_add_test(test_gatherdeferredlogger
     tests/test_gatherdeferredlogger.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
 
 opm_add_test(test_parallelwellinfo_mpi
-  EXE_NAME
+  EXE_TARGET
     test_parallelwellinfo
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
   PROCESSORS
     4
@@ -47,11 +44,10 @@ opm_add_test(test_parallelwellinfo_mpi
 
 foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_wbp_sourcevalues_np${NPROC}
-    EXE_NAME
+    EXE_TARGET
       test_parallel_wbp_sourcevalues
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -70,11 +66,10 @@ opm_add_executable(
 )
 
 opm_add_test(test_parallel_wbp_calculation_create
-  EXE_NAME
+  EXE_TARGET
     test_parallel_wbp_calculation
   DRIVER_ARGS
     -n 2
-    -b ${PROJECT_BINARY_DIR}
   TEST_ARGS
     --run_test=Create
   NO_COMPILE
@@ -83,11 +78,10 @@ opm_add_test(test_parallel_wbp_calculation_create
 )
 
 opm_add_test(test_parallel_wbp_calculation_well_openconns
-  EXE_NAME
+  EXE_TARGET
     test_parallel_wbp_calculation
   DRIVER_ARGS
     -n 2
-    -b ${PROJECT_BINARY_DIR}
   TEST_ARGS
     --run_test=TopOfFormation_Well_OpenConns
   NO_COMPILE
@@ -97,11 +91,10 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
 
 foreach(NPROC 2 3 4)
   opm_add_test(test_rftcontainer_np${NPROC}
-    EXE_NAME
+    EXE_TARGET
       test_rftcontainer
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -110,11 +103,10 @@ endforeach()
 
 foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_region_phase_pvaverage_np${NPROC}
-    EXE_NAME
+    EXE_TARGET
       test_region_phase_pvaverage
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     TEST_ARGS
       --run_test=Parallel/*
     NO_COMPILE
@@ -125,11 +117,10 @@ endforeach()
 
 foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_satfunc_consistency_checks_np${NPROC}
-    EXE_NAME
+    EXE_TARGET
       test_SatfuncConsistencyChecks_parallel
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -146,7 +137,6 @@ opm_add_test(test_broadcast
     tests/test_broadcast.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -163,7 +153,6 @@ opm_add_test(test_HDF5File_Parallel
     HDF5_FOUND
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -181,17 +170,15 @@ opm_add_test(test_HDF5Serializer_Parallel
     HDF5_FOUND
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
 
 opm_add_test(test_rstconv_parallel
-  EXE_NAME
+  EXE_TARGET
     test_rstconv
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
   PROCESSORS
     4

@@ -10,7 +10,6 @@ then
   echo -e "\tMandatory options:"
   echo -e "\t\t -i <path>     Path to read deck from"
   echo -e "\t\t -r <path>     Path to store results in"
-  echo -e "\t\t -b <path>     Path to simulator binary"
   echo -e "\t\t -f <filename> Deck file name"
   echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
@@ -24,12 +23,11 @@ fi
 MPI_PROCS=4
 OPTIND=1
 
-while getopts "i:r:b:f:a:t:c:e:n:" OPT
+while getopts "i:r:f:a:t:c:e:n:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
     r) RESULT_PATH=${OPTARG} ;;
-    b) BINPATH=${OPTARG} ;;
     f) FILENAME=${OPTARG} ;;
     a) ABS_TOL=${OPTARG} ;;
     t) REL_TOL=${OPTARG} ;;
@@ -44,12 +42,12 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
+"${EXE_NAME}" ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
 
 test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}/mpi
+mpirun -np ${MPI_PROCS} "${EXE_NAME}" ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}/mpi
 test $? -eq 0 || exit 1
 cd ..
 
