@@ -10,7 +10,6 @@ then
   echo -e "\tMandatory options:"
   echo -e "\t\t -i <path>     Path to read deck from"
   echo -e "\t\t -r <path>     Path to store results in"
-  echo -e "\t\t -b <path>     Path to simulator binary"
   echo -e "\t\t -f <filename> Deck file name"
   echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
@@ -22,12 +21,11 @@ fi
 
 OPTIND=1
 MPI_PROCS=1
-while getopts "i:r:b:f:a:t:c:e:n:d:s:" OPT
+while getopts "i:r:f:a:t:c:e:n:d:s:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
     r) RESULT_PATH=${OPTARG} ;;
-    b) BINPATH=${OPTARG} ;;
     f) FILENAME=${OPTARG} ;;
     a) ABS_TOL=${OPTARG} ;;
     t) REL_TOL=${OPTARG} ;;
@@ -44,18 +42,18 @@ TEST_ARGS="$@"
 BASE_NAME=${FILENAME}
 if test $MPI_PROCS -gt 1
 then
-  CMD_PREFIX="mpirun -np $MPI_PROCS "
+  CMD_PREFIX="mpirun -np $MPI_PROCS"
 fi
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${CMD_PREFIX}${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS} --save-step=${RESTART_STEP}
+${CMD_PREFIX} "${EXE_NAME}" ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS} --save-step=${RESTART_STEP}
 
 test $? -eq 0 || exit 1
 
 mkdir -p ${RESULT_PATH}/restart
-${CMD_PREFIX}${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH}/restart ${TEST_ARGS} --load-step=${RESTART_STEP} --save-file=${RESULT_PATH}/${FILENAME}.OPMRST
+${CMD_PREFIX} "${EXE_NAME}" ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH}/restart ${TEST_ARGS} --load-step=${RESTART_STEP} --save-file=${RESULT_PATH}/${FILENAME}.OPMRST
 test $? -eq 0 || exit 1
 
 echo "=== Executing comparison for restart file ==="

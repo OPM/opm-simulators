@@ -41,7 +41,6 @@ function(add_test_runSimulator)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME})
  if(PARAM_PROCS)
    list(APPEND DRIVER_ARGS -n ${PARAM_PROCS})
@@ -97,7 +96,6 @@ function(add_test_compareECLFiles)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
@@ -173,7 +171,6 @@ function(add_test_compareSeparateECLFiles)
                   -f ${PARAM_FILENAME1}
                   -g ${PARAM_FILENAME2}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
                   -c $<TARGET_FILE:compareECL>
@@ -239,7 +236,6 @@ function(add_test_compare_restarted_simulation)
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                            -r ${RESULT_PATH}
-                           -b ${PROJECT_BINARY_DIR}/bin
                            -f ${PARAM_FILENAME}
                            -a ${PARAM_ABS_TOL}
                            -t ${PARAM_REL_TOL}
@@ -301,7 +297,6 @@ function(add_test_compare_parallel_simulation)
 
     set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                     -r ${RESULT_PATH}
-                    -b ${PROJECT_BINARY_DIR}/bin
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
@@ -370,7 +365,6 @@ function(add_test_compare_parallel_restarted_simulation)
     set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
     set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                     -r ${RESULT_PATH}
-                    -b ${PROJECT_BINARY_DIR}/bin
                     -f ${PARAM_FILENAME}
                     -a ${PARAM_ABS_TOL}
                     -t ${PARAM_REL_TOL}
@@ -429,12 +423,10 @@ function(add_test_split_comm)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelSplitComm/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c $<TARGET_FILE:compareECL>
-                  -n ${MPI_PROCS})
+                  -c $<TARGET_FILE:compareECL>)
 
   opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -489,7 +481,6 @@ function(add_test_compareDamarisFiles)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
-                  -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}

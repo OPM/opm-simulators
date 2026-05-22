@@ -3,7 +3,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-vtu-test.sh "--simulation")
 opm_add_test(art2dgf
   NO_COMPILE
   EXE_NAME
-    $<TARGET_FILE:art2dgf>
+    art2dgf
   DRIVER_ARGS
     --plain
   TEST_ARGS
@@ -20,7 +20,7 @@ foreach(tgt lens_immiscible_ecfv_ad
   opm_add_test(${tgt}
     NO_COMPILE
     EXE_NAME
-      $<TARGET_FILE:${tgt}>
+      ${tgt}
     TEST_ARGS
       --end-time=3000
     WORKING_DIRECTORY
@@ -31,7 +31,7 @@ endforeach()
 opm_add_test(waterair_pvs_ni
   NO_COMPILE
   EXE_NAME
-    $<TARGET_FILE:waterair_pvs_ni>
+    waterair_pvs_ni
   TEST_ARGS
     --grid-global-refinements=1
   WORKING_DIRECTORY
@@ -86,7 +86,7 @@ foreach(tgt ${PLAIN_TGT})
   opm_add_test(${tgt}
     NO_COMPILE
     EXE_NAME
-      $<TARGET_FILE:${tgt}>
+      ${tgt}
     WORKING_DIRECTORY
       ${PROJECT_BINARY_DIR}/tests
   )
@@ -99,7 +99,7 @@ foreach(tgt reservoir_blackoil_ecfv
   opm_add_test(${tgt}
     NO_COMPILE
     EXE_NAME
-      $<TARGET_FILE:${tgt}>
+      ${tgt}
     TEST_ARGS
       --end-time=8750000
     WORKING_DIRECTORY
@@ -111,7 +111,7 @@ if(dune-alugrid_FOUND)
   opm_add_test(fracture_discretefracture
     NO_COMPILE
     EXE_NAME
-      $<TARGET_FILE:fracture_discretefracture>
+      fracture_discretefracture
     TEST_ARGS
       --end-time=400
     WORKING_DIRECTORY
@@ -123,7 +123,7 @@ if(dune-alugrid_FOUND AND dune-fem_FOUND)
   opm_add_test(finger_immiscible_ecfv_adaptive
     NO_COMPILE
     EXE_NAME
-      $<TARGET_FILE:finger_immiscible_ecfv>
+      finger_immiscible_ecfv
     TEST_ARGS
       --enable-grid-adaptation=true
       --end-time=25e3
@@ -136,7 +136,7 @@ endif()
 opm_add_test(obstacle_immiscible_parameters
   NO_COMPILE
   EXE_NAME
-    $<TARGET_FILE:obstacle_immiscible>
+    obstacle_immiscible
   DRIVER_ARGS
     --parameters
   WORKING_DIRECTORY
@@ -146,7 +146,7 @@ opm_add_test(obstacle_immiscible_parameters
 opm_add_test(obstacle_pvs_restart
   NO_COMPILE
   EXE_NAME
-    $<TARGET_FILE:obstacle_pvs>
+    obstacle_pvs
   TEST_ARGS
     --pvs-verbosity=2
     --end-time=30000

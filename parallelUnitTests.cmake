@@ -14,7 +14,6 @@ opm_add_test(test_gatherconvergencereport
     tests/test_gatherconvergencereport.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -29,7 +28,6 @@ opm_add_test(test_gatherdeferredlogger
     tests/test_gatherdeferredlogger.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -39,7 +37,6 @@ opm_add_test(test_parallelwellinfo_mpi
     test_parallelwellinfo
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
   PROCESSORS
     4
@@ -51,7 +48,6 @@ foreach(NPROC 2 3 4)
       test_parallel_wbp_sourcevalues
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -74,7 +70,6 @@ opm_add_test(test_parallel_wbp_calculation_create
     test_parallel_wbp_calculation
   DRIVER_ARGS
     -n 2
-    -b ${PROJECT_BINARY_DIR}
   TEST_ARGS
     --run_test=Create
   NO_COMPILE
@@ -87,7 +82,6 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
     test_parallel_wbp_calculation
   DRIVER_ARGS
     -n 2
-    -b ${PROJECT_BINARY_DIR}
   TEST_ARGS
     --run_test=TopOfFormation_Well_OpenConns
   NO_COMPILE
@@ -101,7 +95,6 @@ foreach(NPROC 2 3 4)
       test_rftcontainer
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -114,7 +107,6 @@ foreach(NPROC 2 3 4)
       test_region_phase_pvaverage
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     TEST_ARGS
       --run_test=Parallel/*
     NO_COMPILE
@@ -129,7 +121,6 @@ foreach(NPROC 2 3 4)
       test_SatfuncConsistencyChecks_parallel
     DRIVER_ARGS
       -n ${NPROC}
-      -b ${PROJECT_BINARY_DIR}
     NO_COMPILE
     PROCESSORS
       ${NPROC}
@@ -146,7 +137,6 @@ opm_add_test(test_broadcast
     tests/test_broadcast.cpp
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -163,7 +153,6 @@ opm_add_test(test_HDF5File_Parallel
     HDF5_FOUND
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -181,7 +170,6 @@ opm_add_test(test_HDF5Serializer_Parallel
     HDF5_FOUND
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   PROCESSORS
     4
 )
@@ -191,7 +179,6 @@ opm_add_test(test_rstconv_parallel
     test_rstconv
   DRIVER_ARGS
     -n 4
-    -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
   PROCESSORS
     4
