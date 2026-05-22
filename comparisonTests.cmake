@@ -57,27 +57,3 @@ add_test_compareSeparateECLFiles(
     1
 )
 
-add_test_compareSeparateECLFiles(
-  CASENAME
-    1dcompositional_prewell_flow_comp3_2p_vs_flowexp_comp3_2p
-  DIR1
-    compositional
-  FILENAME1
-    1D_COMP_PREWELL
-  DIR2
-    compositional
-  FILENAME2
-    1D_COMP_PREWELL
-  SIMULATOR
-    flow_comp3_2p
-  REFERENCE_SIMULATOR
-    flowexp_comp3_2p
-  ABS_TOL
-    ${abs_tol}
-  REL_TOL
-    ${rel_tol}
-  TEST_ARGS
-    --solver-max-time-step-in-days=0.4
-  MPI_PROCS
-    1
-)

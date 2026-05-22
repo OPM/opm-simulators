@@ -22,7 +22,6 @@
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 
-#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
@@ -99,8 +98,6 @@ main(int argc, char** argv)
     const auto numComps = runspec.numComps();
     const auto& phases = runspec.phases();
     const auto wat = phases.active(Opm::Phase::WATER);
-
-    Opm::Parameters::reset();
 
     auto [componentSupported, executionStatus]
         = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, wat, argc, argv);
