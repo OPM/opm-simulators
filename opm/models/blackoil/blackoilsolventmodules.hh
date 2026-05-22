@@ -1346,7 +1346,8 @@ public:
         const unsigned I = elemCtx.globalSpaceIndex(interiorDofIdx, timeIdx);
         const unsigned J = elemCtx.globalSpaceIndex(exteriorDofIdx, timeIdx);
 
-        const Scalar thpres = elemCtx.problem().thresholdPressure(I, J);
+        const Scalar thpresInToEx = elemCtx.problem().thresholdPressure(I, J);
+        const Scalar thpresExToIn = elemCtx.problem().thresholdPressure(J, I);
         const Scalar trans = elemCtx.problem().transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         const Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
@@ -1363,16 +1364,19 @@ public:
         pressureExterior += distZ * g * rhoAvg;
 
         Evaluation pressureDiffSolvent = pressureExterior - pressureInterior;
-        if (std::abs(scalarValue(pressureDiffSolvent)) > thpres) {
-            if (pressureDiffSolvent < 0.0) {
-                pressureDiffSolvent += thpres;
+        const Scalar thpres = pressureDiffSolvent < 0.0 ? thpresInToEx : thpresExToIn;
+        if (thpres > 0.0) {
+            if (std::abs(scalarValue(pressureDiffSolvent)) > thpres) {
+                if (pressureDiffSolvent < 0.0) {
+                    pressureDiffSolvent += thpres;
+                }
+                else {
+                    pressureDiffSolvent -= thpres;
+                }
             }
             else {
-                pressureDiffSolvent -= thpres;
+                pressureDiffSolvent = 0.0;
             }
-        }
-        else {
-            pressureDiffSolvent = 0.0;
         }
 
         if (pressureDiffSolvent > 0.0) {

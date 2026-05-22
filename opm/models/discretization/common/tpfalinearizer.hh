@@ -592,11 +592,23 @@ private:
                         const Scalar zIn = problem_().dofCenterDepth(myIdx);
                         const Scalar zEx = problem_().dofCenterDepth(neighborIdx);
                         const Scalar dZg = (zIn - zEx)*gravity;
-                        const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
+                        const Scalar thpresInToEx = problem_().thresholdPressure(myIdx, neighborIdx);
+                        const Scalar thpresExToIn = problem_().thresholdPressure(neighborIdx, myIdx);
                         const auto dirId = scvf.dirId();
                         auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
                                                  : FaceDir::FromIntersectionIndex(dirId);
-                        ResidualNBInfo nbinfo{trans, area, thpres, dZg, faceDir, Vin, Vex, {}, {}, {}, {}};
+                        ResidualNBInfo nbinfo{trans,
+                                              area,
+                                              thpresInToEx,
+                                              thpresExToIn,
+                                              dZg,
+                                              faceDir,
+                                              Vin,
+                                              Vex,
+                                              {},
+                                              {},
+                                              {},
+                                              {}};
                         if constexpr (enableFullyImplicitThermal) {
                             nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);

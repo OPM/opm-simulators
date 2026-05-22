@@ -67,10 +67,10 @@ partiallySupported()
          {
             "EQLOPTS",
             {
-               {1,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION1
-               {2,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION2
-               {3,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION3
-               {4,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION4
+               {1,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION1
+               {2,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION2
+               {3,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION3
+               {4,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION4
             },
          },
          {
