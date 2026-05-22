@@ -233,12 +233,13 @@ initWellState()
     OPM_END_PARALLEL_TRY_CATCH("ComposotionalWellModel::initializeWellState() failed: ",
                            this->simulator_.vanguard().grid().comm());
 
-    // Carry accepted well runtime state across report-step reinitialization while
-    // still rebuilding static schedule-derived data for the new episode.
+    // Start each report step from freshly initialized schedule state. Retry
+    // recovery still comes from last_valid_comp_well_states_ via
+    // restoreLastValidState()/endTimeStep().
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, cell_temperature[0], cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_,
-                                 &this->last_valid_comp_well_states_);//better but change result &this->last_valid_comp_well_states_);
+                                 nullptr);//better but change result &this->last_valid_comp_well_states_);
 }
 
 
