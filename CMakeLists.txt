@@ -814,28 +814,24 @@ macro(opm-simulators_targets_hook)
       OPM_COMPILE_COMPONENTS_TEMPLATE_LIST=${OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}
   )
 
-  opm_add_test(flowexp_comp2_2p
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
-    LIBRARIES
-      opmsimulators
+  opm_add_executable(
+    TARGET
+      flowexp_comp2_2p
     SOURCES
       flowexperimental/comp/flowexp_comp2_2p_main.cpp
       $<TARGET_OBJECTS:moduleVersion>
-  )
-
-  opm_add_test(flowexp_comp3_2p
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
     LIBRARIES
       opmsimulators
+  )
+
+  opm_add_executable(
+    TARGET
+      flowexp_comp3_2p
     SOURCES
       flowexperimental/comp/flowexp_comp3_2p_main.cpp
       $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
   )
 
   opm_add_test(flow_comp
@@ -854,28 +850,24 @@ macro(opm-simulators_targets_hook)
       OPM_COMPILE_COMPONENTS_TEMPLATE_LIST=${OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}
   )
 
-  opm_add_test(flow_comp2_2p
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
-    LIBRARIES
-      opmsimulators
+  opm_add_executable(
+    TARGET
+      flow_comp2_2p
     SOURCES
       flowexperimental/comp/flow_comp2_2p.cpp
       $<TARGET_OBJECTS:moduleVersion>
-  )
-
-  opm_add_test(flow_comp3_2p
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
     LIBRARIES
       opmsimulators
+  )
+
+  opm_add_executable(
+    TARGET
+      flow_comp3_2p
     SOURCES
       flowexperimental/comp/flow_comp3_2p.cpp
       $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
   )
 
   if(BUILD_FLOW_FLOAT_VARIANTS)
