@@ -686,7 +686,15 @@ reportConnections(std::vector<data::Connection>& connections,
     connections.resize(num_perf_well);
 
     for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
-        connections[i].index = globalCellIdxMap[perf_data.cell_index[i]];
+        // For LGR perforations, write the LGR-local Cartesian identity so
+        // that (lgr_grid, index) uniquely identifies the cell.  Going
+        // through globalCellIdxMap (= CpGrid::globalCell()) would yield
+        // the level-0 ancestor's Cartesian -- shared by all refined
+        // siblings under one coarse parent -- which aliases the cell.
+        connections[i].index = (perf_data.grid_id[i] > 0)
+            ? perf_data.global_index[i]
+            : globalCellIdxMap[perf_data.cell_index[i]];
+        connections[i].lgr_grid = perf_data.grid_id[i];
     }
 
     this->reportConnectionFactors(well_index, connections);

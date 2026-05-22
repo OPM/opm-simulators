@@ -502,6 +502,49 @@ BOOST_AUTO_TEST_CASE(RSCONST_InjectionWellDoesNotSynthesizeGas)
 
 // ---------------------------------------------------------------------
 
+BOOST_AUTO_TEST_CASE(ReportConnections_LgrGridField_NonLgrWells)
+{
+    // data::Connection::lgr_grid is the numeric LGR level (0 == global
+    // grid, > 0 == refined grid in declaration order).  Wells declared
+    // via WELSPECS (i.e., not WELSPECL) live in the global grid, so
+    // every reported connection must have lgr_grid == 0.
+    //
+    // The companion case where WELSPECL connections receive a non-zero
+    // lgr_grid is covered end-to-end by the spe1case1_carfin test
+    // (see compareECLFiles.cmake) -- its restart-file diff catches
+    // regressions in the populated path.
+    const auto setup  = Setup { makeOilWaterRsconstWellDeck() };
+    auto       pinfos = std::vector<Opm::ParallelWellInfo<double>>{};
+
+    const auto wstate = [&setup, &pinfos]()
+    {
+        const auto tstep = std::size_t{0};
+        return buildWellState(setup, tstep, pinfos);
+    }();
+
+    const auto rpt = wstate
+        .report(setup.grid.c_grid()->global_cell,
+                [](const int) { return false; });
+
+    BOOST_REQUIRE(!rpt.empty());
+
+    for (const auto& [name, well] : rpt) {
+        BOOST_TEST_CONTEXT("well " << name) {
+            for (const auto& c : well.connections) {
+                // Non-LGR well: lgr_grid must be 0.  When lgr_grid == 0
+                // WellState::reportConnections selects c.index from the
+                // globalCellIdxMap path (rather than from
+                // perf_data.global_index, which is the LGR-local
+                // Cartesian path); the spe1case1_carfin regression
+                // exercises the lgr_grid != 0 branch end-to-end.
+                BOOST_CHECK_EQUAL(c.lgr_grid, 0);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
+
 //BOOST_AUTO_TEST_CASE(GlobalWellInfo_TEST) {
 //    const Setup setup{ "msw.data" };
 //    std::vector<Opm::Well> local_wells = { setup.sched.getWell("PROD01", 1) };

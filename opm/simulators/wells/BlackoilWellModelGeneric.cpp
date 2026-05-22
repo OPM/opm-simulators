@@ -394,6 +394,11 @@ initializeWellPerfData()
                     pd.connection_transmissibility_factor = connection.CF();
                     pd.satnum_id = connection.satTableId();
                     pd.ecl_index = connection_index;
+                    // Connection::get_lgr_level() is the Connection's grid identity
+                    pd.grid_id = connection.get_lgr_level();
+
+                    // Connection::global_index() is the linearised Cartesian cell index relative to the grid
+                    pd.global_index = connection.global_index();
 
                     parallelWellInfo.pushBackEclIndex(connection_index_above,
                                                       connection_index);
