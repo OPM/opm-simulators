@@ -308,6 +308,17 @@ public:
         return this->guide_rate_;
     }
 
+    /// @brief Whether a reservoir-coupling master group is *eligible* to participate in
+    ///   its parent's guide-rate distribution (GCONPROD item 8 RESPOND_TO_PARENT = YES).
+    /// @details A necessary but not sufficient condition: a group that is eligible still
+    ///   only contributes to the guide-rate sum when its effective GCW > 0 (see
+    ///   ReservoirCouplingMaster::effectiveGCW() and the GCW gate in
+    ///   FractionCalculator::guideRateSum).  A capped or inactive-slave group is eligible
+    ///   here but effGCW=0, so it is excluded and instead contributes its rate as a parent
+    ///   target reduction.  Returns false for any non-master group, so non-rescoup runs are
+    ///   unaffected.
+    bool isMasterGroupEligibleForGuideRate(const std::string& group_name) const;
+
     bool isRank0() const
     {
         return this->well_state_->isRank0();
@@ -681,6 +692,27 @@ private:
     ///
     /// @return Set of group names in the master group hierarchy
     std::unordered_set<std::string> collectMasterGroupHierarchy_() const;
+
+    /// @brief Effective group-controlled-wells (GCW) count for a reservoir-coupling
+    ///   master group, decoupled from its production control mode.
+    /// @details Only called for master groups (see updateGroupControlledWellsRecursive_).
+    ///   A master group carries the ORAT marker control mode purely for slave
+    ///   communication, so its real participation in the parent's guide-rate
+    ///   distribution cannot be read off the cmode.  Instead:
+    ///   - If the group is available for higher-level control (GCONPROD item 8
+    ///     RESPOND_TO_PARENT = YES, or a plain FLD group): return the effective GCW
+    ///     maintained by the rescoup master — 1 when participating-and-uncapped, 0
+    ///     when capped at the slave potential or belonging to an inactive slave
+    ///     (see ReservoirCouplingMaster::effectiveGCW()).
+    ///   - Otherwise (RESPOND_TO_PARENT = NO): the group uses only its own limit and
+    ///     is excluded from guide-rate distribution, so GCW = 0.  Being on FLD/NONE
+    ///     control in that case is contradictory and throws.
+    ///   The injection path is not yet handled and returns 1.
+    /// @param group_name Name of the reservoir-coupling master group.
+    /// @param is_production_group True for the production GCW, false for injection.
+    /// @return The effective GCW (0 or 1) for the master group.
+    int getMasterGroupEffectiveGCW_(const std::string& group_name,
+                                    bool is_production_group) const;
 
     /// @brief Get the effective production limit for a group and rate type,
     /// combining master limit, slave-local target, and GRUPSLAV filter flag.

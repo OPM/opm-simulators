@@ -67,10 +67,33 @@ RescoupConstraintsCalculator(
 // the underlying GroupStateHelper / GroupConstraintCalculator); the
 // slave-facing MPI sends in Phase 3 are rank-0-only inside the send helpers.
 //
-//  Pre-phase: restore master-group control modes from the Schedule, switch
-//    inactive slaves' master groups to individual control so they don't
-//    consume any share of the parent's target, and recompute GCW + FIELD
-//    target reductions with the resulting state.
+//  A note on "effective GCW" for master groups:
+//    GCW (group controlled wells) gates whether a group participates in its
+//    parent's guide-rate distribution (GCW>0) or instead has its own rate
+//    subtracted as a parent target reduction (GCW=0).  For ordinary groups GCW
+//    is derived from the control mode.  Master groups, however, carry the individual control mode
+//    purely as a slave-communication signal (see the Phase 2 finalize), so their cmode cannot
+//    be used to decide participation. The master therefore maintains a per-master-group "effective GCW"
+//    (ReservoirCouplingMaster::effectiveGCW), set in this routine and read by
+//    GroupStateHelper::updateGroupControlledWellsRecursive_.  It separates two
+//    concerns:
+//      - static eligibility: GCONPROD item 8 RESPOND_TO_PARENT = YES
+//        (Group::productionGroupControlAvailable) — a deck property; from
+//      - dynamic weight this sync step: 1 if the group participates and is
+//        uncapped, 0 if capped at its slave potential (Phase 2) or if its
+//        slave is inactive (pre-phase).
+//    An eligible group with effective GCW = 0 is excluded from the guide-rate
+//    sum and contributes its rate as a parent target reduction instead — which
+//    is precisely how a capped group's shortfall is redistributed to its
+//    siblings.  This decoupling is needed because the cmode (the natural
+//    dynamic control channel) is already taken by the slave-communication
+//    marker for master groups.
+//
+//  Pre-phase: restore master-group control modes from the Schedule, reset the
+//    effective GCW (participating master groups default to 1), switch inactive
+//    slaves' master groups to individual control and set their effective GCW
+//    to 0 so they don't consume any share of the parent's target, then
+//    recompute GCW + FIELD target reductions with the resulting state.
 //
 //  Phase 1 (per-slave per-master-group): compute initial guide-rate-
 //    distributed targets and per-rate-type limits via
@@ -83,15 +106,19 @@ RescoupConstraintsCalculator(
 //
 //  Phase 2 (cap-and-redistribute): if any master group's Phase-1 target
 //    exceeds its slave's reported production potential, cap the target at
-//    that potential, switch the group to individual control, recompute the
-//    FIELD target reduction (so the capped group's rate is now subtracted),
-//    and recompute targets for the remaining uncapped groups via
-//    GroupConstraintCalculator.  The shortfall is absorbed by the uncapped
-//    groups through the standard localReduction / FractionCalculator
-//    machinery.  Finally all master groups are switched to individual
-//    control so the master completes its own time step assuming slave rates
-//    remain constant; the controls are restored from Schedule at the start
-//    of the next sync step.  See capAndRedistributeProductionTargets_().
+//    that potential and set the group's effective GCW to 0.  With effective
+//    GCW = 0 the group drops out of the parent's guide-rate sum, and on the
+//    recompute below its (capped) rate is subtracted as a FIELD target
+//    reduction instead; the remaining uncapped groups then absorb the
+//    shortfall through the standard localReduction / FractionCalculator
+//    machinery.  (The capped group is also switched to individual control,
+//    but for master groups the cmode is only a slave-communication marker —
+//    it is the effective GCW, not the cmode, that drives the guide-rate
+//    exclusion; see the effective-GCW note above.)  Finally all master groups
+//    are switched to individual control so the master completes its own time
+//    step assuming slave rates remain constant; the controls and effective
+//    GCW are reset at the start of the next sync step.  See
+//    capAndRedistributeProductionTargets_().
 //
 //  Phase 3: send the resulting (target, cmode, per-rate-type limits)
 //    triples to each activated slave via MPI.  Only rank 0 actually sends;
@@ -185,6 +212,10 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         this->group_state_helper_
     };
     this->restoreMasterGroupControlsFromSchedule_();
+    // Reset effective-GCW entries from the previous sync step to GCW=1 before
+    // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
+    // Phase 2 cap) repopulate the 0-entries for this step.
+    rescoup_master.resetEffectiveGCW();
     this->excludeInactiveSlaveMasterGroupsFromDistribution_();
     // Recompute GCW and reduction rates after the control changes above.
     // The earlier updateAndCommunicateGroupData() in beginTimeStep() may
@@ -303,15 +334,6 @@ capAndRedistributeProductionTargets_(
     // updateGroupTargetReduction includes their rates as reduction for the
     // parent group.  Then recompute targets for uncapped groups — they get
     // a larger share because the parent's available target increased.
-    //
-    // TODO: for master groups under individual control in schedule and GCONPROD
-    //   item 8 set to "YES" (RESPOND_TO_PARENT = YES), the target calculation
-    //   above does not compute a correct target because GCW=0 excludes the group from
-    //   FractionCalculator::guideRateSum (see TODO in GroupStateHelper.cpp
-    //   updateGroupControlledWells()).  The slave-potential cap below is still
-    //   correct for such groups once Phase 1 (see
-    //   calculateMasterGroupConstraintsAndSendToSlaves() above) is fixed.
-    //   This is deferred to a follow-up PR.
 
     auto& rescoup_master = this->reservoir_coupling_master_;
     const auto num_slaves = all_production_constraints.size();
@@ -332,6 +354,11 @@ capAndRedistributeProductionTargets_(
                 // includes this group's rate as reduction for the parent.
                 this->group_state_helper_.groupState().production_control(
                     group_name, pc.cmode);
+                // Drop the capped group from guide-rate distribution to its
+                // siblings: set effective GCW=0 so it is excluded from
+                // FractionCalculator::guideRateSum on the recompute below.  This
+                // must happen before updateGCWAndTargetReductions_().
+                rescoup_master.setEffectiveGCW(group_name, 0);
             }
         }
     }
@@ -431,6 +458,12 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
             for (const auto& group_name : master_groups) {
                 this->group_state_helper_.groupState().production_control(
                     group_name, individual_cmode);
+                // For a participating master group (GCONPROD item 8 = YES) the
+                // ORAT marker above no longer forces GCW=0 — its GCW now comes
+                // from effectiveGCW().  Force it to 0 here so an inactive slave's
+                // groups are excluded from guide-rate distribution regardless of
+                // item 8.
+                rescoup_master.setEffectiveGCW(group_name, 0);
             }
         }
     }
