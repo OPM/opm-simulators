@@ -245,6 +245,14 @@ public:
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 
+        if (reportStepNum == 6 && !isSubStep && simulator_.gridView().comm().rank() == 0) {
+            if (const auto injPos = localWellData.find("INJ"); injPos != localWellData.end()) {
+                std::cout << "DBG_EVAL_WGIR_INJ="
+                          << injPos->second.rates.get(data::Rates::opt::gas, 0.0)
+                          << "\n";
+            }
+        }
+
         const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
@@ -463,6 +471,14 @@ public:
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
+
+        if (reportStepNum == 6 && !isSubStep && simulator_.gridView().comm().rank() == 0) {
+            if (const auto injPos = localWellData.find("INJ"); injPos != localWellData.end()) {
+                std::cout << "DBG_OUTPUT_WGIR_INJ="
+                          << injPos->second.rates.get(data::Rates::opt::gas, 0.0)
+                          << "\n";
+            }
+        }
 
         auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         auto localWellTestState = simulator_.problem().wellModel().wellTestState();

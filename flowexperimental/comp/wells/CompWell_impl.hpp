@@ -404,6 +404,7 @@ iterateWellEq(const Simulator& simulator,
         converged = this->getConvergence();
 
         if (converged) {
+            updateWellStateFromPrimaryVariables(well_state);
             break;
         }
 
