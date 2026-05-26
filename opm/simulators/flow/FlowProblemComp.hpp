@@ -102,6 +102,7 @@ public:
         EclWriterType::registerParameters();
 
         // tighter tolerance is needed for compositional modeling here
+        Parameters::SetDefault<Parameters::NewtonTargetIterations>(8);
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
 

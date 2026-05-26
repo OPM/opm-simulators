@@ -21,6 +21,7 @@
 
 #include <opm/models/utils/start.hh>
 
+#include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
@@ -30,10 +31,11 @@ int main(int argc, char** argv)
 {
   using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<3, false>;
 
-  Opm::Parameters::Register<Opm::Parameters::EnableAdaptiveTimeStepping>
-    ("Use adaptive time stepping between report steps");
-  Opm::registerEclTimeSteppingParameters<double>();
-  Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
+  Dune::MPIHelper::instance(argc, argv);
+  const int paramStatus = Opm::FlowMain<TypeTag>::setupParameters_(argc, argv, Dune::MPIHelper::getCommunication());
+  if (paramStatus != 0) {
+    return (paramStatus > 0) ? paramStatus : EXIT_SUCCESS;
+  }
 
   return Opm::start<TypeTag>(argc, argv, false);
 }

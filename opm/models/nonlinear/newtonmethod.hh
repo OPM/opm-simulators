@@ -446,7 +446,7 @@ public:
         // conservative when increasing it. the rationale is
         // that we want to avoid failing in the next time
         // integration which would be quite expensive
-        const int nit = problem().iterationContext().iteration();
+        const int nit = std::max(1, problem().iterationContext().iteration() - 1);
         if (lastSolveFailed_ || nit > params_.targetIterations_) {
             const int overshoot = lastSolveFailed_ ? params_.targetIterations_ : nit - params_.targetIterations_;
             Scalar percent = Scalar(overshoot) / params_.targetIterations_;

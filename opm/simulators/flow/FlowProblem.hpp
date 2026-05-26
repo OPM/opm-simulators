@@ -355,6 +355,14 @@ public:
             // allow the size of the initial time step to be set via an external parameter
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, this->initialTimeStepSize_);
+        else if (episodeIdx > 0) {
+            const auto& newtonMethod = this->model().newtonMethod();
+            const auto previousDt = simulator.timeStepSize();
+            const auto suggestedDt = newtonMethod.suggestTimeStepSize(previousDt);
+            if (suggestedDt < previousDt) {
+                dt = std::min(dt, limitNextTimeStepSize_(suggestedDt));
+            }
+        }
         simulator.setTimeStepSize(dt);
     }
 
@@ -1675,33 +1683,40 @@ protected:
     // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
     {
+        const auto& simulator = this->simulator();
+        Scalar maxTimeStepSize = Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60;
+
         if constexpr (enableExperiments) {
-            const auto& simulator = this->simulator();
             const auto& schedule = simulator.vanguard().schedule();
             int episodeIdx = simulator.episodeIndex();
 
-            // first thing in the morning, limit the time step size to the maximum size
-            Scalar maxTimeStepSize = Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60;
             int reportStepIdx = std::max(episodeIdx, 0);
             if (this->enableTuning_) {
                 const auto& tuning = schedule[reportStepIdx].tuning();
                 maxTimeStepSize = tuning.TSMAXZ;
             }
+        }
 
-            dtNext = std::min(dtNext, maxTimeStepSize);
+        dtNext = std::min(dtNext, maxTimeStepSize);
 
-            Scalar remainingEpisodeTime =
-                simulator.episodeStartTime() + simulator.episodeLength()
-                - (simulator.startTime() + simulator.time());
-            assert(remainingEpisodeTime >= 0.0);
+        Scalar remainingEpisodeTime =
+            simulator.episodeStartTime() + simulator.episodeLength()
+            - (simulator.startTime() + simulator.time());
+        assert(remainingEpisodeTime >= 0.0);
 
-            // if we would have a small amount of time left over in the current episode, make
-            // two equal time steps instead of a big and a small one
-            if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
-                // note: limiting to the maximum time step size here is probably not strictly
-                // necessary, but it should not hurt and is more fool-proof
-                dtNext = std::min(maxTimeStepSize, remainingEpisodeTime/2.0);
+        // If the proposed step is close to half of the remaining report-step time,
+        // snap to equal halves instead of taking two almost-equal substeps.
+        constexpr Scalar equalSplitTolerance = Scalar{1.0} - Scalar{1e-2};
+        if (remainingEpisodeTime/2.0 * equalSplitTolerance < dtNext
+            && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
+            // note: limiting to the maximum time step size here is probably not strictly
+            // necessary, but it should not hurt and is more fool-proof
+            dtNext = std::min(maxTimeStepSize, remainingEpisodeTime/2.0);
 
+        if constexpr (enableExperiments) {
+            const auto& schedule = simulator.vanguard().schedule();
+            int episodeIdx = simulator.episodeIndex();
+            int reportStepIdx = std::max(episodeIdx, 0);
             if (simulator.episodeStarts()) {
                 // if a well event occurred, respect the limit for the maximum time step after
                 // that, too
