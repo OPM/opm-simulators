@@ -759,6 +759,9 @@ public:
 
             // do the next time integration
             const Scalar oldDt = timeStepSize();
+            const Scalar endTime = episodeWillBeOver()
+                ? (episodeStartTime_ - startTime() + episodeLength())
+                : (this->time() + oldDt);
             {
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
                 problem_->advanceTimeLevel();
@@ -770,14 +773,14 @@ public:
                 std::cout << "Time step " << timeStepIndex() + 1 << " done. "
                           << "CPU time: " << executionTimer_.realTimeElapsed()
                           << " seconds" << humanReadableTime(executionTimer_.realTimeElapsed())
-                          << ", end time: " << this->time() + oldDt << " seconds"
-                          << humanReadableTime(this->time() + oldDt)
+                          << ", end time: " << endTime << " seconds"
+                          << humanReadableTime(endTime)
                           << ", step size: " << oldDt << " seconds" << humanReadableTime(oldDt)
                           << "\n" << std::flush;
             }
 
             // advance the simulated time by the current time step size
-            time_ += oldDt;
+            time_ = endTime;
             ++timeStepIdx_;
 
             prePostProcessTimer_.start();

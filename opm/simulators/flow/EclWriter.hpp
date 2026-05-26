@@ -232,7 +232,9 @@ public:
         if (reportStepNum == 0)
             return;
 
-        const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
+        const Scalar curTime = isSubStep
+            ? (simulator_.time() + simulator_.timeStepSize())
+            : simulator_.vanguard().schedule().seconds(reportStepNum);
         const Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
             simulator_.setupTimer().realTimeElapsed() +
@@ -510,7 +512,9 @@ public:
         }
 
         if (this->collectOnIORank_.isIORank()) {
-            const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
+            const Scalar curTime = isSubStep
+                ? (simulator_.time() + simulator_.timeStepSize())
+                : simulator_.vanguard().schedule().seconds(reportStepNum);
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
             std::optional<int> timeStepIdx;
             if (Parameters::Get<Parameters::EnableWriteAllSolutions>()) {

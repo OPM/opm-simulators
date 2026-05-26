@@ -56,9 +56,10 @@ updateSolution(const GlobalEqVector& dx)
 
     auto& newtonMethod = simulator_.model().newtonMethod();
     auto& solution = simulator_.model().solution(/*timeIdx=*/0);
+    const auto currentSolution = solution;
 
     newtonMethod.applyUpdate(/*nextSolution=*/solution,
-                             /*curSolution=*/solution,
+                             /*curSolution=*/currentSolution,
                              /*update=*/dx,
                              /*resid=*/dx);
 
@@ -201,7 +202,7 @@ assembleReservoir(WellModelType& wellModel)
 {
     simulator_.problem().beginIteration();
     simulator_.model().linearizer().linearizeDomain();
-    simulator_.problem().endIteration();
+    simulator_.problem().endIteration();// this seems strange it is not end of iteration 
     return wellModel.lastReport();
 }
 

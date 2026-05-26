@@ -26,6 +26,7 @@
 #include <opm/models/ptflash/flashmodel.hh>
 
 #include <opm/simulators/flow/FlowProblemComp.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
@@ -42,6 +43,28 @@ namespace Opm {
 
 template<int numComp, bool EnableWater>
 int dispatchFlowExpComp(int argc, char** argv);
+
+template <class TypeTag>
+class FlowExpCompNewtonMethod : public FlashNewtonMethod<TypeTag>
+{
+    using ParentType = FlashNewtonMethod<TypeTag>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+
+public:
+    explicit FlowExpCompNewtonMethod(Simulator& simulator)
+        : ParentType(simulator)
+    {}
+
+    bool converged() const
+    {
+        if (this->problem().iterationContext().iteration()
+            < Parameters::Get<Parameters::NewtonMinIterations>(false)) {
+            return false;
+        }
+
+        return ParentType::converged();
+    }
+};
 
 }
 
@@ -114,6 +137,12 @@ template <class TypeTag, int NumComp, bool EnableWater>
 struct Problem<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>>
 {
     using type = FlowProblemComp<TypeTag>;
+};
+
+template <class TypeTag, int NumComp, bool EnableWater>
+struct NewtonMethod<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>>
+{
+    using type = FlowExpCompNewtonMethod<TypeTag>;
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>
