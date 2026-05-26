@@ -141,7 +141,8 @@ public:
     struct ResidualNBInfo {
         double trans;
         double faceArea;
-        double thpres;
+        double thpresInToEx;
+        double thpresExToIn;
         double dZg;
         FaceDir::DirEnum faceDir;
         double Vin;
@@ -306,7 +307,8 @@ public:
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
         const auto faceDir = faceDirFromDirId(scvf.dirId());
-        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+        Scalar thpresInToEx = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+        Scalar thpresExToIn = problem.thresholdPressure(globalIndexEx, globalIndexIn);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
@@ -333,7 +335,8 @@ public:
 
         const ResidualNBInfo res_nbinfo {trans,
                                          faceArea,
-                                         thpres,
+                                         thpresInToEx,
+                                         thpresExToIn,
                                          distZ * g,
                                          faceDir,
                                          Vin,
@@ -370,7 +373,8 @@ public:
         const Scalar Vin = nbInfo.Vin;
         const Scalar Vex = nbInfo.Vex;
         const Scalar distZg = nbInfo.dZg;
-        const Scalar thpres = nbInfo.thpres;
+        const Scalar thpresInToEx = nbInfo.thpresInToEx;
+        const Scalar thpresExToIn = nbInfo.thpresExToIn;
         const Scalar trans = nbInfo.trans;
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
@@ -402,7 +406,8 @@ public:
                                                              globalIndexIn,
                                                              globalIndexEx,
                                                              distZg,
-                                                             thpres,
+                                                             thpresInToEx,
+                                                             thpresExToIn,
                                                              moduleParams);
 
             const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
