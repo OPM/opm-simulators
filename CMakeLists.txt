@@ -834,7 +834,9 @@ macro(opm-simulators_targets_hook)
       opmsimulators
   )
 
-  opm_add_test(flow_comp
+  opm_add_executable(
+    TARGET
+      flow_comp
     ONLY_COMPILE
     ALWAYS_ENABLE
     DEPENDS
