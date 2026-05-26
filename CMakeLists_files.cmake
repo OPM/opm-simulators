@@ -498,6 +498,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
+  tests/test_networkpressure.cpp
   tests/test_nonnc.cpp
   tests/test_norne_pvt.cpp
   tests/test_OilSatfuncConsistencyChecks.cpp

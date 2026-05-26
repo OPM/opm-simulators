@@ -22,6 +22,7 @@
 
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 
@@ -123,16 +124,16 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 /// @brief  Class to compute network pressures using VFP tables, given flow rates
 ///         for each group and fixed pressures at network roots.
 ///         Optionally, the ALQ values from wells can be included in the rates.
-template<typename Scalar, typename IndexTraits, typename VfpProperties>
+template<typename GenericWellModel, typename VfpProperties, typename Communication = Parallel::Communication>
 class NetworkPressureComputation
 {
 public:
-    NetworkPressureComputation(const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
+    NetworkPressureComputation(const GenericWellModel& well_model,
                                const Network::ExtNetwork& network,
                                const VfpProperties& vfp_props,
                                const UnitSystem& unit_system,
                                const int report_step_idx,
-                               const Parallel::Communication& comm)
+                               const Communication& comm)
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
@@ -141,6 +142,9 @@ public:
         , comm_(comm)
     {
     }
+
+    using Scalar = typename GenericWellModel::Scalar;
+    using IndexTraits = GenericWellModel::IndexTraits;
 
     std::map<std::string, Scalar> run()
     {
@@ -317,12 +321,12 @@ private:
         }
     }
 
-    const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
+    const GenericWellModel& well_model_;
     const Network::ExtNetwork& network_;
     const VfpProperties& vfp_props_;
     const UnitSystem& unit_system_;
     const int report_step_idx_;
-    const Parallel::Communication& comm_;
+    const Communication& comm_;
     std::map<std::string, Scalar> node_pressures_;
 };
 
