@@ -104,7 +104,8 @@ public:
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsageInfo<IndexTraits>& phase_usage,
-                             const Parallel::Communication& comm);
+                             const Parallel::Communication& comm,
+                             const NewtonIterationContext& iter_ctx);
 
     virtual ~BlackoilWellModelGeneric() = default;
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
@@ -304,10 +305,12 @@ public:
     }
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const NewtonIterationContext& iterCtx,
                                        // we only want to update the wellgroup target
                                        // after the groups have found their controls
                                        const bool update_wellgrouptarget);
+
+    const NewtonIterationContext& iterationContext() const
+    { return iter_ctx_; }
 
     const EclipseState& eclState() const
     { return eclState_; }
@@ -512,6 +515,7 @@ protected:
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
     const BlackoilWellModelGenericParameters<Scalar> param_;
+    const NewtonIterationContext& iter_ctx_;
     BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar, IndexTraits> wbp_;
 

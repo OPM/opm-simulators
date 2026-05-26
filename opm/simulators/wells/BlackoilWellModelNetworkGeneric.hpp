@@ -82,11 +82,9 @@ public:
 
     /// Checks if we shall perform a network re-balance.
     /// This is typically controlled by the NETBALAN keyword.
-    bool shouldBalance(const int reportStepIndex,
-                       const NewtonIterationContext& iterCtx) const;
+    bool shouldBalance(const int reportStepIndex) const;
     /// Checks if we will perform a network re-balance on the next Newton iteration.
-    bool willBalanceOnNextIteration(const int reportStepIndex,
-                                    const NewtonIterationContext& iterCtx) const;
+    bool willBalanceOnNextIteration(const int reportStepIndex) const;
 
     Scalar updatePressures(const int reportStepIdx,
                            const Scalar damping_factor,

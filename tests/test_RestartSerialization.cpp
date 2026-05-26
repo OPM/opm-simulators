@@ -311,7 +311,7 @@ public:
                                  const Parallel::Communication& comm,
                                  bool deserialize)
         : BlackoilWellModelGeneric<double, IndexTraits>(schedule, gaslift, network_, summaryState,
-                                           eclState, phase_usage, comm)
+                                           eclState, phase_usage, comm, iter_ctx_)
         , network_(*this)
     {
         if (deserialize) {
@@ -372,6 +372,7 @@ public:
 
 private:
     BlackoilWellModelNetworkGeneric<double, IndexTraits> network_;
+    NewtonIterationContext iter_ctx_;
     ParallelWellInfo<double> dummy;
 };
 
