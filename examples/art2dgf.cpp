@@ -272,13 +272,13 @@ try {
         return 1;
     }
 
-    std::string filename( argv[ 1 ] );
-    std::string dgfname( filename );
+    std::string filename(argv[1]);
+    std::string dgfname(filename);
     dgfname += ".dgf";
 
     std::cout << "Converting ART file \"" << filename << "\" to DGF file \"" << dgfname << "\"\n";
-    std::ofstream dgfFile( dgfname );
-    Ewoms::Art2DGF::convert( filename, dgfFile );
+    std::ofstream dgfFile(dgfname);
+    Ewoms::Art2DGF::convert(filename, dgfFile);
 
     return 0;
 }
