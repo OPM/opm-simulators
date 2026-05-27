@@ -262,7 +262,7 @@ namespace Ewoms {
 } // namespace Ewoms
 
 int main( int argc, char** argv )
-{
+try {
     if (argc != 2) {
         std::cout << "Converts a grid file from the ART file format to DGF (Dune grid format)\n"
                   << "\n"
@@ -281,4 +281,12 @@ int main( int argc, char** argv )
     Ewoms::Art2DGF::convert( filename, dgfFile );
 
     return 0;
+}
+catch (const std::exception& e) {
+    std::cerr << "Exception thrown " << e.what() << std::endl;
+    return 2;
+}
+catch (...) {
+    std::cerr << "Unknown exception thrown" << std::endl;
+    return 2;
 }
