@@ -99,6 +99,9 @@ public:
 
     static constexpr int numEq = Indices::numEq;
 
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool canUseAnalyticWeightsForCprw = !enableSolvent;
+
     //! \brief The constructor sets up the subdomains.
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
@@ -203,7 +206,7 @@ public:
             const auto& eclState = model_.simulator().vanguard().eclState();
             FlowLinearSolverParameters loc_param;
             loc_param.is_nldd_local_solver_ = true;
-            loc_param.init(eclState.getSimulationConfig().useCPR());
+            loc_param.init(eclState.getSimulationConfig().useCPR(), canUseAnalyticWeightsForCprw);
             // Override solver type with umfpack if small domain.
             if (domains_[index].cells.size() < 200) {
                 loc_param.linsolver_ = "umfpack";

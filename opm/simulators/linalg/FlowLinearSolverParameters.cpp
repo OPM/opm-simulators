@@ -29,7 +29,7 @@
 
 namespace Opm {
 
-void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
+void FlowLinearSolverParameters::init(bool cprRequestedInDataFile, bool cprwUseAnalyticWeights)
 {
     // TODO: these parameters have undocumented non-trivial dependencies
     relaxed_linear_solver_reduction_ = Parameters::Get<Parameters::RelaxedLinearSolverReduction>();
@@ -48,6 +48,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
     cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
     gpu_aware_mpi_ = Parameters::Get<Parameters::GpuAwareMpi>();
+    cprw_use_analytic_weights_ = cprwUseAnalyticWeights;
 
     if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
         linsolver_ = "cpr";

@@ -78,7 +78,9 @@ public:
     using GPUVectorInt = Opm::gpuistl::GpuVector<int>;
 
     constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
-
+    
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool canUseAnalyticWeightsForCprw = !enableSolvent;
 
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -120,7 +122,8 @@ public:
 #else
         m_comm = std::make_shared<CommunicationType>(simulator.gridView().comm());
 #endif
-        m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
+        m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR(),
+            canUseAnalyticWeightsForCprw);
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
