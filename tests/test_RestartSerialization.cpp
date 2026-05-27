@@ -613,7 +613,7 @@ int main(int argc, char** argv)
 {
     // MPI setup.
     int argcDummy = 1;
-    const char *tmp[] = {"test_RestartSerialization"};
+    const char *tmp[] = {"test_RestartSerialization", nullptr};
     char **argvDummy = const_cast<char**>(tmp);
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argcDummy, argvDummy);

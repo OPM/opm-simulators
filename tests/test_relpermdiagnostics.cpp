@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(diagnosis)
 {
     // MPI setup.
     int argcDummy = 1;
-    const char *tmp[] = {"test_relpermdiagnostic"};
+    const char *tmp[] = {"test_relpermdiagnostic", nullptr};
     char **argvDummy = const_cast<char**>(tmp);
 
 #if HAVE_DUNE_FEM
