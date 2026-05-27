@@ -67,10 +67,10 @@ partiallySupported()
          {
             "EQLOPTS",
             {
-               {1,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION1
-               {2,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION2
-               {3,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION3
-               {4,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION4
+               {1,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION1
+               {2,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION2
+               {3,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION3
+               {4,{true, allow_values<std::string> {"THPRES", "IRREVERS"}, "EQLOPTS(MOBILE/QUIESC): options not supported"}}, // OPTION4
             },
          },
          {
@@ -259,6 +259,16 @@ partiallySupported()
                {3,{true, allow_values<std::string> {"YES"}, "WAGHYSTR(GAS_MODEL): only the YES option is supported – will STOP"}}, // GAS_MODEL
                {4,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(RES_OIL): only the NO option is supported – will STOP"}}, // RES_OIL
                {5,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(WATER_MODEL): only the NO option is supported – will STOP"}}, // WATER_MODEL
+            },
+         },
+         {
+            "WECON",
+            {
+               {7,{true, allow_values<std::string> {"NONE", "CON", "WELL"}, "WECON(ACTION): Only NONE, CON and WELL options are supported"}}, // ACTION
+               {8,{true, allow_values<std::string> {"NO"}, "WECON(ENDRUN): only the NO option is supported"}}, // END_RUN
+               // Item 9 (follow-on well) is supported (but not validated here because it is a string with no specific allowed values).
+               {10,{true, allow_values<std::string> {"POTN", "RATE"}, "WECON(ELTOPT): Valid options are POTN and RATE"}}, // ELTOPT
+               {12,{true, allow_values<std::string> {}, "WECON(ACTION2): Feature not supported and should be defaulted"}}, // ACTION2
             },
          },
          {
@@ -641,6 +651,16 @@ partiallySupported()
             "WAGHYSTR",
             {
                {8,{false, allow_values<double> {}, "WAGHYSTR(RES_OIL_MOD_FRACTION): Residual oil modification for STONE1 not supported - value ignored"}}, // RES_OIL_MOD_FRACTION
+            },
+         },
+         {
+            "WECON",
+            {
+               {11,{true, allow_values<double> {}, "WECON(WCUT2): Feature not supported and should be defaulted"}}, // WELOPEN
+               {13,{true, allow_values<double> {}, "WECON(GLR): Feature not supported and should be defaulted"}}, // GLR
+               {14,{true, allow_values<double> {}, "WECON(LRAT): Feature not supported and should be defaulted"}}, // LRAT
+               {15,{true, allow_values<double> {}, "WECON(TEMP): Feature not supported and should be defaulted"}}, // TEMP
+               {16,{true, allow_values<double> {}, "WECON(RESV): Feature not supported and should be defaulted"}}, // RESV
             },
          },
          {

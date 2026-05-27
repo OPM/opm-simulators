@@ -190,7 +190,9 @@ applyExplicitThresholdPressures_()
                 unsigned offset2 = equilRegionOutside*numEquilRegions_ + equilRegionInside;
 
                 thpres_[offset1] = pth;
-                thpres_[offset2] = pth;
+                if (!thpres.irreversible()) {
+                    thpres_[offset2] = pth;
+                }
             }
         }
     }
@@ -285,10 +287,10 @@ logPressures()
         for (unsigned j = (thpres.irreversible() ? 1 : i); j <= numEquilRegions_; ++j) {
             if (thpres.hasRegionBarrier(i, j)) {
                 if (thpres.hasThresholdPressure(i, j)) {
-                    str += lineFormat(i, j, thpres.getThresholdPressure(j, i));
+                    str += lineFormat(i, j, thpres.getThresholdPressure(i, j));
                 }
                 else {
-                    std::size_t idx = (j - 1) * numEquilRegions_ + (i - 1);
+                    std::size_t idx = (i - 1) * numEquilRegions_ + (j - 1);
                     str += lineFormat(i, j, this->thpresDefault_[idx]);
                 }
             }

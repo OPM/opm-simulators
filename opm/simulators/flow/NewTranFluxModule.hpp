@@ -246,7 +246,8 @@ public:
         unsigned J = stencil.globalSpaceIndex(exteriorDofIdx);
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
-        Scalar thpres = problem.thresholdPressure(I, J);
+        Scalar thpresInToEx = problem.thresholdPressure(I, J);
+        Scalar thpresExToIn = problem.thresholdPressure(J, I);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
@@ -287,7 +288,8 @@ public:
                                         I,
                                         J,
                                         distZ*g,
-                                        thpres,
+                                        thpresInToEx,
+                                        thpresExToIn,
                                         problem.moduleParams());
 
             const bool upwindIsInterior = (static_cast<unsigned>(upIdx[phaseIdx]) == interiorDofIdx);
@@ -324,7 +326,8 @@ public:
                                             const unsigned globalIndexIn,
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
-                                            const Scalar thpres,
+                                            const Scalar thpresInToEx,
+                                            const Scalar thpresExToIn,
                                             const ModuleParams& moduleParams)
     {
 
@@ -401,6 +404,7 @@ public:
         // of threshold pressure is a quite big hack that only makes sense for ECL
         // datasets. (and even there, its physical justification is quite
         // questionable IMO.)
+        const Scalar thpres = pressureDifference < 0.0 ? thpresInToEx : thpresExToIn;
         if (thpres > 0.0) {
             if (std::abs(Toolbox::value(pressureDifference)) > thpres) {
                 if (pressureDifference < 0.0)
