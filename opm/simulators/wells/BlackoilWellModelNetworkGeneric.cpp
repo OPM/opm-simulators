@@ -92,6 +92,14 @@ updateActiveState(const int report_step)
         const auto& rescoup_master = rescoup_proxy.master();
         const auto num_slaves = rescoup_master.numSlaves();
         for (std::size_t s = 0; s < num_slaves && !network_active; ++s) {
+            // Only an activated slave supplies leaf rates this step; a master
+            // group whose slave is inactive must not keep the network active
+            // (it would be solved against missing/stale slave rates). This
+            // matches the slaveIsActivated gate used in the coupled-network
+            // iteration.
+            if (!rescoup_master.slaveIsActivated(s)) {
+                continue;
+            }
             for (const auto& master_group : rescoup_master.getMasterGroupNamesForSlave(s)) {
                 if (network.has_node(master_group)) {
                     network_active = true;

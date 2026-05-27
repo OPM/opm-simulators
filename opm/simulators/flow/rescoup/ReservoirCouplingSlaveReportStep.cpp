@@ -141,6 +141,12 @@ receiveCoupledNetworkActiveStatusFromMaster()
     this->comm().broadcast(&payload, /*count=*/1, /*emitter_rank=*/0);
     const bool active = payload != 0u;
     this->last_received_master_group_node_pressures_is_final_ = !active;
+    // No coupled-network iteration this sync step: the per-iteration pressure
+    // receive (which clears the map) is not entered, so drop any pressures
+    // left over from a previous sync step to avoid re-applying stale THP limits.
+    if (!active) {
+        this->master_group_node_pressures_.clear();
+    }
     this->logger().debug(fmt::format(
         "Received coupled-network active status (active={}) from master process",
         active));
@@ -278,6 +284,12 @@ receiveNumMasterGroupNodePressuresFromMaster()
     const auto num_pressures = header[0];
     const bool is_final = header[1] != 0u;
     this->last_received_master_group_node_pressures_is_final_ = is_final;
+    // When the master sends count == 0 the payload receive (which clears and
+    // repopulates the map) is skipped by the caller. Clear here so stale
+    // pressures from a previous iteration are not re-applied as THP limits.
+    if (num_pressures == 0) {
+        this->master_group_node_pressures_.clear();
+    }
     this->logger().debug(fmt::format(
         "Received master-group-node-pressures header (count={}, is_final={}) from master process",
         num_pressures, is_final
