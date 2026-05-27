@@ -37,7 +37,6 @@ opm_add_test(test_parallelwellinfo_mpi
     test_parallelwellinfo
   DRIVER_ARGS
     -n 4
-  NO_COMPILE
   PROCESSORS
     4
 )
@@ -48,7 +47,6 @@ foreach(NPROC 2 3 4)
       test_parallel_wbp_sourcevalues
     DRIVER_ARGS
       -n ${NPROC}
-    NO_COMPILE
     PROCESSORS
       ${NPROC}
   )
@@ -72,7 +70,6 @@ opm_add_test(test_parallel_wbp_calculation_create
     -n 2
   TEST_ARGS
     --run_test=Create
-  NO_COMPILE
   PROCESSORS
     2
 )
@@ -84,7 +81,6 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
     -n 2
   TEST_ARGS
     --run_test=TopOfFormation_Well_OpenConns
-  NO_COMPILE
   PROCESSORS
     2
 )
@@ -95,7 +91,6 @@ foreach(NPROC 2 3 4)
       test_rftcontainer
     DRIVER_ARGS
       -n ${NPROC}
-    NO_COMPILE
     PROCESSORS
       ${NPROC}
   )
@@ -109,7 +104,6 @@ foreach(NPROC 2 3 4)
       -n ${NPROC}
     TEST_ARGS
       --run_test=Parallel/*
-    NO_COMPILE
     PROCESSORS
       ${NPROC}
   )
@@ -121,7 +115,6 @@ foreach(NPROC 2 3 4)
       test_SatfuncConsistencyChecks_parallel
     DRIVER_ARGS
       -n ${NPROC}
-    NO_COMPILE
     PROCESSORS
       ${NPROC}
   )
@@ -179,7 +172,6 @@ opm_add_test(test_rstconv_parallel
     test_rstconv
   DRIVER_ARGS
     -n 4
-  NO_COMPILE
   PROCESSORS
     4
 )

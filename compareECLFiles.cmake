@@ -51,7 +51,7 @@ function(add_test_runSimulator)
   if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
-  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
+  opm_add_test(runSimulator/${PARAM_CASENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -116,7 +116,7 @@ function(add_test_compareECLFiles)
   if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -187,7 +187,7 @@ function(add_test_compareSeparateECLFiles)
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -245,7 +245,7 @@ function(add_test_compare_restarted_simulation)
   endif()
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  opm_add_test(${TEST_NAME} NO_COMPILE
+  opm_add_test(${TEST_NAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -321,7 +321,7 @@ function(add_test_compare_parallel_simulation)
                     -n ${MPI_PROCS})
 
     # Add test that runs flow_mpi and outputs the results to file
-    opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
+    opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
       EXE_TARGET
         ${PARAM_SIMULATOR}
       DRIVER_ARGS
@@ -394,7 +394,7 @@ function(add_test_compare_parallel_restarted_simulation)
                     -d $<TARGET_FILE:rst_deck>
                     -n ${MPI_PROCS})
 
-    opm_add_test(${TEST_NAME} NO_COMPILE
+    opm_add_test(${TEST_NAME}
       EXE_TARGET
         ${PARAM_SIMULATOR}
       DRIVER_ARGS
@@ -453,7 +453,7 @@ function(add_test_split_comm)
                   -t ${PARAM_REL_TOL}
                   -c $<TARGET_FILE:compareECL>)
 
-  opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+  opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
@@ -516,7 +516,7 @@ function(add_test_compareDamarisFiles)
                   -c ${HDF5_DIFF_EXECUTABLE}
                   -n ${MPI_PROCS})
   set(TEST_NAME ${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME})
-  opm_add_test(${TEST_NAME} NO_COMPILE
+  opm_add_test(${TEST_NAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
