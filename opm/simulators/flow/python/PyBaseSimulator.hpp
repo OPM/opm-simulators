@@ -56,6 +56,11 @@ public:
                     std::shared_ptr<SummaryConfig> summary_config,
                     const std::vector<std::string>& args);
 
+    virtual ~PyBaseSimulator()
+    {
+        Parameters::reset();
+    }
+
     void advance(int report_step);
 
     bool checkSimulationFinished();
