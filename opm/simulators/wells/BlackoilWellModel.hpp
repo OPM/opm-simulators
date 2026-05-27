@@ -630,6 +630,16 @@ template<class Scalar> class WellContributions;
             void assignWellSpeciesRates_(data::Wells& wsrpt) const;
             void assignWellTracerRates_(data::Wells& wsrpt) const;
 
+            /// @brief True when this process takes part in a *shared* (cross-rescoup)
+            ///   network this sync step: a master with at least one master-group
+            ///   network leaf, or a slave connected to the master's network.
+            /// @details Used to gate operations whose inner network solve would
+            ///   run the cross-rescoup pressure/rate exchange. A non-participant
+            ///   (master with no leaves, or an unconnected slave) does no
+            ///   cross-rescoup MPI in the network solve and so is safe to treat
+            ///   like a standalone process.
+            bool isRescoupCoupledNetworkParticipant_() const;
+
             /// @brief True when the master is in the active cross-rescoup network
             ///   iteration: master process AND first substep of a sync step AND at
             ///   least one master group is a network leaf AND the master has not
@@ -655,6 +665,16 @@ template<class Scalar> class WellContributions;
             ///   terminating iteration too so the slave can set
             ///   more_network_update = false and exit its outer loop.
             bool isRescoupSlaveOnSyncStepFirstSubstep_() const;
+
+            /// @brief True when this slave participates in the master's
+            ///   cross-rescoup network this sync step (at least one of its
+            ///   master groups is a leaf in the master network).
+            /// @details Distinct from isRescoupSlaveOnSyncStepFirstSubstep_():
+            ///   a slave can be on its first sync substep yet not be connected
+            ///   to the master network, in which case it balances only its own
+            ///   (local) network and does not take part in the cross-rescoup
+            ///   exchange.
+            bool isRescoupSlaveConnectedToMasterNetwork_() const;
 
             /// @brief Slave-side: if the master is still iterating, ship fresh
             ///   slave rates back and request another outer iteration; if the

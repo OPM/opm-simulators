@@ -176,6 +176,16 @@ public:
     bool lastReceivedMasterGroupNodePressuresIsFinal() const
     { return last_received_master_group_node_pressures_is_final_; }
 
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step (i.e. at least one of its master groups is a
+    ///   leaf node in the master network). Set by
+    ///   `receiveCoupledNetworkActiveStatusFromMaster` from the master's
+    ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
+    ///   unconnected slave never participates in the cross-rescoup exchange
+    ///   and balances only its own (local) network.
+    bool connectedToMasterCoupledNetwork() const
+    { return connected_to_master_coupled_network_; }
+
     /// @brief Receive the number of injection and production constraints from master
     /// @return Pair of (num_injection_targets, num_production_constraints)
     std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
@@ -307,22 +317,31 @@ private:
     // populated for master groups that are leaf nodes in the master's extended
     // network. Cleared and repopulated on every receive cycle.
     std::map<std::string, Scalar> master_group_node_pressures_;
-    // This variable is initialized for each sync step through the call chain: beginTimeStep()
-    //   -> BlackoilWellModelRescoup::sendCoupledNetworkActiveStatus()
-    //   -> BlackoilWellModelRescoup::masterNetworkHasMasterGroupLeaves()
-    // Which determines the value:
-    //   1) true : the master has no master groups connected to its network,
-    //             or has no network at all.
-    //   2) false: the master has master groups connected to its network (and the master has not
-    //             sent the final node pressures in the network iteration in BlackoilWellModel::assemble()).
+    // Whether *this* slave is connected to the master's cross-rescoup network
+    // this sync step. Set once per sync step by
+    // receiveCoupledNetworkActiveStatusFromMaster() from the master's per-slave
+    // flag (BlackoilWellModelRescoup::masterNetworkHasMasterGroupLeavesForSlave_()).
+    // A slave that is not connected does not participate in the cross-rescoup
+    // exchange at all and balances only its own (local) network.
     //
-    // In the case of "false" above: The value is reset to "true" in the course of the network iteration
+    // This is deliberately separate from
+    // last_received_master_group_node_pressures_is_final_ below: connectivity is
+    // a per-sync-step property, whereas is_final is the per-iteration
+    // termination signal (only meaningful while connected).
+    bool connected_to_master_coupled_network_{false};
+    // The iteration-termination flag. Initialized for each sync step through:
+    //   beginTimeStep() -> BlackoilWellModelRescoup::sendCoupledNetworkActiveStatus()
+    // to is_final = !connected (so an unconnected slave sees is_final = true and
+    // never enters the per-iteration receive). For a connected slave it then
+    // tracks the per-iteration is_final from the node-pressure header:
+    //
+    // In that case it is set to "true" in the course of the network iteration
     // in BlackoilWellModel::assemble() -> BlackoilWellModel::updateWellControlsAndNetworkIteration()
     // based on the "more_network_update" return value of BlackoilWellModelNetwork::update().
-    // If it returns "false" the flag below is reset to "true" and stays true for the rest of the sync timestep.
+    // If it returns "false" the flag is reset to "true" and stays true for the rest of the sync timestep.
     //
-    // So in the case of "false" above: The slaves use this variable to determine when to exit
-    // the outer network loop such that the MPI master-slave communication protocol is kept in sync.
+    // Connected slaves use this variable to determine when to exit the outer
+    // network loop such that the MPI master-slave communication protocol is kept in sync.
     bool last_received_master_group_node_pressures_is_final_{true};
 };
 } // namespace Opm

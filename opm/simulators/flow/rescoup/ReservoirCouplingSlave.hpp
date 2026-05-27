@@ -90,6 +90,11 @@ public:
     /// @details Delegates to ReservoirCouplingSlaveReportStep.
     bool lastReceivedMasterGroupNodePressuresIsFinal() const;
 
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    bool connectedToMasterCoupledNetwork() const;
+
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
     /// @brief Get the master-computed network-leaf node pressure for a master group

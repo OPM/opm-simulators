@@ -202,6 +202,14 @@ public:
     std::optional<ReservoirCoupling::ScopedLoggerGuard> setupScopedLogger(DeferredLogger& local_logger);
 
 private:
+    /// \brief Per-slave variant of masterNetworkHasMasterGroupLeaves():
+    ///   true iff at least one of the given slave's master groups is a
+    ///   leaf node in the master's extended network.  This is what
+    ///   determines whether *that* slave participates in the cross-rescoup
+    ///   network exchange; the (public) global version is the OR over all
+    ///   activated slaves and gates the master's own iteration.
+    bool masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const;
+
     BlackoilWellModel<TypeTag>& well_model_;
     BlackoilWellModelNetwork<TypeTag>& network_;
     Simulator& simulator_;

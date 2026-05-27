@@ -129,6 +129,15 @@ lastReceivedMasterGroupNodePressuresIsFinal() const
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+connectedToMasterCoupledNetwork() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->connectedToMasterCoupledNetwork();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 isLastSubstepOfSyncTimestep() const
 {
     assert(this->report_step_data_);

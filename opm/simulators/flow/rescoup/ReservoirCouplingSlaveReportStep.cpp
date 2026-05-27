@@ -139,7 +139,10 @@ receiveCoupledNetworkActiveStatusFromMaster()
         );
     }
     this->comm().broadcast(&payload, /*count=*/1, /*emitter_rank=*/0);
+    // The received flag is now per-slave: "is this slave connected to the
+    // master's cross-rescoup network this sync step?".
     const bool active = payload != 0u;
+    this->connected_to_master_coupled_network_ = active;
     this->last_received_master_group_node_pressures_is_final_ = !active;
     // No coupled-network iteration this sync step: the per-iteration pressure
     // receive (which clears the map) is not entered, so drop any pressures

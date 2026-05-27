@@ -63,17 +63,12 @@ masterNetworkHasMasterGroupLeaves() const
     // `node_pressures_` map.  The runtime map is empty on the very first beginTimeStep call
     // (network_.update has not yet run for this substep).
     if (!this->isReservoirCouplingMaster()) return false;
-    const int episodeIdx = this->simulator_.episodeIndex();
-    const auto& network = this->schedule()[episodeIdx].network();
-    if (!network.active()) return false;
     const auto& rcm = this->reservoirCouplingMaster();
     const auto num_slaves = rcm.numSlaves();
     for (std::size_t s = 0; s < num_slaves; ++s) {
         if (!rcm.slaveIsActivated(s)) continue;
-        for (const auto& mg : rcm.getMasterGroupNamesForSlave(s)) {
-            if (network.has_node(mg)) {
-                return true;
-            }
+        if (this->masterNetworkHasMasterGroupLeavesForSlave_(s)) {
+            return true;
         }
     }
     return false;
@@ -124,6 +119,21 @@ receiveMasterGroupNodePressuresFromMaster()
     // directly, because setDynamicThpLimit() alone leaves the active
     // control's THP value stale and the subsequent well-solve would
     // converge against the old THP.
+    //
+    // TODO (follow-up PR): this THP-direct path is only correct when the
+    // slave has no extended network between its slave group and the wells
+    // (the case exercised here).  When the slave uses an extended network
+    // with the slave group declared as a fixed-pressure node, the master-
+    // supplied pressure should instead be installed as that node's terminal
+    // pressure and the slave's network solver should propagate it down to
+    // the wells.  The plumbing exists -- the solver already reads
+    // Network::Node::terminal_pressure() when walking up branches -- but
+    // surfacing the master-sent value into the solver needs a runtime
+    // override path (e.g. a fixed-pressure override map on
+    // BlackoilWellModelNetwork) so we do not mutate the parsed Schedule
+    // network at runtime.  Until then, decks where the slave group is a
+    // fixed-pressure node in the slave's extended network are not handled
+    // correctly.
     const auto& pressures = rescoup_slave.masterGroupNodePressures();
     if (pressures.empty()) return;
     const auto& summary_state = this->well_model_.summaryState();
@@ -188,22 +198,30 @@ sendCoupledNetworkActiveStatus()
 {
     OPM_TIMEFUNCTION();
     assert(this->isReservoirCouplingMaster());
-    // Send to each activated slave a single bool: "will the master iterate
-    // the cross-rescoup network exchange this sync timestep?".  Sent as a
-    // dedicated one-element MPI message; the per-iteration node-pressure
-    // sends inside updateWellControlsAndNetworkIteration() carry their own
-    // is_final flag in the NumMasterGroupNodePressures header.
-    const bool active = this->masterNetworkHasMasterGroupLeaves();
+    // Send to each activated slave a single bool: "are you connected to the
+    // master's cross-rescoup network this sync timestep?", i.e. does this
+    // slave have a master group that is a leaf in the master network.  This
+    // is per-slave: a slave with no leaf in the master network does not
+    // participate even if other slaves do.  Sent as a dedicated one-element
+    // MPI message; the per-iteration node-pressure sends inside
+    // updateWellControlsAndNetworkIteration() carry their own is_final flag
+    // in the NumMasterGroupNodePressures header.
     auto& rescoup_master = this->reservoirCouplingMaster();
     const auto num_slaves = rescoup_master.numSlaves();
+    bool any_connected = false;
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (rescoup_master.slaveIsActivated(slave_idx)) {
-            rescoup_master.sendCoupledNetworkActiveStatusToSlave(slave_idx, active);
+            const bool connected =
+                this->masterNetworkHasMasterGroupLeavesForSlave_(slave_idx);
+            any_connected = any_connected || connected;
+            rescoup_master.sendCoupledNetworkActiveStatusToSlave(slave_idx, connected);
         }
     }
-    // Mirror into the master's local is_final state so the master's own
-    // updateWellControlsAndNetworkIteration() gates see the initial value before the per-iteration sends.
-    this->last_sent_master_group_node_pressures_is_final_ = !active;
+    // Mirror the *global* active state into the master's own is_final flag:
+    // the master iterates the exchange iff at least one slave is connected.
+    // (This must stay global -- a per-slave value would break the master's
+    // own updateWellControlsAndNetworkIteration() gate.)
+    this->last_sent_master_group_node_pressures_is_final_ = !any_connected;
 }
 
 template<typename TypeTag>
@@ -290,6 +308,30 @@ setupScopedLogger(DeferredLogger& local_logger)
     }
     return std::nullopt;
 }
+
+// Private methods alphabetically
+// ------------------------------
+
+template<typename TypeTag>
+bool
+BlackoilWellModelRescoup<TypeTag>::
+masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const
+{
+    // See masterNetworkHasMasterGroupLeaves() for why the parsed Schedule
+    // topology is queried rather than the runtime node_pressures_ map.
+    if (!this->isReservoirCouplingMaster()) return false;
+    const int episodeIdx = this->simulator_.episodeIndex();
+    const auto& network = this->schedule()[episodeIdx].network();
+    if (!network.active()) return false;
+    const auto& rcm = this->reservoirCouplingMaster();
+    for (const auto& mg : rcm.getMasterGroupNamesForSlave(slave_idx)) {
+        if (network.has_node(mg)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 } // namespace Opm
 

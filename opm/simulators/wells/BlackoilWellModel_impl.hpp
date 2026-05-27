@@ -1297,8 +1297,17 @@ namespace Opm {
         bool more_network_update = this->network_.shouldBalance(reportStepIdx) &&
                     (more_inner_network_update || alq_updated);
 
-        if (this->isRescoupSlaveOnSyncStepFirstSubstep_()) {
-            more_network_update = this->maybeSendSlaveGroupFlowToMaster_(reportStepIdx);
+        if (this->isRescoupSlaveOnSyncStepFirstSubstep_()
+            && this->isRescoupSlaveConnectedToMasterNetwork_()) {
+            // Connected slave: the call ships this slave's flow to the master
+            // and reports whether the cross-rescoup exchange continues.  OR
+            // with the local decision so a connected slave that also has its
+            // own network keeps iterating it.  A slave not connected to the
+            // master network skips this branch entirely and runs purely on its
+            // local more_network_update.
+            const bool more_cross_rescoup_update =
+                this->maybeSendSlaveGroupFlowToMaster_(reportStepIdx);
+            more_network_update = more_network_update || more_cross_rescoup_update;
         }
 
         return {well_group_control_changed, more_network_update, network_imbalance};
@@ -2243,6 +2252,7 @@ namespace Opm {
         // and lets the master signal termination.
 #ifdef RESERVOIR_COUPLING_ENABLED
         return this->isRescoupSlaveOnSyncStepFirstSubstep_()
+            && this->reservoirCouplingSlave().connectedToMasterCoupledNetwork()
             && !this->reservoirCouplingSlave().lastReceivedMasterGroupNodePressuresIsFinal();
 #else
         return false;
@@ -2260,6 +2270,17 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         return this->isReservoirCouplingSlave()
             && this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveConnectedToMasterNetwork_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().connectedToMasterCoupledNetwork();
 #else
         return false;
 #endif
@@ -2310,18 +2331,34 @@ namespace Opm {
     {
         // Rebalance the network initially if any wells in the network have status changes
         //
-        // In reservoir-coupling mode this rebalance is skipped: its inner
-        // updateWellControlsAndNetwork call would run the cross-rescoup
-        // pressure/rate exchange, but needPreStepRebalance is collectivised
-        // only over the local OPM communicator -- not across the rescoup
-        // boundary -- so master and slave may disagree on whether to enter the
-        // rebalance, deadlocking the exchange.  Re-enabling the rebalance
-        // under rescoup is left to a follow-up PR that collectivises the
-        // decision across the rescoup boundary.
+        // The rebalance is skipped only for *coupled-network participants*: its
+        // inner updateWellControlsAndNetwork call would run the cross-rescoup
+        // pressure/rate exchange, but needPreStepRebalance is collectivised only
+        // over the local OPM communicator -- not across the rescoup boundary --
+        // so a coupled master and slave may disagree on whether to enter the
+        // rebalance, deadlocking the exchange.  A non-participant (a master with
+        // no master-group network leaves, or a slave not connected to the master
+        // network) does no cross-rescoup MPI in the network solve, so it is safe
+        // to rebalance like a standalone process and we no longer skip it.
         return param_.pre_solve_network_
             && this->network_.needPreStepRebalance(episodeIdx)
-            && !this->isReservoirCouplingMaster()
-            && !this->isReservoirCouplingSlave();
+            && !this->isRescoupCoupledNetworkParticipant_();
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupCoupledNetworkParticipant_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingMaster()) {
+            return this->rescoupHelper_.masterNetworkHasMasterGroupLeaves();
+        }
+        if (this->isReservoirCouplingSlave()) {
+            return this->reservoirCouplingSlave().connectedToMasterCoupledNetwork();
+        }
+        return false;
+#else
+        return false;
+#endif
     }
 
     template <typename TypeTag>
