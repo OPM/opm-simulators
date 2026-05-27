@@ -54,7 +54,7 @@ struct Grid <TypeTag, TTag::LensProblemEcfvAd>
     using RangeVector = typename Base :: RangeVector ;
 
     template< typename... Args >
-    IdentityCoordFct( Args&... )
+    explicit IdentityCoordFct( Args&... )
     {}
 
     RangeVector operator()(const DomainVector& x) const
