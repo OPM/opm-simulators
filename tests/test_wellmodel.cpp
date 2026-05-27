@@ -103,7 +103,7 @@ struct GlobalFixture {
     GlobalFixture()
     {
         int argcDummy = 1;
-        const char *tmp[] = {"test_wellmodel"};
+        const char *tmp[] = {"test_wellmodel", nullptr};
         char **argvDummy = const_cast<char**>(tmp);
 
         // MPI setup.
