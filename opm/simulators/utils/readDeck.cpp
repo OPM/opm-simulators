@@ -44,7 +44,9 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
 #include <opm/input/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/GridDims.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
@@ -398,9 +400,32 @@ namespace {
         }
 
         if (summaryConfig == nullptr) {
+            // Supply an LGR-aware GridDims call-back so LGR block/connection
+            // summary vectors (LB*/LC*) resolve their NUMS.  SummaryConfig stays
+            // decoupled from EclipseGrid: the grid is captured here, in the client.
+            const auto& inputGrid = eclipseState->getInputGrid();
+            auto lgrGridDims =
+                [&inputGrid](const std::string& gridID) -> Opm::GridDims
+            {
+                if (gridID.empty()) {
+                    return Opm::GridDims {
+                        inputGrid.getNX(), inputGrid.getNY(), inputGrid.getNZ()
+                    };
+                }
+
+                const auto labels = inputGrid.get_all_lgr_labels();
+                if (std::ranges::find(labels, gridID) == labels.end()) {
+                    return Opm::GridDims{};
+                }
+
+                const auto& lgr = inputGrid.getLGRCell(gridID);
+                return Opm::GridDims { lgr.getNX(), lgr.getNY(), lgr.getNZ() };
+            };
+
             summaryConfig = std::make_shared<Opm::SummaryConfig>
                 (deck, *schedule, eclipseState->fieldProps(),
-                 eclipseState->aquifer(), *parseContext, errorGuard);
+                 eclipseState->aquifer(), *parseContext, errorGuard,
+                 std::move(lgrGridDims));
         }
 
         Opm::checkConsistentArrayDimensions(*eclipseState, *schedule,
