@@ -25,6 +25,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/common/utility/String.hpp>
+
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
@@ -71,20 +73,7 @@ namespace Ewoms {
                 curLine.erase(commentPos);
             }
 
-            // remove leading whitespace
-            unsigned numLeadingSpaces = 0;
-            while (curLine.size() > numLeadingSpaces
-                   && std::isspace(curLine[numLeadingSpaces]))
-                ++numLeadingSpaces;
-            curLine = curLine.substr(numLeadingSpaces,
-                                     curLine.size() - numLeadingSpaces);
-
-            // remove trailing whitespace
-            unsigned numTrailingSpaces = 0;
-            while (curLine.size() > numTrailingSpaces
-                   && std::isspace(curLine[curLine.size() - numTrailingSpaces]))
-                ++numTrailingSpaces;
-            curLine.erase(numTrailingSpaces);
+            curLine = Opm::trim_copy(curLine);
 
             // a section of the file is finished, go to the next one
             if (curLine == "$") {
