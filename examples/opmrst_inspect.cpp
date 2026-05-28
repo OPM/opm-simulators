@@ -29,11 +29,12 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <exception>
 #include <iostream>
 #include <string>
 
 int main(int argc, char** argv)
-{
+try {
     if (argc < 2) {
         std::cerr << "Need one parameter, the .OPMRST file to inspect\n";
         return 1;
@@ -83,4 +84,12 @@ int main(int argc, char** argv)
               << strings[4];
 
     return 0;
+}
+catch (const std::exception& e) {
+    std::cerr << "Exception thrown " << e.what() << std::endl;
+    return 2;
+}
+catch (...) {
+  std::cerr << "Unknown exception thrown" << std::endl;
+  return 2;
 }
