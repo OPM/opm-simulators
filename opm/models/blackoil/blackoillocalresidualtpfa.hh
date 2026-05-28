@@ -37,9 +37,10 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>

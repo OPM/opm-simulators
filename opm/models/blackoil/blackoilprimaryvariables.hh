@@ -25,6 +25,7 @@
 #define EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -34,13 +35,10 @@
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmeanings.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
-
-#include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
@@ -48,6 +46,8 @@
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
+
+#include <fmt/format.h>
 
 namespace Opm::Parameters {
 

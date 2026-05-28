@@ -37,6 +37,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
@@ -53,9 +54,6 @@
 
 
 namespace Opm {
-
-template <class TypeTag, EnergyModules activeModule>
-class BlackOilEnergyModule;
 
 /*!
  * \ingroup BlackOil
@@ -310,9 +308,6 @@ public:
         priVars1 = priVars0[temperatureIdx];
     }
 };
-
-template <class TypeTag, EnergyModules activeModule>
-class BlackOilEnergyIntensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -594,14 +589,6 @@ protected:
 
 };
 
-template <class TypeTag>
-class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>
-{
-};
-
-template <class TypeTag, EnergyModules activeModule>
-class BlackOilEnergyExtensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilEnergyExtensiveQuantities
@@ -774,11 +761,6 @@ private:
 };
 
 template <class TypeTag>
-class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
-{
-};
-
-template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::SequentialImplicitThermal>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -837,11 +819,6 @@ public:
 
     OPM_HOST_DEVICE const Evaluation& energyFlux() const
     { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
-};
-
-template <class TypeTag>
-class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
-{
 };
 
 } // namespace Opm

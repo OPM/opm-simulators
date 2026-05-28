@@ -30,6 +30,8 @@
 #ifndef OPM_BLACK_OIL_MODULES_HPP
 #define OPM_BLACK_OIL_MODULES_HPP
 
+#include <opm/material/thermal/EnergyModuleType.hpp>
+
 namespace Opm {
 
 #define DECLARE_MODULE(T) \
@@ -55,6 +57,21 @@ DECLARE_MODULE(BlackOilExtbo)
 DECLARE_MODULE(BlackOilFoam)
 DECLARE_MODULE(BlackOilPolymer)
 DECLARE_MODULE(BlackOilSolvent)
+
+template<class TypeTag, EnergyModules activeModule>
+class BlackOilEnergyModule
+{
+};
+
+template <class TypeTag, EnergyModules activeModule>
+class BlackOilEnergyIntensiveQuantities
+{
+};
+
+template <class TypeTag, EnergyModules activeModule>
+class BlackOilEnergyExtensiveQuantities
+{
+};
 
 #undef DECLARE_MODULE
 

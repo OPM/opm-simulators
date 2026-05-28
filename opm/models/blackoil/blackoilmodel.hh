@@ -35,7 +35,6 @@
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilboundaryratevector.hh>
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>

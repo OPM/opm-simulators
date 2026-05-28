@@ -33,7 +33,6 @@
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/basicproperties.hh>
 

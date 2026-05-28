@@ -25,6 +25,7 @@
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
 #include <opm/simulators/flow/Main.hpp>
