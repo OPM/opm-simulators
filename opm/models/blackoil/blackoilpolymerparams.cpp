@@ -107,25 +107,10 @@ initFromState(const EclipseState& eclState)
     unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
     setNumSatRegions(numSatRegions);
 
-           // initialize the objects which deal with the PLYROCK keyword
-    const auto& plyrockTables = tableManager.getPlyrockTables();
-    if (!plyrockTables.empty()) {
-        assert(numSatRegions == plyrockTables.size());
-        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            const auto& plyrockTable = plyrockTables.template getTable<PlyrockTable>(satRegionIdx);
-            setPlyrock(satRegionIdx,
-                       plyrockTable.getDeadPoreVolumeColumn()[0],
-                       plyrockTable.getResidualResistanceFactorColumn()[0],
-                       plyrockTable.getRockDensityFactorColumn()[0],
-                       static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]),
-                       plyrockTable.getMaxAdsorbtionColumn()[0]);
-        }
-    }
-    else {
-        throw std::runtime_error("PLYROCK must be specified in POLYMER runs\n");
-    }
+    // initialize the objects which deal with the PLYROCK keyword
+    processPlyrock(eclState);
 
-           // initialize the objects which deal with the PLYADS keyword
+    // initialize the objects which deal with the PLYADS keyword
     const auto& plyadsTables = tableManager.getPlyadsTables();
     if (!plyadsTables.empty()) {
         assert(numSatRegions == plyadsTables.size());
@@ -145,7 +130,7 @@ initFromState(const EclipseState& eclState)
     unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
     plyviscViscosityMultiplierTable_.resize(numPvtRegions);
 
-           // initialize the objects which deal with the PLYVISC keyword
+    // initialize the objects which deal with the PLYVISC keyword
     const auto& plyviscTables = tableManager.getPlyviscTables();
     if (!plyviscTables.empty()) {
         // different viscosity model is used for POLYMW
@@ -168,7 +153,7 @@ initFromState(const EclipseState& eclState)
         throw std::runtime_error("PLYVISC must be specified in POLYMER runs\n");
     }
 
-           // initialize the objects which deal with the PLYMAX keyword
+    // initialize the objects which deal with the PLYMAX keyword
     const auto& plymaxTables = tableManager.getPlymaxTables();
     const unsigned numMixRegions = plymaxTables.size();
     setNumMixRegions(numMixRegions, enablePolymerMolarWeight);
@@ -278,7 +263,7 @@ initFromState(const EclipseState& eclState)
             throw std::runtime_error("PLYVMH keyword must be specified in POLYMW rus \n");
         }
 
-               // handling PLYMWINJ keyword
+        // handling PLYMWINJ keyword
         const auto& plymwinjTables = tableManager.getPlymwinjTables();
         for (const auto& table : plymwinjTables) {
             const int tableNumber = table.first;
@@ -298,7 +283,7 @@ initFromState(const EclipseState& eclState)
             }
         }
 
-               // handling SKPRWAT keyword
+        // handling SKPRWAT keyword
         const auto& skprwatTables = tableManager.getSkprwatTables();
         for (const auto& table : skprwatTables) {
             const int tableNumber = table.first;
@@ -318,7 +303,7 @@ initFromState(const EclipseState& eclState)
             }
         }
 
-               // handling SKPRPOLY keyword
+        // handling SKPRPOLY keyword
         const auto& skprpolyTables = tableManager.getSkprpolyTables();
         for (const auto& table : skprpolyTables) {
             const int tableNumber = table.first;
@@ -368,6 +353,30 @@ setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight)
 
     if (enablePolymerMolarWeight) {
         plyvmhCoefficients_.resize(numRegions);
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processPlyrock(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    const auto& plyrockTables = tableManager.getPlyrockTables();
+    if (!plyrockTables.empty()) {
+        assert(numSatRegions == plyrockTables.size());
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+            const auto& plyrockTable = plyrockTables.template getTable<PlyrockTable>(satRegionIdx);
+            setPlyrock(satRegionIdx,
+                       plyrockTable.getDeadPoreVolumeColumn()[0],
+                       plyrockTable.getResidualResistanceFactorColumn()[0],
+                       plyrockTable.getRockDensityFactorColumn()[0],
+                       static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]),
+                       plyrockTable.getMaxAdsorbtionColumn()[0]);
+        }
+    }
+    else {
+        throw std::runtime_error("PLYROCK must be specified in POLYMER runs\n");
     }
 }
 

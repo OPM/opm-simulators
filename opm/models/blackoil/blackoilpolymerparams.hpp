@@ -111,6 +111,11 @@ private:
                     const Scalar& plyrockRockDensityFactor,
                     const Scalar& plyrockAdsorbtionIndex,
                     const Scalar& plyrockMaxAdsorbtion);
+
+    /*!
+     * \brief Process the Plyrock data.
+     */
+    void processPlyrock(const EclipseState& eclState);
 };
 
 } // namespace Opm
