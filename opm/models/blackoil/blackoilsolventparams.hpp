@@ -112,6 +112,11 @@ private:
      * \brief Process the SOF2 data.
      */
     void processSof2(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the MISC data.
+     */
+    void processMisc(const EclipseState& eclState);
 };
 
 } // namespace Opm

@@ -76,29 +76,11 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
 
     // initialize the objects needed for miscible solvent and oil simulations
     isMiscible_ = false;
-    if (!eclState.getTableManager().getMiscTables().empty()) {
+    if (!tableManager.getMiscTables().empty()) {
         isMiscible_ = true;
-        unsigned numMiscRegions = 1;
+        const unsigned numMiscRegions = 1;
         processSof2(eclState);
-
-        const auto& miscTables = tableManager.getMiscTables();
-        if (!miscTables.empty()) {
-            assert(numMiscRegions == miscTables.size());
-
-            // resize the attributes of the object
-            misc_.resize(numMiscRegions);
-            for (unsigned miscRegionIdx = 0; miscRegionIdx < numMiscRegions; ++miscRegionIdx) {
-                const auto& miscTable = miscTables.template getTable<MiscTable>(miscRegionIdx);
-
-                // solventFraction = Ss / (Ss + Sg);
-                const auto& solventFraction = miscTable.getSolventFractionColumn();
-                const auto& misc = miscTable.getMiscibilityColumn();
-                misc_[miscRegionIdx].setXYContainers(solventFraction, misc);
-            }
-        }
-        else {
-            throw std::runtime_error("MISC must be specified in MISCIBLE (SOLVENT) runs\n");
-        }
+        processMisc(eclState);
 
         // resize the attributes of the object
         pmisc_.resize(numMiscRegions);
@@ -349,6 +331,32 @@ processSof2(const EclipseState& eclState)
     }
     else if (eclState.runspec().phases().active(Phase::OIL)) {
         throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT and OIL) runs\n");
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processMisc(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& miscTables = tableManager.getMiscTables();
+    const unsigned numMiscRegions = 1;
+    if (!miscTables.empty()) {
+        assert(numMiscRegions == miscTables.size());
+
+        // resize the attributes of the object
+        misc_.resize(numMiscRegions);
+        for (unsigned miscRegionIdx = 0; miscRegionIdx < numMiscRegions; ++miscRegionIdx) {
+            const auto& miscTable = miscTables.template getTable<MiscTable>(miscRegionIdx);
+
+            // solventFraction = Ss / (Ss + Sg);
+            const auto& solventFraction = miscTable.getSolventFractionColumn();
+            const auto& misc = miscTable.getMiscibilityColumn();
+            misc_[miscRegionIdx].setXYContainers(solventFraction, misc);
+        }
+    }
+    else {
+        throw std::runtime_error("MISC must be specified in MISCIBLE (SOLVENT) runs\n");
     }
 }
 
