@@ -43,7 +43,6 @@
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
-#include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
@@ -279,7 +278,6 @@ public:
                                                                 SoMax);
                     fluidState_.setRs(min(RsMax, RsSat));
                 }
-
             }
             else if constexpr (compositionSwitchEnabled) {
                 fluidState_.setRs(0.0);
