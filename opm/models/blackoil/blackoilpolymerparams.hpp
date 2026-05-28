@@ -159,6 +159,11 @@ private:
      * \brief Process the Plymwinj data.
      */
     void processPlymwinj(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Skprwat data.
+     */
+    void processSkprwat(const EclipseState& eclState);
 };
 
 } // namespace Opm
