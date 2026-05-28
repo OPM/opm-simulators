@@ -80,8 +80,9 @@ struct BlackOilSolventParams
     bool co2sol_ = false;
     bool h2sol_ = false;
 
+private:
     /*!
-     * \brief Specify the number of satuation regions.
+     * \brief Specify the number of saturation regions.
      *
      * This must be called before setting the SSFN of any region.
      */
