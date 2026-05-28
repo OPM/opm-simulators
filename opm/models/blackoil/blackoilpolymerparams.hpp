@@ -139,6 +139,11 @@ private:
      */
     template<bool enablePolymerMolarWeight>
     void processPlmixpar(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyshlog data.
+     */
+    void processPlyshlog(const EclipseState& eclState);
 };
 
 } // namespace Opm

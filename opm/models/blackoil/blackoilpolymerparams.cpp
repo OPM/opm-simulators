@@ -31,6 +31,7 @@ copyright holders.
 #include <opm/input/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
@@ -124,50 +125,15 @@ initFromState(const EclipseState& eclState)
 
     processPlmixpar<enablePolymerMolarWeight>(eclState);
 
-    hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
-    hasShrate_ = eclState.getTableManager().useShrate();
+    hasPlyshlog_ = tableManager.hasTables("PLYSHLOG");
+    hasShrate_ = tableManager.useShrate();
 
     if ((hasPlyshlog_ || hasShrate_) && enablePolymerMolarWeight) {
         OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
     }
 
     if (hasPlyshlog_ && !enablePolymerMolarWeight) {
-        const auto& plyshlogTables = tableManager.getPlyshlogTables();
-        assert(numPvtRegions == plyshlogTables.size());
-        plyshlogShearEffectRefMultiplier_.resize(numPvtRegions);
-        plyshlogShearEffectRefLogVelocity_.resize(numPvtRegions);
-        for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
-            const auto& plyshlogTable = plyshlogTables.template getTable<PlyshlogTable>(pvtRegionIdx);
-
-            Scalar plyshlogRefPolymerConcentration = plyshlogTable.getRefPolymerConcentration();
-            auto waterVelocity = plyshlogTable.getWaterVelocityColumn().vectorCopy();
-            auto shearMultiplier = plyshlogTable.getShearMultiplierColumn().vectorCopy();
-
-                   // do the unit version here for the waterVelocity
-            UnitSystem unitSystem = eclState.getDeckUnitSystem();
-            double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
-            for (std::size_t i = 0; i < waterVelocity.size(); ++i) {
-                waterVelocity[i] *= siFactor;
-                // for plyshlog the input must be stored as logarithms
-                // the interpolation is then done the log-space.
-                waterVelocity[i] = std::log(waterVelocity[i]);
-            }
-
-            Scalar refViscMult = plyviscViscosityMultiplierTable_[pvtRegionIdx].eval(plyshlogRefPolymerConcentration, /*extrapolate=*/true);
-            // convert the table using referece conditions
-            for (std::size_t i = 0; i < waterVelocity.size(); ++i) {
-                shearMultiplier[i] *= refViscMult;
-                shearMultiplier[i] -= 1;
-                shearMultiplier[i] /= (refViscMult - 1);
-            }
-            plyshlogShearEffectRefMultiplier_[pvtRegionIdx].resize(waterVelocity.size());
-            plyshlogShearEffectRefLogVelocity_[pvtRegionIdx].resize(waterVelocity.size());
-
-            for (std::size_t i = 0; i < waterVelocity.size(); ++i) {
-                plyshlogShearEffectRefMultiplier_[pvtRegionIdx][i] = shearMultiplier[i];
-                plyshlogShearEffectRefLogVelocity_[pvtRegionIdx][i] = waterVelocity[i];
-            }
-        }
+        processPlyshlog(eclState);
     }
 
     if (hasShrate_ && !enablePolymerMolarWeight) {
@@ -420,6 +386,52 @@ processPlmixpar(const EclipseState& eclState)
     else {
         if constexpr (!enablePolymerMolarWeight) {
             throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
+        }
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processPlyshlog(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plyshlogTables = tableManager.getPlyshlogTables();
+    const unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
+    assert(numPvtRegions == plyshlogTables.size());
+    plyshlogShearEffectRefMultiplier_.resize(numPvtRegions);
+    plyshlogShearEffectRefLogVelocity_.resize(numPvtRegions);
+    for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
+        const auto& plyshlogTable = plyshlogTables.template getTable<PlyshlogTable>(pvtRegionIdx);
+
+        const Scalar plyshlogRefPolymerConcentration = plyshlogTable.getRefPolymerConcentration();
+        auto waterVelocity = plyshlogTable.getWaterVelocityColumn().vectorCopy();
+        auto shearMultiplier = plyshlogTable.getShearMultiplierColumn().vectorCopy();
+
+        // do the unit version here for the waterVelocity
+        UnitSystem unitSystem = eclState.getDeckUnitSystem();
+        const double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling()
+                                          : unitSystem.parse("Length/Time").getSIScaling();
+
+        // for plyshlog the input must be stored as logarithms
+        // the interpolation is then done in log-space.
+        std::ranges::transform(waterVelocity, waterVelocity.begin(),
+                               [siFactor](const double input)
+                               { return std::log(input * siFactor); });
+
+        const Scalar refViscMult = plyviscViscosityMultiplierTable_[pvtRegionIdx].
+                                      eval(plyshlogRefPolymerConcentration, /*extrapolate=*/true);
+
+        // convert the table using reference conditions
+        std::ranges::transform(shearMultiplier, shearMultiplier.begin(),
+                               [refViscMult](const double input)
+                               { return (input * refViscMult - 1.0) / (refViscMult - 1.0); });
+
+        plyshlogShearEffectRefMultiplier_[pvtRegionIdx].resize(waterVelocity.size());
+        plyshlogShearEffectRefLogVelocity_[pvtRegionIdx].resize(waterVelocity.size());
+
+        for (std::size_t i = 0; i < waterVelocity.size(); ++i) {
+            plyshlogShearEffectRefMultiplier_[pvtRegionIdx][i] = shearMultiplier[i];
+            plyshlogShearEffectRefLogVelocity_[pvtRegionIdx][i] = waterVelocity[i];
         }
     }
 }
