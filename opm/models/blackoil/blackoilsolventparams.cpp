@@ -84,22 +84,7 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         processMsfn(eclState);
         processSorwmis(eclState);
         processSgcwmis(eclState);
-
-        const auto& tlmixpar = eclState.getTableManager().getTLMixpar();
-        if (!tlmixpar.empty()) {
-            // resize the attributes of the object
-            tlMixParamViscosity_.resize(numMiscRegions);
-            tlMixParamDensity_.resize(numMiscRegions);
-
-            assert(numMiscRegions == tlmixpar.size());
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                const auto& tlp = tlmixpar[regionIdx];
-                tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
-                tlMixParamDensity_[regionIdx] = tlp.density_parameter;
-            }
-        }
-        else
-            throw std::runtime_error("TLMIXPAR must be specified in MISCIBLE (SOLVENT) runs\n");
+        processTlmixpar(eclState);
 
         // resize the attributes of the object
         tlPMixTable_.resize(numMiscRegions);
@@ -392,6 +377,30 @@ processSgcwmis(const EclipseState& eclState)
         for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
             sgcwmis_[regionIdx] = zero;
         }
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processTlmixpar(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numMiscRegions = 1;
+    const auto& tlmixpar = tableManager.getTLMixpar();
+    if (!tlmixpar.empty()) {
+        // resize the attributes of the object
+        tlMixParamViscosity_.resize(numMiscRegions);
+        tlMixParamDensity_.resize(numMiscRegions);
+
+        assert(numMiscRegions == tlmixpar.size());
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            const auto& tlp = tlmixpar[regionIdx];
+            tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
+            tlMixParamDensity_[regionIdx] = tlp.density_parameter;
+        }
+    }
+    else {
+        throw std::runtime_error("TLMIXPAR must be specified in MISCIBLE (SOLVENT) runs\n");
     }
 }
 

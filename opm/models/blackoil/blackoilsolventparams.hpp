@@ -137,6 +137,11 @@ private:
      * \brief Process the SGCWMIS data.
      */
     void processSgcwmis(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Tlmixpar data.
+     */
+    void processTlmixpar(const EclipseState& eclState);
 };
 
 } // namespace Opm
