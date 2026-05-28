@@ -116,6 +116,11 @@ private:
      * \brief Process the Plyrock data.
      */
     void processPlyrock(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyads data.
+     */
+    void processPlyads(const EclipseState& eclState);
 };
 
 } // namespace Opm

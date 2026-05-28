@@ -111,23 +111,9 @@ initFromState(const EclipseState& eclState)
     processPlyrock(eclState);
 
     // initialize the objects which deal with the PLYADS keyword
-    const auto& plyadsTables = tableManager.getPlyadsTables();
-    if (!plyadsTables.empty()) {
-        assert(numSatRegions == plyadsTables.size());
-        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            const auto& plyadsTable = plyadsTables.template getTable<PlyadsTable>(satRegionIdx);
-            // Copy data
-            const auto& c = plyadsTable.getPolymerConcentrationColumn();
-            const auto& ads = plyadsTable.getAdsorbedPolymerColumn();
-            plyadsAdsorbedPolymer_[satRegionIdx].setXYContainers(c, ads);
-        }
-    }
-    else {
-        throw std::runtime_error("PLYADS must be specified in POLYMER runs\n");
-    }
+    processPlyads(eclState);
 
-
-    unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
+    const unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
     plyviscViscosityMultiplierTable_.resize(numPvtRegions);
 
     // initialize the objects which deal with the PLYVISC keyword
@@ -382,6 +368,28 @@ processPlyrock(const EclipseState& eclState)
 
 template<class Scalar>
 void BlackOilPolymerParams<Scalar>::
+processPlyads(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    const auto& plyadsTables = tableManager.getPlyadsTables();
+    if (!plyadsTables.empty()) {
+        assert(numSatRegions == plyadsTables.size());
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+            const auto& plyadsTable = plyadsTables.template getTable<PlyadsTable>(satRegionIdx);
+            // Copy data
+            const auto& c = plyadsTable.getPolymerConcentrationColumn();
+            const auto& ads = plyadsTable.getAdsorbedPolymerColumn();
+            plyadsAdsorbedPolymer_[satRegionIdx].setXYContainers(c, ads);
+        }
+    }
+    else {
+        throw std::runtime_error("PLYADS must be specified in POLYMER runs\n");
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
 setPlyrock(unsigned satRegionIdx,
            const Scalar& plyrockDeadPoreVolume,
            const Scalar& plyrockResidualResistanceFactor,
@@ -395,6 +403,7 @@ setPlyrock(unsigned satRegionIdx,
     plyrockAdsorbtionIndex_[satRegionIdx] = plyrockAdsorbtionIndex;
     plyrockMaxAdsorbtion_[satRegionIdx] = plyrockMaxAdsorbtion;
 }
+
 
 #define INSTANTIATE_TYPE(T)                                                                  \
     template struct BlackOilPolymerParams<T>;                                                \
