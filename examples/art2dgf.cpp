@@ -95,8 +95,9 @@ private:
             }
 
             // skip empty lines
-            if (curLine.empty())
+            if (curLine.empty()) {
                 continue;
+            }
 
             if (curParseMode == ParseMode::Vertex) {
                 vertexPos.emplace_back(parseVertex(curLine), 0);
@@ -114,67 +115,16 @@ private:
                 }
             }
             else if (curParseMode == ParseMode::Element) {
-                // skip the data attached to an element
-                std::istringstream iss(curLine);
-                int dataVal;
-                std::string tmp;
-                iss >> dataVal;
-                iss >> tmp;
-                assert(tmp == ":");
-
-                // read the edge indices of an element
-                std::vector<unsigned> edgeIndices;
-                while (iss) {
-                    unsigned tmp2;
-                    iss >> tmp2;
-                    if (!iss)
-                        break;
-                    edgeIndices.push_back(tmp2);
-                    assert(tmp2 < edges.size());
-                }
-
-                // so far, we only support triangles
-                assert(edgeIndices.size() == 3);
-
-                // extract the vertex indices of the element
-                std::vector<unsigned> vertIndices;
-                for (unsigned i = 0; i < 3; ++i) {
-                    bool haveFirstVertex = false;
-                    for (unsigned j = 0; j < vertIndices.size(); ++j) {
-                        assert(edgeIndices[i] < edges.size());
-                        if (vertIndices[j] == edges[edgeIndices[i]].first) {
-                            haveFirstVertex = true;
-                            break;
-                        }
-                    }
-                    if (!haveFirstVertex)
-                        vertIndices.push_back(edges[edgeIndices[i]].first);
-
-                    bool haveSecondVertex = false;
-                    for (unsigned j = 0; j < vertIndices.size(); ++j) {
-                        assert(edgeIndices[i] < edges.size());
-                        if (vertIndices[j] == edges[edgeIndices[i]].second) {
-                            haveSecondVertex = true;
-                            break;
-                        }
-                    }
-                    if (!haveSecondVertex)
-                        vertIndices.push_back(edges[edgeIndices[i]].second);
-                }
+                auto vertIndices = parseElement(curLine);
 
                 // check whether the element's vertices are given in
                 // mathematically positive direction. if not, swap the
-                // first two.
-                Dune::FieldMatrix<Scalar, 2, 2> mat;
-                mat[0] = vertexPos[vertIndices[1]].first;
-                mat[0] -= vertexPos[vertIndices[0]].first;
-                mat[1] = vertexPos[vertIndices[2]].first;
-                mat[1] -= vertexPos[vertIndices[0]].first;
-                assert(std::abs(mat.determinant()) > 1e-50);
-                if (mat.determinant() < 0)
+                // last two indices.
+                if (!isPositive(vertIndices)) {
                     std::swap(vertIndices[2], vertIndices[1]);
+                }
 
-                elements.push_back( vertIndices );
+                elements.push_back(std::move(vertIndices));
             }
             else if (curParseMode == ParseMode::Finished) {
                 assert(curLine.size() == 0);
@@ -243,6 +193,87 @@ private:
         return std::make_pair(Edge{vertIndices[0], vertIndices[1]}, dataVal < 0);
     }
 
+    //! \brief Parses an element from a string.
+    //! \param curLine String to parse
+    std::vector<unsigned>
+    parseElement(const std::string& curLine)
+    {
+        // skip the data attached to an element
+        std::istringstream iss(curLine);
+        int dataVal;
+        std::string tmp;
+        iss >> dataVal;
+        iss >> tmp;
+        assert(tmp == ":");
+
+        // read the edge indices of an element
+        std::vector<unsigned> edgeIndices;
+        while (iss) {
+            unsigned tmp2;
+            iss >> tmp2;
+            if (!iss) {
+                break;
+            }
+            edgeIndices.push_back(tmp2);
+            assert(tmp2 < edges.size());
+        }
+
+        // so far, we only support triangles
+        assert(edgeIndices.size() == 3);
+
+        // extract the vertex indices of the element
+        return extractVertexIndices(edgeIndices);
+    }
+
+    //! \brief Extracts vertex indices from edge indices.
+    //! \param edgeIndices Indices for the edges
+    std::vector<unsigned>
+    extractVertexIndices(const std::vector<unsigned>& edgeIndices)
+    {
+        // extract the vertex indices of the element
+        std::vector<unsigned> vertIndices;
+        for (unsigned i = 0; i < 3; ++i) {
+            bool haveFirstVertex = false;
+            for (unsigned j = 0; j < vertIndices.size(); ++j) {
+                assert(edgeIndices[i] < edges.size());
+                if (vertIndices[j] == edges[edgeIndices[i]].first) {
+                    haveFirstVertex = true;
+                    break;
+                }
+            }
+            if (!haveFirstVertex) {
+                vertIndices.push_back(edges[edgeIndices[i]].first);
+            }
+
+            bool haveSecondVertex = false;
+            for (unsigned j = 0; j < vertIndices.size(); ++j) {
+                assert(edgeIndices[i] < edges.size());
+                if (vertIndices[j] == edges[edgeIndices[i]].second) {
+                    haveSecondVertex = true;
+                    break;
+                }
+            }
+            if (!haveSecondVertex) {
+                vertIndices.push_back(edges[edgeIndices[i]].second);
+            }
+        }
+
+        return vertIndices;
+    }
+
+    //! \brief Check whether vertices are given in mathematically positive direction.
+    //! \param vertIndices Indices to check
+    bool isPositive(const std::vector<unsigned>& vertIndices)
+    {
+        Dune::FieldMatrix<Scalar, 2, 2> mat;
+        mat[0] = vertexPos[vertIndices[1]].first;
+        mat[0] -= vertexPos[vertIndices[0]].first;
+        mat[1] = vertexPos[vertIndices[2]].first;
+        mat[1] -= vertexPos[vertIndices[0]].first;
+        assert(std::abs(mat.determinant()) > 1e-50);
+        return mat.determinant() >= 0.0;
+    }
+
     //! \brief Writes out the data to the output stream.
     //! \param dgfFile Stream to write to
     //! \param precision Precision to write at
@@ -288,10 +319,11 @@ private:
         dgfFile << "#" << std::endl;
     }
 
+    //! List of vertices and whether they are part of a fracture (1) or not (0)
     std::vector<std::pair<GlobalPosition, unsigned>> vertexPos;
-    std::vector<Edge> edges;
-    std::vector<Edge> fractureEdges;
-    std::vector<std::vector<unsigned>> elements;
+    std::vector<Edge> edges; //!< List of edge connectivities
+    std::vector<Edge> fractureEdges; //!< List of edges that are fractures
+    std::vector<std::vector<unsigned>> elements; //!< List of elements connectivities
  };
 
 } // namespace Ewoms
