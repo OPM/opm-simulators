@@ -132,6 +132,11 @@ private:
      * \brief Process the SORWMIS data.
      */
     void processSorwmis(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SGCWMIS data.
+     */
+    void processSgcwmis(const EclipseState& eclState);
 };
 
 } // namespace Opm
