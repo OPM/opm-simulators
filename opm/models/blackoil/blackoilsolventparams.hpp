@@ -139,9 +139,14 @@ private:
     void processSgcwmis(const EclipseState& eclState);
 
     /*!
-     * \brief Process the Tlmixpar data.
+     * \brief Process the TLMIXPAR data.
      */
     void processTlmixpar(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the TLPMIXPA data.
+     */
+    void processTlpmixpa(const EclipseState& eclState);
 };
 
 } // namespace Opm

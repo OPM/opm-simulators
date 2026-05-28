@@ -77,7 +77,6 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
     isMiscible_ = false;
     if (!tableManager.getMiscTables().empty()) {
         isMiscible_ = true;
-        const unsigned numMiscRegions = 1;
         processSof2(eclState);
         processMisc(eclState);
         processPmisc(eclState);
@@ -85,43 +84,7 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         processSorwmis(eclState);
         processSgcwmis(eclState);
         processTlmixpar(eclState);
-
-        // resize the attributes of the object
-        tlPMixTable_.resize(numMiscRegions);
-        if (!eclState.getTableManager().getTlpmixpaTables().empty()) {
-            const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
-            if (!tlpmixparTables.empty()) {
-                assert(numMiscRegions == tlpmixparTables.size());
-                for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    const auto& tlpmixparTable = tlpmixparTables.template getTable<TlpmixpaTable>(regionIdx);
-
-                    // Copy data
-                    const auto& po = tlpmixparTable.getOilPhasePressureColumn();
-                    const auto& tlpmixpa = tlpmixparTable.getMiscibilityColumn();
-
-                    tlPMixTable_[regionIdx].setXYContainers(po, tlpmixpa);
-                }
-            }
-            else {
-                // if empty keyword. Try to use the pmisc table as default.
-                if (!pmisc_.empty()) {
-                    tlPMixTable_ = pmisc_;
-                }
-                else {
-                    throw std::invalid_argument("If the pressure dependent TL values in "
-                                                "TLPMIXPA is defaulted (no entries), then "
-                                                "the PMISC tables must be specified.");
-                }
-            }
-        }
-        else {
-            // default
-            std::vector<double> x = {0.0,1.0e20};
-            std::vector<double> y = {1.0,1.0};
-            TabulatedFunction ones = TabulatedFunction(2, x, y);
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx)
-                tlPMixTable_[regionIdx] = ones;
-        }
+        processTlpmixpa(eclState);
     }
 }
 
@@ -401,6 +364,43 @@ processTlmixpar(const EclipseState& eclState)
     }
     else {
         throw std::runtime_error("TLMIXPAR must be specified in MISCIBLE (SOLVENT) runs\n");
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processTlpmixpa(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numMiscRegions = 1;
+    const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
+
+    // resize the attributes of the object
+    tlPMixTable_.resize(numMiscRegions);
+    if (!tableManager.getTlpmixpaTables().empty()) {
+        assert(numMiscRegions == tlpmixparTables.size());
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            const auto& tlpmixparTable = tlpmixparTables.template getTable<TlpmixpaTable>(regionIdx);
+
+            // Copy data
+            const auto& po = tlpmixparTable.getOilPhasePressureColumn();
+            const auto& tlpmixpa = tlpmixparTable.getMiscibilityColumn();
+
+            tlPMixTable_[regionIdx].setXYContainers(po, tlpmixpa);
+        }
+    }
+    else {
+        OpmLog::warning("The pressure dependent TL values in "
+                        "TLPMIXPA is missing or defaulted,"
+                        "using dummy values");
+
+        // default
+        const std::vector<double> x = {0.0,1.0e20};
+        const std::vector<double> y = {1.0,1.0};
+        const TabulatedFunction ones = TabulatedFunction(2, x, y);
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            tlPMixTable_[regionIdx] = ones;
+        }
     }
 }
 
