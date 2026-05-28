@@ -103,13 +103,7 @@ private:
                 continue;
 
             if (curParseMode == ParseMode::Vertex) {
-                GlobalPosition coord;
-                std::istringstream iss(curLine);
-                // parse only the first two numbers as the vertex
-                // coordinate. the last number is the Z coordinate
-                // which we ignore (so far)
-                iss >> coord[0] >> coord[1];
-                vertexPos.push_back( std::make_pair( coord, 0 ) );
+                vertexPos.emplace_back(parseVertex(curLine), 0);
             }
             else if (curParseMode == ParseMode::Edge) {
                 // read an edge and update the fracture mapper
@@ -215,6 +209,20 @@ private:
         }
 
         write(dgfFile, precision);
+    }
+
+    //! \brief Parses a vertex from a string.
+    //! \param curLine String to parse
+    static GlobalPosition parseVertex(const std::string& curLine)
+    {
+        GlobalPosition coord;
+        std::istringstream iss(curLine);
+        // parse only the first two numbers as the vertex
+        // coordinate. the last number is the Z coordinate
+        // which we ignore (so far)
+        iss >> coord[0] >> coord[1];
+
+        return coord;
     }
 
     //! \brief Writes out the data to the output stream.
