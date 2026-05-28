@@ -102,6 +102,11 @@ private:
      */
     void setupPvts(const EclipseState& eclState,
                    const Schedule& schedule);
+
+    /*!
+     * \brief Process the SSFN data.
+     */
+    void processSsfn(const EclipseState& eclState);
 };
 
 } // namespace Opm

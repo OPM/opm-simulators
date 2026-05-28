@@ -69,21 +69,10 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
     }
 
     setupPvts(eclState, schedule);
+    processSsfn(eclState);
 
     const auto& tableManager = eclState.getTableManager();
-    // initialize the objects which deal with the SSFN keyword
-    const auto& ssfnTables = tableManager.getSsfnTables();
     unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
-    setNumSatRegions(numSatRegions);
-    for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-        const auto& ssfnTable = ssfnTables.template getTable<SsfnTable>(satRegionIdx);
-        ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
-                                               ssfnTable.getGasRelPermMultiplierColumn(),
-                                               /*sortInput=*/true);
-        ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
-                                               ssfnTable.getSolventRelPermMultiplierColumn(),
-                                               /*sortInput=*/true);
-    }
 
     // initialize the objects needed for miscible solvent and oil simulations
     isMiscible_ = false;
@@ -333,6 +322,26 @@ setupPvts(const EclipseState& eclState,
     }
     else {
         solventPvt_.initFromState(eclState, schedule);
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processSsfn(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    // initialize the objects which deal with the SSFN keyword
+    const auto& ssfnTables = tableManager.getSsfnTables();
+    const unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    setNumSatRegions(numSatRegions);
+    for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+        const auto& ssfnTable = ssfnTables.template getTable<SsfnTable>(satRegionIdx);
+        ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                               ssfnTable.getGasRelPermMultiplierColumn(),
+                                               /*sortInput=*/true);
+        ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                               ssfnTable.getSolventRelPermMultiplierColumn(),
+                                               /*sortInput=*/true);
     }
 }
 
