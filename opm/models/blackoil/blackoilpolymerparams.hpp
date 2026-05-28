@@ -164,6 +164,11 @@ private:
      * \brief Process the Skprwat data.
      */
     void processSkprwat(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Skprpoly data.
+     */
+    void processSkprpoly(const EclipseState& eclState);
 };
 
 } // namespace Opm

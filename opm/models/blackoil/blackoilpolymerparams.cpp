@@ -147,33 +147,7 @@ initFromState(const EclipseState& eclState)
         processPlyvmh(eclState);
         processPlymwinj(eclState);
         processSkprwat(eclState);
-
-        // handling SKPRPOLY keyword
-        const auto& skprpolyTables = tableManager.getSkprpolyTables();
-        for (const auto& table : skprpolyTables) {
-            const int tableNumber = table.first;
-            const auto& skprpolytable = table.second;
-            const std::vector<double>& throughput = skprpolytable.getThroughputs();
-            const std::vector<double>& watervelocity = skprpolytable.getVelocities();
-            const std::vector<std::vector<double>>& skinpressure = skprpolytable.getSkinPressures();
-            const double refPolymerConcentration = skprpolytable.referenceConcentration();
-            if constexpr (std::is_same_v<Scalar, float>) {
-                const std::vector<Scalar> tp(throughput.begin(), throughput.end());
-                const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
-                const auto sp = convertVecToVec<float>(skinpressure);
-                SkprpolyTable tablefunc {
-                    refPolymerConcentration,
-                    TabulatedTwoDFunction(tp, wv, sp, true, false)
-                };
-                skprpolyTables_[tableNumber] = std::move(tablefunc);
-            } else {
-                SkprpolyTable tablefunc {
-                    refPolymerConcentration,
-                    TabulatedTwoDFunction(throughput, watervelocity, skinpressure, true, false)
-                };
-                skprpolyTables_[tableNumber] = std::move(tablefunc);
-            }
-        }
+        processSkprpoly(eclState);
     }
 }
 
@@ -461,6 +435,38 @@ processSkprwat(const EclipseState& eclState)
         } else {
             TabulatedTwoDFunction tablefunc(throughput, watervelocity, skinpressure, true, false);
             skprwatTables_[tableNumber] = std::move(tablefunc);
+        }
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processSkprpoly(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& skprpolyTables = tableManager.getSkprpolyTables();
+    for (const auto& table : skprpolyTables) {
+        const int tableNumber = table.first;
+        const auto& skprpolytable = table.second;
+        const std::vector<double>& throughput = skprpolytable.getThroughputs();
+        const std::vector<double>& watervelocity = skprpolytable.getVelocities();
+        const std::vector<std::vector<double>>& skinpressure = skprpolytable.getSkinPressures();
+        const double refPolymerConcentration = skprpolytable.referenceConcentration();
+        if constexpr (std::is_same_v<Scalar, float>) {
+            const std::vector<Scalar> tp(throughput.begin(), throughput.end());
+            const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
+            const auto sp = convertVecToVec<float>(skinpressure);
+            SkprpolyTable tablefunc {
+                refPolymerConcentration,
+                TabulatedTwoDFunction(tp, wv, sp, true, false)
+            };
+            skprpolyTables_[tableNumber] = std::move(tablefunc);
+        } else {
+            SkprpolyTable tablefunc {
+                refPolymerConcentration,
+                TabulatedTwoDFunction(throughput, watervelocity, skinpressure, true, false)
+            };
+            skprpolyTables_[tableNumber] = std::move(tablefunc);
         }
     }
 }
