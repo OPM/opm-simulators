@@ -144,21 +144,7 @@ initFromState(const EclipseState& eclState)
     }
 
     if constexpr (enablePolymerMolarWeight) {
-        const auto& plyvmhTable = eclState.getTableManager().getPlyvmhTable();
-        const auto& plymaxTables = tableManager.getPlymaxTables();
-        const unsigned numMixRegions = plymaxTables.size();
-        if (!plyvmhTable.empty()) {
-            assert(plyvmhTable.size() == numMixRegions);
-            for (std::size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
-                plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
-                plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
-                plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
-                plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
-            }
-        }
-        else {
-            throw std::runtime_error("PLYVMH keyword must be specified in POLYMW rus \n");
-        }
+        processPlyvmh(eclState);
 
         // handling PLYMWINJ keyword
         const auto& plymwinjTables = tableManager.getPlymwinjTables();
@@ -442,6 +428,28 @@ processShrate(const EclipseState& eclState)
         else {
             throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
         }
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processPlyvmh(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plyvmhTable = tableManager.getPlyvmhTable();
+    const auto& plymaxTables = tableManager.getPlymaxTables();
+    const unsigned numMixRegions = plymaxTables.size();
+    if (!plyvmhTable.empty()) {
+        assert(plyvmhTable.size() == numMixRegions);
+        for (std::size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
+            plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
+            plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
+            plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
+            plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
+        }
+    }
+    else {
+        throw std::runtime_error("PLYVMH keyword must be specified in POLYMW runs\n");
     }
 }
 
