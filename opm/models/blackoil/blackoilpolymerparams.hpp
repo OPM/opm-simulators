@@ -133,6 +133,12 @@ private:
      */
     template<bool enablePolymerMolarWeight>
     void processPlymax(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plmixpar data.
+     */
+    template<bool enablePolymerMolarWeight>
+    void processPlmixpar(const EclipseState& eclState);
 };
 
 } // namespace Opm

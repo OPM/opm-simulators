@@ -122,21 +122,7 @@ initFromState(const EclipseState& eclState)
     // initialize the objects which deal with the PLYMAX keyword
     processPlymax<enablePolymerMolarWeight>(eclState);
 
-    if (!eclState.getTableManager().getPlmixparTable().empty()) {
-        if constexpr (enablePolymerMolarWeight) {
-            OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
-        }
-        else {
-            const auto& plmixparTable = eclState.getTableManager().getPlmixparTable();
-            // initialize the objects which deal with the PLMIXPAR keyword
-            for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++mixRegionIdx) {
-                plymixparToddLongstaff_[mixRegionIdx] = plmixparTable[mixRegionIdx].todd_langstaff;
-            }
-        }
-    }
-    else if constexpr (!enablePolymerMolarWeight) {
-        throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
-    }
+    processPlmixpar<enablePolymerMolarWeight>(eclState);
 
     hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
     hasShrate_ = eclState.getTableManager().useShrate();
@@ -205,6 +191,8 @@ initFromState(const EclipseState& eclState)
 
     if constexpr (enablePolymerMolarWeight) {
         const auto& plyvmhTable = eclState.getTableManager().getPlyvmhTable();
+        const auto& plymaxTables = tableManager.getPlymaxTables();
+        const unsigned numMixRegions = plymaxTables.size();
         if (!plyvmhTable.empty()) {
             assert(plyvmhTable.size() == numMixRegions);
             for (std::size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
@@ -406,6 +394,33 @@ processPlymax(const EclipseState& eclState)
     }
     else {
         throw std::runtime_error("PLYMAX must be specified in POLYMER runs\n");
+    }
+}
+
+template<class Scalar>
+template<bool enablePolymerMolarWeight>
+void BlackOilPolymerParams<Scalar>::
+processPlmixpar(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plmixparTable = tableManager.getPlmixparTable();
+    const auto& plymaxTables = tableManager.getPlymaxTables();
+    const unsigned numMixRegions = plymaxTables.size();
+    if (!plmixparTable.empty()) {
+        if constexpr (enablePolymerMolarWeight) {
+            OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
+        }
+        else {
+            // initialize the objects which deal with the PLMIXPAR keyword
+            for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++mixRegionIdx) {
+                plymixparToddLongstaff_[mixRegionIdx] = plmixparTable[mixRegionIdx].todd_langstaff;
+            }
+        }
+    }
+    else {
+        if constexpr (!enablePolymerMolarWeight) {
+            throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
+        }
     }
 }
 
