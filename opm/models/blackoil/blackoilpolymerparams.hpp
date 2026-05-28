@@ -154,6 +154,11 @@ private:
      * \brief Process the Plyvmh data.
      */
     void processPlyvmh(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plymwinj data.
+     */
+    void processPlymwinj(const EclipseState& eclState);
 };
 
 } // namespace Opm

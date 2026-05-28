@@ -145,26 +145,7 @@ initFromState(const EclipseState& eclState)
 
     if constexpr (enablePolymerMolarWeight) {
         processPlyvmh(eclState);
-
-        // handling PLYMWINJ keyword
-        const auto& plymwinjTables = tableManager.getPlymwinjTables();
-        for (const auto& table : plymwinjTables) {
-            const int tableNumber = table.first;
-            const auto& plymwinjtable = table.second;
-            const std::vector<double>& throughput = plymwinjtable.getThroughputs();
-            const std::vector<double>& watervelocity = plymwinjtable.getVelocities();
-            const std::vector<std::vector<double>>& molecularweight = plymwinjtable.getMoleWeights();
-            if constexpr (std::is_same_v<Scalar, float>) {
-                const std::vector<Scalar> tp(throughput.begin(), throughput.end());
-                const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
-                const auto mw = convertVecToVec<float>(molecularweight);
-                TabulatedTwoDFunction tablefunc(tp, wv, mw, true, false);
-                plymwinjTables_[tableNumber] = std::move(tablefunc);
-            } else {
-                TabulatedTwoDFunction tablefunc(throughput, watervelocity, molecularweight, true, false);
-                plymwinjTables_[tableNumber] = std::move(tablefunc);
-            }
-        }
+        processPlymwinj(eclState);
 
         // handling SKPRWAT keyword
         const auto& skprwatTables = tableManager.getSkprwatTables();
@@ -450,6 +431,31 @@ processPlyvmh(const EclipseState& eclState)
     }
     else {
         throw std::runtime_error("PLYVMH keyword must be specified in POLYMW runs\n");
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processPlymwinj(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plymwinjTables = tableManager.getPlymwinjTables();
+    for (const auto& table : plymwinjTables) {
+        const int tableNumber = table.first;
+        const auto& plymwinjtable = table.second;
+        const std::vector<double>& throughput = plymwinjtable.getThroughputs();
+        const std::vector<double>& watervelocity = plymwinjtable.getVelocities();
+        const std::vector<std::vector<double>>& molecularweight = plymwinjtable.getMoleWeights();
+        if constexpr (std::is_same_v<Scalar, float>) {
+            const std::vector<Scalar> tp(throughput.begin(), throughput.end());
+            const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
+            const auto mw = convertVecToVec<float>(molecularweight);
+            TabulatedTwoDFunction tablefunc(tp, wv, mw, true, false);
+            plymwinjTables_[tableNumber] = std::move(tablefunc);
+        } else {
+            TabulatedTwoDFunction tablefunc(throughput, watervelocity, molecularweight, true, false);
+            plymwinjTables_[tableNumber] = std::move(tablefunc);
+        }
     }
 }
 
