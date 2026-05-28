@@ -144,6 +144,11 @@ private:
      * \brief Process the Plyshlog data.
      */
     void processPlyshlog(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Shrate data.
+     */
+    void processShrate(const EclipseState& eclState);
 };
 
 } // namespace Opm

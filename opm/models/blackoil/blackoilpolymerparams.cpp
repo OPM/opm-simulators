@@ -140,19 +140,7 @@ initFromState(const EclipseState& eclState)
         if (!hasPlyshlog_) {
             throw std::runtime_error("PLYSHLOG must be specified if SHRATE is used in POLYMER runs\n");
         }
-        const auto& shrateTable = eclState.getTableManager().getShrateTable();
-        shrate_.resize(numPvtRegions);
-        for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
-            if (shrateTable.empty()) {
-                shrate_[pvtRegionIdx] = 4.8; //default;
-            }
-            else if (shrateTable.size() == numPvtRegions) {
-                shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
-            }
-            else {
-                throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
-            }
-        }
+        processShrate(eclState);
     }
 
     if constexpr (enablePolymerMolarWeight) {
@@ -432,6 +420,27 @@ processPlyshlog(const EclipseState& eclState)
         for (std::size_t i = 0; i < waterVelocity.size(); ++i) {
             plyshlogShearEffectRefMultiplier_[pvtRegionIdx][i] = shearMultiplier[i];
             plyshlogShearEffectRefLogVelocity_[pvtRegionIdx][i] = waterVelocity[i];
+        }
+    }
+}
+
+template<class Scalar>
+void BlackOilPolymerParams<Scalar>::
+processShrate(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& shrateTable = tableManager.getShrateTable();
+    const unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
+    shrate_.resize(numPvtRegions);
+    for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
+        if (shrateTable.empty()) {
+            shrate_[pvtRegionIdx] = 4.8; //default;
+        }
+        else if (shrateTable.size() == numPvtRegions) {
+            shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
+        }
+        else {
+            throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
         }
     }
 }
