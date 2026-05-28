@@ -45,6 +45,7 @@ namespace Ewoms {
  {
     using Scalar = double;
     using GlobalPosition = Dune::FieldVector<Scalar, 2>;
+    using Edge = std::pair<unsigned, unsigned>;
 
     enum class ParseMode { Vertex, Edge, Element, Finished };
 
@@ -107,37 +108,14 @@ private:
             }
             else if (curParseMode == ParseMode::Edge) {
                 // read an edge and update the fracture mapper
-
-                // read the data attached to the edge
-                std::istringstream iss(curLine);
-                int dataVal;
-                std::string tmp;
-                iss >> dataVal;
-                iss >> tmp;
-                assert(tmp == ":");
-
-                // read the vertex indices of an edge
-                std::vector<unsigned int> vertIndices;
-                while (iss) {
-                    unsigned int tmp2;
-                    iss >> tmp2;
-                    if (!iss)
-                        break;
-                    vertIndices.push_back(tmp2);
-                    assert(tmp2 < vertexPos.size());
-                }
-
-                // an edge always has two indices!
-                assert(vertIndices.size() == 2);
-
-                std::pair<unsigned, unsigned> edge(vertIndices[0], vertIndices[1]);
+                const auto& [edge, isFracture] = parseEdge(curLine);
                 edges.push_back(edge);
 
                 // add the edge to the fracture mapper if it is a fracture
-                if (dataVal < 0) {
+                if (isFracture) {
                     fractureEdges.push_back(edge);
-                    vertexPos[ edge.first  ].second = 1;
-                    vertexPos[ edge.second ].second = 1;
+                    vertexPos[edge.first].second = 1;
+                    vertexPos[edge.second].second = 1;
                 }
             }
             else if (curParseMode == ParseMode::Element) {
@@ -225,6 +203,38 @@ private:
         return coord;
     }
 
+    //! \brief Parses an edge from a string.
+    //! \param curLine String to parse
+    //! \return Pair of edge and whether or not edge is a fracture
+    std::pair<Edge, bool>
+    parseEdge(const std::string& curLine)
+    {
+        // read the data attached to the edge
+        std::istringstream iss(curLine);
+        int dataVal;
+        std::string tmp;
+        iss >> dataVal;
+        iss >> tmp;
+        assert(tmp == ":");
+
+        // read the vertex indices of an edge
+        std::vector<unsigned int> vertIndices;
+        while (iss) {
+            unsigned int tmp2;
+            iss >> tmp2;
+            if (!iss) {
+                break;
+            }
+            vertIndices.push_back(tmp2);
+            assert(tmp2 < vertexPos.size());
+        }
+
+        // an edge always has two indices!
+        assert(vertIndices.size() == 2);
+
+        return std::make_pair(Edge{vertIndices[0], vertIndices[1]}, dataVal < 0);
+    }
+
     //! \brief Writes out the data to the output stream.
     //! \param dgfFile Stream to write to
     //! \param precision Precision to write at
@@ -270,10 +280,10 @@ private:
         dgfFile << "#" << std::endl;
     }
 
-    std::vector< std::pair<GlobalPosition, unsigned> > vertexPos;
-    std::vector<std::pair<unsigned, unsigned> > edges;
-    std::vector<std::pair<unsigned, unsigned> > fractureEdges;
-    std::vector<std::vector<unsigned> > elements;
+    std::vector<std::pair<GlobalPosition, unsigned>> vertexPos;
+    std::vector<Edge> edges;
+    std::vector<Edge> fractureEdges;
+    std::vector<std::vector<unsigned>> elements;
  };
 
 } // namespace Ewoms
