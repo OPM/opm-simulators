@@ -68,26 +68,7 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         return; // solvent treatment is supposed to be disabled
     }
 
-    co2sol_ = eclState.runspec().co2Sol();
-    h2sol_ = eclState.runspec().h2Sol();
-
-    if (co2sol_ && h2sol_) {
-        throw std::runtime_error("CO2SOL and H2SOL can not be used together");
-    }
-
-    if (co2sol_ || h2sol_) {
-        if (co2sol_) {
-            co2GasPvt_.initFromState(eclState, schedule);
-            brineCo2Pvt_.initFromState(eclState, schedule);
-        } else {
-            h2GasPvt_.initFromState(eclState, schedule);
-            brineH2Pvt_.initFromState(eclState, schedule);
-        }
-        if (eclState.getSimulationConfig().hasDISGASW()) {
-            rsSolw_active_ = true;
-        }
-    } else
-        solventPvt_.initFromState(eclState, schedule);
+    setupPvts(eclState, schedule);
 
     const auto& tableManager = eclState.getTableManager();
     // initialize the objects which deal with the SSFN keyword
@@ -323,6 +304,36 @@ setMsfn(unsigned satRegionIdx,
 {
     msfnKrsg_[satRegionIdx] = msfnKrsg;
     msfnKro_[satRegionIdx] = msfnKro;
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+setupPvts(const EclipseState& eclState,
+          const Schedule& schedule)
+{
+    co2sol_ = eclState.runspec().co2Sol();
+    h2sol_ = eclState.runspec().h2Sol();
+
+    if (co2sol_ && h2sol_) {
+        throw std::runtime_error("CO2SOL and H2SOL can not be used together");
+    }
+
+    if (co2sol_ || h2sol_) {
+        if (co2sol_) {
+            co2GasPvt_.initFromState(eclState, schedule);
+            brineCo2Pvt_.initFromState(eclState, schedule);
+        }
+        else {
+            h2GasPvt_.initFromState(eclState, schedule);
+            brineH2Pvt_.initFromState(eclState, schedule);
+        }
+        if (eclState.getSimulationConfig().hasDISGASW()) {
+            rsSolw_active_ = true;
+        }
+    }
+    else {
+        solventPvt_.initFromState(eclState, schedule);
+    }
 }
 
 #define INSTANTIATE_TYPE(T)                                                                             \

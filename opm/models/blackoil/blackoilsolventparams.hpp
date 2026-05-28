@@ -96,6 +96,12 @@ private:
     void setMsfn(unsigned satRegionIdx,
                  const TabulatedFunction& msfnKrsg,
                  const TabulatedFunction& msfnKro);
+
+    /*!
+     * \brief Setup active pvt members.
+     */
+    void setupPvts(const EclipseState& eclState,
+                   const Schedule& schedule);
 };
 
 } // namespace Opm
