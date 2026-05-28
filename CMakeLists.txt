@@ -288,7 +288,7 @@ macro(opm-simulators_prereqs_hook)
 endmacro()
 
 macro(opm-simulators_sources_hook)
-  if(OPENCL_FOUND)
+  if(OpenCL_FOUND)
     include(opencl-source-provider)
     target_sources(opmsimulators PRIVATE ${PROJECT_BINARY_DIR}/clSources.cpp)
   endif()
