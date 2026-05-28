@@ -202,6 +202,22 @@ namespace Ewoms {
             }
         }
 
+        write(dgfFile, fractureEdges, vertexPos, elements, precision);
+    }
+
+private:
+    //! \brief Writes out the data to the output stream.
+    //! \param dgfFile Stream to write to
+    //! \param fractureEdges List of fracture edges
+    //! \param vertexPos List of vertices
+    //! \param elements List of element connectivities
+    //! \param precision Precision to write at
+    static void write(std::ostream& dgfFile,
+                      const std::vector<std::pair<unsigned, unsigned>>& fractureEdges,
+                      const std::vector<std::pair<Dune::FieldVector<double, 2>, unsigned>>& vertexPos,
+                      const std::vector<std::vector<unsigned>>& elements,
+                      const unsigned precision)
+    {
         dgfFile << "DGF" << std::endl << std::endl;
 
         dgfFile << "GridParameter" << std::endl
@@ -211,19 +227,15 @@ namespace Ewoms {
 
         dgfFile << "Vertex" << std::endl;
         const bool hasFractures = fractureEdges.size() > 0;
-        if( hasFractures )
-        {
+        if (hasFractures) {
             dgfFile << "parameters 1" << std::endl;
         }
         dgfFile << std::scientific;
         dgfFile.precision( precision );
-        const size_t vxSize = vertexPos.size();
-        for( size_t i=0; i<vxSize; ++i)
-        {
-            dgfFile << vertexPos[ i ].first;
-            if( hasFractures )
-            {
-                dgfFile << " " << vertexPos[ i ].second;
+        for (const auto& vtx : vertexPos) {
+            dgfFile << vtx.first;
+            if (hasFractures) {
+                dgfFile << " " << vtx.second;
             }
             dgfFile << std::endl;
         }
@@ -231,12 +243,10 @@ namespace Ewoms {
         dgfFile << "#" << std::endl << std::endl;
 
         dgfFile << "Simplex" << std::endl;
-        const size_t elSize = elements.size();
-        for( size_t i=0; i<elSize; ++i )
-        {
-            const size_t elVx = elements[ i ].size();
-            for( size_t j=0; j<elVx; ++j )
-                dgfFile << elements[ i ][ j ] << " ";
+        for (const auto& element : elements) {
+            for (const auto idx : element) {
+                dgfFile << idx << " ";
+            }
             dgfFile << std::endl;
         }
 
