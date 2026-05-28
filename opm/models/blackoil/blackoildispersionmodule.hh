@@ -33,6 +33,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
@@ -51,23 +52,6 @@ namespace Opm {
  * \class Opm::BlackOilDispersionModule
  * \brief Provides the auxiliary methods required for consideration of the
  * dispersion equation.
- */
-template <class TypeTag, bool enableDispersion>
-class BlackOilDispersionModule;
-
-template <class TypeTag, bool enableDispersion>
-class BlackOilDispersionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::BlackOilDispersionModule
- */
-template <class TypeTag>
-class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDispersionModule
  */
 template <class TypeTag>
 class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/true>
@@ -287,20 +271,6 @@ private:
  * \brief Provides the volumetric quantities required for the
  *        calculation of dispersive fluxes.
  */
-template <class TypeTag, bool enableDispersion>
-class BlackOilDispersionIntensiveQuantities;
-
-/*!
- * \copydoc Opm::DispersionIntensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDispersionIntensiveQuantities<TypeTag, /*enableDispersion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::DispersionIntensiveQuantities
- */
 template <class TypeTag>
 class BlackOilDispersionIntensiveQuantities<TypeTag, /*enableDispersion=*/true>
 {
@@ -376,20 +346,6 @@ private:
  * \class Opm::BlackOilDispersionExtensiveQuantities
  *
  * \brief Provides the quantities required to calculate dispersive mass fluxes.
- */
-template <class TypeTag, bool enableDispersion>
-class BlackOilDispersionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::DispersionExtensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDispersionExtensiveQuantities<TypeTag, /*enableDispersion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDispersionExtensiveQuantities
  */
 template <class TypeTag>
 class BlackOilDispersionExtensiveQuantities<TypeTag, /*enableDispersion=*/true>
