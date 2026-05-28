@@ -117,6 +117,11 @@ private:
      * \brief Process the MISC data.
      */
     void processMisc(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the PMISC data.
+     */
+    void processPmisc(const EclipseState& eclState);
 };
 
 } // namespace Opm

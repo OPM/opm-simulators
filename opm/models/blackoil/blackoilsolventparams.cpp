@@ -81,31 +81,7 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         const unsigned numMiscRegions = 1;
         processSof2(eclState);
         processMisc(eclState);
-
-        // resize the attributes of the object
-        pmisc_.resize(numMiscRegions);
-        const auto& pmiscTables = tableManager.getPmiscTables();
-        if (!pmiscTables.empty()) {
-            assert(numMiscRegions == pmiscTables.size());
-
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                const auto& pmiscTable = pmiscTables.template getTable<PmiscTable>(regionIdx);
-
-                // Copy data
-                const auto& po = pmiscTable.getOilPhasePressureColumn();
-                const auto& pmisc = pmiscTable.getMiscibilityColumn();
-
-                pmisc_[regionIdx].setXYContainers(po, pmisc);
-            }
-        }
-        else {
-            std::vector<double> x = {0.0,1.0e20};
-            std::vector<double> y = {1.0,1.0};
-            TabulatedFunction constant = TabulatedFunction(2, x, y);
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                pmisc_[regionIdx] = constant;
-            }
-        }
+        processPmisc(eclState);
 
         // miscible relative permeability multipleiers
         msfnKrsg_.resize(numSatRegions);
@@ -357,6 +333,39 @@ processMisc(const EclipseState& eclState)
     }
     else {
         throw std::runtime_error("MISC must be specified in MISCIBLE (SOLVENT) runs\n");
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processPmisc(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numMiscRegions = 1;
+
+    // resize the attributes of the object
+    pmisc_.resize(numMiscRegions);
+    const auto& pmiscTables = tableManager.getPmiscTables();
+    if (!pmiscTables.empty()) {
+        assert(numMiscRegions == pmiscTables.size());
+
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            const auto& pmiscTable = pmiscTables.template getTable<PmiscTable>(regionIdx);
+
+            // Copy data
+            const auto& po = pmiscTable.getOilPhasePressureColumn();
+            const auto& pmisc = pmiscTable.getMiscibilityColumn();
+
+            pmisc_[regionIdx].setXYContainers(po, pmisc);
+        }
+    }
+    else {
+        const std::vector<double> x = {0.0,1.0e20};
+        const std::vector<double> y = {1.0,1.0};
+        const TabulatedFunction constant = TabulatedFunction(2, x, y);
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            pmisc_[regionIdx] = constant;
+        }
     }
 }
 
