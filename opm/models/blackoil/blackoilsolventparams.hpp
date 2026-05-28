@@ -127,6 +127,11 @@ private:
      * \brief Process the MSFN data.
      */
     void processMsfn(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SORWMIS data.
+     */
+    void processSorwmis(const EclipseState& eclState);
 };
 
 } // namespace Opm

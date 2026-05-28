@@ -82,32 +82,7 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         processMisc(eclState);
         processPmisc(eclState);
         processMsfn(eclState);
-
-        // resize the attributes of the object
-        sorwmis_.resize(numMiscRegions);
-        const auto& sorwmisTables = tableManager.getSorwmisTables();
-        if (!sorwmisTables.empty()) {
-            assert(numMiscRegions == sorwmisTables.size());
-
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                const auto& sorwmisTable = sorwmisTables.template getTable<SorwmisTable>(regionIdx);
-
-                // Copy data
-                const auto& sw = sorwmisTable.getWaterSaturationColumn();
-                const auto& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
-
-                sorwmis_[regionIdx].setXYContainers(sw, sorwmis);
-            }
-        }
-        else {
-            // default
-            std::vector<double> x = {0.0,1.0};
-            std::vector<double> y = {0.0,0.0};
-            TabulatedFunction zero = TabulatedFunction(2, x, y);
-            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                sorwmis_[regionIdx] = zero;
-            }
-        }
+        processSorwmis(eclState);
 
         // resize the attributes of the object
         sgcwmis_.resize(numMiscRegions);
@@ -374,6 +349,38 @@ processMsfn(const EclipseState& eclState)
 
         for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
             setMsfn(regionIdx, unit, invUnit);
+        }
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processSorwmis(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numMiscRegions = 1;
+    sorwmis_.resize(numMiscRegions);
+    const auto& sorwmisTables = tableManager.getSorwmisTables();
+    if (!sorwmisTables.empty()) {
+        assert(numMiscRegions == sorwmisTables.size());
+
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            const auto& sorwmisTable = sorwmisTables.template getTable<SorwmisTable>(regionIdx);
+
+            // Copy data
+            const auto& sw = sorwmisTable.getWaterSaturationColumn();
+            const auto& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
+
+            sorwmis_[regionIdx].setXYContainers(sw, sorwmis);
+        }
+    }
+    else {
+        // default
+        const std::vector<double> x = {0.0,1.0};
+        const std::vector<double> y = {0.0,0.0};
+        const TabulatedFunction zero = TabulatedFunction(2, x, y);
+        for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+            sorwmis_[regionIdx] = zero;
         }
     }
 }
