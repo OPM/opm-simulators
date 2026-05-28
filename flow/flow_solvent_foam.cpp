@@ -23,23 +23,24 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowSolventFoamProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowSolventFoamProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
-template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::FlowSolventFoamProblem> {
-    static constexpr bool value = true;
-};
 
 template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::FlowSolventFoamProblem> {
-    static constexpr bool value = true;
-};
-}}
+struct EnableSolvent<TypeTag, TTag::FlowSolventFoamProblem>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::FlowSolventFoamProblem>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -65,4 +66,4 @@ int flowSolventFoamMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

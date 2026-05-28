@@ -28,42 +28,39 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasWaterSaltprecVapwatProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasWaterSaltprecVapwatProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    static constexpr bool value = true;
-};
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    static constexpr bool value = true;
-};
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    static constexpr bool value = true;
-};
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasWaterSaltprecVapwatProblem>
 { static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
@@ -79,7 +76,8 @@ private:
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal ? 1 : 0;
+
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
@@ -91,7 +89,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -117,4 +116,4 @@ int flowGasWaterSaltprecVapwatMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -28,25 +28,30 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasOilDiffuseProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasOilDiffuseProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasOilDiffuseProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasOilDiffuseProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasOilDiffuseProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasOilDiffuseProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasOilDiffuseProblem> { static constexpr bool value = true; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasOilDiffuseProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowGasOilDiffuseProblem> { static constexpr bool value = true; };
+struct EnableDispersion<TypeTag, TTag::FlowGasOilDiffuseProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasOilDiffuseProblem>
@@ -63,7 +68,8 @@ private:
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal ? 1 : 0;
+
 public:
   using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                        getPropValue<TypeTag, Properties::EnableExtbo>(),
@@ -75,7 +81,8 @@ public:
                                        /*disabledCompIdx=*/FluidSystem::waterCompIdx,
                                        getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -101,4 +108,4 @@ int flowGasOilDiffuseMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

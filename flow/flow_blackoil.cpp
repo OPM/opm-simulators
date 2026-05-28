@@ -26,27 +26,28 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
+namespace Opm::Properties {
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowProblemTPFA>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowProblemTPFA>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowProblemTPFA>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct AvoidElementContext<TypeTag, TTag::FlowProblemTPFA>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Properties
+
 namespace Opm {
-    namespace Properties {
 
-        template<class TypeTag>
-        struct Linearizer<TypeTag, TTag::FlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
-
-        template<class TypeTag>
-        struct LocalResidual<TypeTag, TTag::FlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
-
-        template<class TypeTag>
-        struct EnableDiffusion<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = false; };
-
-        template<class TypeTag>
-        struct AvoidElementContext<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = true; };
-
-    }
-}
-
-
-namespace Opm
-{
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
 flowBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {

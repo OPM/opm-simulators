@@ -29,32 +29,42 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 
-namespace Opm {
-namespace Properties {
-    namespace TTag {
-        struct FlowProblemNohyst {
-            using InheritsFrom = std::tuple<FlowProblem>;
-        };
-    }
-    template<class TypeTag>
-    struct Linearizer<TypeTag, TTag::FlowProblemNohyst> { using type = TpfaLinearizer<TypeTag>; };
+namespace Opm::Properties {
 
-    template<class TypeTag>
-    struct LocalResidual<TypeTag, TTag::FlowProblemNohyst> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+namespace TTag {
 
-    template<class TypeTag>
-    struct EnableDiffusion<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = false; };
-
-    template<class TypeTag>
-    struct EnableHysteresis<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = false; };
-
-    template<class TypeTag>
-    struct EnableEndpointScaling<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = true; };
-
-    template<class TypeTag>
-    struct AvoidElementContext<TypeTag, TTag::FlowProblemNohyst> { static constexpr bool value = true; };
+struct FlowProblemNohyst
+{ using InheritsFrom = std::tuple<FlowProblem>; };
 
 }
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowProblemNohyst>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowProblemNohyst>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowProblemNohyst>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableHysteresis<TypeTag, TTag::FlowProblemNohyst>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableEndpointScaling<TypeTag, TTag::FlowProblemNohyst>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct AvoidElementContext<TypeTag, TTag::FlowProblemNohyst>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Properties
+
+namespace Opm {
 
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblemNohyst>>
 flowBlackoilTpfaNohystMainInit(int argc, char** argv, bool outputCout, bool outputFiles)

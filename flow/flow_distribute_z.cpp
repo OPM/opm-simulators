@@ -47,8 +47,8 @@ std::vector<int> loadBalanceInZOnly(const Dune::CpGrid& grid)
     for( const auto &element : elements(gridView) )
     {
         const auto& id = idSet.id(element);
-        unsigned elemIdx = elemMapper.index(element);
-        const auto& cartIndex = cartMapper.cartesianIndex(elemIdx);
+        const auto elemIdx = elemMapper.index(element);
+        const auto& cartIndex = cartMapper.cartesianIndex(static_cast<int>(elemIdx));
         std::array<int,3> cartCoord;
         cartMapper.cartesianCoordinate(cartIndex, cartCoord);
         using std::min;

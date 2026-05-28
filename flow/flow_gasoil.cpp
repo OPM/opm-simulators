@@ -29,22 +29,26 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasOilProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasOilProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasOilProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasOilProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasOilProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasOilProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasOilProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasOilProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasOilProblem>
@@ -61,7 +65,8 @@ private:
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal ? 1 : 0;
+
 public:
   using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                        getPropValue<TypeTag, Properties::EnableExtbo>(),
@@ -73,7 +78,8 @@ public:
                                        /*disabledCompIdx=*/FluidSystem::waterCompIdx,
                                        getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -99,4 +105,4 @@ int flowGasOilMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

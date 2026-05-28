@@ -26,38 +26,36 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowBrinePrecsaltVapwatProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowBrinePrecsaltVapwatProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
-    static constexpr bool value = true;
-};
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
-    static constexpr bool value = true;
-};
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct EnableVapwat<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
-}}
+struct Linearizer<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -83,4 +81,4 @@ int flowBrinePrecsaltVapwatMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

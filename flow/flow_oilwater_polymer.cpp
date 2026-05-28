@@ -25,17 +25,19 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowOilWaterPolymerProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowOilWaterPolymerProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
+
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::FlowOilWaterPolymerProblem> {
-    static constexpr bool value = true;
-};
+struct EnablePolymer<TypeTag, TTag::FlowOilWaterPolymerProblem>
+{ static constexpr bool value = true; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowOilWaterPolymerProblem>
@@ -47,7 +49,8 @@ private:
     using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal;
+    static constexpr int numEnergyVars = energyModuleType == EnergyModules::FullyImplicitThermal ? 1 : 0;
+
 public:
     using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
@@ -59,7 +62,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -85,4 +89,4 @@ int flowOilWaterPolymerMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm
