@@ -43,6 +43,8 @@ namespace Ewoms {
 
  struct Art2DGF
  {
+    enum class ParseMode { Vertex, Edge, Element, Finished };
+
     /*!
      * \brief Create the Grid
      */
@@ -52,7 +54,6 @@ namespace Ewoms {
     {
         using Scalar = double;
         using GlobalPosition = Dune::FieldVector< Scalar, 2 >;
-        enum ParseMode { Vertex, Edge, Element, Finished };
         std::vector< std::pair<GlobalPosition, unsigned> > vertexPos;
         std::vector<std::pair<unsigned, unsigned> > edges;
         std::vector<std::pair<unsigned, unsigned> > fractureEdges;
@@ -63,7 +64,7 @@ namespace Ewoms {
                                      +"' does not exist or is not readable");
         }
         std::string curLine;
-        ParseMode curParseMode = Vertex;
+        ParseMode curParseMode = ParseMode::Vertex;
         while (inStream) {
             std::getline(inStream, curLine);
 
@@ -77,12 +78,12 @@ namespace Ewoms {
 
             // a section of the file is finished, go to the next one
             if (curLine == "$") {
-                if (curParseMode == Vertex)
-                    curParseMode = Edge;
-                else if (curParseMode == Edge)
-                    curParseMode = Element;
-                else if (curParseMode == Element)
-                    curParseMode = Finished;
+                if (curParseMode == ParseMode::Vertex)
+                    curParseMode = ParseMode::Edge;
+                else if (curParseMode == ParseMode::Edge)
+                    curParseMode = ParseMode::Element;
+                else if (curParseMode == ParseMode::Element)
+                    curParseMode = ParseMode::Finished;
                 continue;
             }
 
@@ -90,7 +91,7 @@ namespace Ewoms {
             if (curLine.empty())
                 continue;
 
-            if (curParseMode == Vertex) {
+            if (curParseMode == ParseMode::Vertex) {
                 GlobalPosition coord;
                 std::istringstream iss(curLine);
                 // parse only the first two numbers as the vertex
@@ -99,7 +100,7 @@ namespace Ewoms {
                 iss >> coord[0] >> coord[1];
                 vertexPos.push_back( std::make_pair( coord, 0 ) );
             }
-            else if (curParseMode == Edge) {
+            else if (curParseMode == ParseMode::Edge) {
                 // read an edge and update the fracture mapper
 
                 // read the data attached to the edge
@@ -134,7 +135,7 @@ namespace Ewoms {
                     vertexPos[ edge.second ].second = 1;
                 }
             }
-            else if (curParseMode == Element) {
+            else if (curParseMode == ParseMode::Element) {
                 // skip the data attached to an element
                 std::istringstream iss(curLine);
                 int dataVal;
@@ -197,7 +198,7 @@ namespace Ewoms {
 
                 elements.push_back( vertIndices );
             }
-            else if (curParseMode == Finished) {
+            else if (curParseMode == ParseMode::Finished) {
                 assert(curLine.size() == 0);
             }
         }
