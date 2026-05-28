@@ -39,7 +39,6 @@
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>

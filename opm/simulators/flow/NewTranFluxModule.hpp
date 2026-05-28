@@ -44,13 +44,14 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/utils/signum.hh>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/models/utils/signum.hh>
 
 #include <array>
 

@@ -30,7 +30,6 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 
