@@ -43,21 +43,32 @@ namespace Ewoms {
 
  struct Art2DGF
  {
+    using Scalar = double;
+    using GlobalPosition = Dune::FieldVector<Scalar, 2>;
+
     enum class ParseMode { Vertex, Edge, Element, Finished };
 
-    /*!
-     * \brief Create the Grid
-     */
-    static void convert( const std::string& artFileName,
-                         std::ostream& dgfFile,
-                         const unsigned precision = 16 )
+    //! \brief Static entry point for conversion.
+    //! \param artFileName File name for art file
+    //! \param dgfFile Stream to output dgf file to
+    //! \param precision Precision for floating point numbers
+    static void convert(const std::string& artFileName,
+                        std::ostream& dgfFile,
+                        const unsigned precision = 16)
     {
-        using Scalar = double;
-        using GlobalPosition = Dune::FieldVector< Scalar, 2 >;
-        std::vector< std::pair<GlobalPosition, unsigned> > vertexPos;
-        std::vector<std::pair<unsigned, unsigned> > edges;
-        std::vector<std::pair<unsigned, unsigned> > fractureEdges;
-        std::vector<std::vector<unsigned> > elements;
+        Art2DGF c;
+        c.doConvert(artFileName, dgfFile, precision);
+    }
+
+private:
+    //! \brief Converts a given .art file to a .dgf file
+    //! \param artFileName File name for art file
+    //! \param dgfFile Stream to output dgf file to
+    //! \param precision Precision for floating point numbers
+    void doConvert(const std::string& artFileName,
+                   std::ostream& dgfFile,
+                   const unsigned precision)
+    {
         std::ifstream inStream(artFileName);
         if (!inStream.is_open()) {
             throw std::runtime_error("File '"+artFileName
@@ -203,21 +214,14 @@ namespace Ewoms {
             }
         }
 
-        write(dgfFile, fractureEdges, vertexPos, elements, precision);
+        write(dgfFile, precision);
     }
 
-private:
     //! \brief Writes out the data to the output stream.
     //! \param dgfFile Stream to write to
-    //! \param fractureEdges List of fracture edges
-    //! \param vertexPos List of vertices
-    //! \param elements List of element connectivities
     //! \param precision Precision to write at
-    static void write(std::ostream& dgfFile,
-                      const std::vector<std::pair<unsigned, unsigned>>& fractureEdges,
-                      const std::vector<std::pair<Dune::FieldVector<double, 2>, unsigned>>& vertexPos,
-                      const std::vector<std::vector<unsigned>>& elements,
-                      const unsigned precision)
+    void write(std::ostream& dgfFile,
+                const unsigned precision)
     {
         dgfFile << "DGF" << std::endl << std::endl;
 
@@ -257,6 +261,11 @@ private:
         dgfFile << "#" << std::endl << std::endl;
         dgfFile << "#" << std::endl;
     }
+
+    std::vector< std::pair<GlobalPosition, unsigned> > vertexPos;
+    std::vector<std::pair<unsigned, unsigned> > edges;
+    std::vector<std::pair<unsigned, unsigned> > fractureEdges;
+    std::vector<std::vector<unsigned> > elements;
  };
 
 } // namespace Ewoms
