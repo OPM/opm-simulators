@@ -107,6 +107,11 @@ private:
      * \brief Process the SSFN data.
      */
     void processSsfn(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SOF2 data.
+     */
+    void processSof2(const EclipseState& eclState);
 };
 
 } // namespace Opm

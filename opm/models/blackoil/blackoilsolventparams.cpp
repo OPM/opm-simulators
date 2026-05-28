@@ -78,24 +78,8 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
     isMiscible_ = false;
     if (!eclState.getTableManager().getMiscTables().empty()) {
         isMiscible_ = true;
-
         unsigned numMiscRegions = 1;
-
-        // misicible hydrocabon relative permeability wrt water
-        const auto& sof2Tables = tableManager.getSof2Tables();
-        if (!sof2Tables.empty()) {
-            // resize the attributes of the object
-            sof2Krn_.resize(numSatRegions);
-            for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-                const auto& sof2Table = sof2Tables.template getTable<Sof2Table>(satRegionIdx);
-                sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
-                                                       sof2Table.getKroColumn(),
-                                                       /*sortInput=*/true);
-            }
-        }
-        else if (eclState.runspec().phases().active(Phase::OIL)) {
-            throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT and OIL) runs\n");
-        }
+        processSof2(eclState);
 
         const auto& miscTables = tableManager.getMiscTables();
         if (!miscTables.empty()) {
@@ -342,6 +326,29 @@ processSsfn(const EclipseState& eclState)
         ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
                                                ssfnTable.getSolventRelPermMultiplierColumn(),
                                                /*sortInput=*/true);
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processSof2(const EclipseState& eclState)
+{
+    // miscible hydrocarbon relative permeability wrt water
+    const auto& tableManager = eclState.getTableManager();
+    const auto& sof2Tables = tableManager.getSof2Tables();
+    const unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    if (!sof2Tables.empty()) {
+        // resize the attributes of the object
+        sof2Krn_.resize(numSatRegions);
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+            const auto& sof2Table = sof2Tables.template getTable<Sof2Table>(satRegionIdx);
+            sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
+                                                   sof2Table.getKroColumn(),
+                                                   /*sortInput=*/true);
+        }
+    }
+    else if (eclState.runspec().phases().active(Phase::OIL)) {
+        throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT and OIL) runs\n");
     }
 }
 
