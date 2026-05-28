@@ -36,6 +36,29 @@
 #include <cstddef>
 #include <stdexcept>
 
+namespace {
+
+template<bool enableBrine, bool enableSaltPrecipitation>
+void verifyState(const Opm::EclipseState& eclState)
+{
+    // some sanity checks: if brine are enabled, the BRINE keyword must be
+    // present, if brine are disabled the keyword must not be present.
+    if constexpr (enableBrine) {
+        if (!eclState.runspec().phases().active(Opm::Phase::BRINE)) {
+            throw std::runtime_error("Non-trivial brine treatment requested at compile time, but "
+                                     "the deck does not contain the BRINE keyword");
+        }
+    }
+    else {
+        if (eclState.runspec().phases().active(Opm::Phase::BRINE)) {
+            throw std::runtime_error("Brine treatment disabled at compile time, but the deck "
+                                     "contains the BRINE keyword");
+        }
+    }
+}
+
+}
+
 namespace Opm {
 
 template<class Scalar>
@@ -43,20 +66,7 @@ template<bool enableBrine, bool enableSaltPrecipitation>
 void BlackOilBrineParams<Scalar>::
 initFromState(const EclipseState& eclState)
 {
-    // some sanity checks: if brine are enabled, the BRINE keyword must be
-    // present, if brine are disabled the keyword must not be present.
-    if constexpr (enableBrine) {
-        if (!eclState.runspec().phases().active(Phase::BRINE)) {
-            throw std::runtime_error("Non-trivial brine treatment requested at compile time, but "
-                                     "the deck does not contain the BRINE keyword");
-        }
-    }
-    else {
-        if (eclState.runspec().phases().active(Phase::BRINE)) {
-            throw std::runtime_error("Brine treatment disabled at compile time, but the deck "
-                                     "contains the BRINE keyword");
-        }
-    }
+    verifyState<enableBrine, enableSaltPrecipitation>(eclState);
 
     if (!eclState.runspec().phases().active(Phase::BRINE)) {
         return; // brine treatment is supposed to be disabled
