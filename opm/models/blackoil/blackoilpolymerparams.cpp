@@ -51,38 +51,32 @@ convertVecToVec(const std::vector<std::vector<From>>& input)
     return output;
 }
 
-}
-
-namespace Opm {
-
-template<class Scalar>
 template<bool enablePolymer, bool enablePolymerMolarWeight>
-void BlackOilPolymerParams<Scalar>::
-initFromState(const EclipseState& eclState)
+void verifyState(const Opm::EclipseState& eclState)
 {
     // some sanity checks: if polymers are enabled, the POLYMER keyword must be
     // present, if polymers are disabled the keyword must not be present.
     if constexpr (enablePolymer) {
-        if (!eclState.runspec().phases().active(Phase::POLYMER)) {
+        if (!eclState.runspec().phases().active(Opm::Phase::POLYMER)) {
             throw std::runtime_error("Non-trivial polymer treatment requested at compile time, but "
                                      "the deck does not contain the POLYMER keyword");
         }
     }
     else {
-        if (eclState.runspec().phases().active(Phase::POLYMER)) {
+        if (eclState.runspec().phases().active(Opm::Phase::POLYMER)) {
             throw std::runtime_error("Polymer treatment disabled at compile time, but the deck "
                                      "contains the POLYMER keyword");
         }
     }
 
     if constexpr (enablePolymerMolarWeight) {
-        if (!eclState.runspec().phases().active(Phase::POLYMW)) {
+        if (!eclState.runspec().phases().active(Opm::Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is enabled at compile time, but "
                                      "the deck does not contain the POLYMW keyword");
         }
     }
     else {
-        if (eclState.runspec().phases().active(Phase::POLYMW)) {
+        if (eclState.runspec().phases().active(Opm::Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is disabled at compile time, but the deck "
                                      "contains the POLYMW keyword");
         }
@@ -92,7 +86,18 @@ initFromState(const EclipseState& eclState)
         throw std::runtime_error("Polymer molecular weight tracking is enabled while polymer treatment "
                                  "is disabled at compile time");
     }
+}
 
+}
+
+namespace Opm {
+
+template<class Scalar>
+template<bool enablePolymer, bool enablePolymerMolarWeight>
+void BlackOilPolymerParams<Scalar>::
+initFromState(const EclipseState& eclState)
+{
+    verifyState<enablePolymer, enablePolymerMolarWeight>(eclState);
     if (!eclState.runspec().phases().active(Phase::POLYMER)) {
         return; // polymer treatment is supposed to be disabled
     }
