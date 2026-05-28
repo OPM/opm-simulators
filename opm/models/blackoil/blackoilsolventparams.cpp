@@ -72,7 +72,6 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
     processSsfn(eclState);
 
     const auto& tableManager = eclState.getTableManager();
-    unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
 
     // initialize the objects needed for miscible solvent and oil simulations
     isMiscible_ = false;
@@ -82,37 +81,8 @@ initFromState(const EclipseState& eclState, const Schedule& schedule)
         processSof2(eclState);
         processMisc(eclState);
         processPmisc(eclState);
+        processMsfn(eclState);
 
-        // miscible relative permeability multipleiers
-        msfnKrsg_.resize(numSatRegions);
-        msfnKro_.resize(numSatRegions);
-        const auto& msfnTables = tableManager.getMsfnTables();
-        if (!msfnTables.empty()) {
-            assert(numSatRegions == msfnTables.size());
-
-            for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
-                const MsfnTable& msfnTable = msfnTables.template getTable<MsfnTable>(regionIdx);
-
-                // Copy data
-                // Ssg = Ss + Sg;
-                const auto& Ssg = msfnTable.getGasPhaseFractionColumn();
-                const auto& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
-                const auto& kro = msfnTable.getOilRelpermMultiplierColumn();
-
-                msfnKrsg_[regionIdx].setXYContainers(Ssg, krsg);
-                msfnKro_[regionIdx].setXYContainers(Ssg, kro);
-            }
-        }
-        else {
-            std::vector<double> x = {0.0,1.0};
-            std::vector<double> y = {1.0,0.0};
-            TabulatedFunction unit = TabulatedFunction(2, x, x);
-            TabulatedFunction invUnit = TabulatedFunction(2, x, y);
-
-            for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
-                setMsfn(regionIdx, unit, invUnit);
-            }
-        }
         // resize the attributes of the object
         sorwmis_.resize(numMiscRegions);
         const auto& sorwmisTables = tableManager.getSorwmisTables();
@@ -365,6 +335,45 @@ processPmisc(const EclipseState& eclState)
         const TabulatedFunction constant = TabulatedFunction(2, x, y);
         for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
             pmisc_[regionIdx] = constant;
+        }
+    }
+}
+
+template<class Scalar>
+void BlackOilSolventParams<Scalar>::
+processMsfn(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+
+    // miscible relative permeability multipleiers
+    msfnKrsg_.resize(numSatRegions);
+    msfnKro_.resize(numSatRegions);
+    const auto& msfnTables = tableManager.getMsfnTables();
+    if (!msfnTables.empty()) {
+        assert(numSatRegions == msfnTables.size());
+
+        for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
+            const MsfnTable& msfnTable = msfnTables.template getTable<MsfnTable>(regionIdx);
+
+            // Copy data
+            // Ssg = Ss + Sg;
+            const auto& Ssg = msfnTable.getGasPhaseFractionColumn();
+            const auto& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
+            const auto& kro = msfnTable.getOilRelpermMultiplierColumn();
+
+            msfnKrsg_[regionIdx].setXYContainers(Ssg, krsg);
+            msfnKro_[regionIdx].setXYContainers(Ssg, kro);
+        }
+    }
+    else {
+        const std::vector<double> x = {0.0,1.0};
+        const std::vector<double> y = {1.0,0.0};
+        const TabulatedFunction unit = TabulatedFunction(2, x, x);
+        const TabulatedFunction invUnit = TabulatedFunction(2, x, y);
+
+        for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
+            setMsfn(regionIdx, unit, invUnit);
         }
     }
 }

@@ -122,6 +122,11 @@ private:
      * \brief Process the PMISC data.
      */
     void processPmisc(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the MSFN data.
+     */
+    void processMsfn(const EclipseState& eclState);
 };
 
 } // namespace Opm
