@@ -37,6 +37,29 @@
 #include <cstddef>
 #include <stdexcept>
 
+namespace {
+
+template<bool enableExtbo>
+void verifyState(const Opm::EclipseState& eclState)
+{
+    // some sanity checks: if extended BO is enabled, the PVTSOL keyword must be
+    // present, if extended BO is disabled the keyword must not be present.
+    if constexpr (enableExtbo) {
+        if (!eclState.runspec().phases().active(Opm::Phase::ZFRACTION)) {
+            throw std::runtime_error("Extended black oil treatment requested at compile "
+                                     "time, but the deck does not contain the PVTSOL keyword");
+        }
+    }
+    else {
+        if (eclState.runspec().phases().active(Opm::Phase::ZFRACTION)) {
+            throw std::runtime_error("Extended black oil treatment disabled at compile time, but the deck "
+                                     "contains the PVTSOL keyword");
+        }
+    }
+}
+
+}
+
 namespace Opm {
 
 template<class Scalar>
@@ -44,21 +67,7 @@ template<bool enableExtbo>
 void BlackOilExtboParams<Scalar>::
 initFromState(const EclipseState& eclState)
 {
-    // some sanity checks: if extended BO is enabled, the PVTSOL keyword must be
-    // present, if extended BO is disabled the keyword must not be present.
-    if constexpr (enableExtbo) {
-        if (!eclState.runspec().phases().active(Phase::ZFRACTION)) {
-            throw std::runtime_error("Extended black oil treatment requested at compile "
-                                     "time, but the deck does not contain the PVTSOL keyword");
-        }
-    }
-    else {
-        if (!enableExtbo && eclState.runspec().phases().active(Phase::ZFRACTION)) {
-            throw std::runtime_error("Extended black oil treatment disabled at compile time, but the deck "
-                                     "contains the PVTSOL keyword");
-        }
-    }
-
+    verifyState<enableExtbo>(eclState);
     if (!eclState.runspec().phases().active(Phase::ZFRACTION)) {
         return; // solvent treatment is supposed to be disabled
     }
