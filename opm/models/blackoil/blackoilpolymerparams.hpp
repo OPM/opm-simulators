@@ -49,32 +49,6 @@ struct BlackOilPolymerParams {
     template<bool enablePolymer, bool enablePolymerMolarWeight>
     void initFromState(const EclipseState& eclState);
 
-    /*!
-     * \brief Specify the number of satuation regions.
-     *
-     * This must be called before setting the PLYROCK and PLYADS of any region.
-     */
-    void setNumSatRegions(unsigned numRegions);
-
-    /*!
-     * \brief Specify the number of mix regions.
-     *
-     * This must be called before setting the PLYMAC and PLMIXPAR of any region.
-     */
-    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight);
-
-    /*!
-     * \brief Specify the polymer rock properties a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    void setPlyrock(unsigned satRegionIdx,
-                    const Scalar& plyrockDeadPoreVolume,
-                    const Scalar& plyrockResidualResistanceFactor,
-                    const Scalar& plyrockRockDensityFactor,
-                    const Scalar& plyrockAdsorbtionIndex,
-                    const Scalar& plyrockMaxAdsorbtion);
-
     // a struct containing the constants to calculate polymer viscosity
     // based on Mark-Houwink equation and Huggins equation, the constants are provided
     // by the keyword PLYVMH
@@ -110,6 +84,33 @@ struct BlackOilPolymerParams {
     std::map<int, TabulatedTwoDFunction> skprwatTables_{};
 
     std::map<int, SkprpolyTable> skprpolyTables_{};
+
+private:
+    /*!
+     * \brief Specify the number of saturation regions.
+     *
+     * This must be called before setting the PLYROCK and PLYADS of any region.
+     */
+    void setNumSatRegions(unsigned numRegions);
+
+    /*!
+     * \brief Specify the number of mix regions.
+     *
+     * This must be called before setting the PLYMAX and PLMIXPAR of any region.
+     */
+    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight);
+
+    /*!
+     * \brief Specify the polymer rock properties a single region.
+     *
+     * The index of specified here must be in range [0, numSatRegions)
+     */
+    void setPlyrock(unsigned satRegionIdx,
+                    const Scalar& plyrockDeadPoreVolume,
+                    const Scalar& plyrockResidualResistanceFactor,
+                    const Scalar& plyrockRockDensityFactor,
+                    const Scalar& plyrockAdsorbtionIndex,
+                    const Scalar& plyrockMaxAdsorbtion);
 };
 
 } // namespace Opm
