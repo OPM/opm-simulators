@@ -21,33 +21,32 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowBrineEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowBrineEnergyProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowBrineEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowBrineEnergyProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem> {
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct Linearizer<TypeTag, TTag::FlowBrineEnergyProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowBrineEnergyProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
+struct LocalResidual<TypeTag, TTag::FlowBrineEnergyProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowBrineEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
-}}
 
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -74,4 +73,4 @@ int flowBrineEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

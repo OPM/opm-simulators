@@ -28,47 +28,46 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
+namespace Opm::Properties {
+
+namespace TTag {
+
 /*!
  * \brief Two-phase (gas+water) flow problem including biofilm effects (one transported
  * quantity: suspended microbes and one solid phase: biofilm).
  */
-namespace Properties {
-namespace TTag {
-struct FlowBiofilmProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+struct FlowBiofilmProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct EnableBioeffects<TypeTag, TTag::FlowBiofilmProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBioeffects<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowBiofilmProblem> {
-    static constexpr bool value = true;
-};
+struct EnableDiffusion<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowBiofilmProblem> {
-    static constexpr bool value = true;
-};
+struct EnableDispersion<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowBiofilmProblem> {
-    static constexpr bool value = true;
-};
+struct EnableDisgasInWater<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowBiofilmProblem> {
-    static constexpr bool value = true;
-};
+struct EnableVapwat<TypeTag, TTag::FlowBiofilmProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBiofilmProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowBiofilmProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
+
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowBiofilmProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowBiofilmProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowBiofilmProblem>
@@ -100,10 +99,10 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          2>; //Two biocomponents (suspended microbes and biofilm)
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
-
 
 // ----------------- Main program -----------------
 int flowBiofilmMain(int argc, char** argv, bool outputCout, bool outputFiles)

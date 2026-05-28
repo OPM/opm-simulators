@@ -28,7 +28,6 @@
 
 namespace Opm {
 
-
 // ----------------- Main program -----------------
 int flowGasWaterEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
@@ -51,4 +50,4 @@ int flowGasWaterEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

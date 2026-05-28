@@ -23,18 +23,20 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowExtboProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowExtboProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
+
 template<class TypeTag>
-struct EnableExtbo<TypeTag, TTag::FlowExtboProblem> {
-    static constexpr bool value = true;
-};
-}}
+struct EnableExtbo<TypeTag, TTag::FlowExtboProblem>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -60,4 +62,4 @@ int flowExtboMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -28,42 +28,39 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasWaterSaltprecEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasWaterSaltprecEnergyProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    static constexpr bool value = true;
-};
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> { 
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
+struct Linearizer<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
@@ -92,7 +89,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -118,4 +116,4 @@ int flowGasWaterSaltprecEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

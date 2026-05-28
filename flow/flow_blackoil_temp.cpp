@@ -27,12 +27,13 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct flowBlackoilTempProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct flowBlackoilTempProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
@@ -40,19 +41,22 @@ struct EnergyModuleType<TypeTag, TTag::flowBlackoilTempProblem>
 { static constexpr EnergyModules value = EnergyModules::SequentialImplicitThermal; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::flowBlackoilTempProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::flowBlackoilTempProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::flowBlackoilTempProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::flowBlackoilTempProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::flowBlackoilTempProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::flowBlackoilTempProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
-struct AvoidElementContext<TypeTag, TTag::flowBlackoilTempProblem> { static constexpr bool value = true; };
+struct AvoidElementContext<TypeTag, TTag::flowBlackoilTempProblem>
+{ static constexpr bool value = true; };
 
-
-}}
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -78,4 +82,4 @@ int flowBlackoilTempMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -25,21 +25,22 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowOilWaterPolymerInjectivityProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowOilWaterPolymerInjectivityProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
+
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::FlowOilWaterPolymerInjectivityProblem> {
-    static constexpr bool value = true;
-};
+struct EnablePolymer<TypeTag, TTag::FlowOilWaterPolymerInjectivityProblem>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct EnablePolymerMW<TypeTag, TTag::FlowOilWaterPolymerInjectivityProblem> {
-    static constexpr bool value = true;
-};
+struct EnablePolymerMW<TypeTag, TTag::FlowOilWaterPolymerInjectivityProblem>
+{ static constexpr bool value = true; };
 
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
@@ -67,7 +68,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -93,4 +95,4 @@ int flowOilWaterPolymerInjectivityMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

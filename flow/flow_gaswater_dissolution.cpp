@@ -29,36 +29,38 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasWaterDissolutionProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasWaterDissolutionProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterDissolutionProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterDissolutionProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasWaterDissolutionProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
-    static constexpr bool value = true;
-};
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasWaterDissolutionProblem>
 { static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
-    static constexpr bool value = true;
-};
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem>
+{ static constexpr bool value = true; };
 
 //! The indices required by the model
 template<class TypeTag>
@@ -84,10 +86,10 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
-
 
 // ----------------- Main program -----------------
 int flowGasWaterDissolutionMain(int argc, char** argv, bool outputCout, bool outputFiles)
@@ -111,4 +113,4 @@ int flowGasWaterDissolutionMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

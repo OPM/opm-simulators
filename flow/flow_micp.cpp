@@ -28,26 +28,32 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
-namespace Opm {
+namespace Opm::Properties {
+
+namespace TTag {
+
 /*!
  * \brief Single-phase (water) flow problem including microbially induced calcite precipitation (MICP)
  * effects (three transported quantities: suspended microbes, oxygen, and urea, and two solid phases:
  * biofilm and calcite).
  */
-namespace Properties {
-namespace TTag {
-struct FlowMICPProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+struct FlowMICPProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
+
 template<class TypeTag>
-struct EnableBioeffects<TypeTag, TTag::FlowMICPProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBioeffects<TypeTag, TTag::FlowMICPProblem>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowMICPProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowMICPProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
+
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowMICPProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowMICPProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowMICPProblem>
@@ -74,12 +80,14 @@ public:
 };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowMICPProblem> { static constexpr bool value = true; };
+struct EnableDiffusion<TypeTag, TTag::FlowMICPProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowMICPProblem> { static constexpr bool value = true; };
+struct EnableDispersion<TypeTag, TTag::FlowMICPProblem>
+{ static constexpr bool value = true; };
 
-}}
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -105,4 +113,4 @@ int flowMICPMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -28,12 +28,13 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowGasOilEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowGasOilEnergyProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 //! The indices required by the model
@@ -61,22 +62,28 @@ public:
                                        /*disabledCompIdx=*/FluidSystem::waterCompIdx,
                                        getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
+
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasOilEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
-template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasOilEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasOilEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasOilEnergyProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasOilEnergyProblem> { static constexpr bool value = true; };
+struct LocalResidual<TypeTag, TTag::FlowGasOilEnergyProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowGasOilEnergyProblem> { static constexpr bool value = true; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasOilEnergyProblem>
+{ static constexpr bool value = true; };
 
-}}
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::FlowGasOilEnergyProblem>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -102,4 +109,4 @@ int flowGasOilEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -26,14 +26,15 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/material/common/ResetLocale.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
 
 namespace TTag {
-struct FlowWaterOnlyEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowWaterOnlyEnergyProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
+
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowWaterOnlyEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
@@ -65,6 +66,8 @@ public:
 
 } // namespace Opm::Properties
 
+namespace Opm {
+
 // ----------------- Main program -----------------
 int flowWaterOnlyEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
@@ -87,4 +90,4 @@ int flowWaterOnlyEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

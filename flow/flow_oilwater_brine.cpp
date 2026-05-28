@@ -27,28 +27,26 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowOilWaterBrineProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowOilWaterBrineProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowOilWaterBrineProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowOilWaterBrineProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowOilWaterBrineProblem> {
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct Linearizer<TypeTag, TTag::FlowOilWaterBrineProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowOilWaterBrineProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
+struct LocalResidual<TypeTag, TTag::FlowOilWaterBrineProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>
@@ -74,7 +72,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -100,4 +99,4 @@ int flowOilWaterBrineMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

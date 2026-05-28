@@ -25,26 +25,29 @@
 #include <opm/material/thermal/EnergyModuleType.hpp>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-namespace Opm {
-namespace Properties {
+
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowEnergyProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowEnergyProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowEnergyProblem>
 { static constexpr EnergyModules value = EnergyModules::FullyImplicitThermal; };
 
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowEnergyProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
-template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowEnergyProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
-
-}}
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -70,4 +73,4 @@ int flowEnergyMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

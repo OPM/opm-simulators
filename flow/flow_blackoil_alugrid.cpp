@@ -46,16 +46,18 @@
 #include <opm/simulators/flow/equil/InitStateEquil_impl.hpp>
 #include <opm/simulators/utils/GridDataOutput_impl.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowProblemAlugrid {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowProblemAlugrid
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct Grid<TypeTag, TTag::FlowProblemAlugrid> {
+struct Grid<TypeTag, TTag::FlowProblemAlugrid>
+{
     static const int dim = 3;
 #if HAVE_MPI
      using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
@@ -66,21 +68,23 @@ struct Grid<TypeTag, TTag::FlowProblemAlugrid> {
 
 // alugrid need cp grid as equilgrid
 template<class TypeTag>
-struct EquilGrid<TypeTag, TTag::FlowProblemAlugrid> {
-    using type = Dune::CpGrid;
-};
+struct EquilGrid<TypeTag, TTag::FlowProblemAlugrid>
+{ using type = Dune::CpGrid; };
+
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::FlowProblemAlugrid> {
-    using type = Opm::AluGridVanguard<TypeTag>;
-};
-}
+struct Vanguard<TypeTag, TTag::FlowProblemAlugrid>
+{ using type = Opm::AluGridVanguard<TypeTag>; };
+
+} // namespace Opm::Properties
+
+namespace Opm {
 
 template<>
 class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
     : public std::bool_constant<true>
 {};
 
-}
+} // namespace Opm
 
 int main(int argc, char** argv)
 {

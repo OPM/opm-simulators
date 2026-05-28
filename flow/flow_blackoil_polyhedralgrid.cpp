@@ -36,45 +36,49 @@
 #include <opm/simulators/flow/equil/InitStateEquil_impl.hpp>
 #include <opm/simulators/utils/GridDataOutput_impl.hpp>
 
-namespace Opm {
-namespace Properties {
-    namespace TTag {
-        struct FlowProblemPoly {
-            using InheritsFrom = std::tuple<FlowProblem>;
-        };
-    }
+namespace Opm::Properties {
 
-    template<class TypeTag>
-    struct Linearizer<TypeTag, TTag::FlowProblemPoly> { using type = TpfaLinearizer<TypeTag>; };
+namespace TTag {
 
-    template<class TypeTag>
-    struct LocalResidual<TypeTag, TTag::FlowProblemPoly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct FlowProblemPoly
+{ using InheritsFrom = std::tuple<FlowProblem>; };
 
-    template<class TypeTag>
-    struct EnableDiffusion<TypeTag, TTag::FlowProblemPoly> { static constexpr bool value = false; };
-
-    template<class TypeTag>
-    struct Grid<TypeTag, TTag::FlowProblemPoly> {
-        using type = Dune::PolyhedralGrid<3, 3>;
-    };
-    template<class TypeTag>
-    struct EquilGrid<TypeTag, TTag::FlowProblemPoly> {
-        //using type = Dune::CpGrid;
-        using type = GetPropType<TypeTag, Properties::Grid>;
-    };
-
-    template<class TypeTag>
-    struct Vanguard<TypeTag, TTag::FlowProblemPoly> {
-        using type = Opm::PolyhedralGridVanguard<TypeTag>;
-    };
 }
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowProblemPoly>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowProblemPoly>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowProblemPoly>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct Grid<TypeTag, TTag::FlowProblemPoly>
+{ using type = Dune::PolyhedralGrid<3, 3>; };
+
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::FlowProblemPoly>
+{ using type = GetPropType<TypeTag, Properties::Grid>; };
+
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::FlowProblemPoly>
+{ using type = Opm::PolyhedralGridVanguard<TypeTag>; };
+
+} // namespace Opm::Properties
+
+namespace Opm {
 
 template<>
 class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
     : public std::bool_constant<true>
 {};
 
-}
+} // namespace Opm
 
 int main(int argc, char** argv)
 {

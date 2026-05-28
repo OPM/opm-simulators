@@ -26,29 +26,28 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowBrineProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowBrineProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowBrineProblem> {
-    static constexpr bool value = true;
-};
+struct EnableBrine<TypeTag, TTag::FlowBrineProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowBrineProblem> {
-    using type = TpfaLinearizer<TypeTag>;
-};
+struct Linearizer<TypeTag, TTag::FlowBrineProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowBrineProblem> {
-    using type = BlackOilLocalResidualTPFA<TypeTag>;
-};
-}}
+struct LocalResidual<TypeTag, TTag::FlowBrineProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -74,4 +73,4 @@ int flowBrineMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm

@@ -30,15 +30,12 @@
 
 #include <tuple>
 
-
 namespace Opm::Properties {
 
 namespace TTag {
 
 struct FlowWaterOnlyProblemTPSA
-{
-    using InheritsFrom = std::tuple<FlowProblem, FlowProblemTpsa>;
-};
+{ using InheritsFrom = std::tuple<FlowProblem, FlowProblemTpsa>; };
 
 }  // namespace Opm::Properties::TTag
 

@@ -28,17 +28,19 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasWaterProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowGasWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasWaterProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowGasWaterProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasWaterProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasWaterProblem>
@@ -68,10 +70,10 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::oilCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
-
 
 // ----------------- Main program -----------------
 int flowGasWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
@@ -106,4 +108,4 @@ flowGasWaterMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
         argc, argv, outputCout, outputFiles);
 }
 
-}
+} // namespace Opm

@@ -28,23 +28,26 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
+
 namespace TTag {
-struct FlowOilWaterProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
+
+struct FlowOilWaterProblem
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FlowOilWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowOilWaterProblem>
+{ using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlowOilWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowOilWaterProblem>
+{ using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowOilWaterProblem> { static constexpr bool value = false; };
-
+struct EnableDiffusion<TypeTag, TTag::FlowOilWaterProblem>
+{ static constexpr bool value = false; };
 
 //! The indices required by the model
 template<class TypeTag>
@@ -70,7 +73,8 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx,
                                          getPropValue<TypeTag, Properties::EnableBioeffects>()>;
 };
-}}
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -96,4 +100,4 @@ int flowOilWaterMainStandalone(int argc, char** argv)
     return ret;
 }
 
-}
+} // namespace Opm
