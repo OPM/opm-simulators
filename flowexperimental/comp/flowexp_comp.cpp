@@ -95,7 +95,7 @@ main(int argc, char** argv)
     const auto deck
         = Opm::Parser {}.parseFile(inputFilename, Opm::ParseContext {}, std::vector {Opm::Ecl::SectionType::RUNSPEC});
     const auto runspec = Opm::Runspec(deck);
-    const auto numComps = runspec.numComps();
+    const auto numComps = static_cast<int>(runspec.numComps());
     const auto& phases = runspec.phases();
     const auto wat = phases.active(Opm::Phase::WATER);
 
