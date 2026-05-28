@@ -120,18 +120,7 @@ initFromState(const EclipseState& eclState)
     processPlyvisc<enablePolymerMolarWeight>(eclState);
 
     // initialize the objects which deal with the PLYMAX keyword
-    const auto& plymaxTables = tableManager.getPlymaxTables();
-    const unsigned numMixRegions = plymaxTables.size();
-    setNumMixRegions(numMixRegions, enablePolymerMolarWeight);
-    if (!plymaxTables.empty()) {
-        for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++mixRegionIdx) {
-            const auto& plymaxTable = plymaxTables.template getTable<PlymaxTable>(mixRegionIdx);
-            plymaxMaxConcentration_[mixRegionIdx] = plymaxTable.getPolymerConcentrationColumn()[0];
-        }
-    }
-    else {
-        throw std::runtime_error("PLYMAX must be specified in POLYMER runs\n");
-    }
+    processPlymax<enablePolymerMolarWeight>(eclState);
 
     if (!eclState.getTableManager().getPlmixparTable().empty()) {
         if constexpr (enablePolymerMolarWeight) {
@@ -397,6 +386,26 @@ processPlyvisc(const EclipseState& eclState)
         if constexpr (!enablePolymerMolarWeight) {
             throw std::runtime_error("PLYVISC must be specified in POLYMER runs\n");
         }
+    }
+}
+
+template<class Scalar>
+template<bool enablePolymerMolarWeight>
+void BlackOilPolymerParams<Scalar>::
+processPlymax(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plymaxTables = tableManager.getPlymaxTables();
+    const unsigned numMixRegions = plymaxTables.size();
+    setNumMixRegions(numMixRegions, enablePolymerMolarWeight);
+    if (!plymaxTables.empty()) {
+        for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++mixRegionIdx) {
+            const auto& plymaxTable = plymaxTables.template getTable<PlymaxTable>(mixRegionIdx);
+            plymaxMaxConcentration_[mixRegionIdx] = plymaxTable.getPolymerConcentrationColumn()[0];
+        }
+    }
+    else {
+        throw std::runtime_error("PLYMAX must be specified in POLYMER runs\n");
     }
 }
 
