@@ -66,6 +66,15 @@ ReservoirCouplingSlave(
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+hasMasterGroupNodePressure(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->hasMasterGroupNodePressure(gname);
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 hasMasterInjectionTarget(const std::string& gname, const Phase phase) const
 {
     assert(this->report_step_data_);
@@ -111,6 +120,24 @@ isFirstSubstepOfSyncTimestep() const
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+lastReceivedMasterGroupNodePressuresIsFinal() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->lastReceivedMasterGroupNodePressuresIsFinal();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+connectedToMasterCoupledNetwork() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->connectedToMasterCoupledNetwork();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 isLastSubstepOfSyncTimestep() const
 {
     assert(this->report_step_data_);
@@ -122,6 +149,24 @@ bool
 ReservoirCouplingSlave<Scalar>::
 isSlaveGroup(const std::string& group_name) const {
     return this->slave_to_master_group_map_.find(group_name) != this->slave_to_master_group_map_.end();
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingSlave<Scalar>::
+masterGroupNodePressure(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterGroupNodePressure(gname);
+}
+
+template <class Scalar>
+const std::map<std::string, Scalar>&
+ReservoirCouplingSlave<Scalar>::
+masterGroupNodePressures() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterGroupNodePressures();
 }
 
 template <class Scalar>
@@ -220,6 +265,15 @@ receiveInjectionGroupTargetsFromMaster(std::size_t num_targets)
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->receiveMasterGroupNodePressuresFromMaster(num_pressures);
+}
+
+template <class Scalar>
 double
 ReservoirCouplingSlave<Scalar>::
 receiveNextTimeStepFromMaster() {
@@ -247,11 +301,29 @@ receiveNextTimeStepFromMaster() {
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveCoupledNetworkActiveStatusFromMaster()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->receiveCoupledNetworkActiveStatusFromMaster();
+}
+
+template <class Scalar>
 std::pair<std::size_t, std::size_t>
 ReservoirCouplingSlave<Scalar>::
 receiveNumGroupConstraintsFromMaster() const {
     assert(this->report_step_data_);
     return this->report_step_data_->receiveNumGroupConstraintsFromMaster();
+}
+
+template <class Scalar>
+std::pair<std::size_t, bool>
+ReservoirCouplingSlave<Scalar>::
+receiveNumMasterGroupNodePressuresFromMaster()
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->receiveNumMasterGroupNodePressuresFromMaster();
 }
 
 template <class Scalar>

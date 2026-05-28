@@ -44,6 +44,7 @@ public:
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using MasterGroupNodePressure = ReservoirCoupling::MasterGroupNodePressure<Scalar>;
     using MasterProductionLimits = typename ReservoirCoupling::MasterProductionLimits<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
@@ -57,6 +58,10 @@ public:
     const std::string& getSlaveName() const { return slave_name_; }
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
+    /// @brief Check if a master-computed network-leaf node pressure exists for a master group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    bool hasMasterGroupNodePressure(const std::string& gname) const;
+
     /// @brief Check if a master-imposed injection target exists for a group and phase
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     bool hasMasterInjectionTarget(const std::string& gname, const Phase phase) const;
@@ -79,8 +84,27 @@ public:
     /// @return true if this is the last substep of a "sync" timestep, false if not
     bool isLastSubstepOfSyncTimestep() const;
     bool isSlaveGroup(const std::string& group_name) const;
+
+    /// @brief Whether the most recent master-group-node-pressures receive
+    ///   carried the `is_final` flag.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    bool lastReceivedMasterGroupNodePressuresIsFinal() const;
+
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    bool connectedToMasterCoupledNetwork() const;
+
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
+    /// @brief Get the master-computed network-leaf node pressure for a master group
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    Scalar masterGroupNodePressure(const std::string& gname) const;
+
+    /// @brief Get the full map of master-computed network-leaf node pressures
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    const std::map<std::string, Scalar>& masterGroupNodePressures() const;
+
     /// @brief Get the master-imposed injection target and control mode for a group and phase
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     std::pair<Scalar, Group::InjectionCMode> masterInjectionTarget(
@@ -95,11 +119,26 @@ public:
     std::pair<Scalar, Group::ProductionCMode> masterProductionTarget(const std::string& gname) const;
     void maybeActivate(int report_step);
     std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
+    /// @brief Receive the master's single-bool flag for the current sync
+    ///   timestep and mirror it into the slave's local is_final state.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Side effect:
+    ///   updates last_received_master_group_node_pressures_is_final_; query
+    ///   it via lastReceivedMasterGroupNodePressuresIsFinal().
+    void receiveCoupledNetworkActiveStatusFromMaster();
     double receiveNextTimeStepFromMaster();
     std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
     /// @brief Receive injection group targets from master and store them locally
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);
+
+    /// @brief Receive master-computed network-leaf node pressures from master
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
+
+    /// @brief Receive the master-group-node-pressures header from master.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Returns
+    ///   (num_pressures, is_final).
+    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
 
     /// @brief Receive production group constraints from master and store them locally
     /// @details Delegates to ReservoirCouplingSlaveReportStep

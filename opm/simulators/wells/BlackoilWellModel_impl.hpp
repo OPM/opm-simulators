@@ -471,6 +471,7 @@ namespace Opm {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
                 this->rescoupHelper_.sendSlaveGroupDataToMaster();
                 this->rescoupHelper_.receiveGroupConstraintsFromMaster();
+                this->rescoupHelper_.receiveCoupledNetworkActiveStatus();
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
                 this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
                     this->schedule_, reportStepIdx);
@@ -537,6 +538,7 @@ namespace Opm {
         else if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
                 this->rescoupHelper_.sendMasterGroupConstraintsToSlaves();
+                this->rescoupHelper_.sendCoupledNetworkActiveStatus();
                 this->rescoupHelper_.receiveSlaveGroupData();
             }
         }
@@ -1105,6 +1107,9 @@ namespace Opm {
         this->closed_offending_wells_.clear();
 
         {
+            if (iterCtx.needsTimestepInit()) {
+                this->updateNetworkActiveState_();
+            }
             const int episodeIdx = simulator_.episodeIndex();
             const auto& network = this->schedule()[episodeIdx].network();
             if (!this->wellsActive() && !network.active()) {
@@ -1129,7 +1134,10 @@ namespace Opm {
                                            this->terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = updateWellControlsAndNetwork(false, dt, local_deferredLogger);
+        const bool well_group_control_changed = updateWellControlsAndNetwork(
+                            /*mandatory_network_balance=*/false,
+                            dt,
+                            local_deferredLogger);
 
         // even when there is no wells active, the network nodal pressure still need to be updated through updateWellControlsAndNetwork()
         // but there is no need to assemble the well equations
@@ -1169,7 +1177,8 @@ namespace Opm {
         std::size_t network_update_iteration = 0;
         network_needs_more_balancing_force_another_newton_iteration_ = false;
         while (do_network_update) {
-            if (network_update_iteration >= max_iteration ) {
+            if (!this->isRescoupSlaveCoupledNetworkIteration_()
+                && network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
                 if (this->network_.willBalanceOnNextIteration(episodeIdx)) {
@@ -1202,6 +1211,9 @@ namespace Opm {
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, optimize_gas_lift, dt,local_deferredLogger);
             ++network_update_iteration;
         }
+        if (this->isRescoupMasterCoupledNetworkIteration_()) {
+            this->sendSlaveNetworkLoopTerminationSignal_();
+        }
         return well_group_control_changed;
     }
 
@@ -1219,6 +1231,12 @@ namespace Opm {
     {
         OPM_TIMEFUNCTION();
         const int reportStepIdx = simulator_.episodeIndex();
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isRescoupSlaveCoupledNetworkIteration_()) {
+            this->rescoupHelper_.receiveMasterGroupNodePressuresFromMaster();
+        }
+#endif
         this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
@@ -1229,6 +1247,17 @@ namespace Opm {
                 this->network_.update(mandatory_network_balance,
                                       local_deferredLogger,
                                       relax_network_tolerance);
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isRescoupMasterCoupledNetworkIteration_()) {
+            const bool is_final = !more_inner_network_update;
+            // send the pressures freshly computed by network_.update() to all activated slaves
+            this->rescoupHelper_.sendMasterGroupNodePressuresToSlaves(is_final);
+            if (!is_final) {
+                // receive slaves' updated network_surface_rates for the next outer iteration.
+                this->rescoupHelper_.receiveSlaveGroupData();
+            }
+        }
+#endif
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1265,8 +1294,22 @@ namespace Opm {
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
-        const bool more_network_update = this->network_.shouldBalance(reportStepIdx) &&
+        bool more_network_update = this->network_.shouldBalance(reportStepIdx) &&
                     (more_inner_network_update || alq_updated);
+
+        if (this->isRescoupSlaveOnSyncStepFirstSubstep_()
+            && this->isRescoupSlaveConnectedToMasterNetwork_()) {
+            // Connected slave: the call ships this slave's flow to the master
+            // and reports whether the cross-rescoup exchange continues.  OR
+            // with the local decision so a connected slave that also has its
+            // own network keeps iterating it.  A slave not connected to the
+            // master network skips this branch entirely and runs purely on its
+            // local more_network_update.
+            const bool more_cross_rescoup_update =
+                this->maybeSendSlaveGroupFlowToMaster_(reportStepIdx);
+            more_network_update = more_network_update || more_cross_rescoup_update;
+        }
+
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
 
@@ -1899,14 +1942,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        // Check if there is a network with active prediction wells at this time step.
         const auto episodeIdx = simulator_.episodeIndex();
-        this->network_.updateActiveState(episodeIdx);
 
-        // Rebalance the network initially if any wells in the network have status changes
-        // (Need to check this before clearing events)
-        const bool do_prestep_network_rebalance =
-            param_.pre_solve_network_ && this->network_.needPreStepRebalance(episodeIdx);
+        // Need to check this before clearing events
+        const bool do_prestep_network_rebalance = this->shouldDoPreStepNetworkRebalance_(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
@@ -2134,32 +2173,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::
-    assignWellTracerRates(data::Wells& wsrpt) const
-    {
-        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
-        const auto& trMod = this->simulator_.problem().tracerModel();
-
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
-
-        this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
-    }
-
-    template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::
-    assignWellSpeciesRates(data::Wells& wsrpt) const
-    {
-        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
-        const auto& geochemMod = this->simulator_.problem().geochemistryModel();
-
-        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
-
-        this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
-    }
-
-    template <typename TypeTag>
     [[nodiscard]] auto BlackoilWellModel<TypeTag>::rsConstInfo() const
         -> typename WellState<Scalar,IndexTraits>::RsConstInfo
     {
@@ -2181,6 +2194,188 @@ namespace Opm {
         const auto rsConst = rsConstTables[0].getColumn(0).front();
 
         return { true, static_cast<Scalar>(rsConst) };
+    }
+
+    // Private helper methods (alphabetical order)
+    // --------------------------------------------
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellTracerRates_(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& trMod = this->simulator_.problem().tracerModel();
+
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellSpeciesRates_(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& geochemMod = this->simulator_.problem().geochemistryModel();
+
+        BlackoilWellModelGeneric<Scalar, IndexTraits>::assignWellTracerRates(wsrpt, geochemMod.getWellSpeciesRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, geochemMod.getMswSpeciesRates(), reportStepIdx);
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupMasterCoupledNetworkIteration_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingMaster()
+            && this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()
+            && this->rescoupHelper_.masterNetworkHasMasterGroupLeaves()
+            && !this->rescoupHelper_.lastSentMasterGroupNodePressuresIsFinal();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveCoupledNetworkIteration_() const
+    {
+        // True when the slave is on the first substep of a sync step AND the
+        // master has not yet signaled termination.  Gates the per-iteration
+        // master->slave node-pressure receive at the top of
+        // updateWellControlsAndNetworkIteration().  The outer loop exit on
+        // the slave is driven by the master's is_final flag (propagated to
+        // local variable "more_network_update" at the end of updateWellControlsAndNetworkIteration(),
+        // not by the slave's local network convergence.  The master's own max_iter
+        // bounds the iteration count from above, so the slave skips the local max_iter check entirely
+        // and lets the master signal termination.
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isRescoupSlaveOnSyncStepFirstSubstep_()
+            && this->reservoirCouplingSlave().connectedToMasterCoupledNetwork()
+            && !this->reservoirCouplingSlave().lastReceivedMasterGroupNodePressuresIsFinal();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveOnSyncStepFirstSubstep_() const
+    {
+        // True when the slave is on the first substep of a sync step,
+        // regardless of is_final state.  Gates post-Newton handling at the
+        // end of updateWellControlsAndNetworkIteration(), which must run on
+        // the terminating iteration too (so the slave can set
+        // more_network_update = false and exit its outer loop).
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupSlaveConnectedToMasterNetwork_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        return this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().connectedToMasterCoupledNetwork();
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::
+    maybeSendSlaveGroupFlowToMaster_([[maybe_unused]] const int reportStepIdx)
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // For a rescoup slave: after the well-solve in
+        // prepareWellsBeforeAssembling() has produced fresh rates under the
+        // new THP, ship them back to the master and force one more outer
+        // iteration so we re-enter updateWellControlsAndNetworkIteration() to receive the next pressures.
+        // When the just-received message had is_final = true, we skip the
+        // send and let the slave's outer loop exit naturally.
+        assert(this->isReservoirCouplingSlave());
+        const bool is_final =
+            this->reservoirCouplingSlave().lastReceivedMasterGroupNodePressuresIsFinal();
+        if (!is_final) {
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget=*/false);
+            this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            return /*more_network_update=*/true;
+        }
+        return /*more_network_update=*/false;
+#else
+        return /*more_network_update=*/false;
+#endif
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    sendSlaveNetworkLoopTerminationSignal_()
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // When the master's outer loop exits without having sent is_final = true (e.g. max_iter
+        // exceeded with the network still unconverged), the slave is stuck
+        // waiting on its next receive.  Fire one final pressure send to
+        // unblock it.
+        assert(this->isReservoirCouplingMaster());
+        this->rescoupHelper_.sendMasterGroupNodePressuresToSlaves(/*is_final=*/true);
+#endif
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::
+    shouldDoPreStepNetworkRebalance_(const int episodeIdx) const
+    {
+        // Rebalance the network initially if any wells in the network have status changes
+        //
+        // The rebalance is skipped only for *coupled-network participants*: its
+        // inner updateWellControlsAndNetwork call would run the cross-rescoup
+        // pressure/rate exchange, but needPreStepRebalance is collectivised only
+        // over the local OPM communicator -- not across the rescoup boundary --
+        // so a coupled master and slave may disagree on whether to enter the
+        // rebalance, deadlocking the exchange.  A non-participant (a master with
+        // no master-group network leaves, or a slave not connected to the master
+        // network) does no cross-rescoup MPI in the network solve, so it is safe
+        // to rebalance like a standalone process and we no longer skip it.
+        return param_.pre_solve_network_
+            && this->network_.needPreStepRebalance(episodeIdx)
+            && !this->isRescoupCoupledNetworkParticipant_();
+    }
+
+    template <typename TypeTag>
+    bool BlackoilWellModel<TypeTag>::isRescoupCoupledNetworkParticipant_() const
+    {
+#ifdef RESERVOIR_COUPLING_ENABLED
+        if (this->isReservoirCouplingMaster()) {
+            return this->rescoupHelper_.masterNetworkHasMasterGroupLeaves();
+        }
+        if (this->isReservoirCouplingSlave()) {
+            return this->reservoirCouplingSlave().connectedToMasterCoupledNetwork();
+        }
+        return false;
+#else
+        return false;
+#endif
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    updateNetworkActiveState_()
+    {
+        // Refresh the network's cached `active_` flag once per timestep
+        // init.  updateActiveState's inputs (Schedule network, well list,
+        // per-well groupName/predictionMode, and rescoup master groups)
+        // are constant within a substep; ACTIONX-driven well structure
+        // changes propagate via wellStructureChangedDynamically_ at the
+        // top of beginTimeStep, before the first assemble() of the new
+        // substep.  Doing this in assemble() rather than only in
+        // prepareTimeStep() covers the case of a rescoup master with no
+        // local wells, where prepareTimeStep() is skipped (gated on wellsActive()).
+        const int episodeIdx = this->simulator_.episodeIndex();
+        this->network_.updateActiveState(episodeIdx);
     }
 
 } // namespace Opm

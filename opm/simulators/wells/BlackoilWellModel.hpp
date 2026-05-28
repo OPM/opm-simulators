@@ -214,10 +214,10 @@ template<class Scalar> class WellContributions;
                 BlackoilWellModelGuideRates(*this)
                     .assignWellGuideRates(wsrpt, this->reportStepIndex());
 
-                this->assignWellTracerRates(wsrpt);
+                this->assignWellTracerRates_(wsrpt);
 
                 if constexpr (has_geochem_) {
-                    this->assignWellSpeciesRates(wsrpt);
+                    this->assignWellSpeciesRates_(wsrpt);
                 }
 
                 if (const auto& rspec = eclState().runspec();
@@ -368,6 +368,14 @@ template<class Scalar> class WellContributions;
 
             const Simulator& simulator() const
             { return simulator_; }
+            Simulator& simulator()
+            { return simulator_; }
+
+            BlackoilWellModelNetwork<TypeTag>& network() { return network_; }
+            const BlackoilWellModelNetwork<TypeTag>& network() const { return network_; }
+
+            std::vector<WellInterfacePtr>& wellContainer() { return well_container_; }
+            const std::vector<WellInterfacePtr>& wellContainer() const { return well_container_; }
 
             void setNlddAdapter(BlackoilWellModelNldd<TypeTag>* mod)
             { nldd_ = mod; }
@@ -419,10 +427,16 @@ template<class Scalar> class WellContributions;
             ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
                 return rescoup_.master();
             }
+            const ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() const {
+                return rescoup_.master();
+            }
 
             /// @brief Get reference to reservoir coupling slave
             /// @note Caller must ensure isReservoirCouplingSlave() is true
             ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() {
+                return rescoup_.slave();
+            }
+            const ReservoirCouplingSlave<Scalar>& reservoirCouplingSlave() const {
                 return rescoup_.slave();
             }
 
@@ -610,6 +624,79 @@ template<class Scalar> class WellContributions;
             void computeWellTemperature();
 
         private:
+            // Private helper methods (alphabetical order)
+            // --------------------------------------------
+
+            void assignWellSpeciesRates_(data::Wells& wsrpt) const;
+            void assignWellTracerRates_(data::Wells& wsrpt) const;
+
+            /// @brief True when this process takes part in a *shared* (cross-rescoup)
+            ///   network this sync step: a master with at least one master-group
+            ///   network leaf, or a slave connected to the master's network.
+            /// @details Used to gate operations whose inner network solve would
+            ///   run the cross-rescoup pressure/rate exchange. A non-participant
+            ///   (master with no leaves, or an unconnected slave) does no
+            ///   cross-rescoup MPI in the network solve and so is safe to treat
+            ///   like a standalone process.
+            bool isRescoupCoupledNetworkParticipant_() const;
+
+            /// @brief True when the master is in the active cross-rescoup network
+            ///   iteration: master process AND first substep of a sync step AND at
+            ///   least one master group is a network leaf AND the master has not
+            ///   yet sent is_final = true.
+            /// @details Gates both the per-iteration master->slave node-pressure
+            ///   send inside updateWellControlsAndNetworkIteration() and the
+            ///   trailing-final send at the end of updateWellControlsAndNetwork().
+            bool isRescoupMasterCoupledNetworkIteration_() const;
+
+            /// @brief True when the slave is in the active cross-rescoup network
+            ///   iteration: isRescoupSlaveOnSyncStepFirstSubstep_() AND the master
+            ///   has not yet signaled termination via is_final.
+            /// @details Gates the per-iteration master->slave node-pressure
+            ///   receive at the top of updateWellControlsAndNetworkIteration(),
+            ///   and the bump of the slave's outer-loop iteration ceiling in
+            ///   updateWellControlsAndNetwork().
+            bool isRescoupSlaveCoupledNetworkIteration_() const;
+
+            /// @brief True when the slave is on the first substep of a sync step,
+            ///   regardless of the master's is_final state.
+            /// @details Gates post-Newton handling at the end of
+            ///   updateWellControlsAndNetworkIteration(), which must run on the
+            ///   terminating iteration too so the slave can set
+            ///   more_network_update = false and exit its outer loop.
+            bool isRescoupSlaveOnSyncStepFirstSubstep_() const;
+
+            /// @brief True when this slave participates in the master's
+            ///   cross-rescoup network this sync step (at least one of its
+            ///   master groups is a leaf in the master network).
+            /// @details Distinct from isRescoupSlaveOnSyncStepFirstSubstep_():
+            ///   a slave can be on its first sync substep yet not be connected
+            ///   to the master network, in which case it balances only its own
+            ///   (local) network and does not take part in the cross-rescoup
+            ///   exchange.
+            bool isRescoupSlaveConnectedToMasterNetwork_() const;
+
+            /// @brief Slave-side: if the master is still iterating, ship fresh
+            ///   slave rates back and request another outer iteration; if the
+            ///   master has signaled termination, do nothing and exit the loop.
+            /// @param reportStepIdx Current report step.
+            /// @return New value for more_network_update: true to continue the
+            ///   slave's outer loop, false to exit.
+            bool maybeSendSlaveGroupFlowToMaster_(const int reportStepIdx);
+
+            /// @brief Master-side: send the trailing-final is_final = true to
+            ///   unblock the slave when the master's outer loop exited without
+            ///   having sent is_final via the normal per-iteration path (e.g.
+            ///   max_iter exceeded with the network still unconverged).
+            void sendSlaveNetworkLoopTerminationSignal_();
+
+            /// @brief Check if the network should be rebalanced initially at the start of a timestep.
+            /// @return True if the network should be rebalanced initially
+            bool shouldDoPreStepNetworkRebalance_(const int episodeIdx) const;
+
+            /// @brief Refresh the network's cached `active_` flag.
+            void updateNetworkActiveState_();
+
             BlackoilWellModelGasLift<TypeTag> gaslift_;
             BlackoilWellModelNetwork<TypeTag> network_;
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -625,9 +712,6 @@ template<class Scalar> class WellContributions;
 
             // Store cell rates after assembling to avoid iterating all wells and connections for every element
             std::map<int, RateVector> cellRates_;
-
-            void assignWellTracerRates(data::Wells& wsrpt) const;
-            void assignWellSpeciesRates(data::Wells& wsrpt) const;
 
             [[nodiscard]] auto rsConstInfo() const
                 -> typename WellState<Scalar,IndexTraits>::RsConstInfo;

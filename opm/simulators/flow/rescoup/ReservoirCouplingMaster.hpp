@@ -42,6 +42,7 @@ public:
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using MasterGroupNodePressure = ReservoirCoupling::MasterGroupNodePressure<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
     ReservoirCouplingMaster(
@@ -137,14 +138,32 @@ public:
     void sendNextTimeStepToSlaves(double next_time_step) {
         this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
     }
+    /// @brief Send a single boolean to a slave telling it whether the master
+    ///   will iterate the cross-rescoup network exchange this sync timestep.
+    void sendCoupledNetworkActiveStatusToSlave(
+        std::size_t slave_idx,
+        bool active
+    ) const;
     void sendInjectionTargetsToSlave(
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets
+    ) const;
+    /// @brief Send master-computed network-leaf node pressures to a slave.
+    void sendMasterGroupNodePressuresToSlave(
+        std::size_t slave_idx,
+        const std::vector<MasterGroupNodePressure>& pressures
     ) const;
     void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx,
         std::size_t num_injection_targets,
         std::size_t num_production_constraints
+    ) const;
+    /// @brief Send the count of master-computed network-leaf node pressures
+    ///   plus the master's `is_final` flag for this sync-step iteration.
+    void sendNumMasterGroupNodePressuresToSlave(
+        std::size_t slave_idx,
+        std::size_t num_pressures,
+        bool is_final
     ) const;
     void sendProductionConstraintsToSlave(
         std::size_t slave_idx,

@@ -81,6 +81,34 @@ updateActiveState(const int report_step)
             break;
         }
     }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // A reservoir coupling master may have no local wells in the network
+    // leaf groups, the leaf rates come from slave-reported
+    // network_surface_rates instead.  Without this clause the master's
+    // network solver short-circuits via active_=false and the leaf
+    // pressures are never iterated.
+    const auto& rescoup_proxy = well_model_.groupStateHelper().rescoup();
+    if (!network_active && rescoup_proxy.isMaster()) {
+        const auto& rescoup_master = rescoup_proxy.master();
+        const auto num_slaves = rescoup_master.numSlaves();
+        for (std::size_t s = 0; s < num_slaves && !network_active; ++s) {
+            // Only an activated slave supplies leaf rates this step; a master
+            // group whose slave is inactive must not keep the network active
+            // (it would be solved against missing/stale slave rates). This
+            // matches the slaveIsActivated gate used in the coupled-network
+            // iteration.
+            if (!rescoup_master.slaveIsActivated(s)) {
+                continue;
+            }
+            for (const auto& master_group : rescoup_master.getMasterGroupNamesForSlave(s)) {
+                if (network.has_node(master_group)) {
+                    network_active = true;
+                    break;
+                }
+            }
+        }
+    }
+#endif
     this->active_ = well_model_.comm().max(network_active);
 }
 
