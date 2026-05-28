@@ -90,12 +90,7 @@ private:
 
             // a section of the file is finished, go to the next one
             if (curLine == "$") {
-                if (curParseMode == ParseMode::Vertex)
-                    curParseMode = ParseMode::Edge;
-                else if (curParseMode == ParseMode::Edge)
-                    curParseMode = ParseMode::Element;
-                else if (curParseMode == ParseMode::Element)
-                    curParseMode = ParseMode::Finished;
+                curParseMode = nextParseMode(curParseMode);
                 continue;
             }
 
@@ -187,6 +182,19 @@ private:
         }
 
         write(dgfFile, precision);
+    }
+
+    //! \brief Returns the next parse mode.
+    //! \param curParseMode Current parse mode
+    static ParseMode nextParseMode(const ParseMode curParseMode)
+    {
+        switch (curParseMode) {
+            case ParseMode::Vertex: return ParseMode::Edge;
+            case ParseMode::Edge:   return ParseMode::Element;
+            default:                break;
+        }
+
+        return ParseMode::Finished;
     }
 
     //! \brief Parses a vertex from a string.
