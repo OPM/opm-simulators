@@ -117,27 +117,7 @@ initFromState(const EclipseState& eclState)
     plyviscViscosityMultiplierTable_.resize(numPvtRegions);
 
     // initialize the objects which deal with the PLYVISC keyword
-    const auto& plyviscTables = tableManager.getPlyviscTables();
-    if (!plyviscTables.empty()) {
-        // different viscosity model is used for POLYMW
-        if constexpr (enablePolymerMolarWeight) {
-            OpmLog::warning("PLYVISC should not be used in POLYMW runs, "
-                            "it will have no effect. A viscosity model based on PLYVMH is used instead.\n");
-        }
-        else {
-            assert(numPvtRegions == plyviscTables.size());
-            for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
-                const auto& plyadsTable = plyviscTables.template getTable<PlyviscTable>(pvtRegionIdx);
-                // Copy data
-                const auto& c = plyadsTable.getPolymerConcentrationColumn();
-                const auto& visc = plyadsTable.getViscosityMultiplierColumn();
-                plyviscViscosityMultiplierTable_[pvtRegionIdx].setXYContainers(c, visc);
-            }
-        }
-    }
-    else if constexpr (!enablePolymerMolarWeight) {
-        throw std::runtime_error("PLYVISC must be specified in POLYMER runs\n");
-    }
+    processPlyvisc<enablePolymerMolarWeight>(eclState);
 
     // initialize the objects which deal with the PLYMAX keyword
     const auto& plymaxTables = tableManager.getPlymaxTables();
@@ -385,6 +365,38 @@ processPlyads(const EclipseState& eclState)
     }
     else {
         throw std::runtime_error("PLYADS must be specified in POLYMER runs\n");
+    }
+}
+
+template<class Scalar>
+template<bool enablePolymerMolarWeight>
+void BlackOilPolymerParams<Scalar>::
+processPlyvisc(const EclipseState& eclState)
+{
+    const auto& tableManager = eclState.getTableManager();
+    const auto& plyviscTables = tableManager.getPlyviscTables();
+    const unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
+    if (!plyviscTables.empty()) {
+        // different viscosity model is used for POLYMW
+        if constexpr (enablePolymerMolarWeight) {
+            OpmLog::warning("PLYVISC should not be used in POLYMW runs, "
+                            "it will have no effect. A viscosity model based on PLYVMH is used instead.\n");
+        }
+        else {
+            assert(numPvtRegions == plyviscTables.size());
+            for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
+                const auto& plyadsTable = plyviscTables.template getTable<PlyviscTable>(pvtRegionIdx);
+                // Copy data
+                const auto& c = plyadsTable.getPolymerConcentrationColumn();
+                const auto& visc = plyadsTable.getViscosityMultiplierColumn();
+                plyviscViscosityMultiplierTable_[pvtRegionIdx].setXYContainers(c, visc);
+            }
+        }
+    }
+    else {
+        if constexpr (!enablePolymerMolarWeight) {
+            throw std::runtime_error("PLYVISC must be specified in POLYMER runs\n");
+        }
     }
 }
 

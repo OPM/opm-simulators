@@ -121,6 +121,13 @@ private:
      * \brief Process the Plyads data.
      */
     void processPlyads(const EclipseState& eclState);
+
+    /*!
+     *
+     * \brief Process the Plyvisc data.
+     */
+    template<bool enablePolymerMolarWeight>
+    void processPlyvisc(const EclipseState& eclState);
 };
 
 } // namespace Opm
