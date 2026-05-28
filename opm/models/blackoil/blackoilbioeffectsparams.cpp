@@ -34,12 +34,10 @@
 
 #include <stdexcept>
 
-namespace Opm {
+namespace {
 
-template<class Scalar>
-template<bool enableBioeffects , bool enableMICP>
-void BlackOilBioeffectsParams<Scalar>::
-initFromState(const EclipseState& eclState)
+template<bool enableBioeffects, bool enableMICP>
+void verifyState(const Opm::EclipseState& eclState)
 {
     // some sanity checks:
     // if biofilm is enabled, the BIOFILM keyword must be present,
@@ -70,6 +68,18 @@ initFromState(const EclipseState& eclState)
                                      "contains the MICP keyword");
         }
     }
+}
+
+}
+
+namespace Opm {
+
+template<class Scalar>
+template<bool enableBioeffects, bool enableMICP>
+void BlackOilBioeffectsParams<Scalar>::
+initFromState(const EclipseState& eclState)
+{
+    verifyState<enableBioeffects, enableMICP>(eclState);
 
     if (!eclState.runspec().micp() && !eclState.runspec().biof())
         return; // bioeffects are supposed to be disabled
