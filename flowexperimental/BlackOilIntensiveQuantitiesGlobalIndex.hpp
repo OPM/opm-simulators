@@ -44,7 +44,6 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/common/directionalmobility.hh>

@@ -37,6 +37,7 @@
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 
 #include <opm/models/blackoil/blackoilfoamparams.hpp>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
@@ -352,14 +353,6 @@ template <class TypeTag>
 BlackOilFoamParams<typename BlackOilFoamModule<TypeTag, true>::Scalar>
 BlackOilFoamModule<TypeTag, true>::params_;
 
-template <class TypeTag>
-class BlackOilFoamModule<TypeTag, false>
-{
-};
-
-template <class TypeTag, bool enableFoam>
-class BlackOilFoamIntensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilFoamIntensiveQuantities
@@ -489,11 +482,6 @@ protected:
     Evaluation foamConcentration_;
     Scalar foamRockDensity_;
     Evaluation foamAdsorbed_;
-};
-
-template <class TypeTag>
-class BlackOilFoamIntensiveQuantities<TypeTag, false>
-{
 };
 
 } // namespace Opm
