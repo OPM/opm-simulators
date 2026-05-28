@@ -34,6 +34,28 @@
 #include <opm/input/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
 
+namespace {
+
+template<bool enableSolvent>
+void verifyState(const Opm::EclipseState& eclState)
+{
+    // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
+    // present, if solvents are disabled the keyword must not be present.
+    if constexpr (enableSolvent) {
+        if (!eclState.runspec().phases().active(Opm::Phase::SOLVENT)) {
+            throw std::runtime_error("Non-trivial solvent treatment requested at compile "
+                                     "time, but the deck does not contain the SOLVENT keyword");
+        }
+    } else {
+        if (eclState.runspec().phases().active(Opm::Phase::SOLVENT)) {
+            throw std::runtime_error("Solvent treatment disabled at compile time, but the deck "
+                                     "contains the SOLVENT keyword");
+        }
+    }
+}
+
+}
+
 namespace Opm {
 
 template<class Scalar>
@@ -41,20 +63,7 @@ template<bool enableSolvent>
 void BlackOilSolventParams<Scalar>::
 initFromState(const EclipseState& eclState, const Schedule& schedule)
 {
-    // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
-    // present, if solvents are disabled the keyword must not be present.
-    if constexpr (enableSolvent) {
-        if (!eclState.runspec().phases().active(Phase::SOLVENT)) {
-            throw std::runtime_error("Non-trivial solvent treatment requested at compile "
-                                     "time, but the deck does not contain the SOLVENT keyword");
-        }
-    } else {
-        if (eclState.runspec().phases().active(Phase::SOLVENT)) {
-            throw std::runtime_error("Solvent treatment disabled at compile time, but the deck "
-                                     "contains the SOLVENT keyword");
-        }
-    }
-
+    verifyState<enableSolvent>(eclState);
     if (!eclState.runspec().phases().active(Phase::SOLVENT)) {
         return; // solvent treatment is supposed to be disabled
     }
