@@ -519,7 +519,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
         const Scalar ratio = (water_rate <= 0.0) ? Scalar{0}
                            : (gas_rate <= 0.0)   ? Scalar{big_value}
                                                   : water_rate / gas_rate;
-        return RatioDetails{RatioViolation::WGR, "water-gas ratio", ratio, max_wgr.value(), UnitSystem::measure::gas_oil_ratio};
+        return RatioDetails{RatioViolation::WGR, "water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::gas_oil_ratio};
     }
     case RatioViolation::GOR: {
         const auto max_gor = this->gecon_props_.maxGasOilRatio();
@@ -533,7 +533,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
         const Scalar ratio = (gas_rate <= 0.0) ? Scalar{0}
                            : (oil_rate <= 0.0) ? Scalar{big_value}
                                                : gas_rate / oil_rate;
-        return RatioDetails{RatioViolation::GOR, "gas-oil ratio", ratio, max_gor.value(), UnitSystem::measure::gas_oil_ratio};
+        return RatioDetails{RatioViolation::GOR, "gas-oil ratio", ratio, static_cast<Scalar>(max_gor.value()), UnitSystem::measure::gas_oil_ratio};
     }
     case RatioViolation::WATER_CUT: {
         const auto max_water_cut = this->gecon_props_.maxWaterCut();
@@ -549,7 +549,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
                            : (water_rate < 0.0)   ? Scalar{0}
                            : (oil_rate < 0.0)     ? Scalar{1}
                                                    : water_rate / liquid_rate;
-        return RatioDetails{RatioViolation::WATER_CUT, "water cut", ratio, max_water_cut.value(), UnitSystem::measure::water_cut};
+        return RatioDetails{RatioViolation::WATER_CUT, "water cut", ratio, static_cast<Scalar>(max_water_cut.value()), UnitSystem::measure::water_cut};
     }
     case RatioViolation::NONE:
     default:
