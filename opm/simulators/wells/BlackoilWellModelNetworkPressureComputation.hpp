@@ -55,6 +55,13 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
         std::ranges::transform(rates, rates.begin(), [](const auto r) { return -r; });
     }
 
+    template <class GroupState>
+    static const std::vector<Scalar>
+    leafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.network_leaf_node_production_rates(node);
+    }
+
     template<typename Branch>
     static Scalar compute(const VFPProdProperties<Scalar>& vfp_props,
                           const int table_id,
@@ -88,6 +95,13 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 {
     static void prepareRates(std::vector<Scalar>&)
     {
+    }
+
+    template <class GroupState>
+    static const std::vector<Scalar>
+    leafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.network_leaf_node_injection_rates(node);
     }
 
     template<typename Branch>
@@ -195,7 +209,8 @@ private:
                 continue;
             }
 
-            node_inflows[node] = well_model_.groupStateHelper().groupState().network_leaf_node_production_rates(node);
+            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
+            node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(), node);
             if (network_.node(node).add_gas_lift_gas()) {
                 addGasLiftGas(node, node_inflows[node]);
             }

@@ -1273,24 +1273,35 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReduction(const Group& g
 
 template <typename Scalar, typename IndexTraits>
 void
-GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeProductionRates()
+GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeRates()
 {
-    const auto& network = this->schedule_[this->report_step_].network();
-    if (network.active()) {
-        const int np = this->numPhases();
-        for (const auto& group_name : network.leaf_nodes()) {
-            std::vector<Scalar> network_rates(np, 0.0);
-            if (this->schedule_[this->report_step_].groups.has(
-                    group_name)) { // Allow empty leaf nodes that are not groups
-                const auto& group = this->schedule_[this->report_step_].groups.get(group_name);
-                for (int phase = 0; phase < np; ++phase) {
-                    network_rates[phase] = this->sumWellPhaseRates(
-                        /*res_rates=*/false, group, phase, /*injector=*/false, /*network=*/true);
+    auto do_update = [&](const Network::ExtNetwork& network,
+                         const bool is_injector) -> void
+    {
+        if (network.active()) {
+            const int np = this->numPhases();
+            for (const auto& group_name : network.leaf_nodes()) {
+                std::vector<Scalar> network_rates(np, 0.0);
+                if (this->schedule_[this->report_step_].groups.has(
+                        group_name)) { // Allow empty leaf nodes that are not groups
+                    const auto& group = this->schedule_[this->report_step_].groups.get(group_name);
+                    for (int phase = 0; phase < np; ++phase) {
+                        network_rates[phase] = this->sumWellPhaseRates(
+                            /*res_rates=*/false, group, phase, is_injector, /*network=*/true);
+                    }
+                }
+                if (is_injector) {
+                    this->groupState().update_network_leaf_node_injection_rates(group_name, network_rates);
+                } else {
+                    this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
                 }
             }
-            this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
         }
-    }
+    };
+    do_update(this->schedule_[this->report_step_].network(), /*is_injector=*/false);
+    // TODO: do the below to support injection networks when available.
+    // do_update(this->schedule_[this->report_step_].gas_injection_network(), /*is_injector=*/true);
+    // do_update(this->schedule_[this->report_step_].water_injection_network(), /*is_injector=*/true);
 }
 
 template <typename Scalar, typename IndexTraits>
