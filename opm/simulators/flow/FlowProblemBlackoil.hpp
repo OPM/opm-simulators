@@ -292,10 +292,12 @@ public:
             else {
                 FluidSystem::setVapPars(0.0, 0.0);
             }
-        }
 
-        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), schedule, episodeIdx,
-                                             this->moduleParams_.convectiveMixingModuleParam);
+            if constexpr (enableConvectiveMixing) {
+                ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), schedule, episodeIdx,
+                                                     this->moduleParams_.convectiveMixingModuleParam);
+            }
+        }
     }
 
     /*!
