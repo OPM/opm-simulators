@@ -207,7 +207,9 @@ public:
         BrineModule::setParams(std::move(brineParams));
 
         DiffusionModule::initFromState(vanguard.eclState());
-        DispersionModule::initFromState(vanguard.eclState());
+        if constexpr (enableDispersion) {
+            DispersionModule::initFromState(vanguard.eclState());
+        }
 
         BlackOilExtboParams<Scalar> extboParams;
         extboParams.template initFromState<enableExtbo>(vanguard.eclState());
