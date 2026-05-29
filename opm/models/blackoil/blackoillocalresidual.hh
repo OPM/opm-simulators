@@ -87,6 +87,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
 
     using Toolbox = MathToolbox<Evaluation>;
@@ -188,7 +189,9 @@ public:
         EnergyModule::addStorage(storage, intQuants);
 
         // deal with foam (if present)
-        FoamModule::addStorage(storage, intQuants);
+        if constexpr (enableFoam) {
+            FoamModule::addStorage(storage, intQuants);
+        }
 
         // deal with salt (if present)
         if constexpr (enableBrine) {
@@ -243,7 +246,9 @@ public:
         EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with foam (if present)
-        FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableFoam) {
+            FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with salt (if present)
         if constexpr (enableBrine) {

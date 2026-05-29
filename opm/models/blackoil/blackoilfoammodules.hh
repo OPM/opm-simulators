@@ -505,24 +505,6 @@ protected:
 template <class TypeTag>
 class BlackOilFoamIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void foamPropertiesUpdate_(const ElementContext&,
-                               unsigned,
-                               unsigned)
-    {}
-
-    const Evaluation& foamConcentration() const
-    { throw std::runtime_error("foamConcentration() called but foam is disabled"); }
-
-    Scalar foamRockDensity() const
-    { throw std::runtime_error("foamRockDensity() called but foam is disabled"); }
-
-    Scalar foamAdsorbed() const
-    { throw std::runtime_error("foamAdsorbed() called but foam is disabled"); }
 };
 
 } // namespace Opm

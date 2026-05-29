@@ -217,9 +217,11 @@ public:
         extboParams.template initFromState<enableExtbo>(vanguard.eclState());
         ExtboModule::setParams(std::move(extboParams));
 
-        BlackOilFoamParams<Scalar> foamParams;
-        foamParams.template initFromState<enableFoam>(vanguard.eclState());
-        FoamModule::setParams(std::move(foamParams));
+        if constexpr (enableFoam) {
+            BlackOilFoamParams<Scalar> foamParams;
+            foamParams.template initFromState<enableFoam>(vanguard.eclState());
+            FoamModule::setParams(std::move(foamParams));
+        }
 
         if constexpr (enableBioeffects) {
             BlackOilBioeffectsParams<Scalar> bioeffectsParams;

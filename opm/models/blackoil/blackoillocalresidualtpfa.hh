@@ -237,7 +237,9 @@ public:
         EnergyModule::addStorage(storage, intQuants);
 
         // deal with foam (if present)
-        FoamModule::addStorage(storage, intQuants);
+        if constexpr (enableFoam) {
+            FoamModule::addStorage(storage, intQuants);
+        }
 
         // deal with salt (if present)
         if constexpr (enableBrine) {
