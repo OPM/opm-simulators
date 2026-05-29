@@ -21,7 +21,11 @@
 
 #if HAVE_CUDA // Avoid including GpuVector.hpp if CUDA
               // is not enabled to avoid linking errors.
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#endif
 #endif
 namespace Opm {
 
