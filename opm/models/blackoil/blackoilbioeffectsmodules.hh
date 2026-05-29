@@ -609,39 +609,6 @@ protected:
 template <class TypeTag>
 class BlackOilBioeffectsIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void bioeffectsPropertiesUpdate_(const ElementContext&,
-                                     unsigned,
-                                     unsigned)
-    {}
-
-    const Evaluation& microbialConcentration() const
-    { throw std::logic_error("microbialConcentration() called but MICP is disabled"); }
-
-    const Evaluation& oxygenConcentration() const
-    { throw std::logic_error("oxygenConcentration() called but MICP is disabled"); }
-
-    const Evaluation& ureaConcentration() const
-    { throw std::logic_error("ureaConcentration() called but MICP is disabled"); }
-
-    const Evaluation& biofilmVolumeFraction() const
-    { throw std::logic_error("biofilmVolumeFraction() called but biofilm/MICP is disabled"); }
-
-    const Evaluation& calciteVolumeFraction() const
-    { throw std::logic_error("calciteVolumeFraction() called but MICP is disabled"); }
-
-    const Evaluation& biofilmMass() const
-    { throw std::logic_error("biofilmMass() called but biofilm/MICP is disabled"); }
-
-    const Evaluation& calciteMass() const
-    { throw std::logic_error("calciteMass() called but MICP is disabled"); }
-
-    const Evaluation& permFactor() const
-    { throw std::logic_error("permFactor() called but biofilm/MICP is disabled"); }
 };
 
 /*!

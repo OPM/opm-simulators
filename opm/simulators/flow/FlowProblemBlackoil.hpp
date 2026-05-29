@@ -217,9 +217,11 @@ public:
         foamParams.template initFromState<enableFoam>(vanguard.eclState());
         FoamModule::setParams(std::move(foamParams));
 
-        BlackOilBioeffectsParams<Scalar> bioeffectsParams;
-        bioeffectsParams.template initFromState<enableBioeffects, enableMICP>(vanguard.eclState());
-        BioeffectsModule::setParams(std::move(bioeffectsParams));
+        if constexpr (enableBioeffects) {
+            BlackOilBioeffectsParams<Scalar> bioeffectsParams;
+            bioeffectsParams.template initFromState<enableBioeffects, enableMICP>(vanguard.eclState());
+            BioeffectsModule::setParams(std::move(bioeffectsParams));
+        }
 
         BlackOilPolymerParams<Scalar> polymerParams;
         polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
