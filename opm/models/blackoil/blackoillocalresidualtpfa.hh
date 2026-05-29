@@ -240,7 +240,9 @@ public:
         FoamModule::addStorage(storage, intQuants);
 
         // deal with salt (if present)
-        BrineModule::addStorage(storage, intQuants);
+        if constexpr (enableBrine) {
+            BrineModule::addStorage(storage, intQuants);
+        }
 
         // deal with bioeffects (if present)
         if constexpr (enableBioeffects) {

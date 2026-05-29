@@ -83,6 +83,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool compositionSwitchEnabled = (compositionSwitchIdx >= 0);
 
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
@@ -190,7 +191,9 @@ public:
         FoamModule::addStorage(storage, intQuants);
 
         // deal with salt (if present)
-        BrineModule::addStorage(storage, intQuants);
+        if constexpr (enableBrine) {
+            BrineModule::addStorage(storage, intQuants);
+        }
 
         // deal with bioeffects (if present)
         if constexpr (enableBioeffects) {
@@ -243,7 +246,9 @@ public:
         FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with salt (if present)
-        BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableBrine) {
+            BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with bioeffects (if present)
         if constexpr (enableBioeffects) {

@@ -43,7 +43,6 @@
 #include <cassert>
 #include <istream>
 #include <ostream>
-#include <stdexcept>
 #include <string>
 
 namespace Opm {
@@ -482,32 +481,6 @@ protected:
 template <class TypeTag>
 class BlackOilBrineIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    OPM_HOST_DEVICE void updateSaltConcentration_(const ElementContext&,
-                                                  unsigned,
-                                                  unsigned)
-    {}
-
-    OPM_HOST_DEVICE void saltPropertiesUpdate_(const ElementContext&,
-                                               unsigned,
-                                               unsigned)
-    {}
-
-    OPM_HOST_DEVICE const Evaluation& brineRefDensity() const
-    { OPM_THROW(std::runtime_error, "brineRefDensity() called but brine are disabled"); }
-
-    OPM_HOST_DEVICE const Scalar saltSolubility() const
-    { OPM_THROW(std::logic_error, "saltSolubility() called but salt precipitation is disabled"); }
-
-    OPM_HOST_DEVICE const Scalar saltDensity() const
-    { OPM_THROW(std::logic_error, "saltDensity() called but salt precipitation is disabled"); }
-
-    OPM_HOST_DEVICE const Evaluation& permFactor() const
-    { OPM_THROW(std::logic_error, "permFactor() called but salt precipitation is disabled"); }
 };
 
 } // namespace Opm

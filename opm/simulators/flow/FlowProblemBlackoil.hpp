@@ -201,10 +201,12 @@ public:
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
 
-        BlackOilBrineParams<Scalar> brineParams;
-        brineParams.template initFromState<enableBrine,
-                                           enableSaltPrecipitation>(vanguard.eclState());
-        BrineModule::setParams(std::move(brineParams));
+        if constexpr (enableBrine) {
+            BlackOilBrineParams<Scalar> brineParams;
+            brineParams.template initFromState<enableBrine,
+                                               enableSaltPrecipitation>(vanguard.eclState());
+            BrineModule::setParams(std::move(brineParams));
+        }
 
         DiffusionModule::initFromState(vanguard.eclState());
         DispersionModule::initFromState(vanguard.eclState());
