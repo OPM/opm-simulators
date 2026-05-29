@@ -86,23 +86,23 @@ compareResultFileContents () {
 extractTestProperties () {
     local failed_test
 
-    failed_test=$(echo "$1" | sed -e 's/.*://' -e 's/\+/./g')
+    failed_test=$(echo "$1" | sed -e 's/.*://')
 
-    testProperty["binary"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
-                             -v prop="SIMULATOR" -f "${dir}/getprop.awk" \
-                             "${BUILD_DIR}/CTestTestfile.cmake")
+    testProperty["binary"]=$(awk -v test="${failed_test}" \
+                                 -v prop="SIMULATOR" -f "${dir}/getprop.awk" \
+                                 "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["dir_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
-                               -v prop="DIRNAME" -f "${dir}/getprop.awk" \
-                               "${BUILD_DIR}/CTestTestfile.cmake")
+    testProperty["dir_name"]=$(awk -v test="${failed_test}" \
+                                   -v prop="DIRNAME" -f "${dir}/getprop.awk" \
+                                   "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["file_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
-                                -v prop="FILENAME" -f "${dir}/getprop.awk" \
-                                "${BUILD_DIR}/CTestTestfile.cmake")
+    testProperty["file_name"]=$(awk -v test="${failed_test}" \
+                                    -v prop="FILENAME" -f "${dir}/getprop.awk" \
+                                    "${BUILD_DIR}/CTestTestfile.cmake")
 
-    testProperty["test_name"]=$(awk -v search="set_tests_properties\\\(.*${failed_test}.*\$" \
-                                -v prop="TESTNAME" -f "${dir}/getprop.awk" \
-                                "${BUILD_DIR}/CTestTestfile.cmake")
+    testProperty["test_name"]=$(awk -v test="${failed_test}" \
+                                    -v prop="TESTNAME" -f "${dir}/getprop.awk" \
+                                    "${BUILD_DIR}/CTestTestfile.cmake")
 }
 
 # Copy results from a test run to reference dir
