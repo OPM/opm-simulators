@@ -2667,6 +2667,23 @@ add_test_compareECLFiles(
     satellite
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    gecon_ratio_well
+  FILENAME
+    GECON-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gecon
+)
+
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(
     CASENAME
