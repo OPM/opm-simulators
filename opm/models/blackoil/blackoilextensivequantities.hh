@@ -81,7 +81,9 @@ public:
         asImp_().updateSolvent(elemCtx, scvfIdx, timeIdx);
         asImp_().updatePolymer(elemCtx, scvfIdx, timeIdx);
         asImp_().updateEnergy(elemCtx, scvfIdx, timeIdx);
-        DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableDiffusion) {
+            DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
+        }
     }
 
     template <class Context, class FluidState>

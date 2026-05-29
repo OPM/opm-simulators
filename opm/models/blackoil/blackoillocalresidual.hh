@@ -256,7 +256,9 @@ public:
         }
 
         // deal with diffusion (if present)
-        DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableDiffusion) {
+            DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with convective mixing (if enabled)
         ConvectiveMixingModule::addConvectiveMixingFlux(flux, elemCtx, scvfIdx, timeIdx);

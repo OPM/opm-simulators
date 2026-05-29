@@ -208,7 +208,9 @@ public:
             BrineModule::setParams(std::move(brineParams));
         }
 
-        DiffusionModule::initFromState(vanguard.eclState());
+        if constexpr (enableDiffusion) {
+            DiffusionModule::initFromState(vanguard.eclState());
+        }
         if constexpr (enableDispersion) {
             DispersionModule::initFromState(vanguard.eclState());
         }

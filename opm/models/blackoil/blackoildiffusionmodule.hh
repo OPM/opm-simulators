@@ -62,31 +62,6 @@ class BlackOilDiffusionExtensiveQuantities;
 template <class TypeTag>
 class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
 {
-    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
-
-public:
-    /*!
-     * \brief Initialize all internal data structures needed by the diffusion module
-     */
-    static void initFromState(const EclipseState&)
-    {}
-
-    /*!
-     * \brief Register all run-time parameters for the diffusion module.
-     */
-    static void registerParameters()
-    {}
-
-    /*!
-     * \brief Adds the diffusive mass flux flux to the flux vector over a flux
-     *        integration point.
-      */
-    template <class Context>
-    OPM_HOST_DEVICE static void addDiffusiveFlux(RateVector&,
-                                                 const Context&,
-                                                 unsigned,
-                                                 unsigned)
-    {}
 };
 
 /*!
@@ -361,52 +336,6 @@ class BlackOilDiffusionIntensiveQuantities;
 template <class TypeTag>
 class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-
-public:
-    /*!
-     * \brief Returns the tortuousity of the sub-domain of a fluid
-     *        phase in the porous medium.
-     */
-    OPM_HOST_DEVICE Scalar tortuosity(unsigned) const
-    {
-        throw std::logic_error("Method tortuosity() does not make sense "
-                               "if diffusion is disabled");
-    }
-
-    /*!
-     * \brief Returns the molecular diffusion coefficient for a
-     *        component in a phase.
-     */
-    OPM_HOST_DEVICE Scalar diffusionCoefficient(unsigned, unsigned) const
-    {
-        throw std::logic_error("Method diffusionCoefficient() does not "
-                               "make sense if diffusion is disabled");
-    }
-
-    /*!
-     * \brief Returns the effective molecular diffusion coefficient of
-     *        the porous medium for a component in a phase.
-     */
-    OPM_HOST_DEVICE Scalar effectiveDiffusionCoefficient(unsigned, unsigned) const
-    {
-        throw std::logic_error("Method effectiveDiffusionCoefficient() "
-                               "does not make sense if diffusion is disabled");
-    }
-
-protected:
-    /*!
-     * \brief Update the quantities required to calculate diffusive
-     *        mass fluxes.
-     */
-    template <class FluidState>
-    void update_(FluidState&,
-                 const unsigned,
-                 const ElementContext&,
-                 unsigned,
-                 unsigned)
-    {}
 };
 
 /*!
@@ -600,51 +529,6 @@ class BlackOilDiffusionExtensiveQuantities;
 template <class TypeTag>
 class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-
-protected:
-    /*!
-     * \brief Update the quantities required to calculate
-     *        the diffusive mass fluxes.
-     */
-    void update_(const ElementContext&,
-                 unsigned,
-                 unsigned)
-    {}
-
-    template <class Context, class FluidState>
-    void updateBoundary_(const Context&,
-                         unsigned,
-                         unsigned,
-                         const FluidState&)
-    {}
-
-public:
-    /*!
-     * \brief The diffusivity the face.
-     *
-     */
-    OPM_HOST_DEVICE Scalar diffusivity() const
-    {
-        throw std::logic_error("The method diffusivity() does not "
-                               "make sense if diffusion is disabled.");
-    }
-
-    /*!
-     * \brief The effective diffusion coeffcient of a component in a
-     *        fluid phase at the face's integration point
-     *
-     * \copydoc Doxygen::phaseIdxParam
-     * \copydoc Doxygen::compIdxParam
-     */
-    OPM_HOST_DEVICE const Evaluation& effectiveDiffusionCoefficient(unsigned,
-                                                                    unsigned) const
-    {
-        throw std::logic_error("The method effectiveDiffusionCoefficient() "
-                               "does not make sense if diffusion is disabled.");
-    }
 };
 
 /*!

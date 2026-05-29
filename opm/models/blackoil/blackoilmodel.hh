@@ -389,7 +389,9 @@ public:
         ExtboModule::registerParameters();
         PolymerModule::registerParameters();
         EnergyModule::registerParameters();
-        DiffusionModule::registerParameters();
+        if constexpr (enableDiffusion) {
+            DiffusionModule::registerParameters();
+        }
         if constexpr (enableBioeffects) {
             BioeffectsModule::registerParameters();
         }
@@ -397,7 +399,9 @@ public:
         // register runtime parameters of the VTK output modules
         VtkBlackOilModule<TypeTag>::registerParameters();
         VtkCompositionModule<TypeTag>::registerParameters();
-        VtkDiffusionModule<TypeTag>::registerParameters();
+        if constexpr (enableDiffusion) {
+            VtkDiffusionModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
