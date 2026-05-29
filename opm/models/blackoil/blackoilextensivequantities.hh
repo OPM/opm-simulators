@@ -65,6 +65,10 @@ class BlackOilExtensiveQuantities
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     using DiffusionExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
+    static constexpr bool enableEnergy =
+        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
+        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal;
+
 public:
     /*!
      * \brief Update the extensive quantities for a given sub-control-volume-face.
@@ -80,7 +84,9 @@ public:
 
         asImp_().updateSolvent(elemCtx, scvfIdx, timeIdx);
         asImp_().updatePolymer(elemCtx, scvfIdx, timeIdx);
-        asImp_().updateEnergy(elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableEnergy) {
+            asImp_().updateEnergy(elemCtx, scvfIdx, timeIdx);
+        }
         if constexpr (enableDiffusion) {
             DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
         }
@@ -94,7 +100,9 @@ public:
     {
         MultiPhaseParent::updateBoundary(ctx, bfIdx, timeIdx, fluidState);
 
-        asImp_().updateEnergyBoundary(ctx, bfIdx, timeIdx, fluidState);
+        if constexpr (enableEnergy) {
+            asImp_().updateEnergyBoundary(ctx, bfIdx, timeIdx, fluidState);
+        }
     }
 
 protected:

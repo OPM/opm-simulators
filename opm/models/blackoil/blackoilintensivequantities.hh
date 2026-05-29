@@ -111,6 +111,7 @@ class BlackOilIntensiveQuantities
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableTemperature = energyModuleType != EnergyModules::NoTemperature;
 
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableMICP = Indices::enableMICP };
@@ -229,7 +230,9 @@ public:
                                         const unsigned timeIdx,
                                         const LinearizationType& lintype)
     {
-        asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
+        if constexpr (enableTemperature) {
+            asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
+        }
         if constexpr (enableBrine) {
             asImp_().updateSaltConcentration_(priVars, timeIdx, lintype);
         }

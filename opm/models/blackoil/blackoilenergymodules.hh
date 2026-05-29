@@ -617,52 +617,6 @@ protected:
 template <class TypeTag>
 class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 {
-    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
-
-public:
-    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
-                                            [[maybe_unused]] unsigned dofIdx,
-                                            [[maybe_unused]] unsigned timeIdx)
-    {
-    }
-
-    template<class Problem>
-    OPM_HOST_DEVICE void updateTemperature_([[maybe_unused]] const Problem& problem,
-                                            [[maybe_unused]] const PrimaryVariables& priVars,
-                                            [[maybe_unused]] unsigned globalDofIdx,
-                                            [[maybe_unused]] unsigned timeIdx,
-                                            [[maybe_unused]] const LinearizationType& lintype)
-    {
-    }
-
-    OPM_HOST_DEVICE void updateEnergyQuantities_(const ElementContext&,
-                                                 unsigned,
-                                                 unsigned,
-                                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
-    {}
-
-    OPM_HOST_DEVICE const Evaluation& rockInternalEnergy() const
-    {
-        OPM_THROW(std::logic_error,
-                  "Requested the rock internal energy, which is "
-                  "unavailable because energy is not conserved");
-    }
-
-    OPM_HOST_DEVICE const Evaluation& totalThermalConductivity() const
-    {
-        OPM_THROW(std::logic_error,
-                  "Requested the total thermal conductivity, which is "
-                  "unavailable because energy is not conserved");
-    }
-
-protected:
-    OPM_HOST_DEVICE Implementation& asImp_()
-    { return *static_cast<Implementation*>(this); }
 };
 
 template <class TypeTag, EnergyModules activeModule>
@@ -842,49 +796,6 @@ private:
 template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
-    template<class Evaluation, class FluidState, class IntensiveQuantities>
-    static void updateEnergy(Evaluation& /*energyFlux*/,
-                             const unsigned& /*focusDofIndex*/,
-                             const unsigned& /*inIdx*/,
-                             const unsigned& /*exIdx*/,
-                             const IntensiveQuantities& /*inIq*/,
-                             const IntensiveQuantities& /*exIq*/,
-                             const FluidState& /*inFs*/,
-                             const FluidState& /*exFs*/,
-                             const Scalar& /*inAlpha*/,
-                             const Scalar& /*outAlpha*/,
-                             const Scalar& /*faceArea*/)
-    {}
-
-    void updateEnergy(const ElementContext&,
-                      unsigned,
-                      unsigned)
-    {}
-
-    template <class Context, class BoundaryFluidState>
-    void updateEnergyBoundary(const Context&,
-                              unsigned,
-                              unsigned,
-                              const BoundaryFluidState&)
-    {}
-
-    template <class BoundaryFluidState,class IntensiveQuantities>
-    static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
-                                     const IntensiveQuantities& /*inIq*/,
-                                     unsigned /*focusDofIndex*/,
-                                     unsigned /*inIdx*/,
-                                     unsigned /*timeIdx*/,
-                                     Scalar /*alpha*/,
-                                     const BoundaryFluidState& /*boundaryFs*/)
-    {}
-
-    OPM_HOST_DEVICE const Evaluation& energyFlux() const
-    { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
 };
 
 template <class TypeTag>
@@ -951,49 +862,6 @@ public:
 template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, EnergyModules::NoTemperature>
 {
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    template<class Evaluation, class FluidState, class IntensiveQuantities>
-    static void updateEnergy(Evaluation& /*energyFlux*/,
-                             const unsigned& /*focusDofIndex*/,
-                             const unsigned& /*inIdx*/,
-                             const unsigned& /*exIdx*/,
-                             const IntensiveQuantities& /*inIq*/,
-                             const IntensiveQuantities& /*exIq*/,
-                             const FluidState& /*inFs*/,
-                             const FluidState& /*exFs*/,
-                             const Scalar& /*inAlpha*/,
-                             const Scalar& /*outAlpha*/,
-                             const Scalar& /*faceArea*/)
-    {}
-
-    void updateEnergy(const ElementContext&,
-                      unsigned,
-                      unsigned)
-    {}
-
-    template <class Context, class BoundaryFluidState>
-    void updateEnergyBoundary(const Context&,
-                              unsigned,
-                              unsigned,
-                              const BoundaryFluidState&)
-    {}
-
-    template <class Evaluation, class BoundaryFluidState, class IntensiveQuantities>
-    static void updateEnergyBoundary(Evaluation& /*heatFlux*/,
-                                     const IntensiveQuantities& /*inIq*/,
-                                     unsigned /*focusDofIndex*/,
-                                     unsigned /*inIdx*/,
-                                     unsigned /*timeIdx*/,
-                                     Scalar /*alpha*/,
-                                     const BoundaryFluidState& /*boundaryFs*/)
-    {}
-
-    OPM_HOST_DEVICE const Evaluation& energyFlux() const
-    { OPM_THROW(std::logic_error, "Requested the energy flux, but energy is not conserved"); }
 };
 
 } // namespace Opm
