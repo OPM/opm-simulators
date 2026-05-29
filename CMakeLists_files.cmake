@@ -418,7 +418,7 @@ if(USE_GPU_BRIDGE)
                                  opm/simulators/linalg/gpubridge/WellContributions.cpp
                                  opm/simulators/linalg/gpubridge/MultisegmentWellContribution.cpp
                                  opm/simulators/linalg/ISTLSolverGpuBridge.cpp)
-  if(OPENCL_FOUND)
+  if(OpenCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/BlockedMatrix.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclBILU0.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/Reorder.cpp)
@@ -595,7 +595,7 @@ if(CUDA_FOUND OR hip_FOUND)
 endif()
 
 if(USE_GPU_BRIDGE)
-  if(OPENCL_FOUND)
+  if(OpenCL_FOUND)
     list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
     list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_csrToCscOffsetMap.cpp)
