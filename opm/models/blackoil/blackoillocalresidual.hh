@@ -82,13 +82,16 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool oilEnabled = Indices::oilEnabled;
     static constexpr bool compositionSwitchEnabled = (compositionSwitchIdx >= 0);
 
+    static constexpr bool blackoilConserveSurfaceVolume = 
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
-    static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
-    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal = 
+        (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -183,7 +186,9 @@ public:
         ExtboModule::addStorage(storage, intQuants);
 
         // deal with polymer (if present)
-        PolymerModule::addStorage(storage, intQuants);
+        if constexpr (enablePolymer) {
+            PolymerModule::addStorage(storage, intQuants);
+        }
 
         // deal with energy (if present)
         EnergyModule::addStorage(storage, intQuants);
@@ -240,7 +245,9 @@ public:
         ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with polymer (if present)
-        PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enablePolymer) {
+            PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with energy (if present)
         EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);

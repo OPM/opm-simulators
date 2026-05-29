@@ -723,35 +723,6 @@ protected:
 template <class TypeTag>
 class BlackOilPolymerIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-
-public:
-    void polymerPropertiesUpdate_(const ElementContext&,
-                                  unsigned,
-                                  unsigned)
-    {}
-
-    const Evaluation& polymerMoleWeight() const
-    { throw std::logic_error("polymerMoleWeight() called but polymer molecular weight is disabled"); }
-
-    const Evaluation& polymerConcentration() const
-    { throw std::runtime_error("polymerConcentration() called but polymers are disabled"); }
-
-    const Evaluation& polymerDeadPoreVolume() const
-    { throw std::runtime_error("polymerDeadPoreVolume() called but polymers are disabled"); }
-
-    const Evaluation& polymerAdsorption() const
-    { throw std::runtime_error("polymerAdsorption() called but polymers are disabled"); }
-
-    const Evaluation& polymerRockDensity() const
-    { throw std::runtime_error("polymerRockDensity() called but polymers are disabled"); }
-
-    const Evaluation& polymerViscosityCorrection() const
-    { throw std::runtime_error("polymerViscosityCorrection() called but polymers are disabled"); }
-
-    const Evaluation& waterViscosityCorrection() const
-    { throw std::runtime_error("waterViscosityCorrection() called but polymers are disabled"); }
 };
 
 template <class TypeTag, bool enablePolymerV>
@@ -802,8 +773,6 @@ public:
      * This is the variant of the method which assumes that the problem is specified
      * using transmissibilities, i.e., *not* via permeabilities.
      */
-    template <class Dummy = bool> // we need to make this method a template to avoid
-                                  // compiler errors if it is not instantiated!
     void updateShearMultipliers(const ElementContext& elemCtx,
                                 unsigned scvfIdx,
                                 unsigned timeIdx)
@@ -880,25 +849,6 @@ private:
 template <class TypeTag>
 class BlackOilPolymerExtensiveQuantities<TypeTag, false>
 {
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
-    void updateShearMultipliers(const ElementContext&,
-                                unsigned,
-                                unsigned)
-    {}
-
-    void updateShearMultipliersPerm(const ElementContext&,
-                                    unsigned,
-                                    unsigned)
-    {}
-
-    const Evaluation& polymerShearFactor() const
-    { throw std::runtime_error("polymerShearFactor() called but polymers are disabled"); }
-
-    const Evaluation& waterShearFactor() const
-    { throw std::runtime_error("waterShearFactor() called but polymers are disabled"); }
 };
 
 } // namespace Opm

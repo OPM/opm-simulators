@@ -231,9 +231,11 @@ public:
             BioeffectsModule::setParams(std::move(bioeffectsParams));
         }
 
-        BlackOilPolymerParams<Scalar> polymerParams;
-        polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
-        PolymerModule::setParams(std::move(polymerParams));
+        if constexpr (enablePolymer) {
+            BlackOilPolymerParams<Scalar> polymerParams;
+            polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
+            PolymerModule::setParams(std::move(polymerParams));
+        }
 
         BlackOilSolventParams<Scalar> solventParams;
         solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
@@ -967,11 +969,13 @@ public:
                                          enableSolvent ? this->solventSaturation_[globalDofIdx] : 0.0,
                                          enableSolvent ? this->solventRsw_[globalDofIdx] : 0.0);
 
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
+        }
 
-        if constexpr (enablePolymerMolarWeight)
+        if constexpr (enablePolymerMolarWeight) {
             values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
+        }
 
         if constexpr (enableBrine) {
             if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {

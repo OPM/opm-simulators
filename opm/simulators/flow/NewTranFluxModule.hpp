@@ -128,7 +128,7 @@ class NewTranExtensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
 
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
-
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
@@ -137,6 +137,7 @@ class NewTranExtensiveQuantities
 
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
+
 public:
     /*!
      * \brief Return the intrinsic permeability tensor at a face [m^2]
@@ -222,7 +223,11 @@ protected:
     { asImp_().updateVolumeFluxTrans(elemCtx, scvfIdx, timeIdx); }
 
     OPM_HOST_DEVICE void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
-    { asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx); }
+    {
+        if constexpr (enablePolymer) {
+            asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx);
+        }
+    }
 
 public:
 
