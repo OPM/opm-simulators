@@ -230,7 +230,9 @@ public:
         }
 
         // deal with zFracton (if present)
-        ExtboModule::addStorage(storage, intQuants);
+        if constexpr (enableExtbo) {
+            ExtboModule::addStorage(storage, intQuants);
+        }
 
         // deal with polymer (if present)
         if constexpr (enablePolymer) {

@@ -88,6 +88,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableFullyImplicitThermal = 
         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
@@ -186,7 +187,9 @@ public:
         }
 
         // deal with zFracton (if present)
-        ExtboModule::addStorage(storage, intQuants);
+        if constexpr (enableExtbo) {
+            ExtboModule::addStorage(storage, intQuants);
+        }
 
         // deal with polymer (if present)
         if constexpr (enablePolymer) {
@@ -248,7 +251,9 @@ public:
         }
 
         // deal with zFracton (if present)
-        ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableExtbo) {
+            ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with polymer (if present)
         if constexpr (enablePolymer) {

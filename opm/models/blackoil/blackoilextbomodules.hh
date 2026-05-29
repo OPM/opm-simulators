@@ -581,48 +581,6 @@ protected:
 template <class TypeTag>
 class BlackOilExtboIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void zPvtUpdate_()
-    {}
-
-    void zFractionUpdate_(const ElementContext&,
-                          unsigned,
-                          unsigned)
-    {}
-
-    const Evaluation& xVolume() const
-    { throw std::runtime_error("xVolume() called but extbo is disabled"); }
-
-    const Evaluation& yVolume() const
-    { throw std::runtime_error("yVolume() called but extbo is disabled"); }
-
-    const Evaluation& oilViscosity() const
-    { throw std::runtime_error("oilViscosity() called but extbo is disabled"); }
-
-    const Evaluation& gasViscosity() const
-    { throw std::runtime_error("gasViscosity() called but extbo is disabled"); }
-
-    const Evaluation& rs() const
-    { throw std::runtime_error("rs() called but extbo is disabled"); }
-
-    const Evaluation& rv() const
-    { throw std::runtime_error("rv() called but extbo is disabled"); }
-
-    const Evaluation& zPureInvFormationVolumeFactor() const
-    { throw std::runtime_error("zPureInvFormationVolumeFactor() called but extbo is disabled"); }
-
-    const Evaluation& zFraction() const
-    { throw std::runtime_error("zFraction() called but extbo is disabled"); }
-
-    const Evaluation& zInverseFormationVolumeFactor() const
-    { throw std::runtime_error("zInverseFormationVolumeFactor() called but extbo is disabled"); }
-
-    Scalar zRefDensity() const
-    { throw std::runtime_error("zRefDensity() called but extbo is disabled"); }
 };
 
 /*!

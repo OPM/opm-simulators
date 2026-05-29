@@ -215,9 +215,11 @@ public:
             DispersionModule::initFromState(vanguard.eclState());
         }
 
-        BlackOilExtboParams<Scalar> extboParams;
-        extboParams.template initFromState<enableExtbo>(vanguard.eclState());
-        ExtboModule::setParams(std::move(extboParams));
+        if constexpr (enableExtbo) {
+            BlackOilExtboParams<Scalar> extboParams;
+            extboParams.template initFromState<enableExtbo>(vanguard.eclState());
+            ExtboModule::setParams(std::move(extboParams));
+        }
 
         if constexpr (enableFoam) {
             BlackOilFoamParams<Scalar> foamParams;
