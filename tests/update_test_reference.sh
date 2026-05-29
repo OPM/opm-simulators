@@ -1,4 +1,4 @@
-#!/usr/bin/env bash -norc
+#!/bin/bash -norc
 
 # Location of this script.
 dir=$(dirname $0)
