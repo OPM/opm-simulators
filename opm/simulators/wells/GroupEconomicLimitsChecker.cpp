@@ -152,7 +152,7 @@ GOR()
                     details->ratio, details->limit);
                 displayDebugMessage(msg);
             }
-            addPrintMessage("  Gas/oil ratio = {:.2f} {} which is greater than the minimum economic value = {:.2f} {}",
+            addPrintMessage("  Gas/oil ratio = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
                                 details->ratio, details->limit, details->measure);
             return details;
         }
@@ -228,6 +228,27 @@ numProducersOpenInitially()
     return 1;
 }
 
+template <typename Scalar, typename IndexTraits>
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+ratioViolation()
+{
+    if (auto water_cut_details = this->waterCut(); water_cut_details.has_value())
+    {
+        return water_cut_details;
+    }
+    else if (auto gor_details = this->GOR(); gor_details.has_value())
+    {
+        return gor_details;
+    }
+    else if (auto wgr_details = this->WGR(); wgr_details.has_value())
+    {
+        return wgr_details;
+    }
+
+    return std::nullopt;
+}
+
 template<typename Scalar, typename IndexTraits>
 std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
 GroupEconomicLimitsChecker<Scalar, IndexTraits>::
@@ -247,24 +268,6 @@ waterCut()
             return details;
         }
     }
-    return std::nullopt;
-}
-
-template<typename Scalar, typename IndexTraits>
-std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
-GroupEconomicLimitsChecker<Scalar, IndexTraits>::
-ratioViolation()
-{
-    if (auto water_cut_details = this->waterCut(); water_cut_details.has_value()) {
-        return water_cut_details;
-    }
-    else if (auto gor_details = this->GOR(); gor_details.has_value()) {
-        return gor_details;
-    }
-    else if (auto wgr_details = this->WGR(); wgr_details.has_value()) {
-        return wgr_details;
-    }
-
     return std::nullopt;
 }
 
@@ -421,8 +424,8 @@ computeWellRatio(const std::string& well_name,
 {
     constexpr Scalar invalid_ratio = std::numeric_limits<Scalar>::lowest();
 
-    // not totally sure all the checking is necessary here, while situation can be complicated
-    // especially when parallel running is involved.
+    // The checks below avoid accessing WellState data for wells that are already closed,
+    // not present on this rank, or not owned by this rank (important for parallel runs).
     if (this->well_test_state_.well_is_closed(well_name)) {
         return invalid_ratio;
     }
@@ -445,6 +448,11 @@ computeWellRatio(const std::string& well_name,
 
     switch (ratio_violation) {
     case RatioViolation::WATER_CUT: {
+        if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+        {
+            return invalid_ratio;
+        }
         const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
         // Surface rates are negative for producers in WellState; flip sign here.
@@ -457,6 +465,11 @@ computeWellRatio(const std::string& well_name,
         return water_rate / liquid;
     }
     case RatioViolation::GOR: {
+        if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::gasPhaseIdx))
+        {
+            return invalid_ratio;
+        }
         const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         // Surface rates are negative for producers in WellState; flip sign here.
@@ -467,6 +480,11 @@ computeWellRatio(const std::string& well_name,
         return gas_rate / oil_rate;
     }
     case RatioViolation::WGR: {
+        if (!pu.phaseIsActive(IndexTraits::gasPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+        {
+            return invalid_ratio;
+        }
         const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
         // Surface rates are negative for producers in WellState; flip sign here.
@@ -616,7 +634,7 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
         const std::string unit_name = this->unit_system_.name(ratio_details.measure);
 
         const std::string msg = fmt::format(
-            "{}\nwell {} ({} {:.4e} {}) is {} at time {:.2f} {} (date = {}) "
+            "{}\nwell {} ({} {:.4e} {}) is {} at time {:.2f} {} (date = {}),\n"
             "because the group {} {} {:.4e} {}"
             " exceeds the limit {:.4e} {}.\n{}",
             this->message_separator(),
