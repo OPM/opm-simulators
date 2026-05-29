@@ -225,7 +225,9 @@ public:
         adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsys);
 
         // deal with solvents (if present)
-        SolventModule::addStorage(storage, intQuants);
+        if constexpr (enableSolvent) {
+            SolventModule::addStorage(storage, intQuants);
+        }
 
         // deal with zFracton (if present)
         ExtboModule::addStorage(storage, intQuants);

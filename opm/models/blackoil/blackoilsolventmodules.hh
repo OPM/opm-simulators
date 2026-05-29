@@ -1146,46 +1146,6 @@ protected:
 template <class TypeTag>
 class BlackOilSolventIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void solventPreSatFuncUpdate_(const ElementContext&,
-                                  unsigned,
-                                  unsigned)
-    {}
-
-    void solventPostSatFuncUpdate_(const ElementContext&,
-                                   unsigned,
-                                   unsigned)
-    {}
-
-    void solventPvtUpdate_(const ElementContext&,
-                           unsigned,
-                           unsigned)
-    {}
-
-    const Evaluation& solventSaturation() const
-    { throw std::runtime_error("solventSaturation() called but solvents are disabled"); }
-
-    const Evaluation& rsSolw() const
-    { throw std::runtime_error("rsSolw() called but solvents are disabled"); }
-
-    const Evaluation& solventDensity() const
-    { throw std::runtime_error("solventDensity() called but solvents are disabled"); }
-
-    const Evaluation& solventViscosity() const
-    { throw std::runtime_error("solventViscosity() called but solvents are disabled"); }
-
-    const Evaluation& solventMobility() const
-    { throw std::runtime_error("solventMobility() called but solvents are disabled"); }
-
-    const Evaluation& solventInverseFormationVolumeFactor() const
-    { throw std::runtime_error("solventInverseFormationVolumeFactor() called but solvents are disabled"); }
-
-    Scalar solventRefDensity() const
-    { throw std::runtime_error("solventRefDensity() called but solvents are disabled"); }
 };
 
 /*!
@@ -1432,31 +1392,6 @@ private:
 template <class TypeTag>
 class BlackOilSolventExtensiveQuantities<TypeTag, false>
 {
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
-    void updateVolumeFluxPerm(const ElementContext&,
-                              unsigned,
-                              unsigned)
-    {}
-
-    void updateVolumeFluxTrans(const ElementContext&,
-                               unsigned,
-                               unsigned)
-    {}
-
-    unsigned solventUpstreamIndex() const
-    { throw std::runtime_error("solventUpstreamIndex() called but solvents are disabled"); }
-
-    unsigned solventDownstreamIndex() const
-    { throw std::runtime_error("solventDownstreamIndex() called but solvents are disabled"); }
-
-    const Evaluation& solventVolumeFlux() const
-    { throw std::runtime_error("solventVolumeFlux() called but solvents are disabled"); }
-
-    void setSolventVolumeFlux(const Evaluation& /* solventVolumeFlux */)
-    { throw std::runtime_error("setSolventVolumeFlux() called but solvents are disabled"); }
 };
 
 } // namespace Opm

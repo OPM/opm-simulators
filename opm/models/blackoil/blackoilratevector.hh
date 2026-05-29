@@ -141,8 +141,10 @@ public:
             (*this)[conti0EqIdx + compIdx] *= FluidSystem::molarMass(compIdx, pvtRegionIdx);
         }
 
-        const auto& solventPvt = SolventModule::solventPvt();
-        (*this)[Indices::contiSolventEqIdx] *= solventPvt.molarMass(pvtRegionIdx);
+        if constexpr (enableSolvent) {
+            const auto& solventPvt = SolventModule::solventPvt();
+            (*this)[Indices::contiSolventEqIdx] *= solventPvt.molarMass(pvtRegionIdx);
+        }
 
         if constexpr (enablePolymer) {
             if constexpr (enablePolymerMolarWeight) {
@@ -179,6 +181,7 @@ public:
                         FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx);
             }
             if constexpr (enableSolvent) {
+                const auto& solventPvt = SolventModule::solventPvt();
                 (*this)[Indices::contiSolventEqIdx] /=
                         solventPvt.referenceDensity(pvtRegionIdx);
             }
