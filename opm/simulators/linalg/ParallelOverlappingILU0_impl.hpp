@@ -155,7 +155,7 @@ void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
 
   assert(colcount == numLower);
 
-  const auto rendi = A.beforeBegin();
+  const auto rbegini = std::make_reverse_iterator(A.begin());
   row = 0;
   colcount = 0;
   upper.rows_[ 0 ] = colcount ;
@@ -164,21 +164,22 @@ void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
 
   // NOTE: upper and inv store entries in reverse order, reverse here
   // relative to ILU
-  for (auto i=A.beforeEnd(); i!=rendi; --i, ++ row )
+  auto rindex = [](auto it) { return std::prev(it.base()).index(); };
+  for (auto i=std::make_reverse_iterator(A.end()); i!=rbegini; ++i, ++ row )
   {
-    const size_type iIndex = i.index();
+    const size_type iIndex = rindex(i);
 
     // store in reverse row order
     // eliminate entries left of diagonal; store L factor
-    for (auto j=(*i).beforeEnd(); j.index()>=iIndex; --j )
+    for (auto j=std::make_reverse_iterator(i->end()); rindex(j)>=iIndex; ++j )
     {
-      const size_type jIndex = j.index();
-      if( j.index() == iIndex )
+      const size_type jIndex = rindex(j);
+      if( rindex(j) == iIndex )
       {
         inv[ row ] = (*j);
         break;
       }
-      else if ( j.index() >= i.index() )
+      else if ( rindex(j) >= rindex(i) )
       {
         upper.push_back( (*j), jIndex );
         ++colcount ;

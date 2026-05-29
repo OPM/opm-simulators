@@ -283,15 +283,16 @@ private:
             OPM_TIMEBLOCK(upper_solve);
 
             // upper triangular solve: (D + U_A) v = Dy
-            auto rendi = A_.beforeBegin();
-            for (auto row = A_.beforeEnd(); row != rendi; --row) {
-                const auto row_i = row.index();
+            auto rindex = [](auto it) { return std::prev(it.base()).index(); };
+            auto rbegini = std::make_reverse_iterator(A_.begin());
+            for (auto row = std::make_reverse_iterator(A_.end()); row != rbegini; ++row) {
+                const auto row_i = rindex(row);
                 // rhs = 0
                 Xblock rhs(0.0);
-                for (auto a_ij = (*row).beforeEnd(); a_ij.index() > row_i; --a_ij) {
+                for (auto a_ij = std::make_reverse_iterator(row->end()); rindex(a_ij) > row_i; ++a_ij) {
                     // if A[i][j] != 0
                     // rhs += A[i][j]*v[j]
-                    const auto col_j = a_ij.index();
+                    const auto col_j = rindex(a_ij);
                     a_ij->umv(v[col_j], rhs);
                 }
                 // calculate update v = M^-1*d
@@ -346,9 +347,10 @@ private:
                     auto row = A_reordered_->begin() + level_start_idx + row_idx_in_level;
                     const auto row_i = reordered_to_natural_[row.index()];
                     Xblock rhs(0.0);
-                    for (auto a_ij = (*row).beforeEnd(); a_ij.index() > row_i; --a_ij) {
+                    auto rindex = [](auto it) { return std::prev(it.base()).index(); };
+                    for (auto a_ij = std::make_reverse_iterator((*row).end()); rindex(a_ij) > row_i; ++a_ij) {
                         // rhs += A[i][j]*v[j]
-                        const auto col_j = a_ij.index();
+                        const auto col_j = rindex(a_ij);
                         a_ij->umv(v[col_j], rhs);
                     }
                     // calculate update v = M^-1*d
