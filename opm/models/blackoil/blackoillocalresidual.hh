@@ -95,7 +95,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using FoamModule = BlackOilFoamModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
