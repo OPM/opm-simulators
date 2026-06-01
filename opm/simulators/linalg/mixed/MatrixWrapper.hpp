@@ -4,13 +4,18 @@
 
 #include <opm/simulators/linalg/mixed/bsr.h>
 
+namespace Opm
+{
 
 //! @brief Wraps c-implementation of mixed-precision matrix
+//!
+//! @note matrix is stored in single precision, but all
+//!       operations are performed in double-precision
 //!
 //! @tparam Vector the block-vector used by linear operator
 //! @tparam b block size
 template <class Vector, int b>
-class MatrixWrapper
+class MixedMatrixWrapper
 {
     public:
     virtual void mv(const Vector& x, Vector& y) const;
@@ -21,7 +26,7 @@ class MatrixWrapper
     //!
     //! @param nrows number of block rows
     //! @param nnz number of nonzero blocks
-    MatrixWrapper(int nrows, int nnz)
+    MixedMatrixWrapper(int nrows, int nnz)
     {
         nnz_=nnz;
         M_ = bsr_alloc();
@@ -29,7 +34,7 @@ class MatrixWrapper
     }
 
     //! @brief destructor
-    ~MatrixWrapper() {bsr_free(M_);}
+    ~MixedMatrixWrapper() {bsr_free(M_);}
 
     void update(double const *data);
 
@@ -42,7 +47,7 @@ class MatrixWrapper
 };
 
 template <class Vector, int b>
-void MatrixWrapper<Vector,b>::
+void MixedMatrixWrapper<Vector,b>::
 mv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv (y = M.x)
@@ -50,7 +55,7 @@ mv(const Vector& x, Vector& y) const
 }
 
 template <class Vector, int b>
-void MatrixWrapper<Vector,b>::
+void MixedMatrixWrapper<Vector,b>::
 umv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv with update (y += M.x)
@@ -58,7 +63,7 @@ umv(const Vector& x, Vector& y) const
 }
 
 template <class Vector, int b>
-void MatrixWrapper<Vector,b>::
+void MixedMatrixWrapper<Vector,b>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
     // scaled mixed-precision block spmv with update (y += alpha *  M.x)
@@ -66,7 +71,7 @@ usmv(double alpha, const Vector& x, Vector& y) const
 }
 
 template <class Vector, int b>
-void MatrixWrapper<Vector,b>::
+void MixedMatrixWrapper<Vector,b>::
 update(double const *data)
 {
     // transpose each dense block to make them column-major
@@ -81,5 +86,5 @@ update(double const *data)
     // downcast to single precision
     bsr_downcast(M_);
 }
-
+} // namespace Opm
 #endif // OPM_MIXED_MATRIX_HEADER_INCLUDED
