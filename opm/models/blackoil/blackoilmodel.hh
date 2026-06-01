@@ -364,7 +364,7 @@ private:
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;

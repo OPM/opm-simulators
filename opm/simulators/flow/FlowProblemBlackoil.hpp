@@ -151,7 +151,7 @@ private:
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
 
     using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
     using IndexTraits = typename FluidSystem::IndexTraitsType;

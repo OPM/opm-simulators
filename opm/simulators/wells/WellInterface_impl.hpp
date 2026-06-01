@@ -2164,7 +2164,7 @@ namespace Opm
 
             if constexpr (has_solvent) {
                 const auto Fsolgas = intQuants.solventSaturation() / (intQuants.solventSaturation() + intQuants.fluidState().saturation(FluidSystem::gasPhaseIdx));
-                using SolventModule = BlackOilSolventModule<TypeTag>;
+                using SolventModule = BlackOilSolventModule<TypeTag, true>;
                 if (Fsolgas > SolventModule::cutOff) { // same cutoff as in the solvent model to avoid division by zero
                     const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
                     const auto& ssfnKrg = SolventModule::ssfnKrg(satid);
