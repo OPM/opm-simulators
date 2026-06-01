@@ -1170,6 +1170,39 @@ setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
+setupLgrBlockData(const EclipseGrid& eclGrid)
+{
+    // Allocate one lgrBlockData_ slot per LB* summary node.  The level
+    // component of the key is the same value data::Connection carries as
+    // lgr_grid for LC* connection vectors -- get_lgr_cell_index returns the
+    // 0-based position of the label in the GLOBAL-stripped LGR list, so a
+    // +1 recovers the on-disk level id (0 = GLOBAL, 1..N = LGRs).  The
+    // level-local linearised Cartesian cell index is recovered from
+    // node.number() - 1 (SummaryConfig::keywordLB stored NUMS = index + 1
+    // via GridDims::getGlobalIndex on the LGR's dimensions at parse time).
+    //
+    // No rank check here: ownership for LGR leaf cells is decided in the
+    // element walk via Dune::InteriorEntity; the existing
+    // isCartIdxOnThisRank predicate is a global-Cartesian check that does
+    // not apply to LGR cells.
+    for (const auto& node : summaryConfig_) {
+        if (node.category() != SummaryConfigNode::Category::Block) {
+            continue;
+        }
+        if (! node.lgr_name().has_value()) {
+            continue;
+        }
+
+        const int level = static_cast<int>(
+            eclGrid.get_lgr_cell_index(*node.lgr_name())) + 1;
+        const int local = node.number() - 1;
+
+        this->lgrBlockData_[std::make_tuple(node.keyword(), level, local)] = 0.0;
+    }
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
 setupExtraBlockData(const std::size_t        reportStepNum,
                     std::function<bool(int)> isCartIdxOnThisRank)
 {

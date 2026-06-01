@@ -180,6 +180,10 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
+        // Allocate slots for LB* summary nodes that name a cell inside an
+        // LGR.  Empty for runs without LB* requests (zero non-LGR cost).
+        this->setupLgrBlockData(simulator.vanguard().eclState().getInputGrid());
+
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectOnIORank.isIORank()) {
