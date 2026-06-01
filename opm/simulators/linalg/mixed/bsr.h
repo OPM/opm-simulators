@@ -70,6 +70,7 @@ void bsr_vmspumv3(bsr_matrix *A, const double *x, double *y, double alpha);
  * @brief Sparse matrix-vector multiplication in mixed precision.
  *
  * @note Function is specialized for 3x3 block-sparse matrices.
+ * @note The dense 3x3 blocks are assumed to be column-major
  * @note Function uses AVX2 intrinsics.
  *
  * @param A Pointer to bsr matrix.
@@ -83,6 +84,7 @@ void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
  * @brief Sparse matrix-vector multiplication in double precision.
  *
  * @note Function is specialized for 3x3 block-sparse matrices.
+ * @note The dense 3x3 blocks are assumed to be column-major
  * @note Function uses AVX2 intrinsics.
  *
  * @param A Pointer to bsr matrix.
