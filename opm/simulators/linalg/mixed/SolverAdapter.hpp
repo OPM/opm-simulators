@@ -141,11 +141,11 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
         rows[0]  = 0;
         for(auto row=A.begin(); row!=A.end(); row++)
         {
-            for(unsigned int i=0; i<row->getsize(); i++)
+            for(auto col = row->begin(); col != row->end(); ++col)
             {
-                cols[icol++] = row->getindexptr()[i];
+                cols[icol++] = col.index();
             }
-            rows[irow+1]     = rows[irow]+row->getsize();
+            rows[irow+1] = icol;
             irow++;
         }
 
