@@ -104,12 +104,14 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
 
     // component indices from the fluid system
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
-    enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
+
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
