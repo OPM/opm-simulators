@@ -355,7 +355,7 @@ private:
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
 
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
