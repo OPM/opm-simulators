@@ -116,6 +116,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
@@ -1300,7 +1301,14 @@ private:
             },
             Entry{ScalarEntry{&this->cFoam_,
                               [](const Context& ectx)
-                              { return getValue(ectx.intQuants.foamConcentration()); }
+                              {
+                                  if constexpr (enableFoam) {
+                                      return getValue(ectx.intQuants.foamConcentration());
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
+                              }
                   }
             },
             Entry{ScalarEntry{&this->cSalt_,

@@ -126,8 +126,8 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
@@ -237,7 +237,9 @@ public:
         EnergyModule::addStorage(storage, intQuants);
 
         // deal with foam (if present)
-        FoamModule::addStorage(storage, intQuants);
+        if constexpr (enableFoam) {
+            FoamModule::addStorage(storage, intQuants);
+        }
 
         // deal with salt (if present)
         if constexpr (enableBrine) {

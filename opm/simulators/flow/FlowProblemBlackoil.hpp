@@ -145,8 +145,8 @@ private:
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
@@ -219,9 +219,11 @@ public:
         extboParams.template initFromState<enableExtbo>(vanguard.eclState());
         ExtboModule::setParams(std::move(extboParams));
 
-        BlackOilFoamParams<Scalar> foamParams;
-        foamParams.template initFromState<enableFoam>(vanguard.eclState());
-        FoamModule::setParams(std::move(foamParams));
+        if constexpr (enableFoam) {
+            BlackOilFoamParams<Scalar> foamParams;
+            foamParams.template initFromState<enableFoam>(vanguard.eclState());
+            FoamModule::setParams(std::move(foamParams));
+        }
 
         if constexpr (enableBioeffects) {
             BlackOilBioeffectsParams<Scalar> bioeffectsParams;
