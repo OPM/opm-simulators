@@ -336,6 +336,10 @@ public:
                 ? this->collectOnIORank_.globalBlockData()
                 : this->outputModule_->getBlockData();
 
+            // LGR block summary values: single-process only.  Parallel
+            // is a separate part of the project.
+            const auto& lgrBlockData = this->outputModule_->getLgrBlockData();
+
             const auto& interRegFlows = this->collectOnIORank_.isParallel()
                 ? this->collectOnIORank_.globalInterRegFlows()
                 : this->outputModule_->getInterRegFlows();
@@ -347,6 +351,7 @@ public:
                               localGroupAndNetworkData,
                               localAquiferData,
                               blockData,
+                              lgrBlockData,
                               miscSummaryData,
                               regionData,
                               inplace,

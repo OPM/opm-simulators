@@ -1025,6 +1025,7 @@ evalSummary(const int                                            reportStepNum,
             const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
             const std::map<int,data::AquiferData>&               localAquiferData,
             const std::map<std::pair<std::string, int>, double>& blockData,
+            const std::map<std::tuple<std::string, int, int>, double>& lgrBlockData,
             const std::map<std::string, double>&                 miscSummaryData,
             const std::map<std::string, std::vector<double>>&    regionData,
             const Inplace&                                       inplace,
@@ -1068,7 +1069,8 @@ evalSummary(const int                                            reportStepNum,
             /* inplace                 = */ {
                 /* current = */ &inplace,
                 /* initial = */ initialInPlace
-            }
+            },
+            /* lgr_block_values        = */ &lgrBlockData
         };
 
         summary.eval(reportStepNum, curTime, values, summaryState);

@@ -128,8 +128,13 @@ public:
         this->setupBlockData(isCartIdxOnThisRank);
 
         // Allocate slots for LB* summary nodes that name a cell inside an
-        // LGR.  Empty for runs without LB* requests (zero non-LGR cost).
-        this->setupLgrBlockData(simulator.vanguard().eclState().getInputGrid());
+        // LGR.  Single-process only: the gather of LGR-cell values to the I/O
+        // rank is a separate change, so skip setup under MPI to keep the LGR
+        // producer path inert and avoid desyncing the ranks in the collective
+        // output walk.  Empty for runs without LB* requests (zero non-LGR cost).
+        if (! collectToIORank.isParallel()) {
+            this->setupLgrBlockData(simulator.vanguard().eclState().getInputGrid());
+        }
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
