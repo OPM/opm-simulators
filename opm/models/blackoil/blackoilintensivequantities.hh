@@ -100,8 +100,8 @@ class BlackOilIntensiveQuantities
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
-    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
