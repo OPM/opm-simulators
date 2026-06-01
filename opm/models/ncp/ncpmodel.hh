@@ -261,7 +261,7 @@ class NcpModel
     enum { saturation0Idx = Indices::saturation0Idx };
     static constexpr int conti0EqIdx = Indices::conti0EqIdx;
     static constexpr int ncp0EqIdx = Indices::ncp0EqIdx;
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
