@@ -57,7 +57,15 @@ void MixedMatrixWrapper<Vector>::
 mv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv (y = M.x)
-    bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
+    if      constexpr(b==1){printf("MixedMatrixWrapper::mv does not support block size == 1!\n");getchar();}
+    else if constexpr(b==2){printf("MixedMatrixWrapper::mv does not support block size == 2!\n");getchar();}
+    else if constexpr(b==3) bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
+    else if constexpr(b==4) bsr_vmspmv4(M_, &x[0][0], &y[0][0]);
+    else
+    {
+        printf("MixedMatrixWrapper::mv only supports block sizes < 5!\n");
+        getchar();
+    }
 }
 
 template <class Vector>
@@ -65,7 +73,15 @@ void MixedMatrixWrapper<Vector>::
 umv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv with update (y += M.x)
-    bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
+    if      constexpr(b==1){printf("MixedMatrixWrapper::umv does not support block size == 1!\n");getchar();}
+    else if constexpr(b==2){printf("MixedMatrixWrapper::umv does not support block size == 2!\n");getchar();}
+    else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
+    else if constexpr(b==4) bsr_vmspumv4(M_, &x[0][0], &y[0][0], 1.0);
+    else
+    {
+        printf("MixedMatrixWrapper::umv only supports block sizes < 4!\n");
+        getchar();
+    }
 }
 
 template <class Vector>
@@ -73,7 +89,17 @@ void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
     // scaled mixed-precision block spmv with update (y += alpha *  M.x)
-    bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
+    //bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
+    if      constexpr(b==1){printf("MixedMatrixWrapper::usmv does not support block size == 1!\n");getchar();}
+    else if constexpr(b==2){printf("MixedMatrixWrapper::usmv does not support block size == 2!\n");getchar();}
+    else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
+    else if constexpr(b==4) bsr_vmspumv4(M_, &x[0][0], &y[0][0], alpha);
+    //else if constexpr(b==4){}
+    else
+    {
+        printf("MixedMatrixWrapper::usmv only supports block sizes < 5!\n");
+        getchar();
+    }
 }
 
 template <class Vector>

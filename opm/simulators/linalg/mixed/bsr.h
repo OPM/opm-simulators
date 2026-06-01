@@ -65,6 +65,7 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b);
  * @param y Pointer to output vector.
  */
 void bsr_vmspumv3(bsr_matrix *A, const double *x, double *y, double alpha);
+void bsr_vmspumv4(bsr_matrix *A, const double *x, double *y, double alpha);
 
 /**
  * @brief Sparse matrix-vector multiplication in mixed precision.
@@ -79,6 +80,7 @@ void bsr_vmspumv3(bsr_matrix *A, const double *x, double *y, double alpha);
  */
 
 void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
+void bsr_vmspmv4(bsr_matrix *A, const double *x, double *y);
 
 /**
  * @brief Sparse matrix-vector multiplication in double precision.
