@@ -44,7 +44,7 @@ struct ImmiscibleIndices
                            getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
     static constexpr int numPhases = getPropValue<TypeTag, Properties::NumPhases>();
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numPhases, enableEnergy>;
 
 public:

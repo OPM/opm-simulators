@@ -47,7 +47,7 @@ class PvsIndices
                            getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
     static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:

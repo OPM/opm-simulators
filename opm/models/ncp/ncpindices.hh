@@ -49,7 +49,7 @@ private:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     static constexpr int numPhases = FluidSystem::numPhases;
     static constexpr int numComponents = FluidSystem::numComponents;
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numComponents + numPhases, enableEnergy>;
 

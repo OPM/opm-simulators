@@ -56,7 +56,7 @@ class ImmiscibleExtensiveQuantities
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
     using EnergyExtensiveQuantities = ::Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;

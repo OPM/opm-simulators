@@ -222,7 +222,7 @@ class ImmiscibleModel
 
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
@@ -237,8 +237,9 @@ public:
     {
         ParentType::registerParameters();
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
+        }
 
         Parameters::SetDefault<Parameters::VtkWriteSaturations>(false);
         Parameters::SetDefault<Parameters::VtkWriteMobilities>(false);
@@ -358,8 +359,9 @@ public:
     {
         ParentType::registerOutputModules_();
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
+        }
     }
 
 private:

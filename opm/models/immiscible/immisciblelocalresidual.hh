@@ -58,7 +58,7 @@ class ImmiscibleLocalResidual : public GetPropType<TypeTag, Properties::DiscLoca
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
     using Toolbox = Opm::MathToolbox<Evaluation>;
