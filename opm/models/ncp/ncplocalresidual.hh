@@ -66,7 +66,7 @@ class NcpLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidu
     enum { ncp0EqIdx = Indices::ncp0EqIdx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     using DiffusionModule = ::Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };

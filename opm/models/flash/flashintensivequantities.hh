@@ -72,7 +72,7 @@ class FlashIntensiveQuantities
     enum { cTot0Idx = Indices::cTot0Idx };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
 

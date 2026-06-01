@@ -254,10 +254,6 @@ void hideUnusedParameters()
     Parameters::Hide<Parameters::VtkWriteTotalMassFractions>();
     Parameters::Hide<Parameters::VtkWriteTotalMoleFractions>();
 
-    Parameters::Hide<Parameters::VtkWriteTortuosities>();
-    Parameters::Hide<Parameters::VtkWriteDiffusionCoefficients>();
-    Parameters::Hide<Parameters::VtkWriteEffectiveDiffusionCoefficients>();
-
     // hide average density option
     Parameters::Hide<Parameters::UseAverageDensityMsWells>();
 }

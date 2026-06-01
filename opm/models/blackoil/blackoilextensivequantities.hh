@@ -62,7 +62,7 @@ class BlackOilExtensiveQuantities
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     using DiffusionExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
@@ -81,7 +81,9 @@ public:
         asImp_().updateSolvent(elemCtx, scvfIdx, timeIdx);
         asImp_().updatePolymer(elemCtx, scvfIdx, timeIdx);
         asImp_().updateEnergy(elemCtx, scvfIdx, timeIdx);
-        DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableDiffusion) {
+            DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
+        }
     }
 
     template <class Context, class FluidState>

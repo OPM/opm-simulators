@@ -120,7 +120,7 @@ protected:
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     enum { enableFullyImplicitThermal = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
@@ -228,7 +228,8 @@ public:
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
                               (energyModuleType == EnergyModules::FullyImplicitThermal ||
-                               energyModuleType == EnergyModules::SequentialImplicitThermal),                       enableDiffusion,
+                               energyModuleType == EnergyModules::SequentialImplicitThermal),
+                              enableDiffusion,
                               enableDispersion)
         , wellModel_(simulator, this->iterationContext())
         , aquiferModel_(simulator)

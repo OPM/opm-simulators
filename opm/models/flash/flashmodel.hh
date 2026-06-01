@@ -209,7 +209,7 @@ class FlashModel
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;

@@ -111,6 +111,11 @@ namespace Opm {
             Simulator::registerParameters();
 
             detail::hideUnusedParameters<Scalar>();
+            if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()) {
+                Parameters::Hide<Parameters::VtkWriteTortuosities>();
+                Parameters::Hide<Parameters::VtkWriteDiffusionCoefficients>();
+                Parameters::Hide<Parameters::VtkWriteEffectiveDiffusionCoefficients>();
+            }
 
             Parameters::endRegistration();
 
