@@ -122,19 +122,18 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableMICP = Indices::enableMICP;
     static constexpr bool runAssemblyOnGpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
 
-    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
-    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
-
-    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
+    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
 
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
     using Toolbox = MathToolbox<Evaluation>;
 
 public:
