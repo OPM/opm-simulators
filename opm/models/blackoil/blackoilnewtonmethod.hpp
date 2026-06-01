@@ -69,7 +69,8 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
     static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
@@ -211,7 +212,6 @@ protected:
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
-        static constexpr bool enableBioeffects = Indices::biofilmVolumeFractionIdx >= 0;
         static constexpr bool enableMICP = Indices::enableMICP;
 
         currentValue.checkDefined();

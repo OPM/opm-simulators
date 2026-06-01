@@ -367,7 +367,7 @@ private:
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
 public:
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;

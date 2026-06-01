@@ -133,7 +133,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
     using Toolbox = MathToolbox<Evaluation>;
 

@@ -124,7 +124,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
     using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
