@@ -115,7 +115,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
@@ -1603,14 +1603,16 @@ private:
             },
             Entry{[&bioeffectsC = this->bioeffectsC_](const Context& ectx)
                   {
-                      bioeffectsC.assign(ectx.globalDofIdx,
-                                         ectx.intQuants.microbialConcentration().value(),
-                                         ectx.intQuants.biofilmVolumeFraction().value());
-                      if (Indices::enableMICP) {
+                      if constexpr (enableBioeffects) {
                           bioeffectsC.assign(ectx.globalDofIdx,
-                                             ectx.intQuants.oxygenConcentration().value(),
-                                             ectx.intQuants.ureaConcentration().value(),
-                                             ectx.intQuants.calciteVolumeFraction().value());
+                                             ectx.intQuants.microbialConcentration().value(),
+                                             ectx.intQuants.biofilmVolumeFraction().value());
+                          if (Indices::enableMICP) {
+                              bioeffectsC.assign(ectx.globalDofIdx,
+                                                 ectx.intQuants.oxygenConcentration().value(),
+                                                 ectx.intQuants.ureaConcentration().value(),
+                                                 ectx.intQuants.calciteVolumeFraction().value());
+                          }
                       }
                   }, this->bioeffectsC_.allocated()
             },
@@ -2612,44 +2614,69 @@ private:
             Entry{ScalarEntry{"BMMIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  return getValue(ectx.intQuants.microbialConcentration()) *
-                                         getValue(ectx.fs.saturation(waterPhaseIdx)) *
-                                         getValue(ectx.intQuants.porosity()) *
-                                         model.dofTotalVolume(ectx.globalDofIdx);
+                                  if constexpr (enableBioeffects) {
+                                      return getValue(ectx.intQuants.microbialConcentration()) *
+                                             getValue(ectx.fs.saturation(waterPhaseIdx)) *
+                                             getValue(ectx.intQuants.porosity()) *
+                                             model.dofTotalVolume(ectx.globalDofIdx);
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
                               }
                   }
             },
             Entry{ScalarEntry{"BMOIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  return getValue(ectx.intQuants.oxygenConcentration()) *
-                                         getValue(ectx.intQuants.porosity()) *
-                                         model.dofTotalVolume(ectx.globalDofIdx);
+                                  if constexpr (enableBioeffects) {
+                                      return getValue(ectx.intQuants.oxygenConcentration()) *
+                                             getValue(ectx.intQuants.porosity()) *
+                                             model.dofTotalVolume(ectx.globalDofIdx);
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
                               }
                   }
             },
             Entry{ScalarEntry{"BMUIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  return getValue(ectx.intQuants.ureaConcentration()) *
-                                         getValue(ectx.intQuants.porosity()) *
-                                         model.dofTotalVolume(ectx.globalDofIdx) * 1;
+                                  if constexpr (enableBioeffects) {
+                                      return getValue(ectx.intQuants.ureaConcentration()) *
+                                             getValue(ectx.intQuants.porosity()) *
+                                             model.dofTotalVolume(ectx.globalDofIdx);
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
                               }
                   }
             },
             Entry{ScalarEntry{"BMBIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  return model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.biofilmMass());
+                                  if constexpr (enableBioeffects) {
+                                      return model.dofTotalVolume(ectx.globalDofIdx) *
+                                            getValue(ectx.intQuants.biofilmMass());
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
                               }
                   }
             },
             Entry{ScalarEntry{"BMCIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  return model.dofTotalVolume(ectx.globalDofIdx) *
-                                         getValue(ectx.intQuants.calciteMass());
+                                  if constexpr (enableBioeffects) {
+                                      return model.dofTotalVolume(ectx.globalDofIdx) *
+                                             getValue(ectx.intQuants.calciteMass());
+                                  }
+                                  else {
+                                      return 0.0;
+                                  }
                               }
                   }
             },

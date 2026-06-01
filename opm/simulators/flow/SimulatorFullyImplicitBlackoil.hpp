@@ -130,7 +130,8 @@ public:
 
     using TimeStepper = AdaptiveTimeStepping<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
     using Solver = NonlinearSolver<TypeTag, Model>;
     using ModelParameters = typename Model::ModelParameters;

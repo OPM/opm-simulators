@@ -148,7 +148,7 @@ private:
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
@@ -217,9 +217,11 @@ public:
         foamParams.template initFromState<enableFoam>(vanguard.eclState());
         FoamModule::setParams(std::move(foamParams));
 
-        BlackOilBioeffectsParams<Scalar> bioeffectsParams;
-        bioeffectsParams.template initFromState<enableBioeffects, enableMICP>(vanguard.eclState());
-        BioeffectsModule::setParams(std::move(bioeffectsParams));
+        if constexpr (enableBioeffects) {
+            BlackOilBioeffectsParams<Scalar> bioeffectsParams;
+            bioeffectsParams.template initFromState<enableBioeffects, enableMICP>(vanguard.eclState());
+            BioeffectsModule::setParams(std::move(bioeffectsParams));
+        }
 
         BlackOilPolymerParams<Scalar> polymerParams;
         polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());

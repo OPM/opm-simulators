@@ -133,7 +133,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
     using Toolbox = MathToolbox<Evaluation>;
 
@@ -243,7 +243,9 @@ public:
         BrineModule::addStorage(storage, intQuants);
 
         // deal with bioeffects (if present)
-        BioeffectsModule::addStorage(storage, intQuants);
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::addStorage(storage, intQuants);
+        }
     }
 
     /*!
@@ -791,7 +793,9 @@ public:
         problem.source(source, globalSpaceIdex, timeIdx);
 
         // deal with bioeffects (if present)
-        BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
+        }
 
         // scale the source term of the energy equation
         if constexpr (enableFullyImplicitThermal) {
@@ -810,7 +814,9 @@ public:
         problem.addToSourceDense(source, globalSpaceIdex, timeIdx);
 
         // deal with bioeffects (if present)
-        BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
+        }
 
         // scale the source term of the energy equation
         if constexpr (enableFullyImplicitThermal) {
@@ -832,7 +838,9 @@ public:
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
 
         // deal with bioeffects (if present)
-        BioeffectsModule::addSource(source, elemCtx, dofIdx, timeIdx);
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::addSource(source, elemCtx, dofIdx, timeIdx);
+        }
 
         // scale the source term of the energy equation
         if constexpr (enableFullyImplicitThermal) {

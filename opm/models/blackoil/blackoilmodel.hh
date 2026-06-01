@@ -357,6 +357,7 @@ private:
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
 
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
@@ -366,7 +367,7 @@ private:
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 
 public:
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
@@ -389,7 +390,9 @@ public:
         PolymerModule::registerParameters();
         EnergyModule::registerParameters();
         DiffusionModule::registerParameters();
-        BioeffectsModule::registerParameters();
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::registerParameters();
+        }
 
         // register runtime parameters of the VTK output modules
         VtkBlackOilModule<TypeTag>::registerParameters();
@@ -678,7 +681,9 @@ protected:
         SolventModule::registerOutputModules(asImp_(), this->simulator_);
         PolymerModule::registerOutputModules(asImp_(), this->simulator_);
         EnergyModule::registerOutputModules(asImp_(), this->simulator_);
-        BioeffectsModule::registerOutputModules(asImp_(), this->simulator_);
+        if constexpr (enableBioeffects) {
+            BioeffectsModule::registerOutputModules(asImp_(), this->simulator_);
+        }
 
         this->addOutputModule(std::make_unique<VtkBlackOilModule<TypeTag>>(this->simulator_));
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));

@@ -43,6 +43,10 @@
 #include <stdexcept>
 
 namespace Opm {
+
+template <class TypeTag, bool enableBioeffectsV>
+class BlackOilBioeffectsModule;
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -90,8 +94,8 @@ namespace Opm {
  * - Concentration of suspended microbes
  * - Volume fraction of biofilm
  */
-template <class TypeTag, bool enableBioeffectsV = getPropValue<TypeTag, Properties::EnableBioeffects>()>
-class BlackOilBioeffectsModule
+template <class TypeTag>
+class BlackOilBioeffectsModule<TypeTag, true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -123,7 +127,7 @@ class BlackOilBioeffectsModule
     static constexpr unsigned contiCalciteEqIdx = Indices::contiCalciteEqIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    static constexpr unsigned enableBioeffects = enableBioeffectsV;
+    static constexpr bool enableBioeffects = true;
     static constexpr bool enableMICP = Indices::enableMICP;
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
@@ -505,9 +509,13 @@ private:
 };
 
 
+template <class TypeTag>
+BlackOilBioeffectsParams<typename BlackOilBioeffectsModule<TypeTag, true>::Scalar>
+BlackOilBioeffectsModule<TypeTag, true>::params_;
+
+
 template <class TypeTag, bool enableBioeffectsV>
-BlackOilBioeffectsParams<typename BlackOilBioeffectsModule<TypeTag, enableBioeffectsV>::Scalar>
-BlackOilBioeffectsModule<TypeTag, enableBioeffectsV>::params_;
+class BlackOilBioeffectsIntensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -516,8 +524,8 @@ BlackOilBioeffectsModule<TypeTag, enableBioeffectsV>::params_;
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        bioeffects extension of the black-oil model.
  */
-template <class TypeTag, bool enableBioeffectsV = getPropValue<TypeTag, Properties::EnableBioeffects>()>
-class BlackOilBioeffectsIntensiveQuantities
+template <class TypeTag>
+class BlackOilBioeffectsIntensiveQuantities<TypeTag, true>
 {
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
@@ -527,7 +535,7 @@ class BlackOilBioeffectsIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, true>;
 
     static constexpr int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
@@ -609,40 +617,10 @@ protected:
 template <class TypeTag>
 class BlackOilBioeffectsIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void bioeffectsPropertiesUpdate_(const ElementContext&,
-                                     unsigned,
-                                     unsigned)
-    {}
-
-    const Evaluation& microbialConcentration() const
-    { throw std::logic_error("microbialConcentration() called but MICP is disabled"); }
-
-    const Evaluation& oxygenConcentration() const
-    { throw std::logic_error("oxygenConcentration() called but MICP is disabled"); }
-
-    const Evaluation& ureaConcentration() const
-    { throw std::logic_error("ureaConcentration() called but MICP is disabled"); }
-
-    const Evaluation& biofilmVolumeFraction() const
-    { throw std::logic_error("biofilmVolumeFraction() called but biofilm/MICP is disabled"); }
-
-    const Evaluation& calciteVolumeFraction() const
-    { throw std::logic_error("calciteVolumeFraction() called but MICP is disabled"); }
-
-    const Evaluation& biofilmMass() const
-    { throw std::logic_error("biofilmMass() called but biofilm/MICP is disabled"); }
-
-    const Evaluation& calciteMass() const
-    { throw std::logic_error("calciteMass() called but MICP is disabled"); }
-
-    const Evaluation& permFactor() const
-    { throw std::logic_error("permFactor() called but biofilm/MICP is disabled"); }
 };
+
+template <class, bool>
+class BlackOilBioeffectsExtensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -651,13 +629,15 @@ public:
  * \brief Provides the bioeffects specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableBioeffectsV = getPropValue<TypeTag, Properties::EnableBioeffects>()>
-class BlackOilBioeffectsExtensiveQuantities
+template <class TypeTag>
+class BlackOilBioeffectsExtensiveQuantities<TypeTag, true>
 {
 };
 
 template <class TypeTag>
-class BlackOilBioeffectsExtensiveQuantities<TypeTag, false>{};
+class BlackOilBioeffectsExtensiveQuantities<TypeTag, false>
+{
+};
 
 } // namespace Opm
 

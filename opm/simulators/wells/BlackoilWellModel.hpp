@@ -125,6 +125,7 @@ template<class Scalar> class WellContributions;
             static constexpr bool has_energy_ = (energyModuleType_ == EnergyModules::FullyImplicitThermal);
             static constexpr bool has_micp_ = Indices::enableMICP;
             static constexpr bool has_geochem_ = getPropValue<TypeTag, Properties::EnableGeochemistry>();
+            static constexpr bool has_bioeffects_ = getPropValue<TypeTag, Properties::EnableBioeffects>();
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -132,7 +133,7 @@ template<class Scalar> class WellContributions;
             using BVector = Dune::BlockVector<VectorBlockType>;
 
             using PolymerModule = BlackOilPolymerModule<TypeTag>;
-            using BioeffectsModule = BlackOilBioeffectsModule<TypeTag>;
+            using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, has_bioeffects_>;
 
             // For the conversion between the surface volume rate and reservoir voidage rate
             using RateConverterType = RateConverter::
