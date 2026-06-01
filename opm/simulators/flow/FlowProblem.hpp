@@ -121,7 +121,7 @@ protected:
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     enum { enableFullyImplicitThermal = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };

@@ -86,8 +86,8 @@ class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/true>
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    static constexpr bool enableDispersion = true;
     enum { enableMICP = Indices::enableMICP };
 
     static constexpr unsigned contiMicrobialEqIdx = Indices::contiMicrobialEqIdx;
@@ -318,7 +318,7 @@ class BlackOilDispersionIntensiveQuantities<TypeTag, /*enableDispersion=*/true>
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    static constexpr bool enableDispersion = true;
 
 public:
     /*!
