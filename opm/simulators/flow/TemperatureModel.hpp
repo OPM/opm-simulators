@@ -76,7 +76,7 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
 

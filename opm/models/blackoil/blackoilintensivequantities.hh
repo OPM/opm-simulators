@@ -97,7 +97,7 @@ class BlackOilIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };

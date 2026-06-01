@@ -88,7 +88,7 @@ class BlackOilFoamModule<TypeTag, true>
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
 public:
     //! \brief Set parameters.
@@ -382,7 +382,7 @@ class BlackOilFoamIntensiveQuantities<TypeTag, /*enableFoam=*/true>
 
     using FoamModule = BlackOilFoamModule<TypeTag, true>;
 
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
