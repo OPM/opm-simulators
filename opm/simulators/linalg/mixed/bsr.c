@@ -185,6 +185,79 @@ void bsr_vdspmv3(bsr_matrix *A, const double *x, double *y)
 }
 
 
+void bsr_vmspmv4(bsr_matrix *A, const double *x, double *y)
+{
+    int nrows = A->nrows;
+    int *rowptr=A->rowptr;
+    int *colidx=A->colidx;
+    const float *data=A->flt;
+
+    const int b=4;
+
+    __m256d mm_zeros =_mm256_setzero_pd();
+    for(int i=0;i<nrows;i++)
+    {
+        __m256d vA[4];
+        for(int k=0;k<4;k++) vA[k] = mm_zeros;
+        for(int k=rowptr[i];k<rowptr[i+1];k++)
+        {
+            const float *AA=data+16*k;
+
+            int j = colidx[k];
+            __m256d vx = _mm256_loadu_pd(x+b*j);
+
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 0))*_mm256_permute4x64_pd(vx,0b00000000);
+            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 4))*_mm256_permute4x64_pd(vx,0b01010101);
+            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 8))*_mm256_permute4x64_pd(vx,0b10101010);
+            vA[3] += _mm256_cvtps_pd(_mm_loadu_ps(AA+12))*_mm256_permute4x64_pd(vx,0b11111111);
+        }
+
+        // sum over columns
+        __m256d vz = vA[0] + vA[1] + vA[2] + vA[3];
+
+        double *y_i = y+b*i;
+        _mm256_storeu_pd(y_i,vz);
+    }
+}
+
+
+void bsr_vmspumv4(bsr_matrix *A, const double *x, double *y, double alpha)
+{
+    int nrows = A->nrows;
+    int *rowptr=A->rowptr;
+    int *colidx=A->colidx;
+    const float *data=A->flt;
+
+    const int b=4;
+
+    __m256d valpha = _mm256_set1_pd(alpha);
+
+    __m256d mm_zeros =_mm256_setzero_pd();
+    for(int i=0;i<nrows;i++)
+    {
+        __m256d vA[4];
+        for(int k=0;k<4;k++) vA[k] = mm_zeros;
+        for(int k=rowptr[i];k<rowptr[i+1];k++)
+        {
+            const float *AA=data+16*k;
+
+            int j = colidx[k];
+            __m256d vx = _mm256_loadu_pd(x+b*j);
+
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 0))*_mm256_permute4x64_pd(vx,0b00000000);
+            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 4))*_mm256_permute4x64_pd(vx,0b01010101);
+            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(AA+ 8))*_mm256_permute4x64_pd(vx,0b10101010);
+            vA[3] += _mm256_cvtps_pd(_mm_loadu_ps(AA+12))*_mm256_permute4x64_pd(vx,0b11111111);
+        }
+
+        // sum over columns
+        __m256d vz = vA[0] + vA[1] + vA[2] + vA[3];
+
+        double *y_i = y+b*i;
+        vz = _mm256_loadu_pd(y_i) + valpha*vz;
+        _mm256_storeu_pd(y_i,vz);
+    }
+}
 
 void bsr_downcast(bsr_matrix *M)
 {
