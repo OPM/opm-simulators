@@ -248,6 +248,7 @@ public:
         this->extractors_.clear();
         this->blockExtractors_.clear();
         this->extraBlockExtractors_.clear();
+        this->lgrBlockExtractors_.clear();
     }
 
     /*!
@@ -3099,6 +3100,12 @@ private:
 
         this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, handlers);
 
+        // The LGR-cell extractors reuse the same handler list -- the
+        // physics is identical, only the cell identification differs.
+        // Empty for runs without LB* requests (zero non-LGR cost).
+        this->lgrBlockExtractors_ =
+            BlockExtractor::setupLgrExecMap(this->lgrBlockData_, handlers);
+
         this->extraBlockData_.clear();
         if (reportStepNum > 0 && !isSubStep) {
             // check we need extra block pressures for RPTSCHED
@@ -3122,6 +3129,12 @@ private:
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;
     typename BlockExtractor::ExecMap extraBlockExtractors_;
+
+    // Per-LGR-cell extractor executor map.  Outer key is the grid level,
+    // inner key is the level-local linearised Cartesian cell index, so
+    // the per-DOF lookup in processElementBlockData short-circuits O(1)
+    // on levels with no LB* requests.  Empty for non-LGR runs.
+    typename BlockExtractor::LgrExecMap lgrBlockExtractors_;
 };
 
 } // namespace Opm
