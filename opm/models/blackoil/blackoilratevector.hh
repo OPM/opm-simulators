@@ -66,7 +66,6 @@ class BlackOilRateVector
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -82,6 +81,7 @@ class BlackOilRateVector
 
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
 
 public:
     BlackOilRateVector() : ParentType()

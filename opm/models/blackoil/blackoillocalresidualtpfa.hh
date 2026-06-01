@@ -124,7 +124,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
