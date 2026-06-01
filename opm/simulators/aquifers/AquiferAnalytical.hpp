@@ -66,7 +66,7 @@ public:
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };

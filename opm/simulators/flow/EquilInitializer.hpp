@@ -76,7 +76,7 @@ class EquilInitializer
 
     enum { dimWorld = GridView::dimensionworld };
     enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
-    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };

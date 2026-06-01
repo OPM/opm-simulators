@@ -72,9 +72,7 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
-
-
-    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
