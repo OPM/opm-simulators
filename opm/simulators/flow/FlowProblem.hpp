@@ -128,7 +128,7 @@ protected:
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     enum { enableMICP = Indices::enableMICP };
-    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
