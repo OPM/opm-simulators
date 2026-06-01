@@ -112,7 +112,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
-    enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     enum { enableMICP = Indices::enableMICP };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };

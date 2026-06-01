@@ -662,7 +662,7 @@ class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     enum { enableMICP = Indices::enableMICP };
     enum { numBioInWat = Indices::numBioInWat };
 

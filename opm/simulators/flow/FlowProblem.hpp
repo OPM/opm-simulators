@@ -117,7 +117,7 @@ protected:
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
 
-    enum { enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>() };
+    static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
