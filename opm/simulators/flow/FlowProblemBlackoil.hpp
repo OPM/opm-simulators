@@ -145,8 +145,8 @@ private:
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;

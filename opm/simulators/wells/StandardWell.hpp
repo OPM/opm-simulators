@@ -90,7 +90,7 @@ namespace Opm
         using Base::has_micp;
 
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
-        using FoamModule = BlackOilFoamModule<TypeTag>;
+        using FoamModule = BlackOilFoamModule<TypeTag, has_foam>;
         using typename Base::PressureMatrix;
 
         // number of the conservation equations

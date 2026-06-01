@@ -67,7 +67,6 @@ class BlackOilRateVector
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -82,6 +81,7 @@ class BlackOilRateVector
     using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
 
 public:
     BlackOilRateVector() : ParentType()
