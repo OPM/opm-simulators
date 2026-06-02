@@ -32,6 +32,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilbioeffectsparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -40,12 +41,8 @@
 #include <cmath>
 #include <memory>
 #include <numeric>
-#include <stdexcept>
 
 namespace Opm {
-
-template <class TypeTag, bool enableBioeffectsV>
-class BlackOilBioeffectsModule;
 
 /*!
  * \ingroup BlackOil
@@ -513,10 +510,6 @@ template <class TypeTag>
 BlackOilBioeffectsParams<typename BlackOilBioeffectsModule<TypeTag, true>::Scalar>
 BlackOilBioeffectsModule<TypeTag, true>::params_;
 
-
-template <class TypeTag, bool enableBioeffectsV>
-class BlackOilBioeffectsIntensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilBioeffectsIntensiveQuantities
@@ -611,16 +604,7 @@ protected:
     Evaluation calciteMass_;
     Evaluation permFactor_;
     Evaluation pcFactor_;
-
 };
-
-template <class TypeTag>
-class BlackOilBioeffectsIntensiveQuantities<TypeTag, false>
-{
-};
-
-template <class, bool>
-class BlackOilBioeffectsExtensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -631,11 +615,6 @@ class BlackOilBioeffectsExtensiveQuantities;
  */
 template <class TypeTag>
 class BlackOilBioeffectsExtensiveQuantities<TypeTag, true>
-{
-};
-
-template <class TypeTag>
-class BlackOilBioeffectsExtensiveQuantities<TypeTag, false>
 {
 };
 

@@ -28,7 +28,7 @@
 #ifndef EWOMS_BLACK_OIL_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_BLACK_OIL_EXTENSIVE_QUANTITIES_HH
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>

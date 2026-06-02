@@ -30,7 +30,7 @@
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 

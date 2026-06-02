@@ -732,6 +732,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilmeanings.hh
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilmoduleparams.hh
+  opm/models/blackoil/blackoilmodules.hpp
   opm/models/blackoil/blackoilnewtonmethod.hpp
   opm/models/blackoil/blackoilnewtonmethodparams.hpp
   opm/models/blackoil/blackoilonephaseindices.hh

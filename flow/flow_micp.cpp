@@ -21,6 +21,7 @@
 #include <opm/grid/CpGrid.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>

@@ -2660,7 +2660,7 @@ private:
                                              model.dofTotalVolume(ectx.globalDofIdx);
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }
@@ -2674,7 +2674,7 @@ private:
                                              model.dofTotalVolume(ectx.globalDofIdx);
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }
@@ -2688,7 +2688,7 @@ private:
                                              model.dofTotalVolume(ectx.globalDofIdx);
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }
@@ -2701,7 +2701,7 @@ private:
                                             getValue(ectx.intQuants.biofilmMass());
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }
@@ -2714,7 +2714,7 @@ private:
                                              getValue(ectx.intQuants.calciteMass());
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }
