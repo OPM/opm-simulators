@@ -21,6 +21,7 @@
 #include <flow/flow_blackoil.hpp>
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
 
 #include <opm/simulators/flow/Main.hpp>
 

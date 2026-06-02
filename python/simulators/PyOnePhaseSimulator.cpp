@@ -18,8 +18,9 @@
 */
 #include "config.h"
 
-#include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
 
 #include <opm/simulators/flow/python/PyOnePhaseSimulator.hpp>
 // NOTE: This file will be generated at compile time and placed in the build directory

@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
 
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
 // NOTE: This file will be generated at compile time and placed in the build directory

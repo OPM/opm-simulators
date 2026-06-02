@@ -53,23 +53,6 @@ namespace Opm {
  * \brief Provides the auxiliary methods required for consideration of the
  * diffusion equation.
  */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionModule;
-
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::BlackOilDiffusionModule
- */
-template <class TypeTag>
-class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDiffusionModule
- */
 template <class TypeTag>
 class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 {
@@ -330,20 +313,6 @@ BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
  * \brief Provides the volumetric quantities required for the
  *        calculation of molecular diffusive fluxes.
  */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionIntensiveQuantities;
-
-/*!
- * \copydoc Opm::DiffusionIntensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::DiffusionIntensiveQuantities
- */
 template <class TypeTag>
 class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
@@ -522,20 +491,6 @@ private:
  * \class Opm::BlackOilDiffusionExtensiveQuantities
  *
  * \brief Provides the quantities required to calculate diffusive mass fluxes.
- */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::DiffusionExtensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDiffusionExtensiveQuantities
  */
 template <class TypeTag>
 class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
