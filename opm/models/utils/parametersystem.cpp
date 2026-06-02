@@ -139,7 +139,7 @@ std::string parseKey(std::string& s)
 {
     const auto it = std::ranges::find_if(s,
                                          [](const char ch)
-                                         { return std::isspace(ch) || ch == '='; });
+                                         { return std::isspace(ch) != 0 || ch == '='; });
     std::string ret {s.begin(), it};
     s.erase(s.begin(), it);
     return ret;
@@ -222,7 +222,7 @@ void printParamUsage(std::ostream& os,
     std::string cmdLineName = "-";
     const std::string camelCaseName = paramInfo.paramName;
     for (unsigned i = 0; i < camelCaseName.size(); ++i) {
-        if (isupper(camelCaseName[i])) {
+        if (isupper(camelCaseName[i]) != 0) {
             cmdLineName += "-";
         }
         cmdLineName += static_cast<char>(std::tolower(camelCaseName[i]));
@@ -310,7 +310,7 @@ void removeLeadingSpace(std::string& s)
 {
     s.erase(s.begin(),
             std::ranges::find_if(s,
-                                 [](const char ch) { return !std::isspace(ch); }));
+                                 [](const char ch) { return std::isspace(ch) == 0; }));
 }
 
 std::string transformKey(const std::string& s,
@@ -323,7 +323,7 @@ std::string transformKey(const std::string& s,
         throw std::runtime_error(errorPrefix + "Empty parameter names are invalid");
     }
 
-    if (!std::isalpha(s[0])) {
+    if (std::isalpha(s[0]) == 0) {
         throw std::runtime_error(errorPrefix +" Parameter name '" + s +
                                  "' is invalid: First character must be a letter");
     }
@@ -338,12 +338,12 @@ std::string transformKey(const std::string& s,
     for (unsigned i = 1; i < s.size(); ++i) {
         if (s[i] == '-') {
             ++i;
-            if (s.size() <= i || !std::isalpha(s[i])) {
+            if (s.size() <= i || std::isalpha(s[i]) == 0) {
                 throw std::runtime_error(errorPrefix + "Invalid parameter name '" + s + "'");
             }
             result += static_cast<char>(std::toupper(s[i]));
         }
-        else if (!std::isalnum(s[i])) {
+        else if (std::isalnum(s[i]) == 0) {
             throw std::runtime_error(errorPrefix + "Invalid parameter name '" + s + "'");
         }
         else {
@@ -690,7 +690,7 @@ std::string parseCommandLineOptions(int argc,
         // "abc"
 
         // There is nothing after the '-'
-        if (argv[i][2] == 0 || !std::isalpha(argv[i][2])) {
+        if (argv[i][2] == 0 || std::isalpha(argv[i][2]) == 0) {
             std::ostringstream oss;
             oss << "Parameter name of argument " << i
                 << " ('" << argv[i] << "') "
