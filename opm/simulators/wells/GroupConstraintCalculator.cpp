@@ -654,6 +654,20 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 bottomGroupHasIndividualControl_()
 {
+    // An eligible master group (GCONPROD item 8 = YES) on individual (ORAT/RATE
+    // marker) control participates in its parent's guide-rate distribution and is
+    // therefore NOT subtracted from the parent's target reduction -- see the
+    // isMasterGroupEligibleForGuideRate override in
+    // GroupStateHelper::updateGroupTargetReductionRecursive_, which sets
+    // individual_control = false there.  Since its rate never entered the
+    // reduction, the addback in calculateGroupConstraint() must not re-add it.
+    // Mirror the reduction's treatment here so the addback is skipped,
+    // keeping the two consistent.
+    if (this->isProductionConstraint()
+        && this->groupStateHelper().isMasterGroupEligibleForGuideRate(
+               this->bottom_group_.name())) {
+        return false;
+    }
     return !this->hasHigherLevelControlOrNoLimit(this->bottom_group_);
 }
 

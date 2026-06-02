@@ -128,9 +128,14 @@ guideRateSum(const Group& group,
     for (const std::string& child_group : group.groups()) {
         bool included = (child_group == always_included_child);
         if (is_producer_) {
-            const auto ctrl = this->groupStateHelper().groupState().production_control(child_group);
-            included |= (ctrl == Group::ProductionCMode::FLD) ||
-                        (ctrl == Group::ProductionCMode::NONE);
+            included |= this->groupStateHelper().groupState().has_field_or_none_control(child_group);
+            // A reservoir-coupling master group with GCONPROD item 8 = YES is eligible
+            // to participate in its parent's guide-rate sum even while on individual
+            // control.  Without this, multi-sibling groups on individual control are
+            // dropped from each other's denominator, giving each ~the full parent
+            // share.  Eligibility is necessary but not sufficient: the capped-state is
+            // still enforced by the GCW gate below (effective GCW = 0 -> excluded).
+            included |= this->groupStateHelper().isMasterGroupEligibleForGuideRate(child_group);
         } else {
             const auto ctrl = this->groupStateHelper().groupState().injection_control(child_group,
                                                                    this->injection_phase_);

@@ -59,11 +59,37 @@ public:
     void addSlaveActivationDate(double date) { this->slave_activation_dates_.push_back(date); }
     void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+
+    /// @brief Effective group-controlled-wells (GCW) count for a master group,
+    ///   used by guide-rate distribution independently of the group's production
+    ///   control mode.
+    /// @details Set by RescoupConstraintsCalculator during master-group constraint
+    ///   calculation.  A participating master group (GCONPROD item 8
+    ///   RESPOND_TO_PARENT = YES) defaults to 1 so it is counted in the parent's
+    ///   guide-rate sum even while on individual control; it is set to 0
+    ///   when capped at its slave's potential or when its slave is inactive.  See
+    ///   GroupStateHelper::updateGroupControlledWellsRecursive_ for the reader.
+    /// @return The stored effective GCW, or 1 if the group has no explicit entry
+    ///   (the participating-and-uncapped default).
+    int effectiveGCW(const std::string& group_name) const {
+        const auto it = this->effective_gcw_.find(group_name);
+        return (it == this->effective_gcw_.end()) ? 1 : it->second;
+    }
+    void setEffectiveGCW(const std::string& group_name, int value) {
+        this->effective_gcw_[group_name] = value;
+    }
+
+    /// @brief Clear all effective-GCW entries.  Call at the start of each
+    ///   master-group constraint calculation before any entries are set, so stale
+    ///   caps from a previous sync step do not leak in.
+    void resetEffectiveGCW() { this->effective_gcw_.clear(); }
+
     double getActivationDate() const { return this->activation_date_; }
     int getArgc() const { return this->argc_; }
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
+
     /// @brief Get the master group names associated with a slave reservoir by index.
     ///
     /// This method retrieves the list of master group names that are associated with a
@@ -77,6 +103,7 @@ public:
     ///       falling back to O(log n) map lookup for error handling.
     /// @see RescoupConstraintsCalculator::calculateAndSendTargets() for primary usage context
     const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const;
+
     /// @brief Get the canonical index of the master group for a given slave name and master group name.
     /// The index is used to map slave group data sent from the slaves, like potentials to the corresponding
     /// master group.
@@ -85,6 +112,7 @@ public:
     /// @return The canonical index of the master group for the given slave name and master group name.
     std::size_t getMasterGroupCanonicalIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
+
     Scalar getMasterGroupRate(
         const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind) const;
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
@@ -106,6 +134,7 @@ public:
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
     bool isMasterGroup(const std::string &group_name) const;
+
     /// @brief Check if the master needs to receive production data from the slaves.
     /// @details This flag is used to control reservoir coupling synchronization of
     ///          summary data sent from the slaves to the master process.
@@ -113,10 +142,12 @@ public:
     ///          their production data.
     /// @return true if the master needs to receive production data from the slaves, false if not
     bool needsSlaveDataReceive() const;
+
     /// @brief Set whether the master needs to receive production data from the slaves.
     /// @details See needsSlaveDataReceive() for details.
     /// @param value true if the master needs to receive production data from the slaves, false if not
     void setNeedsSlaveDataReceive(bool value);
+
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void maybeActivate(int report_step);
@@ -138,6 +169,7 @@ public:
     void sendNextTimeStepToSlaves(double next_time_step) {
         this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
     }
+
     /// @brief Send a single boolean to a slave telling it whether the master
     ///   will iterate the cross-rescoup network exchange this sync timestep.
     void sendCoupledNetworkActiveStatusToSlave(
@@ -148,6 +180,7 @@ public:
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets
     ) const;
+
     /// @brief Send master-computed network-leaf node pressures to a slave.
     void sendMasterGroupNodePressuresToSlave(
         std::size_t slave_idx,
@@ -158,6 +191,7 @@ public:
         std::size_t num_injection_targets,
         std::size_t num_production_constraints
     ) const;
+
     /// @brief Send the count of master-computed network-leaf node pressures
     ///   plus the master's `is_final` flag for this sync-step iteration.
     void sendNumMasterGroupNodePressuresToSlave(
@@ -183,6 +217,7 @@ public:
     void setSlaveNextReportTimeOffset(int index, double offset);
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
     bool slaveIsActivated(int index) const { return this->slave_activation_status_[index] != 0; }
+
     /// @brief Whether the master syncs with slaves at slave report-step boundaries
     ///        (true) or at every master actual time step (false, default CLI flag value).
     /// @details Set from the --rescoup-sync-at-report-steps CLI flag in the
@@ -219,9 +254,11 @@ private:
     char **argv_;
     // Whether the master process has activated the reservoir coupling
     bool activated_{false};
+
     // NOTE: MPI_Comm is just an integer handle, so we can just copy it into the vector
     std::vector<MPI_Comm> master_slave_comm_; // MPI communicators for the slave processes
     std::vector<std::string> slave_names_;
+
     // The start dates are in whole seconds since the epoch. We use a double to store the value
     // since both schedule_.getStartTime() and schedule_.stepLength(report_step) returns
     // a double value representing whole seconds.
@@ -229,33 +266,48 @@ private:
     // which can include milliseconds. The double values are also convenient when we need to
     // to add fractions of seconds for sub steps to the start date.
     std::vector<double> slave_start_dates_;
+
     // The activation dates are in whole seconds since the epoch.
     std::vector<double> slave_activation_dates_;
     double activation_date_{0.0};  // The date when SLAVES is encountered in the schedule
+
     // A mapping from a slave name to the master group name order used when slaves send
     //  potentials to the master process.
     std::map<std::string, std::map<std::string, std::size_t>> master_group_name_order_;
+
+    // Effective group-controlled-wells count per master group, used by guide-rate
+    // distribution independently of the production control mode (see effectiveGCW()).
+    // Reset and repopulated on each master-group constraint calculation.
+    std::map<std::string, int> effective_gcw_;
+
     mutable ReservoirCoupling::Logger logger_;
+
     // Whether the slave has activated. Unfortunatley, we cannot use std::vector<bool> since
     // it is not supported to get a pointer to the underlying array of bools needed
     // with MPI broadcast().
     std::vector<std::uint8_t> slave_activation_status_;
+
     // A mapping from master group names to slave names
     std::map<std::string, std::string> master_group_slave_names_;
+
     // A mapping from slave names to master group names
     // NOTE: The order of the master groups in the vector is important,
     //   as the slaves will communicate the indices of the master groups in
     //   the vector instead of the group names themselves.
     // NOTE: This map is created by ReservoirCouplingSpawnSlaves.cpp
     std::map<std::string, std::vector<std::string>> slave_name_to_master_groups_map_;
+
     // Direct index-based lookup for performance optimization (O(1) instead of O(log n))
     // This vector is populated in parallel with slave_name_to_master_groups_map_
     // and maintains the same ordering as slave_names_ vector for consistent indexing
     std::vector<std::vector<std::string>> slave_idx_to_master_groups_;
+
     // Stores data that changes for a single report step or for timesteps within a report step.
     std::unique_ptr<ReservoirCouplingMasterReportStep<Scalar>> report_step_data_{nullptr};
+
     // Handles time stepping for the master and slaves
     std::unique_ptr<ReservoirCouplingTimeStepper<Scalar>> time_stepper_{nullptr};
+
     // CLI flag --rescoup-sync-at-report-steps.  When true, the master syncs with
     // its slaves at report-step boundaries (RSYNC).  When false
     // (default), it syncs at every master time step (TSYNC).
