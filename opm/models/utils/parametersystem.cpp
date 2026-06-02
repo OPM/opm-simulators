@@ -45,7 +45,9 @@
 #include <charconv>
 #include <fstream>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
+#include <string_view>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -359,16 +361,23 @@ bool handleHelp(const std::string& helpPreamble, int argc, const char** argv)
     if (helpPreamble.empty()) {
         return false;
     }
-    for (int i = 1; i < argc; ++i) {
-        if (std::string("-h") == argv[i] ||
-            std::string("--help") == argv[i]) {
-            Opm::Parameters::printUsage(helpPreamble, std::cout, /*errorMsg=*/"");
-            return true;
+    auto args = std::views::counted(argv, argc)
+        | std::views::drop(1) // Skip argv[0]
+        | std::views::transform([](const char* p) { return std::string_view(p); });
+
+    auto first_help = std::ranges::find_if(args, [](std::string_view arg) {
+        return arg == "-h" || arg == "--help" || arg == "--help-all";
+    });
+
+    if (first_help != std::ranges::end(args)) {
+        if (*first_help == "--help-all") {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, "", true);
         }
-        if (std::string("--help-all") == argv[i]) {
-            Opm::Parameters::printUsage(helpPreamble, std::cout, /*errorMsg=*/"",  true);
-            return true;
+        else {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, "");
         }
+
+        return true;
     }
 
     return false;
