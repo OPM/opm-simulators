@@ -63,8 +63,33 @@ mv(const Vector& x, Vector& y) const
     else if constexpr(b==4) bsr_vmspmv4(M_, &x[0][0], &y[0][0]);
     else
     {
-        printf("MixedMatrixWrapper::mv only supports block sizes < 5!\n");
-        getchar();
+        int nrows = M_->nrows;
+        int *rowptr=M_->rowptr;
+        int *colidx=M_->colidx;
+        const float *data=M_->flt;
+
+        int bb = b*b;
+        double yy[bb];
+        for(int i=0;i<nrows;i++)
+        {
+            for(int k=0;k<bb;k++) yy[k] = 0.0;
+            for(int k=rowptr[i];k<rowptr[i+1];k++)
+            {
+                const float *AA=data+bb*k;
+
+                int j = colidx[k];
+                double const *xx = &x[0][0]+b*j;
+                for(int n=0;n<b;n++) for(int m=0;m<b;m++) yy[m+b*n] += AA[m+b*n]*xx[n];
+            }
+
+            // sum over columns
+            double z[b];
+            for(int m=0;m<b;m++) z[m] = yy[m];
+            for(int n=1;n<b;n++) for(int m=0;m<b;m++) z[m] += yy[m+b*n];
+
+            double *y_i = &y[0][0] + b*i;
+            for(int m=0;m<b;m++) y_i[m] = z[m];
+        }
     }
 }
 
@@ -89,15 +114,40 @@ void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
     // scaled mixed-precision block spmv with update (y += alpha *  M.x)
-    //bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
     if      constexpr(b==1){printf("MixedMatrixWrapper::usmv does not support block size == 1!\n");getchar();}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==4) bsr_vmspumv4(M_, &x[0][0], &y[0][0], alpha);
     else
     {
-        printf("MixedMatrixWrapper::usmv only supports block sizes < 5!\n");
-        getchar();
+        int nrows = M_->nrows;
+        int *rowptr=M_->rowptr;
+        int *colidx=M_->colidx;
+        const float *data=M_->flt;
+
+        int bb = b*b;
+        double yy[bb];
+        for(int i=0;i<nrows;i++)
+        {
+            for(int k=0;k<bb;k++) yy[k] = 0.0;
+            for(int k=rowptr[i];k<rowptr[i+1];k++)
+            {
+                const float *AA=data+bb*k;
+
+                int j = colidx[k];
+                double const *xx = &x[0][0]+b*j;
+                for(int n=0;n<b;n++) for(int m=0;m<b;m++) yy[m+b*n] += AA[m+b*n]*xx[n];
+            }
+
+            // sum over columns
+            double z[b];
+            for(int m=0;m<b;m++) z[m] = yy[m];
+            for(int n=1;n<b;n++) for(int m=0;m<b;m++) z[m] += yy[m+b*n];
+
+            double *y_i = &y[0][0] + b*i;
+            for(int m=0;m<b;m++) y_i[m] += alpha*z[m];
+        }
+
     }
 }
 
