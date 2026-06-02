@@ -45,7 +45,9 @@
 #include <charconv>
 #include <fstream>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
+#include <string_view>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -139,7 +141,7 @@ std::string parseKey(std::string& s)
 {
     const auto it = std::ranges::find_if(s,
                                          [](const char ch)
-                                         { return std::isspace(ch) || ch == '='; });
+                                         { return std::isspace(ch) != 0 || ch == '='; });
     std::string ret {s.begin(), it};
     s.erase(s.begin(), it);
     return ret;
@@ -222,7 +224,7 @@ void printParamUsage(std::ostream& os,
     std::string cmdLineName = "-";
     const std::string camelCaseName = paramInfo.paramName;
     for (unsigned i = 0; i < camelCaseName.size(); ++i) {
-        if (isupper(camelCaseName[i])) {
+        if (isupper(camelCaseName[i]) != 0) {
             cmdLineName += "-";
         }
         cmdLineName += static_cast<char>(std::tolower(camelCaseName[i]));
@@ -310,7 +312,7 @@ void removeLeadingSpace(std::string& s)
 {
     s.erase(s.begin(),
             std::ranges::find_if(s,
-                                 [](const char ch) { return !std::isspace(ch); }));
+                                 [](const char ch) { return std::isspace(ch) == 0; }));
 }
 
 std::string transformKey(const std::string& s,
@@ -323,7 +325,7 @@ std::string transformKey(const std::string& s,
         throw std::runtime_error(errorPrefix + "Empty parameter names are invalid");
     }
 
-    if (!std::isalpha(s[0])) {
+    if (std::isalpha(s[0]) == 0) {
         throw std::runtime_error(errorPrefix +" Parameter name '" + s +
                                  "' is invalid: First character must be a letter");
     }
@@ -338,12 +340,12 @@ std::string transformKey(const std::string& s,
     for (unsigned i = 1; i < s.size(); ++i) {
         if (s[i] == '-') {
             ++i;
-            if (s.size() <= i || !std::isalpha(s[i])) {
+            if (s.size() <= i || std::isalpha(s[i]) == 0) {
                 throw std::runtime_error(errorPrefix + "Invalid parameter name '" + s + "'");
             }
             result += static_cast<char>(std::toupper(s[i]));
         }
-        else if (!std::isalnum(s[i])) {
+        else if (std::isalnum(s[i]) == 0) {
             throw std::runtime_error(errorPrefix + "Invalid parameter name '" + s + "'");
         }
         else {
@@ -352,6 +354,33 @@ std::string transformKey(const std::string& s,
     }
 
     return result;
+}
+
+bool handleHelp(const std::string& helpPreamble, int argc, const char** argv)
+{
+    if (helpPreamble.empty()) {
+        return false;
+    }
+    auto args = std::views::counted(argv, argc)
+        | std::views::drop(1) // Skip argv[0]
+        | std::views::transform([](const char* p) { return std::string_view(p); });
+
+    auto first_help = std::ranges::find_if(args, [](std::string_view arg) {
+        return arg == "-h" || arg == "--help" || arg == "--help-all";
+    });
+
+    if (first_help != std::ranges::end(args)) {
+        if (*first_help == "--help-all") {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, "", true);
+        }
+        else {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, "");
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 } // anonymous namespace
@@ -640,19 +669,16 @@ std::string parseCommandLineOptions(int argc,
                                     const std::string& helpPreamble)
 {
     // handle the "--help" parameter
-    if (!helpPreamble.empty()) {
-        for (int i = 1; i < argc; ++i) {
-            if (std::string("-h") == argv[i] ||
-                std::string("--help") == argv[i]) {
-                printUsage(helpPreamble, std::cout, /*errorMsg=*/"");
-                return "Help called";
-            }
-            if (std::string("--help-all") == argv[i]) {
-                printUsage(helpPreamble, std::cout, /*errorMsg=*/"",  true);
-                return "Help called";
-            }
-        }
+    if (handleHelp(helpPreamble, argc, argv)) {
+        return "Help called";
     }
+
+    auto handleUsage = [&helpPreamble](const std::string& msg)
+    {
+        if (!helpPreamble.empty()) {
+            printUsage(helpPreamble, std::cerr, msg);
+        }
+    };
 
     std::set<std::string> seenKeys;
     int numPositionalParams = 0;
@@ -663,17 +689,17 @@ std::string parseCommandLineOptions(int argc,
             || argv[i][1] != '-')
         {
             std::string errorMsg;
-            int numHandled = posArgCallback([](const std::string& k, const std::string& v)
-                                            {
-                                                MetaData::tree()[k] = v;
-                                            }, seenKeys, errorMsg,
-                                            argc, argv, i, numPositionalParams);
+            const int numHandled = posArgCallback([](const std::string& k, const std::string& v)
+                                                    { MetaData::tree()[k] = v; },
+                                                  seenKeys,
+                                                  errorMsg,
+                                                  argc,
+                                                  argv,
+                                                  i,
+                                                  numPositionalParams);
 
             if (numHandled < 1) {
-                if (!helpPreamble.empty()) {
-                    printUsage(helpPreamble, std::cerr, errorMsg);
-                }
-
+                handleUsage(errorMsg);
                 return errorMsg;
             }
             else {
@@ -690,16 +716,13 @@ std::string parseCommandLineOptions(int argc,
         // "abc"
 
         // There is nothing after the '-'
-        if (argv[i][2] == 0 || !std::isalpha(argv[i][2])) {
+        if (argv[i][2] == 0 || std::isalpha(argv[i][2]) == 0) {
             std::ostringstream oss;
             oss << "Parameter name of argument " << i
                 << " ('" << argv[i] << "') "
                 << "is invalid because it does not start with a letter.";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, oss.str());
-            }
-
+            handleUsage(oss.str());
             return oss.str();
         }
 
@@ -713,9 +736,7 @@ std::string parseCommandLineOptions(int argc,
                                     "' specified multiple times as a "
                                     "command line parameter";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, msg);
-            }
+            handleUsage(msg);
             return msg;
         }
         seenKeys.insert(paramName);
@@ -725,9 +746,7 @@ std::string parseCommandLineOptions(int argc,
                                     "' is missing a value. "
                                     " Please use " + argv[i] + "=value.";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, msg);
-            }
+            handleUsage(msg);
             return msg;
         }
 
