@@ -354,6 +354,26 @@ std::string transformKey(const std::string& s,
     return result;
 }
 
+bool handleHelp(const std::string& helpPreamble, int argc, const char** argv)
+{
+    if (helpPreamble.empty()) {
+        return false;
+    }
+    for (int i = 1; i < argc; ++i) {
+        if (std::string("-h") == argv[i] ||
+            std::string("--help") == argv[i]) {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, /*errorMsg=*/"");
+            return true;
+        }
+        if (std::string("--help-all") == argv[i]) {
+            Opm::Parameters::printUsage(helpPreamble, std::cout, /*errorMsg=*/"",  true);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 } // anonymous namespace
 
 namespace Opm::Parameters {
@@ -640,18 +660,8 @@ std::string parseCommandLineOptions(int argc,
                                     const std::string& helpPreamble)
 {
     // handle the "--help" parameter
-    if (!helpPreamble.empty()) {
-        for (int i = 1; i < argc; ++i) {
-            if (std::string("-h") == argv[i] ||
-                std::string("--help") == argv[i]) {
-                printUsage(helpPreamble, std::cout, /*errorMsg=*/"");
-                return "Help called";
-            }
-            if (std::string("--help-all") == argv[i]) {
-                printUsage(helpPreamble, std::cout, /*errorMsg=*/"",  true);
-                return "Help called";
-            }
-        }
+    if (handleHelp(helpPreamble, argc, argv)) {
+        return "Help called";
     }
 
     std::set<std::string> seenKeys;
