@@ -19,6 +19,7 @@
 #include <flow/flow_biofilm.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>

@@ -32,7 +32,7 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilboundaryratevector.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
@@ -59,6 +59,8 @@
 #include <opm/models/io/vtkblackoilmodule.hpp>
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
+
+#include <opm/models/utils/propertysystem.hh>
 
 #include <cassert>
 #include <istream>
