@@ -97,8 +97,6 @@ class BlackOilIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
-    enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
@@ -109,8 +107,10 @@ class BlackOilIntensiveQuantities
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool enableTemperature = energyModuleType != EnergyModules::NoTemperature;
 
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
@@ -435,12 +435,17 @@ public:
             }
             else {
                 if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                    const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                oilPhaseIdx,
-                                                                pvtRegionIdx,
-                                                                SoMax);
-                    fluidState_.setRs(min(RsMax, RsSat));
+                    if constexpr (enableExtbo) {
+                        fluidState_.setRs(min(RsMax, asImp_().rs()));
+                    }
+                    else {
+                        const Evaluation& RsSat =
+                            getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                        oilPhaseIdx,
+                                                                        pvtRegionIdx,
+                                                                        SoMax);
+                        fluidState_.setRs(min(RsMax, RsSat));
+                    }
                 }
                 else {
                     fluidState_.setRs(0.0);
@@ -453,12 +458,17 @@ public:
             }
             else {
                 if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                    const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                gasPhaseIdx,
-                                                                pvtRegionIdx,
-                                                                SoMax);
-                    fluidState_.setRv(min(RvMax, RvSat));
+                    if constexpr (enableExtbo) {
+                        fluidState_.setRv(min(RvMax, asImp_().rv()));
+                    }
+                    else {
+                        const Evaluation& RvSat =
+                            getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                        gasPhaseIdx,
+                                                                        pvtRegionIdx,
+                                                                        SoMax);
+                        fluidState_.setRv(min(RvMax, RvSat));
+                    }
                 }
                 else {
                     fluidState_.setRv(0.0);
@@ -519,11 +529,16 @@ public:
             const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
             for (int i = 0; i < nmobilities; ++i) {
-                if (enableExtbo && phaseIdx == oilPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
-                }
-                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                if constexpr (enableExtbo) {
+                    if (phaseIdx == oilPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                    }
+                    else if (phaseIdx == gasPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                    }
+                    else {
+                        (*mobilities[i])[phaseIdx] /= mu;
+                    }
                 }
                 else {
                     (*mobilities[i])[phaseIdx] /= mu;

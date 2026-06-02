@@ -88,6 +88,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableFullyImplicitThermal = 
         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
@@ -95,15 +96,16 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     using Toolbox = MathToolbox<Evaluation>;
-    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
-    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
+    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
 
 public:
     /*!
@@ -186,7 +188,9 @@ public:
         }
 
         // deal with zFracton (if present)
-        ExtboModule::addStorage(storage, intQuants);
+        if constexpr (enableExtbo) {
+            ExtboModule::addStorage(storage, intQuants);
+        }
 
         // deal with polymer (if present)
         if constexpr (enablePolymer) {
@@ -248,7 +252,9 @@ public:
         }
 
         // deal with zFracton (if present)
-        ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableExtbo) {
+            ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with polymer (if present)
         if constexpr (enablePolymer) {

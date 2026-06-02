@@ -270,12 +270,18 @@ public:
         } else {
             if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
                 OPM_TIMEBLOCK_LOCAL(UpdateSaturatedRs, Subsystem::PvtProps);
-                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            oilPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRs(min(RsMax, RsSat));
+                if constexpr (enableExtbo) {
+                    fluidState_.setRs(min(RsMax, asImp_().rs()));
+                }
+                else {
+                    const Evaluation& RsSat =
+                        FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                                oilPhaseIdx,
+                                                                pvtRegionIdx,
+                                                                SoMax);
+                    fluidState_.setRs(min(RsMax, RsSat));
+                }
+
             }
             else if constexpr (compositionSwitchEnabled) {
                 fluidState_.setRs(0.0);
@@ -288,13 +294,18 @@ public:
         } else {
             if (FluidSystem::enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
                 OPM_TIMEBLOCK_LOCAL(UpdateSaturatedRv, Subsystem::PvtProps);
-                //NB! should save the indexing for later evalustion
-                const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRv(min(RvMax, RvSat));
+                //NB! should save the indexing for later evaluation
+                if constexpr (enableExtbo) {
+                    fluidState_.setRv(min(RvMax, asImp_().rv()));
+                }
+                else {
+                    const Evaluation& RvSat =
+                        FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                                gasPhaseIdx,
+                                                                pvtRegionIdx,
+                                                                SoMax);
+                    fluidState_.setRv(min(RvMax, RvSat));
+                }
             }
             else if constexpr (compositionSwitchEnabled) {
                 fluidState_.setRv(0.0);

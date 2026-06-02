@@ -116,6 +116,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
@@ -1194,15 +1195,15 @@ private:
             Entry{PhaseEntry{&this->viscosity_,
                              [this](const unsigned phaseIdx, const Context& ectx)
                              {
-                                if (this->extboC_.allocated() && phaseIdx == oilPhaseIdx) {
-                                    return getValue(ectx.intQuants.oilViscosity());
+                                if constexpr (enableExtbo) {
+                                    if (this->extboC_.allocated() && phaseIdx == oilPhaseIdx) {
+                                        return getValue(ectx.intQuants.oilViscosity());
+                                    }
+                                    else if (this->extboC_.allocated() && phaseIdx == gasPhaseIdx) {
+                                        return getValue(ectx.intQuants.gasViscosity());
+                                    }
                                 }
-                                else if (this->extboC_.allocated() && phaseIdx == gasPhaseIdx) {
-                                    return getValue(ectx.intQuants.gasViscosity());
-                                }
-                                else {
-                                    return getValue(ectx.fs.viscosity(phaseIdx));
-                                }
+                                return getValue(ectx.fs.viscosity(phaseIdx));
                              }
                   }
             },
@@ -1597,39 +1598,41 @@ private:
             },
             Entry{[&extboC = this->extboC_](const Context& ectx)
                   {
-                      extboC.assignVolumes(ectx.globalDofIdx,
-                                           ectx.intQuants.xVolume().value(),
-                                           ectx.intQuants.yVolume().value());
-                      extboC.assignZFraction(ectx.globalDofIdx,
-                                             ectx.intQuants.zFraction().value());
+                      if constexpr (enableExtbo) {
+                          extboC.assignVolumes(ectx.globalDofIdx,
+                                               ectx.intQuants.xVolume().value(),
+                                               ectx.intQuants.yVolume().value());
+                          extboC.assignZFraction(ectx.globalDofIdx,
+                                                 ectx.intQuants.zFraction().value());
 
-                      const Scalar stdVolOil = getValue(ectx.fs.saturation(oilPhaseIdx)) *
-                                               getValue(ectx.fs.invB(oilPhaseIdx)) +
-                                               getValue(ectx.fs.saturation(gasPhaseIdx)) *
-                                               getValue(ectx.fs.invB(gasPhaseIdx)) *
-                                               getValue(ectx.fs.Rv());
-                      const Scalar stdVolGas = getValue(ectx.fs.saturation(gasPhaseIdx)) *
-                                               getValue(ectx.fs.invB(gasPhaseIdx)) *
-                                               (1.0 - ectx.intQuants.yVolume().value()) +
-                                               getValue(ectx.fs.saturation(oilPhaseIdx)) *
-                                               getValue(ectx.fs.invB(oilPhaseIdx)) *
-                                               getValue(ectx.fs.Rs()) *
-                                               (1.0 - ectx.intQuants.xVolume().value());
-                      const Scalar stdVolCo2 = getValue(ectx.fs.saturation(gasPhaseIdx)) *
-                                               getValue(ectx.fs.invB(gasPhaseIdx)) *
-                                               ectx.intQuants.yVolume().value() +
-                                               getValue(ectx.fs.saturation(oilPhaseIdx)) *
-                                               getValue(ectx.fs.invB(oilPhaseIdx)) *
-                                               getValue(ectx.fs.Rs()) *
-                                               ectx.intQuants.xVolume().value();
-                      const Scalar rhoO = FluidSystem::referenceDensity(gasPhaseIdx, ectx.pvtRegionIdx);
-                      const Scalar rhoG = FluidSystem::referenceDensity(gasPhaseIdx, ectx.pvtRegionIdx);
-                      const Scalar rhoCO2 = ectx.intQuants.zRefDensity();
-                      const Scalar stdMassTotal = 1.0e-10 + stdVolOil * rhoO + stdVolGas * rhoG + stdVolCo2 * rhoCO2;
-                      extboC.assignMassFractions(ectx.globalDofIdx,
-                                                 stdVolGas * rhoG / stdMassTotal,
-                                                 stdVolOil * rhoO / stdMassTotal,
-                                                 stdVolCo2 * rhoCO2 / stdMassTotal);
+                          const Scalar stdVolOil = getValue(ectx.fs.saturation(oilPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(oilPhaseIdx)) +
+                                                   getValue(ectx.fs.saturation(gasPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(gasPhaseIdx)) *
+                                                   getValue(ectx.fs.Rv());
+                          const Scalar stdVolGas = getValue(ectx.fs.saturation(gasPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(gasPhaseIdx)) *
+                                                   (1.0 - ectx.intQuants.yVolume().value()) +
+                                                   getValue(ectx.fs.saturation(oilPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(oilPhaseIdx)) *
+                                                   getValue(ectx.fs.Rs()) *
+                                                   (1.0 - ectx.intQuants.xVolume().value());
+                          const Scalar stdVolCo2 = getValue(ectx.fs.saturation(gasPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(gasPhaseIdx)) *
+                                                   ectx.intQuants.yVolume().value() +
+                                                   getValue(ectx.fs.saturation(oilPhaseIdx)) *
+                                                   getValue(ectx.fs.invB(oilPhaseIdx)) *
+                                                   getValue(ectx.fs.Rs()) *
+                                                   ectx.intQuants.xVolume().value();
+                          const Scalar rhoO = FluidSystem::referenceDensity(oilPhaseIdx, ectx.pvtRegionIdx);
+                          const Scalar rhoG = FluidSystem::referenceDensity(gasPhaseIdx, ectx.pvtRegionIdx);
+                          const Scalar rhoCO2 = ectx.intQuants.zRefDensity();
+                          const Scalar stdMassTotal = 1.0e-10 + stdVolOil * rhoO + stdVolGas * rhoG + stdVolCo2 * rhoCO2;
+                          extboC.assignMassFractions(ectx.globalDofIdx,
+                                                     stdVolGas * rhoG / stdMassTotal,
+                                                     stdVolOil * rhoO / stdMassTotal,
+                                                     stdVolCo2 * rhoCO2 / stdMassTotal);
+                      }
                     }, this->extboC_.allocated()
             },
             Entry{[&bioeffectsC = this->bioeffectsC_](const Context& ectx)

@@ -148,7 +148,7 @@ private:
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
@@ -215,9 +215,11 @@ public:
             DispersionModule::initFromState(vanguard.eclState());
         }
 
-        BlackOilExtboParams<Scalar> extboParams;
-        extboParams.template initFromState<enableExtbo>(vanguard.eclState());
-        ExtboModule::setParams(std::move(extboParams));
+        if constexpr (enableExtbo) {
+            BlackOilExtboParams<Scalar> extboParams;
+            extboParams.template initFromState<enableExtbo>(vanguard.eclState());
+            ExtboModule::setParams(std::move(extboParams));
+        }
 
         if constexpr (enableFoam) {
             BlackOilFoamParams<Scalar> foamParams;

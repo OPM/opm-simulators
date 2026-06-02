@@ -360,17 +360,18 @@ private:
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
-    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
 
 public:
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
@@ -391,7 +392,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::registerParameters();
         }
-        ExtboModule::registerParameters();
+        if constexpr (enableExtbo) {
+            ExtboModule::registerParameters();
+        }
         if constexpr (enablePolymer) {
             PolymerModule::registerParameters();
         }
@@ -438,8 +441,10 @@ public:
             }
         }
 
-        if (ExtboModule::primaryVarApplies(pvIdx)) {
-            return ExtboModule::primaryVarName(pvIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::primaryVarApplies(pvIdx)) {
+                return ExtboModule::primaryVarName(pvIdx);
+            }
         }
 
         if constexpr (enablePolymer) {
@@ -473,8 +478,10 @@ public:
             }
         }
 
-        if (ExtboModule::eqApplies(eqIdx)) {
-            return ExtboModule::eqName(eqIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::eqApplies(eqIdx)) {
+                return ExtboModule::eqName(eqIdx);
+            }
         }
 
         if constexpr (enablePolymer) {
@@ -521,8 +528,10 @@ public:
         }
 
         // deal with primary variables stemming from the extBO module
-        if (ExtboModule::primaryVarApplies(pvIdx)) {
-            return ExtboModule::primaryVarWeight(pvIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::primaryVarApplies(pvIdx)) {
+                return ExtboModule::primaryVarWeight(pvIdx);
+            }
         }
 
         // deal with primary variables stemming from the polymer module
@@ -602,7 +611,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::serializeEntity(asImp_(), outstream, dof);
         }
-        ExtboModule::serializeEntity(asImp_(), outstream, dof);
+        if constexpr (enableExtbo) {
+            ExtboModule::serializeEntity(asImp_(), outstream, dof);
+        }
         if constexpr (enablePolymer) {
             PolymerModule::serializeEntity(asImp_(), outstream, dof);
         }
@@ -652,7 +663,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::deserializeEntity(asImp_(), instream, dof);
         }
-        ExtboModule::deserializeEntity(asImp_(), instream, dof);
+        if constexpr (enableExtbo) {
+            ExtboModule::deserializeEntity(asImp_(), instream, dof);
+        }
         if constexpr (enablePolymer) {
             PolymerModule::deserializeEntity(asImp_(), instream, dof);
         }

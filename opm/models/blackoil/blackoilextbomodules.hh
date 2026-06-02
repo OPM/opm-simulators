@@ -54,13 +54,16 @@
 
 namespace Opm {
 
+template<class TypeTag, bool enableExtboV>
+class BlackOilExtboModule;
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model.
  */
-template <class TypeTag, bool enableExtboV = getPropValue<TypeTag, Properties::EnableExtbo>()>
-class BlackOilExtboModule
+template <class TypeTag>
+class BlackOilExtboModule<TypeTag, true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -78,7 +81,7 @@ class BlackOilExtboModule
 
     static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
     static constexpr unsigned contiZfracEqIdx = Indices::contiZfracEqIdx;
-    static constexpr unsigned enableExtbo = enableExtboV;
+    static constexpr bool enableExtbo = true;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr unsigned oilPhaseIdx = FluidSystem::oilPhaseIdx;
@@ -106,12 +109,7 @@ public:
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableExtbo) {
-            return pvIdx == zFractionIdx;
-        }
-        else {
-            return false;
-        }
+        return pvIdx == zFractionIdx;
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -131,12 +129,7 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableExtbo) {
-            return eqIdx == contiZfracEqIdx;
-        }
-        else {
-            return false;
-        }
+        return eqIdx == contiZfracEqIdx;
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -160,87 +153,83 @@ public:
     {
         using LhsEval = typename StorageType::value_type;
 
-        if constexpr (enableExtbo) {
-            if constexpr (blackoilConserveSurfaceVolume) {
-                storage[contiZfracEqIdx] =
-                        Toolbox::template decay<LhsEval>(intQuants.porosity()) *
-                        Toolbox::template decay<LhsEval>(intQuants.yVolume()) *
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
-                if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
-                    storage[contiZfracEqIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.porosity()) *
-                        Toolbox::template decay<LhsEval>(intQuants.xVolume()) *
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(oilPhaseIdx)) *
-                        Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(oilPhaseIdx));
-                }
-                // Reg. terms: Preliminary attempt to avoid singular behaviour when solvent is invading a pure water
-                //             region. Results seems insensitive to the weighting factor.
-                // TODO: Further investigations ...
-                const Scalar regWghtFactor = 1.0e-6;
+        if constexpr (blackoilConserveSurfaceVolume) {
+            storage[contiZfracEqIdx] =
+                    Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                    Toolbox::template decay<LhsEval>(intQuants.yVolume()) *
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
+            if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
                 storage[contiZfracEqIdx] +=
-                    regWghtFactor* (1.0 - Toolbox::template decay<LhsEval>(intQuants.zFraction())) +
-                                    regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.porosity()) *
-                                   Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
-                                   Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
-                storage[contiZfracEqIdx - 1] += regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.zFraction());
+                    Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                    Toolbox::template decay<LhsEval>(intQuants.xVolume()) *
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(oilPhaseIdx)) *
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(oilPhaseIdx));
             }
-            else {
-                throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
-            }
+            // Reg. terms: Preliminary attempt to avoid singular behaviour when solvent is invading a pure water
+            //             region. Results seems insensitive to the weighting factor.
+            // TODO: Further investigations ...
+            const Scalar regWghtFactor = 1.0e-6;
+            storage[contiZfracEqIdx] +=
+                regWghtFactor* (1.0 - Toolbox::template decay<LhsEval>(intQuants.zFraction())) +
+                                regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                               Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
+                               Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
+            storage[contiZfracEqIdx - 1] += regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.zFraction());
+        }
+        else {
+            throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
         }
     }
 
-    static void computeFlux([[maybe_unused]] RateVector& flux,
-                            [[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned scvfIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    static void computeFlux(RateVector& flux,
+                            const ElementContext& elemCtx,
+                            unsigned scvfIdx,
+                            unsigned timeIdx)
     {
-        if constexpr (enableExtbo) {
-            const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-            if constexpr (blackoilConserveSurfaceVolume) {
-                const unsigned inIdx = extQuants.interiorIndex();
+        if constexpr (blackoilConserveSurfaceVolume) {
+            const unsigned inIdx = extQuants.interiorIndex();
 
-                const unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
-                const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
-                const auto& fsGas = upGas.fluidState();
-                if (upIdxGas == inIdx) {
-                    flux[contiZfracEqIdx] =
-                        extQuants.volumeFlux(gasPhaseIdx) *
-                        upGas.yVolume() *
-                        fsGas.invB(gasPhaseIdx);
-                }
-                else {
-                    flux[contiZfracEqIdx] =
-                            extQuants.volumeFlux(gasPhaseIdx) *
-                            decay<Scalar>(upGas.yVolume()) *
-                            decay<Scalar>(fsGas.invB(gasPhaseIdx));
-                }
-                if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
-                    const unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
-                    const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
-                    const auto& fsOil = upOil.fluidState();
-                    if (upIdxOil == inIdx) {
-                        flux[contiZfracEqIdx] +=
-                            extQuants.volumeFlux(oilPhaseIdx) *
-                            upOil.xVolume() *
-                            fsOil.Rs() *
-                            fsOil.invB(oilPhaseIdx);
-                    }
-                    else {
-                        flux[contiZfracEqIdx] +=
-                            extQuants.volumeFlux(oilPhaseIdx) *
-                            decay<Scalar>(upOil.xVolume()) *
-                            decay<Scalar>(fsOil.Rs()) *
-                            decay<Scalar>(fsOil.invB(oilPhaseIdx));
-                    }
-                }
+            const unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
+            const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
+            const auto& fsGas = upGas.fluidState();
+            if (upIdxGas == inIdx) {
+                flux[contiZfracEqIdx] =
+                    extQuants.volumeFlux(gasPhaseIdx) *
+                    upGas.yVolume() *
+                    fsGas.invB(gasPhaseIdx);
             }
             else {
-                throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
+                flux[contiZfracEqIdx] =
+                        extQuants.volumeFlux(gasPhaseIdx) *
+                        decay<Scalar>(upGas.yVolume()) *
+                        decay<Scalar>(fsGas.invB(gasPhaseIdx));
             }
+            if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
+                const unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
+                const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
+                const auto& fsOil = upOil.fluidState();
+                if (upIdxOil == inIdx) {
+                    flux[contiZfracEqIdx] +=
+                        extQuants.volumeFlux(oilPhaseIdx) *
+                        upOil.xVolume() *
+                        fsOil.Rs() *
+                        fsOil.invB(oilPhaseIdx);
+                }
+                else {
+                    flux[contiZfracEqIdx] +=
+                        extQuants.volumeFlux(oilPhaseIdx) *
+                        decay<Scalar>(upOil.xVolume()) *
+                        decay<Scalar>(fsOil.Rs()) *
+                        decay<Scalar>(fsOil.invB(oilPhaseIdx));
+                }
+            }
+        }
+        else {
+            throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
         }
     }
 
@@ -250,9 +239,7 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar zFraction)
     {
-        if constexpr (enableExtbo) {
-            priVars[zFractionIdx] = zFraction;
-        }
+        priVars[zFractionIdx] = zFraction;
     }
 
     /*!
@@ -262,10 +249,8 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if constexpr (enableExtbo) {
-            // do a plain unchopped Newton update
-            newPv[zFractionIdx] = oldPv[zFractionIdx] - delta[zFractionIdx];
-        }
+        // do a plain unchopped Newton update
+        newPv[zFractionIdx] = oldPv[zFractionIdx] - delta[zFractionIdx];
     }
 
     /*!
@@ -292,28 +277,24 @@ public:
     template <class DofEntity>
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
-        if constexpr (enableExtbo) {
-            const unsigned dofIdx = model.dofMapper().index(dof);
+        const unsigned dofIdx = model.dofMapper().index(dof);
 
-            const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
-            outstream << priVars[zFractionIdx];
-        }
+        const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
+        outstream << priVars[zFractionIdx];
     }
 
     template <class DofEntity>
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
-        if constexpr (enableExtbo) {
-            const unsigned dofIdx = model.dofMapper().index(dof);
+        const unsigned dofIdx = model.dofMapper().index(dof);
 
-            PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
-            PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
+        PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
+        PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
-            instream >> priVars0[zFractionIdx];
+        instream >> priVars0[zFractionIdx];
 
-            // set the primary variables for the beginning of the current time step.
-            priVars1 = priVars0[zFractionIdx];
-        }
+        // set the primary variables for the beginning of the current time step.
+        priVars1 = priVars0[zFractionIdx];
     }
 
     template <typename Value>
@@ -374,9 +355,9 @@ private:
     static BlackOilExtboParams<Scalar> params_;
 };
 
-template <class TypeTag, bool enableExtboV>
-BlackOilExtboParams<typename BlackOilExtboModule<TypeTag, enableExtboV>::Scalar>
-BlackOilExtboModule<TypeTag, enableExtboV>::params_;
+template <class TypeTag>
+BlackOilExtboParams<typename BlackOilExtboModule<TypeTag, true>::Scalar>
+BlackOilExtboModule<TypeTag, true>::params_;
 
 template <class TypeTag, bool enableExtboV>
 class BlackOilExtboIntensiveQuantities;
@@ -400,7 +381,7 @@ class BlackOilExtboIntensiveQuantities<TypeTag, /*enableExtboV=*/true>
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, true>;
 
     static constexpr int zFractionIdx = Indices::zFractionIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
@@ -581,48 +562,6 @@ protected:
 template <class TypeTag>
 class BlackOilExtboIntensiveQuantities<TypeTag, false>
 {
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-
-public:
-    void zPvtUpdate_()
-    {}
-
-    void zFractionUpdate_(const ElementContext&,
-                          unsigned,
-                          unsigned)
-    {}
-
-    const Evaluation& xVolume() const
-    { throw std::runtime_error("xVolume() called but extbo is disabled"); }
-
-    const Evaluation& yVolume() const
-    { throw std::runtime_error("yVolume() called but extbo is disabled"); }
-
-    const Evaluation& oilViscosity() const
-    { throw std::runtime_error("oilViscosity() called but extbo is disabled"); }
-
-    const Evaluation& gasViscosity() const
-    { throw std::runtime_error("gasViscosity() called but extbo is disabled"); }
-
-    const Evaluation& rs() const
-    { throw std::runtime_error("rs() called but extbo is disabled"); }
-
-    const Evaluation& rv() const
-    { throw std::runtime_error("rv() called but extbo is disabled"); }
-
-    const Evaluation& zPureInvFormationVolumeFactor() const
-    { throw std::runtime_error("zPureInvFormationVolumeFactor() called but extbo is disabled"); }
-
-    const Evaluation& zFraction() const
-    { throw std::runtime_error("zFraction() called but extbo is disabled"); }
-
-    const Evaluation& zInverseFormationVolumeFactor() const
-    { throw std::runtime_error("zInverseFormationVolumeFactor() called but extbo is disabled"); }
-
-    Scalar zRefDensity() const
-    { throw std::runtime_error("zRefDensity() called but extbo is disabled"); }
 };
 
 /*!
