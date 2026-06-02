@@ -105,50 +105,6 @@ class BlackOilConvectiveMixingModule;
 template <class TypeTag>
 class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-
-public:
-    static void beginEpisode(const EclipseState&,
-                             const Schedule&,
-                             const int,
-                             ConvectiveMixingModuleParam<Scalar>&)
-    {}
-
-    template <class Context>
-    static bool active(const Context&)
-    { return false; }
-
-    static void modifyAvgDensity(Evaluation&,
-                                 const IntensiveQuantities&,
-                                 const IntensiveQuantities&,
-                                 const unsigned int,
-                                 const ConvectiveMixingModuleParam<Scalar>&)
-    {}
-
-    template <class Context>
-    static void addConvectiveMixingFlux(RateVector&,
-                                        const Context&,
-                                        unsigned,
-                                        unsigned)
-    {}
-
-    /*!
-     * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
-     *        integration point.
-     */
-    static void addConvectiveMixingFlux(RateVector&,
-                                        const IntensiveQuantities&,
-                                        const IntensiveQuantities&,
-                                        const unsigned,
-                                        const unsigned,
-                                        const Scalar,
-                                        const Scalar,
-                                        const Scalar,
-                                        const ConvectiveMixingModuleParam<Scalar>&)
-    {}
 };
 
 template <class TypeTag>

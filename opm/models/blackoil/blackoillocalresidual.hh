@@ -266,7 +266,9 @@ public:
         }
 
         // deal with convective mixing (if enabled)
-        ConvectiveMixingModule::addConvectiveMixingFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableConvectiveMixing) {
+            ConvectiveMixingModule::addConvectiveMixingFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
     }
 
     /*!
