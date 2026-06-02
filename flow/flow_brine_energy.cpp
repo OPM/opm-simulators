@@ -16,6 +16,7 @@
 */
 #include "config.h"
 
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/simulators/flow/Main.hpp>

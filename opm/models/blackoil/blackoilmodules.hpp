@@ -41,6 +41,7 @@ namespace Opm {
     template<class TypeTag> class T##ExtensiveQuantities<TypeTag, false> {};
 
 DECLARE_MODULE(BlackOilBioeffects)
+DECLARE_MODULE(BlackOilBrine)
 
 #undef DECLARE_MODULE
 

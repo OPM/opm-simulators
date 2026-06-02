@@ -36,7 +36,6 @@
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>

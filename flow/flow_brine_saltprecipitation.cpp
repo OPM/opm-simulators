@@ -19,6 +19,7 @@
 #include <flow/flow_brine_saltprecipitation.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
