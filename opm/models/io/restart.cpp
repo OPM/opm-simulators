@@ -71,7 +71,7 @@ void Restart::deserializeSectionEnd()
     std::string dummy;
     std::getline(inStream_, dummy);
     for (unsigned i = 0; i < dummy.length(); ++i) {
-        if (!std::isspace(dummy[i])) {
+        if (std::isspace(dummy[i]) == 0) {
             throw std::logic_error("Encountered unread values while deserializing");
         }
     }
