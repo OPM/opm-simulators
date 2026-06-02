@@ -30,9 +30,29 @@
 
 #include <csignal>
 #include <iostream>
-#include <string.h>             // strsignal()
+#include <unordered_map>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+namespace {
+
+const char* getSignalAbbrev(int sig)
+{
+    const auto sig_map = std::unordered_map<int, const char*>{
+        {SIGINT, "INT"},
+        {SIGILL, "ILL"},
+        {SIGABRT, "ABRT"},
+        {SIGFPE, "FPE"},
+        {SIGKILL, "KILL"},
+        {SIGSEGV, "SEGV"},
+        {SIGTERM, "TERM"},
+    };
+
+    const auto it = sig_map.find(sig);
+    return it != sig_map.end() ? it->second : "UNKNOWN";
+}
+
+}
 
 namespace Opm {
 
@@ -160,7 +180,7 @@ void resetTerminal(int signum)
 
     if (isatty(fileno(stdout)) && isatty(fileno(stdin))) {
         std::cout << "\n\nReceived signal " << signum
-                  << " (\"" << strsignal(signum) << "\")."
+                  << " (\"" << getSignalAbbrev(signum) << "\")."
                   << " Trying to reset the terminal.\n";
 
         resetTerminal();
