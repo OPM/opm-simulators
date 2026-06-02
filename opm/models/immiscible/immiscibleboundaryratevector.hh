@@ -58,7 +58,7 @@ class ImmiscibleBoundaryRateVector : public GetPropType<TypeTag, Properties::Rat
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;

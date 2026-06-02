@@ -77,7 +77,7 @@ class PvsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;

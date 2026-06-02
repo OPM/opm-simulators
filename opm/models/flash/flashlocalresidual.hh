@@ -60,7 +60,7 @@ class FlashLocalResidual: public GetPropType<TypeTag, Properties::DiscLocalResid
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
     using Toolbox = Opm::MathToolbox<Evaluation>;

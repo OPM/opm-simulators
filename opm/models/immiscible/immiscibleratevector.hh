@@ -57,7 +57,7 @@ class ImmiscibleRateVector
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using ParentType = Dune::FieldVector<Evaluation, numEq>;
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;

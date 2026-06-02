@@ -63,7 +63,7 @@ class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities
     static_assert(numPhases == 2, "The fracture module currently is only "
                                   "implemented for two fluid phases!");
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     enum { wettingPhaseIdx = MaterialLaw::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx };
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;

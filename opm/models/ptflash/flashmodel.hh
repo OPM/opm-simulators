@@ -202,7 +202,7 @@ class FlashModel
 
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 

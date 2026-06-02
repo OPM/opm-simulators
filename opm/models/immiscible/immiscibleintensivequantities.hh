@@ -66,7 +66,7 @@ class ImmiscibleIntensiveQuantities
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { saturation0Idx = Indices::saturation0Idx };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     enum { dimWorld = GridView::dimensionworld };
 
     using Toolbox = Opm::MathToolbox<Evaluation>;

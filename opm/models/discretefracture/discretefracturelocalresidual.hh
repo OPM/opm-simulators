@@ -51,7 +51,7 @@ class DiscreteFractureLocalResidual : public ImmiscibleLocalResidual<TypeTag>
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 

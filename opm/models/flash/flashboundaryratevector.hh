@@ -58,7 +58,7 @@ class FlashBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVect
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
     using Toolbox = MathToolbox<Evaluation>;
