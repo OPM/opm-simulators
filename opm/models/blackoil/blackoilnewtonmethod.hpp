@@ -38,6 +38,8 @@
 
 #include <opm/models/utils/signum.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
