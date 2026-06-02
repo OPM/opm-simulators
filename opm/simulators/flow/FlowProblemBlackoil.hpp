@@ -40,8 +40,9 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantRsDeadOilPvt.hpp>
 
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 

@@ -19,11 +19,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <opm/simulators/flow/Main.hpp>
+
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+
+#include <opm/simulators/flow/Main.hpp>
 
 namespace Opm::Properties {
 

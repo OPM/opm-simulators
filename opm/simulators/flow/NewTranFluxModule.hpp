@@ -41,12 +41,14 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/signum.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -358,7 +360,7 @@ public:
         Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
         Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
-        if constexpr(enableConvectiveMixing) {
+        if constexpr (enableConvectiveMixing) {
             ConvectiveMixingModule::modifyAvgDensity(rhoAvg, intQuantsIn, intQuantsEx, phaseIdx, moduleParams.convectiveMixingModuleParam);
         }
 

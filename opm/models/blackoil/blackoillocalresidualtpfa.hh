@@ -36,7 +36,7 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoildispersionmodule.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>

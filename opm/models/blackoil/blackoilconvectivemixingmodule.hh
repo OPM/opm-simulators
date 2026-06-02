@@ -36,6 +36,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -48,7 +49,6 @@
 namespace Opm {
 
 /*!
- * \copydoc Opm::BlackOilConvectiveMixingModule
  * \brief Provides the convective term in the transport flux for the brine
  * when convective mixing (enhanced dissolution of CO2 in brine) occurs.
  * Controlled by the regimes for a controlvolume:
@@ -59,18 +59,6 @@ namespace Opm {
  * iv) decline phase (Convection ceases at the large-scale when the CO2
  * has been completely dissolved)
  */
-
-template <class TypeTag, bool enableConvectiveMixing>
-class BlackOilConvectiveMixingModule;
-
-/*!
- * \copydoc Opm::BlackOilConvectiveMixingModule
- */
-
-template <class TypeTag>
-class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
-{
-};
 
 template <class TypeTag>
 class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
@@ -89,7 +77,8 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     enum { dimWorld = GridView::dimensionworld };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal =
+        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
@@ -345,9 +334,6 @@ public:
     }
 };
 
-template <class TypeTag, bool enableConvectiveMixingV>
-class BlackOilConvectiveMixingIntensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilConvectiveMixingIntensiveQuantities
@@ -389,11 +375,6 @@ protected:
     { return *static_cast<Implementation*>(this); }
 
     Evaluation saturatedDissolutionFactor_;
-};
-
-template <class TypeTag>
-class BlackOilConvectiveMixingIntensiveQuantities<TypeTag, false>
-{
 };
 
 }

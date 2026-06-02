@@ -19,8 +19,11 @@
 #include <flow/flow_blackoil_legacyassembly.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 namespace Opm {
 

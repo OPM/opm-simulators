@@ -20,11 +20,13 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
-#include <opm/simulators/flow/PolyhedralGridVanguard.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/PolyhedralGridVanguard.hpp>
 
 // these are not explicitly instanced in library
 #include <opm/simulators/flow/CollectDataOnIORank_impl.hpp>
