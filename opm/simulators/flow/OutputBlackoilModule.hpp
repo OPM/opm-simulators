@@ -1624,7 +1624,7 @@ private:
                                                    getValue(ectx.fs.invB(oilPhaseIdx)) *
                                                    getValue(ectx.fs.Rs()) *
                                                    ectx.intQuants.xVolume().value();
-                          const Scalar rhoO = FluidSystem::referenceDensity(gasPhaseIdx, ectx.pvtRegionIdx);
+                          const Scalar rhoO = FluidSystem::referenceDensity(oilPhaseIdx, ectx.pvtRegionIdx);
                           const Scalar rhoG = FluidSystem::referenceDensity(gasPhaseIdx, ectx.pvtRegionIdx);
                           const Scalar rhoCO2 = ectx.intQuants.zRefDensity();
                           const Scalar stdMassTotal = 1.0e-10 + stdVolOil * rhoO + stdVolGas * rhoG + stdVolCo2 * rhoCO2;
