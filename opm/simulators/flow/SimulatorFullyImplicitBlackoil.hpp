@@ -129,7 +129,8 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     using TimeStepper = AdaptiveTimeStepping<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
 

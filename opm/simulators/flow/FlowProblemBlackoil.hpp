@@ -143,25 +143,25 @@ private:
     enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
 
-    using SolventModule = BlackOilSolventModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
-    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
-    using HybridNewton = BlackOilHybridNewton<TypeTag>;
+    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
+    using ExtboModule = BlackOilExtboModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
 
-    using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
     using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
+    using HybridNewton = BlackOilHybridNewton<TypeTag>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
+
 #if HAVE_DAMARIS
     using DamarisWriterType = DamarisWriter<TypeTag>;
 #endif
-
 
 public:
     using FlowProblemType::porosity;
@@ -231,9 +231,11 @@ public:
             BioeffectsModule::setParams(std::move(bioeffectsParams));
         }
 
-        BlackOilPolymerParams<Scalar> polymerParams;
-        polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
-        PolymerModule::setParams(std::move(polymerParams));
+        if constexpr (enablePolymer) {
+            BlackOilPolymerParams<Scalar> polymerParams;
+            polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
+            PolymerModule::setParams(std::move(polymerParams));
+        }
 
         BlackOilSolventParams<Scalar> solventParams;
         solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
@@ -967,11 +969,13 @@ public:
                                          enableSolvent ? this->solventSaturation_[globalDofIdx] : 0.0,
                                          enableSolvent ? this->solventRsw_[globalDofIdx] : 0.0);
 
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
+        }
 
-        if constexpr (enablePolymerMolarWeight)
+        if constexpr (enablePolymerMolarWeight) {
             values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
+        }
 
         if constexpr (enableBrine) {
             if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {

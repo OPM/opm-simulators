@@ -132,7 +132,7 @@ template<class Scalar> class WellContributions;
             using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
             using BVector = Dune::BlockVector<VectorBlockType>;
 
-            using PolymerModule = BlackOilPolymerModule<TypeTag>;
+            using PolymerModule = BlackOilPolymerModule<TypeTag, has_polymer_>;
             using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, has_bioeffects_>;
 
             // For the conversion between the surface volume rate and reservoir voidage rate

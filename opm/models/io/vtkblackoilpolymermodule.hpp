@@ -70,7 +70,7 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
     static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
 
     using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;

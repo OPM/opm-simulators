@@ -170,7 +170,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
-        enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+        static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
         constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
 
 #if HAVE_MPI
