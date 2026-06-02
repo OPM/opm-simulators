@@ -664,6 +664,13 @@ std::string parseCommandLineOptions(int argc,
         return "Help called";
     }
 
+    auto handleUsage = [&helpPreamble](const std::string& msg)
+    {
+        if (!helpPreamble.empty()) {
+            printUsage(helpPreamble, std::cerr, msg);
+        }
+    };
+
     std::set<std::string> seenKeys;
     int numPositionalParams = 0;
     for (int i = 1; i < argc; ++i) {
@@ -673,17 +680,17 @@ std::string parseCommandLineOptions(int argc,
             || argv[i][1] != '-')
         {
             std::string errorMsg;
-            int numHandled = posArgCallback([](const std::string& k, const std::string& v)
-                                            {
-                                                MetaData::tree()[k] = v;
-                                            }, seenKeys, errorMsg,
-                                            argc, argv, i, numPositionalParams);
+            const int numHandled = posArgCallback([](const std::string& k, const std::string& v)
+                                                    { MetaData::tree()[k] = v; },
+                                                  seenKeys,
+                                                  errorMsg,
+                                                  argc,
+                                                  argv,
+                                                  i,
+                                                  numPositionalParams);
 
             if (numHandled < 1) {
-                if (!helpPreamble.empty()) {
-                    printUsage(helpPreamble, std::cerr, errorMsg);
-                }
-
+                handleUsage(errorMsg);
                 return errorMsg;
             }
             else {
@@ -706,10 +713,7 @@ std::string parseCommandLineOptions(int argc,
                 << " ('" << argv[i] << "') "
                 << "is invalid because it does not start with a letter.";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, oss.str());
-            }
-
+            handleUsage(oss.str());
             return oss.str();
         }
 
@@ -723,9 +727,7 @@ std::string parseCommandLineOptions(int argc,
                                     "' specified multiple times as a "
                                     "command line parameter";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, msg);
-            }
+            handleUsage(msg);
             return msg;
         }
         seenKeys.insert(paramName);
@@ -735,9 +737,7 @@ std::string parseCommandLineOptions(int argc,
                                     "' is missing a value. "
                                     " Please use " + argv[i] + "=value.";
 
-            if (!helpPreamble.empty()) {
-                printUsage(helpPreamble, std::cerr, msg);
-            }
+            handleUsage(msg);
             return msg;
         }
 
