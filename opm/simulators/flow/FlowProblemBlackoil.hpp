@@ -151,7 +151,7 @@ private:
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
 
     using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
@@ -237,9 +237,11 @@ public:
             PolymerModule::setParams(std::move(polymerParams));
         }
 
-        BlackOilSolventParams<Scalar> solventParams;
-        solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
-        SolventModule::setParams(std::move(solventParams));
+        if constexpr (enableSolvent) {
+            BlackOilSolventParams<Scalar> solventParams;
+            solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
+            SolventModule::setParams(std::move(solventParams));
+        }
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
@@ -965,9 +967,11 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        SolventModule::assignPrimaryVars(values,
-                                         enableSolvent ? this->solventSaturation_[globalDofIdx] : 0.0,
-                                         enableSolvent ? this->solventRsw_[globalDofIdx] : 0.0);
+        if constexpr (enableSolvent) {
+            SolventModule::assignPrimaryVars(values,
+                                             this->solventSaturation_[globalDofIdx],
+                                             this->solventRsw_[globalDofIdx]);
+        }
 
         if constexpr (enablePolymer) {
             values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];

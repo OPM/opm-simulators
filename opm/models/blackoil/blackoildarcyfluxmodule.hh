@@ -73,6 +73,7 @@ class BlackOilDarcyExtensiveQuantities : public DarcyExtensiveQuantities<TypeTag
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
 public:
     /*!
@@ -81,9 +82,9 @@ public:
      */
     void updateSolvent(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
-        asImp_().updateVolumeFluxPerm(elemCtx,
-                                      scvfIdx,
-                                      timeIdx);
+        if constexpr (enableSolvent) {
+            asImp_().updateVolumeFluxPerm(elemCtx, scvfIdx, timeIdx);
+        }
     }
 
     void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)

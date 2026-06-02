@@ -118,6 +118,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { enableMICP = Indices::enableMICP };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
@@ -1287,12 +1288,26 @@ private:
             },
             Entry{ScalarEntry{&this->sSol_,
                               [](const Context& ectx)
-                              { return getValue(ectx.intQuants.solventSaturation()); }
+                              {
+                                  if constexpr (enableSolvent) {
+                                      return getValue(ectx.intQuants.solventSaturation());
+                                  }
+                                  else {
+                                      return Scalar{0};
+                                  }
+                              }
                   }
             },
             Entry{ScalarEntry{&this->rswSol_,
                               [](const Context& ectx)
-                              { return getValue(ectx.intQuants.rsSolw()); }
+                              {
+                                  if constexpr (enableSolvent) {
+                                      return getValue(ectx.intQuants.rsSolw());
+                                  }
+                                  else {
+                                      return Scalar{0};
+                                  }
+                              }
                   }
             },
             Entry{ScalarEntry{&this->cPolymer_,
@@ -1953,7 +1968,12 @@ private:
             Entry{ScalarEntry{"BNSAT",
                               [](const Context& ectx)
                               {
-                                  return ectx.intQuants.solventSaturation().value();
+                                  if constexpr (enableSolvent) {
+                                      return ectx.intQuants.solventSaturation().value();
+                                  }
+                                  else {
+                                      return Scalar{0};
+                                  }
                               }
                   }
             },

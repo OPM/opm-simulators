@@ -361,9 +361,10 @@ private:
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
@@ -387,7 +388,9 @@ public:
     {
         ParentType::registerParameters();
 
-        SolventModule::registerParameters();
+        if constexpr (enableSolvent) {
+            SolventModule::registerParameters();
+        }
         ExtboModule::registerParameters();
         if constexpr (enablePolymer) {
             PolymerModule::registerParameters();
@@ -428,10 +431,14 @@ public:
         else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx) {
             return "composition_switching";
         }
-        else if (SolventModule::primaryVarApplies(pvIdx)) {
-            return SolventModule::primaryVarName(pvIdx);
+
+        if constexpr (enableSolvent) {
+            if (SolventModule::primaryVarApplies(pvIdx)) {
+                return SolventModule::primaryVarName(pvIdx);
+            }
         }
-        else if (ExtboModule::primaryVarApplies(pvIdx)) {
+
+        if (ExtboModule::primaryVarApplies(pvIdx)) {
             return ExtboModule::primaryVarName(pvIdx);
         }
 
@@ -459,10 +466,14 @@ public:
             oss << "conti_" << FluidSystem::phaseName(eqIdx - Indices::conti0EqIdx);
             return oss.str();
         }
-        else if (SolventModule::eqApplies(eqIdx)) {
-            return SolventModule::eqName(eqIdx);
+
+        if constexpr (enableSolvent) {
+            if (SolventModule::eqApplies(eqIdx)) {
+                return SolventModule::eqName(eqIdx);
+            }
         }
-        else if (ExtboModule::eqApplies(eqIdx)) {
+
+        if (ExtboModule::eqApplies(eqIdx)) {
             return ExtboModule::eqName(eqIdx);
         }
 
@@ -503,12 +514,14 @@ public:
         }
 
         // deal with primary variables stemming from the solvent module
-        else if (SolventModule::primaryVarApplies(pvIdx)) {
-            return SolventModule::primaryVarWeight(pvIdx);
+        if constexpr (enableSolvent) {
+            if (SolventModule::primaryVarApplies(pvIdx)) {
+                return SolventModule::primaryVarWeight(pvIdx);
+            }
         }
 
         // deal with primary variables stemming from the extBO module
-        else if (ExtboModule::primaryVarApplies(pvIdx)) {
+        if (ExtboModule::primaryVarApplies(pvIdx)) {
             return ExtboModule::primaryVarWeight(pvIdx);
         }
 
@@ -586,7 +599,9 @@ public:
 
         outstream << priVars.pvtRegionIndex() << " ";
 
-        SolventModule::serializeEntity(asImp_(), outstream, dof);
+        if constexpr (enableSolvent) {
+            SolventModule::serializeEntity(asImp_(), outstream, dof);
+        }
         ExtboModule::serializeEntity(asImp_(), outstream, dof);
         if constexpr (enablePolymer) {
             PolymerModule::serializeEntity(asImp_(), outstream, dof);
@@ -634,7 +649,9 @@ public:
             throw std::runtime_error("Could not deserialize degree of freedom " + std::to_string(dofIdx));
         }
 
-        SolventModule::deserializeEntity(asImp_(), instream, dof);
+        if constexpr (enableSolvent) {
+            SolventModule::deserializeEntity(asImp_(), instream, dof);
+        }
         ExtboModule::deserializeEntity(asImp_(), instream, dof);
         if constexpr (enablePolymer) {
             PolymerModule::deserializeEntity(asImp_(), instream, dof);
@@ -700,7 +717,9 @@ protected:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which make sense for the blackoil model
-        SolventModule::registerOutputModules(asImp_(), this->simulator_);
+        if constexpr (enableSolvent) {
+            SolventModule::registerOutputModules(asImp_(), this->simulator_);
+        }
         if constexpr (enablePolymer) {
             PolymerModule::registerOutputModules(asImp_(), this->simulator_);
         }

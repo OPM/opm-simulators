@@ -122,7 +122,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableMICP = Indices::enableMICP;
     static constexpr bool runAssemblyOnGpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
 
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
@@ -225,7 +225,9 @@ public:
         adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex(), fsys);
 
         // deal with solvents (if present)
-        SolventModule::addStorage(storage, intQuants);
+        if constexpr (enableSolvent) {
+            SolventModule::addStorage(storage, intQuants);
+        }
 
         // deal with zFracton (if present)
         ExtboModule::addStorage(storage, intQuants);

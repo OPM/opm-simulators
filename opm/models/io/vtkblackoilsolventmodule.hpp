@@ -63,7 +63,7 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
     static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;

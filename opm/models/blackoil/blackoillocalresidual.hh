@@ -90,11 +90,12 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableFullyImplicitThermal = 
-        (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     using Toolbox = MathToolbox<Evaluation>;
-    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
@@ -180,7 +181,9 @@ public:
         adaptMassConservationQuantities_(storage, intQuants.pvtRegionIndex());
 
         // deal with solvents (if present)
-        SolventModule::addStorage(storage, intQuants);
+        if constexpr (enableSolvent) {
+            SolventModule::addStorage(storage, intQuants);
+        }
 
         // deal with zFracton (if present)
         ExtboModule::addStorage(storage, intQuants);
@@ -238,8 +241,11 @@ public:
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, extQuants, up.fluidState());
             }
         }
+
         // deal with solvents (if present)
-        SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableSolvent) {
+            SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with zFracton (if present)
         ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);

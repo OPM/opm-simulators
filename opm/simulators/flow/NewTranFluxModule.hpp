@@ -123,7 +123,7 @@ class NewTranExtensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { numPhases = FluidSystem::numPhases };
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
 
@@ -220,7 +220,11 @@ protected:
     }
 
     OPM_HOST_DEVICE void updateSolvent(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
-    { asImp_().updateVolumeFluxTrans(elemCtx, scvfIdx, timeIdx); }
+    {
+        if constexpr (enableSolvent) {
+            asImp_().updateVolumeFluxTrans(elemCtx, scvfIdx, timeIdx);
+        }
+    }
 
     OPM_HOST_DEVICE void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
