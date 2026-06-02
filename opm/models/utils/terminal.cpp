@@ -76,7 +76,7 @@ std::string breakLines(const std::string& msg,
             continue;
         }
 
-        if (std::isspace(msg[inPos])) {
+        if (std::isspace(msg[inPos]) != 0) {
             lastBreakPos = inPos;
         }
 
@@ -110,7 +110,7 @@ std::string breakLines(const std::string& msg,
 int getTtyWidth()
 {
     int ttyWidth = 10*1000; // effectively do not break lines at all.
-    if (isatty(STDOUT_FILENO)) {
+    if (isatty(STDOUT_FILENO) != 0) {
 #if defined TIOCGWINSZ
         // This is a bit too linux specific, IMO. let's do it anyway
         struct winsize ttySize;
@@ -129,7 +129,7 @@ void assignResetTerminalSignalHandlers()
 {
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts
-    if (isatty(STDIN_FILENO)) {
+    if (isatty(STDIN_FILENO) != 0) {
         signal(SIGINT, resetTerminal);
         signal(SIGHUP, resetTerminal);
         signal(SIGABRT, resetTerminal);
@@ -178,7 +178,7 @@ void resetTerminal(int signum)
     }
 #endif
 
-    if (isatty(fileno(stdout)) && isatty(fileno(stdin))) {
+    if (isatty(fileno(stdout)) != 0 && isatty(fileno(stdin)) != 0) {
         std::cout << "\n\nReceived signal " << signum
                   << " (\"" << getSignalAbbrev(signum) << "\")."
                   << " Trying to reset the terminal.\n";
