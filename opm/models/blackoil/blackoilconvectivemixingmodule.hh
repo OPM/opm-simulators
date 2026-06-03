@@ -36,51 +36,16 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <opm/common/utility/VectorWithDefaultAllocator.hpp>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
 
 #include <cstddef>
 
 namespace Opm {
-
-    template<class Scalar, template<class> class Storage = Opm::VectorWithDefaultAllocator>
-    struct ConvectiveMixingModuleParam
-    {
-        Storage<bool> active_;
-        Storage<Scalar> Xhi_;
-        Storage<Scalar> Psi_;
-    };
-
-#ifdef HAVE_CUDA
-namespace gpuistl
-{
-    template <class Scalar>
-    ConvectiveMixingModuleParam<Scalar, GpuView> make_view(ConvectiveMixingModuleParam<Scalar, GpuBuffer>& params)
-    {
-        ConvectiveMixingModuleParam<Scalar, GpuView> view;
-        view.active_ = gpuistl::make_view(params.active_);
-        view.Xhi_ = gpuistl::make_view(params.Xhi_);
-        view.Psi_ = gpuistl::make_view(params.Psi_);
-        return view;
-    }
-
-    template <class Scalar>
-    ConvectiveMixingModuleParam<Scalar, GpuBuffer> copy_to_gpu(const ConvectiveMixingModuleParam<Scalar, Opm::VectorWithDefaultAllocator>& params)
-    {
-        return ConvectiveMixingModuleParam<Scalar, GpuBuffer>{
-            gpuistl::GpuBuffer(params.active_),
-            gpuistl::GpuBuffer(params.Xhi_),
-            gpuistl::GpuBuffer(params.Psi_)
-        };
-    }
-}
-
-#endif
 
 /*!
  * \copydoc Opm::BlackOilConvectiveMixingModule

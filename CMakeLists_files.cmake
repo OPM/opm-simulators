@@ -716,6 +716,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilbrinemodules.hh
   opm/models/blackoil/blackoilbrineparams.hpp
   opm/models/blackoil/blackoilconvectivemixingmodule.hh
+  opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
