@@ -18,8 +18,11 @@
 */
 #include <config.h>
 
-#include <opm/simulators/flow/Main.hpp>
 #include <flow/flow_blackoil.hpp>
+
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+
+#include <opm/simulators/flow/Main.hpp>
 
 namespace Opm::Properties {
 

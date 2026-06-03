@@ -65,9 +65,26 @@
 
 #include <memory>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
-using StandardWell = Opm::StandardWell<Opm::Properties::TTag::FlowProblem>;
+namespace Opm::Properties {
+
+namespace TTag {
+
+struct WellModelTestTypeTag
+{ using InheritsFrom = std::tuple<FlowProblem>; };
+
+}
+
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::WellModelTestTypeTag>
+{ static constexpr bool value = false; };
+
+}
+
+using StandardWell = Opm::StandardWell<Opm::Properties::TTag::WellModelTestTypeTag>;
 
 struct SetupTest {
 
@@ -113,7 +130,7 @@ struct GlobalFixture {
         Dune::MPIHelper::instance(argcDummy, argvDummy);
 #endif
 
-        Opm::FlowMain<Opm::Properties::TTag::FlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
+        Opm::FlowMain<Opm::Properties::TTag::WellModelTestTypeTag>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
     }
 };
 

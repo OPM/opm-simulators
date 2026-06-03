@@ -97,6 +97,11 @@ struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::TestTypeTag>;
 };
 
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::TestTypeTag>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Properties
 
 #endif // OPM_TEST_TYPETAG_HPP

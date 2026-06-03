@@ -18,16 +18,20 @@
 
 #include <flow/flow_gaswater_saltprec_energy.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
+
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
-#include <opm/grid/CpGrid.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/material/thermal/EnergyModuleType.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 namespace Opm::Properties {
 

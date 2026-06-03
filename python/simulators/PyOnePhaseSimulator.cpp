@@ -17,14 +17,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+
 #include <opm/simulators/flow/python/PyOnePhaseSimulator.hpp>
 // NOTE: This file will be generated at compile time and placed in the build directory
 // See python/generate_docstring_hpp.py, and python/simulators/CMakeLists.txt for details
 #include <PyOnePhaseSimulatorDoc.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
-#include <stdexcept>
 #include <string>
 
 namespace Opm::Properties {

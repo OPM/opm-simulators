@@ -28,12 +28,15 @@
 // For more details, refer to the files gridfactory.hh and aluinline.hh located in the dune-alugrid/3d/
 
 #include <dune/alugrid/grid.hh>
-#include <opm/simulators/flow/Main.hpp>
 
 // for equilgrid in writer
 // need to include this before eclgenericwriter_impl.hh due to specializations.
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
+
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+
+#include <opm/simulators/flow/Main.hpp>
 
 // these are not explicitly instanced in library
 #include <opm/simulators/flow/AluGridVanguard.hpp>

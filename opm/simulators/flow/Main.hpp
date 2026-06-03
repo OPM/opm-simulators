@@ -69,10 +69,17 @@ namespace Opm::Properties {
 // this is a dummy type tag that is used to setup the parameters before the actual
 // simulator.
 namespace TTag {
+
 struct FlowEarlyBird {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
+
 }
+
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowEarlyBird>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 

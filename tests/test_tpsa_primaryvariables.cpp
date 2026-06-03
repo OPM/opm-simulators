@@ -41,6 +41,13 @@ namespace Opm::Properties::TTag {
     };
 }
 
+namespace Opm::Properties {
+    // Disable convective mixing
+    template<class TypeTag>
+    struct EnableConvectiveMixing<TypeTag, TTag::TpsaTestTypeTag>
+    { static constexpr bool value = false; };
+}
+
 BOOST_AUTO_TEST_CASE(ElasticityPrimVarTest) {
     using TypeTag = Opm::Properties::TTag::TpsaTestTypeTag;
     using Scalar = Opm::GetPropType<TypeTag, Opm::Properties::Scalar>;

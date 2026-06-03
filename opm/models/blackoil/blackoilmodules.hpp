@@ -42,6 +42,7 @@ namespace Opm {
 
 DECLARE_MODULE(BlackOilBioeffects)
 DECLARE_MODULE(BlackOilBrine)
+DECLARE_MODULE(BlackOilConvectiveMixing)
 
 #undef DECLARE_MODULE
 

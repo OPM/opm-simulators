@@ -36,11 +36,11 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <opm/common/utility/VectorWithDefaultAllocator.hpp>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
 
@@ -48,42 +48,7 @@
 
 namespace Opm {
 
-    template<class Scalar, template<class> class Storage = Opm::VectorWithDefaultAllocator>
-    struct ConvectiveMixingModuleParam
-    {
-        Storage<bool> active_;
-        Storage<Scalar> Xhi_;
-        Storage<Scalar> Psi_;
-    };
-
-#ifdef HAVE_CUDA
-namespace gpuistl
-{
-    template <class Scalar>
-    ConvectiveMixingModuleParam<Scalar, GpuView> make_view(ConvectiveMixingModuleParam<Scalar, GpuBuffer>& params)
-    {
-        ConvectiveMixingModuleParam<Scalar, GpuView> view;
-        view.active_ = gpuistl::make_view(params.active_);
-        view.Xhi_ = gpuistl::make_view(params.Xhi_);
-        view.Psi_ = gpuistl::make_view(params.Psi_);
-        return view;
-    }
-
-    template <class Scalar>
-    ConvectiveMixingModuleParam<Scalar, GpuBuffer> copy_to_gpu(const ConvectiveMixingModuleParam<Scalar, Opm::VectorWithDefaultAllocator>& params)
-    {
-        return ConvectiveMixingModuleParam<Scalar, GpuBuffer>{
-            gpuistl::GpuBuffer(params.active_),
-            gpuistl::GpuBuffer(params.Xhi_),
-            gpuistl::GpuBuffer(params.Psi_)
-        };
-    }
-}
-
-#endif
-
 /*!
- * \copydoc Opm::BlackOilConvectiveMixingModule
  * \brief Provides the convective term in the transport flux for the brine
  * when convective mixing (enhanced dissolution of CO2 in brine) occurs.
  * Controlled by the regimes for a controlvolume:
@@ -94,18 +59,6 @@ namespace gpuistl
  * iv) decline phase (Convection ceases at the large-scale when the CO2
  * has been completely dissolved)
  */
-
-template <class TypeTag, bool enableConvectiveMixing>
-class BlackOilConvectiveMixingModule;
-
-/*!
- * \copydoc Opm::BlackOilConvectiveMixingModule
- */
-
-template <class TypeTag>
-class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
-{
-};
 
 template <class TypeTag>
 class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
@@ -124,7 +77,8 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     enum { dimWorld = GridView::dimensionworld };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal =
+        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
@@ -380,9 +334,6 @@ public:
     }
 };
 
-template <class TypeTag, bool enableConvectiveMixingV>
-class BlackOilConvectiveMixingIntensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilConvectiveMixingIntensiveQuantities
@@ -424,11 +375,6 @@ protected:
     { return *static_cast<Implementation*>(this); }
 
     Evaluation saturatedDissolutionFactor_;
-};
-
-template <class TypeTag>
-class BlackOilConvectiveMixingIntensiveQuantities<TypeTag, false>
-{
 };
 
 }

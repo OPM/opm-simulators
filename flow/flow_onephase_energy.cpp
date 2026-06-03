@@ -22,9 +22,12 @@
 
 #include <flow/flow_onephase_energy.hpp>
 
-#include <opm/simulators/flow/Main.hpp>
-#include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/material/common/ResetLocale.hpp>
+
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+
+#include <opm/simulators/flow/Main.hpp>
 
 namespace Opm::Properties {
 
