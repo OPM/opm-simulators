@@ -43,6 +43,7 @@
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/overlappingbcrsmatrix.hh>
 #include <opm/simulators/linalg/overlappingblockvector.hh>
 #include <opm/simulators/linalg/overlappingoperator.hh>
@@ -401,7 +402,7 @@ private:
     static constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
     using LinearSolverScalar = GetPropType<TypeTag, Properties::LinearSolverScalar>;
     using MatrixBlock = Opm::MatrixBlock<LinearSolverScalar, numEq, numEq>;
-    using NonOverlappingMatrix = Dune::BCRSMatrix<MatrixBlock>;
+    using NonOverlappingMatrix = Opm::BlockSparseMatrix<MatrixBlock>;
 
 public:
     using type = Opm::Linear::OverlappingBCRSMatrix<NonOverlappingMatrix>;

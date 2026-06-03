@@ -289,6 +289,23 @@ public:
         : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
     {}
 };
+
+#if defined(OPM_USE_EXPERIMENTAL_IBCRSMATRIX) && OPM_USE_EXPERIMENTAL_IBCRSMATRIX
+template <typename T, typename I, typename A, int n, int m>
+class UMFPack<IBCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A> >
+    : public UMFPack<IBCRSMatrix<FieldMatrix<T, n, m>, I, A> >
+{
+    using Base = UMFPack<IBCRSMatrix<FieldMatrix<T, n, m>, I, A> >;
+    using Matrix = IBCRSMatrix<FieldMatrix<T, n, m>, I, A>;
+
+public:
+    using RealMatrix = IBCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A>;
+
+    UMFPack(const RealMatrix& matrix, int verbose, bool)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
+    {}
+};
+#endif
 #endif
 
 #if HAVE_SUPERLU
@@ -309,6 +326,23 @@ public:
         : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)
     {}
 };
+
+#if defined(OPM_USE_EXPERIMENTAL_IBCRSMATRIX) && OPM_USE_EXPERIMENTAL_IBCRSMATRIX
+template <typename T, typename I, typename A, int n, int m>
+class SuperLU<IBCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A> >
+    : public SuperLU<IBCRSMatrix<FieldMatrix<T, n, m>, I, A> >
+{
+    using Base = SuperLU<IBCRSMatrix<FieldMatrix<T, n, m>, I, A> >;
+    using Matrix = IBCRSMatrix<FieldMatrix<T, n, m>, I, A>;
+
+public:
+    using RealMatrix = IBCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A>;
+
+    SuperLU(const RealMatrix& matrix, int verb, bool reuse=true)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)
+    {}
+};
+#endif
 #endif
 
 template<typename T, int n, int m>

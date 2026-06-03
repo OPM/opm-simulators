@@ -25,19 +25,19 @@
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioners.hh>
 #include <limits>
 #include <memory>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerConvertFieldTypeAdapter.hpp>
 
 
 using XDouble = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 using MDouble = Dune::FieldMatrix<double, 2, 2>;
-using SpMatrixDouble = Dune::BCRSMatrix<MDouble>;
+using SpMatrixDouble = Opm::BlockSparseMatrix<MDouble>;
 using XFloat = Dune::BlockVector<Dune::FieldVector<float, 2>>;
 using MFloat = Dune::FieldMatrix<float, 2, 2>;
-using SpMatrixFloat = Dune::BCRSMatrix<MFloat>;
+using SpMatrixFloat = Opm::BlockSparseMatrix<MFloat>;
 namespace
 {
 class TestPreconditioner : Dune::PreconditionerWithUpdate<XFloat, XFloat>

@@ -17,7 +17,6 @@
 #ifndef OPM_STANDARDPRECONDITIONERS_GPU_MPI_HEADER
 #define OPM_STANDARDPRECONDITIONERS_GPU_MPI_HEADER
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <string>
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>

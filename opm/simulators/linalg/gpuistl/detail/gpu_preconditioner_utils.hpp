@@ -21,8 +21,7 @@
 #define OPM_GPUISTL_DETAIL_GPU_PRECONDITIONER_UTILS_HEADER
 
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
-
-#include <dune/istl/bcrsmatrix.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 
 namespace Opm::gpuistl::detail {
@@ -44,7 +43,7 @@ namespace Opm::gpuistl::detail {
  * used in the constructor, **not** in the update function or the apply function.
  */
 template<class Operator, class BlockType>
-Dune::BCRSMatrix<BlockType> makeCPUMatrix(const Operator& op) {
+BlockSparseMatrix<BlockType> makeCPUMatrix(const Operator& op) {
     // TODO: Make this more efficient. Maybe we can simply copy the memory areas directly?
     //       Do note that this function is anyway going away when we have a GPU
     //       constructor for the preconditioners, so it is not a priority.
@@ -57,7 +56,7 @@ Dune::BCRSMatrix<BlockType> makeCPUMatrix(const Operator& op) {
     const auto numberOfNonZeroes = gpuMatrix.nonzeroes();
     const auto N = gpuMatrix.N();
 
-    Dune::BCRSMatrix<BlockType> matrix(N, N, numberOfNonZeroes, Dune::BCRSMatrix<BlockType>::row_wise);
+    BlockSparseMatrix<BlockType> matrix(N, N, numberOfNonZeroes, BlockSparseMatrix<BlockType>::row_wise);
     for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
         for (auto j = rowIndices[row.index()]; j != rowIndices[row.index() + 1]; ++j) {
             const auto columnIndex = columnIndices[j];

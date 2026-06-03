@@ -27,13 +27,14 @@
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 using ScalarT = double;
 constexpr static int Dim = 1;
 
 using CommSeq = Dune::Amg::SequentialInformation;
 
-using MatrixTypeCPU = Dune::BCRSMatrix<Dune::FieldMatrix<ScalarT, Dim, Dim>>;
+using MatrixTypeCPU = Opm::BlockSparseMatrix<Dune::FieldMatrix<ScalarT, Dim, Dim>>;
 using VectorCPU = Dune::BlockVector<Dune::FieldVector<ScalarT, 1>>;
 using CpuOperatorType = Dune::MatrixAdapter<MatrixTypeCPU, VectorCPU, VectorCPU>;
 using FactoryTypeCpu = Opm::PreconditionerFactory<CpuOperatorType, CommSeq>;

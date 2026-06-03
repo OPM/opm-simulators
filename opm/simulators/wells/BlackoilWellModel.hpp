@@ -25,7 +25,6 @@
 
 #include <dune/common/fmatrix.hh>
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -43,6 +42,7 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
@@ -288,9 +288,9 @@ template<class Scalar> class WellContributions;
 
             static constexpr int numResDofs = Indices::numEq;
             static constexpr int numWellDofs = numResDofs + 1;//NB will fail for for thermal for now
-            using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
-            using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
-            using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+            using BMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+            using CMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+            using DMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
             using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 
             void addBCDMatrix(std::vector<BMatrix>& b_matrices,
@@ -300,7 +300,7 @@ template<class Scalar> class WellContributions;
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
-            using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
+            using PressureMatrix = BlockSparseMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
             void addWellPressureEquations(PressureMatrix& jacobian,
                                           const BVector& weights,

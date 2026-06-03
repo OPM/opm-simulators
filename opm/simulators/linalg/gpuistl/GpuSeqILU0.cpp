@@ -22,10 +22,10 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
@@ -324,10 +324,10 @@ GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
 }
 } // namespace Opm::gpuistl
 #define INSTANTIATE_GPUSEQILU0_DUNE(realtype, blockdim)                                                                  \
-    template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+    template class ::Opm::gpuistl::GpuSeqILU0<Opm::BlockSparseMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
-    template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+    template class ::Opm::gpuistl::GpuSeqILU0<Opm::BlockSparseMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 

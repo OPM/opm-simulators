@@ -22,7 +22,7 @@
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
-#include <dune/istl/bcrsmatrix.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith3By3Blocks, T, Numeric
     const size_t N = 2;
     const int nonZeroes = 3;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     /*
         create this sparse matrix
         | |1 2 3| | 1  0  0| |
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith2By2Blocks, T, Numeric
     const size_t N = 2;
     const int nonZeroes = 3;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     /*
         create this sparse matrix
         | |  1 2| | 1  0| |
