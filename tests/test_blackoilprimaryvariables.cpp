@@ -8,9 +8,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <memory>
-#include <stdexcept>
 #include <tuple>
-#include <vector>
 
 struct ZeroCapillaryMaterialLaw
 {
@@ -109,6 +107,11 @@ static_assert(Opm::getPropValue<TypeTag, Opm::Properties::EnergyModuleType>()
 
 struct FluidSystemGuard
 {
+    FluidSystemGuard(const FluidSystemGuard&) = delete;
+    FluidSystemGuard& operator=(const FluidSystemGuard&) = delete;
+    FluidSystemGuard(FluidSystemGuard&&) = delete;
+    FluidSystemGuard& operator=(FluidSystemGuard&&) = delete;
+    
     FluidSystemGuard()
         : dissolvedGas(FluidSystem::enableDissolvedGas())
         , dissolvedGasInWater(FluidSystem::enableDissolvedGasInWater())
@@ -151,7 +154,6 @@ PrimaryVariables makePrimaryVariables(PrimaryVariables::GasMeaning gasMeaning,
     for (std::size_t i = 0; i < priVars.size(); ++i) {
         priVars[i] = 0.0;
     }
-
     priVars.setPrimaryVarsMeaningWater(waterMeaning);
     priVars.setPrimaryVarsMeaningGas(gasMeaning);
     priVars.setPrimaryVarsMeaningPressure(pressureMeaning);
