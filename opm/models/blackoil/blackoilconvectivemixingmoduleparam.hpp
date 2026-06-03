@@ -30,10 +30,15 @@
 
 #include <opm/common/utility/VectorWithDefaultAllocator.hpp>
 
-#ifdef HAVE_CUDA
+#if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
+#else // !USE_HIP
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#endif
+#endif // USE_HIP
+#endif // HAVE_CUDA
 
 namespace Opm {
 
