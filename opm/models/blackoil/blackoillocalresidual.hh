@@ -83,8 +83,8 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
-    static constexpr bool enableFullyImplicitThermal = 
-        getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr bool enableFullyImplicitThermal = energyModuleType == EnergyModules::FullyImplicitThermal;
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
@@ -94,7 +94,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
@@ -191,7 +191,9 @@ public:
         }
 
         // deal with energy (if present)
-        EnergyModule::addStorage(storage, intQuants);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::addStorage(storage, intQuants);
+        }
 
         // deal with foam (if present)
         if constexpr (enableFoam) {
@@ -255,7 +257,9 @@ public:
         }
 
         // deal with energy (if present)
-        EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        }
 
         // deal with foam (if present)
         if constexpr (enableFoam) {

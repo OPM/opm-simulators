@@ -358,12 +358,14 @@ private:
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    static constexpr bool enableFullyImplicitThermal = energyModuleType == EnergyModules::FullyImplicitThermal;
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
@@ -393,7 +395,9 @@ public:
         if constexpr (enablePolymer) {
             PolymerModule::registerParameters();
         }
-        EnergyModule::registerParameters();
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::registerParameters();
+        }
         if constexpr (enableDiffusion) {
             DiffusionModule::registerParameters();
         }
@@ -448,12 +452,13 @@ public:
             }
         }
 
-        if (EnergyModule::primaryVarApplies(pvIdx)) {
-            return EnergyModule::primaryVarName(pvIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            if (EnergyModule::primaryVarApplies(pvIdx)) {
+                return EnergyModule::primaryVarName(pvIdx);
+            }
         }
-        else {
-            throw std::logic_error("Invalid primary variable index");
-        }
+
+        throw std::logic_error("Invalid primary variable index");
     }
 
     /*!
@@ -485,12 +490,13 @@ public:
             }
         }
 
-        if (EnergyModule::eqApplies(eqIdx)) {
-            return EnergyModule::eqName(eqIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            if (EnergyModule::eqApplies(eqIdx)) {
+                return EnergyModule::eqName(eqIdx);
+            }
         }
-        else {
-            throw std::logic_error("Invalid equation index");
-        }
+
+        throw std::logic_error("Invalid equation index");
     }
 
     /*!
@@ -537,8 +543,10 @@ public:
         }
 
         // deal with primary variables stemming from the energy module
-        if (EnergyModule::primaryVarApplies(pvIdx)) {
-            return EnergyModule::primaryVarWeight(pvIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            if (EnergyModule::primaryVarApplies(pvIdx)) {
+                return EnergyModule::primaryVarWeight(pvIdx);
+            }
         }
 
         // if the primary variable is either the gas saturation, Rs or Rv
@@ -612,7 +620,9 @@ public:
         if constexpr (enablePolymer) {
             PolymerModule::serializeEntity(asImp_(), outstream, dof);
         }
-        EnergyModule::serializeEntity(asImp_(), outstream, dof);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::serializeEntity(asImp_(), outstream, dof);
+        }
     }
 
     /*!
@@ -664,7 +674,9 @@ public:
         if constexpr (enablePolymer) {
             PolymerModule::deserializeEntity(asImp_(), instream, dof);
         }
-        EnergyModule::deserializeEntity(asImp_(), instream, dof);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::deserializeEntity(asImp_(), instream, dof);
+        }
 
         using PVM_G = typename PrimaryVariables::GasMeaning;
         using PVM_W = typename PrimaryVariables::WaterMeaning;
@@ -731,7 +743,9 @@ protected:
         if constexpr (enablePolymer) {
             PolymerModule::registerOutputModules(asImp_(), this->simulator_);
         }
-        EnergyModule::registerOutputModules(asImp_(), this->simulator_);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::registerOutputModules(asImp_(), this->simulator_);
+        }
         if constexpr (enableBioeffects) {
             BioeffectsModule::registerOutputModules(asImp_(), this->simulator_);
         }

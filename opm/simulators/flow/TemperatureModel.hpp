@@ -196,7 +196,8 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+    using EnergyModule = BlackOilEnergyModule<TypeTag, energyModuleType>;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using WellStateType = WellState<Scalar, IndexTraits>;
 
@@ -554,7 +555,7 @@ protected:
         flux *= scalingFactor_;
     }
 
-    template < class ResidualNBInfo>
+    template <class ResidualNBInfo>
     void computeHeatFluxTerm(const IntensiveQuantitiesTemp& intQuantsIn,
                              const IntensiveQuantitiesTemp& intQuantsEx,
                              const ResidualNBInfo& res_nbinfo,
@@ -562,17 +563,18 @@ protected:
     {
         short interiorDofIdx = 0; // NB
         short exteriorDofIdx = 1; // NB
-        EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
-                                                        interiorDofIdx, // focusDofIndex,
-                                                        interiorDofIdx,
-                                                        exteriorDofIdx,
-                                                        intQuantsIn,
-                                                        intQuantsEx,
-                                                        intQuantsIn.fluidStateTemp(),
-                                                        intQuantsEx.fluidStateTemp(),
-                                                        res_nbinfo.inAlpha,
-                                                        res_nbinfo.outAlpha,
-                                                        res_nbinfo.faceArea);
+        BlackOilEnergyExtensiveQuantities<TypeTag, energyModuleType>::
+            updateEnergy(heatFlux,
+                         interiorDofIdx, // focusDofIndex,
+                         interiorDofIdx,
+                         exteriorDofIdx,
+                         intQuantsIn,
+                         intQuantsEx,
+                         intQuantsIn.fluidStateTemp(),
+                         intQuantsEx.fluidStateTemp(),
+                         res_nbinfo.inAlpha,
+                         res_nbinfo.outAlpha,
+                         res_nbinfo.faceArea);
         heatFlux *= scalingFactor_*res_nbinfo.faceArea;
     }
 

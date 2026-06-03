@@ -54,13 +54,16 @@
 
 namespace Opm {
 
+template <class TypeTag, EnergyModules activeModule>
+class BlackOilEnergyModule;
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy.
  */
-template <class TypeTag, EnergyModules activeModule = getPropValue<TypeTag, Properties::EnergyModuleType>()>
-class BlackOilEnergyModule
+template <class TypeTag>
+class BlackOilEnergyModule<TypeTag, EnergyModules::FullyImplicitThermal>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -77,7 +80,7 @@ class BlackOilEnergyModule
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-    static constexpr unsigned enableFullyImplicitThermal = (activeModule == EnergyModules::FullyImplicitThermal);
+    static constexpr unsigned enableFullyImplicitThermal = true;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
@@ -89,9 +92,7 @@ public:
      */
     static void registerParameters()
     {
-        if constexpr (enableFullyImplicitThermal) {
-            VtkBlackOilEnergyModule<TypeTag>::registerParameters();
-        }
+        VtkBlackOilEnergyModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -100,19 +101,12 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            model.addOutputModule(std::make_unique<VtkBlackOilEnergyModule<TypeTag>>(simulator));
-        }
+        model.addOutputModule(std::make_unique<VtkBlackOilEnergyModule<TypeTag>>(simulator));
     }
 
     static OPM_HOST_DEVICE bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            return pvIdx == temperatureIdx;
-        }
-        else {
-            return false;
-        }
+        return pvIdx == temperatureIdx;
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -132,12 +126,7 @@ public:
 
     static OPM_HOST_DEVICE bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            return eqIdx == contiEnergyEqIdx;
-        }
-        else {
-            return false;
-        }
+        return eqIdx == contiEnergyEqIdx;
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -160,73 +149,66 @@ public:
                                            const IntensiveQuantities& intQuants)
     {
         using LhsEval = typename StorageType::value_type;
+        const FluidSystem& fsys = intQuants.getFluidSystem();
 
-        if constexpr (enableFullyImplicitThermal) {
-            const FluidSystem& fsys = intQuants.getFluidSystem();
+        const auto& poro = decay<LhsEval>(intQuants.porosity());
 
-            const auto& poro = decay<LhsEval>(intQuants.porosity());
-
-            // accumulate the internal energy of the fluids
-            const auto& fs = intQuants.fluidState();
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!fsys.phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
-                const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
-                const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
-
-                storage[contiEnergyEqIdx] += poro*S*u*rho;
+        // accumulate the internal energy of the fluids
+        const auto& fs = intQuants.fluidState();
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!fsys.phaseIsActive(phaseIdx)) {
+                continue;
             }
 
-            // add the internal energy of the rock
-            const Scalar rockFraction = intQuants.rockFraction();
-            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-            storage[contiEnergyEqIdx] += rockFraction * uRock;
-            storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+            const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+            const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
+
+            storage[contiEnergyEqIdx] += poro*S*u*rho;
         }
+
+        // add the internal energy of the rock
+        const Scalar rockFraction = intQuants.rockFraction();
+        const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+        storage[contiEnergyEqIdx] += rockFraction * uRock;
+        storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
-    OPM_HOST_DEVICE static void computeFlux([[maybe_unused]] RateVector& flux,
-                                            [[maybe_unused]] const ElementContext& elemCtx,
-                                            [[maybe_unused]] unsigned scvfIdx,
-                                            [[maybe_unused]] unsigned timeIdx)
+    OPM_HOST_DEVICE static void computeFlux(RateVector& flux,
+                                            const ElementContext& elemCtx,
+                                            unsigned scvfIdx,
+                                            unsigned timeIdx)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            flux[contiEnergyEqIdx] = 0.0;
+        flux[contiEnergyEqIdx] = 0.0;
 
-            const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-            const unsigned focusIdx = elemCtx.focusDofIndex();
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-                if (upIdx == focusIdx) {
-                    addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
-                }
-                else {
-                    addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
-                }
+        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        const unsigned focusIdx = elemCtx.focusDofIndex();
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
             }
 
-            // diffusive energy flux
-            flux[contiEnergyEqIdx] += extQuants.energyFlux();
-            flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+            if (upIdx == focusIdx) {
+                addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+            }
+            else {
+                addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+            }
         }
+
+        // diffusive energy flux
+        flux[contiEnergyEqIdx] += extQuants.energyFlux();
+        flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template<class RateVectorT>
     OPM_HOST_DEVICE static void addHeatFlux(RateVectorT& flux,
                                             const Evaluation& heatFlux)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            // diffusive energy flux
-            flux[contiEnergyEqIdx] += heatFlux;
-            flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-        }
+        // diffusive energy flux
+        flux[contiEnergyEqIdx] += heatFlux;
+        flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template <class UpEval, class RateVectorT, class Eval, class FluidState>
@@ -262,9 +244,7 @@ public:
     OPM_HOST_DEVICE static void addToEnthalpyRate(RateVector& flux,
                                                   const Evaluation& hRate)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            flux[contiEnergyEqIdx] += hRate;
-        }
+        flux[contiEnergyEqIdx] += hRate;
     }
 
     /*!
@@ -274,9 +254,7 @@ public:
     OPM_HOST_DEVICE static void assignPrimaryVars(PrimaryVariables& priVars,
                                                   const FluidState& fluidState)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            priVars[temperatureIdx] = getValue(fluidState.temperature(/*phaseIdx=*/0));
-        }
+        priVars[temperatureIdx] = getValue(fluidState.temperature(/*phaseIdx=*/0));
     }
 
     /*!
@@ -286,10 +264,8 @@ public:
                                                   const PrimaryVariables& oldPv,
                                                   const EqVector& delta)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            // do a plain unchopped Newton update
-            newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
-        }
+        // do a plain unchopped Newton update
+        newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
     }
 
     /*!
@@ -316,26 +292,22 @@ public:
     template <class DofEntity>
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            const unsigned dofIdx = model.dofMapper().index(dof);
-            const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
-            outstream << priVars[temperatureIdx];
-        }
+        const unsigned dofIdx = model.dofMapper().index(dof);
+        const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
+        outstream << priVars[temperatureIdx];
     }
 
     template <class DofEntity>
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
-        if constexpr (enableFullyImplicitThermal) {
-            const unsigned dofIdx = model.dofMapper().index(dof);
-            PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
-            PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
+        const unsigned dofIdx = model.dofMapper().index(dof);
+        PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
+        PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
-            instream >> priVars0[temperatureIdx];
+        instream >> priVars0[temperatureIdx];
 
-            // set the primary variables for the beginning of the current time step.
-            priVars1 = priVars0[temperatureIdx];
-        }
+        // set the primary variables for the beginning of the current time step.
+        priVars1 = priVars0[temperatureIdx];
     }
 };
 
