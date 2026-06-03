@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -32,7 +33,6 @@
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/common/parallel/communication.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
 
@@ -270,7 +270,7 @@ void runBlackoilAmgLaplace()
 {
     constexpr int BS=2, N=100;
     typedef Dune::FieldMatrix<double,BS,BS> MatrixBlock;
-    typedef Dune::BCRSMatrix<MatrixBlock> BCRSMat;
+    typedef Opm::BlockSparseMatrix<MatrixBlock> BCRSMat;
     typedef Dune::FieldVector<double,BS> VectorBlock;
     typedef Dune::BlockVector<VectorBlock> Vector;
     typedef int GlobalId;

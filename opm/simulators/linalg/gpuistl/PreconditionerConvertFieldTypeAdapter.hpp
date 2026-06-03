@@ -19,9 +19,9 @@
 #ifndef OPM_PRECONDITIONERCONVERTOFLOATADAPTER_HPP
 #define OPM_PRECONDITIONERCONVERTOFLOATADAPTER_HPP
 #include <cusparse.h>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
@@ -55,10 +55,10 @@ namespace Opm::gpuistl
 //!
 //! using XDouble = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 //! using MDouble = Dune::FieldMatrix<double, 2, 2>;
-//! using SpMatrixDouble = Dune::BCRSMatrix<MDouble>;
+//! using SpMatrixDouble = BlockSparseMatrix<MDouble>;
 //! using XFloat = Dune::BlockVector<Dune::FieldVector<float, 2>>;
 //! using MFloat = Dune::FieldMatrix<float, 2, 2>;
-//! using SpMatrixFloat = Dune::BCRSMatrix<MFloat>;
+//! using SpMatrixFloat = BlockSparseMatrix<MFloat>;
 //!
 //! template<class ParallelInfo>
 //! void applyILU0AsFloat(const MDouble& matrix, const XDouble& x, XDouble& y) {
@@ -107,8 +107,7 @@ public:
 
     using XTo = Dune::BlockVector<Dune::FieldVector<field_type_to, block_type::dimension>>;
     using YTo = Dune::BlockVector<Dune::FieldVector<field_type_to, block_type::dimension>>;
-    using matrix_type_to =
-        typename Dune::BCRSMatrix<Dune::FieldMatrix<field_type_to, block_type::dimension, block_type::dimension>>;
+    using matrix_type_to = BlockSparseMatrix<Dune::FieldMatrix<field_type_to, block_type::dimension, block_type::dimension>>;
 
     //! \brief Constructor.
     //!

@@ -28,7 +28,6 @@
 #include <opm/simulators/linalg/gpuistl/AmgxInterface.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <amgx_c.h>
 

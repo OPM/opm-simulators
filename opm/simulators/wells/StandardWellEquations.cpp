@@ -422,7 +422,7 @@ sumDistributed(Parallel::Communication comm)
     template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                                        \
         extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,N,N>>&) const;          \
     template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                                        \
-        extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
+        extractCPRPressureMatrix(BlockSparseMatrix<MatrixBlock<T,1,1>>&,               \
                                  const typename StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::BVector&, \
                                  const int,                                           \
                                  const bool,                                          \
