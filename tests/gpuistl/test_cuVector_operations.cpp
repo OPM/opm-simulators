@@ -22,7 +22,6 @@
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
-#include <dune/istl/bcrsmatrix.hh>
 #include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>

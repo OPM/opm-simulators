@@ -22,8 +22,8 @@
 
 #include <boost/test/unit_test.hpp>
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <memory>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
@@ -40,8 +40,8 @@ using FM1x1 = Dune::FieldMatrix<T, 1, 1>;
 using FM2x2 = Dune::FieldMatrix<T, 2, 2>;
 using B1x1Vec = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 using B2x2Vec = Dune::BlockVector<Dune::FieldVector<double, 2>>;
-using Sp1x1BlockMatrix = Dune::BCRSMatrix<FM1x1>;
-using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
+using Sp1x1BlockMatrix = Opm::BlockSparseMatrix<FM1x1>;
+using Sp2x2BlockMatrix = Opm::BlockSparseMatrix<FM2x2>;
 using CuMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<T>;
 using CuIntVec = Opm::gpuistl::GpuVector<int>;
 using CuFloatingPointVec = Opm::gpuistl::GpuVector<T>;

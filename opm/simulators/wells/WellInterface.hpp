@@ -41,6 +41,7 @@ namespace Opm {
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -57,7 +58,6 @@ namespace Opm {
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
@@ -96,7 +96,7 @@ public:
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
     using Eval = typename Base::Eval;
     using BVector = Dune::BlockVector<VectorBlockType>;
-    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
+    using PressureMatrix = BlockSparseMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;

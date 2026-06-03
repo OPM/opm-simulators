@@ -22,12 +22,13 @@
 
 #include <boost/test/unit_test.hpp>
 #include <dune/istl/solvers.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/gpuistl/SolverAdapter.hpp>
 
 static const constexpr int dim = 3;
-using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, dim, dim>>;
+using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, dim, dim>>;
 using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
 using Moperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
 using PrecondFactory = Opm::PreconditionerFactory<Moperator, Dune::Amg::SequentialInformation>;
