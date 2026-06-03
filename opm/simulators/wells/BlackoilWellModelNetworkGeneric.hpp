@@ -90,8 +90,10 @@ public:
                            const Scalar damping_factor,
                            const Scalar update_upper_bound);
 
-    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
-                          const int reportStepIdx) const;
+    void assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
+                                   std::map<std::string, data::BranchData>& branchvalues,
+                                   std::map<std::string, data::BranchData>& converged_branchvalues,
+                                   const int reportStepIdx) const;
 
     void commitState()
     { this->last_valid_node_pressures_ = this->node_pressures_; }
@@ -109,7 +111,7 @@ public:
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
-    std::map<std::string, Scalar>
+    std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
     computePressures(const Network::ExtNetwork& network,
                      const VFPProdProperties<Scalar>& vfp_prod_props,
                      const UnitSystem& unit_system,
@@ -122,6 +124,8 @@ protected:
 
     // Network pressures for output and initialization
     std::map<std::string, Scalar> node_pressures_;
+    // Network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network)
+    std::map<std::string, data::BranchData> branch_data_;
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
 };

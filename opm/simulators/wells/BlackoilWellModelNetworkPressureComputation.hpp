@@ -25,6 +25,8 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 
+#include <opm/output/data/Groups.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
@@ -128,7 +130,7 @@ public:
     {
     }
 
-    std::map<std::string, Scalar> run()
+    std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>> run()
     {
         const auto roots = network_.roots();
         for (const auto& root : roots) {
@@ -154,7 +156,7 @@ public:
             computeNodePressures(root_to_child_nodes, node_inflows);
         }
 
-        return node_pressures_;
+        return {node_pressures_, branch_data_};
     }
 
 private:
@@ -274,6 +276,7 @@ private:
             const auto terminal_pressure = network_.node(node).terminal_pressure();
             if (terminal_pressure) {
                 node_pressures_[node] = *terminal_pressure;
+                branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
                 continue;
             }
 
@@ -289,6 +292,8 @@ private:
                 } else {
                     node_pressures_[node] = up_press;
                 }
+                auto rates = node_inflows.at(node);
+                branch_data_.emplace(node, data::BranchData{0.0, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
                 continue;
             }
 
@@ -297,8 +302,9 @@ private:
             assert(rates.size() == 3);
             using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
             Calc::prepareRates(rates);
-            node_pressures_[node]
-                = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
+            auto node_pressure = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
+            node_pressures_[node] = node_pressure;
+            branch_data_.emplace(node, data::BranchData{node_pressure - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
         }
     }
 
@@ -309,6 +315,7 @@ private:
     const int report_step_idx_;
     const Parallel::Communication& comm_;
     std::map<std::string, Scalar> node_pressures_;
+    std::map<std::string, data::BranchData> branch_data_;
 };
 
 } // namespace Opm
