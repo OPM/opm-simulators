@@ -82,6 +82,11 @@ template<class TypeTag>
 struct EnableConvectiveMixing<TypeTag, TTag::WellModelTestTypeTag>
 { static constexpr bool value = false; };
 
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::WellModelTestTypeTag>
+{ static constexpr bool value = false; };
+
 }
 
 using StandardWell = Opm::StandardWell<Opm::Properties::TTag::WellModelTestTypeTag>;
