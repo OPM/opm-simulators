@@ -31,11 +31,12 @@
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+#include <tests/TestTypeTag.hpp>
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector)
 {
     // Just make sure we can instantiate
-    using TypeTag = Opm::Properties::TTag::FlowProblem;
+    using TypeTag = Opm::Properties::TTag::TestTypeTag;
     Opm::BlackOilPrimaryVariables<TypeTag> primaryVariables;
     for (std::size_t i = 0; i < primaryVariables.size(); ++i) {
         primaryVariables[i] = static_cast<double>(i);
