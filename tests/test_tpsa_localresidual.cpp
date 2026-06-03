@@ -83,6 +83,11 @@ namespace Opm::Properties {
                                              /*enabledCompIdx=*/FluidSystem::waterCompIdx,
                                              getPropValue<TypeTag, Properties::EnableBioeffects>()>;
     };
+
+    // Disable convective mixing
+    template<class TypeTag>
+    struct EnableConvectiveMixing<TypeTag, TTag::TpsaTestTypeTag>
+    { static constexpr bool value = false; };
 }
 
 namespace {
