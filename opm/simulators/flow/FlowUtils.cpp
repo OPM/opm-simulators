@@ -215,36 +215,37 @@ void hideUnusedParameters()
     // the default eWoms checkpoint/restart mechanism does not work with flow
     Parameters::Hide<Parameters::RestartTime<Scalar>>();
     Parameters::Hide<Parameters::RestartWritingInterval>();
-    // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-    //if(not(Parameters::Get<Parameters::EnableVtkOutput>())){
-        Parameters::HideIfRegistered<Parameters::VtkWriteOilFormationVolumeFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteOilSaturationPressure>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteOilVaporizationFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWritePorosity>();
-        Parameters::HideIfRegistered<Parameters::VtkWritePotentialGradients>();
-        Parameters::HideIfRegistered<Parameters::VtkWritePressures>();
-        Parameters::HideIfRegistered<Parameters::VtkWritePrimaryVars>();
-        Parameters::HideIfRegistered<Parameters::VtkWritePrimaryVarsMeaning>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteProcessRank>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteRelativePermeabilities>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteSaturationRatios>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteSaturations>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteTemperature>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteViscosities>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteWaterFormationVolumeFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteGasDissolutionFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteGasFormationVolumeFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteGasSaturationPressure>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteIntrinsicPermeabilities>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteTracerConcentration>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteExtrusionFactor>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteFilterVelocities>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteDensities>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteDofIndex>();
-        Parameters::HideIfRegistered<Parameters::VtkWriteMobilities>();
-        //}
+    // hide all vtk related it is not currently possible to do this dependet on if the vtk writing
+    // is used
+    // if(not(Parameters::Get<Parameters::EnableVtkOutput>())){
+    Parameters::HideIfRegistered<Parameters::VtkWriteOilFormationVolumeFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteOilSaturationPressure>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteOilVaporizationFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWritePorosity>();
+    Parameters::HideIfRegistered<Parameters::VtkWritePotentialGradients>();
+    Parameters::HideIfRegistered<Parameters::VtkWritePressures>();
+    Parameters::HideIfRegistered<Parameters::VtkWritePrimaryVars>();
+    Parameters::HideIfRegistered<Parameters::VtkWritePrimaryVarsMeaning>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteProcessRank>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteRelativePermeabilities>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteSaturationRatios>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteSaturations>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteTemperature>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteViscosities>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteWaterFormationVolumeFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteGasDissolutionFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteGasFormationVolumeFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteGasSaturationPressure>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteIntrinsicPermeabilities>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteTracerConcentration>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteExtrusionFactor>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteFilterVelocities>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteDensities>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteDofIndex>();
+    Parameters::HideIfRegistered<Parameters::VtkWriteMobilities>();
+    //}
     Parameters::HideIfRegistered<Parameters::VtkWriteAverageMolarMasses>();
     Parameters::HideIfRegistered<Parameters::VtkWriteFugacities>();
     Parameters::HideIfRegistered<Parameters::VtkWriteFugacityCoeffs>();
