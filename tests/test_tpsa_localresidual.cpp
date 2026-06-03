@@ -88,6 +88,11 @@ namespace Opm::Properties {
     template<class TypeTag>
     struct EnableConvectiveMixing<TypeTag, TTag::TpsaTestTypeTag>
     { static constexpr bool value = false; };
+
+    // Disable diffusion
+    template<class TypeTag>
+    struct EnableDiffusion<TypeTag, TTag::TpsaTestTypeTag>
+    { static constexpr bool value = false; };
 }
 
 namespace {
