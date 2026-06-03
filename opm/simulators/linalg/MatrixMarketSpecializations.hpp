@@ -44,6 +44,18 @@ namespace MatrixMarketImpl
         }
     };
 
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+    template <typename T, typename I, int i, int j, typename A>
+    struct mm_header_printer<Experimental::BCRSMatrix<Opm::MatrixBlock<T,i,j>, I, A>>
+    {
+        static void print(std::ostream& os)
+        {
+            os << "%%MatrixMarket matrix coordinate ";
+            os << mm_numeric_type<T>::str() << " general" << std::endl;
+        }
+    };
+#endif
+
     template <typename T, int i, int j, typename A>
     struct mm_block_structure_header<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
@@ -54,6 +66,19 @@ namespace MatrixMarketImpl
             os << i << " " << j << std::endl;
         }
     };
+
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+    template <typename T, typename I, int i, int j, typename A>
+    struct mm_block_structure_header<Experimental::BCRSMatrix<Opm::MatrixBlock<T,i,j>, I, A>>
+    {
+        using M = Experimental::BCRSMatrix<Opm::MatrixBlock<T,i,j>, I, A>;
+        static void print(std::ostream& os, const M&)
+        {
+            os << "% ISTL_STRUCT blocked ";
+            os << i << " " << j << std::endl;
+        }
+    };
+#endif
 } // namespace MatrixMarketImpl
 
 namespace MatrixMarketImpl

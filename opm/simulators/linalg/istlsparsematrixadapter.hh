@@ -27,9 +27,10 @@
 #ifndef EWOMS_ISTL_SPARSE_MATRIX_ADAPTER_HH
 #define EWOMS_ISTL_SPARSE_MATRIX_ADAPTER_HH
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
+
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 namespace Opm {
 namespace Linear {
@@ -43,7 +44,7 @@ class IstlSparseMatrixAdapter
 {
 public:
     //! \brief Implementation of matrix
-    using IstlMatrix = Dune::BCRSMatrix<MatrixBlockType, AllocatorType>;
+    using IstlMatrix = BlockSparseMatrix<MatrixBlockType, AllocatorType>;
 
     //! \brief block type forming the matrix entries
     using MatrixBlock = typename IstlMatrix::block_type;

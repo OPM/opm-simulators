@@ -29,6 +29,7 @@
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <fmt/format.h>
@@ -164,7 +165,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
 }
 
 template<class Scalar, int Dim>
-using BM = Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
+using BM = BlockSparseMatrix<MatrixBlock<Scalar,Dim,Dim>>;
 template<class Scalar, int Dim>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 

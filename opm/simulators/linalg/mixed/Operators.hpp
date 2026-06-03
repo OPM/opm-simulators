@@ -74,7 +74,7 @@ class WellModelMixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperato
 {
 public:
     using field_type = typename V::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
+    using PressureMatrix = Opm::BlockSparseMatrix<MatrixBlock<field_type, 1, 1>>;
 
     // extract block size
     static constexpr auto block_size = V::block_type::dimension;

@@ -30,6 +30,7 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
@@ -77,8 +78,8 @@ initMatrixAndVectors(const ParallelWellInfo<Scalar>& parallel_well_info)
 
 
 template<typename BlockType, typename BlockTypeTransposed>
-Dune::BCRSMatrix<BlockTypeTransposed>
-transposeMatrix(const Dune::BCRSMatrix<BlockType>& A)
+Opm::BlockSparseMatrix<BlockTypeTransposed>
+transposeMatrix(const Opm::BlockSparseMatrix<BlockType>& A)
 {
     const size_t rows = A.N();
     const size_t cols = A.M();
@@ -91,8 +92,8 @@ transposeMatrix(const Dune::BCRSMatrix<BlockType>& A)
     }
 
     // Create the transposed matrix
-    Dune::BCRSMatrix<BlockTypeTransposed> AT(cols, rows, A.nonzeroes(),
-                                             Dune::BCRSMatrix<BlockTypeTransposed>::row_wise);
+    Opm::BlockSparseMatrix<BlockTypeTransposed> AT(cols, rows, A.nonzeroes(),
+                                                   Opm::BlockSparseMatrix<BlockTypeTransposed>::row_wise);
 
     for (auto row = AT.createbegin(); row != AT.createend(); ++row) {
         for (int col_idx : rowind[row.index()]) {

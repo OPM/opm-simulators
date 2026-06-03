@@ -23,12 +23,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
 using B = Dune::FieldMatrix<double, 2, 2>;
-using M = Dune::BCRSMatrix<B>;
+using M = Opm::BlockSparseMatrix<B>;
 using V = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 
 M build3x3BlockMatrix()
