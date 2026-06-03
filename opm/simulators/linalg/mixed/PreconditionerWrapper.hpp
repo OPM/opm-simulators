@@ -35,7 +35,7 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
         mixed_matrix_ = bsr_alloc();
         bsr_init(mixed_matrix_, nrows, nnz, block_size);
 
-        // copy sparsity pattern from double preccision matrix
+        // copy sparsity pattern from double-precision matrix
         int *rows = mixed_matrix_->rowptr;
         int *cols = mixed_matrix_->colidx;
 
@@ -90,8 +90,8 @@ void MixedPreconditioner<M,X,Y>::
 update ()
 {
     // transpose each dense block to make them column-major
-    int b = block_size;
-    int bb=b*b;
+    int const b = block_size;
+    int const bb=b*b;
     double B[bb];
     for(int k=0;k<nnz_;k++)
     {
@@ -99,7 +99,18 @@ update ()
         for(int i=0;i<bb;i++) mixed_matrix_->dbl[bb*k + i] = B[i];
     }
 
-    use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_); // choose dilu or ilu0
+    //use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_); // choose dilu or ilu0
+
+    if      constexpr(b==1){printf("MixedPreconditioner::update does not support block size == 1!\n");getchar();}
+    else if constexpr(b==2){printf("MixedPreconditioner::update does not support block size == 2!\n");getchar();}
+    else if constexpr(b==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
+    else if constexpr(b==4){printf("MixedPreconditioner::update does not support block size == 4!\n");getchar();}
+    else
+    {
+        printf("MixedPreconditioner::update only supports block sizes < 5!\n");
+        getchar();
+    }
+
     prec_downcast(prec_);
 }
 
@@ -108,7 +119,20 @@ void MixedPreconditioner<M,X,Y>::
 apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
 {
     x=y;
-    prec_mapply3c(prec_,&x[0][0]);
+
+    //prec_mapply3c(prec_,&x[0][0]);
+
+    int const b = block_size;
+    if      constexpr(b==1){printf("MixedPreconditioner::apply does not support block size == 1!\n");getchar();}
+    else if constexpr(b==2){printf("MixedPreconditioner::apply does not support block size == 2!\n");getchar();}
+    else if constexpr(b==3) prec_mapply3c(prec_,&x[0][0]);
+    else if constexpr(b==4){printf("MixedPreconditioner::apply does not support block size == 4!\n");getchar();}
+    else
+    {
+        printf("MixedPreconditioner::apply only supports block sizes < 5!\n");
+        getchar();
+    }
+
 }
 
 }
