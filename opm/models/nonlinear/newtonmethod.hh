@@ -192,6 +192,21 @@ public:
     void setTolerance(Scalar value)
     { params_.tolerance_ = value; }
 
+    /*! 
+     * \brief Public wrapper for applying a Newton update to a solution vector.
+     *
+     * This keeps update_() protected while allowing external orchestrators
+     * (like flow-level nonlinear-system wrappers) to request a model-consistent
+     * update step.
+     */
+    void applyUpdate(SolutionVector& nextSolution,
+                     const SolutionVector& currentSolution,
+                     const GlobalEqVector& solutionUpdate,
+                     const GlobalEqVector& currentResidual)
+    {
+        asImp_().update_(nextSolution, currentSolution, solutionUpdate, currentResidual);
+    }
+
     /*!
      * \brief Run the Newton method.
      *

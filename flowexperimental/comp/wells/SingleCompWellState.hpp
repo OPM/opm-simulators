@@ -94,6 +94,8 @@ public:
 
     void update_injector_targets(const Well& well, const SummaryState& st);
 
+    void copyRuntimeStateFrom(const SingleCompWellState& other);
+
     Scalar get_total_surface_rate() const;
 };
 

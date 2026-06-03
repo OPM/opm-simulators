@@ -525,7 +525,7 @@ maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_
     );
 }
 
-// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicit::runStep()
 // It has to be called for each substep since TUNING might have been changed for next sub step due
 // to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
@@ -1245,7 +1245,7 @@ maybeUpdateLastSubstepOfSyncTimestep_([[maybe_unused]] const double dt)
 #endif
 }
 
-// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicit::runStep()
 // It has to be called for each substep since TUNING might have been changed for next sub step due
 // to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
@@ -1259,7 +1259,7 @@ maybeUpdateTuningAndTimeStep_()
     // be named maybeUpdateTimeStep_() or similar, since it should not update the tuning. However,
     // the current definition of the maybeUpdateTuning_() callback is actually calling
     // adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning) which is updating the tuning
-    // see SimulatorFullyImplicitBlackoil::runStep() for more details.
+    // see SimulatorFullyImplicit::runStep() for more details.
     const auto old_value = suggestedNextTimestep_();
     if (this->substepper_.maybeUpdateTuning_(this->substep_timer_.simulationTimeElapsed(),
                                              this->substep_timer_.currentStepLength(),

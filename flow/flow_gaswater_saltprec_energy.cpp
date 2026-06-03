@@ -25,7 +25,7 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/grid/CpGrid.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
 

@@ -814,6 +814,62 @@ macro(opm-simulators_targets_hook)
       OPM_COMPILE_COMPONENTS_TEMPLATE_LIST=${OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}
   )
 
+  opm_add_executable(
+    TARGET
+      flowexp_comp2_2p
+    SOURCES
+      flowexperimental/comp/flowexp_comp2_2p_main.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
+  )
+
+  opm_add_executable(
+    TARGET
+      flowexp_comp3_2p
+    SOURCES
+      flowexperimental/comp/flowexp_comp3_2p_main.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
+  )
+
+  opm_add_test(flow_comp
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEPENDS
+      opmsimulators
+    LIBRARIES
+      opmsimulators
+    SOURCES
+      flowexperimental/comp/flow_comp.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+  )
+  target_compile_definitions(flow_comp
+    PRIVATE
+      OPM_COMPILE_COMPONENTS_TEMPLATE_LIST=${OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}
+  )
+
+  opm_add_executable(
+    TARGET
+      flow_comp2_2p
+    SOURCES
+      flowexperimental/comp/flow_comp2_2p.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
+  )
+
+  opm_add_executable(
+    TARGET
+      flow_comp3_2p
+    SOURCES
+      flowexperimental/comp/flow_comp3_2p.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
+  )
+
   if(BUILD_FLOW_FLOAT_VARIANTS)
     opm_add_executable(
       TARGET

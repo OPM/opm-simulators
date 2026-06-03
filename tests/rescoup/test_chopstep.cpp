@@ -39,7 +39,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #if HAVE_DUNE_FEM
