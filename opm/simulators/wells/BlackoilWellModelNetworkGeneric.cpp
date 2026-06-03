@@ -266,8 +266,8 @@ assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
 {
     nodevalues.clear();
     branchvalues.clear();
+    converged_branchvalues.clear();
     if (reportStepIdx < 0) return;
-
     for (const auto& [node, pressure] : node_pressures_) {
         nodevalues.emplace(node, data::NodeData{pressure});
         // Assign node values of well groups to GPR:WELLNAME
