@@ -212,6 +212,7 @@ public:
         if constexpr (enableDiffusion) {
             DiffusionModule::initFromState(vanguard.eclState());
         }
+
         if constexpr (enableDispersion) {
             DispersionModule::initFromState(vanguard.eclState());
         }

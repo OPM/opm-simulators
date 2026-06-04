@@ -72,6 +72,11 @@ template<class TypeTag>
 struct EnableConvectiveMixing<TypeTag, TTag::TestTypeTag>
 { static constexpr bool value = false; };
 
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::TestTypeTag>
+{ static constexpr bool value = false; };
+
 }
 
 namespace Opm {

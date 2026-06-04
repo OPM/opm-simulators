@@ -81,6 +81,13 @@ template<class TypeTag>
 struct EnableConvectiveMixing<TypeTag, TTag::FlowEarlyBird>
 { static constexpr bool value = false; };
 
+#ifndef OPM_PYMAINBO_HEADER_INCLUDED
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowEarlyBird>
+{ static constexpr bool value = false; };
+#endif
+
 } // namespace Opm::Properties
 
 namespace Opm {

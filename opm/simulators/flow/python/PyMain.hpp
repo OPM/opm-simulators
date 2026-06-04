@@ -32,6 +32,16 @@
 #include <string>
 #include <vector>
 
+namespace Opm::Properties {
+
+// Enable diffusion - the python simulators do not re-parse parameters
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowEarlyBird>
+{ static constexpr bool value = true; };
+
+}
+
+
 namespace Opm {
 
 template<class TypeTag>

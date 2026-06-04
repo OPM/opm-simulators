@@ -35,6 +35,7 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
 
 #include <opm/simulators/flow/Main.hpp>
 

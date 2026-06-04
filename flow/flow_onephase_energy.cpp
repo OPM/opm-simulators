@@ -25,6 +25,7 @@
 #include <opm/material/common/ResetLocale.hpp>
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
 #include <opm/simulators/flow/Main.hpp>
