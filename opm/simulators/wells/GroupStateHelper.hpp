@@ -465,7 +465,7 @@ public:
     void updateGroupTargetReduction(const Group& group,
                                     const bool is_injector);
 
-    void updateNetworkLeafNodeProductionRates();
+    void updateNetworkLeafNodeRates();
 
     /// @brief Set production control to NONE for groups not targeting any well.
     ///

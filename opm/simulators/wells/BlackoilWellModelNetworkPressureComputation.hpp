@@ -22,6 +22,7 @@
 
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 
@@ -53,6 +54,13 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
     {
         // Network rates are positive, while production VFP expects negative rates.
         std::ranges::transform(rates, rates.begin(), [](const auto r) { return -r; });
+    }
+
+    template <class GroupState>
+    static const std::vector<Scalar>
+    leafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.network_leaf_node_production_rates(node);
     }
 
     template<typename Branch>
@@ -90,6 +98,13 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     {
     }
 
+    template <class GroupState>
+    static const std::vector<Scalar>
+    leafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.network_leaf_node_injection_rates(node);
+    }
+
     template<typename Branch>
     static Scalar compute(const VFPInjProperties<Scalar>& vfp_props,
                           const int table_id,
@@ -109,16 +124,16 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 /// @brief  Class to compute network pressures using VFP tables, given flow rates
 ///         for each group and fixed pressures at network roots.
 ///         Optionally, the ALQ values from wells can be included in the rates.
-template<typename Scalar, typename IndexTraits, typename VfpProperties>
+template<typename GenericWellModel, typename VfpProperties, typename Communication = Parallel::Communication>
 class NetworkPressureComputation
 {
 public:
-    NetworkPressureComputation(const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
+    NetworkPressureComputation(const GenericWellModel& well_model,
                                const Network::ExtNetwork& network,
                                const VfpProperties& vfp_props,
                                const UnitSystem& unit_system,
                                const int report_step_idx,
-                               const Parallel::Communication& comm)
+                               const Communication& comm)
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
@@ -127,6 +142,9 @@ public:
         , comm_(comm)
     {
     }
+
+    using Scalar = typename GenericWellModel::Scalar;
+    using IndexTraits = GenericWellModel::IndexTraits;
 
     std::map<std::string, Scalar> run()
     {
@@ -195,7 +213,8 @@ private:
                 continue;
             }
 
-            node_inflows[node] = well_model_.groupStateHelper().groupState().network_leaf_node_production_rates(node);
+            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
+            node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(), node);
             if (network_.node(node).add_gas_lift_gas()) {
                 addGasLiftGas(node, node_inflows[node]);
             }
@@ -302,12 +321,12 @@ private:
         }
     }
 
-    const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
+    const GenericWellModel& well_model_;
     const Network::ExtNetwork& network_;
     const VfpProperties& vfp_props_;
     const UnitSystem& unit_system_;
     const int report_step_idx_;
-    const Parallel::Communication& comm_;
+    const Communication& comm_;
     std::map<std::string, Scalar> node_pressures_;
 };
 

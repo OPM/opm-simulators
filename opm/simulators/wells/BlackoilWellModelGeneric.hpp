@@ -93,11 +93,14 @@ struct EnableTerminalOutput { static constexpr bool value = true; };
 namespace Opm {
 
 /// Class for handling the blackoil well model.
-template<typename Scalar, typename IndexTraits>
+template<typename ScalarT, typename IndexTraitsT>
 class BlackoilWellModelGeneric
 {
-    using GroupStateHelperType =  GroupStateHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType =  GroupStateHelper<ScalarT, IndexTraitsT>;
 public:
+    using Scalar = ScalarT;
+    using IndexTraits = IndexTraitsT;
+
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
                              BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>& network,

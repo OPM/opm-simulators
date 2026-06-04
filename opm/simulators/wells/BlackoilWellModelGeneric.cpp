@@ -1323,7 +1323,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         group_state_helper.updateVREPForGroups(fieldGroup);
         group_state_helper.updateReservoirRatesInjectionGroups(fieldGroup);
         group_state_helper.updateSurfaceRatesInjectionGroups(fieldGroup);
-        group_state_helper.updateNetworkLeafNodeProductionRates();
+        group_state_helper.updateNetworkLeafNodeRates();
         group_state_helper.updateGroupProductionRates(fieldGroup);
     }
     group_state_helper.updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());

@@ -349,12 +349,11 @@ computePressures(const Network::ExtNetwork& network,
         return {};
     }
 
-    NetworkPressureComputation<Scalar, IndexTraits, VFPProdProperties<Scalar>> network_pressure_computation(well_model_,
-                                                                                                              network,
-                                                                                                              vfp_prod_props,
-                                                                                                              unit_system,
-                                                                                                              reportStepIdx,
-                                                                                                              comm);
+    NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
+                               VFPProdProperties<Scalar>>
+        network_pressure_computation(
+            well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm);
+
     return network_pressure_computation.run();
 }
 
