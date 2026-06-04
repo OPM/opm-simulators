@@ -37,6 +37,7 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/models/blackoil/blackoilextboparams.hpp>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
@@ -53,9 +54,6 @@
 #include <string>
 
 namespace Opm {
-
-template<class TypeTag, bool enableExtboV>
-class BlackOilExtboModule;
 
 /*!
  * \ingroup BlackOil
@@ -85,7 +83,8 @@ class BlackOilExtboModule<TypeTag, true>
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr unsigned oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
+    static constexpr bool blackoilConserveSurfaceVolume =
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
 public:
     //! \brief Set parameters.
@@ -359,9 +358,6 @@ template <class TypeTag>
 BlackOilExtboParams<typename BlackOilExtboModule<TypeTag, true>::Scalar>
 BlackOilExtboModule<TypeTag, true>::params_;
 
-template <class TypeTag, bool enableExtboV>
-class BlackOilExtboIntensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilExtboIntensiveQuantities
@@ -559,11 +555,6 @@ protected:
     Scalar zRefDensity_;
 };
 
-template <class TypeTag>
-class BlackOilExtboIntensiveQuantities<TypeTag, false>
-{
-};
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilExtboExtensiveQuantities
@@ -571,8 +562,8 @@ class BlackOilExtboIntensiveQuantities<TypeTag, false>
  * \brief Provides the solvent specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableExtboV = getPropValue<TypeTag, Properties::EnableExtbo>()>
-class BlackOilExtboExtensiveQuantities
+template <class TypeTag>
+class BlackOilExtboExtensiveQuantities<TypeTag, true>
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
@@ -580,10 +571,6 @@ class BlackOilExtboExtensiveQuantities
     { return *static_cast<Implementation*>(this); }
 };
 
-template <class TypeTag>
-class BlackOilExtboExtensiveQuantities<TypeTag, false>
-{
-};
 
 } // namespace Opm
 
