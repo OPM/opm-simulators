@@ -75,6 +75,12 @@ namespace Opm {
 template <class TypeTag>
 class EcfvDiscretization;
 
+namespace detail {
+    //! \brief Utility to silence "unused variable" warnings in lambdas.
+    template <typename... T>
+    constexpr void ignoreUnused(T&&...) noexcept {}
+}
+
 /*!
  * \ingroup BlackOilSimulator
  *
@@ -148,7 +154,7 @@ public:
                    [&collectOnIORank](const int idx)
                    { return collectOnIORank.isCartIdxOnThisRank(idx); },
                    simulator.vanguard().grid().comm(),
-                   energyModuleType == EnergyModules::FullyImplicitThermal || 
+                   energyModuleType == EnergyModules::FullyImplicitThermal ||
                    energyModuleType == EnergyModules::SequentialImplicitThermal,
                    energyModuleType == EnergyModules::ConstantTemperature,
                    getPropValue<TypeTag, Properties::EnableMech>(),
@@ -1195,6 +1201,7 @@ private:
             Entry{PhaseEntry{&this->viscosity_,
                              [this](const unsigned phaseIdx, const Context& ectx)
                              {
+                                detail::ignoreUnused(this);
                                 if constexpr (enableExtbo) {
                                     if (this->extboC_.allocated() && phaseIdx == oilPhaseIdx) {
                                         return getValue(ectx.intQuants.oilViscosity());
@@ -1598,6 +1605,7 @@ private:
             },
             Entry{[&extboC = this->extboC_](const Context& ectx)
                   {
+                      detail::ignoreUnused(extboC);
                       if constexpr (enableExtbo) {
                           extboC.assignVolumes(ectx.globalDofIdx,
                                                ectx.intQuants.xVolume().value(),
@@ -1637,6 +1645,7 @@ private:
             },
             Entry{[&bioeffectsC = this->bioeffectsC_](const Context& ectx)
                   {
+                      detail::ignoreUnused(bioeffectsC);
                       if constexpr (enableBioeffects) {
                           bioeffectsC.assign(ectx.globalDofIdx,
                                              ectx.intQuants.microbialConcentration().value(),
