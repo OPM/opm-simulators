@@ -1311,9 +1311,13 @@ GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeRates()
         }
     };
     do_update(this->schedule_[this->report_step_].network(), /*is_injector=*/false);
-    // TODO: do the below to support injection networks when available.
-    // do_update(this->schedule_[this->report_step_].gas_injection_network(), /*is_injector=*/true);
-    // do_update(this->schedule_[this->report_step_].water_injection_network(), /*is_injector=*/true);
+    for (const Phase phase : {Phase::GAS, Phase::WATER}) {
+        if (const auto injNetwork = this->schedule_[this->report_step_].injectionNetwork.get_ptr(phase);
+            injNetwork != nullptr)
+        {
+            do_update(*injNetwork, /* is_injector = */ true);
+        }
+    }
 }
 
 template <typename Scalar, typename IndexTraits>
