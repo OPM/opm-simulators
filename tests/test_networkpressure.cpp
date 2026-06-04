@@ -24,14 +24,6 @@
 
 #include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
 
-#include <algorithm>
-#include <filesystem>
-#include <memory>
-#include <map>
-#include <sstream>
-#include <limits>
-#include <vector>
-
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
@@ -46,6 +38,16 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <filesystem>
+#include <memory>
+#include <map>
+#include <sstream>
+#include <limits>
+#include <string>
+#include <vector>
 
 using namespace Opm;
 using namespace Opm::unit;
