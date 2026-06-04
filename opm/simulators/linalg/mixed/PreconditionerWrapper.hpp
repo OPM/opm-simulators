@@ -102,7 +102,7 @@ update ()
     //use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_); // choose dilu or ilu0
 
     if      constexpr(b==1){printf("MixedPreconditioner::update does not support block size == 1!\n");getchar();}
-    else if constexpr(b==2){printf("MixedPreconditioner::update does not support block size == 2!\n");getchar();}
+    else if constexpr(b==2) use_dilu_ ? prec_dilu_factorize2(prec_, mixed_matrix_) : prec_ilu0_factorize2(prec_, mixed_matrix_);
     else if constexpr(b==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
     else if constexpr(b==4) use_dilu_ ? prec_dilu_factorize4(prec_, mixed_matrix_) : prec_ilu0_factorize4(prec_, mixed_matrix_);
     else
@@ -125,7 +125,7 @@ apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
 
     int const b = block_size;
     if      constexpr(b==1){printf("MixedPreconditioner::apply does not support block size == 1!\n");getchar();}
-    else if constexpr(b==2){printf("MixedPreconditioner::apply does not support block size == 2!\n");getchar();}
+    else if constexpr(b==2) prec_mapply2c(prec_,&x[0][0]);
     else if constexpr(b==3) prec_mapply3c(prec_,&x[0][0]);
     else if constexpr(b==4) prec_mapply4c(prec_,&x[0][0]);
     else
