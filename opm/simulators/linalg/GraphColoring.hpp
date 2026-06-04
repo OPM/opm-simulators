@@ -273,14 +273,15 @@ getMatrixRowColoring(const M& matrix, ColoringType coloringType)
             }
         }
     } else if (coloringType == ColoringType::UPPER) {
-        for (auto i = matrix.beforeEnd(); i != matrix.beforeBegin(); --i) {
-            for (auto a_ij = ++(i->find(i.index())); a_ij != i->end(); ++a_ij) {
-                color[i.index()] = std::max({color[i.index()], color[a_ij.index()] + 1});
+        auto rindex = [](auto it) { return std::prev(it.base()).index(); };
+        for (auto i = std::make_reverse_iterator(matrix.end()); i != std::make_reverse_iterator(matrix.begin()); ++i) {
+            for (auto a_ij = ++(i->find(rindex(i))); a_ij != i->end(); ++a_ij) {
+                color[rindex(i)] = std::max({color[rindex(i)], color[a_ij.index()] + 1});
             }
-            if (color[i.index()] >= colorCnt.size()) {
+            if (color[rindex(i)] >= colorCnt.size()) {
                 colorCnt.push_back(1);
             } else {
-                ++colorCnt[color[i.index()]];
+                ++colorCnt[color[rindex(i)]];
             }
         }
     } else if (coloringType == ColoringType::LOWER) {

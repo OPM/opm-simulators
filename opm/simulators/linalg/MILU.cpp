@@ -167,23 +167,21 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
 
     auto iluRow = ILU.createbegin();
 
-    for(std::size_t i = 0, iend = A.N(); i < iend; ++i)
+    for (auto&& [_, i] : sparseRange(A))
     {
-        auto& orow = A[inverseOrdering[i]];
-
         Map rowPattern;
-        for ( auto col = orow.begin(), cend = orow.end(); col != cend; ++col)
+        for (auto&& [_, j] : sparseRange(A[inverseOrdering[i]]))
         {
-            rowPattern[ordering[col.index()]] = 0;
+            rowPattern[ordering[j]] = 0;
         }
 
         for(auto ik = rowPattern.begin(); ik->first < i; ++ik)
         {
             if ( ik->second < n )
             {
-                auto& rowk = ILU[ik->first];
+                auto rowk = ILU.begin() + ik->first;
 
-                for ( auto kj = rowk.find(ik->first), endk = rowk.end();
+                for ( auto kj = rowk->find(ik->first), endk = rowk->end();
                       kj != endk; ++kj)
                 {
                     // Assume double and block_type FieldMatrix
@@ -220,14 +218,14 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     // copy Entries from A
     for(auto iter=A.begin(), iend = A.end(); iter != iend; ++iter)
     {
-        auto& newRow = ILU[ordering[iter.index()]];
         // reset stored generation
-        std::ranges::fill(newRow, 0);
+        auto newRowIt = ILU.begin() + ordering[iter.index()];
+        std::ranges::fill(*newRowIt, 0);
 
         // copy row.
         for(auto col = iter->begin(), cend = iter->end(); col != cend; ++col)
         {
-            newRow[ordering[col.index()]] = *col;
+            (*newRowIt)[ordering[col.index()]] = *col;
         }
     }
     // call decomposition on pattern
