@@ -421,7 +421,12 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
+            std::string extra_summary;
+            if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+                extra_summary = simulator_->model().simulator().problem().geoMechModel().finalTimingSummary();
+            }
+
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, extra_summary);
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
