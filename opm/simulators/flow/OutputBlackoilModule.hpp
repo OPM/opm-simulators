@@ -1337,7 +1337,7 @@ private:
                                       return getValue(ectx.intQuants.foamConcentration());
                                   }
                                   else {
-                                      return 0.0;
+                                      return Scalar{0};
                                   }
                               }
                   }

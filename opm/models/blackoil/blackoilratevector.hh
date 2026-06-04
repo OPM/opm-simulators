@@ -35,7 +35,6 @@
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>

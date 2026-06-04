@@ -46,6 +46,7 @@ DECLARE_MODULE(BlackOilConvectiveMixing)
 DECLARE_MODULE(BlackOilDiffusion)
 DECLARE_MODULE(BlackOilDispersion)
 DECLARE_MODULE(BlackOilExtbo)
+DECLARE_MODULE(BlackOilFoam)
 
 #undef DECLARE_MODULE
 
