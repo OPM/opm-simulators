@@ -184,7 +184,7 @@ void mat4_vfms(double *C, double const *A, double const *B)
         vz = _mm256_loadu_pd(C+4*j) - vz;
 
         // Store result in column j of matrix C
-        _mm256_store_pd(C+4*j,vz);
+        _mm256_storeu_pd(C+4*j,vz);
     }
 }
 
