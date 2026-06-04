@@ -32,16 +32,6 @@
 #include <string>
 #include <vector>
 
-namespace Opm::Properties {
-
-// Enable diffusion - the python simulators do not re-parse parameters
-template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowEarlyBird>
-{ static constexpr bool value = true; };
-
-}
-
-
 namespace Opm {
 
 template<class TypeTag>
@@ -96,7 +86,7 @@ public:
     {
         exitCode = EXIT_SUCCESS;
 
-        if (this->initialize_<Properties::TTag::FlowEarlyBird>(exitCode, true)) {
+        if (this->initialize_<TypeTag>(exitCode, true)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
