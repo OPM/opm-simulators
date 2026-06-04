@@ -37,7 +37,13 @@ namespace Opm {
     template<class TypeTag, bool enable> class T##IntensiveQuantities;  \
     template<class TypeTag, bool enable> class T##ExtensiveQuantities; \
     template<class TypeTag> struct T##Params; \
-    template<class TypeTag> class T##IntensiveQuantities<TypeTag, false> {}; \
+    template<class TypeTag> class T##IntensiveQuantities<TypeTag, false> { \
+        public: \
+        T##IntensiveQuantities() = default; \
+        template <class OtherTypeTag> \
+        T##IntensiveQuantities(const T##IntensiveQuantities<OtherTypeTag, false>& other) \
+        {} \
+    }; \
     template<class TypeTag> class T##ExtensiveQuantities<TypeTag, false> {};
 
 DECLARE_MODULE(BlackOilBioeffects)

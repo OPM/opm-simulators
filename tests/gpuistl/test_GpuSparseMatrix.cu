@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrs)
     BOOST_CHECK_EQUAL(cpuValues[4], 5.0);
     BOOST_CHECK_EQUAL(cpuValues[5], 6.0);
 
-    auto diagPtrs = Opm::gpuistl::detail::getDiagPtrs(gpuSparseMatrix);
+    auto diagPtrs = Opm::gpuistl::detail::getDiagPtrsTyped<double>(gpuSparseMatrix);
     auto diagPtrsView = Opm::gpuistl::GpuView<double*>(diagPtrs.data(), diagPtrs.size());
 
     auto d_result = Opm::gpuistl::make_gpu_unique_ptr<std::array<double, 3>>({-1});
@@ -199,12 +199,12 @@ __global__ void checkDiagBlocksKernel (double** diagPtrs, std::array<double, 12>
         (*values)[1] = diagPtrs[0][1];  // B[0][0][0][1]
         (*values)[2] = diagPtrs[0][2];  // B[0][0][1][0]
         (*values)[3] = diagPtrs[0][3];  // B[0][0][1][1]
-        
+
         (*values)[4] = diagPtrs[1][0];  // B[1][1][0][0]
         (*values)[5] = diagPtrs[1][1];  // B[1][1][0][1]
         (*values)[6] = diagPtrs[1][2];  // B[1][1][1][0]
         (*values)[7] = diagPtrs[1][3];  // B[1][1][1][1]
-        
+
         (*values)[8] = diagPtrs[2][0];  // B[2][2][0][0]
         (*values)[9] = diagPtrs[2][1];  // B[2][2][0][1]
         (*values)[10] = diagPtrs[2][2]; // B[2][2][1][0]
@@ -251,27 +251,27 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
     B[0][0][0][1] = 1.1;
     B[0][0][1][0] = 1.2;
     B[0][0][1][1] = 1.3;
-    
+
     B[0][1][0][0] = 2.0;
     B[0][1][0][1] = 2.1;
     B[0][1][1][0] = 2.2;
     B[0][1][1][1] = 2.3;
-    
+
     B[0][2][0][0] = 3.0;
     B[0][2][0][1] = 3.1;
     B[0][2][1][0] = 3.2;
     B[0][2][1][1] = 3.3;
-    
+
     B[1][1][0][0] = 4.0;
     B[1][1][0][1] = 4.1;
     B[1][1][1][0] = 4.2;
     B[1][1][1][1] = 4.3;
-    
+
     B[2][0][0][0] = 5.0;
     B[2][0][0][1] = 5.1;
     B[2][0][1][0] = 5.2;
     B[2][0][1][1] = 5.3;
-    
+
     B[2][2][0][0] = 6.0;
     B[2][2][0][1] = 6.1;
     B[2][2][1][0] = 6.2;
@@ -279,8 +279,8 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
 
     auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<double>::fromMatrix(B);
 
-    auto diagPtrs = Opm::gpuistl::detail::getDiagPtrs(gpuSparseMatrix);
-    
+    auto diagPtrs = Opm::gpuistl::detail::getDiagPtrsTyped<double>(gpuSparseMatrix);
+
     // Check that we have the correct number of diagonal pointers
     BOOST_CHECK_EQUAL(diagPtrs.size(), N);
 
@@ -291,18 +291,18 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
     checkDiagBlocksKernel<<<1, 1>>>(diagPtrsView.data(), d_result.get());
 
     std::array<double, 12> h_result = Opm::gpuistl::copyFromGPU(d_result);
-    
+
     // Verify diagonal block elements
     BOOST_CHECK_EQUAL(h_result[0], 1.0);
     BOOST_CHECK_EQUAL(h_result[1], 1.1);
     BOOST_CHECK_EQUAL(h_result[2], 1.2);
     BOOST_CHECK_EQUAL(h_result[3], 1.3);
-    
+
     BOOST_CHECK_EQUAL(h_result[4], 4.0);
     BOOST_CHECK_EQUAL(h_result[5], 4.1);
     BOOST_CHECK_EQUAL(h_result[6], 4.2);
     BOOST_CHECK_EQUAL(h_result[7], 4.3);
-    
+
     BOOST_CHECK_EQUAL(h_result[8], 6.0);
     BOOST_CHECK_EQUAL(h_result[9], 6.1);
     BOOST_CHECK_EQUAL(h_result[10], 6.2);
