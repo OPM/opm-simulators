@@ -14,7 +14,7 @@ void mat_show(double const *A, int n, char const *name)
     }
     printf("]\n\n");
 }
-#if 0
+
 void mat2_rmul(double *A, double const *B)
 {
     double M[4];
@@ -46,7 +46,16 @@ void mat2_inv(double *A, double const *B)
     double inv_det = 1.0/(M[0]*M[3]-M[1]*M[2]);
     for(int k=0;k<4;k++) A[k]=inv_det*M[k];
 }
-#endif
+
+void mat2_vfms(double *C, double const *A, double const *B)
+{
+    double M[4];
+    M[0] = A[0]*B[0] + A[2]*B[1];
+    M[1] = A[1]*B[0] + A[3]*B[1];
+    M[2] = A[0]*B[2] + A[2]*B[3];
+    M[3] = A[1]*B[2] + A[3]*B[3];
+    for(int k=0;k<4;k++) C[k]-=M[k];
+}
 
 /**
  * @brief Matrix inverse for 4x4 matrix.
