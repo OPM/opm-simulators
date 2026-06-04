@@ -107,6 +107,7 @@ update ()
     else if constexpr(b==4){printf("MixedPreconditioner::update does not support block size == 4!\n");getchar();}
     else
     {
+        prec_test();
         printf("MixedPreconditioner::update only supports block sizes < 5!\n");
         getchar();
     }

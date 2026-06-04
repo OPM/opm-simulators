@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <immintrin.h>
 
+#include "matvec.h"
 
 prec_t *prec_alloc()
 {
@@ -203,6 +204,11 @@ void mat3_inv(double *invA, const double *A)
 static inline void vec_copy9(double *y, double const *x)
 {
     for(int i=0;i<9;i++) y[i]=x[i];
+}
+
+static inline void vec_copy16(double *y, double const *x)
+{
+    for(int i=0;i<16;i++) y[i]=x[i];
 }
 
 /**
@@ -669,3 +675,43 @@ void prec_info(prec_t *P)
     bsr_info(P->D);
     bsr_info(P->U);
 }
+
+void prec_test()
+{
+#if 0
+    // verify 2x2 inverse and matrix-matrix multiplications
+    double A[4] = {1,0.2,0.3,4};
+    double B[4] = {1,0.2,0.3,4};
+    double C[4] = {1,0.2,0.3,4};
+
+    mat2_inv(A,A);
+    mat_show(A,2,"A");
+
+    mat2_rmul(B,A);
+    mat_show(B,2,"B");
+
+    mat2_lmul(A,C);
+    mat_show(C,2,"C");
+#endif
+
+
+    // verify 4x4 inverse and matrix-matrix multiplications
+    double AA[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double BB[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double CC[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double II[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+    mat_show(AA,4,"AA");
+
+    mat4_inv(AA,AA);
+    mat_show(AA,4,"AA");
+
+    mat4_vfms(II,AA,BB);
+    mat_show(II,4,"II");
+
+    mat4_rmul(BB,AA);
+    mat_show(BB,4,"BB");
+
+    mat4_lmul(AA,CC);
+    mat_show(CC,4,"CC");
+}
+
