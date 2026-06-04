@@ -41,7 +41,7 @@ namespace Opm {
         public: \
         T##IntensiveQuantities() = default; \
         template <class OtherTypeTag> \
-        T##IntensiveQuantities(const T##IntensiveQuantities<OtherTypeTag, false>& other) \
+        T##IntensiveQuantities(const T##IntensiveQuantities<OtherTypeTag, false>&) \
         {} \
     }; \
     template<class TypeTag> class T##ExtensiveQuantities<TypeTag, false> {};
