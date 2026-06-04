@@ -134,9 +134,9 @@ public:
         void update();
 
     private:
-#ifdef RESERVOIR_COUPLING_ENABLED
-        bool isMasterGroup_(const Group& group);
-#endif
+        bool isMasterGroup_(const Group& group) const {
+            return this->parent_.rescoup().isMasterGroup(group.name());
+        }
         void updateGuideRatesForInjectionGroups_(const Group& group);
         /**
          * @brief Updates guide rates for all production groups recursively.
