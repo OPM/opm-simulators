@@ -44,6 +44,7 @@ DECLARE_MODULE(BlackOilBioeffects)
 DECLARE_MODULE(BlackOilBrine)
 DECLARE_MODULE(BlackOilConvectiveMixing)
 DECLARE_MODULE(BlackOilDiffusion)
+DECLARE_MODULE(BlackOilDispersion)
 
 #undef DECLARE_MODULE
 
