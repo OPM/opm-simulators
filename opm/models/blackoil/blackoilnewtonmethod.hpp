@@ -214,7 +214,8 @@ protected:
             Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enablePolymer =
             Indices::polymerConcentrationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
+        static constexpr bool enablePolymerWeight =
+            Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
@@ -322,7 +323,7 @@ protected:
                 const auto& curr = currentValue[Indices::zFractionIdx]; // or currentValue[pvIdx] given the block condition
                 delta = std::clamp(delta, curr - Scalar{1.0}, curr);
             }
-            else if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
+            else if (enablePolymerWeight && pvIdx == static_cast<int>(Indices::polymerMoleWeightIdx)) {
                 const double sign = delta >= 0. ? 1. : -1.;
                 // maximum change of polymer molecular weight, the unit is MDa.
                 // applying this limit to stabilize the simulation. The value itself is still experimental.
@@ -363,7 +364,7 @@ protected:
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
             }
 
-            if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
+            if (enablePolymerWeight && pvIdx == static_cast<int>(Indices::polymerMoleWeightIdx)) {
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 const double polymerConcentration = nextValue[Indices::polymerConcentrationIdx];
                 if (polymerConcentration < 1.e-10) {

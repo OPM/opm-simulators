@@ -568,7 +568,7 @@ class BlackOilPolymerIntensiveQuantities<TypeTag, /*enablePolymerV=*/true>
     static constexpr unsigned polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
-    static constexpr int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
+    static constexpr unsigned polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
 
 public:
     /*!
