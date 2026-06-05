@@ -21,8 +21,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
-#define OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#ifndef OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
+#define OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
 
 #include <dune/common/timer.hh>
 #include <dune/istl/istlexception.hh>
@@ -1235,4 +1235,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#endif // OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
