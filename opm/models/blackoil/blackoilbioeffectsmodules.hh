@@ -531,7 +531,7 @@ class BlackOilBioeffectsIntensiveQuantities<TypeTag, true>
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, true>;
 
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
-    static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
+    static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
     static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
     static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;

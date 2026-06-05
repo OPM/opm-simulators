@@ -174,7 +174,7 @@ struct BlackOilTwoPhaseIndices
         enableBiofilm ? PVOffset + numPhases + numSolvents + 1 : -1000;
 
     //! MICP only available for one phase indices
-    static constexpr int oxygenConcentrationIdx = -1000;
+    static constexpr unsigned oxygenConcentrationIdx = std::numeric_limits<unsigned>::max();
     static constexpr int ureaConcentrationIdx = -1000;
     static constexpr int calciteVolumeFractionIdx = -1000;
 
