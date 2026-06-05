@@ -29,6 +29,8 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
+#include <fmt/format.h>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -392,18 +394,12 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
         case WellEconProductionLimits::EconWorkover::CON:
             {
                 const int worst_offending_completion = ratio_report.worst_offending_completion;
+                assert(worst_offending_completion > 0);
 
                 well_test_state.close_completion(well_.name(), worst_offending_completion, simulation_time);
                 if (write_message_to_opmlog) {
-                    if (worst_offending_completion < 0) {
-                        const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
-                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
-                        deferred_logger.info(msg);
-                    } else {
-                        const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion)
-                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
-                        deferred_logger.info(msg);
-                    }
+                    deferred_logger.info(fmt::format("Completion {} for well {} will be closed due to economic limit",
+                                                      worst_offending_completion, well_.name()));
                 }
 
                 bool allCompletionsClosed = true;
