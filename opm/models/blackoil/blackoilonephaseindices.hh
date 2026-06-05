@@ -139,8 +139,9 @@ struct BlackOilOnePhaseIndices
     static constexpr unsigned compositionSwitchIdx = std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first solvent
-    static constexpr int solventSaturationIdx =
-        enableSolvent ? PVOffset + numPhases : -1000;
+    static constexpr unsigned solventSaturationIdx =
+        enableSolvent ? PVOffset + numPhases
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first extbo component
     static constexpr int zFractionIdx =

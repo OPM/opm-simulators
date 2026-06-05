@@ -87,7 +87,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     static constexpr unsigned pressureSwitchIdx = Indices::pressureSwitchIdx;
     static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
     enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
-    enum { solventSaturationIdx  = Indices::solventSaturationIdx };
+    static constexpr unsigned solventSaturationIdx  = Indices::solventSaturationIdx;
 
     static constexpr bool compositionSwitchEnabled =
         Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();

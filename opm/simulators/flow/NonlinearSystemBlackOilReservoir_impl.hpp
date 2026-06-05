@@ -608,7 +608,8 @@ typename NonlinearSystemBlackOilReservoir<TypeTag>::MaxSolutionUpdateData
 NonlinearSystemBlackOilReservoir<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
-    static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
+    static constexpr bool enableSolvent =
+        Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
 
     // Init output
@@ -628,7 +629,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
                       || (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
-                      || (enableSolvent && pvIdx == Indices::solventSaturationIdx
+                      || (enableSolvent && pvIdx == static_cast<int>(Indices::solventSaturationIdx)
                           && value.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss)
                       || (enableBrine && enableSaltPrecipitation && pvIdx == Indices::saltConcentrationIdx
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {

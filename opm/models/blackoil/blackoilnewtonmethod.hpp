@@ -207,7 +207,8 @@ protected:
                                  const EqVector& update,
                                  const EqVector& currentResidual)
     {
-        static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
+        static constexpr bool enableSolvent =
+            Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableExtbo = Indices::zFractionIdx >= 0;
         static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
@@ -241,8 +242,10 @@ protected:
             }
         }
         if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            deltaSs = update[Indices::solventSaturationIdx];
-            deltaSo -= deltaSs;
+            if constexpr (Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSs = update[Indices::solventSaturationIdx];
+                deltaSo -= deltaSs;
+            }
         }
 
         // maximum saturation delta
@@ -299,7 +302,7 @@ protected:
                     }
                 }
             }
-            else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
+            else if (enableSolvent && pvIdx == static_cast<int>(Indices::solventSaturationIdx)) {
                 // solvent saturation updates are also subject to the Appleyard chop
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                     delta *= satAlpha;
@@ -341,7 +344,7 @@ protected:
             nextValue[pvIdx] = currentValue[pvIdx] - delta;
 
             // keep the solvent saturation between 0 and 1
-            if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
+            if (enableSolvent && pvIdx == static_cast<int>(Indices::solventSaturationIdx)) {
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                     nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
                 }

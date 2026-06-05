@@ -545,7 +545,7 @@ class BlackOilSolventIntensiveQuantities<TypeTag, /*enableSolventV=*/true>
     using SolventModule = BlackOilSolventModule<TypeTag, true>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    static constexpr int solventSaturationIdx = Indices::solventSaturationIdx;
+    static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
