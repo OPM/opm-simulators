@@ -1981,6 +1981,19 @@ operator==(const BlackoilWellModelGeneric& rhs) const
 }
 
 
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+allConnectionsClosed(const Well& well_ecl) const
+{
+    return std::ranges::all_of(well_ecl.getConnections(),
+                               [this, &well_name = well_ecl.name()](const auto& connection)
+                               {
+                                   return connection.state() != Connection::State::OPEN
+                                       || this->wellTestState().completion_is_closed(well_name,
+                                                                                     connection.complnum());
+                               });
+}
+
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 
 #if FLOW_INSTANTIATE_FLOAT

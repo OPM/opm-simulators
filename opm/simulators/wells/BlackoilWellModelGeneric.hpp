@@ -587,6 +587,8 @@ protected:
 
     BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
 
+    bool allConnectionsClosed(const Well& well_ecl) const;
+
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);
 
