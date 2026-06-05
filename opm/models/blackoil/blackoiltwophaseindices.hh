@@ -175,7 +175,7 @@ struct BlackOilTwoPhaseIndices
 
     //! MICP only available for one phase indices
     static constexpr unsigned oxygenConcentrationIdx = std::numeric_limits<unsigned>::max();
-    static constexpr int ureaConcentrationIdx = -1000;
+    static constexpr unsigned ureaConcentrationIdx = std::numeric_limits<unsigned>::max();
     static constexpr int calciteVolumeFractionIdx = -1000;
 
     //! Index of the primary variable for the foam

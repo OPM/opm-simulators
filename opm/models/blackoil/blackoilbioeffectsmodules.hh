@@ -532,7 +532,7 @@ class BlackOilBioeffectsIntensiveQuantities<TypeTag, true>
 
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
-    static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
+    static constexpr unsigned ureaConcentrationIdx = Indices::ureaConcentrationIdx;
     static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
     static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
     static constexpr bool enableMICP = Indices::enableMICP;

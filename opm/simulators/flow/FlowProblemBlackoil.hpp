@@ -1000,7 +1000,7 @@ public:
             values[Indices::biofilmVolumeFractionIdx]= this->bioeffects_.biofilmVolumeFraction[globalDofIdx];
             if constexpr (enableMICP) {
                 values[Indices::oxygenConcentrationIdx] = this->bioeffects_.oxygenConcentration[globalDofIdx];
-                values[Indices::ureaConcentrationIdx]= this->bioeffects_.ureaConcentration[globalDofIdx];
+                values[Indices::ureaConcentrationIdx] = this->bioeffects_.ureaConcentration[globalDofIdx];
                 values[Indices::calciteVolumeFractionIdx]= this->bioeffects_.calciteVolumeFraction[globalDofIdx];
             }
         }

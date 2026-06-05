@@ -419,7 +419,7 @@ protected:
                     if (pvIdx == static_cast<int>(Indices::oxygenConcentrationIdx)) {
                         nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                     }
-                    if (pvIdx == Indices::ureaConcentrationIdx) {
+                    if (pvIdx == static_cast<int>(Indices::ureaConcentrationIdx)) {
                         nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                     }
                     if (pvIdx == Indices::calciteVolumeFractionIdx) {
