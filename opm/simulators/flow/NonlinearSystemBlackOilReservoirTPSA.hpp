@@ -39,7 +39,7 @@
 namespace Opm {
 
 /*!
-* \brief Black oil model for coupling Flow simulations with TPSA geomechanics
+* \brief Nonlinear system for coupling Flow simulations with TPSA geomechanics
 */
 template <class TypeTag>
 class NonlinearSystemBlackOilReservoirTPSA : public NonlinearSystemBlackOilReservoir<TypeTag>
