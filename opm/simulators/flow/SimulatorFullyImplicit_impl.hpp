@@ -23,9 +23,9 @@
 #define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_IMPL_HEADER_INCLUDED
 
 // Improve IDE experience
-#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
+#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_HEADER_HPP
 #include <config.h>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #endif
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -42,8 +42,8 @@
 namespace Opm {
 
 template<class TypeTag>
-SimulatorFullyImplicitBlackoil<TypeTag>::
-SimulatorFullyImplicitBlackoil(Simulator& simulator)
+SimulatorFullyImplicit<TypeTag>::
+SimulatorFullyImplicit(Simulator& simulator)
     : simulator_(simulator)
     , serializer_(*this,
                   FlowGenericVanguard::comm(),
@@ -74,8 +74,8 @@ SimulatorFullyImplicitBlackoil(Simulator& simulator)
 }
 
 template<class TypeTag>
-SimulatorFullyImplicitBlackoil<TypeTag>::
-~SimulatorFullyImplicitBlackoil()
+SimulatorFullyImplicit<TypeTag>::
+~SimulatorFullyImplicit()
 {
     // Safe to call on all ranks, not just the I/O rank.
     convergence_output_.endThread();
@@ -83,7 +83,7 @@ SimulatorFullyImplicitBlackoil<TypeTag>::
 
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 registerParameters()
 {
     ModelParameters::registerParameters();
@@ -98,14 +98,14 @@ registerParameters()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
 SimulatorReport
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 run(SimulatorTimer& timer, int argc, char** argv)
 {
     init(timer, argc, argv);
 #else
 template<class TypeTag>
 SimulatorReport
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 run(SimulatorTimer& timer)
 {
     init(timer);
@@ -142,7 +142,7 @@ run(SimulatorTimer& timer)
 #ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
 bool
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 checkRunningAsReservoirCouplingMaster()
 {
     for (std::size_t report_step = 0; report_step < this->schedule().size(); ++report_step) {
@@ -170,7 +170,7 @@ checkRunningAsReservoirCouplingMaster()
 #ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 init(const SimulatorTimer& timer, int argc, char** argv)
 {
     auto slave_mode = Parameters::Get<Parameters::Slave>();
@@ -200,7 +200,7 @@ init(const SimulatorTimer& timer, int argc, char** argv)
 #else
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 init(const SimulatorTimer& timer)
 {
 #endif
@@ -236,7 +236,7 @@ init(const SimulatorTimer& timer)
 
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 updateTUNING(const Tuning& tuning)
 {
     modelParam_.tolerance_cnv_ = tuning.TRGCNV;
@@ -252,7 +252,7 @@ updateTUNING(const Tuning& tuning)
 
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 updateTUNINGDP(const TuningDp& tuning_dp)
 {
     // NOTE: If TUNINGDP item is _not_ set it should be 0.0
@@ -275,7 +275,7 @@ updateTUNINGDP(const TuningDp& tuning_dp)
 
 template<class TypeTag>
 bool
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 runStep(SimulatorTimer& timer)
 {
     if (schedule().exitStatus().has_value()) {
@@ -491,7 +491,7 @@ runStep(SimulatorTimer& timer)
 
 template<class TypeTag>
 SimulatorReport
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 finalize()
 {
     // make sure all output is written to disk before run is finished
@@ -514,7 +514,7 @@ finalize()
 template<class TypeTag>
 template<class Serializer>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 serializeOp(Serializer& serializer)
 {
     serializer(simulator_);
@@ -524,7 +524,7 @@ serializeOp(Serializer& serializer)
 
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 loadState([[maybe_unused]] HDF5Serializer& serializer,
           [[maybe_unused]] const std::string& groupName)
 {
@@ -535,7 +535,7 @@ loadState([[maybe_unused]] HDF5Serializer& serializer,
 
 template<class TypeTag>
 void
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 saveState([[maybe_unused]] HDF5Serializer& serializer,
           [[maybe_unused]] const std::string& groupName) const
 {
@@ -546,7 +546,7 @@ saveState([[maybe_unused]] HDF5Serializer& serializer,
 
 template<class TypeTag>
 std::array<std::string,5>
-SimulatorFullyImplicitBlackoil<TypeTag>::
+SimulatorFullyImplicit<TypeTag>::
 getHeader() const
 {
     std::ostringstream str;
@@ -559,8 +559,8 @@ getHeader() const
 }
 
 template<class TypeTag>
-std::unique_ptr<typename SimulatorFullyImplicitBlackoil<TypeTag>::Solver>
-SimulatorFullyImplicitBlackoil<TypeTag>::
+std::unique_ptr<typename SimulatorFullyImplicit<TypeTag>::Solver>
+SimulatorFullyImplicit<TypeTag>::
 createSolver(WellModel& wellModel)
 {
     auto model = std::make_unique<Model>(simulator_,

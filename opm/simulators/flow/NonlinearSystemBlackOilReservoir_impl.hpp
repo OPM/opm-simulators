@@ -21,12 +21,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODEL_IMPL_HEADER_INCLUDED
-#define OPM_BLACKOILMODEL_IMPL_HEADER_INCLUDED
+#ifndef OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_IMPL_HEADER_INCLUDED
+#define OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_IMPL_HEADER_INCLUDED
 
-#ifndef OPM_BLACKOILMODEL_HEADER_INCLUDED
+#ifndef OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_HEADER_INCLUDED
 #include <config.h>
-#include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp>
 #endif
 
 #include <dune/common/timer.hh>
@@ -57,9 +57,9 @@
 namespace {
     template <typename TypeTag>
     std::string_view
-    make_string(const typename Opm::BlackoilModel<TypeTag>::DebugFlags f)
+    make_string(const typename Opm::NonlinearSystemBlackOilReservoir<TypeTag>::DebugFlags f)
     {
-        using F = typename Opm::BlackoilModel<TypeTag>::DebugFlags;
+        using F = typename Opm::NonlinearSystemBlackOilReservoir<TypeTag>::DebugFlags;
 
         switch (f) {
         case F::STRICT:   return "Strict";
@@ -74,8 +74,8 @@ namespace {
 namespace Opm {
 
 template <class TypeTag>
-BlackoilModel<TypeTag>::
-BlackoilModel(Simulator& simulator,
+NonlinearSystemBlackOilReservoir<TypeTag>::
+NonlinearSystemBlackOilReservoir(Simulator& simulator,
               const ModelParameters& param,
               BlackoilWellModel<TypeTag>& well_model,
               const bool terminal_output)
@@ -96,7 +96,7 @@ BlackoilModel(Simulator& simulator,
         if (terminal_output) {
             OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
         }
-        nlddSolver_ = std::make_unique<BlackoilModelNldd<TypeTag>>(*this);
+        nlddSolver_ = std::make_unique<NonlinearSystemNldd<TypeTag>>(*this);
     } else if (param_.nonlinear_solver_ == "newton") {
         if (terminal_output) {
             OpmLog::info("Using Newton nonlinear solver.");
@@ -109,7 +109,7 @@ BlackoilModel(Simulator& simulator,
 
 template <class TypeTag>
 SimulatorReportSingle
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 prepareStep(const SimulatorTimerInterface& timer)
 {
     OPM_TIMEFUNCTION();
@@ -180,7 +180,7 @@ prepareStep(const SimulatorTimerInterface& timer)
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 initialLinearization(SimulatorReportSingle& report,
                      const int minIter,
                      const int maxIter,
@@ -242,7 +242,7 @@ initialLinearization(SimulatorReportSingle& report,
 template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 nonlinearIteration(const SimulatorTimerInterface& timer,
                    NonlinearSolverType& nonlinear_solver)
 {
@@ -277,7 +277,7 @@ nonlinearIteration(const SimulatorTimerInterface& timer,
 template <class TypeTag>
 template <class NonlinearSolverType>
 SimulatorReportSingle
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                          NonlinearSolverType& nonlinear_solver)
 {
@@ -369,7 +369,7 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
 
 template <class TypeTag>
 SimulatorReportSingle
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 assembleReservoir(const SimulatorTimerInterface& /* timer */)
 {
     // -------- Mass balance equations --------
@@ -380,8 +380,8 @@ assembleReservoir(const SimulatorTimerInterface& /* timer */)
 }
 
 template <class TypeTag>
-typename BlackoilModel<TypeTag>::Scalar
-BlackoilModel<TypeTag>::
+typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar
+NonlinearSystemBlackOilReservoir<TypeTag>::
 relativeChange() const
 {
     Scalar resultDelta = 0.0;
@@ -468,7 +468,7 @@ relativeChange() const
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 solveJacobianSystem(BVector& x)
 {
     auto& jacobian = simulator_.model().linearizer().jacobian().istlMatrix();
@@ -530,7 +530,7 @@ solveJacobianSystem(BVector& x)
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 updateSolution(const BVector& dx)
 {
     OPM_TIMEBLOCK(updateSolution);
@@ -565,7 +565,7 @@ updateSolution(const BVector& dx)
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 prepareStoringSolutionUpdate()
 {
     // Init. solution update vector
@@ -586,7 +586,7 @@ prepareStoringSolutionUpdate()
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 storeSolutionUpdate(const BVector& dx)
 {
     const auto& elemMapper = simulator_.model().elementMapper();
@@ -604,8 +604,8 @@ storeSolutionUpdate(const BVector& dx)
 }
 
 template <class TypeTag>
-typename BlackoilModel<TypeTag>::MaxSolutionUpdateData
-BlackoilModel<TypeTag>::
+typename NonlinearSystemBlackOilReservoir<TypeTag>::MaxSolutionUpdateData
+NonlinearSystemBlackOilReservoir<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
     static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
@@ -655,9 +655,9 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 }
 
 template <class TypeTag>
-std::tuple<typename BlackoilModel<TypeTag>::Scalar,
-           typename BlackoilModel<TypeTag>::Scalar>
-BlackoilModel<TypeTag>::
+std::tuple<typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar,
+           typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar>
+NonlinearSystemBlackOilReservoir<TypeTag>::
 convergenceReduction(Parallel::Communication comm,
                      const Scalar pvSumLocal,
                      const Scalar numAquiferPvSumLocal,
@@ -715,9 +715,9 @@ convergenceReduction(Parallel::Communication comm,
 }
 
 template <class TypeTag>
-std::pair<typename BlackoilModel<TypeTag>::Scalar,
-          typename BlackoilModel<TypeTag>::Scalar>
-BlackoilModel<TypeTag>::
+std::pair<typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar,
+          typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar>
+NonlinearSystemBlackOilReservoir<TypeTag>::
 localConvergenceData(std::vector<Scalar>& R_sum,
                      std::vector<Scalar>& maxCoeff,
                      std::vector<Scalar>& B_avg,
@@ -755,7 +755,7 @@ localConvergenceData(std::vector<Scalar>& R_sum,
                           B_avg, R_sum, maxCoeff, maxCoeffCell);
     }
 
-    OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::localConvergenceData() failed: ", grid_.comm());
+    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", grid_.comm());
 
     // compute local average in terms of global number of elements
     const int bSize = B_avg.size();
@@ -767,8 +767,8 @@ localConvergenceData(std::vector<Scalar>& R_sum,
 }
 
 template <class TypeTag>
-typename BlackoilModel<TypeTag>::CnvPvSplitData
-BlackoilModel<TypeTag>::
+typename NonlinearSystemBlackOilReservoir<TypeTag>::CnvPvSplitData
+NonlinearSystemBlackOilReservoir<TypeTag>::
 characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
 {
     OPM_TIMEBLOCK(computeCnvErrorPv);
@@ -838,7 +838,7 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         }
     }
 
-    OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::characteriseCnvPvSplit() failed: ",
+    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::characteriseCnvPvSplit() failed: ",
                                this->grid_.comm());
 
     this->grid_.comm().sum(splitPV  .data(), splitPV  .size());
@@ -849,7 +849,7 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 updateTUNING(const Tuning& tuning)
 {
     this->param_.tolerance_cnv_ = tuning.TRGCNV;
@@ -862,7 +862,7 @@ updateTUNING(const Tuning& tuning)
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 updateTUNINGDP(const TuningDp& tuning_dp)
 {
     // NOTE: If TUNINGDP item is _not_ set it should be 0.0
@@ -874,7 +874,7 @@ updateTUNINGDP(const TuningDp& tuning_dp)
 
 template <class TypeTag>
 ConvergenceReport
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 getReservoirConvergence(const double reportTime,
                         const double dt,
                         const int maxIter,
@@ -1128,7 +1128,7 @@ getReservoirConvergence(const double reportTime,
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 convergencePerCell(const std::vector<Scalar>& B_avg,
                    const double dt,
                    const double tol_cnv,
@@ -1167,14 +1167,14 @@ convergencePerCell(const std::vector<Scalar>& B_avg,
         }
         ++idx;
     }
-    OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::convergencePerCell() failed: ",
+    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::convergencePerCell() failed: ",
                                this->grid_.comm());
     rst_conv.updateNewton(convNewt);
 }
 
 template <class TypeTag>
 ConvergenceReport
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 getConvergence(const SimulatorTimerInterface& timer,
                const int maxIter,
                std::vector<Scalar>& residual_norms)
@@ -1197,8 +1197,8 @@ getConvergence(const SimulatorTimerInterface& timer,
 }
 
 template <class TypeTag>
-std::vector<std::vector<typename BlackoilModel<TypeTag>::Scalar> >
-BlackoilModel<TypeTag>::
+std::vector<std::vector<typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar> >
+NonlinearSystemBlackOilReservoir<TypeTag>::
 computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
 {
     OPM_TIMEBLOCK(computeFluidInPlace);
@@ -1210,7 +1210,7 @@ computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
 
 template <class TypeTag>
 const SimulatorReport&
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 localAccumulatedReports() const
 {
     if (!hasNlddSolver()) {
@@ -1221,7 +1221,7 @@ localAccumulatedReports() const
 
 template <class TypeTag>
 const std::vector<SimulatorReport>&
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 domainAccumulatedReports() const
 {
     if (!nlddSolver_)
@@ -1231,7 +1231,7 @@ domainAccumulatedReports() const
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
 {
     if (hasNlddSolver()) {
@@ -1241,7 +1241,7 @@ writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
 
 template <class TypeTag>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 writePartitions(const std::filesystem::path& odir) const
 {
     if (hasNlddSolver()) {
@@ -1268,7 +1268,7 @@ writePartitions(const std::filesystem::path& odir) const
 template <class TypeTag>
 template<class FluidState, class Residual>
 void
-BlackoilModel<TypeTag>::
+NonlinearSystemBlackOilReservoir<TypeTag>::
 getMaxCoeff(const unsigned cell_idx,
             const IntensiveQuantities& intQuants,
             const FluidState& fs,
@@ -1390,4 +1390,4 @@ getMaxCoeff(const unsigned cell_idx,
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODEL_IMPL_HEADER_INCLUDED
+#endif // OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_IMPL_HEADER_INCLUDED

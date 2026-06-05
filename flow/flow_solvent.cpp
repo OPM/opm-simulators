@@ -26,7 +26,7 @@
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 
 namespace Opm::Properties {
 
