@@ -422,7 +422,7 @@ protected:
                     if (pvIdx == static_cast<int>(Indices::ureaConcentrationIdx)) {
                         nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                     }
-                    if (pvIdx == Indices::calciteVolumeFractionIdx) {
+                    if (pvIdx == static_cast<int>(Indices::calciteVolumeFractionIdx)) {
                         nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
                                                                         this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                     }

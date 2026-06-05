@@ -101,7 +101,7 @@ public:
     static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr unsigned ureaConcentrationIdx = Indices::ureaConcentrationIdx;
     static constexpr unsigned biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
-    static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
+    static constexpr unsigned calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
 
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
     using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
