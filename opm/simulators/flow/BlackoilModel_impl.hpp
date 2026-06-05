@@ -34,6 +34,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <algorithm>
@@ -384,8 +385,8 @@ typename BlackoilModel<TypeTag>::Scalar
 BlackoilModel<TypeTag>::
 relativeChange() const
 {
-    Scalar resultDelta = 0.0;
-    Scalar resultDenom = 0.0;
+    std::array<Scalar,4> r{};
+    auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
 
     const auto& elemMapper = simulator_.model().elementMapper();
     const auto& gridView = simulator_.gridView();
@@ -421,16 +422,17 @@ relativeChange() const
 
         const auto& priVarsOld = simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
+        const double elemVolume = elem.geometry().volume();
+
         Scalar pressureOld;
         pressureOld = priVarsOld[Indices::pressureSwitchIdx];
 
         Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
         Scalar oilSaturationOld = 1.0;
 
-        // NB fix me! adding pressures changes to saturation changes does not make sense
         Scalar tmp = pressureNew - pressureOld;
-        resultDelta += tmp*tmp;
-        resultDenom += pressureNew*pressureNew;
+        resultDeltaPressure += tmp*tmp * elemVolume;
+        resultDenomPressure += pressureNew*pressureNew * elemVolume;
 
         if (FluidSystem::numActivePhases() > 1) {
             if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
@@ -452,18 +454,40 @@ relativeChange() const
             }
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                 Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                resultDelta += tmpSat*tmpSat;
-                resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                assert(std::isfinite(resultDelta));
-                assert(std::isfinite(resultDenom));
+                resultDeltaSaturation += tmpSat*tmpSat * elemVolume;
+                resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx] * elemVolume;
+                assert(std::isfinite(resultDeltaSaturation));
+                assert(std::isfinite(resultDenomSaturation));
             }
         }
     }
 
-    resultDelta = gridView.comm().sum(resultDelta);
-    resultDenom = gridView.comm().sum(resultDenom);
+    gridView.comm().sum(r.data(), r.size());
 
-    return resultDenom > 0.0 ? resultDelta / resultDenom : 0.0;
+    const auto relative_change_version = this->param_.relative_change_version_;
+
+    switch(relative_change_version) {
+        case RelativeChangeApproaches::Pressure:
+            if (resultDenomPressure > 0.0)
+                return std::sqrt(resultDeltaPressure / resultDenomPressure);
+            break;
+        case RelativeChangeApproaches::Saturation:
+            if (resultDenomSaturation > 0.0)
+                return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
+            break;
+        case RelativeChangeApproaches::PressureSaturation:
+            if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
+                // Only using pressure for time step zero is a pragmatic choice to avoid excessive cutting for the first step
+                if (simulator_.timeStepIndex() == 0) {
+                    return std::sqrt(resultDeltaPressure / resultDenomPressure);
+                }
+                return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure),
+                                std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
+            }
+            break;
+    }
+    
+    return 0.0;
 }
 
 template <class TypeTag>
