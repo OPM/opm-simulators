@@ -2028,7 +2028,9 @@ getInjectionGroupTargetForMode_(
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::InjectionCMode in getInjectionGroupTargetForMode_",
+                         fmt::format("Invalid Group::InjectionCMode in getInjectionGroupTargetForMode_ for {} cmode: {}",
+                                     group.name(),
+                                     Group::InjectionCMode2String(cmode)),
                          this->deferredLogger());
         return 0.0;
     }

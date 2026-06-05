@@ -341,6 +341,12 @@ getGroupConstraintNoGuideRate(const Group& group)
     //   to the slave group. Alternatively, we could also throw an error here for that case
     if (this->isInjectionConstraint()) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
+        // FLD/NONE means no own local constraint for this phase.
+        // Let the caller use a higher-level distributed target instead.
+        if (control_mode == Group::InjectionCMode::FLD ||
+            control_mode == Group::InjectionCMode::NONE) {
+            return std::nullopt;
+        }
         return ConstraintInfo{
             this->groupStateHelper().getInjectionGroupTarget(group, this->injectionPhase_(), this->resvCoeffsInj()),
             control_mode
