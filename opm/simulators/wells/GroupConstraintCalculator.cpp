@@ -859,24 +859,21 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    if (this->constraintType() == ConstraintType::Limit) {
-        const auto control_mode = this->getProdCmode();
-        // Use the control mode for per-rate-type limit computation
-        this->target_calculator_.template emplace<TargetCalculator>(
-            this->groupStateHelper(),
-            this->resvCoeffsProd(),
-            control_mode
-        );
-    }
-    else {
-        this->target_calculator_.template emplace<TargetCalculator>(
-            this->groupStateHelper(),
-            this->resvCoeffsProd(),
-            this->top_group_
-        );
-    }
-    const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
-    const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
+    // Use the same control mode for both the target calculator and guide-rate logic.
+    const auto control_mode =
+        (this->constraintType() == ConstraintType::Limit)?
+        this->getProdCmode():
+        this->groupState().production_control(this->top_group_.name());
+
+    this->target_calculator_.template emplace<TargetCalculator>(
+        this->groupStateHelper(),
+        this->resvCoeffsProd(),
+        control_mode
+    );
+    // Map that mode once for the fraction calculator.
+    const auto guide_target_mode =
+        this->groupStateHelper().getProductionGuideTargetModeFromControlMode(control_mode);
+    const auto dummy_phase = Phase::OIL;  // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),
