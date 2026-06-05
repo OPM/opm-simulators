@@ -126,7 +126,7 @@ struct BlackOilVariableAndEquationIndices
      * saturation of the gas phase, as the mole fraction of the gas component in the oil
      * phase or as the mole fraction of the oil component in the gas phase.
      */
-    static constexpr int compositionSwitchIdx = PVOffset + 2;
+    static constexpr unsigned compositionSwitchIdx = PVOffset + 2;
 
     //! Index of the primary variable for the first solvent
     static constexpr int solventSaturationIdx =

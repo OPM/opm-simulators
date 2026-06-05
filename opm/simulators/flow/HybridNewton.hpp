@@ -29,6 +29,7 @@
 
 #include <opm/ml/ml_model.hpp>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -71,7 +72,8 @@ protected:
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
 
-    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
 public:
     explicit BlackOilHybridNewton(Simulator& simulator)

@@ -115,9 +115,10 @@ class BlackOilIntensiveQuantities
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
+    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
 
-    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool waterEnabled = Indices::waterEnabled;
     static constexpr bool gasEnabled = Indices::gasEnabled;
     static constexpr bool oilEnabled = Indices::oilEnabled;
@@ -247,7 +248,7 @@ public:
         Evaluation Sg = 0.0;
         if constexpr (gasEnabled) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
-                assert(Indices::compositionSwitchIdx >= 0);
+                assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
                 if constexpr (compositionSwitchEnabled) {
                     Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
                 }

@@ -235,8 +235,10 @@ protected:
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            deltaSg = update[Indices::compositionSwitchIdx];
-            deltaSo -= deltaSg;
+            if constexpr (Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSg = update[Indices::compositionSwitchIdx];
+                deltaSo -= deltaSg;
+            }
         }
         if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
             deltaSs = update[Indices::solventSaturationIdx];
@@ -281,7 +283,7 @@ protected:
                         delta = currentValue[ Indices::waterSwitchIdx];
                     }
                 }
-            else if (pvIdx == Indices::compositionSwitchIdx) {
+            else if (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)) {
                 // the switching primary variable for composition is tricky because the
                 // "reasonable" value ranges it exhibits vary widely depending on its
                 // interpretation since it can represent Sg, Rs or Rv. For now, we only

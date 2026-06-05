@@ -140,7 +140,9 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase water oil and water gas models this is disabled.
      */
-    static constexpr int compositionSwitchIdx = (gasEnabled && oilEnabled) ? PVOffset + 1 : -10000;
+    static constexpr unsigned compositionSwitchIdx =
+        gasEnabled && oilEnabled ? PVOffset + 1
+                                 : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first solvent
     static constexpr int solventSaturationIdx =
