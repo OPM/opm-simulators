@@ -372,7 +372,9 @@ operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
     return
            this->active_ == rhs.active_
         && this->node_pressures_ == rhs.node_pressures_
-        && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_;
+        && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
+        && this->branch_data_ == rhs.branch_data_
+        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_;
 }
 
 template class BlackoilWellModelNetworkGeneric<double, BlackOilDefaultFluidSystemIndices>;

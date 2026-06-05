@@ -335,7 +335,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     // Test using mock setup.
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
         s.well_model, s.network, s.vfp_inj_props, UnitSystem {}, 0, Comm{});
-    const auto pressures = comp.run();
+    const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(463.483, bars);
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
     using Comm = Dune::Communication<int>;
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
         s.well_model, s.network, s.vfp_inj_props, UnitSystem {}, 0, Comm{});
-    const auto pressures = comp.run();
+    const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(150.488, bars);
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(production_pressure_computation)
     using Comm = Dune::Communication<int>;
     NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
         s.well_model, s.network, s.vfp_prod_props, UnitSystem {}, 0, Comm{});
-    const auto pressures = comp.run();
+    const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(31.0, bars);
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);

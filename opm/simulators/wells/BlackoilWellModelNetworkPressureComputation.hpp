@@ -291,7 +291,7 @@ private:
                               const std::map<std::string, std::vector<Scalar>>& node_inflows)
     {
         for (const auto& node : root_to_child_nodes) {
-            // Do no traverse subtree more than once
+            // Do not traverse subtree more than once
             if (node_pressures_.find(node) != node_pressures_.end()) {
                 continue;
             }
@@ -304,13 +304,13 @@ private:
             if (terminal_pressure) {
                 node_pressures_[node] = *terminal_pressure;
                 if (upbranch) {
-                    // If terminal pressure is specified on a non-root node, we still want to calculate the branch data for the uptree branch, but we set the pressure drop to zero since the terminal pressure overrides the VFP calculation.
+                    // If terminal pressure is specified on a non-root node, we still want to calculate the branch data for the uptree branch.
                     const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
                     auto rates = node_inflows.at(node);
                     Calc::prepareRates(rates);
                     branch_data_.emplace(node, data::BranchData{*terminal_pressure - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
                 } else {
-                    // Root node with terminal pressure and no uptree branch, so no branch data.
+                    // Root node with terminal pressure and no uptree branch, inserting a zero-valued placeholder.
                     branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
                 }
                 continue;
