@@ -212,7 +212,8 @@ protected:
             Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableExtbo =
             Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
+        static constexpr bool enablePolymer =
+            Indices::polymerConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
@@ -358,7 +359,7 @@ protected:
             }
 
             // keep the polymer concentration above 0
-            if (enablePolymer && pvIdx == Indices::polymerConcentrationIdx) {
+            if (enablePolymer && pvIdx == static_cast<int>(Indices::polymerConcentrationIdx)) {
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
             }
 

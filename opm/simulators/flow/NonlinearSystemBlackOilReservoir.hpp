@@ -92,7 +92,7 @@ public:
     static constexpr int contiCalciteEqIdx = Indices::contiCalciteEqIdx;
     static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
     static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
-    static constexpr int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+    static constexpr unsigned polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;
