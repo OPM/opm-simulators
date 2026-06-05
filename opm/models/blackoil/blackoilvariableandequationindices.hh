@@ -152,7 +152,7 @@ struct BlackOilVariableAndEquationIndices
     static constexpr unsigned microbialConcentrationIdx = std::numeric_limits<unsigned>::max();
     static constexpr unsigned oxygenConcentrationIdx = std::numeric_limits<unsigned>::max();
     static constexpr unsigned ureaConcentrationIdx = std::numeric_limits<unsigned>::max();
-    static constexpr int biofilmVolumeFractionIdx = -1000;
+    static constexpr unsigned biofilmVolumeFractionIdx = std::numeric_limits<unsigned>::max();
     static constexpr int calciteVolumeFractionIdx = -1000;
 
     //! Index of the primary variable for the foam

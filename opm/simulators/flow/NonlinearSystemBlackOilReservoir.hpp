@@ -100,7 +100,7 @@ public:
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr unsigned ureaConcentrationIdx = Indices::ureaConcentrationIdx;
-    static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
+    static constexpr unsigned biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;
     static constexpr int calciteVolumeFractionIdx = Indices::calciteVolumeFractionIdx;
 
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
