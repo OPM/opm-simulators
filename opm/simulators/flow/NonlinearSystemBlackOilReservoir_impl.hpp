@@ -624,7 +624,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
             if (pvIdx == Indices::pressureSwitchIdx) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
-            else if ( (pvIdx == Indices::waterSwitchIdx
+            else if ((pvIdx == int(Indices::waterSwitchIdx)
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
                       || (pvIdx == Indices::compositionSwitchIdx
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)

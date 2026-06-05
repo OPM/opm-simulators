@@ -228,8 +228,10 @@ protected:
 
         if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
-            deltaSw = update[Indices::waterSwitchIdx];
-            deltaSo -= deltaSw;
+            if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSw = update[Indices::waterSwitchIdx];
+                deltaSo -= deltaSw;
+            }
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
@@ -269,7 +271,7 @@ protected:
                 }
             }
             // water saturation delta
-            else if (pvIdx == Indices::waterSwitchIdx)
+            else if (pvIdx == static_cast<int>(Indices::waterSwitchIdx))
                 if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
                     delta *= satAlpha;
                 }

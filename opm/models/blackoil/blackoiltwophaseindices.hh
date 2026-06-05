@@ -31,6 +31,7 @@
 #include <opm/common/utility/ConstexprAssert.hpp>
 
 #include <cassert>
+#include <limits>
 
 namespace Opm {
 
@@ -119,7 +120,9 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase gas-oil models this is disabled.
      */
-    static constexpr int waterSwitchIdx  = waterEnabled ? PVOffset + 0 : -10000;
+    static constexpr unsigned waterSwitchIdx  =
+        waterEnabled ? PVOffset + 0
+                     : std::numeric_limits<unsigned>::max();
 
     /*!
      * \brief Index of the switching variable which determines the pressure

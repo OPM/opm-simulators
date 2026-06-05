@@ -29,6 +29,7 @@
 #define EWOMS_BLACK_OIL_ONE_PHASE_INDICES_HH
 
 #include <cassert>
+#include <limits>
 
 #include <opm/common/utility/ConstexprAssert.hpp>
 
@@ -119,7 +120,7 @@ struct BlackOilOnePhaseIndices
      *
      * \note For one-phase models this is disabled.
      */
-    static constexpr int waterSwitchIdx  = -10000;
+    static constexpr unsigned waterSwitchIdx = std::numeric_limits<unsigned>::max();
 
     /*!
      * \brief Index of the switching variable which determines the pressure

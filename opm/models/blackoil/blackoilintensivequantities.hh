@@ -50,6 +50,7 @@
 #include <array>
 #include <cassert>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -230,8 +231,8 @@ public:
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
-                assert(Indices::waterSwitchIdx >= 0);
-                if constexpr (Indices::waterSwitchIdx >= 0) {
+                assert(Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max());
+                if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
                     Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
                 }
             }

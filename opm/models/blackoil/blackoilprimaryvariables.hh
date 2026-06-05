@@ -82,7 +82,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     // primary variable indices
-    enum { waterSwitchIdx = Indices::waterSwitchIdx };
+    static constexpr unsigned waterSwitchIdx = Indices::waterSwitchIdx;
     enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
     enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
