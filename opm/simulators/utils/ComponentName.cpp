@@ -25,80 +25,51 @@
 #include <opm/simulators/utils/ComponentName.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+#include <opm/models/ptflash/flashindices.hh>
 
-#include <cassert>
-#include <limits>
+#include <flowexperimental/comp/flow_comp.hpp>
+
+#include "ComponentName_impl.hpp"
 
 namespace Opm {
 
-template<class FluidSystem, class Indices>
-ComponentName<FluidSystem,Indices>::ComponentName()
-    : names_(Indices::numEq)
-{
-    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-            continue;
-        }
-
-        const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-        names_[FluidSystem::canonicalToActiveCompIdx(canonicalCompIdx)]
-            = FluidSystem::componentName(canonicalCompIdx);
-    }
-
-    if constexpr (Indices::enableSolvent) {
-        names_[Indices::solventSaturationIdx] = "Solvent";
-    }
-
-    if constexpr (Indices::enableExtbo) {
-        names_[Indices::zFractionIdx] = "ZFraction";
-    }
-
-    if constexpr (Indices::enablePolymer) {
-        names_[Indices::polymerConcentrationIdx] = "Polymer";
-    }
-
-    if constexpr (Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max()) {
-        assert(Indices::enablePolymer);
-        names_[Indices::polymerMoleWeightIdx] = "MolecularWeightP";
-    }
-
-    if constexpr (Indices::enableFullyImplicitThermal) {
-        names_[Indices::temperatureIdx] = "Energy";
-    }
-
-    if constexpr (Indices::numFoam == 1) {
-        names_[Indices::foamConcentrationIdx] = "Foam";
-    }
-
-    if constexpr (Indices::numBrine == 1) {
-        names_[Indices::saltConcentrationIdx] = "Brine";
-    }
-
-    if constexpr (Indices::enableMICP) {
-        names_[Indices::microbialConcentrationIdx] = "Microbes";
-        names_[Indices::oxygenConcentrationIdx] = "Oxygen";
-        names_[Indices::ureaConcentrationIdx] = "Urea";
-        names_[Indices::biofilmVolumeFractionIdx] = "Biofilm";
-        names_[Indices::calciteVolumeFractionIdx] = "Calcite";
-    }
-
-    if constexpr (Indices::enableBiofilm) {
-        names_[Indices::microbialConcentrationIdx] = "Microbes";
-        names_[Indices::biofilmVolumeFractionIdx] = "Biofilm";
-    }
-}
-
-
 #include <opm/simulators/utils/InstantiationIndicesMacros.hpp>
 
+#define INSTANTIATE_COMPONENT_NAME_TYPE_TAG(T, N, W, TAG)                  \
+template class ComponentName<GenericOilGasWaterFluidSystem<T, N, W>,       \
+                             FlashIndices<Properties::TTag::TAG<N, W>, 0>>;
+
+#define INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, N, W)                       \
+    INSTANTIATE_COMPONENT_NAME_TYPE_TAG(T, N, W, FlowCompProblem)
+
+#define INSTANTIATE_COMPONENT_NAME_COUNTS(T, W)                            \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 2, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 3, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 4, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 5, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 6, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 7, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 8, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 9, W)                           \
+    INSTANTIATE_COMPONENT_NAME_PROBLEMS(T, 10, W)
+
 INSTANTIATE_TYPE_INDICES(ComponentName, double)
+INSTANTIATE_COMPONENT_NAME_COUNTS(double, false)
+INSTANTIATE_COMPONENT_NAME_COUNTS(double, true)
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE_INDICES(ComponentName, float)
+INSTANTIATE_COMPONENT_NAME_COUNTS(float, false)
+INSTANTIATE_COMPONENT_NAME_COUNTS(float, true)
 #endif
+
+#undef INSTANTIATE_COMPONENT_NAME_COUNTS
+#undef INSTANTIATE_COMPONENT_NAME_PROBLEMS
+#undef INSTANTIATE_COMPONENT_NAME_TYPE_TAG
 
 } // namespace Opm

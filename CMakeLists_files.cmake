@@ -73,6 +73,7 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/BlackOilEnergyIntensiveQuantitiesGlobalIndex.hpp
   flowexperimental/BlackOilIntensiveQuantitiesGlobalIndex.hpp
   flowexperimental/comp/EmptyModel.hpp
+  flowexperimental/comp/flow_comp.hpp
   flowexperimental/comp/flowexp_comp.hpp
   flowexperimental/comp/wells/CompWellModel.hpp
   flowexperimental/comp/wells/CompWellModel_impl.hpp
@@ -156,6 +157,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NlddReporting.cpp
   opm/simulators/flow/NonlinearSolver.cpp
+  opm/simulators/flow/NonlinearSystemCompositional.hpp
+  opm/simulators/flow/NonlinearSystemCompositional_impl.hpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RFTContainer.cpp
   opm/simulators/flow/RSTConv.cpp
@@ -203,6 +206,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/ComponentName.cpp
+  opm/simulators/utils/ComponentNameFlowExp.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
@@ -993,6 +997,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSystemBlackOilReservoirTPSA.hpp
   opm/simulators/flow/NonlinearSystem.hpp
   opm/simulators/flow/NonlinearSystem_impl.hpp
+  opm/simulators/flow/NonlinearSystemCompositional.hpp
+  opm/simulators/flow/NonlinearSystemCompositional_impl.hpp
   opm/simulators/flow/CO2H2Container.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
