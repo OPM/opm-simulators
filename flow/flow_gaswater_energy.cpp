@@ -18,13 +18,17 @@
 
 #include <flow/flow_gaswater_energy.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+
 #include <opm/material/common/ResetLocale.hpp>
 
-#include <opm/grid/CpGrid.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/simulators/flow/Main.hpp>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoildispersionmodule.hh>
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
+#include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 namespace Opm {
 

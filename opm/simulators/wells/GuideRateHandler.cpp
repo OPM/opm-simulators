@@ -444,21 +444,6 @@ update()
 // Inner class UpdateGuideRates private methods sorted alphabetically
 // --------------------------------------------------------------------
 
-#ifdef RESERVOIR_COUPLING_ENABLED
-template<typename Scalar, typename IndexTraits>
-bool
-GuideRateHandler<Scalar, IndexTraits>::UpdateGuideRates::
-isMasterGroup_(const Group& group)
-{
-    if (this->isReservoirCouplingMaster()) {
-        return this->reservoirCouplingMaster().isMasterGroup(group.name());
-    }
-    else {
-        return false;
-    }
-}
-#endif
-
 template<typename Scalar, typename IndexTraits>
 void
 GuideRateHandler<Scalar, IndexTraits>::UpdateGuideRates::
@@ -564,8 +549,9 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
     // NOTE: Even if this is a pure injection group, we still need to compute the
     // group potentials since they may be used by a production group at a higher
     // level in the group hierarchy. See MOD4_UDQ_ACTIONX.DATA for an example.
+    const bool is_master_group = this->isMasterGroup_(group);
 #ifdef RESERVOIR_COUPLING_ENABLED
-    if (this->isMasterGroup_(group)) {
+    if (is_master_group) {
         // This is a master group, so we do not need to compute potentials
         // for sub groups. We just set the guide rates for the master group
         // as submitted from its corresponding slave group.
@@ -595,9 +581,17 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
 
     // Synchronize potentials across all ranks
     this->comm().sum(potentials.data(), potentials.size());
-    oil_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oil_pot);
-    water_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, water_pot);
-    gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
+    if (!is_master_group) {
+        // Non-master group potentials are accumulated from sub-groups in SI;
+        // convert them to the display units (e.g. SM3/DAY for METRIC) that
+        // GuideRate::compute() and the stored group potential use. A master
+        // group's potential already arrives in display units from its slave
+        // group (the slave applied from_si before storing and sending it), so
+        // it must not be converted again here.
+        oil_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oil_pot);
+        water_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, water_pot);
+        gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
+    }
     this->guideRate().compute(
         group.name(), this->report_step_idx_, this->sim_time_, oil_pot, gas_pot, water_pot
     );

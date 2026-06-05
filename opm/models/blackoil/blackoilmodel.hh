@@ -32,26 +32,19 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilboundaryratevector.hh>
-#include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
-#include <opm/models/blackoil/blackoildiffusionmodule.hh>
-#include <opm/models/blackoil/blackoildispersionmodule.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
-#include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoillocalresidual.hh>
 #include <opm/models/blackoil/blackoilnewtonmethod.hpp>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilproblem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilratevector.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/models/common/multiphasebasemodel.hh>
@@ -59,6 +52,8 @@
 #include <opm/models/io/vtkblackoilmodule.hpp>
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
+
+#include <opm/models/utils/propertysystem.hh>
 
 #include <cassert>
 #include <istream>
@@ -360,17 +355,18 @@ private:
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
-    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
 
 public:
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
@@ -391,7 +387,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::registerParameters();
         }
-        ExtboModule::registerParameters();
+        if constexpr (enableExtbo) {
+            ExtboModule::registerParameters();
+        }
         if constexpr (enablePolymer) {
             PolymerModule::registerParameters();
         }
@@ -438,8 +436,10 @@ public:
             }
         }
 
-        if (ExtboModule::primaryVarApplies(pvIdx)) {
-            return ExtboModule::primaryVarName(pvIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::primaryVarApplies(pvIdx)) {
+                return ExtboModule::primaryVarName(pvIdx);
+            }
         }
 
         if constexpr (enablePolymer) {
@@ -473,8 +473,10 @@ public:
             }
         }
 
-        if (ExtboModule::eqApplies(eqIdx)) {
-            return ExtboModule::eqName(eqIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::eqApplies(eqIdx)) {
+                return ExtboModule::eqName(eqIdx);
+            }
         }
 
         if constexpr (enablePolymer) {
@@ -521,8 +523,10 @@ public:
         }
 
         // deal with primary variables stemming from the extBO module
-        if (ExtboModule::primaryVarApplies(pvIdx)) {
-            return ExtboModule::primaryVarWeight(pvIdx);
+        if constexpr (enableExtbo) {
+            if (ExtboModule::primaryVarApplies(pvIdx)) {
+                return ExtboModule::primaryVarWeight(pvIdx);
+            }
         }
 
         // deal with primary variables stemming from the polymer module
@@ -533,7 +537,7 @@ public:
         }
 
         // deal with primary variables stemming from the energy module
-        else if (EnergyModule::primaryVarApplies(pvIdx)) {
+        if (EnergyModule::primaryVarApplies(pvIdx)) {
             return EnergyModule::primaryVarWeight(pvIdx);
         }
 
@@ -602,7 +606,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::serializeEntity(asImp_(), outstream, dof);
         }
-        ExtboModule::serializeEntity(asImp_(), outstream, dof);
+        if constexpr (enableExtbo) {
+            ExtboModule::serializeEntity(asImp_(), outstream, dof);
+        }
         if constexpr (enablePolymer) {
             PolymerModule::serializeEntity(asImp_(), outstream, dof);
         }
@@ -652,7 +658,9 @@ public:
         if constexpr (enableSolvent) {
             SolventModule::deserializeEntity(asImp_(), instream, dof);
         }
-        ExtboModule::deserializeEntity(asImp_(), instream, dof);
+        if constexpr (enableExtbo) {
+            ExtboModule::deserializeEntity(asImp_(), instream, dof);
+        }
         if constexpr (enablePolymer) {
             PolymerModule::deserializeEntity(asImp_(), instream, dof);
         }

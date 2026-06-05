@@ -146,6 +146,13 @@ thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+const std::map<std::pair<unsigned, unsigned>, Scalar>& Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+getThermalHalfTransBoundary() const
+{
+    return thermalHalfTransBoundary_;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
 {

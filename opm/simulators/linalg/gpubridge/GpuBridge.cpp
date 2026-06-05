@@ -160,7 +160,7 @@ int replaceZeroDiagonal(BridgeMatrix& mat,
     } else {
         for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             typename BridgeMatrix::size_type offset = diag_indices[r.index()];
-            auto& diag_block = r->getptr()[offset]; // diag_block is a reference to MatrixBlock, located on column r of row r
+            auto& diag_block = *std::next(r->begin(), offset); // diag_block is a reference to MatrixBlock, located on column r of row r
             for (int rr = 0; rr < dim; ++rr) {
                 auto& val = diag_block[rr][rr];
                 if (val == 0.0) {                     // could be replaced by '< 1e-30' or similar

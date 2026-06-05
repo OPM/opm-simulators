@@ -40,8 +40,9 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantRsDeadOilPvt.hpp>
 
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -148,7 +149,7 @@ private:
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
@@ -211,13 +212,16 @@ public:
         if constexpr (enableDiffusion) {
             DiffusionModule::initFromState(vanguard.eclState());
         }
+
         if constexpr (enableDispersion) {
             DispersionModule::initFromState(vanguard.eclState());
         }
 
-        BlackOilExtboParams<Scalar> extboParams;
-        extboParams.template initFromState<enableExtbo>(vanguard.eclState());
-        ExtboModule::setParams(std::move(extboParams));
+        if constexpr (enableExtbo) {
+            BlackOilExtboParams<Scalar> extboParams;
+            extboParams.template initFromState<enableExtbo>(vanguard.eclState());
+            ExtboModule::setParams(std::move(extboParams));
+        }
 
         if constexpr (enableFoam) {
             BlackOilFoamParams<Scalar> foamParams;

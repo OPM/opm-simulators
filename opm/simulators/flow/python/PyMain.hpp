@@ -86,7 +86,7 @@ public:
     {
         exitCode = EXIT_SUCCESS;
 
-        if (this->initialize_<Properties::TTag::FlowEarlyBird>(exitCode, true)) {
+        if (this->initialize_<TypeTag>(exitCode, true)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
             this->setupVanguard();

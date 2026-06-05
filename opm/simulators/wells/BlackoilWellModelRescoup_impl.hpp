@@ -57,6 +57,18 @@ BlackoilWellModelRescoup(BlackoilWellModel<TypeTag>& well_model)
 template<typename TypeTag>
 bool
 BlackoilWellModelRescoup<TypeTag>::
+masterIsInCoupledNetworkIteration() const
+{
+    return this->isReservoirCouplingMaster()
+        && this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()
+        && this->masterNetworkHasMasterGroupLeaves()
+        && !this->lastSentMasterGroupNodePressuresIsFinal();
+}
+
+
+template<typename TypeTag>
+bool
+BlackoilWellModelRescoup<TypeTag>::
 masterNetworkHasMasterGroupLeaves() const
 {
     // Query the parsed Schedule topology (`network.has_node(...)`) rather than the runtime
@@ -72,6 +84,66 @@ masterNetworkHasMasterGroupLeaves() const
         }
     }
     return false;
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+maybeExchangeNetworkOuterIterationWithSlaves(bool more_network_update)
+{
+    if (!this->masterIsInCoupledNetworkIteration()) {
+        return;
+    }
+    const bool is_final = !more_network_update;
+    // In tight coupling the inner sub-loop (maybeExchangeNetworkSubIterationWithSlaves)
+    // performs every non-final exchange, so here we only emit the single
+    // terminating (is_final) message -- the non-final case would just resend the
+    // same node pressures the last sub-iteration already shipped, and get the same
+    // rates back.  The retained final send still covers the case where the network
+    // is not balanced this iteration (the inner loop never runs).  In loose coupling
+    // this per-outer send is the sole master<->slave coupling and runs every outer
+    // iteration.
+    if (is_final || !this->well_model_.useTightRcNetworkCoupling()) {
+        // send the pressures freshly computed by network_.update() to all activated slaves
+        this->sendMasterGroupNodePressuresToSlaves(is_final);
+        if (!is_final) {
+            // receive slaves' updated network_surface_rates for the next outer iteration.
+            this->receiveSlaveGroupData();
+        }
+    }
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+maybeExchangeNetworkSubIterationWithSlaves()
+{
+    // Called for rescoup master for the tight master-slave coupling (--rc-network-loose-coupling=false)
+    // mode at the sub-iteration level: Send node pressures and receive slave rates per master inner
+    // network sub-iteration.
+    // In the loose mode (--rc-network-loose-coupling=true) the exchange happens only once
+    // per master outer iteration (see updateWellControlsAndNetworkIteration), so
+    // the inner loop converges the node pressures against a frozen slave rate.
+    // This loose mode is faster but has been observed in some cases to overshoot to a value that
+    // incorrectly shuts the slave wells in.
+    // To avoid this, the tight coupling is therefore the default coupling.
+    //
+    // NOTE: This is always a non-final exchange.  The inner sub-iteration loop cannot
+    // know whether the master's outer network loop will iterate again (the inner
+    // loop ending on max_sub_iter, or on a THP update, still leaves
+    // more_inner_network_update true), so it must not declare termination here.
+    // The single is_final = true send is owned by the per-outer send in
+    // updateWellControlsAndNetworkIteration() (when the outer loop converges)
+    // and by sendSlaveNetworkLoopTerminationSignal_() (when the outer loop hits
+    // max_iter).
+    if (!this->well_model_.useTightRcNetworkCoupling()) {
+        return;
+    }
+    if (!this->masterIsInCoupledNetworkIteration()) {
+        return;
+    }
+    this->sendMasterGroupNodePressuresToSlaves(/*is_final=*/false);
+    this->receiveSlaveGroupData();
 }
 
 template<typename TypeTag>

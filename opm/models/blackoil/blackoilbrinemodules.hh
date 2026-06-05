@@ -32,6 +32,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilbrineparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -46,9 +47,6 @@
 #include <string>
 
 namespace Opm {
-
-template<class TypeTag, bool enableBrineV>
-class BlackOilBrineModule;
 
 /*!
  * \ingroup BlackOil
@@ -342,17 +340,9 @@ private:
     static BlackOilBrineParams<Scalar> params_;
 };
 
-template<class TypeTag>
-class BlackOilBrineModule<TypeTag, false>
-{
-};
-
 template <class TypeTag>
 BlackOilBrineParams<typename BlackOilBrineModule<TypeTag, true>::Scalar>
 BlackOilBrineModule<TypeTag, true>::params_;
-
-template <class TypeTag, bool enableBrineV>
-class BlackOilBrineIntensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -464,11 +454,6 @@ protected:
     Evaluation permFactor_;
     Scalar saltSolubility_;
     Scalar saltDensity_;
-};
-
-template <class TypeTag>
-class BlackOilBrineIntensiveQuantities<TypeTag, false>
-{
 };
 
 } // namespace Opm

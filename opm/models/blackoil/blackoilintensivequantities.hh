@@ -37,17 +37,9 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
-#include <opm/models/blackoil/blackoilbrinemodules.hh>
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
-#include <opm/models/blackoil/blackoildiffusionmodule.hh>
-#include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
-#include <opm/models/blackoil/blackoilextbomodules.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
@@ -59,7 +51,6 @@
 #include <cstring>
 #include <stdexcept>
 #include <utility>
-#include <vector>
 
 namespace Opm {
 
@@ -97,8 +88,6 @@ class BlackOilIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
-    enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
@@ -109,8 +98,10 @@ class BlackOilIntensiveQuantities
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool enableTemperature = energyModuleType != EnergyModules::NoTemperature;
 
     enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
@@ -178,9 +169,8 @@ public:
             fluidState_.setRsw(0.0);
         }
     }
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
-    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
+    OPM_HOST_DEVICE BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
@@ -189,25 +179,18 @@ public:
     template<class OtherTypeTag>
     explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
-        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
-        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
-            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
-        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
-            other.tortuosities(), other.diffusionCoefficients())
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem>(fsystem))
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other)
+        , DiffusionIntensiveQuantities(other)
         , referencePorosity_(other.referencePorosity_)
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
         , mobility_(other.mobility_)
         , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
     {
-        static_assert(!enableSolvent);
-        static_assert(!enableExtbo);
-        static_assert(!enablePolymer);
-        static_assert(!enableFoam);
-        static_assert(!enableMICP);
-        static_assert(!enableBrine);
-        static_assert(!enableDispersion);
     }
+
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     /**
      * \brief Create a copy of this intensive quantities object
@@ -435,11 +418,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                    const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                oilPhaseIdx,
-                                                                pvtRegionIdx,
-                                                                SoMax);
+                    Evaluation RsSat;
+                    if constexpr (enableExtbo) {
+                        RsSat = asImp_().rs();
+                    } else {
+                        RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            oilPhaseIdx,
+                                                                            pvtRegionIdx,
+                                                                            SoMax);
+                    }
                     fluidState_.setRs(min(RsMax, RsSat));
                 }
                 else {
@@ -453,11 +440,15 @@ public:
             }
             else {
                 if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                    const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                        getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                gasPhaseIdx,
-                                                                pvtRegionIdx,
-                                                                SoMax);
+                    Evaluation RvSat;
+                    if constexpr (enableExtbo) {
+                        RvSat = asImp_().rv();
+                    } else {
+                        RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            gasPhaseIdx,
+                                                                            pvtRegionIdx,
+                                                                            SoMax);
+                    }
                     fluidState_.setRv(min(RvMax, RvSat));
                 }
                 else {
@@ -519,11 +510,16 @@ public:
             const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
             for (int i = 0; i < nmobilities; ++i) {
-                if (enableExtbo && phaseIdx == oilPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
-                }
-                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
-                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                if constexpr (enableExtbo) {
+                    if (phaseIdx == oilPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                    }
+                    else if (phaseIdx == gasPhaseIdx) {
+                        (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                    }
+                    else {
+                        (*mobilities[i])[phaseIdx] /= mu;
+                    }
                 }
                 else {
                     (*mobilities[i])[phaseIdx] /= mu;
@@ -850,7 +846,7 @@ public:
                     case Dir::ZPlus:
                         return dirMob_->getArray(2)[phaseIdx];
                     default:
-                        throw std::runtime_error("Unexpected face direction");
+                        OPM_THROW(std::runtime_error, "Unexpected face direction");
                 }
             }
             else{
@@ -911,7 +907,7 @@ public:
             return BrineIntQua::permFactor();
         }
         else {
-            throw std::logic_error("permFactor() called but salt precipitation or bioeffects are disabled");
+            OPM_THROW(std::logic_error, "permFactor() called but salt precipitation and bioeffects are disabled");
         }
     }
 

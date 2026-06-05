@@ -417,14 +417,10 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
 
                 if (allCompletionsClosed) {
                     well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+                    // if all the completion/connections are closed, the well can only be SHUT
                     if (write_message_to_opmlog) {
-                        if (well_.wellEcl().getAutomaticShutIn()) {
-                            const std::string msg = well_.name() + std::string(" will be shut due to last completion closed");
-                            deferred_logger.info(msg);
-                        } else {
-                            const std::string msg = well_.name() + std::string(" will be stopped due to last completion closed");
-                            deferred_logger.info(msg);
-                        }
+                        const std::string msg = well_.name() + std::string(" will be shut due to last completion closed");
+                        deferred_logger.info(msg);
                     }
                 }
                 break;

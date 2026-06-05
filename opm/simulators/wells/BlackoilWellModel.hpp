@@ -469,6 +469,19 @@ template<class Scalar> class WellContributions;
             const ModelParameters& param() const
             { return param_; }
 
+            /// @brief True when tight (per-sub-iteration) reservoir-coupling network
+            ///   coupling is in effect.  This is the default; --rc-network-loose-coupling=true
+            ///   selects the loose (per-outer-iteration) coupling instead.
+            bool useTightRcNetworkCoupling() const
+            { return !param_.rc_network_loose_coupling_; }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+            /// @brief Access the reservoir-coupling flow helper (RC builds only).
+            ///   Used e.g. by the network solver to drive the per-sub-iteration
+            ///   cross-rescoup node-pressure / rate exchange.
+            BlackoilWellModelRescoup<TypeTag>& rescoupHelper() { return rescoupHelper_; }
+#endif
+
 
             template<class FluidState, class SingleWellState>
             static Scalar computeTemperatureWeightFactor(const int perf_index, const int np, const FluidState& fs, const SingleWellState& ws)

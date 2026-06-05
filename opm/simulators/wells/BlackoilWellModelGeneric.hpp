@@ -93,11 +93,14 @@ struct EnableTerminalOutput { static constexpr bool value = true; };
 namespace Opm {
 
 /// Class for handling the blackoil well model.
-template<typename Scalar, typename IndexTraits>
+template<typename ScalarT, typename IndexTraitsT>
 class BlackoilWellModelGeneric
 {
-    using GroupStateHelperType =  GroupStateHelper<Scalar, IndexTraits>;
+    using GroupStateHelperType =  GroupStateHelper<ScalarT, IndexTraitsT>;
 public:
+    using Scalar = ScalarT;
+    using IndexTraits = IndexTraitsT;
+
     BlackoilWellModelGeneric(Schedule& schedule,
                              BlackoilWellModelGasLiftGeneric<Scalar, IndexTraits>& gaslift,
                              BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>& network,
@@ -583,6 +586,8 @@ protected:
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
     BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
+
+    bool allConnectionsClosed(const Well& well_ecl) const;
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);

@@ -102,6 +102,8 @@ public:
 
     Scalar thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const;
 
+    const std::map<std::pair<unsigned, unsigned>, Scalar>& getThermalHalfTransBoundary() const;
+
     /*!
      * \brief Return the diffusivity for the intersection between two elements.
      */

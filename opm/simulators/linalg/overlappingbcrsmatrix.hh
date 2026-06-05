@@ -328,8 +328,8 @@ private:
         size_t numDomestic = overlap_->numDomestic();
 
         // allocate the rows
-        this->setSize(numDomestic, numDomestic);
         this->setBuildMode(ParentType::random);
+        this->setSize(numDomestic, numDomestic);
 
         // communicate the entries
         buildIndices_(nativeMatrix);

@@ -223,7 +223,7 @@ macro(opm-simulators_prereqs_hook)
   if(USE_HYPRE AND USE_MPI)
     find_package(HYPRE)
     if(HYPRE_FOUND)
-      target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
+      target_link_libraries(opmsimulators PRIVATE HYPRE::HYPRE)
     else()
       message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
     endif()
@@ -469,6 +469,16 @@ macro(opm-simulators_tests_hook)
     include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
   endif()
 
+  if(AMGX_FOUND)
+    target_link_libraries(test_AmgxInterface PRIVATE AMGX::AMGX)
+    target_link_libraries(test_AmgxPreconditioner PRIVATE AMGX::AMGX)
+  endif()
+
+  if(HYPRE_FOUND)
+    target_link_libraries(test_HypreInterfaceCPU PRIVATE HYPRE::HYPRE)
+    target_link_libraries(test_HyprePreconditionerCPU PRIVATE HYPRE::HYPRE)
+  endif()
+
   if(CUDA_FOUND OR hip_FOUND)
     # CUISTL
     set(gpu_label "gpu_cuda")
@@ -525,6 +535,11 @@ macro(opm-simulators_tests_hook)
         )
       endif()
     endforeach()
+
+    if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
+      target_link_libraries(test_HypreInterfaceGPU PRIVATE HYPRE::HYPRE)
+      target_link_libraries(test_HyprePreconditionerGPU PRIVATE HYPRE::HYPRE)
+    endif()
   endif()
 
   if(USE_GPU_BRIDGE)
@@ -774,6 +789,58 @@ macro(opm-simulators_targets_hook)
     LIBRARIES
       opmsimulators
   )
+
+  # Flow GPU executables handled separately to avoid making flow dependent on CUDA/HIP
+  set(FLOW_GPU_MODELS
+    gpu_gaswater_thermal
+  )
+
+  if(CONVERT_CUDA_TO_HIP OR CUDA_FOUND)
+
+    if(CONVERT_CUDA_TO_HIP)
+      set(EXTENSION "hip")
+    else()
+      set(EXTENSION "cu")
+    endif()
+
+    foreach(OBJ ${FLOW_GPU_MODELS})
+
+      opm_add_library(
+        TARGET
+          flow_lib${OBJ}
+        TYPE
+          OBJECT
+        SOURCES
+          flow/flow_${OBJ}.${EXTENSION}
+      )
+
+      simulators_add_target_options(TARGET flow_lib${OBJ})
+      list(APPEND FLOW_GPU_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+      list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})
+
+      opm_add_executable(
+        TARGET
+          flow_${OBJ}
+        SOURCES
+          flow/flow_${OBJ}_main.cpp
+          $<TARGET_OBJECTS:moduleVersion>
+          $<TARGET_OBJECTS:flow_lib${OBJ}>
+        LIBRARIES
+          opmsimulators
+      )
+    endforeach()
+
+    opm_add_executable(
+      TARGET
+        flow_gpu
+      SOURCES
+        flow/flow_gpu_main.cpp
+        ${FLOW_GPU_TGTS}
+        $<TARGET_OBJECTS:moduleVersion>
+      LIBRARIES
+        opmsimulators
+    )
+  endif()
 
   if(OPM_ENABLE_PYTHON)
     set_target_properties(

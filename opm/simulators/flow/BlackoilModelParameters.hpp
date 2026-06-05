@@ -152,6 +152,11 @@ template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
 template<class Scalar>
 struct NetworkMaxPressureUpdateInBars { static constexpr Scalar value = 5.0; };
+// Reservoir coupling: when false (default) the master exchanges node pressures
+// and slave rates with the slaves once per master inner network sub-iteration
+// (tight coupling).  When true, the exchange happens only once per master outer network
+// iteration (loose coupling).
+struct RcNetworkLooseCoupling { static constexpr bool value = false; };
 struct NonlinearSolver { static constexpr auto value = "newton"; };
 struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
 struct MaxLocalSolveIterations { static constexpr int value = 20; };
@@ -346,6 +351,10 @@ public:
 
     /// Maximum pressure update in the inner network pressure update iterations
     Scalar network_max_pressure_update_in_bars_;
+
+    /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
+    /// coupling instead of the default tight (per-sub-iteration) coupling.
+    bool rc_network_loose_coupling_;
 
     /// Maximum number of iterations in the well/group switch algorithm
     int well_group_constraints_max_iterations_;

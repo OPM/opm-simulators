@@ -127,6 +127,14 @@ update(const bool mandatory_network_balance,
                 relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance()
                                         : balance.pressure_tolerance();
             more_network_sub_update = this->active() && network_imbalance > tolerance;
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (well_model_.isReservoirCouplingMaster()) {
+                // Tight reservoir-coupling: exchange node pressures and slave rates with the
+                // slaves per inner sub-iteration. Must run before the break below so the converged
+                // sub-iteration still feeds back the slaves' rates.
+                well_model_.rescoupHelper().maybeExchangeNetworkSubIterationWithSlaves();
+            }
+#endif
             if (!more_network_sub_update) {
                 break;
             }

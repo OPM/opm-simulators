@@ -104,6 +104,26 @@ struct EnableVapwat<TypeTag, TTag::TestEquilVapwatTypeTag> {
     static constexpr bool value = true;
 };
 
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::TestEquilTypeTag>
+{ static constexpr bool value = false; };
+
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::TestEquilTypeTag>
+{ static constexpr bool value = false; };
+
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::TestEquilVapwatTypeTag>
+{ static constexpr bool value = false; };
+
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::TestEquilVapwatTypeTag>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Properties
 
 namespace {

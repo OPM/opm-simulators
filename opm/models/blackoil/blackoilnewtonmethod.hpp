@@ -30,13 +30,15 @@
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/nonlinear/newtonmethod.hh>
 
 #include <opm/models/utils/signum.hh>
+
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 #include <cmath>

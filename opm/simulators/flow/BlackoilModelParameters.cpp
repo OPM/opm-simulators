@@ -111,6 +111,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_max_strict_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictOuterIterations>();
     network_max_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxOuterIterations>();
     network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
+    rc_network_loose_coupling_ = Parameters::Get<Parameters::RcNetworkLooseCoupling>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
@@ -262,6 +263,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Maximum outer number of iterations in the network solver before giving up");
     Parameters::Register<Parameters::NetworkMaxSubIterations>
         ("Maximum number of sub-iterations to update network pressures (within a single well/group control update)");
+    Parameters::Register<Parameters::RcNetworkLooseCoupling>
+        ("Reservoir coupling: exchange master/slave network pressures and rates only once per master outer "
+         "network iteration (loose coupling) instead of the default once per inner sub-iteration (tight coupling)");
     Parameters::Register<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>

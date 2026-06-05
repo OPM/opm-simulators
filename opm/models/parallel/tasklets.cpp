@@ -37,7 +37,7 @@ thread_local TaskletRunner* TaskletRunner::taskletRunner_ = nullptr;
 thread_local int TaskletRunner::workerThreadIndex_ = -1;
 
 TaskletRunner::BarrierTasklet::BarrierTasklet(unsigned numWorkers)
-    : TaskletInterface(/*refCount=*/numWorkers)
+    : TaskletInterface(/*refCount=*/static_cast<int>(numWorkers))
 {
     numWorkers_ = numWorkers;
     numWaiting_ = 0;

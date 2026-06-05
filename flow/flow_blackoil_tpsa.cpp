@@ -20,7 +20,9 @@
 */
 #include "config.h"
 
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/simulators/flow/BlackoilModelProperties.hpp>

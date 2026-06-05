@@ -1323,7 +1323,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         group_state_helper.updateVREPForGroups(fieldGroup);
         group_state_helper.updateReservoirRatesInjectionGroups(fieldGroup);
         group_state_helper.updateSurfaceRatesInjectionGroups(fieldGroup);
-        group_state_helper.updateNetworkLeafNodeProductionRates();
+        group_state_helper.updateNetworkLeafNodeRates();
         group_state_helper.updateGroupProductionRates(fieldGroup);
     }
     group_state_helper.updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());
@@ -1980,6 +1980,19 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
 
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+allConnectionsClosed(const Well& well_ecl) const
+{
+    return std::ranges::all_of(well_ecl.getConnections(),
+                               [this, &well_name = well_ecl.name()](const auto& connection)
+                               {
+                                   return connection.state() != Connection::State::OPEN
+                                       || this->wellTestState().completion_is_closed(well_name,
+                                                                                     connection.complnum());
+                               });
+}
 
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
 

@@ -32,12 +32,7 @@
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
-#include <opm/models/blackoil/blackoilextbomodules.hh>
-#include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilbrinemodules.hh>
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>

@@ -31,6 +31,8 @@
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
+#include <dune/istl/bvector.hh>
+
 #include <fmt/format.h>
 
 #include <cstddef>

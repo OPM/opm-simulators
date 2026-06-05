@@ -341,6 +341,12 @@ getGroupConstraintNoGuideRate(const Group& group)
     //   to the slave group. Alternatively, we could also throw an error here for that case
     if (this->isInjectionConstraint()) {
         const auto& control_mode = this->groupState().injection_control(group.name(), this->injectionPhase_());
+        // FLD/NONE means no own local constraint for this phase.
+        // Let the caller use a higher-level distributed target instead.
+        if (control_mode == Group::InjectionCMode::FLD ||
+            control_mode == Group::InjectionCMode::NONE) {
+            return std::nullopt;
+        }
         return ConstraintInfo{
             this->groupStateHelper().getInjectionGroupTarget(group, this->injectionPhase_(), this->resvCoeffsInj()),
             control_mode
@@ -859,24 +865,21 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 initForProducer_()
 {
-    if (this->constraintType() == ConstraintType::Limit) {
-        const auto control_mode = this->getProdCmode();
-        // Use the control mode for per-rate-type limit computation
-        this->target_calculator_.template emplace<TargetCalculator>(
-            this->groupStateHelper(),
-            this->resvCoeffsProd(),
-            control_mode
-        );
-    }
-    else {
-        this->target_calculator_.template emplace<TargetCalculator>(
-            this->groupStateHelper(),
-            this->resvCoeffsProd(),
-            this->top_group_
-        );
-    }
-    const auto guide_target_mode = this->groupStateHelper().getProductionGuideTargetMode(this->top_group_);
-    const auto dummy_phase = Phase::OIL; // Dummy phase, not used for producers.
+    // Use the same control mode for both the target calculator and guide-rate logic.
+    const auto control_mode =
+        (this->constraintType() == ConstraintType::Limit)?
+        this->getProdCmode():
+        this->groupState().production_control(this->top_group_.name());
+
+    this->target_calculator_.template emplace<TargetCalculator>(
+        this->groupStateHelper(),
+        this->resvCoeffsProd(),
+        control_mode
+    );
+    // Map that mode once for the fraction calculator.
+    const auto guide_target_mode =
+        this->groupStateHelper().getProductionGuideTargetModeFromControlMode(control_mode);
+    const auto dummy_phase = Phase::OIL;  // Dummy phase, not used for producers.
     this->fraction_calculator_.emplace(
         this->schedule(),
         this->groupStateHelper(),

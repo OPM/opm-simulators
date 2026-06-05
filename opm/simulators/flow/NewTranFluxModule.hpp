@@ -36,19 +36,22 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
+
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/utils/signum.hh>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 
-#include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/models/utils/signum.hh>
 
 #include <array>
 
@@ -123,13 +126,13 @@ class NewTranExtensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { numPhases = FluidSystem::numPhases };
-    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
-    enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
 
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableEnergy =
         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
@@ -237,12 +240,12 @@ protected:
 public:
 
     OPM_HOST_DEVICE static void volumeAndPhasePressureDifferences(std::array<short, numPhases>& upIdx,
-                                                  std::array<short, numPhases>& dnIdx,
-                                                  Evaluation (&volumeFlux)[numPhases],
-                                                  Evaluation (&pressureDifferences)[numPhases],
-                                                  const ElementContext& elemCtx,
-                                                  unsigned scvfIdx,
-                                                  unsigned timeIdx)
+                                                                  std::array<short, numPhases>& dnIdx,
+                                                                  Evaluation (&volumeFlux)[numPhases],
+                                                                  Evaluation (&pressureDifferences)[numPhases],
+                                                                  const ElementContext& elemCtx,
+                                                                  unsigned scvfIdx,
+                                                                  unsigned timeIdx)
     {
         const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);
@@ -322,23 +325,23 @@ public:
         }
     }
 
-    template<class EvalType>
+    template<class EvalType, class ModuleParamsT = ModuleParams>
     OPM_HOST_DEVICE static void calculatePhasePressureDiff_(short& upIdx,
-                                            short& dnIdx,
-                                            EvalType& pressureDifference,
-                                            const IntensiveQuantities& intQuantsIn,
-                                            const IntensiveQuantities& intQuantsEx,
-                                            const unsigned phaseIdx,
-                                            const unsigned interiorDofIdx,
-                                            const unsigned exteriorDofIdx,
-                                            const Scalar Vin,
-                                            const Scalar Vex,
-                                            const unsigned globalIndexIn,
-                                            const unsigned globalIndexEx,
-                                            const Scalar distZg,
-                                            const Scalar thpresInToEx,
-                                            const Scalar thpresExToIn,
-                                            const ModuleParams& moduleParams)
+                                                            short& dnIdx,
+                                                            EvalType& pressureDifference,
+                                                            const IntensiveQuantities& intQuantsIn,
+                                                            const IntensiveQuantities& intQuantsEx,
+                                                            const unsigned phaseIdx,
+                                                            const unsigned interiorDofIdx,
+                                                            const unsigned exteriorDofIdx,
+                                                            const Scalar Vin,
+                                                            const Scalar Vex,
+                                                            const unsigned globalIndexIn,
+                                                            const unsigned globalIndexEx,
+                                                            const Scalar distZg,
+                                                            const Scalar thpresInToEx,
+                                                            const Scalar thpresExToIn,
+                                                            const ModuleParamsT& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as
@@ -358,7 +361,7 @@ public:
         Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
         Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
-        if constexpr(enableConvectiveMixing) {
+        if constexpr (enableConvectiveMixing) {
             ConvectiveMixingModule::modifyAvgDensity(rhoAvg, intQuantsIn, intQuantsEx, phaseIdx, moduleParams.convectiveMixingModuleParam);
         }
 
@@ -444,9 +447,9 @@ protected:
      */
     template <class FluidState>
     OPM_HOST_DEVICE void calculateBoundaryGradients_(const ElementContext& elemCtx,
-                                     unsigned scvfIdx,
-                                     unsigned timeIdx,
-                                     const FluidState& exFluidState)
+                                                     unsigned scvfIdx,
+                                                     unsigned timeIdx,
+                                                     const FluidState& exFluidState)
     {
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(scvfIdx);
         const Scalar faceArea = scvf.area();
@@ -488,16 +491,16 @@ public:
      */
     template <class Problem, class FluidState, class EvaluationContainer>
     OPM_HOST_DEVICE static void calculateBoundaryGradients_(const Problem& problem,
-                                            const unsigned globalSpaceIdx,
-                                            const IntensiveQuantities& intQuantsIn,
-                                            const unsigned bfIdx,
-                                            const double faceArea,
-                                            const double zEx,
-                                            const FluidState& exFluidState,
-                                            std::array<short, numPhases>& upIdx,
-                                            std::array<short, numPhases>& dnIdx,
-                                            EvaluationContainer& volumeFlux,
-                                            EvaluationContainer& pressureDifference)
+                                                            const unsigned globalSpaceIdx,
+                                                            const IntensiveQuantities& intQuantsIn,
+                                                            const unsigned bfIdx,
+                                                            const double faceArea,
+                                                            const double zEx,
+                                                            const FluidState& exFluidState,
+                                                            std::array<short, numPhases>& upIdx,
+                                                            std::array<short, numPhases>& dnIdx,
+                                                            EvaluationContainer& volumeFlux,
+                                                            EvaluationContainer& pressureDifference)
     {
 
         bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();

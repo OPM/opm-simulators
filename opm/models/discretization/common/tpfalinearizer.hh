@@ -47,7 +47,12 @@
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
+#include <opm/models/discretization/common/tpfalinearizerstructs.hh>
+
 #include <opm/simulators/linalg/exportSystem.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
 
 #include <cassert>
 #include <cstddef>
@@ -59,22 +64,33 @@
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
+#if HAVE_OPENMP
+#include <omp.h>
+#endif
 
 #include <fmt/format.h>
 
 #include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/common/utility/gpuistl_if_available.hpp>
+#include <opm/common/utility/pointerArithmetic.hpp>
 #if HAVE_CUDA
+#include <opm/models/discretization/common/tpfalinearizergpukernels.hh>
+#include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
+#include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
+#include <opm/models/discretization/common/tpfalinearizergpuparams.hh>
 #if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_operations.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #endif
 #endif
 
@@ -89,91 +105,6 @@ namespace Opm {
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
-
-// Moved these structs out of the class to make them visible in the GPU code.
-template<class Storage = std::vector<int>>
-struct FullDomain
-{
-    Storage cells;
-};
-
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    inline FullDomain<gpuistl::GpuBuffer<int>> copy_to_gpu(FullDomain<> CPUDomain)
-    {
-        if (CPUDomain.cells.size() == 0) {
-            OPM_THROW(std::runtime_error, "Cannot copy empty full domain to GPU.");
-        }
-        return FullDomain<gpuistl::GpuBuffer<int>>{
-            gpuistl::GpuBuffer<int>(CPUDomain.cells)
-        };
-    };
-
-    inline FullDomain<gpuistl::GpuView<int>> make_view(FullDomain<gpuistl::GpuBuffer<int>>& buffer)
-    {
-        if (buffer.cells.size() == 0) {
-            OPM_THROW(std::runtime_error, "Cannot make view of empty full domain buffer.");
-        }
-        return FullDomain<gpuistl::GpuView<int>>{
-            gpuistl::make_view(buffer.cells)
-        };
-    };
-#endif
-
-template <class ResidualNBInfoType,class BlockType>
-struct NeighborInfoStruct
-{
-    unsigned int neighbor;
-    ResidualNBInfoType res_nbinfo;
-    BlockType* matBlockAddress;
-
-    template <class OtherBlockType>
-    NeighborInfoStruct(const NeighborInfoStruct<ResidualNBInfoType,OtherBlockType>& other)
-        : neighbor(other.neighbor)
-        , res_nbinfo(other.res_nbinfo)
-        , matBlockAddress(nullptr)
-    {
-        if (other.matBlockAddress) {
-            matBlockAddress = reinterpret_cast<BlockType*>(other.matBlockAddress);
-        }
-    }
-
-    template <class PtrType>
-    NeighborInfoStruct(unsigned int n, const ResidualNBInfoType& r, PtrType ptr)
-        : neighbor(n)
-        , res_nbinfo(r)
-        , matBlockAddress(static_cast<BlockType*>(ptr))
-    {
-    }
-
-    // Add a default constructor
-    NeighborInfoStruct()
-        : neighbor(0)
-        , res_nbinfo()
-        , matBlockAddress(nullptr)
-    {
-    }
-};
-
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-namespace  gpuistl {
-    template<class MiniMatrixType, class MatrixBlockType, class ResidualNBInfoType>
-    auto copy_to_gpu(const SparseTable<NeighborInfoStruct<ResidualNBInfoType, MatrixBlockType>>& cpuNeighborInfoTable)
-    {
-        // Convert the DUNE FieldMatrix/MatrixBlock to MiniMatrix types
-        using StructWithMinimatrix = NeighborInfoStruct<ResidualNBInfoType, MiniMatrixType>;
-        std::vector<StructWithMinimatrix> minimatrices(cpuNeighborInfoTable.dataSize());
-        size_t idx = 0;
-        for (auto e : cpuNeighborInfoTable.dataStorage()) {
-            minimatrices[idx++] = StructWithMinimatrix(e);
-        }
-
-        return SparseTable<StructWithMinimatrix, gpuistl::GpuBuffer>(
-            gpuistl::GpuBuffer<StructWithMinimatrix>(minimatrices),
-            gpuistl::GpuBuffer<int>(cpuNeighborInfoTable.rowStarts())
-        );
-    }
-}
-#endif
 
 /*!
  * \ingroup FiniteVolumeDiscretizations
@@ -210,17 +141,29 @@ class TpfaLinearizer
 
     using Vector = GlobalEqVector;
 
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
     enum { dimWorld = GridView::dimensionworld };
 
-    using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
-    using VectorBlock = Dune::FieldVector<Scalar, numEq>;
-    using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
+    constexpr static bool runAssemblyOnGpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
 
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-    using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq * numEq>;
+    using MatrixBlockCPU = typename SparseMatrixAdapter::MatrixBlock;
+    using VectorBlockCPU = Dune::FieldVector<Scalar, numEq>;
+    using ADVectorBlockCPU = GetPropType<TypeTag, Properties::RateVector>;
+
+#if HAVE_CUDA
+    using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq>;
     using VectorBlockGPU = gpuistl::MiniVector<Scalar, numEq>;
+    using ADVectorBlockGPU = gpuistl::MiniVector<Evaluation, numEq>;
+    using MatrixBlock = std::conditional_t<runAssemblyOnGpu, MatrixBlockGPU, MatrixBlockCPU>;
+    using VectorBlock = std::conditional_t<runAssemblyOnGpu, VectorBlockGPU, VectorBlockCPU>;
+    using ADVectorBlock = std::conditional_t<runAssemblyOnGpu, ADVectorBlockGPU, ADVectorBlockCPU>;
+#else
+    using MatrixBlock = MatrixBlockCPU;
+    using VectorBlock = VectorBlockCPU;
+    using ADVectorBlock = ADVectorBlockCPU;
 #endif
 
     static constexpr bool linearizeNonLocalElements =
@@ -484,7 +427,7 @@ public:
             const auto [type, massrateAD] = problem_().boundaryCondition(bdyInfo.cell, bdyInfo.dir);
 
             // Strip the unnecessary (and zero anyway) derivatives off massrate.
-            VectorBlock massrate(0.0);
+            VectorBlockCPU massrate(0.0);
             for (std::size_t ii = 0; ii < massrate.size(); ++ii) {
                 massrate[ii] = massrateAD[ii].value();
             }
@@ -570,7 +513,7 @@ private:
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
-        neighborInfo_.reserve(numCells, 6 * numCells);
+        neighborInfo_.reserve(numCells, 6 * numCells); // Expect ~6 neighbors per cell
         std::vector<NeighborInfoCPU> loc_nbinfo;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
@@ -633,18 +576,18 @@ private:
                         }
                         const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
                         // Strip the unnecessary (and zero anyway) derivatives off massrate.
-                        VectorBlock massrate(0.0);
+                        VectorBlockCPU massrate(0.0);
                         for (std::size_t ii = 0; ii < massrate.size(); ++ii) {
                             massrate[ii] = massrateAD[ii].value();
                         }
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
-                        BoundaryConditionData bcdata{type,
-                                                     massrate,
-                                                     exFluidState.pvtRegionIndex(),
-                                                     bfIndex,
-                                                     bf.area(),
-                                                     bf.integrationPos()[dimWorld - 1],
-                                                     exFluidState};
+                        BoundaryConditionDataCPU bcdata {type,
+                                                         massrate,
+                                                         exFluidState.pvtRegionIndex(),
+                                                         bfIndex,
+                                                         bf.area(),
+                                                         bf.integrationPos()[dimWorld - 1],
+                                                         exFluidState};
                         boundaryInfo_.push_back({myIdx, dir_id, bfIndex, bcdata});
                     }
                 }
@@ -671,6 +614,13 @@ private:
             }
         }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        gpuJacobian_.reset(new gpuistl::GpuSparseMatrixWrapper<Scalar>(
+            gpuistl::GpuSparseMatrixWrapper<Scalar>::fromMatrix(jacobian_->istlMatrix())));
+        gpuBufferDiagMatAddress_.reset(new gpuistl::GpuBuffer<MatrixBlockGPU*>(
+            gpuistl::detail::getDiagPtrsTyped<MatrixBlockGPU>(*gpuJacobian_)));
+#endif
+
         // Create dummy full domain.
         fullDomain_.cells.resize(numCells);
         std::iota(fullDomain_.cells.begin(), fullDomain_.cells.end(), 0);
@@ -682,6 +632,10 @@ private:
         residual_ = 0.0;
         // zero all matrix entries
         jacobian_->clear();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        gpuJacobian_->setToZero();
+#endif
     }
 
     // Initialize the flows, flores, and velocity sparse tables
@@ -810,7 +764,9 @@ private:
     }
 
 public:
-    void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
+    template <class VectorBlockType, class MatrixBlockType, class ADVectorBlockType>
+    OPM_HOST_DEVICE static void
+    setResAndJacobi(VectorBlockType& res, MatrixBlockType& bMat, const ADVectorBlockType& resid)
     {
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             res[eqIdx] = resid[eqIdx].value();
@@ -891,7 +847,7 @@ public:
                 continue;
             }
 
-            ADVectorBlock adres(0.0);
+            ADVectorBlockCPU adres(0.0);
             const unsigned globI = bdyInfo.cell;
             const auto& nbInfos = neighborInfo_[globI];
             const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
@@ -911,6 +867,8 @@ private:
     template <class SubDomainType>
     void linearize_(const SubDomainType& domain)
     {
+        constexpr bool run_assembly_on_gpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
+
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
         // rsmax (for DRSDT) and similar.
@@ -920,123 +878,170 @@ private:
             }
         }
 
+        const double dt = simulator_().timeStepSize();
+
         OPM_TIMEBLOCK(linearize);
 
         // We do not call resetSystem_() here, since that will set
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        const auto& blockVelocity = simulator_().problem().eclWriter().outputModule().getFlows().blockVelocity();
         const unsigned int numCells = domain.cells.size();
 
-        // Fetch timestepsize used later in accumulation term.
-        const double dt = simulator_().timeStepSize();
+        if constexpr (!run_assembly_on_gpu) {
+            linearize_parallelization_wrapper<run_assembly_on_gpu, LocalResidual>(
+                numCells /*numCells*/,
+                domain,
+                neighborInfo_,
+                diagMatAddress_,
+                residual_,
+                model_(),
+                dt,
+                dispersionActive,
+                problem_());
 
+            linearize_bc<IntensiveQuantities, Model, LocalResidual>(
+                diagMatAddress_, residual_, boundaryInfo_);
+        } else {
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            // Make sure we have can have the domain on the GPU.
+            if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
+
+                using GpuParams = TpfaLinearizerGpuParams<TypeTag>;
+
+                int constexpr blockSize = 256; // Experimentally this is a good value for multiple
+                                               // GPUs. Autotune this later.
+
+                GpuParams gpuParams(domain,
+                                    neighborInfo_,
+                                    *gpuJacobian_,
+                                    *gpuBufferDiagMatAddress_,
+                                    jacobian_->istlMatrix(),
+                                    residual_,
+                                    boundaryInfo_,
+                                    model_(),
+                                    problem_(),
+                                    numCells);
+
+                linearize_parallelization_wrapper<run_assembly_on_gpu,
+                                                  typename GpuParams::LocalResidualGPU>(
+                    numCells,
+                    gpuParams.domainView(),
+                    gpuParams.neighborInfoView(),
+                    gpuParams.diagMatAddressView(),
+                    gpuParams.residualView(),
+                    gpuParams.modelView(),
+                    dt,
+                    dispersionActive,
+                    gpuParams.flowProblemView());
+
+                if (gpuParams.boundaryInfoSize() > 0) {
+                    auto boundaryInfoView = gpuParams.boundaryInfoView();
+                    linearize_bc_threadsafe<TpfaLinearizer<TypeTag>,
+                                            typename GpuParams::GPUBOIQ,
+                                            decltype(gpuParams.modelView()),
+                                            typename GpuParams::LocalResidualGPU>
+                        <<<((gpuParams.boundaryInfoSize() + blockSize - 1) / blockSize),
+                           blockSize>>>(gpuParams.diagMatAddressView(),
+                                        gpuParams.residualView(),
+                                        boundaryInfoView,
+                                        gpuParams.modelView(),
+                                        gpuParams.flowProblemView());
+                }
+
+                // The memory copies here are synchronous and in the default stream,
+                // guaranteeing that the GPU kernels have completed.
+                gpuParams.copyResidualToHost(residual_, numCells);
+                gpuParams.copyJacobianToHost(*jacobian_, *gpuJacobian_);
+            } else {
+                OPM_THROW(std::logic_error, "Only FullDomain is supported on GPU");
+            }
+#else
+            OPM_THROW(std::logic_error,
+                      "Trying to run GPU assembly without compiling with GPU support");
+#endif
+        }
+
+        // Handle source terms separately as we want the functionality for CPU and GPU cases
+        // but for now we cannot handle this inside gpu kernels due to the use of problem_()
+        linearize_source_terms(numCells, domain);
+    }
+
+    template <bool useGPU,
+              class LocalResidualT,
+              class ModelClass,
+              class DiagPtrType,
+              class DomainType,
+              class NeighborSparseTable,
+              class ResidualType,
+              class ProblemT>
+    void linearize_parallelization_wrapper(const unsigned int numCells,
+                                           const DomainType& domain,
+                                           const NeighborSparseTable& neighborInfo,
+                                           DiagPtrType& diagMatAddress,
+                                           ResidualType& residual,
+                                           const ModelClass& model,
+                                           Scalar dt,
+                                           bool dispersionActive,
+                                           const ProblemT& problem)
+    {
+        if constexpr (useGPU) {
+            static_assert(!enableBioeffects && "Bioeffects not yet supported on GPU");
+            assert(!dispersionActive && "Dispersion not yet supported on GPU");
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            int constexpr blockSize = 256;
+            kernel_linearize<TpfaLinearizer<TypeTag>,
+                             ModelClass,
+                             LocalResidualT,
+                             DiagPtrType,
+                             Scalar,
+                             DomainType,
+                             NeighborSparseTable,
+                             ResidualType,
+                             ProblemT>
+                <<<((numCells + blockSize - 1) / blockSize), blockSize>>>(numCells,
+                                                                          domain,
+                                                                          neighborInfo,
+                                                                          diagMatAddress,
+                                                                          residual,
+                                                                          model,
+                                                                          dt,
+                                                                          problem);
+#else
+            OPM_THROW(std::runtime_error, "Trying to run GPU code without GPU support");
+#endif
+        } else {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for (unsigned ii = 0; ii < numCells; ++ii) {
+                linearize_cell<false, LocalResidual>(ii,
+                                                     domain,
+                                                     neighborInfo,
+                                                     diagMatAddress,
+                                                     residual,
+                                                     model,
+                                                     velocityInfo_,
+                                                     dt,
+                                                     problem);
+            }
+        }
+    }
+
+    template <class SubDomainType>
+    void linearize_source_terms(unsigned int numCells, const SubDomainType& domain)
+    {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (unsigned ii = 0; ii < numCells; ++ii) {
             OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
             const unsigned globI = domain.cells[ii];
-            const auto& nbInfos = neighborInfo_[globI];
-            VectorBlock res(0.0);
-            MatrixBlock bMat(0.0);
-            ADVectorBlock adres(0.0);
-            ADVectorBlock darcyFlux(0.0);
+            VectorBlockCPU res(0.0);
+            MatrixBlockCPU bMat(0.0);
+            ADVectorBlockCPU adres(0.0);
             const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-
-            // Flux term.
-            {
-                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
-                short loc = 0;
-                for (const auto& nbInfo : nbInfos) {
-                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
-                    const unsigned globJ = nbInfo.neighbor;
-                    assert(globJ != globI);
-                    res = 0.0;
-                    bMat = 0.0;
-                    adres = 0.0;
-                    darcyFlux = 0.0;
-                    const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    LocalResidual::computeFlux(adres, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
-                                               nbInfo.res_nbinfo, problem_().moduleParams());
-                    adres *= nbInfo.res_nbinfo.faceArea;
-                    if (dispersionActive || enableBioeffects) {
-                        for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-                            velocityInfo_[globI][loc].velocity[phaseIdx] =
-                                darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                        }
-                    }
-                    else if (!blockVelocity.empty()) {
-                        if (std::ranges::binary_search(blockVelocity,
-                                                       simulator_().vanguard().cartesianIndex(globI))) {
-                            for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
-                                velocityInfo_[globI][loc].velocity[phaseIdx] =
-                                    darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                            }
-                        }
-                    }
-                    setResAndJacobi(res, bMat, adres);
-                    residual_[globI] += res;
-                    //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-                    *diagMatAddress_[globI] += bMat;
-                    bMat *= -1.0;
-                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                    *nbInfo.matBlockAddress += bMat;
-                    ++loc;
-                }
-            }
-
-            // Accumulation term.
             const double volume = model_().dofTotalVolume(globI);
-            const Scalar storefac = volume / dt;
-            adres = 0.0;
-            {
-                OPM_TIMEBLOCK_LOCAL(computeStorage, Subsystem::Assembly);
-                LocalResidual::template computeStorage<Evaluation>(adres, intQuantsIn);
-            }
-            setResAndJacobi(res, bMat, adres);
-            // Either use cached storage term, or compute it on the fly.
-            if (model_().enableStorageCache()) {
-                // The cached storage for timeIdx 0 (current time) is not
-                // used, but after storage cache is shifted at the end of the
-                // timestep, it will become cached storage for timeIdx 1.
-                model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
-                // We should not update the storage cache here for NLDD local solves.
-                // This will reset the start-of-step storage to incorrect numbers when
-                // we do local solves, where the iteration number will start from 0,
-                // but the starting state may not be identical to the start-of-step state.
-                // Note that a full assembly must be done before local solves
-                // otherwise this will be left un-updated.
-                if (problem_().iterationContext().isFirstGlobalIteration()) {
-                    // Need to update the storage cache.
-                    if (problem_().recycleFirstIterationStorage()) {
-                        // Assumes nothing have changed in the system which
-                        // affects masses calculated from primary variables.
-                        model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-                    }
-                    else {
-                        Dune::FieldVector<Scalar, numEq> tmp;
-                        const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                        LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                        model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
-                    }
-                }
-                res -= model_().cachedStorage(globI, 1);
-            }
-            else {
-                OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
-                Dune::FieldVector<Scalar, numEq> tmp;
-                const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
-                LocalResidual::template computeStorage<Scalar>(tmp, intQuantOld);
-                // assume volume do not change
-                res -= tmp;
-            }
-            res *= storefac;
-            bMat *= storefac;
-            residual_[globI] += res;
-            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            *diagMatAddress_[globI] += bMat;
 
             // Cell-wise source terms.
             // This will include well sources if SeparateSparseSourceTerms is false.
@@ -1045,14 +1050,13 @@ private:
             adres = 0.0;
             if (separateSparseSourceTerms_) {
                 LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-            }
-            else {
+            } else {
                 LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
             }
             adres *= -volume;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
-            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
         } // end of loop for cell globI.
 
@@ -1060,24 +1064,223 @@ private:
         if (separateSparseSourceTerms_) {
             problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
         }
+    }
 
+public:
+    template <bool useGPU,
+              class LocalResidualT,
+              class ProblemType,
+              class VelocityInfoType,
+              class ModelClass,
+              class DiagPtrType,
+              class DomainType,
+              class NeighborSparseTable,
+              class ResidualType>
+    OPM_HOST_DEVICE static void linearize_cell(const unsigned int ii,
+                                               const DomainType& domain,
+                                               const NeighborSparseTable& neighborInfo,
+                                               const DiagPtrType& diagMatAddress,
+                                               ResidualType& residual,
+                                               const ModelClass& model,
+                                               VelocityInfoType& velocityInfo,
+                                               const Scalar dt,
+                                               const ProblemType& problem)
+    {
+#if OPM_IS_INSIDE_HOST_FUNCTION
+        OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+#endif
+        const unsigned globI = domain.cells[ii];
+        const auto& nbInfos = neighborInfo[globI];
+        VectorBlock res(0.0);
+        MatrixBlock bMat(0.0);
+        ADVectorBlock adres(0.0);
+        ADVectorBlock darcyFlux(0.0);
+        const auto& intQuantsIn = model.intensiveQuantities(globI, /*timeIdx*/ 0);
+
+        // Flux term.
+        {
+#if OPM_IS_INSIDE_HOST_FUNCTION
+            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
+#endif
+            short loc = 0;
+            for (const auto& nbInfo : nbInfos) {
+                const unsigned globJ = nbInfo.neighbor;
+                res = 0.0;
+                bMat = 0.0;
+                adres = 0.0;
+                darcyFlux = 0.0;
+
+                const auto& intQuantsEx = model.intensiveQuantities(globJ, /*timeIdx*/ 0);
+
+                LocalResidualT::computeFlux(adres,
+                                            darcyFlux,
+                                            globI,
+                                            globJ,
+                                            intQuantsIn,
+                                            intQuantsEx,
+                                            nbInfo.res_nbinfo,
+                                            problem.moduleParams());
+
+                adres *= nbInfo.res_nbinfo.faceArea;
+
+                // currently not supported on GPU
+                if constexpr (!useGPU) {
+                    // Use std::cmp_less because sparseTable.size() returns signed integer, and globI is unsigned
+                    if (std::cmp_less(globI, velocityInfo.size())) {
+                        if (velocityInfo.rowSize(globI) > 0) {
+                            for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+                                velocityInfo[globI][loc].velocity[phaseIdx]
+                                    = darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                            }
+                        }
+                    }
+                }
+
+                setResAndJacobi(res, bMat, adres);
+                residual[globI] += res;
+                // SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+                *diagMatAddress[globI] += bMat;
+                bMat *= -1.0;
+                // SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                *nbInfo.matBlockAddress += bMat;
+                ++loc;
+            }
+        }
+
+        // Accumulation term.
+        adres = 0.0;
+        {
+            LocalResidualT::template computeStorage<Evaluation>(adres, intQuantsIn);
+        }
+        setResAndJacobi(res, bMat, adres);
+
+        if constexpr (!useGPU) { // Cached storage not enabled for GPU
+            // Either use cached storage term, or compute it on the fly.
+            if (model.enableStorageCache()) {
+                // The cached storage for timeIdx 0 (current time) is not
+                // used, but after storage cache is shifted at the end of the
+                // timestep, it will become cached storage for timeIdx 1.
+                model.updateCachedStorage(globI, /*timeIdx=*/0, res);
+                // We should not update the storage cache here for NLDD local solves.
+                // This will reset the start-of-step storage to incorrect numbers when
+                // we do local solves, where the iteration number will start from 0,
+                // but the starting state may not be identical to the start-of-step state.
+                // Note that a full assembly must be done before local solves
+                // otherwise this will be left un-updated.
+                if (problem.iterationContext().isFirstGlobalIteration()) {
+                    // Need to update the storage cache.
+                    if (problem.recycleFirstIterationStorage()) {
+                        // Assumes nothing have changed in the system which
+                        // affects masses calculated from primary variables.
+                        model.updateCachedStorage(globI, 1, res);
+                    } else {
+                        VectorBlock tmp;
+                        const auto& intQuantOld = model.intensiveQuantities(globI, 1);
+                        LocalResidualT::template computeStorage<Scalar>(tmp, intQuantOld);
+                        model.updateCachedStorage(globI, 1, tmp);
+                    }
+                }
+                res -= model.cachedStorage(globI, 1);
+            } else {
+#if OPM_IS_INSIDE_HOST_FUNCTION
+                OPM_TIMEBLOCK_LOCAL(computeStorage0, Subsystem::Assembly);
+#endif
+                VectorBlock tmp;
+                const auto& intQuantOld = model.intensiveQuantities(globI, 1);
+                LocalResidualT::template computeStorage<Scalar>(tmp, intQuantOld);
+                // assume volume do not change
+                res -= tmp;
+            }
+        } else {
+            VectorBlock tmp;
+            const auto& intQuantOld = model.intensiveQuantities(globI, 1);
+            LocalResidualT::template computeStorage<Scalar>(tmp, intQuantOld);
+            // assume volume do not change
+            res -= tmp;
+        }
+
+        const Scalar volume = model.dofTotalVolume(globI);
+        const Scalar storefac = volume / dt;
+        res *= storefac;
+        bMat *= storefac;
+        residual[globI] += res;
+        // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+        *diagMatAddress[globI] += bMat;
+    }
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    template <class LocalIntensiveQuantities,
+              class LocalResidualT,
+              class ModelT,
+              class DiagPtrType,
+              class ResidualT,
+              class BoundaryInfoT,
+              class ProblemT>
+    OPM_HOST_DEVICE static void linearize_bc_threadsafe_single_cell(DiagPtrType diagMatAdress,
+                                                               ResidualT residual,
+                                                               const BoundaryInfoT boundaryInfoElement,
+                                                               ModelT model,
+                                                               ProblemT problem)
+    {
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
+        if (boundaryInfoElement.bcdata.type != BCType::NONE) {
+            VectorBlock res(0.0);
+            MatrixBlock bMat(0.0);
+            ADVectorBlock adres(0.0);
+            const unsigned globI = boundaryInfoElement.cell;
+            const LocalIntensiveQuantities& insideIntQuants
+                = model.intensiveQuantities(globI, /*timeIdx*/ 0);
+            if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
+                LocalResidualT::computeBoundaryFlux(
+                    adres, problem, boundaryInfoElement.bcdata, insideIntQuants, globI);
+            }
+            adres *= boundaryInfoElement.bcdata.faceArea;
+            TpfaLinearizer<TypeTag>::setResAndJacobi(res, bMat, adres);
+            auto* residualPtr = &(residual.data()[globI]);
+            for (int i = 0; i < numEq; ++i) {
+                atomicAdd(&((*residualPtr)[i]), res[i]);
+            }
+            auto* matPtr = diagMatAdress[globI];
+            for (int row = 0; row < bMat.size(); ++row) {
+                for (int col = 0; col < bMat.size(); ++col) {
+                    Scalar* elemPtr = &((*matPtr)[row][col]);
+                    atomicAdd(elemPtr, bMat[row][col]);
+                }
+            }
+        }
+    }
+#endif
+
+private:
+    template <class LocalIntensiveQuantities,
+              class ModelClass,
+              class LocalResidualT,
+              class DiagPtrType,
+              class ResidualType,
+              class BoundaryInfoT>
+    void linearize_bc(DiagPtrType& diagMatAdress,
+                      ResidualType& residual,
+                      const BoundaryInfoT& boundaryInfo)
+    {
         // Boundary terms. Only looping over cells with nontrivial bcs.
-        for (const auto& bdyInfo : boundaryInfo_) {
+        for (const auto& bdyInfo : boundaryInfo) {
             if (bdyInfo.bcdata.type == BCType::NONE) {
                 continue;
             }
-
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const unsigned globI = bdyInfo.cell;
-            const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+            const LocalIntensiveQuantities& insideIntQuants
+                = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            LocalResidual::computeBoundaryFlux(
+                adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
             adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
-            residual_[globI] += res;
+            residual[globI] += res;
             ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            *diagMatAddress_[globI] += bMat;
+            *diagMatAdress[globI] += bMat;
         }
     }
 
@@ -1107,6 +1310,10 @@ private:
 
     // the jacobian matrix
     std::unique_ptr<SparseMatrixAdapter> jacobian_{};
+#if HAVE_CUDA
+    std::unique_ptr<gpuistl::GpuSparseMatrixWrapper<Scalar>> gpuJacobian_;
+    std::unique_ptr<gpuistl::GpuBuffer<MatrixBlockGPU*>> gpuBufferDiagMatAddress_;
+#endif
 
     // the right-hand side
     GlobalEqVector residual_;
@@ -1114,10 +1321,10 @@ private:
     LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
-    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlock>;
+    using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockCPU>;
 
     SparseTable<NeighborInfoCPU> neighborInfo_{};
-    std::vector<MatrixBlock*> diagMatAddress_{};
+    std::vector<MatrixBlockCPU*> diagMatAddress_ {};
 
     struct FlowInfo
     {
@@ -1136,25 +1343,12 @@ private:
     SparseTable<VelocityInfo> velocityInfo_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
-    struct BoundaryConditionData
-    {
-        BCType type;
-        VectorBlock massRate;
-        unsigned pvtRegionIdx;
-        unsigned boundaryFaceIndex;
-        double faceArea;
-        double faceZCoord;
-        ScalarFluidState exFluidState;
-    };
 
-    struct BoundaryInfo
-    {
-        unsigned int cell;
-        int dir;
-        unsigned int bfIndex;
-        BoundaryConditionData bcdata;
-    };
-    std::vector<BoundaryInfo> boundaryInfo_;
+    using BoundaryConditionDataCPU = BoundaryConditionData<VectorBlockCPU, ScalarFluidState>;
+
+    using BoundaryInfoCPU = BoundaryInfo<BoundaryConditionDataCPU>;
+
+    std::vector<BoundaryInfoCPU> boundaryInfo_;
 
     bool separateSparseSourceTerms_ = false;
 

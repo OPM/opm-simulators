@@ -56,12 +56,35 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
+#include <tuple>
+
+namespace Opm::Properties::TTag {
+
+struct TestTypeTag
+{ using InheritsFrom = std::tuple<FlowProblemTPFA>; };
+
+}
+
+namespace Opm::Properties {
+
+// Disable convective mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::TestTypeTag>
+{ static constexpr bool value = false; };
+
+// Disable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::TestTypeTag>
+{ static constexpr bool value = false; };
+
+}
+
 namespace Opm {
 
 class MainTestWrapper : public Main
 {
 public:
-    using TypeTag = Properties::TTag::FlowProblemTPFA;
+    using TypeTag = Properties::TTag::TestTypeTag;
     using FlowMainPtr = std::unique_ptr<FlowMain<TypeTag>>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 

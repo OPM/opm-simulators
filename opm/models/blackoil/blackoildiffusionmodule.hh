@@ -34,9 +34,12 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/models/blackoil/blackoilbioeffectsmodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <array>
@@ -49,23 +52,6 @@ namespace Opm {
  * \class Opm::BlackOilDiffusionModule
  * \brief Provides the auxiliary methods required for consideration of the
  * diffusion equation.
- */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionModule;
-
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::BlackOilDiffusionModule
- */
-template <class TypeTag>
-class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDiffusionModule
  */
 template <class TypeTag>
 class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
@@ -327,20 +313,6 @@ BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
  * \brief Provides the volumetric quantities required for the
  *        calculation of molecular diffusive fluxes.
  */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionIntensiveQuantities;
-
-/*!
- * \copydoc Opm::DiffusionIntensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::DiffusionIntensiveQuantities
- */
 template <class TypeTag>
 class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
@@ -373,6 +345,12 @@ public:
         , diffusionCoefficient_(diffusionCoefficient)
     {}
 
+    template <class OtherTypeTag>
+    BlackOilDiffusionIntensiveQuantities(const BlackOilDiffusionIntensiveQuantities<OtherTypeTag, true>& other)
+        : tortuosity_(other.tortuosity())
+        , diffusionCoefficient_(other.diffusionCoefficients())
+    {}
+
     BlackOilDiffusionIntensiveQuantities&
     operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
     {
@@ -395,11 +373,23 @@ public:
     { return diffusionCoefficient_[phaseIdx][compIdx]; }
 
     /*!
+     * \brief Returns all the diffusion coefficients
+     */
+    OPM_HOST_DEVICE const std::array<std::array<Evaluation, numComponents>, numPhases>& diffusionCoefficients() const
+    { return diffusionCoefficient_; }
+
+    /*!
      * \brief Returns the tortuousity of the sub-domain of a fluid
      *        phase in the porous medium.
      */
     OPM_HOST_DEVICE Evaluation tortuosity(unsigned phaseIdx) const
     { return tortuosity_[phaseIdx]; }
+
+    /*!
+     * \brief Returns all the tortuosities
+     */
+    OPM_HOST_DEVICE const std::array<Evaluation, numPhases>& tortuosities() const
+    { return tortuosity_; }
 
     /*!
      * \brief Returns the effective molecular diffusion coefficient of
@@ -520,20 +510,6 @@ private:
  *
  * \brief Provides the quantities required to calculate diffusive mass fluxes.
  */
-template <class TypeTag, bool enableDiffusion>
-class BlackOilDiffusionExtensiveQuantities;
-
-/*!
- * \copydoc Opm::DiffusionExtensiveQuantities
- */
-template <class TypeTag>
-class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
-{
-};
-
-/*!
- * \copydoc Opm::BlackOilDiffusionExtensiveQuantities
- */
 template <class TypeTag>
 class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
@@ -582,9 +558,9 @@ protected:
     }
 
 public:
-    static void update(EvaluationArray& effectiveDiffusionCoefficient,
-                       const IntensiveQuantities& intQuantsInside,
-                       const IntensiveQuantities& intQuantsOutside)
+    OPM_HOST_DEVICE static void update(EvaluationArray& effectiveDiffusionCoefficient,
+                                       const IntensiveQuantities& intQuantsInside,
+                                       const IntensiveQuantities& intQuantsOutside)
     {
         const FluidSystem& fsys = intQuantsInside.getFluidSystem();
 

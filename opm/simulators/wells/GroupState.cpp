@@ -41,6 +41,7 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
 {
     GroupState result(3);
     result.m_production_rates = {{"test1", {1.0, 2.0}}};
+    result.m_network_leaf_node_injection_rates={{"test1", {44.0, 20}}};
     result.m_network_leaf_node_production_rates={{"test1", {1.0, 20}}};
     result.production_controls = {{"test2", Group::ProductionCMode::LRAT}};
     result.prod_red_rates = {{"test3", {3.0, 4.0, 5.0}}};
@@ -64,6 +65,7 @@ template<class Scalar>
 bool GroupState<Scalar>::operator==(const GroupState& other) const
 {
     return this->m_production_rates == other.m_production_rates &&
+           this->m_network_leaf_node_injection_rates == other.m_network_leaf_node_injection_rates &&
            this->m_network_leaf_node_production_rates == other.m_network_leaf_node_production_rates &&
            this->production_controls == other.production_controls &&
            this->prod_red_rates == other.prod_red_rates &&
@@ -101,6 +103,16 @@ void GroupState<Scalar>::update_production_rates(const std::string& gname,
 }
 
 template<class Scalar>
+void GroupState<Scalar>::update_network_leaf_node_injection_rates(const std::string& gname,
+                                                 const std::vector<Scalar>& rates)
+{
+    if (rates.size() != this->num_phases)
+        throw std::logic_error("Wrong number of phases");
+
+    this->m_network_leaf_node_injection_rates[gname] = rates;
+}
+
+template<class Scalar>
 void GroupState<Scalar>::update_network_leaf_node_production_rates(const std::string& gname,
                                                  const std::vector<Scalar>& rates)
 {
@@ -116,7 +128,7 @@ GroupState<Scalar>::production_rates(const std::string& gname) const
 {
     auto group_iter = this->m_production_rates.find(gname);
     if (group_iter == this->m_production_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -127,7 +139,7 @@ GroupState<Scalar>::prev_production_rates(const std::string& gname) const
 {
     auto group_iter = this->m_prev_production_rates.find(gname);
     if (group_iter == this->m_prev_production_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -144,11 +156,22 @@ void GroupState<Scalar>::update_prev_production_rates(const std::string& gname,
 
 template<class Scalar>
 const std::vector<Scalar>&
+GroupState<Scalar>::network_leaf_node_injection_rates(const std::string& gname) const
+{
+    auto group_iter = this->m_network_leaf_node_injection_rates.find(gname);
+    if (group_iter == this->m_network_leaf_node_injection_rates.end())
+        throw std::logic_error("No such group: " + gname);
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+const std::vector<Scalar>&
 GroupState<Scalar>::network_leaf_node_production_rates(const std::string& gname) const
 {
     auto group_iter = this->m_network_leaf_node_production_rates.find(gname);
     if (group_iter == this->m_network_leaf_node_production_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -168,7 +191,7 @@ GroupState::well_group_thp(const std::string& gname) const
 {
     auto group_iter = this->group_thp.find(gname);
     if (group_iter == this->group_thp.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -207,7 +230,7 @@ GroupState<Scalar>::production_reduction_rates(const std::string& gname) const
 {
     auto group_iter = this->prod_red_rates.find(gname);
     if (group_iter == this->prod_red_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -239,7 +262,7 @@ GroupState<Scalar>::injection_reduction_rates(const std::string& gname) const
 {
     auto group_iter = this->inj_red_rates.find(gname);
     if (group_iter == this->inj_red_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -271,7 +294,7 @@ injection_surface_rates(const std::string& gname) const
 {
     auto group_iter = this->inj_surface_rates.find(gname);
     if (group_iter == this->inj_surface_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -303,7 +326,7 @@ GroupState<Scalar>::injection_reservoir_rates(const std::string& gname) const
 {
     auto group_iter = this->inj_resv_rates.find(gname);
     if (group_iter == this->inj_resv_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -328,7 +351,7 @@ injection_rein_rates(const std::string& gname) const
 {
     auto group_iter = this->inj_rein_rates.find(gname);
     if (group_iter == this->inj_rein_rates.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -348,7 +371,7 @@ injection_vrep_rate(const std::string& gname) const
 {
     auto group_iter = this->inj_vrep_rate.find(gname);
     if (group_iter == this->inj_vrep_rate.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -368,7 +391,7 @@ grat_sales_target(const std::string& gname) const
 {
     auto group_iter = this->m_grat_sales_target.find(gname);
     if (group_iter == this->m_grat_sales_target.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -466,7 +489,7 @@ injection_control(const std::string& gname, Phase phase) const
     auto key = std::make_pair(phase, gname);
     auto group_iter = this->injection_controls.find( key );
     if (group_iter == this->injection_controls.end())
-        throw std::logic_error("Could not find ontrol for injection group: " + gname);
+        throw std::logic_error("Could not find control for injection group: " + gname);
 
     return group_iter->second;
 }
@@ -487,7 +510,7 @@ number_of_wells_under_group_control(const std::string& gname) const
 {
     auto group_iter = this->m_number_of_wells_under_group_control.find(gname);
     if (group_iter == this->m_number_of_wells_under_group_control.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -508,7 +531,7 @@ number_of_wells_under_inj_group_control(const std::string& gname, Phase phase) c
 {
     auto group_iter = this->m_number_of_wells_under_inj_group_control.find({phase, gname});
     if (group_iter == this->m_number_of_wells_under_inj_group_control.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }
@@ -538,7 +561,7 @@ Scalar GroupState<Scalar>::gpmaint_target(const std::string& gname) const
 {
     auto group_iter = this->m_gpmaint_target.find(gname);
     if (group_iter == this->m_gpmaint_target.end())
-        throw std::logic_error("No such group");
+        throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
 }

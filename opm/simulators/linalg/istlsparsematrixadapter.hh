@@ -138,15 +138,11 @@ public:
         for (int i = 0; i < diagBlock.rows; ++i)
             diagBlock[i][i] = diag;
 
-        auto& matRow = (*istlMatrix_)[row];
-        auto colIt = matRow.begin();
-        const auto& colEndIt = matRow.end();
-        for (; colIt != colEndIt; ++colIt) {
-            if (colIt.index() == row)
-                *colIt = diagBlock;
+        for (auto&& [a_ij, j] : sparseRange((*istlMatrix_)[row]))
+            if (j == row)
+                a_ij = diagBlock;
             else
-                *colIt = Scalar(0.0);
-        }
+                a_ij = Scalar(0.0);
     }
 
     /*!

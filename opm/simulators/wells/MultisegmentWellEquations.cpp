@@ -86,8 +86,8 @@ init(const int numPerfs,
     duneC_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
 
     // we need to add the off diagonal ones
-    for (auto row = duneD_.createbegin(),
-              end = duneD_.createend(); row != end; ++row) {
+    auto endD = duneD_.createend();
+    for (auto row = duneD_.createbegin(); row != endD; ++row) {
         // the number of the row corrspnds to the segment now
         const int seg = row.index();
         // adding the item related to outlet relation
@@ -108,8 +108,8 @@ init(const int numPerfs,
     }
 
     // make the C matrix
-    for (auto row = duneC_.createbegin(),
-              end = duneC_.createend(); row != end; ++row) {
+    auto endC = duneC_.createend();
+    for (auto row = duneC_.createbegin(); row != endC; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
             const int local_perf_index = parallel_well_info.activePerfToLocalPerf(perf);
@@ -120,8 +120,8 @@ init(const int numPerfs,
     }
 
     // make the B^T matrix
-    for (auto row = duneB_.createbegin(),
-              end = duneB_.createend(); row != end; ++row) {
+    auto endB = duneB_.createend();
+    for (auto row = duneB_.createbegin(); row != endB; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
             const int local_perf_index = parallel_well_info.activePerfToLocalPerf(perf);

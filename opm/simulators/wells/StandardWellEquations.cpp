@@ -47,8 +47,6 @@ StandardWellEquations<Scalar, IndexTraits, numEq>::
 StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     : parallelB_(duneB_, parallel_well_info)
 {
-    duneB_.setBuildMode(OffDiagMatWell::row_wise);
-    duneC_.setBuildMode(OffDiagMatWell::row_wise),
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
@@ -62,20 +60,24 @@ init(const int numWellEq,
     //[A C^T    [x    =  [ res
     // B D] x_well]      res_well]
     // set the size of the matrices
+    duneB_.setBuildMode(OffDiagMatWell::row_wise);
+    duneC_.setBuildMode(OffDiagMatWell::row_wise),
+    duneD_.setBuildMode(DiagMatWell::row_wise),
+
     duneD_.setSize(1, 1, 1);
     duneB_.setSize(1, numPerfs, numPerfs);
     duneC_.setSize(1, numPerfs, numPerfs);
 
-    for (auto row = duneD_.createbegin(),
-              end = duneD_.createend(); row != end; ++row) {
+    auto endD = duneD_.createend();
+    for (auto row = duneD_.createbegin(); row != endD; ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
       // the block size is run-time determined now
     duneD_[0][0].resize(numWellEq, numWellEq);
 
-    for (auto row = duneB_.createbegin(),
-              end = duneB_.createend(); row != end; ++row) {
+    auto endB = duneB_.createend();
+    for (auto row = duneB_.createbegin(); row != endB; ++row) {
         for (int perf = 0 ; perf < numPerfs; ++perf) {
             row.insert(perf);
         }
@@ -87,8 +89,8 @@ init(const int numWellEq,
     }
 
          // make the C^T matrix
-    for (auto row = duneC_.createbegin(),
-              end = duneC_.createend(); row != end; ++row) {
+    auto endC = duneC_.createend();
+    for (auto row = duneC_.createbegin(); row != endC; ++row) {
         for (int perf = 0; perf < numPerfs; ++perf) {
             row.insert(perf);
         }
