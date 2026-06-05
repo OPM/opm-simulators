@@ -96,16 +96,24 @@ public:
                                    const int reportStepIdx) const;
 
     void commitState()
-    { this->last_valid_node_pressures_ = this->node_pressures_; }
+    {
+        this->last_valid_node_pressures_ = this->node_pressures_;
+        this->last_valid_branch_data_ = this->branch_data_;
+    }
 
     void resetState()
-    { this->node_pressures_ = this->last_valid_node_pressures_; }
+    {
+        this->node_pressures_ = this->last_valid_node_pressures_;
+        this->branch_data_ = this->last_valid_branch_data_;
+    }
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(node_pressures_);
         serializer(last_valid_node_pressures_);
+        serializer(branch_data_);
+        serializer(last_valid_branch_data_);
     }
 
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
@@ -128,6 +136,8 @@ protected:
     std::map<std::string, data::BranchData> branch_data_;
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
+    // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations
+    std::map<std::string, data::BranchData> last_valid_branch_data_;
 };
 
 } // namespace Opm

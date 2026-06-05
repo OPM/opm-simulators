@@ -273,15 +273,31 @@ private:
                               const std::map<std::string, std::vector<Scalar>>& node_inflows)
     {
         for (const auto& node : root_to_child_nodes) {
-            const auto terminal_pressure = network_.node(node).terminal_pressure();
-            if (terminal_pressure) {
-                node_pressures_[node] = *terminal_pressure;
-                branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
+            // Do no traverse subtree more than once
+            if (node_pressures_.find(node) != node_pressures_.end()) {
                 continue;
             }
 
+            const auto terminal_pressure = network_.node(node).terminal_pressure();
             const auto upbranch = network_.uptree_branch(node);
-            assert(upbranch);
+            assert(upbranch || terminal_pressure); // If not root, must have uptree branch, and if root, must have terminal pressure.
+            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
+
+            if (terminal_pressure) {
+                node_pressures_[node] = *terminal_pressure;
+                if (upbranch) {
+                    // If terminal pressure is specified on a non-root node, we still want to calculate the branch data for the uptree branch, but we set the pressure drop to zero since the terminal pressure overrides the VFP calculation.
+                    const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
+                    auto rates = node_inflows.at(node);
+                    Calc::prepareRates(rates);
+                    branch_data_.emplace(node, data::BranchData{*terminal_pressure - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
+                } else {
+                    // Root node with terminal pressure and no uptree branch, so no branch data.
+                    branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
+                }
+                continue;
+            }
+
             const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
             const auto vfp_table = (*upbranch).vfp_table();
             if (!vfp_table) {
@@ -293,14 +309,14 @@ private:
                     node_pressures_[node] = up_press;
                 }
                 auto rates = node_inflows.at(node);
-                branch_data_.emplace(node, data::BranchData{0.0, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
+                Calc::prepareRates(rates);
+                branch_data_.emplace(node, data::BranchData{node_pressures_[node] - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
                 continue;
             }
 
             OPM_TIMEBLOCK(NetworkVfpCalculations);
             auto rates = node_inflows.at(node);
             assert(rates.size() == 3);
-            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
             Calc::prepareRates(rates);
             auto node_pressure = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
             node_pressures_[node] = node_pressure;
