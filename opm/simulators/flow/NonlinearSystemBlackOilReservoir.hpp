@@ -21,13 +21,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODEL_HEADER_INCLUDED
-#define OPM_BLACKOILMODEL_HEADER_INCLUDED
+#ifndef OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_HEADER_INCLUDED
+#define OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_HEADER_INCLUDED
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 
 #include <opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp>
-#include <opm/simulators/flow/BlackoilModelNldd.hpp>
+#include <opm/simulators/flow/NonlinearSystemNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelProperties.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
@@ -57,7 +57,7 @@ namespace Opm {
 /// uses an industry-standard TPFA discretization with per-phase
 /// upwind weighting of mobilities.
 template <class TypeTag>
-class BlackoilModel
+class NonlinearSystemBlackOilReservoir
 {
 public:
     // ---------  Types and enums  ---------
@@ -139,7 +139,7 @@ public:
     /// \param[in] param            parameters
     /// \param[in] well_model       Reference to well model
     /// \param[in] terminal_output  request output to cout/cerr
-    BlackoilModel(Simulator& simulator,
+    NonlinearSystemBlackOilReservoir(Simulator& simulator,
                   const ModelParameters& param,
                   BlackoilWellModel<TypeTag>& well_model,
                   const bool terminal_output);
@@ -371,7 +371,7 @@ protected:
     std::vector<StepReport> convergence_reports_;
     ComponentName compNames_{};
 
-    std::unique_ptr<BlackoilModelNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
+    std::unique_ptr<NonlinearSystemNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
     BlackoilModelConvergenceMonitor<Scalar> conv_monitor_;
 
 private:
@@ -385,6 +385,6 @@ private:
 
 } // namespace Opm
 
-#include <opm/simulators/flow/BlackoilModel_impl.hpp>
+#include <opm/simulators/flow/NonlinearSystemBlackOilReservoir_impl.hpp>
 
-#endif // OPM_BLACKOILMODEL_HEADER_INCLUDED
+#endif // OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_HEADER_INCLUDED

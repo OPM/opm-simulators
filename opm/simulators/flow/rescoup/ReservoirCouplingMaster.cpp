@@ -571,7 +571,7 @@ getMasterActivationDate_() const
         }
     }
     // NOTE: Consistency between SLAVES and GRUPMAST keywords has already been checked in
-    //       init() in SimulatorFullyImplicitBlackoil.hpp
+    //       init() in SimulatorFullyImplicit.hpp
     RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
               "No SLAVES keyword found in schedule");
 }

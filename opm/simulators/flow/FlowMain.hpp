@@ -31,7 +31,7 @@
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/NlddReporting.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
 
 #if HAVE_DUNE_FEM
@@ -74,7 +74,7 @@ namespace Opm {
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        using Simulator = SimulatorFullyImplicitBlackoil<TypeTag>;
+        using Simulator = SimulatorFullyImplicit<TypeTag>;
 
         FlowMain(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},

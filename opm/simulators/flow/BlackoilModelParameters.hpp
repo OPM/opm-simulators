@@ -195,7 +195,7 @@ struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
 
 namespace Opm {
 
-/// Solver parameters for the BlackoilModel.
+/// Solver parameters for the NonlinearSystemBlackOilReservoir.
 template <class Scalar>
 struct BlackoilModelParameters
 {
