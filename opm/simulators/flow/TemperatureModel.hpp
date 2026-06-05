@@ -226,7 +226,7 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    static constexpr int temperatureIdx = 0;
+    static constexpr unsigned temperatureIdx = 0;
 
 public:
     explicit TemperatureModel(Simulator& simulator)

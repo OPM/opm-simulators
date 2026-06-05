@@ -190,8 +190,10 @@ struct BlackOilTwoPhaseIndices
                     : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for temperature
-    static constexpr int temperatureIdx  =
-        (enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
+    static constexpr unsigned temperatureIdx  =
+        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos +
+                                     numPolymers + numBioComp + numFoam + numBrine
+                                   : std::numeric_limits<unsigned>::max();
 
     //////////////////////
     // Equation indices

@@ -332,7 +332,7 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::FullyImplicitThe
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    static constexpr int temperatureIdx = Indices::temperatureIdx;
+    static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
 
 public:
     /*!

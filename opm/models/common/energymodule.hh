@@ -40,6 +40,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -236,7 +237,7 @@ class EnergyModule<TypeTag, /*enableEnergy=*/true>
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { energyEqIdx = Indices::energyEqIdx };
-    enum { temperatureIdx = Indices::temperatureIdx };
+    static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
 
     using Toolbox = Opm::MathToolbox<Evaluation>;
 
@@ -500,7 +501,7 @@ template <unsigned PVOffset>
 struct EnergyIndices<PVOffset, /*enableEnergy=*/false>
 {
     //! The index of the primary variable representing temperature
-    enum { temperatureIdx = -1000 };
+    static constexpr unsigned temperatureIdx = std::numeric_limits<unsigned>::max();
 
     //! The index of the equation representing the conservation of energy
     enum { energyEqIdx = -1000 };
@@ -516,7 +517,7 @@ template <unsigned PVOffset>
 struct EnergyIndices<PVOffset, /*enableEnergy=*/true>
 {
     //! The index of the primary variable representing temperature
-    enum { temperatureIdx = PVOffset };
+    static constexpr unsigned temperatureIdx = PVOffset;
 
     //! The index of the equation representing the conservation of energy
     enum { energyEqIdx = PVOffset };
@@ -608,7 +609,7 @@ class EnergyIntensiveQuantities<TypeTag, /*enableEnergy=*/true>
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
-    enum { temperatureIdx = Indices::temperatureIdx };
+    static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
 
     using Toolbox = Opm::MathToolbox<Evaluation>;
 

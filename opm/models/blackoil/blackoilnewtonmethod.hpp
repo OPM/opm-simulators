@@ -216,7 +216,8 @@ protected:
             Indices::polymerConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enablePolymerWeight =
             Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
+        static constexpr bool enableFullyImplicitThermal =
+            Indices::temperatureIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableFoam =
             Indices::foamConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableBrine =
@@ -333,7 +334,7 @@ protected:
                 delta = sign * std::min(std::abs(delta), maxMolarWeightChange);
                 delta *= satAlpha;
             }
-            else if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
+            else if (enableFullyImplicitThermal && pvIdx == static_cast<int>(Indices::temperatureIdx)) {
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), bparams_.maxTempChange_);
             }
@@ -395,7 +396,7 @@ protected:
             }
 
             // keep the temperature within given values
-            if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
+            if (enableFullyImplicitThermal && pvIdx == static_cast<int>(Indices::temperatureIdx)) {
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.tempMin_, bparams_.tempMax_);
             }
 
