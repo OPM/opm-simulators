@@ -536,7 +536,7 @@ macro(opm-simulators_tests_hook)
       endif()
     endforeach()
 
-    if(HYPRE_FOUND)
+    if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
       target_link_libraries(test_HypreInterfaceGPU PRIVATE HYPRE::HYPRE)
       target_link_libraries(test_HyprePreconditionerGPU PRIVATE HYPRE::HYPRE)
     endif()
