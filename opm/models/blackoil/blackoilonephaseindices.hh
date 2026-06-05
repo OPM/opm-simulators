@@ -159,8 +159,9 @@ struct BlackOilOnePhaseIndices
                         : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first MICP component
-    static constexpr int microbialConcentrationIdx =
-        enableMICP ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned microbialConcentrationIdx =
+        enableMICP ? PVOffset + numPhases + numSolvents
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the second MICP component
     static constexpr int oxygenConcentrationIdx =

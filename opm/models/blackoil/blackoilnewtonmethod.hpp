@@ -407,7 +407,7 @@ protected:
             // evaluated at 1/(iniPoro - calcite)). The value 1e-8 is taken from the salt precipitation
             // clapping above.
             if constexpr (enableBioeffects) {
-                if (pvIdx == Indices::microbialConcentrationIdx) {
+                if (pvIdx == static_cast<int>(Indices::microbialConcentrationIdx)) {
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 }
                 if (pvIdx == Indices::biofilmVolumeFractionIdx) {

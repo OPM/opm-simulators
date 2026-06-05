@@ -149,7 +149,7 @@ struct BlackOilVariableAndEquationIndices
                         : std::numeric_limits<unsigned>::max();
 
     //! No bioeffects for three phase indices
-    static constexpr int microbialConcentrationIdx = -1000;
+    static constexpr unsigned microbialConcentrationIdx = std::numeric_limits<unsigned>::max();
     static constexpr int oxygenConcentrationIdx = -1000;
     static constexpr int ureaConcentrationIdx = -1000;
     static constexpr int biofilmVolumeFractionIdx = -1000;

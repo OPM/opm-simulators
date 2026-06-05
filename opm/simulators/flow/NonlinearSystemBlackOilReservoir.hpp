@@ -97,7 +97,7 @@ public:
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;
     static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
-    static constexpr int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
+    static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
     static constexpr int biofilmVolumeFractionIdx = Indices::biofilmVolumeFractionIdx;

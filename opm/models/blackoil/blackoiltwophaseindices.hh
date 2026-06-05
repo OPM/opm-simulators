@@ -165,8 +165,9 @@ struct BlackOilTwoPhaseIndices
                         : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first microbial component
-    static constexpr int microbialConcentrationIdx =
-        enableBiofilm ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned microbialConcentrationIdx =
+        enableBiofilm ? PVOffset + numPhases + numSolvents
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the biofilm component
     static constexpr int biofilmVolumeFractionIdx =
