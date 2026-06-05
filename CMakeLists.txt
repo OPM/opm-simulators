@@ -469,6 +469,11 @@ macro(opm-simulators_tests_hook)
     include(${CMAKE_CURRENT_SOURCE_DIR}/pythonIntegrationTests.cmake)
   endif()
 
+  if(AMGX_FOUND)
+    target_link_libraries(test_AmgxInterface PRIVATE AMGX::AMGX)
+    target_link_libraries(test_AmgxPreconditioner PRIVATE AMGX::AMGX)
+  endif()
+
   if(HYPRE_FOUND)
     target_link_libraries(test_HypreInterfaceCPU PRIVATE HYPRE::HYPRE)
     target_link_libraries(test_HyprePreconditionerCPU PRIVATE HYPRE::HYPRE)
