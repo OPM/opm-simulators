@@ -184,8 +184,9 @@ struct BlackOilOnePhaseIndices
                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the foam
-    static constexpr int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
+    static constexpr unsigned foamConcentrationIdx =
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the salt
     static constexpr int saltConcentrationIdx =

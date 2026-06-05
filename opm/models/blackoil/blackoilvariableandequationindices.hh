@@ -156,8 +156,9 @@ struct BlackOilVariableAndEquationIndices
     static constexpr unsigned calciteVolumeFractionIdx = std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the foam
-    static constexpr int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers : -1000;
+    static constexpr unsigned foamConcentrationIdx =
+        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the brine
     static constexpr int saltConcentrationIdx =

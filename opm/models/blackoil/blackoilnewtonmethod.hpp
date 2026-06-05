@@ -217,7 +217,8 @@ protected:
         static constexpr bool enablePolymerWeight =
             Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
-        static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
+        static constexpr bool enableFoam =
+            Indices::foamConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
         static constexpr bool enableMICP = Indices::enableMICP;
 
@@ -373,7 +374,7 @@ protected:
             }
 
             // keep the foam concentration above 0
-            if (enableFoam && pvIdx == Indices::foamConcentrationIdx) {
+            if (enableFoam && pvIdx == static_cast<int>(Indices::foamConcentrationIdx)) {
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
             }
 
