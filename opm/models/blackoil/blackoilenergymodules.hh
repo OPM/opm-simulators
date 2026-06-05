@@ -380,6 +380,14 @@ public:
     {
     }
 
+    template <class OtherTypeTag>
+    BlackOilEnergyIntensiveQuantities(
+        const BlackOilEnergyIntensiveQuantities<OtherTypeTag, EnergyModules::FullyImplicitThermal>& other)
+        : rockInternalEnergy_(other.rockInternalEnergy())
+        , totalThermalConductivity_(other.totalThermalConductivity())
+        , rockFraction_(other.rockFraction())
+    {}
+
     BlackOilEnergyIntensiveQuantities() = default;
 
     /*!

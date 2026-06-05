@@ -171,9 +171,8 @@ public:
             fluidState_.setRsw(0.0);
         }
     }
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
-    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
+    OPM_HOST_DEVICE BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
     template<class OtherTypeTag>
     friend class BlackOilIntensiveQuantities;
@@ -182,25 +181,18 @@ public:
     template<class OtherTypeTag>
     explicit BlackOilIntensiveQuantities(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other, const FluidSystem& fsystem)
-        : fluidState_(other.fluidState_.withOtherFluidSystem(fsystem))
-        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(
-            other.rockInternalEnergy_, other.totalThermalConductivity_, other.rockFraction_)
-        , BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>(
-            other.tortuosities(), other.diffusionCoefficients())
+        : fluidState_(other.fluidState_.template withOtherFluidSystem<FluidSystem>(fsystem))
+        , BlackOilEnergyIntensiveQuantities<TypeTag, energyModuleType>(other)
+        , DiffusionIntensiveQuantities(other)
         , referencePorosity_(other.referencePorosity_)
         , porosity_(other.porosity_)
         , rockCompTransMultiplier_(other.rockCompTransMultiplier_)
         , mobility_(other.mobility_)
         , dirMob_(/*NOT YET SUPPORTED ON GPU*/)
     {
-        static_assert(!enableSolvent);
-        static_assert(!enableExtbo);
-        static_assert(!enablePolymer);
-        static_assert(!enableFoam);
-        static_assert(!enableMICP);
-        static_assert(!enableBrine);
-        static_assert(!enableDispersion);
     }
+
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     /**
      * \brief Create a copy of this intensive quantities object
@@ -428,17 +420,16 @@ public:
             }
             else {
                 if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
+                    Evaluation RsSat;
                     if constexpr (enableExtbo) {
-                        fluidState_.setRs(min(RsMax, asImp_().rs()));
+                        RsSat = asImp_().rs();
+                    } else {
+                        RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            oilPhaseIdx,
+                                                                            pvtRegionIdx,
+                                                                            SoMax);
                     }
-                    else {
-                        const Evaluation& RsSat =
-                            getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                        oilPhaseIdx,
-                                                                        pvtRegionIdx,
-                                                                        SoMax);
-                        fluidState_.setRs(min(RsMax, RsSat));
-                    }
+                    fluidState_.setRs(min(RsMax, RsSat));
                 }
                 else {
                     fluidState_.setRs(0.0);
@@ -451,17 +442,16 @@ public:
             }
             else {
                 if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
+                    Evaluation RvSat;
                     if constexpr (enableExtbo) {
-                        fluidState_.setRv(min(RvMax, asImp_().rv()));
+                        RvSat = asImp_().rv();
+                    } else {
+                        RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            gasPhaseIdx,
+                                                                            pvtRegionIdx,
+                                                                            SoMax);
                     }
-                    else {
-                        const Evaluation& RvSat =
-                            getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                        gasPhaseIdx,
-                                                                        pvtRegionIdx,
-                                                                        SoMax);
-                        fluidState_.setRv(min(RvMax, RvSat));
-                    }
+                    fluidState_.setRv(min(RvMax, RvSat));
                 }
                 else {
                     fluidState_.setRv(0.0);
@@ -858,7 +848,7 @@ public:
                     case Dir::ZPlus:
                         return dirMob_->getArray(2)[phaseIdx];
                     default:
-                        throw std::runtime_error("Unexpected face direction");
+                        OPM_THROW(std::runtime_error, "Unexpected face direction");
                 }
             }
             else{
@@ -919,7 +909,7 @@ public:
             return BrineIntQua::permFactor();
         }
         else {
-            throw std::logic_error("permFactor() called but salt precipitation or bioeffects are disabled");
+            OPM_THROW(std::logic_error, "permFactor() called but salt precipitation and bioeffects are disabled");
         }
     }
 

@@ -78,12 +78,18 @@ void copyMatDataToReorderedSplit(const T* srcMatrix,
                                  int threadBlockSize);
 
 /**
- * @brief Return the pointers to diagonal elements in a GpuBuffer
+ * @brief Return typed pointers to diagonal block elements in a GpuBuffer
+ *
+ * Like getDiagPtrs, but returns pointers typed as MatrixBlockType* instead of T*,
+ * avoiding the need for reinterpret_cast at the call sites.
+ *
+ * @tparam MatrixBlockType The block matrix type (e.g. MiniMatrix<T, N>) whose size
+ *         must match T[blockSize^2] in the underlying storage.
  * @param matrix The matrix to extract diagonal pointers from
- * @return GpuBuffer containing pointers to the diagonal elements
+ * @return GpuBuffer containing typed pointers to the diagonal block elements
  */
-template <class T>
-GpuBuffer<T*> getDiagPtrs(GpuSparseMatrixWrapper<T>& matrix);
+template <class MatrixBlockType, class T>
+GpuBuffer<MatrixBlockType*> getDiagPtrsTyped(GpuSparseMatrixWrapper<T>& matrix);
 
 } // namespace Opm::gpuistl::detail
 
