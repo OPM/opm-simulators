@@ -45,7 +45,6 @@
 #include <opm/models/blackoil/blackoilproblem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilratevector.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/models/common/multiphasebasemodel.hh>

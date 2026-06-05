@@ -34,7 +34,6 @@
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <cassert>
 

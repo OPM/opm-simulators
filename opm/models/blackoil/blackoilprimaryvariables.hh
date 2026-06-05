@@ -37,7 +37,6 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmeanings.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 

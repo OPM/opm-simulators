@@ -126,13 +126,13 @@ class NewTranExtensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { numPhases = FluidSystem::numPhases };
-    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableEnergy =
         getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal;
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;

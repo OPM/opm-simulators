@@ -40,8 +40,6 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/blackoil/blackoilsolventmodules.hh>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
