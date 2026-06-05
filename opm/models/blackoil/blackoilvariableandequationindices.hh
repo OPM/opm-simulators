@@ -134,8 +134,9 @@ struct BlackOilVariableAndEquationIndices
                       : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first extbo component
-    static constexpr int zFractionIdx =
-        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned zFractionIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first polymer
     static constexpr int polymerConcentrationIdx =

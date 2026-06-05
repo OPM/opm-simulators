@@ -42,6 +42,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 namespace Opm::Properties {
@@ -209,7 +210,8 @@ protected:
     {
         static constexpr bool enableSolvent =
             Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableExtbo = Indices::zFractionIdx >= 0;
+        static constexpr bool enableExtbo =
+            Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
@@ -314,7 +316,7 @@ protected:
                     }
                 }
             }
-            else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
+            else if (enableExtbo && pvIdx == static_cast<int>(Indices::zFractionIdx)) {
                 // z fraction updates are also subject to the Appleyard chop
                 const auto& curr = currentValue[Indices::zFractionIdx]; // or currentValue[pvIdx] given the block condition
                 delta = std::clamp(delta, curr - Scalar{1.0}, curr);
@@ -351,7 +353,7 @@ protected:
             }
 
             // keep the z fraction between 0 and 1
-            if (enableExtbo && pvIdx == Indices::zFractionIdx) {
+            if (enableExtbo && pvIdx == static_cast<int>(Indices::zFractionIdx)) {
                 nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
             }
 
