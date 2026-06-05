@@ -610,7 +610,8 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
     static constexpr bool enableSolvent =
         Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
-    static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
+    static constexpr bool enableBrine =
+        Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
 
     // Init output
     Scalar dPMax = 0.0;
@@ -631,7 +632,7 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
                       || (enableSolvent && pvIdx == static_cast<int>(Indices::solventSaturationIdx)
                           && value.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss)
-                      || (enableBrine && enableSaltPrecipitation && pvIdx == Indices::saltConcentrationIdx
+                      || (enableBrine && enableSaltPrecipitation && pvIdx == static_cast<int>(Indices::saltConcentrationIdx)
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {
                 dSMax = std::max(dSMax, std::abs(value[pvIdx]));
             }

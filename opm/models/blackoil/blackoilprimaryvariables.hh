@@ -86,7 +86,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     static constexpr unsigned waterSwitchIdx = Indices::waterSwitchIdx;
     static constexpr unsigned pressureSwitchIdx = Indices::pressureSwitchIdx;
     static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
-    enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
+    static constexpr unsigned saltConcentrationIdx  = Indices::saltConcentrationIdx;
     static constexpr unsigned solventSaturationIdx  = Indices::solventSaturationIdx;
 
     static constexpr bool compositionSwitchEnabled =

@@ -161,8 +161,9 @@ struct BlackOilVariableAndEquationIndices
                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the brine
-    static constexpr int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam : -1000;
+    static constexpr unsigned saltConcentrationIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =

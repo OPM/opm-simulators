@@ -96,7 +96,7 @@ public:
     static constexpr unsigned polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned foamConcentrationIdx = Indices::foamConcentrationIdx;
-    static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
+    static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned microbialConcentrationIdx = Indices::microbialConcentrationIdx;
     static constexpr unsigned oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
     static constexpr unsigned ureaConcentrationIdx = Indices::ureaConcentrationIdx;

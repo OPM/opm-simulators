@@ -219,7 +219,8 @@ protected:
         static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam =
             Indices::foamConcentrationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
+        static constexpr bool enableBrine =
+            Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableMICP = Indices::enableMICP;
 
         currentValue.checkDefined();
@@ -336,7 +337,7 @@ protected:
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), bparams_.maxTempChange_);
             }
-            else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
+            else if (enableBrine && pvIdx == static_cast<int>(Indices::saltConcentrationIdx) &&
                      enableSaltPrecipitation &&
                      currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
             {
@@ -378,7 +379,7 @@ protected:
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
             }
 
-            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
+            if (enableBrine && pvIdx == static_cast<int>(Indices::saltConcentrationIdx)) {
                // keep the salt concentration above 0
                 if (!enableSaltPrecipitation ||
                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs)
