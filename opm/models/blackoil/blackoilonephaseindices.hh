@@ -128,7 +128,7 @@ struct BlackOilOnePhaseIndices
      * Depending on the phases present, this variable is either interpreted as the
      * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
      */
-     static constexpr int pressureSwitchIdx  = PVOffset + 0;
+    static constexpr unsigned pressureSwitchIdx = PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the

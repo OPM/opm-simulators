@@ -427,7 +427,7 @@ public:
         if (pvIdx == static_cast<int>(Indices::waterSwitchIdx)) {
             return "water_switching";
         }
-        else if (pvIdx == Indices::pressureSwitchIdx) {
+        else if (pvIdx == static_cast<int>(Indices::pressureSwitchIdx)) {
             return "pressure_switching";
         }
         else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx) {
