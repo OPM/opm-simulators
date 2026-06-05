@@ -35,6 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
+#include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilpolymerparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -54,9 +55,6 @@
 #include <vector>
 
 namespace Opm {
-
-template <class TypeTag, bool enablePolymerV>
-class BlackOilPolymerModule;
 
 /*!
  * \ingroup BlackOil
@@ -542,16 +540,8 @@ private:
 };
 
 template <class TypeTag>
-class BlackOilPolymerModule<TypeTag, false>
-{
-};
-
-template <class TypeTag>
 BlackOilPolymerParams<typename BlackOilPolymerModule<TypeTag, true>::Scalar>
 BlackOilPolymerModule<TypeTag, true>::params_;
-
-template <class TypeTag, bool enablePolymerV>
-class BlackOilPolymerIntensiveQuantities;
 
 /*!
  * \ingroup BlackOil
@@ -706,14 +696,6 @@ protected:
     Evaluation waterViscosityCorrection_;
 };
 
-template <class TypeTag>
-class BlackOilPolymerIntensiveQuantities<TypeTag, false>
-{
-};
-
-template <class TypeTag, bool enablePolymerV>
-class BlackOilPolymerExtensiveQuantities;
-
 /*!
  * \ingroup BlackOil
  * \class Opm::BlackOilPolymerExtensiveQuantities
@@ -830,11 +812,6 @@ private:
 
     Evaluation polymerShearFactor_;
     Evaluation waterShearFactor_;
-};
-
-template <class TypeTag>
-class BlackOilPolymerExtensiveQuantities<TypeTag, false>
-{
 };
 
 } // namespace Opm

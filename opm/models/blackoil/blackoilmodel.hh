@@ -41,7 +41,6 @@
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoillocalresidual.hh>
 #include <opm/models/blackoil/blackoilnewtonmethod.hpp>
-#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilproblem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
@@ -539,7 +538,7 @@ public:
         }
 
         // deal with primary variables stemming from the energy module
-        else if (EnergyModule::primaryVarApplies(pvIdx)) {
+        if (EnergyModule::primaryVarApplies(pvIdx)) {
             return EnergyModule::primaryVarWeight(pvIdx);
         }
 
