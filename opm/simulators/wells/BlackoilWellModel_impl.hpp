@@ -1241,14 +1241,8 @@ namespace Opm {
                                       local_deferredLogger,
                                       relax_network_tolerance);
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isRescoupMasterCoupledNetworkIteration_()) {
-            const bool is_final = !more_inner_network_update;
-            // send the pressures freshly computed by network_.update() to all activated slaves
-            this->rescoupHelper_.sendMasterGroupNodePressuresToSlaves(is_final);
-            if (!is_final) {
-                // receive slaves' updated network_surface_rates for the next outer iteration.
-                this->rescoupHelper_.receiveSlaveGroupData();
-            }
+        if (this->isReservoirCouplingMaster()) {
+            this->rescoupHelper_.maybeExchangeNetworkOuterIterationWithSlaves(more_inner_network_update);
         }
 #endif
 
@@ -2219,10 +2213,7 @@ namespace Opm {
     bool BlackoilWellModel<TypeTag>::isRescoupMasterCoupledNetworkIteration_() const
     {
 #ifdef RESERVOIR_COUPLING_ENABLED
-        return this->isReservoirCouplingMaster()
-            && this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()
-            && this->rescoupHelper_.masterNetworkHasMasterGroupLeaves()
-            && !this->rescoupHelper_.lastSentMasterGroupNodePressuresIsFinal();
+        return this->rescoupHelper_.masterIsInCoupledNetworkIteration();
 #else
         return false;
 #endif

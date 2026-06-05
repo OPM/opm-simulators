@@ -119,6 +119,13 @@ public:
     /// at every call site including the very first beginTimeStep call.
     bool masterNetworkHasMasterGroupLeaves() const;
 
+    /// \brief True when this process is the reservoir-coupling master on the
+    ///   first substep of a sync step, its network has master-group leaves,
+    ///   and it has not yet sent the terminating (is_final) node-pressure
+    ///   message.  Gates the cross-rescoup node-pressure exchange (both the
+    ///   per-outer-iteration send and the per-sub-iteration tight exchange).
+    bool masterIsInCoupledNetworkIteration() const;
+
     /// \brief Slave-side counterpart of sendCoupledNetworkActiveStatus().
     ///
     /// Blocking receive of the master's per-sync-step "is the cross-rescoup
@@ -188,6 +195,31 @@ public:
     ///
     /// Side effect: updates last_sent_master_group_node_pressures_is_final_.
     void sendMasterGroupNodePressuresToSlaves(bool is_final);
+
+    /// \brief Master-side, tight reservoir-coupling only: from inside the
+    ///   network inner sub-iteration loop, ship the freshly-computed node
+    ///   pressures to the slaves and receive their updated rates, so the next
+    ///   updatePressures() sees fresh leaf-node rates -- the per-iteration rate
+    ///   feedback the loose (per-outer-iteration) coupling lacks.  Always a
+    ///   non-final exchange: the inner loop cannot know whether the master's
+    ///   outer network loop will iterate again, so termination (is_final=true)
+    ///   is owned by the per-outer send in updateWellControlsAndNetworkIteration()
+    ///   and by sendSlaveNetworkLoopTerminationSignal_().  No-op unless tight
+    ///   coupling is active and masterIsInCoupledNetworkIteration().
+    void maybeExchangeNetworkSubIterationWithSlaves();
+
+    /// \brief Master-side: per master OUTER network iteration exchange, the
+    ///   counterpart of maybeExchangeNetworkSubIterationWithSlaves().  In tight
+    ///   coupling it emits only the single terminating (is_final) message --
+    ///   the inner sub-loop already performed every non-final exchange, and a
+    ///   non-final send here would just resend the same node pressures.  In
+    ///   loose coupling it is the sole master<->slave exchange and runs every
+    ///   outer iteration (send + receive while not final).  No-op unless
+    ///   masterIsInCoupledNetworkIteration().
+    /// \param more_network_update True if the master's outer network loop will
+    ///   iterate again (network_.update() reported more updates needed); the
+    ///   send is final when this is false.
+    void maybeExchangeNetworkOuterIterationWithSlaves(bool more_network_update);
 
     /// \brief Slave-side counterpart of receiveSlaveGroupData().
     ///
