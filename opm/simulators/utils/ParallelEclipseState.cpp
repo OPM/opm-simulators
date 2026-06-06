@@ -59,17 +59,19 @@ ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager,
 
 std::vector<int> ParallelFieldPropsManager::actnum() const
 {
-    if (m_comm.rank() == 0)
+    if (m_comm.rank() == 0) {
         return m_manager.actnum();
+    }
 
-    return{};
+    return {};
 }
 
 
 void ParallelFieldPropsManager::reset_actnum(const std::vector<int>& actnum)
 {
-    if (m_comm.rank() != 0)
+    if (m_comm.rank() != 0) {
         OPM_THROW(std::runtime_error, "reset_actnum should only be called on root process.");
+    }
     m_manager.reset_actnum(actnum);
 }
 
@@ -77,19 +79,20 @@ void ParallelFieldPropsManager::reset_actnum(const std::vector<int>& actnum)
 std::vector<double> ParallelFieldPropsManager::porv(bool global) const
 {
     std::vector<double> global_porv;
-    if (m_comm.rank() == 0)
+    if (m_comm.rank() == 0) {
         global_porv = m_manager.porv(true);
+    }
 
     std::size_t size = global_porv.size();
     m_comm.broadcast(&size, 1, 0);
     global_porv.resize(size);
     m_comm.broadcast(global_porv.data(), size, 0);
-    if (global)
+    if (global) {
         return global_porv;
+    }
 
     std::vector<double> local_porv(this->m_activeSize());
-    for (int i = 0; i < m_activeSize(); ++i)
-    {
+    for (int i = 0; i < m_activeSize(); ++i) {
         local_porv[i] = global_porv[this->m_local2Global(i)];
     }
     return local_porv;
@@ -99,8 +102,7 @@ std::vector<double> ParallelFieldPropsManager::porv(bool global) const
 const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& keyword) const
 {
     auto it = m_intProps.find(keyword);
-    if (it == m_intProps.end())
-    {
+    if (it == m_intProps.end()) {
         // Some of the keywords might be defaulted.
         // We will let rank 0 create them and distribute them using get_global_int
         auto data = get_global_int(keyword);
@@ -108,8 +110,7 @@ const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& ke
         local_data.data.resize(m_activeSize());
         local_data.value_status.resize(m_activeSize());
 
-        for (int i = 0; i < m_activeSize(); ++i)
-        {
+        for (int i = 0; i < m_activeSize(); ++i) {
             local_data.data[i] = data[m_local2Global(i)];
         }
         return local_data.data;
@@ -142,8 +143,9 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
 
     m_comm.broadcast(&exceptionThrown, 1, 0);
 
-    if (exceptionThrown != 0)
+    if (exceptionThrown != 0) {
         OPM_THROW_NOLOG(std::runtime_error, "No integer property field: " + keyword);
+    }
 
     std::size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
@@ -157,16 +159,14 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
 const std::vector<double>& ParallelFieldPropsManager::get_double(const std::string& keyword) const
 {
     auto it = m_doubleProps.find(keyword);
-    if (it == m_doubleProps.end())
-    {
+    if (it == m_doubleProps.end()) {
         // Some of the keywords might be defaulted.
         // We will let rank 0 create them and distribute them using get_global_int
         auto data = get_global_double(keyword);
         auto& local_data = const_cast<std::map<std::string, Fieldprops::FieldData<double>>&>(m_doubleProps)[keyword];
         local_data.data.resize(m_activeSize());
         local_data.value_status.resize(m_activeSize());
-        for (int i = 0; i < m_activeSize(); ++i)
-        {
+        for (int i = 0; i < m_activeSize(); ++i) {
             local_data.data[i] = data[m_local2Global(i)];
         }
         return local_data.data;
@@ -181,14 +181,13 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
     std::vector<double> result;
     int exceptionThrown{};
 
-    if (m_comm.rank() == 0)
-    {
-        try
-        {
+    if (m_comm.rank() == 0) {
+        try {
             result = m_manager.get_global_double(keyword);
-        }catch(std::exception& e) {
+        }
+        catch(std::exception& e) {
             exceptionThrown = 1;
-            OpmLog::error("No double property field: " + keyword + " ("+e.what()+")");
+            OpmLog::error("No double property field: " + keyword + " (" + e.what() + ")");
             m_comm.broadcast(&exceptionThrown, 1, 0);
             throw e;
         }
@@ -196,8 +195,9 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
 
     m_comm.broadcast(&exceptionThrown, 1, 0);
 
-    if (exceptionThrown != 0)
+    if (exceptionThrown != 0) {
         OPM_THROW_NOLOG(std::runtime_error, "No double property field: " + keyword);
+    }
 
     std::size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
@@ -267,11 +267,14 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck, Parallel::Communica
 
 const FieldPropsManager& ParallelEclipseState::fieldProps() const
 {
-    if (!m_parProps && m_comm.rank() != 0)
-        OPM_THROW(std::runtime_error, "Attempt to access field properties on no-root process before switch to parallel properties");
+    if (!m_parProps && m_comm.rank() != 0) {
+        OPM_THROW(std::runtime_error, "Attempt to access field properties on "
+                                      "no-root process before switch to parallel properties");
+    }
 
-    if (!m_parProps || m_comm.size() == 1)
+    if (!m_parProps || m_comm.size() == 1) {
         return this->EclipseState::fieldProps();
+    }
 
     return m_fieldProps;
 }
@@ -279,8 +282,9 @@ const FieldPropsManager& ParallelEclipseState::fieldProps() const
 
 const FieldPropsManager& ParallelEclipseState::globalFieldProps() const
 {
-    if (m_comm.rank() != 0)
+    if (m_comm.rank() != 0) {
         OPM_THROW(std::runtime_error, "Attempt to access global field properties on non-root process");
+    }
     return this->EclipseState::globalFieldProps();
 }
 
@@ -301,8 +305,9 @@ void ParallelEclipseState::computeFipRegionStatistics()
 
 const EclipseGrid& ParallelEclipseState::getInputGrid() const
 {
-    if (m_comm.rank() != 0)
+    if (m_comm.rank() != 0) {
         OPM_THROW(std::runtime_error, "Attempt to access eclipse grid on non-root process");
+    }
     return this->EclipseState::getInputGrid();
 }
 
@@ -315,8 +320,9 @@ void ParallelEclipseState::switchToGlobalProps()
 
 void ParallelEclipseState::switchToDistributedProps()
 {
-    if (m_comm.size() == 1) // No need for the parallel frontend
+    if (m_comm.size() == 1) { // No need for the parallel frontend
         return;
+    }
     m_parProps = true;
 }
 
