@@ -27,13 +27,13 @@
 #include <Damaris.h>
 #include <damaris/env/Environment.hpp>
 
-#include <fmt/format.h>
-
-#include <fstream>
+#include <filesystem>
 #include <map>
 #include <random>
 #include <stdexcept>
 #include <string>
+
+#include <fmt/format.h>
 
 /**
     Below are the Damaris Keywords supported by Damaris to be filled
@@ -51,34 +51,17 @@ namespace Opm::DamarisOutput {
 bool FileExists(const std::string& filename_in,
                 const Parallel::Communication& comm)
 {
-    // From c++17  : std::filesystem::exists(filename_in);
-
-    int retint = 1;
-    std::ifstream filestr;
-    bool file_exists = false;
-
-    if ((filename_in.length() == 0) || (filename_in == "#") ) {
-        return file_exists;
+    if (filename_in.empty() || filename_in == "#") {
+        return false;
     }
 
+    int retint = 0;
     if (comm.rank() == 0) {
-        filestr.open(filename_in);
-        if(filestr.fail()) {
-            retint = 0;
-        } else {
-            retint = 1;
-            filestr.close();
-        }
+        retint = std::filesystem::exists(filename_in) ? 1 : 0;
     }
 
     comm.broadcast(&retint, 1, 0);
-    if (retint == 1) {
-        file_exists = true;
-    } else {
-        file_exists = false;
-    }
-
-    return (file_exists);
+    return retint == 1;
 }
 
 void DamarisSettings::SetRandString(void)
