@@ -27,8 +27,7 @@
 
 #include <map>
 #include <string>
-#include <sstream>
-#include <algorithm>
+#include <tuple>
 #include <unordered_set>
 
 /*
@@ -75,7 +74,17 @@ struct DamarisSettings
     getKeywords(const Parallel::Communication& comm,
                 const std::string& OutputDir);
 
-    void SetRandString(void);  // sets the value of rand_value_str_
+private:
+    void SetRandString();  // sets the value of rand_value_str_
+
+    struct StartEnd
+    {
+        std::string start;
+        std::string end;
+    };
+
+    std::tuple<StartEnd, StartEnd, std::string>
+    checkFiles(const Parallel::Communication& comm);
 };
 
 /**
