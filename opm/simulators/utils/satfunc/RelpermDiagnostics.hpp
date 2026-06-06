@@ -101,37 +101,9 @@ namespace Opm {
                                    const LevelCartesianIndexMapper& levelCartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
-        void swofTableCheck_(const SwofTable& swofTables,
-                             const std::size_t satnumIdx);
-        void sgofTableCheck_(const SgofTable& sgofTables,
-                             const std::size_t satnumIdx);
-        void slgofTableCheck_(const SlgofTable& slgofTables,
-                              const std::size_t satnumIdx);
-        void swfnTableCheck_(const SwfnTable& swfnTables,
-                             const std::size_t satnumIdx);
-        void sgfnTableCheck_(const SgfnTable& sgfnTables,
-                             const std::size_t satnumIdx);
-        void wsfTableCheck_(const WsfTable& wsfTables,
-                            const std::size_t satnumIdx);
-        void gsfTableCheck_(const GsfTable& gsfTables,
-                            const std::size_t satnumIdx);
-        void sof3TableCheck_(const Sof3Table& sof3Tables,
-                             const std::size_t satnumIdx);
-        void sof2TableCheck_(const Sof2Table& sof2Tables,
-                             const std::size_t satnumIdx);
-        void sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
-                              const std::size_t satnumIdx);
-        ///Tables for solvent model
-        void sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
-                                const std::size_t satnumIdx);
-        void sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
-                                const std::size_t satnumIdx);
-        void ssfnTableCheck_(const SsfnTable& ssfnTables,
-                             const std::size_t satnumIdx);
-        void miscTableCheck_(const MiscTable& miscTables,
-                             const std::size_t miscnumIdx);
-        void msfnTableCheck_(const MsfnTable& msfnTables,
-                             const std::size_t satnumIdx);
+        template<class TableType>
+        void checkTable_(const TableType& tables,
+                         const std::size_t satnumIdx);
 
         void analyzeFamily(const EclipseState& eclState,
                            const std::array<bool,3>& family);

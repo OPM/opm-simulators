@@ -204,87 +204,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::tableCheck_(const EclipseState& eclState)
-    {
-        const auto numSatRegions = eclState.runspec().tabdims().getNumSatTables();
-        {
-            const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
-            OpmLog::info(msg);
-        }
-        const auto& tableManager = eclState.getTableManager();
-        const TableContainer& swofTables    = tableManager.getSwofTables();
-        const TableContainer& slgofTables   = tableManager.getSlgofTables();
-        const TableContainer& sgofTables    = tableManager.getSgofTables();
-        const TableContainer& swfnTables    = tableManager.getSwfnTables();
-        const TableContainer& sgfnTables    = tableManager.getSgfnTables();
-        const TableContainer& sof3Tables    = tableManager.getSof3Tables();
-        const TableContainer& sof2Tables    = tableManager.getSof2Tables();
-        const TableContainer& sgwfnTables   = tableManager.getSgwfnTables();
-        const TableContainer& sgcwmisTables = tableManager.getSgcwmisTables();
-        const TableContainer& sorwmisTables = tableManager.getSorwmisTables();
-        const TableContainer& ssfnTables    = tableManager.getSsfnTables();
-        const TableContainer& miscTables    = tableManager.getMiscTables();
-        const TableContainer& msfnTables    = tableManager.getMsfnTables();
-        const TableContainer& gsfTables     = tableManager.getGsfTables();
-        const TableContainer& wsfTables     = tableManager.getWsfTables();
-
-        for (std::size_t satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-            if (tableManager.hasTables("SWOF")) {
-                swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGOF")) {
-                sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SLGOF")) {
-                slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SWFN")) {
-                swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGFN")) {
-                sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SOF3")) {
-                sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SOF2")) {
-                sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGWFN")) {
-                sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGCWMIS")) {
-                sgcwmisTableCheck_(sgcwmisTables.getTable<SgcwmisTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SORWMIS")) {
-                sorwmisTableCheck_(sorwmisTables.getTable<SorwmisTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SSFN")) {
-                ssfnTableCheck_(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("MSFN")) {
-                msfnTableCheck_(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("GSF")) {
-                gsfTableCheck_(gsfTables.getTable<GsfTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("WSF")) {
-                wsfTableCheck_(wsfTables.getTable<WsfTable>(satnumIdx), satnumIdx+1);
-            }
-        }
-
-        if (tableManager.hasTables("MISC")) {
-            const auto numMiscNumIdx = miscTables.size();
-            const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
-            OpmLog::info(msg);
-            for (std::size_t miscNumIdx = 0; miscNumIdx < numMiscNumIdx; ++miscNumIdx) {
-                miscTableCheck_(miscTables.getTable<MiscTable>(miscNumIdx), miscNumIdx+1);
-            }
-        }
-    }
-
-    void RelpermDiagnostics::swofTableCheck_(const SwofTable&  swofTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_(const SwofTable& swofTables,
+                                         const std::size_t satnumIdx)
     {
         const auto& sw = swofTables.getSwColumn();
         const auto& krw = swofTables.getKrwColumn();
@@ -314,8 +236,9 @@ namespace Opm {
         ///TODO check if run with gas.
     }
 
-    void RelpermDiagnostics::sgofTableCheck_(const SgofTable& sgofTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SgofTable>(const SgofTable& sgofTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& sg = sgofTables.getSgColumn();
         const auto& krg = sgofTables.getKrgColumn();
@@ -349,8 +272,9 @@ namespace Opm {
         //TODO check if run with water.
     }
 
-    void RelpermDiagnostics::slgofTableCheck_(const SlgofTable& slgofTables,
-                                              const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SlgofTable>(const SlgofTable& slgofTables,
+                                                     const std::size_t satnumIdx)
     {
         const auto& sl = slgofTables.getSlColumn();
         const auto& krg = slgofTables.getKrgColumn();
@@ -382,8 +306,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::swfnTableCheck_(const SwfnTable& swfnTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SwfnTable>(const SwfnTable& swfnTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& sw = swfnTables.getSwColumn();
         const auto& krw = swfnTables.getKrwColumn();
@@ -406,8 +331,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::wsfTableCheck_(const WsfTable& wsfTables,
-                                            const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<WsfTable>(const WsfTable& wsfTables,
+                                                   const std::size_t satnumIdx)
     {
         const auto& sw = wsfTables.getSwColumn();
         const auto& krw = wsfTables.getKrwColumn();
@@ -430,8 +356,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sgfnTableCheck_(const SgfnTable& sgfnTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SgfnTable>(const SgfnTable& sgfnTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& sg = sgfnTables.getSgColumn();
         const auto& krg = sgfnTables.getKrgColumn();
@@ -453,8 +380,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::gsfTableCheck_(const GsfTable& gsfTables,
-                                            const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<GsfTable>(const GsfTable& gsfTables,
+                                                   const std::size_t satnumIdx)
     {
         const auto& sg = gsfTables.getSgColumn();
         const auto& krg = gsfTables.getKrgColumn();
@@ -476,8 +404,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sof3TableCheck_(const Sof3Table& sof3Tables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<Sof3Table>(const Sof3Table& sof3Tables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& so = sof3Tables.getSoColumn();
         const auto& krow = sof3Tables.getKrowColumn();
@@ -517,8 +446,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sof2TableCheck_(const Sof2Table& sof2Tables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<Sof2Table>(const Sof2Table& sof2Tables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& so = sof2Tables.getSoColumn();
         const auto& kro = sof2Tables.getKroColumn();
@@ -541,8 +471,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
-                                              const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SgwfnTable>(const SgwfnTable& sgwfnTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& sg = sgwfnTables.getSgColumn();
         const auto& krg = sgwfnTables.getKrgColumn();
@@ -576,8 +507,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
-                                                const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SgcwmisTable>(const SgcwmisTable& sgcwmisTables,
+                                                       const std::size_t satnumIdx)
     {
         const auto& sw = sgcwmisTables.getWaterSaturationColumn();
         const auto& sgc = sgcwmisTables.getMiscibleResidualGasColumn();
@@ -595,8 +527,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
-                                                const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SorwmisTable>(const SorwmisTable& sorwmisTables,
+                                                       const std::size_t satnumIdx)
     {
         const auto& sw = sorwmisTables.getWaterSaturationColumn();
         const auto& sor = sorwmisTables.getMiscibleResidualOilColumn();
@@ -614,8 +547,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::ssfnTableCheck_(const SsfnTable& ssfnTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<SsfnTable>(const SsfnTable& ssfnTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& frac = ssfnTables.getSolventFractionColumn();
         const auto& krgm = ssfnTables.getGasRelPermMultiplierColumn();
@@ -640,8 +574,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::miscTableCheck_(const MiscTable& miscTables,
-                                             const std::size_t miscnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<MiscTable>(const MiscTable& miscTables,
+                                                    const std::size_t miscnumIdx)
     {
         const auto& frac = miscTables.getSolventFractionColumn();
         const auto& misc = miscTables.getMiscibilityColumn();
@@ -660,8 +595,9 @@ namespace Opm {
         }
     }
 
-    void RelpermDiagnostics::msfnTableCheck_(const MsfnTable& msfnTables,
-                                             const std::size_t satnumIdx)
+    template<>
+    void RelpermDiagnostics::checkTable_<MsfnTable>(const MsfnTable& msfnTables,
+                                                    const std::size_t satnumIdx)
     {
         const auto& frac = msfnTables.getGasPhaseFractionColumn();
         const auto& krgsm = msfnTables.getGasSolventRelpermMultiplierColumn();
@@ -686,6 +622,86 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
+
+    void RelpermDiagnostics::tableCheck_(const EclipseState& eclState)
+    {
+        const auto numSatRegions = eclState.runspec().tabdims().getNumSatTables();
+        {
+            const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
+            OpmLog::info(msg);
+        }
+        const auto& tableManager = eclState.getTableManager();
+        const TableContainer& swofTables    = tableManager.getSwofTables();
+        const TableContainer& slgofTables   = tableManager.getSlgofTables();
+        const TableContainer& sgofTables    = tableManager.getSgofTables();
+        const TableContainer& swfnTables    = tableManager.getSwfnTables();
+        const TableContainer& sgfnTables    = tableManager.getSgfnTables();
+        const TableContainer& sof3Tables    = tableManager.getSof3Tables();
+        const TableContainer& sof2Tables    = tableManager.getSof2Tables();
+        const TableContainer& sgwfnTables   = tableManager.getSgwfnTables();
+        const TableContainer& sgcwmisTables = tableManager.getSgcwmisTables();
+        const TableContainer& sorwmisTables = tableManager.getSorwmisTables();
+        const TableContainer& ssfnTables    = tableManager.getSsfnTables();
+        const TableContainer& miscTables    = tableManager.getMiscTables();
+        const TableContainer& msfnTables    = tableManager.getMsfnTables();
+        const TableContainer& gsfTables     = tableManager.getGsfTables();
+        const TableContainer& wsfTables     = tableManager.getWsfTables();
+
+        for (std::size_t satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
+            if (tableManager.hasTables("SWOF")) {
+                checkTable_<SwofTable>(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SGOF")) {
+                checkTable_<SgofTable>(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SLGOF")) {
+                checkTable_<SlgofTable>(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SWFN")) {
+                checkTable_<SwfnTable>(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SGFN")) {
+                checkTable_<SgfnTable>(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SOF2")) {
+                checkTable_<Sof2Table>(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SOF3")) {
+                checkTable_<Sof3Table>(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SGWFN")) {
+                checkTable_<SgwfnTable>(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SGCWMIS")) {
+                checkTable_<SgcwmisTable>(sgcwmisTables.getTable<SgcwmisTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SORWMIS")) {
+                checkTable_<SorwmisTable>(sorwmisTables.getTable<SorwmisTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("SSFN")) {
+                checkTable_<SsfnTable>(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("MSFN")) {
+                checkTable_<MsfnTable>(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("GSF")) {
+                checkTable_<GsfTable>(gsfTables.getTable<GsfTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("WSF")) {
+                checkTable_<WsfTable>(wsfTables.getTable<WsfTable>(satnumIdx), satnumIdx+1);
+            }
+        }
+
+        if (tableManager.hasTables("MISC")) {
+            const auto numMiscNumIdx = miscTables.size();
+            const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
+            OpmLog::info(msg);
+            for (std::size_t miscNumIdx = 0; miscNumIdx < numMiscNumIdx; ++miscNumIdx) {
+                checkTable_<MiscTable>(miscTables.getTable<MiscTable>(miscNumIdx), miscNumIdx+1);
+            }
+        }
+    }
+
 
     void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
