@@ -788,7 +788,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     // serializing the non-existent TableManager)
     parseSuccess = comm.min(parseSuccess);
     try {
-        if (parseSuccess) {
+        if (parseSuccess != 0) {
             OPM_TIMEBLOCK(eclBcast);
             eclStateBroadcast(comm, *eclipseState, *schedule,
                               *summaryConfig, *udqState, *actionState, *wtestState);
@@ -814,7 +814,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     //    via Main::~Main() destructor calling MPI_Finalize()
     parseSuccess = comm.min(parseSuccess);
 
-    if (! parseSuccess) {
+    if (parseSuccess == 0) {
         if (comm.rank() == 0) {
             OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
