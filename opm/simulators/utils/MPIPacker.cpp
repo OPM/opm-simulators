@@ -22,13 +22,12 @@
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/FIPConfig.hpp>
 
+#include <algorithm>
 #include <bitset>
-#include <cstdint>
 #include <ctime>
+#include <limits>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
-
 
 namespace Opm::Mpi::detail {
 
