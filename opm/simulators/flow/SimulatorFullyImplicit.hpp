@@ -327,6 +327,21 @@ protected:
 
     const WellModel& wellModel_() const { return simulator_.problem().wellModel(); }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    /** \brief Reservoir-coupling slave: tear down the current report step
+     *         after the master has ended the coupled run.
+     *
+     * Called from \ref runStep when the slave received the terminate signal
+     * from the master and disconnected its intercommunicator during the
+     * adaptive time stepping. The terminate step ran zero substeps, so the
+     * simulator state is unchanged from the previous (fully-coupled) report
+     * step and there is no new state to write; \ref finalize will flush all
+     * output. Logs the stop and balances the beginReportStep() issued
+     * earlier in \ref runStep; the caller then stops the run loop.
+     */
+    void handleSlaveTerminated_();
+#endif
+
     /// Surrounding eWoms simulator; observed, not owned.
     Simulator& simulator_;
 

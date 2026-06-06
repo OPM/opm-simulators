@@ -436,6 +436,18 @@ runStep(SimulatorTimer& timer)
             events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
         auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, tuningUpdater);
         report_ += stepReport;
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // If the master ended its schedule first (e.g. an END keyword truncates the master
+        // SCHEDULE), the slave received the terminate signal and disconnected its
+        // intercommunicator inside step() above. The coupled run is over for this slave:
+        // finish the current report step cleanly and stop the run loop instead of advancing
+        // to another report step, which would issue an MPI_Recv on the now-disconnected
+        // communicator and abort the job.
+        if (this->reservoirCouplingSlave_ && this->reservoirCouplingSlave_->terminated()) {
+            this->handleSlaveTerminated_();
+            return false;   // breaks the while(!timer.done()) loop in run()
+        }
+#endif
     } else {
         // solve for complete report step
         auto stepReport = solver_->step(timer, nullptr);
@@ -488,6 +500,23 @@ runStep(SimulatorTimer& timer)
 
     return true;
 }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template<class TypeTag>
+void
+SimulatorFullyImplicit<TypeTag>::
+handleSlaveTerminated_()
+{
+    if (terminalOutput_) {
+        OpmLog::info("Reservoir coupling: master simulation has ended; "
+                     "stopping slave simulation gracefully.");
+    }
+    // The terminate step ran zero substeps, so the simulator state is unchanged from the
+    // previous (fully-coupled) report step and there is no new state to write; finalize()
+    // will flush all output. Balance the beginReportStep() issued earlier in runStep().
+    this->solver_->model().endReportStep();
+}
+#endif
 
 template<class TypeTag>
 SimulatorReport

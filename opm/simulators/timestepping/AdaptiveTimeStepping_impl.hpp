@@ -581,6 +581,24 @@ suggestedNextTimestep_() const
 
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+// Throw if the slave has already been terminated by the master. A terminated slave has
+// disconnected its intercommunicator, so running another coupled substep loop would issue
+// an MPI_Recv on a null communicator and abort the job. The run loop in
+// SimulatorFullyImplicit::runStep() stops before this can happen, so this guards
+// against future regressions of that logic.
+template <class TypeTag>
+template <class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+checkIfSlaveIsTerminated_()
+{
+    if (reservoirCouplingSlave_().terminated()) {
+        OPM_THROW(ReservoirCouplingError,
+                  "Internal error: attempt to run a coupled substep loop after the slave "
+                  "has been terminated by the master process");
+    }
+}
+
 // Pick the master's sync-step length for the next outer-loop iteration of
 // `runStepReservoirCouplingMaster_()`.  Includes the chop against slave-
 // report dates and emits the user-visible log line.  See the block comment
@@ -779,6 +797,7 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 runStepReservoirCouplingSlave_()
 {
+    checkIfSlaveIsTerminated_();
     int iteration = 0;
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};

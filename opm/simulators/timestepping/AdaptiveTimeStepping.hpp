@@ -196,6 +196,12 @@ private:
         /// \ref SubStepIteration covers the whole report step.
         SimulatorReport runStepOriginal_();
 #ifdef RESERVOIR_COUPLING_ENABLED
+        /// Reservoir-coupling slave: throw if the slave has already been
+        /// terminated by the master. A terminated slave has disconnected its
+        /// intercommunicator, so running another coupled substep loop would
+        /// issue an MPI_Recv on a null communicator and abort the job.
+        void checkIfSlaveIsTerminated_();
+
         // Reservoir coupling master: pick the sync-step length for the next outer-loop
         // iteration of `runStepReservoirCouplingMaster_()`, including the chop
         // against slave-report boundaries.  See the helper's own comment for

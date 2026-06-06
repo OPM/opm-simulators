@@ -404,13 +404,25 @@ void
 ReservoirCouplingMaster<Scalar>::
 sendDontTerminateSignalToSlaves()
 {
-    // Send "don't terminate" signal (value=0) to all spawned slaves.
+    // Send "don't terminate" signal (value=0) to the activated slaves.
     // This is called at the start of each iteration in the master's substep loop.
-    // We send to all spawned slaves, not just activated ones, because even non-activated
-    // slaves are running and waiting at the terminate signal receive point.
+    // We send only to activated slaves: only an activated slave runs the coupled substep
+    // loop and is blocked at the terminate-signal receive point. A slave that has not yet
+    // activated does not consume this channel, so sending to it would queue stale signals
+    // that the slave later reads out of step when it does activate (e.g. a slave whose
+    // activation date coincides with the master's last report step when the master schedule
+    // is truncated by an END keyword). The final terminate signal is still sent to all
+    // started slaves in sendTerminateAndDisconnect().
     if (this->comm_.rank() == 0) {
         int terminate_signal = 0;
+        // maybeReceiveActivationHandshakeFromSlaves() has resized the activation-status
+        // vector before the substep loop that calls us, and the slaves are spawned only
+        // once, so the vector covers all started slaves here.
+        assert(this->slave_activation_status_.size() == this->numSlavesStarted());
         for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+            if (!this->slaveIsActivated(i)) {
+                continue;
+            }
             // NOTE: See comment about error handling at the top of this file.
             MPI_Send(
                 &terminate_signal,
