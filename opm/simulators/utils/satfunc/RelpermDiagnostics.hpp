@@ -102,36 +102,36 @@ namespace Opm {
 
         ///For every table, need to deal with case by case.
         void swofTableCheck_(const SwofTable& swofTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void sgofTableCheck_(const SgofTable& sgofTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void slgofTableCheck_(const SlgofTable& slgofTables,
-                              const int satnumIdx);
+                              const std::size_t satnumIdx);
         void swfnTableCheck_(const SwfnTable& swfnTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void sgfnTableCheck_(const SgfnTable& sgfnTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void wsfTableCheck_(const WsfTable& wsfTables,
-                            const int satnumIdx);
+                            const std::size_t satnumIdx);
         void gsfTableCheck_(const GsfTable& gsfTables,
-                            const int satnumIdx);
+                            const std::size_t satnumIdx);
         void sof3TableCheck_(const Sof3Table& sof3Tables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void sof2TableCheck_(const Sof2Table& sof2Tables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
-                              const int satnumIdx);
+                              const std::size_t satnumIdx);
         ///Tables for solvent model
         void sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
-                                const int satnumIdx);
+                                const std::size_t satnumIdx);
         void sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
-                                const int satnumIdx);
+                                const std::size_t satnumIdx);
         void ssfnTableCheck_(const SsfnTable& ssfnTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
         void miscTableCheck_(const MiscTable& miscTables,
-                             const int miscnumIdx);
+                             const std::size_t miscnumIdx);
         void msfnTableCheck_(const MsfnTable& msfnTables,
-                             const int satnumIdx);
+                             const std::size_t satnumIdx);
     };
 
 } //namespace Opm
