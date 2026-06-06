@@ -68,11 +68,13 @@ HDF5File::HDF5File(const std::string& fileName,
     }
 
     if (mode == OpenMode::OVERWRITE ||
-        (mode == OpenMode::APPEND && !exists)) {
+        (mode == OpenMode::APPEND && !exists))
+    {
         m_file = H5Fcreate(fileName.c_str(),
                            H5F_ACC_TRUNC,
                            H5P_DEFAULT, acc_tpl);
-    } else {
+    }
+    else {
         m_file = H5Fopen(fileName.c_str(),
                          mode == OpenMode::READ ? H5F_ACC_RDONLY : H5F_ACC_RDWR,
                          acc_tpl);
@@ -143,7 +145,8 @@ void HDF5File::write(const std::string& group,
 
     if (mode == DataSetMode::PROCESS_SPLIT) {
         writeSplit(grp, buffer, realGroup);
-    } else if (mode == DataSetMode::ROOT_ONLY) {
+    }
+    else if (mode == DataSetMode::ROOT_ONLY) {
         writeRootOnly(grp, buffer, group, dset);
     }
     H5Gclose(grp);
@@ -186,7 +189,8 @@ std::vector<std::string> HDF5File::list(const std::string& group) const
     std::vector<std::string> result;
     if (H5Literate_by_name(m_file, group.c_str(),
                            H5_INDEX_NAME, H5_ITER_INC,
-                           &idx, list_group, &result, H5P_DEFAULT) < 0) {
+                           &idx, list_group, &result, H5P_DEFAULT) < 0)
+    {
         throw std::runtime_error("Failure while listing group '" + group + "'");
     }
 
@@ -208,7 +212,8 @@ void HDF5File::writeSplit(hid_t grp,
 #else
         assert(false); // should be unreachable
 #endif
-    } else {
+    }
+    else {
         proc_sizes[0] = buffer.size();
     }
 
