@@ -905,6 +905,29 @@ namespace Opm {
                     }
                 }
 
+                // WELOPEN can explicitly reopen individual completions that were
+                // closed by the economic limits.
+                {
+                    auto& events = this->wellState().well(w).events;
+                    if (events.hasEvent(ScheduleEvents::COMPLETION_CHANGE)) {
+                        for (const auto& connection : well_ecl.getConnections()) {
+                            if (connection.state() == Connection::State::OPEN &&
+                                this->wellTestState().completion_is_closed(well_name, connection.complnum())) {
+                                this->wellTestState().open_completion(well_name, connection.complnum());
+                                local_deferredLogger.info(
+                                    fmt::format("Completion {} - block ({}, {}, {}) for well {}"
+                                                " is re-opened due to WELOPEN",
+                                                connection.complnum(),
+                                                connection.getI() + 1,
+                                                connection.getJ() + 1,
+                                                connection.getK() + 1,
+                                                well_name));
+                            }
+                        }
+                        events.clearEvent(ScheduleEvents::COMPLETION_CHANGE);
+                    }
+                }
+
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState().hasWell(well_name)?
                 if (this->wellTestState().well_is_closed(well_name))
