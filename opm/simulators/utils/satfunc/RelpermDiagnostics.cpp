@@ -108,10 +108,6 @@ namespace Opm {
         return true;
     }
 
-
-
-
-
     void RelpermDiagnostics::satFamilyCheck_(const EclipseState& eclState)
     {
         const auto& tableManager = eclState.getTableManager();
@@ -131,9 +127,9 @@ namespace Opm {
         const TableContainer& wsfTables = tableManager.getWsfTables();
 
         const auto& phases = eclState.runspec().phases();
-        const bool waterActive   = phases.active( Phase::WATER );
-        const bool gasActive     = phases.active( Phase::GAS );
-        const bool oilActive     = phases.active( Phase::OIL );
+        const bool waterActive = phases.active(Phase::WATER);
+        const bool gasActive   = phases.active(Phase::GAS);
+        const bool oilActive   = phases.active(Phase::OIL);
 
         // Family I test.
         bool family1 = oilActive;
@@ -195,9 +191,6 @@ namespace Opm {
             OpmLog::info(msg);
         }
     }
-
-
-
 
     void RelpermDiagnostics::tableCheck_(const EclipseState& eclState)
     {
@@ -268,7 +261,6 @@ namespace Opm {
             }
         }
 
-
         if (tableManager.hasTables("MISC")) {
             const int numMiscNumIdx = miscTables.size();
             const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
@@ -277,12 +269,7 @@ namespace Opm {
                 miscTableCheck_(miscTables.getTable<MiscTable>(miscNumIdx), miscNumIdx+1);
             }
         }
-
     }
-
-
-
-
 
     void RelpermDiagnostics::swofTableCheck_(const SwofTable& swofTables,
                                              const int satnumIdx)
@@ -314,10 +301,6 @@ namespace Opm {
         }
         ///TODO check if run with gas.
     }
-
-
-
-
 
     void RelpermDiagnostics::sgofTableCheck_(const SgofTable& sgofTables,
                                              const int satnumIdx)
@@ -387,10 +370,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
     void RelpermDiagnostics::swfnTableCheck_(const SwfnTable& swfnTables,
                                              const int satnumIdx)
     {
@@ -439,8 +418,6 @@ namespace Opm {
         }
     }
 
-
-
     void RelpermDiagnostics::sgfnTableCheck_(const SgfnTable& sgfnTables,
                                              const int satnumIdx)
     {
@@ -464,7 +441,6 @@ namespace Opm {
         }
     }
 
-
     void RelpermDiagnostics::gsfTableCheck_(const GsfTable& gsfTables,
                                             const int satnumIdx)
     {
@@ -487,7 +463,6 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
-
 
     void RelpermDiagnostics::sof3TableCheck_(const Sof3Table& sof3Tables,
                                              const int satnumIdx)
@@ -530,10 +505,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
     void RelpermDiagnostics::sof2TableCheck_(const Sof2Table& sof2Tables,
                                              const int satnumIdx)
     {
@@ -557,10 +528,6 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
-
-
-
-
 
     void RelpermDiagnostics::sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
                                               const int satnumIdx)
@@ -597,8 +564,6 @@ namespace Opm {
         }
     }
 
-
-
     void RelpermDiagnostics::sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
                                                 const int satnumIdx)
     {
@@ -618,10 +583,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
     void RelpermDiagnostics::sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
                                                 const int satnumIdx)
     {
@@ -640,9 +601,6 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
-
-
-
 
     void RelpermDiagnostics::ssfnTableCheck_(const SsfnTable& ssfnTables,
                                              const int satnumIdx)
@@ -670,11 +628,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
-
     void RelpermDiagnostics::miscTableCheck_(const MiscTable& miscTables,
                                              const int miscnumIdx)
     {
@@ -694,10 +647,6 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
-
-
-
-
 
     void RelpermDiagnostics::msfnTableCheck_(const MsfnTable& msfnTables,
                                              const int satnumIdx)
@@ -725,10 +674,6 @@ namespace Opm {
             OpmLog::error(msg);
         }
     }
-
-
-
-
 
     void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
@@ -766,7 +711,7 @@ namespace Opm {
                  .extractUnscaled(rtep, rfunc, satnumIdx);
 
              const std::string regionIdx = std::to_string(satnumIdx + 1);
-             ///Consistency check.
+             /// Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
                 const std::string msg = "In saturation table SATNUM = " + regionIdx + ", Sgmax should not exceed 1-Swco.";
                 OpmLog::warning(msg);
@@ -776,45 +721,45 @@ namespace Opm {
                 OpmLog::warning(msg);
              }
 
-             //Krow(Sou) == Krog(Sou) for three-phase
+             // Krow(Sou) == Krog(Sou) for three-phase
              // means Krow(Swco) == Krog(Sgco)
              double krow_value = 1e20;
              double krog_value = 1e-20;
              if (fluidSystem_ == FluidSystem::BlackOil) {
                 if (satFamily_ == SaturationFunctionFamily::FamilyI) {
-                     if (!sgofTables.empty()) {
-                         const auto& table = sgofTables.getTable<SgofTable>(satnumIdx);
-                         krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
-                     } else if (!sgofletTables.empty()) {
-                         krog_value = sgofletTables[satnumIdx].krt2_relperm;
-                     } else {
-                         assert(!slgofTables.empty());
-                         const auto& table = slgofTables.getTable<SlgofTable>(satnumIdx);
-                         krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
-                     }
-                     if (!swofTables.empty()) {
-                         const auto& table = swofTables.getTable<SwofTable>(satnumIdx);
-                         krow_value = table.evaluate("KROW" , unscaledEpsInfo_[satnumIdx].Swl);
-                     } else {
-                         assert(!swofletTables.empty());
-                         krow_value = swofletTables[satnumIdx].krt2_relperm;
-                     }
-                 }
-                 if (satFamily_ == SaturationFunctionFamily::FamilyII) {
-                     assert(!sof3Tables.empty());
-                     const auto& table = sof3Tables.getTable<Sof3Table>(satnumIdx);
-                     const double Sou = 1.- unscaledEpsInfo_[satnumIdx].Swl - unscaledEpsInfo_[satnumIdx].Sgl;
+                    if (!sgofTables.empty()) {
+                        const auto& table = sgofTables.getTable<SgofTable>(satnumIdx);
+                        krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
+                    } else if (!sgofletTables.empty()) {
+                        krog_value = sgofletTables[satnumIdx].krt2_relperm;
+                    } else {
+                        assert(!slgofTables.empty());
+                        const auto& table = slgofTables.getTable<SlgofTable>(satnumIdx);
+                        krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
+                    }
+                    if (!swofTables.empty()) {
+                        const auto& table = swofTables.getTable<SwofTable>(satnumIdx);
+                        krow_value = table.evaluate("KROW" , unscaledEpsInfo_[satnumIdx].Swl);
+                    } else {
+                        assert(!swofletTables.empty());
+                        krow_value = swofletTables[satnumIdx].krt2_relperm;
+                    }
+                }
+                if (satFamily_ == SaturationFunctionFamily::FamilyII) {
+                    assert(!sof3Tables.empty());
+                    const auto& table = sof3Tables.getTable<Sof3Table>(satnumIdx);
+                    const double Sou = 1.- unscaledEpsInfo_[satnumIdx].Swl - unscaledEpsInfo_[satnumIdx].Sgl;
 
-                     krow_value = table.evaluate("KROW" , Sou);
-                     krog_value = table.evaluate("KROG" , Sou);
-                 }
-                 if (krow_value != krog_value) {
-                     const std::string msg = "In saturation table SATNUM = " + regionIdx + ", Krow(Somax) should be equal to Krog(Somax).";
-                     OpmLog::warning(msg);
-                 }
-             }
-             //Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
-             //Mobile fluid requirements
+                    krow_value = table.evaluate("KROW" , Sou);
+                    krog_value = table.evaluate("KROG" , Sou);
+                }
+                if (krow_value != krog_value) {
+                    const std::string msg = "In saturation table SATNUM = " + regionIdx + ", Krow(Somax) should be equal to Krog(Somax).";
+                    OpmLog::warning(msg);
+                }
+            }
+            // Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
+            // Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
                 const std::string msg = "In saturation table SATNUM = " + regionIdx + ", Sowcr + Swcr should be less than 1.";
                 OpmLog::warning(msg);
@@ -832,8 +777,9 @@ namespace Opm {
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
         bool doDiagnostics = phaseCheck_(eclState);
-        if (!doDiagnostics) // no diagnostics needed for single phase problems
+        if (!doDiagnostics) { // no diagnostics needed for single phase problems
             return;
+        }
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
@@ -891,11 +837,12 @@ namespace Opm {
     }
 
 #define INSTANCE_DIAGNOSIS(...) \
-    template void RelpermDiagnostics::diagnosis<Opm::LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Opm::LevelCartesianIndexMapper<__VA_ARGS__>&); \
-    template void RelpermDiagnostics::scaledEndPointsCheck_<Opm::LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Opm::LevelCartesianIndexMapper<__VA_ARGS__>&);
+    template void RelpermDiagnostics::diagnosis<LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const LevelCartesianIndexMapper<__VA_ARGS__>&); \
+    template void RelpermDiagnostics::scaledEndPointsCheck_<LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const LevelCartesianIndexMapper<__VA_ARGS__>&);
 
     INSTANCE_DIAGNOSIS(Dune::CpGrid)
     INSTANCE_DIAGNOSIS(Dune::PolyhedralGrid<3,3>)
+
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
     INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>)
@@ -903,4 +850,5 @@ namespace Opm {
     INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>)
 #endif //HAVE_MPI
 #endif //HAVE_DUNE_ALUGRID
+
 } //namespace Opm
