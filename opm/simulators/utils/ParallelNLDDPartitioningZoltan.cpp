@@ -37,13 +37,10 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <functional>
 #include <numeric>
 #include <stdexcept>
 #include <utility>
 #include <vector>
-#include <set>
-#include <map>
 
 namespace {
 
