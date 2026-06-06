@@ -131,8 +131,14 @@ namespace Opm {
         const bool gasActive   = phases.active(Phase::GAS);
         const bool oilActive   = phases.active(Phase::OIL);
 
+        std::array<bool,3> family{
+            oilActive,
+            true,
+            !gsfTables.empty() && !wsfTables.empty()
+        };
+        auto& [family1, family2, family3] = family;
+
         // Family I test.
-        bool family1 = oilActive;
         if (waterActive) {
             family1 = family1 && (!swofTables.empty() || !swofletTable.empty());
         }
@@ -141,7 +147,6 @@ namespace Opm {
         }
 
         // Family II test.
-        bool family2 = true;
         if (waterActive) {
             family2 = family2 && (!swfnTables.empty() || !sgwfnTables.empty());
         }
@@ -152,43 +157,50 @@ namespace Opm {
             family2 = family2 && (!sgfnTables.empty() || !sgwfnTables.empty());
         }
 
-        bool family3 = !gsfTables.empty() && !wsfTables.empty();
+        analyzeFamily(eclState, family);
+    }
 
+    void RelpermDiagnostics::analyzeFamily(const EclipseState& eclState,
+                                           const std::array<bool,3>& family)
+    {
+        const auto& [family1, family2, family3] = family;
         if (family3) {
+            const auto& phases = eclState.runspec().phases();
             const bool co2store = eclState.runspec().co2Storage();
             const bool h2store = eclState.runspec().h2Storage();
-            if ( !((co2store || h2store) && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {
-                const std::string msg = "Relative permeability input format: Saturation Family III. \n \
-                                         Only valid for CO2STORE or H2STORE cases with GAS and WATER.";
-                OpmLog::info(msg);
+            if (!((co2store || h2store) && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {
+                OpmLog::info(
+                    "Relative permeability input format: Saturation Family III. \n"
+                    "Only valid for CO2STORE or H2STORE cases with GAS and WATER."
+                );
             }
             satFamily_ = SaturationFunctionFamily::FamilyIII;
-            const std::string msg = "Relative permeability input format: Saturation Family III (GSF/WSF).";
-            OpmLog::info(msg);
+            OpmLog::info("Relative permeability input format: Saturation Family III (GSF/WSF).");
             return;
         }
 
         if (family1 && family2) {
-            const std::string msg = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3";
-            OpmLog::error(msg);
+            OpmLog::error(
+                "Saturation families should not be mixed.\n"
+                "Use either SGOF and SWOF or SGFN, SWFN and SOF3"
+            );
         }
 
         if (!family1 && !family2) {
-            const std::string msg = "Saturations function must be specified using either \n \
-                             family 1, family 2 or family3 keywords \n \
-                             Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
-            OpmLog::error(msg);
+            OpmLog::error(
+                "Saturations function must be specified using either \n"
+                "family 1, family 2 or family3 keywords \n"
+                "Use either SGOF and SWOF or SGFN, SWFN and SOF3."
+            );
         }
 
         if (family1 && !family2) {
             satFamily_ = SaturationFunctionFamily::FamilyI;
-            const std::string msg = "Relative permeability input format: Saturation Family I.";
-            OpmLog::info(msg);
+            OpmLog::info("Relative permeability input format: Saturation Family I.");
         }
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
-            const std::string msg = "Relative permeability input format: Saturation Family II.";
-            OpmLog::info(msg);
+            OpmLog::info("Relative permeability input format: Saturation Family II.");
         }
     }
 

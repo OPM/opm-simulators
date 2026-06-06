@@ -20,8 +20,8 @@
 #ifndef OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
 #define OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
 
+#include <array>
 #include <vector>
-#include <utility>
 
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
@@ -132,6 +132,9 @@ namespace Opm {
                              const std::size_t miscnumIdx);
         void msfnTableCheck_(const MsfnTable& msfnTables,
                              const std::size_t satnumIdx);
+
+        void analyzeFamily(const EclipseState& eclState,
+                           const std::array<bool,3>& family);
     };
 
 } //namespace Opm
