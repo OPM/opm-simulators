@@ -85,6 +85,7 @@
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -305,6 +306,23 @@ namespace {
         }
     }
 
+    void checkSatellite(const Opm::Schedule& schedule,
+                        const Opm::Group& group,
+                        const bool injection,
+                        std::string_view groupname)
+    {
+        for (std::size_t stepIdx = 0; stepIdx < schedule.size(); ++stepIdx) {
+            if (parentHasResVolControl(schedule, group.parent(), stepIdx, injection)) {
+                OPM_THROW(std::logic_error,
+                          fmt::format("Satellite {} group {} is not allowed "
+                                      "to have parent group controlled by {}",
+                                      injection ? "injection" : "production",
+                                      groupname,
+                                      injection ? "RESV/VREP" : "RESV/PRBL"));
+            }
+        }
+    }
+
     void checkSatelliteGroupParentControls(const Opm::Schedule& schedule)
     {
         // Check that no satellite group has a parent group controlled by RESV or VREP
@@ -314,22 +332,10 @@ namespace {
         for (const auto& groupname : schedule.groupNames(sz - 1)) {
             const auto& group = schedule.getGroup(groupname, sz - 1);
             if (group.hasSatelliteProduction()) {
-                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
-                        OPM_THROW(std::logic_error,
-                            fmt::format("Satellite production group {} is not allowed to have parent group controlled by RESV", groupname));
-                        return;
-                    }
-                }
+                checkSatellite(schedule, group, false, groupname);
             }
             if (group.hasSatelliteInjection()) {
-                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
-                        OPM_THROW(std::logic_error,
-                            fmt::format("Satellite injection group {} is not allowed to have parent group controlled by RESV/VREP", groupname));
-                        return;
-                    }
-                }
+                checkSatellite(schedule, group, true, groupname);
             }
         }
     }
