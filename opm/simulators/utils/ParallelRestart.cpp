@@ -44,7 +44,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
 #if HAVE_MPI
     RestartValue restartValues{};
 
-    if (eclIO)
+    if (eclIO != nullptr)
     {
         assert(comm.rank() == 0);
         restartValues = eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
@@ -66,7 +66,7 @@ data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
 #if HAVE_MPI
     data::Solution sol{};
 
-    if (eclIO)
+    if (eclIO != nullptr)
     {
         assert(comm.rank() == 0);
         sol = eclIO->loadRestartSolution(solutionKeys, step);
