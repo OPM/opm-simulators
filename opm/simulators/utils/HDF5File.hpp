@@ -113,6 +113,11 @@ private:
     //! \param data Data to write
     void writeDset(int rank, hid_t dataset_id,
                    hid_t dxpl, hsize_t size, const void* data) const;
+
+    //! \brief Create groups.
+    //! \param realGroup Path for groups to create
+    hid_t createGroups(const std::string& realGroup) const;
+
     hid_t m_file = H5I_INVALID_HID; //!< File handle
     Parallel::Communication comm_;
 };
