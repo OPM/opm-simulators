@@ -445,6 +445,11 @@ extern "C" {
         explicit Partitioner(const Opm::Parallel::Communication                         comm,
                              const Opm::ParallelNLDDPartitioningZoltan::ZoltanParamMap& params);
 
+        Partitioner(const Partitioner&) = delete;
+        Partitioner(Partitioner&&) = delete;
+        Partitioner& operator=(const Partitioner&) = delete;
+        Partitioner& operator=(Partitioner&&) = delete;
+
         /// Destructor.
         ///
         /// Destroys Zoltan context.
@@ -478,6 +483,12 @@ extern "C" {
 
             /// Block/domain to which each cell/vertex/object is assigned.
             int* block{nullptr};
+
+            ZoltanPart() = default;
+            ZoltanPart(const ZoltanPart&) = delete;
+            ZoltanPart(ZoltanPart&&) = delete;
+            ZoltanPart& operator=(const ZoltanPart&) = delete;
+            ZoltanPart& operator=(ZoltanPart&&) = delete;
 
             /// Destructor.
             ///
