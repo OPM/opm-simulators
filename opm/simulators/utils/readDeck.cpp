@@ -523,6 +523,27 @@ especially if the grid is imported through GDFILE.)"};
 
         return {hasValidCells, message};
     }
+
+    void validateParams(const std::string& parsingStrictness,
+                        const std::string& actionParsingStrictness,
+                        const std::string& inputSkipMode)
+    {
+        if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter ParsingStrictness, "
+                                  "must be 'high', 'normal', or 'low'", parsingStrictness));
+        }
+        if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter ActionParsingStrictness, "
+                                  "must be 'normal' or 'low'", actionParsingStrictness));
+        }
+        if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter InputSkipMode, "
+                                  "must be '100', '300', or 'all'", inputSkipMode));
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -739,18 +760,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
 
-    if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
-    }
-    if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter ActionParsingStrictness, must be 'normal', or 'low'", actionParsingStrictness));
-    }
-    if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter InputSkipMode, must be '100', '300', or 'all'", inputSkipMode));
-    }
+    validateParams(parsingStrictness, actionParsingStrictness, inputSkipMode);
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         const bool exitOnAllErrors = (parsingStrictness == "high");
