@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <iostream>
 #include <string_view>
 #include <typeinfo>
 
@@ -122,12 +123,22 @@ DamarisVar<T>::DamarisVar(int dims,
 template<class T>
 DamarisVar<T>::~DamarisVar()
 {
-    if (data_ptr_ != nullptr) {
-        commitVariableDamarisShmem();
-        clearVariableDamarisShmem();
+    try {
+        if (data_ptr_ != nullptr) {
+            commitVariableDamarisShmem();
+            clearVariableDamarisShmem();
+        }
     }
+    catch (const std::exception& e) {
+        std::cerr << "Exception caught during damaris var cleanup: " << e.what() << std::endl;
+    }
+    catch (...) {
+        std::cerr << "Unknown exception caught during damaris var cleanup" << std::endl;
+
+    }
+
     if (this->hasError()) {
-        printError(); // flush out any error messages
+        std::cerr << "Error detected during damaris var cleanup: " << dam_err_str_ << std::endl;
     }
 }
 
