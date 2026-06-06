@@ -142,7 +142,7 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
 
     m_comm.broadcast(&exceptionThrown, 1, 0);
 
-    if (exceptionThrown)
+    if (exceptionThrown != 0)
         OPM_THROW_NOLOG(std::runtime_error, "No integer property field: " + keyword);
 
     std::size_t size = result.size();
@@ -196,7 +196,7 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
 
     m_comm.broadcast(&exceptionThrown, 1, 0);
 
-    if (exceptionThrown)
+    if (exceptionThrown != 0)
         OPM_THROW_NOLOG(std::runtime_error, "No double property field: " + keyword);
 
     std::size_t size = result.size();
@@ -210,7 +210,7 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
 bool ParallelFieldPropsManager::tran_active(const std::string& keyword) const
 {
     auto calculator = m_tran.find(keyword);
-    return calculator != m_tran.end() && calculator->second.size();
+    return calculator != m_tran.end() && calculator->second.size() != 0;
 }
 
 void ParallelFieldPropsManager::apply_tran(const std::string& keyword,
