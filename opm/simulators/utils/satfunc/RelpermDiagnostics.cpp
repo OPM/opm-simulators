@@ -64,45 +64,37 @@ namespace Opm {
         bool hasSolvent = phases.active( Phase::SOLVENT );
 
         if (hasWater && !hasGas && !hasOil && !hasSolvent) {
-            const std::string msg = "System:  Single phase Water system. Nothing to check";
-            OpmLog::info(msg);
+            OpmLog::info("System:  Single phase Water system. Nothing to check");
             return false;
         }
 
         if (!hasWater && hasGas && !hasOil && !hasSolvent) {
-            const std::string msg = "System:  Single phase Gas system. Nothing to check";
-            OpmLog::info(msg);
+            OpmLog::info("System:  Single phase Gas system. Nothing to check");
             return false;
         }
 
         if (!hasWater && !hasGas && hasOil && !hasSolvent) {
-            const std::string msg = "System: Single phase Oil system. Nothing to check";
-            OpmLog::info(msg);
+            OpmLog::info("System: Single phase Oil system. Nothing to check");
             return false;
         }
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
-            const std::string msg = "System: Water-Gas system.";
-            OpmLog::info(msg);
+            OpmLog::info("System: Water-Gas system.");
             fluidSystem_ = FluidSystem::WaterGas;
         }
         if (hasWater && hasOil && !hasGas && !hasSolvent) {
-            const std::string msg = "System: Oil-Water system.";
-            OpmLog::info(msg);
+            OpmLog::info("System: Oil-Water system.");
             fluidSystem_ = FluidSystem::OilWater;
         }
         if (hasOil && hasGas && !hasWater && !hasSolvent) {
-            const std::string msg = "System: Oil-Gas system.";
-            OpmLog::info(msg);
+            OpmLog::info("System: Oil-Gas system.");
             fluidSystem_ = FluidSystem::OilGas;
         }
         if (hasOil && hasWater && hasGas && !hasSolvent) {
-            const std::string msg = "System: Black-oil system.";
-            OpmLog::info(msg);
+            OpmLog::info("System: Black-oil system.");
             fluidSystem_ = FluidSystem::BlackOil;
         }
         if (hasSolvent) {
-            const std::string msg = "System: Solvent model.";
-            OpmLog::info(msg);
+            OpmLog::info("System: Solvent model.");
             fluidSystem_ = FluidSystem::Solvent;
         }
         return true;
