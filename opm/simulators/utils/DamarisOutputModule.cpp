@@ -47,7 +47,7 @@ initializeDamaris(const Parallel::Communication comm, const int mpiRank, const s
 
     /* Get the name of the Damaris input file from an environment variable if available */
     const char* cs_damaris_xml_file = getenv("FLOW_DAMARIS_XML_FILE");
-    if (cs_damaris_xml_file != NULL)
+    if (cs_damaris_xml_file != nullptr)
     {
         OpmLog::info(std::string("Initializing Damaris from environment variable FLOW_DAMARIS_XML_FILE: ") + cs_damaris_xml_file);
         dam_err = damaris_initialize(cs_damaris_xml_file, comm);
