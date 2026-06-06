@@ -107,6 +107,9 @@ namespace Opm {
 
         void analyzeFamily(const EclipseState& eclState,
                            const std::array<bool,3>& family);
+
+        void blackoilChecks(const EclipseState& eclState,
+                            const std::size_t satnumIdx);
     };
 
 } //namespace Opm
