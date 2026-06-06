@@ -53,6 +53,9 @@
 #include <opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp>
 #endif // HAVE_DUNE_ALUGRID
 
+#include <algorithm>
+#include <functional>
+
 #include <fmt/format.h>
 
 namespace Opm {
@@ -726,69 +729,51 @@ namespace Opm {
         const auto numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         OpmLog::info(fmt::format("Number of saturation regions: {}\n", numSatRegions));
 
+        struct TableEntry
+        {
+            std::string name;
+            const TableContainer& table;
+            std::function<void(const TableContainer&, const std::size_t)> f;
+        };
+
+        auto mkop = [this]<class Type>()
+        {
+            return [this](const TableContainer& table, const std::size_t idx) {
+                this->checkTable_<Type>(table.getTable<Type>(idx), idx + 1);
+            };
+        };
+
         const auto& tableManager = eclState.getTableManager();
-        const TableContainer& swofTables    = tableManager.getSwofTables();
-        const TableContainer& slgofTables   = tableManager.getSlgofTables();
-        const TableContainer& sgofTables    = tableManager.getSgofTables();
-        const TableContainer& swfnTables    = tableManager.getSwfnTables();
-        const TableContainer& sgfnTables    = tableManager.getSgfnTables();
-        const TableContainer& sof3Tables    = tableManager.getSof3Tables();
-        const TableContainer& sof2Tables    = tableManager.getSof2Tables();
-        const TableContainer& sgwfnTables   = tableManager.getSgwfnTables();
-        const TableContainer& sgcwmisTables = tableManager.getSgcwmisTables();
-        const TableContainer& sorwmisTables = tableManager.getSorwmisTables();
-        const TableContainer& ssfnTables    = tableManager.getSsfnTables();
-        const TableContainer& miscTables    = tableManager.getMiscTables();
-        const TableContainer& msfnTables    = tableManager.getMsfnTables();
-        const TableContainer& gsfTables     = tableManager.getGsfTables();
-        const TableContainer& wsfTables     = tableManager.getWsfTables();
+
+        const auto tableChecks = std::array{
+            TableEntry{"GSF", tableManager.getGsfTables(), mkop.operator()<GsfTable>()},
+            TableEntry{"MSFN", tableManager.getMsfnTables(), mkop.operator()<MsfnTable>()},
+            TableEntry{"SGCWMIS", tableManager.getSgcwmisTables(), mkop.operator()<SgcwmisTable>()},
+            TableEntry{"SGFN", tableManager.getSgfnTables(), mkop.operator()<SgfnTable>()},
+            TableEntry{"SGOF", tableManager.getSgofTables(), mkop.operator()<SgofTable>()},
+            TableEntry{"SGWFN", tableManager.getSgwfnTables(), mkop.operator()<SgwfnTable>()},
+            TableEntry{"SLGOF", tableManager.getSlgofTables(), mkop.operator()<SlgofTable>()},
+            TableEntry{"SOF2", tableManager.getSof2Tables(), mkop.operator()<Sof2Table>()},
+            TableEntry{"SOF3", tableManager.getSof3Tables(), mkop.operator()<Sof3Table>()},
+            TableEntry{"SORWMIS", tableManager.getSorwmisTables(), mkop.operator()<SorwmisTable>()},
+            TableEntry{"SSFN", tableManager.getSsfnTables(), mkop.operator()<SsfnTable>()},
+            TableEntry{"SWFN", tableManager.getSwfnTables(), mkop.operator()<SwfnTable>()},
+            TableEntry{"SWOF", tableManager.getSwofTables(), mkop.operator()<SwofTable>()},
+            TableEntry{"WSF", tableManager.getWsfTables(), mkop.operator()<WsfTable>()},
+        };
 
         for (std::size_t satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-            if (tableManager.hasTables("SWOF")) {
-                checkTable_<SwofTable>(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGOF")) {
-                checkTable_<SgofTable>(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SLGOF")) {
-                checkTable_<SlgofTable>(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SWFN")) {
-                checkTable_<SwfnTable>(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGFN")) {
-                checkTable_<SgfnTable>(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SOF2")) {
-                checkTable_<Sof2Table>(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SOF3")) {
-                checkTable_<Sof3Table>(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGWFN")) {
-                checkTable_<SgwfnTable>(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SGCWMIS")) {
-                checkTable_<SgcwmisTable>(sgcwmisTables.getTable<SgcwmisTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SORWMIS")) {
-                checkTable_<SorwmisTable>(sorwmisTables.getTable<SorwmisTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("SSFN")) {
-                checkTable_<SsfnTable>(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("MSFN")) {
-                checkTable_<MsfnTable>(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("GSF")) {
-                checkTable_<GsfTable>(gsfTables.getTable<GsfTable>(satnumIdx), satnumIdx+1);
-            }
-            if (tableManager.hasTables("WSF")) {
-                checkTable_<WsfTable>(wsfTables.getTable<WsfTable>(satnumIdx), satnumIdx+1);
-            }
+            std::ranges::for_each(tableChecks,
+                                  [&tableManager, satnumIdx](const auto& input)
+                                  {
+                                      if (tableManager.hasTables(input.name)) {
+                                          input.f(input.table, satnumIdx);
+                                      }
+                                  });
         }
 
         if (tableManager.hasTables("MISC")) {
+            const auto& miscTables = tableManager.getMiscTables();
             const auto numMiscNumIdx = miscTables.size();
             OpmLog::info(fmt::format("Number of misc regions: {}\n", numMiscNumIdx));
             for (std::size_t miscNumIdx = 0; miscNumIdx < numMiscNumIdx; ++miscNumIdx) {
@@ -796,7 +781,6 @@ namespace Opm {
             }
         }
     }
-
 
     void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
