@@ -36,6 +36,7 @@
 #define HAVE_MPI
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <numeric>
 #include <stdexcept>
@@ -512,10 +513,10 @@ extern "C" {
                              const Opm::ParallelNLDDPartitioningZoltan::ZoltanParamMap& params)
     {
         const auto argc   = 0;
-        char*      argv[] = { nullptr };
+        std::array<char*,1> argv = { nullptr };
         auto       ver    = 0.0f;
 
-        const auto rc = Zoltan_Initialize(argc, argv, &ver);
+        const auto rc = Zoltan_Initialize(argc, argv.data(), &ver);
         if (rc != ZOLTAN_OK) {
             OPM_THROW(std::runtime_error, "Unable to Initialise Zoltan");
         }
