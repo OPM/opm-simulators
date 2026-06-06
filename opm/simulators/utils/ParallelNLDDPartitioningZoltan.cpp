@@ -300,7 +300,7 @@ extern "C" {
 
         for (auto cell = 0*numCells; cell < numCells; ++cell) {
             const auto localCell = localID[cell];
-            numEdges[cell] = ia[localCell + 1] - ia[localCell + 0];
+            numEdges[cell] = static_cast<int>(ia[localCell + 1] - ia[localCell + 0]);
         }
 
         *ierr = ZOLTAN_OK;
