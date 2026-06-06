@@ -274,7 +274,7 @@ namespace {
 
     bool parentHasResVolControl(const Opm::Schedule& schedule,
                                 const std::string& parentname,
-                                const int stepIdx,
+                                const std::size_t stepIdx,
                                 const bool isInj)
     {
         if (!schedule.hasGroup(parentname, stepIdx)) {
