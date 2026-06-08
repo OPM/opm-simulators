@@ -84,7 +84,7 @@ void ParallelFileMerger::operator()(const fs::path& file)
 
 void ParallelFileMerger::appendFile(std::ofstream& of, const fs::path& file, const std::string& rank)
 {
-    if (fs::file_size(file)) {
+    if (fs::file_size(file) > 0) {
         std::cerr << "WARNING: There has been logging to file "
                       << file.string() <<" by process "
                       << rank << std::endl;
