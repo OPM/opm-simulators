@@ -37,7 +37,7 @@ namespace detail {
 template <typename T>
 constexpr bool is_pod_v = std::is_standard_layout_v<T> && std::is_trivial_v<T>;
 
-std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position);
+int mpi_buffer_size(const std::size_t bufsize, const std::size_t position);
 
 //! \brief Abstract struct for packing which is (partially) specialized for specific types.
 template <bool pod, class T>

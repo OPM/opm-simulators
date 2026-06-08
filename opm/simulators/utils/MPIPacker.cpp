@@ -22,24 +22,23 @@
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/FIPConfig.hpp>
 
+#include <algorithm>
 #include <bitset>
-#include <cstdint>
 #include <ctime>
+#include <limits>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
-
 
 namespace Opm::Mpi::detail {
 
-std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position)
+int mpi_buffer_size(const std::size_t bufsize, const std::size_t position)
 {
     if (bufsize < position) {
         throw std::invalid_argument("Buffer size should never be less than position!");
     }
 
-    return std::min(bufsize - position,
-                    static_cast<std::size_t>(std::numeric_limits<int>::max()));
+    return static_cast<int>(std::min(bufsize - position,
+                            static_cast<std::size_t>(std::numeric_limits<int>::max())));
 }
 
 template<std::size_t Size>
@@ -78,7 +77,7 @@ packSize(const std::string& data, Parallel::MPIComm comm)
     int size;
     MPI_Pack_size(1, Dune::MPITraits<std::size_t>::getType(), comm, &size);
     int totalSize = size;
-    MPI_Pack_size(data.size(), MPI_CHAR, comm, &size);
+    MPI_Pack_size(static_cast<int>(data.size()), MPI_CHAR, comm, &size);
     return totalSize + size;
 }
 
@@ -88,11 +87,12 @@ pack(const std::string& data,
      std::size_t& position,
      Parallel::MPIComm comm)
 {
-    std::size_t length = data.size();
+    const auto length = data.size();
     int int_position = 0;
-    MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data()+position,
+    MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data() + position,
              mpi_buffer_size(buffer.size(), position), &int_position, comm);
-    MPI_Pack(data.data(), length, MPI_CHAR, buffer.data()+position, mpi_buffer_size(buffer.size(), position),
+    MPI_Pack(data.data(), static_cast<int>(length), MPI_CHAR,
+             buffer.data()+position, mpi_buffer_size(buffer.size(), position),
              &int_position, comm);
     position += int_position;
 }
@@ -103,12 +103,14 @@ unpack(std::string& data,
        std::size_t& position,
        Opm::Parallel::MPIComm comm)
 {
-    std::size_t length = 0;
+    int length = 0;
     int int_position = 0;
-    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position), &int_position, &length, 1,
+    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position),
+               &int_position, &length, 1,
                Dune::MPITraits<std::size_t>::getType(), comm);
     std::vector<char> cStr(length+1, '\0');
-    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position), &int_position, cStr.data(), length,
+    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position),
+               &int_position, cStr.data(), length,
                MPI_CHAR, comm);
     position += int_position;
     data.clear();
