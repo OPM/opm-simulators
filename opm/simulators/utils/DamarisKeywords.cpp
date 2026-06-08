@@ -27,9 +27,12 @@
 #include <Damaris.h>
 #include <damaris/env/Environment.hpp>
 
+#include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <map>
 #include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
