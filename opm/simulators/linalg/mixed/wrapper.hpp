@@ -14,6 +14,9 @@ class MixedSolver : public InverseOperator<X,X>
 {
     public:
 
+    // extract block size
+    static constexpr auto block_size = X::block_type::dimension;
+
     MixedSolver(const M &A, double tol, int maxiter, bool use_dilu)
     {
         // verify that well contributions are added to the matrix
@@ -25,8 +28,8 @@ class MixedSolver : public InverseOperator<X,X>
         int nnz   = A.nonzeroes();
         int b     = A[0][0].N();
 
-        // verify that block size is 3x3
-        if (b!=3) {OPM_THROW(std::logic_error, "Block sizes other than 3x3 are not supported by mixed precision.");}
+        // verify that block size is 3x3 or 4x4
+        if (b<3 || b>4) {OPM_THROW(std::logic_error, "Legacy mixed precision only supports 3x3 and 4x4 blocks.");}
 
         // create jacobian matrix object and allocate various arrays
         jacobian_ = bsr_alloc();
@@ -61,25 +64,27 @@ class MixedSolver : public InverseOperator<X,X>
     {
         bsr_free(jacobian_);
         bslv_free(mem_);
-
     }
 
     virtual void apply (X& x, X& b, InverseOperatorResult& res) override
     {
         // transpose each dense block to make them column-major
-        double B[9];
+        int const N = block_size;
+        int const NN = N*N;
+        double B[NN];
         for(int k=0;k<jacobian_->nnz;k++)
         {
-            for(int i=0;i<3;i++) for(int j=0;j<3;j++) B[3*j+i] = data_[9*k + 3*i + j];
-            for(int i=0;i<9;i++) jacobian_->dbl[9*k + i] = B[i];
+            for(int i=0;i<N;i++) for(int j=0;j<N;j++) B[N*j+i] = data_[NN*k + N*i + j];
+            for(int i=0;i<NN;i++) jacobian_->dbl[NN*k + i] = B[i];
         }
 
         // downcast to allow mixed precision
         bsr_downcast(jacobian_);
 
         // solve linear system
-        int count = bslv_pbicgstab3m(mem_, jacobian_, &b[0][0], &x[0][0]);
-        //int count = bslv_pbicgstab3d(mem_, jacobian_, &b[0][0], &x[0][0]);
+        int count = 0;
+             if constexpr(N==3) count = bslv_pbicgstab3m(mem_, jacobian_, &b[0][0], &x[0][0]);
+        else if constexpr(N==4) count = bslv_pbicgstab4m(mem_, jacobian_, &b[0][0], &x[0][0]);
 
         // return convergence information
         res.converged  = (mem_->e[count] < mem_->tol);

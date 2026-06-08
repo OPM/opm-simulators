@@ -698,7 +698,7 @@ void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
 {
 
     int nrows = A->nrows;
-    int const b = 4;
+    //int const b = 4;
     int const bb =16;
 
     bsr_matrix *L=P->L;
