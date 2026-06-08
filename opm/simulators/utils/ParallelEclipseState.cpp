@@ -185,11 +185,11 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
         try {
             result = m_manager.get_global_double(keyword);
         }
-        catch(std::exception& e) {
+        catch (const std::exception& e) {
             exceptionThrown = 1;
             OpmLog::error("No double property field: " + keyword + " (" + e.what() + ")");
             m_comm.broadcast(&exceptionThrown, 1, 0);
-            throw e;
+            throw;
         }
     }
 
