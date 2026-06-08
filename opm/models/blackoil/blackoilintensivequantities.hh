@@ -30,7 +30,9 @@
 
 #include <dune/common/fmatrix.hh>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
@@ -38,11 +40,10 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/directionalmobility.hh>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/utility/gpuDecorators.hpp>
+
+#include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/utility/CopyablePtr.hpp>
 

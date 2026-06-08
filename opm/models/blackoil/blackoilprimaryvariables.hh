@@ -25,6 +25,7 @@
 #define EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -34,13 +35,10 @@
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilmeanings.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
-
-#include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
@@ -48,6 +46,8 @@
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
+
+#include <fmt/format.h>
 
 namespace Opm::Parameters {
 
@@ -102,16 +102,18 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     // component indices from the fluid system
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
+
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
+    static constexpr bool enableFullyImplicitThermal = energyModuleType == EnergyModules::FullyImplicitThermal;
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
-    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     enum { enableMICP = Indices::enableMICP };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -339,7 +341,9 @@ public:
         const bool precipitatedSaltPresent = enableSaltPrecipitation ? saltSaturation > 0.0 : false;
         const bool oneActivePhases = fluidState.fluidSystem().numActivePhases() == 1;
         // deal with the primary variables for the energy extension
-        EnergyModule::assignPrimaryVars(*this, fluidState);
+        if constexpr (enableFullyImplicitThermal) {
+            EnergyModule::assignPrimaryVars(*this, fluidState);
+        }
 
         // Determine the meaning of the pressure primary variables
         // Depending on the phases present, this variable is either interpreted as the

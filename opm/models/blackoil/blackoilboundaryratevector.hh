@@ -31,7 +31,14 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/models/utils/propertysystem.hh>
 
 #include <algorithm>
 #include <type_traits>

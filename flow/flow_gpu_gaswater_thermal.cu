@@ -30,6 +30,8 @@
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
+
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>

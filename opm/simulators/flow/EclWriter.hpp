@@ -40,7 +40,6 @@
 #include <opm/output/eclipse/Inplace.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
-#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh> // Properties::EnableMech, EnableSolvent
 #include <opm/models/common/multiphasebaseproperties.hh> // Properties::FluidSystem
 
