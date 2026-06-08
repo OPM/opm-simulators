@@ -423,15 +423,15 @@ public:
     /*!
      * \copydoc FvBaseDiscretization::primaryVarName
      */
-    std::string primaryVarName(int pvIdx) const
+    std::string primaryVarName(unsigned pvIdx) const
     {
-        if (pvIdx == static_cast<int>(Indices::waterSwitchIdx)) {
+        if (pvIdx == Indices::waterSwitchIdx) {
             return "water_switching";
         }
-        else if (pvIdx == static_cast<int>(Indices::pressureSwitchIdx)) {
+        else if (pvIdx == Indices::pressureSwitchIdx) {
             return "pressure_switching";
         }
-        else if (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)) {
+        else if (pvIdx == Indices::compositionSwitchIdx) {
             return "composition_switching";
         }
 
