@@ -162,11 +162,11 @@ update(double const *data)
     for(int k=0;k<nnz_;k++)
     {
         for(int i=0;i<b;i++) for(int j=0;j<b;j++) B[b*j+i] = data[bb*k + b*i + j];
-        for(int i=0;i<bb;i++) M_->dbl[bb*k + i] = B[i];
+        for(int i=0;i<bb;i++) M_->flt[bb*k + i] = B[i];
     }
 
     // downcast to single precision
-    bsr_downcast(M_);
+    //bsr_downcast(M_);
 }
 } // namespace Opm
 #endif // OPM_MIXED_MATRIX_HEADER_INCLUDED
