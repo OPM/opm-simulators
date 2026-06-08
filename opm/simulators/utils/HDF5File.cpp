@@ -68,11 +68,13 @@ HDF5File::HDF5File(const std::string& fileName,
     }
 
     if (mode == OpenMode::OVERWRITE ||
-        (mode == OpenMode::APPEND && !exists)) {
+        (mode == OpenMode::APPEND && !exists))
+    {
         m_file = H5Fcreate(fileName.c_str(),
                            H5F_ACC_TRUNC,
                            H5P_DEFAULT, acc_tpl);
-    } else {
+    }
+    else {
         m_file = H5Fopen(fileName.c_str(),
                          mode == OpenMode::READ ? H5F_ACC_RDONLY : H5F_ACC_RDWR,
                          acc_tpl);
@@ -113,28 +115,9 @@ void HDF5File::write(const std::string& group,
 
     if (groupExists(m_file, realGroup)) {
         grp = H5Gopen2(m_file, realGroup.c_str(), H5P_DEFAULT);
-    } else {
-        auto grps = split_string(realGroup, '/');
-        std::string curr;
-        for (std::size_t i = 0; i < grps.size(); ++i) {
-            if (grps[i].empty())
-                continue;
-            curr += '/';
-            curr += grps[i];
-            if (!groupExists(m_file, curr)) {
-                hid_t subgrp = H5Gcreate2(m_file, curr.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
-                if (subgrp == H5I_INVALID_HID) {
-                    throw std::runtime_error("Failed to create group '" + curr + "'");
-                }
-                if (i == grps.size() - 1) {
-                    grp = subgrp;
-                } else {
-                    H5Gclose(subgrp);
-                }
-            } else if (i == grps.size() - 1) {
-                grp = H5Gopen2(m_file, realGroup.c_str(), H5P_DEFAULT);
-            }
-        }
+    }
+    else {
+        grp = createGroups(realGroup);
     }
 
     if (grp == H5I_INVALID_HID) {
@@ -143,7 +126,8 @@ void HDF5File::write(const std::string& group,
 
     if (mode == DataSetMode::PROCESS_SPLIT) {
         writeSplit(grp, buffer, realGroup);
-    } else if (mode == DataSetMode::ROOT_ONLY) {
+    }
+    else if (mode == DataSetMode::ROOT_ONLY) {
         writeRootOnly(grp, buffer, group, dset);
     }
     H5Gclose(grp);
@@ -186,7 +170,8 @@ std::vector<std::string> HDF5File::list(const std::string& group) const
     std::vector<std::string> result;
     if (H5Literate_by_name(m_file, group.c_str(),
                            H5_INDEX_NAME, H5_ITER_INC,
-                           &idx, list_group, &result, H5P_DEFAULT) < 0) {
+                           &idx, list_group, &result, H5P_DEFAULT) < 0)
+    {
         throw std::runtime_error("Failure while listing group '" + group + "'");
     }
 
@@ -208,7 +193,8 @@ void HDF5File::writeSplit(hid_t grp,
 #else
         assert(false); // should be unreachable
 #endif
-    } else {
+    }
+    else {
         proc_sizes[0] = buffer.size();
     }
 
@@ -281,7 +267,7 @@ hid_t HDF5File::getCompression([[maybe_unused]] hsize_t size) const
 {
     hid_t dcpl = H5P_DEFAULT;
 #if H5_VERS_MINOR > 8
-    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE)) {
+    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) != 0) {
         dcpl = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_deflate(dcpl, 1);
         H5Pset_chunk(dcpl, 1, &size);
@@ -302,6 +288,38 @@ void HDF5File::writeDset(int rank, hid_t dataset_id,
     H5Dwrite(dataset_id, H5T_NATIVE_CHAR, memspace, filespace, dxpl, data);
     H5Sclose(memspace);
     H5Sclose(filespace);
+}
+
+hid_t HDF5File::createGroups(const std::string& realGroup) const
+{
+    const auto grps = split_string(realGroup, '/');
+    hid_t grp = H5I_INVALID_HID;
+    std::string curr;
+    for (std::size_t i = 0; i < grps.size(); ++i) {
+        if (grps[i].empty()) {
+            continue;
+        }
+        curr += '/';
+        curr += grps[i];
+        if (!groupExists(m_file, curr)) {
+            hid_t subgrp = H5Gcreate2(m_file, curr.c_str(),
+                                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            if (subgrp == H5I_INVALID_HID) {
+                throw std::runtime_error("Failed to create group '" + curr + "'");
+            }
+            if (i == grps.size() - 1) {
+                grp = subgrp;
+            }
+            else {
+                H5Gclose(subgrp);
+            }
+        }
+        else if (i == grps.size() - 1) {
+            grp = H5Gopen2(m_file, realGroup.c_str(), H5P_DEFAULT);
+        }
+    }
+
+    return grp;
 }
 
 }
