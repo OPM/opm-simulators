@@ -726,7 +726,6 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
-        std::string debugFile = debugFileStream.str();
         std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
         Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
     }
