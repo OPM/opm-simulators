@@ -20,8 +20,8 @@
 #ifndef OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
 #define OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
 
+#include <array>
 #include <vector>
-#include <utility>
 
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
@@ -101,37 +101,15 @@ namespace Opm {
                                    const LevelCartesianIndexMapper& levelCartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
-        void swofTableCheck_(const SwofTable& swofTables,
-                             const int satnumIdx);
-        void sgofTableCheck_(const SgofTable& sgofTables,
-                             const int satnumIdx);
-        void slgofTableCheck_(const SlgofTable& slgofTables,
-                              const int satnumIdx);
-        void swfnTableCheck_(const SwfnTable& swfnTables,
-                             const int satnumIdx);
-        void sgfnTableCheck_(const SgfnTable& sgfnTables,
-                             const int satnumIdx);
-        void wsfTableCheck_(const WsfTable& wsfTables,
-                            const int satnumIdx);
-        void gsfTableCheck_(const GsfTable& gsfTables,
-                            const int satnumIdx);
-        void sof3TableCheck_(const Sof3Table& sof3Tables,
-                             const int satnumIdx);
-        void sof2TableCheck_(const Sof2Table& sof2Tables,
-                             const int satnumIdx);
-        void sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
-                              const int satnumIdx);
-        ///Tables for solvent model
-        void sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
-                                const int satnumIdx);
-        void sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
-                                const int satnumIdx);
-        void ssfnTableCheck_(const SsfnTable& ssfnTables,
-                             const int satnumIdx);
-        void miscTableCheck_(const MiscTable& miscTables,
-                             const int miscnumIdx);
-        void msfnTableCheck_(const MsfnTable& msfnTables,
-                             const int satnumIdx);
+        template<class TableType>
+        void checkTable_(const TableType& tables,
+                         const std::size_t satnumIdx);
+
+        void analyzeFamily(const EclipseState& eclState,
+                           const std::array<bool,3>& family);
+
+        void blackoilChecks(const EclipseState& eclState,
+                            const std::size_t satnumIdx);
     };
 
 } //namespace Opm
