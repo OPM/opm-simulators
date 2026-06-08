@@ -85,6 +85,7 @@
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -274,7 +275,7 @@ namespace {
 
     bool parentHasResVolControl(const Opm::Schedule& schedule,
                                 const std::string& parentname,
-                                const int stepIdx,
+                                const std::size_t stepIdx,
                                 const bool isInj)
     {
         if (!schedule.hasGroup(parentname, stepIdx)) {
@@ -305,6 +306,23 @@ namespace {
         }
     }
 
+    void checkSatellite(const Opm::Schedule& schedule,
+                        const Opm::Group& group,
+                        const bool injection,
+                        std::string_view groupname)
+    {
+        for (std::size_t stepIdx = 0; stepIdx < schedule.size(); ++stepIdx) {
+            if (parentHasResVolControl(schedule, group.parent(), stepIdx, injection)) {
+                OPM_THROW(std::logic_error,
+                          fmt::format("Satellite {} group {} is not allowed "
+                                      "to have parent group controlled by {}",
+                                      injection ? "injection" : "production",
+                                      groupname,
+                                      injection ? "RESV/VREP" : "RESV/PRBL"));
+            }
+        }
+    }
+
     void checkSatelliteGroupParentControls(const Opm::Schedule& schedule)
     {
         // Check that no satellite group has a parent group controlled by RESV or VREP
@@ -314,22 +332,10 @@ namespace {
         for (const auto& groupname : schedule.groupNames(sz - 1)) {
             const auto& group = schedule.getGroup(groupname, sz - 1);
             if (group.hasSatelliteProduction()) {
-                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ false)) {
-                        OPM_THROW(std::logic_error,
-                            fmt::format("Satellite production group {} is not allowed to have parent group controlled by RESV", groupname));
-                        return;
-                    }
-                }
+                checkSatellite(schedule, group, false, groupname);
             }
             if (group.hasSatelliteInjection()) {
-                for (std::size_t stepIdx = 0; stepIdx < sz; ++stepIdx) {
-                    if (parentHasResVolControl(schedule, group.parent(), stepIdx, /*injection*/ true)) {
-                        OPM_THROW(std::logic_error,
-                            fmt::format("Satellite injection group {} is not allowed to have parent group controlled by RESV/VREP", groupname));
-                        return;
-                    }
-                }
+                checkSatellite(schedule, group, true, groupname);
             }
         }
     }
@@ -517,6 +523,27 @@ especially if the grid is imported through GDFILE.)"};
 
         return {hasValidCells, message};
     }
+
+    void validateParams(const std::string& parsingStrictness,
+                        const std::string& actionParsingStrictness,
+                        const std::string& inputSkipMode)
+    {
+        if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter ParsingStrictness, "
+                                  "must be 'high', 'normal', or 'low'", parsingStrictness));
+        }
+        if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter ActionParsingStrictness, "
+                                  "must be 'normal' or 'low'", actionParsingStrictness));
+        }
+        if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Incorrect value {} for parameter InputSkipMode, "
+                                  "must be '100', '300', or 'all'", inputSkipMode));
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -699,7 +726,6 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
-        std::string debugFile = debugFileStream.str();
         std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
         Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
     }
@@ -733,18 +759,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
 
-    if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
-    }
-    if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter ActionParsingStrictness, must be 'normal', or 'low'", actionParsingStrictness));
-    }
-    if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter InputSkipMode, must be '100', '300', or 'all'", inputSkipMode));
-    }
+    validateParams(parsingStrictness, actionParsingStrictness, inputSkipMode);
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         const bool exitOnAllErrors = (parsingStrictness == "high");
@@ -788,7 +803,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     // serializing the non-existent TableManager)
     parseSuccess = comm.min(parseSuccess);
     try {
-        if (parseSuccess) {
+        if (parseSuccess != 0) {
             OPM_TIMEBLOCK(eclBcast);
             eclStateBroadcast(comm, *eclipseState, *schedule,
                               *summaryConfig, *udqState, *actionState, *wtestState);
@@ -814,7 +829,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     //    via Main::~Main() destructor calling MPI_Finalize()
     parseSuccess = comm.min(parseSuccess);
 
-    if (! parseSuccess) {
+    if (parseSuccess == 0) {
         if (comm.rank() == 0) {
             OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
