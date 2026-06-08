@@ -982,7 +982,7 @@ private:
                                            ResidualType& residual,
                                            const ModelClass& model,
                                            Scalar dt,
-                                           bool dispersionActive,
+                                           [[maybe_unused]] bool dispersionActive,
                                            const ProblemT& problem)
     {
         if constexpr (useGPU) {
