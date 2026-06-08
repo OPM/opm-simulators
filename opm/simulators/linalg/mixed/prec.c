@@ -508,7 +508,7 @@ void prec_dilu_factorize4(prec_t *P, bsr_matrix *A)
     double scale[16]; //hard-coded to 4x4 blocks
     for(int i=0;i<A->nrows;i++)
     {
-        mat4_inv(scale,D->dbl+i*bb);
+        mat4_vinv(scale,D->dbl+i*bb);
         vec_copy16(D->dbl+bb*i, scale); //store inverse instead to simplify application
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
@@ -698,8 +698,8 @@ void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
 {
 
     int nrows = A->nrows;
-    int b     = A->b;
-    int bb    = b*b;
+    int const b = 4;
+    int const bb =16;
 
     bsr_matrix *L=P->L;
     bsr_matrix *D=P->D;
@@ -736,10 +736,10 @@ void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
     // Factorizing
     int idx=0;
     int next = P->offsets[idx][0];
-    double scale[16]; //hard-coded to 4x4 blocks
+    double scale[16] __attribute__((aligned(64))); //hard-coded to 4x4 blocks
     for(int i=0;i<A->nrows;i++)
     {
-        mat4_inv(scale,D->dbl+i*bb);
+        mat4_vinv(scale,D->dbl+i*bb);
         vec_copy16(D->dbl+bb*i, scale); //store inverse instead to simplify application
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
@@ -954,8 +954,8 @@ void prec_mapply4c(prec_t *restrict P, double *x)
     bsr_matrix *D  = P->D;
     bsr_matrix *U  = P->U;
 
-    int b=L->b;
-    int bb=b*b;
+    int const b=4;
+    int const bb=16;
 
     __m256d mm256_zero_pd =_mm256_setzero_pd();
 
@@ -967,14 +967,14 @@ void prec_mapply4c(prec_t *restrict P, double *x)
         double *xi = x+b*i;
         __m256d vxi = _mm256_loadu_pd(xi);
 
-        vx[0] = _mm256_permute4x64_pd(vxi,0x00);
+        vx[0] = _mm256_permute4x64_pd(vxi,0x00); // 0b00000000
         vx[1] = _mm256_permute4x64_pd(vxi,0x55); // 0b01010101
         vx[2] = _mm256_permute4x64_pd(vxi,0xAA); // 0b10101010
-        vx[3] = _mm256_permute4x64_pd(vxi,0xFF); // 0b10101010
+        vx[3] = _mm256_permute4x64_pd(vxi,0xFF); // 0b11111111
         for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
         {
             const float *A = L->flt+k*bb;
-            int j=U->colidx[k]; // should be L, but does not matter die to structural symmetry?
+            int j=U->colidx[k]; // should be L, but does not matter due to structural
             vA[0] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*vx[0];
             vA[1] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*vx[1];
             vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*vx[2];
@@ -982,29 +982,22 @@ void prec_mapply4c(prec_t *restrict P, double *x)
 
             double *xj = x+b*j;
             __m256d vxj = _mm256_loadu_pd(xj);
-            //__m256d vz = (vxj - vA[0]) - (vA[1] + vA[2]);
             __m256d vz = vxj - (vA[0]+vA[1]) - (vA[2]+vA[3]);
-
-            //double z[4];
             _mm256_storeu_pd(xj,vz);
-            //for(int n=0;n<3;n++) xj[n]=z[n];
         }
 
         // Muliply by (inverse) diagonal block
         const float *A = D->flt+i*bb;
-        vA[0] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*vx[0]; //0b01010101
+        vA[0] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*vx[0]; //0b00000000
         vA[1] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*vx[1]; //0b01010101
-        vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*vx[2]; //0b01010101
-        vA[3] = _mm256_cvtps_pd(_mm_loadu_ps(A+12))*vx[3]; //0b01010101
-        __m256d vz = vA[0] + vA[1] + vA[2] + vA[3];
+        vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*vx[2]; //0b10101010
+        vA[3] = _mm256_cvtps_pd(_mm_loadu_ps(A+12))*vx[3]; //0b11111111
 
-        //double z[4];
-        //_mm256_store_pd(z,vz);
-        //for(int k=0;k<3;k++) xi[k]=z[k];
+        __m256d vz = vA[0] + vA[1] + vA[2] + vA[3];
         _mm256_storeu_pd(xi,vz);
     }
 
-    // Upper triangular solve assuming nonzeros stored in original order
+    // Upper triangular solve assuming ones on diagonal`
     for(int i=U->ncols;i>0;i--)
     {
         __m256d vA[4];
@@ -1014,16 +1007,15 @@ void prec_mapply4c(prec_t *restrict P, double *x)
             const float *A = U->flt+k*bb;
             int j=U->colidx[k];
             __m256d vxj = _mm256_loadu_pd(x+b*j);
-            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*_mm256_permute4x64_pd(vxj,0x00);
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*_mm256_permute4x64_pd(vxj,0x00); // 0b00000000
             vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*_mm256_permute4x64_pd(vxj,0x55); // 0b01010101
             vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*_mm256_permute4x64_pd(vxj,0xAA); // 0b10101010
-            vA[3] += _mm256_cvtps_pd(_mm_loadu_ps(A+12))*_mm256_permute4x64_pd(vxj,0xFF); // 0b10101010
+            vA[3] += _mm256_cvtps_pd(_mm_loadu_ps(A+12))*_mm256_permute4x64_pd(vxj,0xFF); // 0b11111111
         }
+
         double *xi = x+b*(i-1);
         __m256d vxi = _mm256_loadu_pd(xi);
-        //__m256d vz = (vxi - vA[0]) - (vA[1] + vA[2]);
         __m256d vz = vxi - (vA[0]+vA[1]) - (vA[2]+vA[3]);
-        //vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
         _mm256_storeu_pd(xi,vz);
     }
 }
@@ -1117,6 +1109,7 @@ void prec_info(prec_t *P)
 
 void prec_test()
 {
+#if 0
     // verify 2x2 inverse and matrix-matrix multiplications
     double A[4] = {1,0.2,0.3,4};
     double B[4] = {1,0.2,0.3,4};
@@ -1134,7 +1127,7 @@ void prec_test()
 
     mat2_lmul(A,C);
     mat_show(C,2,"C");
-
+#endif
 #if 0
     // verify 4x4 inverse and matrix-matrix multiplications
     double AA[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
@@ -1143,7 +1136,7 @@ void prec_test()
     double II[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     mat_show(AA,4,"AA");
 
-    mat4_inv(AA,AA);
+    mat4_inv2(AA,AA);
     mat_show(AA,4,"AA");
 
     mat4_vfms(II,AA,BB);
@@ -1155,5 +1148,27 @@ void prec_test()
     mat4_lmul(AA,CC);
     mat_show(CC,4,"CC");
 #endif
+    // verify 4x4 inverse and matrix-matrix multiplications
+    double A[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double B[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double C[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double I[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+/*
+    mat_fshow(A,4,"A");
+    mat4_inv2(A);
+    mat_fshow(A,4,"A");
+*/
+    mat_show(A,4,"A");
+    mat4_vinv(A,A);
+    mat_show(A,4,"A");
+
+    mat4_vfms(I,A,B);
+    mat_show(I,4,"I");
+
+    mat4_rmul(B,A);
+    mat_show(B,4,"B");
+
+    mat4_lmul(A,C);
+    mat_show(C,4,"C");
 }
 
