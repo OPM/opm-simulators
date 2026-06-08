@@ -622,25 +622,25 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
         const auto& value = solUpd_[ix];
-        for (int pvIdx = 0; pvIdx < static_cast<int>(value.size()); ++pvIdx) {
+        for (unsigned pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
             if (pvIdx == Indices::pressureSwitchIdx) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
-            else if ((pvIdx == int(Indices::waterSwitchIdx)
+            else if ((pvIdx == Indices::waterSwitchIdx
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
-                      || (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)
+                      || (pvIdx == Indices::compositionSwitchIdx
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
-                      || (enableSolvent && pvIdx == static_cast<int>(Indices::solventSaturationIdx)
+                      || (enableSolvent && pvIdx == Indices::solventSaturationIdx
                           && value.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss)
-                      || (enableBrine && enableSaltPrecipitation && pvIdx == static_cast<int>(Indices::saltConcentrationIdx)
+                      || (enableBrine && enableSaltPrecipitation && pvIdx == Indices::saltConcentrationIdx
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {
                 dSMax = std::max(dSMax, std::abs(value[pvIdx]));
             }
-            else if (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)
+            else if (pvIdx == Indices::compositionSwitchIdx
                      && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
                 dRsMax = std::max(dRsMax, std::abs(value[pvIdx]));
             }
-            else if (pvIdx == static_cast<int>(Indices::compositionSwitchIdx)
+            else if (pvIdx == Indices::compositionSwitchIdx
                      && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 dRvMax = std::max(dRvMax, std::abs(value[pvIdx]));
             }
