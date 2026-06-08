@@ -23,6 +23,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/input/eclipse/Schedule/RSTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
@@ -30,6 +32,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fmt/format.h>
+#include <limits>
 #include <numeric>
 
 namespace Opm {
@@ -46,7 +50,19 @@ void RSTConv::init(const std::size_t numCells,
         return;
     }
 
-    N_ = kw->second;
+    const int requestedN = kw->second;
+    const int maxN = static_cast<int>(numCells);
+    if (requestedN > maxN && comm_.rank() == 0) {
+        const auto msg = fmt::format(
+            "RPTRST CONV value {} is larger than number of active cells {}. "
+            "Clamping CONV to {}.",
+                                     requestedN,
+                                     maxN,
+                                     maxN);
+        OpmLog::warning(msg);
+    }
+
+    N_ = std::clamp(requestedN, 0, maxN);
     compIdx_ = compIdx;
 
     cnv_X_.resize(6);
