@@ -206,6 +206,7 @@ macro(opm-simulators_prereqs_hook)
           CUDA::cusparse
           CUDA::cublas
           CUDA::nvptxcompiler_static
+          CUDA::cudart
       )
     endif()
   endif()
@@ -650,16 +651,6 @@ macro(opm-simulators_targets_hook)
           examples/${tapp}.cpp
       )
       target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
-    endforeach()
-  endif()
-
-  if(CUDA_FOUND)
-    foreach(tgt
-        test_gpu_safe_call
-        test_cuda_check_last_error
-        test_GpuVector
-        test_is_gpu_pointer)
-      target_link_libraries(${tgt} PRIVATE CUDA::cudart)
     endforeach()
   endif()
 
