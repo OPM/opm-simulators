@@ -47,8 +47,9 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
 
     A->rowptr = malloc((nrows+1)*sizeof(int));
     A->colidx = malloc(nnz*sizeof(int));
-    A->dbl    = malloc(b*b*nnz*sizeof(double));
-    A->flt    = malloc(b*b*nnz*sizeof(float));
+
+    A->dbl = aligned_alloc(64,b*b*nnz*sizeof(double));
+    A->flt = aligned_alloc(64,b*b*nnz*sizeof(float));
 
     assert(A->rowptr);
     assert(A->colidx);
