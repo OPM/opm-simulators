@@ -32,7 +32,6 @@
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/simulators/utils/ComponentName.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-#include <opm/input/eclipse/Schedule/Tuning.hpp>
 #include <span>
 #include <string_view>
 #include <tuple>
