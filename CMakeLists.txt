@@ -365,8 +365,10 @@ macro(opm-simulators_sources_hook)
     # cuda warns when constxpr functions are used in kernels.
     # since the entire stl is constexpr ..., we enable relaxed flag
     set_source_files_properties(
+      opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
       tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
@@ -750,6 +752,7 @@ macro(opm-simulators_targets_hook)
       SOURCES
         flow/flow_${OBJ}.cpp
     )
+
     simulators_add_target_options(TARGET flow_lib${OBJ})
     list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
     list(APPEND FLOWMODELS_PREFIXED flow_${OBJ})

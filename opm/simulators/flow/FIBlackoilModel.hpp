@@ -42,6 +42,15 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
+#if HAVE_CUDA
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+#include <memory>
+#include <variant>
+#include <vector>
+#endif
+
+#include <chrono>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -79,6 +88,10 @@ public:
                           Dune::Partitions::all,
                           ThreadManager::maxThreads())
     {
+#if HAVE_CUDA
+        useGpuIntensiveQuantitiesDispatcher_ =
+            Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+#endif
     }
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
@@ -100,6 +113,22 @@ public:
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
+
+#if HAVE_CUDA
+            // After all cells are CPU-updated and written into the cache,
+            // overlay the GPU-computed BlackOil fields in one batched call.
+            if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
+            {
+                if (useGpuIntensiveQuantitiesDispatcher_) {
+                    runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+
+                    const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+                    for (std::size_t i = 0; i < numCells; ++i) {
+                        this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+                    }
+                }
+            }
+#endif
             OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
                                        this->simulator_.vanguard().grid().comm());
         } else {
@@ -262,6 +291,21 @@ protected:
                 this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
             }
         }
+
+#if HAVE_CUDA
+        // After the CPU per-cell update has populated all fields, optionally
+        // overlay the BlackOil intensive-quantities fields with their GPU
+        // counterparts via the experimental dispatcher. The dispatcher only
+        // overwrites the subset of fields covered by
+        // BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom; everything
+        // else (mobility, energy, ...) keeps the CPU-computed value.
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
+        {
+            if (useGpuIntensiveQuantitiesDispatcher_) {
+                runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+            }
+        }
+#endif
     }
 
     template <class ...Args>
@@ -276,6 +320,40 @@ protected:
     }
 
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+
+#if HAVE_CUDA
+    bool useGpuIntensiveQuantitiesDispatcher_{false};
+    using GpuDispatcherStorage = std::conditional_t<
+        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value,
+        std::unique_ptr<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>,
+        std::monostate>;
+    mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
+
+    void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
+    {
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (!gpuIntensiveQuantitiesDispatcher_) {
+                gpuIntensiveQuantitiesDispatcher_ =
+                    std::make_unique<
+                        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>();
+            }
+            using PV = GetPropType<TypeTag, Properties::PrimaryVariables>;
+            const auto& sol = this->solution(timeIdx);
+            const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+            std::vector<const PV*> priVarsPtrs(numCells);
+            std::vector<IntensiveQuantities*> outIqPtrs(numCells);
+            for (std::size_t i = 0; i < numCells; ++i) {
+                priVarsPtrs[i] = &sol[i];
+                outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
+            }
+            gpuIntensiveQuantitiesDispatcher_->update(
+                this->simulator_.problem(),
+                priVarsPtrs.data(),
+                outIqPtrs.data(),
+                numCells);
+        }
+    }
+#endif
 };
 
 } // namespace Opm

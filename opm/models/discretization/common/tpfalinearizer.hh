@@ -887,6 +887,7 @@ private:
         // Instead, that must be called before starting the linearization.
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
+        const bool onFullDomain = (numCells == model_().numTotalDof());
 
         if constexpr (!run_assembly_on_gpu) {
             linearize_parallelization_wrapper<run_assembly_on_gpu, LocalResidual>(
