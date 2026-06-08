@@ -167,9 +167,11 @@ namespace Opm
     {
         os << "Sub steps started at time = "
            << unit::convert::to(reportStepStartTime(), unit::day) << " (days)" << std::endl;
+        assert(report_step_substep_offset_ >= 0);
+        const auto offset = static_cast<std::size_t>(report_step_substep_offset_);
         for (std::size_t i = 0; i < steps_.size(); ++i)
         {
-            os << " step[ " << (report_step_substep_offset_ + i) << " ] = "
+            os << " step[ " << (offset + i) << " ] = "
                << unit::convert::to(steps_[i], unit::day) << " (days)" << std::endl;
         }
         os << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
