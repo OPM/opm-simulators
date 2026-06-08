@@ -511,10 +511,17 @@ handleSlaveTerminated_()
         OpmLog::info("Reservoir coupling: master simulation has ended; "
                      "stopping slave simulation gracefully.");
     }
-    // The terminate step ran zero substeps, so the simulator state is unchanged from the
-    // previous (fully-coupled) report step and there is no new state to write; finalize()
-    // will flush all output. Balance the beginReportStep() issued earlier in runStep().
+    // The slave stops as soon as it is terminated, so no further substeps run for this report
+    // step. Per-substep SUMMARY output for any substeps already completed in this report step
+    // was written by the adaptive substep loop; the report-step-level restart write is
+    // intentionally skipped because a terminated report step is partial - the last completed
+    // report step is the clean restart point. finalize() flushes the remaining output.
+    // Balance the beginReportStep() issued earlier in runStep().
     this->solver_->model().endReportStep();
+    // Account for this report step's solver time and leave the timer stopped: runStep()'s own
+    // solverTimer_->stop()/accumulation below is bypassed by the early return on termination.
+    this->solverTimer_->stop();
+    this->report_.success.solver_time += this->solverTimer_->secsSinceStart();
 }
 #endif
 
