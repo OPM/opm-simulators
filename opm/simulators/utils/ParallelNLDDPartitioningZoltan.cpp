@@ -36,14 +36,12 @@
 #define HAVE_MPI
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
-#include <functional>
 #include <numeric>
 #include <stdexcept>
 #include <utility>
 #include <vector>
-#include <set>
-#include <map>
 
 namespace {
 
@@ -302,7 +300,7 @@ extern "C" {
 
         for (auto cell = 0*numCells; cell < numCells; ++cell) {
             const auto localCell = localID[cell];
-            numEdges[cell] = ia[localCell + 1] - ia[localCell + 0];
+            numEdges[cell] = static_cast<int>(ia[localCell + 1] - ia[localCell + 0]);
         }
 
         *ierr = ZOLTAN_OK;
@@ -448,6 +446,11 @@ extern "C" {
         explicit Partitioner(const Opm::Parallel::Communication                         comm,
                              const Opm::ParallelNLDDPartitioningZoltan::ZoltanParamMap& params);
 
+        Partitioner(const Partitioner&) = delete;
+        Partitioner(Partitioner&&) = delete;
+        Partitioner& operator=(const Partitioner&) = delete;
+        Partitioner& operator=(Partitioner&&) = delete;
+
         /// Destructor.
         ///
         /// Destroys Zoltan context.
@@ -482,6 +485,12 @@ extern "C" {
             /// Block/domain to which each cell/vertex/object is assigned.
             int* block{nullptr};
 
+            ZoltanPart() = default;
+            ZoltanPart(const ZoltanPart&) = delete;
+            ZoltanPart(ZoltanPart&&) = delete;
+            ZoltanPart& operator=(const ZoltanPart&) = delete;
+            ZoltanPart& operator=(ZoltanPart&&) = delete;
+
             /// Destructor.
             ///
             /// Releases partition ("part") memory acquired by Zoltan.
@@ -504,10 +513,10 @@ extern "C" {
                              const Opm::ParallelNLDDPartitioningZoltan::ZoltanParamMap& params)
     {
         const auto argc   = 0;
-        char*      argv[] = { nullptr };
+        std::array<char*,1> argv = { nullptr };
         auto       ver    = 0.0f;
 
-        const auto rc = Zoltan_Initialize(argc, argv, &ver);
+        const auto rc = Zoltan_Initialize(argc, argv.data(), &ver);
         if (rc != ZOLTAN_OK) {
             OPM_THROW(std::runtime_error, "Unable to Initialise Zoltan");
         }
