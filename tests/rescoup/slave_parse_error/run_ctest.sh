@@ -37,11 +37,15 @@
 #   causing the connection to be rejected ("dropped inbound connection"
 #   or "UNREACHABLE").
 #
-#   This bug is NOT present in OpenMPI 4.1.6. It has been observed with
-#   the Ubuntu 25.10 system package (5.0.8-8ubuntu1) but could not be
-#   reproduced with custom source builds of the same version, suggesting
-#   additional runtime factors (e.g., --with-verbs, --with-libfabric)
-#   affect connection routing.
+#   This bug is NOT present in OpenMPI 4.1.6. It was observed only with the
+#   Ubuntu 25.10 system package (5.0.8-8ubuntu1); custom source builds of the
+#   same version did not reproduce it, suggesting it depends on the specific
+#   OpenMPI build and runtime transport providers (e.g., --with-verbs,
+#   --with-libfabric). It could NOT be reproduced on the Ubuntu 26.04 system
+#   package (5.0.10-1): even with IPv6 registered first for the dual-stack
+#   interface (btl_tcp_disable_family unset), the spawned slave connects back
+#   successfully. The master-hang behavior this test detects is independent of
+#   this TCP bug — it stems from the slave exiting before the initial handshake.
 #
 #   Root cause: opal/mca/btl/tcp/btl_tcp_component.c mca_btl_tcp_create()
 #   iterates opal_if_list and takes the FIRST address for each interface,
