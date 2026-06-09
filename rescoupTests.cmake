@@ -29,6 +29,15 @@ else()
   endif()
 endif()
 
+# Select the simulator binary. When USE_DEV_SIMULATOR_IN_TESTS is set, use the
+# faster-to-build development simulator (flow_blackoil) instead of the full flow
+# target. This matches the pattern used by the other test cmake files.
+if(USE_DEV_SIMULATOR_IN_TESTS)
+  set(_rescoup_simulator flow_blackoil)
+else()
+  set(_rescoup_simulator flow)
+endif()
+
 # Slave parse error test.
 add_custom_target(test_rc_slave_parsing_err
   COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -38,12 +47,12 @@ add_custom_target(test_rc_slave_parsing_err
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
     ${CMAKE_CURRENT_BINARY_DIR}/tests/include
   COMMENT "Copying slave_parse_error test data to build tree"
-  DEPENDS flow
+  DEPENDS ${_rescoup_simulator}
 )
 add_test(NAME rc_slave_parsing_err
   COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error/run_ctest.sh
-    $<TARGET_FILE:flow>
+    $<TARGET_FILE:${_rescoup_simulator}>
     ${_rescoup_mpiexec}
   WORKING_DIRECTORY
     ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error
