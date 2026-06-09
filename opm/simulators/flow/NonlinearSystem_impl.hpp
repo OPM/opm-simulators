@@ -114,15 +114,15 @@ addReservoirConvergenceMetrics(ConvergenceReport& report,
 
         if (std::isnan(residual)) {
             report.setReservoirFailed({type, CR::Severity::NotANumber, componentIdx});
-            std::forward<LogFailure>(logFailure)("NaN residual for " + std::string(componentName) + " equation.");
+            logFailure("NaN residual for " + std::string(componentName) + " equation.");
         }
         else if (residual > maxResidualAllowed) {
             report.setReservoirFailed({type, CR::Severity::TooLarge, componentIdx});
-            std::forward<LogFailure>(logFailure)("Too large residual for " + std::string(componentName) + " equation.");
+            logFailure("Too large residual for " + std::string(componentName) + " equation.");
         }
         else if (residual < 0.0) {
             report.setReservoirFailed({type, CR::Severity::Normal, componentIdx});
-            std::forward<LogFailure>(logFailure)("Negative residual for " + std::string(componentName) + " equation.");
+            logFailure("Negative residual for " + std::string(componentName) + " equation.");
         }
         else if (residual > tolerance) {
             report.setReservoirFailed({type, CR::Severity::Normal, componentIdx});
