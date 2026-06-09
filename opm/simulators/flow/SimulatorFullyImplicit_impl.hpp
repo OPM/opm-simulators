@@ -436,6 +436,18 @@ runStep(SimulatorTimer& timer)
             events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
         auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, tuningUpdater);
         report_ += stepReport;
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // If the master ended its schedule first (e.g. an END keyword truncates the master
+        // SCHEDULE), the slave received the terminate signal and disconnected its
+        // intercommunicator inside step() above. The coupled run is over for this slave:
+        // finish the current report step cleanly and stop the run loop instead of advancing
+        // to another report step, which would issue an MPI_Recv on the now-disconnected
+        // communicator and abort the job.
+        if (this->reservoirCouplingSlave_ && this->reservoirCouplingSlave_->terminated()) {
+            this->handleSlaveTerminated_();
+            return false;   // breaks the while(!timer.done()) loop in run()
+        }
+#endif
     } else {
         // solve for complete report step
         auto stepReport = solver_->step(timer, nullptr);
@@ -488,6 +500,30 @@ runStep(SimulatorTimer& timer)
 
     return true;
 }
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template<class TypeTag>
+void
+SimulatorFullyImplicit<TypeTag>::
+handleSlaveTerminated_()
+{
+    if (terminalOutput_) {
+        OpmLog::info("Reservoir coupling: master simulation has ended; "
+                     "stopping slave simulation gracefully.");
+    }
+    // The slave stops as soon as it is terminated, so no further substeps run for this report
+    // step. Per-substep SUMMARY output for any substeps already completed in this report step
+    // was written by the adaptive substep loop; the report-step-level restart write is
+    // intentionally skipped because a terminated report step is partial - the last completed
+    // report step is the clean restart point. finalize() flushes the remaining output.
+    // Balance the beginReportStep() issued earlier in runStep().
+    this->solver_->model().endReportStep();
+    // Account for this report step's solver time and leave the timer stopped: runStep()'s own
+    // solverTimer_->stop()/accumulation below is bypassed by the early return on termination.
+    this->solverTimer_->stop();
+    this->report_.success.solver_time += this->solverTimer_->secsSinceStart();
+}
+#endif
 
 template<class TypeTag>
 SimulatorReport
