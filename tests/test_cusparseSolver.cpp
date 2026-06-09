@@ -36,10 +36,12 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <utility>
+
 class DeviceInitException : public std::logic_error
 {
 public:
-    DeviceInitException(std::string msg) : logic_error(msg){};
+    explicit DeviceInitException(std::string msg) : logic_error(std::move(msg)) {}
 };
 
 template <int bz>
