@@ -36,10 +36,18 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
 
-class MPIError {
+#include <exception>
+#include <string>
+#include <utility>
+
+class MPIError : public std::exception {
 public:
     /** @brief Constructor. */
     MPIError(std::string s, int e) : errorstring(s), errorcode(e){}
+
+    const char* what() const noexcept override
+    { return errorstring.c_str(); }
+
     /** @brief The error string. */
     std::string errorstring;
     /** @brief The mpi error code. */
