@@ -349,7 +349,7 @@ void testQuadrature()
 }
 
 int main(int argc, char **argv)
-{
+try {
     // initialize MPI, finalize is done automatically on exit
     Dune::MPIHelper::instance(argc, argv);
 
@@ -365,4 +365,12 @@ int main(int argc, char **argv)
     testQuadrature();
 
     return 0;
+}
+catch (const std::exception& e) {
+    std::cerr << "Exception caught: " << e.what() << std::endl;
+    return 1;
+}
+catch (...) {
+    std::cerr << "Unknown exception caught" << std::endl;
+    return 2;
 }
