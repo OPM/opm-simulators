@@ -48,6 +48,7 @@
 
 #include <array>
 #include <cassert>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -89,12 +90,13 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
-    enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
+    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
 
     static constexpr bool waterEnabled = Indices::waterEnabled;
     static constexpr bool gasEnabled = Indices::gasEnabled;
     static constexpr bool oilEnabled = Indices::oilEnabled;
-    static constexpr bool compositionSwitchEnabled = compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
     static constexpr bool blackoilConserveSurfaceVolume
         = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();

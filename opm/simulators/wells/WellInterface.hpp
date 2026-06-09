@@ -62,6 +62,7 @@ namespace Opm {
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <limits>
 #include <vector>
 
 namespace Opm
@@ -131,7 +132,7 @@ public:
                                           FluidSystem,
                                           energyModuleType != EnergyModules::NoTemperature,
                                           energyModuleType == EnergyModules::FullyImplicitThermal,
-                                          Indices::compositionSwitchIdx >= 0,
+                                          Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
                                           has_watVapor,
                                           has_brine,
                                           has_saltPrecip,

@@ -377,7 +377,7 @@ class BlackOilFoamIntensiveQuantities<TypeTag, /*enableFoam=*/true>
 
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
-    static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;
+    static constexpr unsigned foamConcentrationIdx = Indices::foamConcentrationIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr unsigned oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;

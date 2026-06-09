@@ -138,7 +138,8 @@ private:
     using typename FlowProblemType::MaterialLaw;
     using typename FlowProblemType::DimMatrix;
 
-    enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
+    static constexpr bool enableDissolvedGas =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
@@ -996,11 +997,11 @@ public:
 
         if constexpr (enableBioeffects) {
             values[Indices::microbialConcentrationIdx] = this->bioeffects_.microbialConcentration[globalDofIdx];
-            values[Indices::biofilmVolumeFractionIdx]= this->bioeffects_.biofilmVolumeFraction[globalDofIdx];
+            values[Indices::biofilmVolumeFractionIdx] = this->bioeffects_.biofilmVolumeFraction[globalDofIdx];
             if constexpr (enableMICP) {
-                values[Indices::oxygenConcentrationIdx]= this->bioeffects_.oxygenConcentration[globalDofIdx];
-                values[Indices::ureaConcentrationIdx]= this->bioeffects_.ureaConcentration[globalDofIdx];
-                values[Indices::calciteVolumeFractionIdx]= this->bioeffects_.calciteVolumeFraction[globalDofIdx];
+                values[Indices::oxygenConcentrationIdx] = this->bioeffects_.oxygenConcentration[globalDofIdx];
+                values[Indices::ureaConcentrationIdx] = this->bioeffects_.ureaConcentration[globalDofIdx];
+                values[Indices::calciteVolumeFractionIdx] = this->bioeffects_.calciteVolumeFraction[globalDofIdx];
             }
         }
 

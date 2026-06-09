@@ -28,6 +28,8 @@
 #ifndef OPM_BLACK_OIL_VARIABLE_AND_EQUATION_INDICES_HH
 #define OPM_BLACK_OIL_VARIABLE_AND_EQUATION_INDICES_HH
 
+#include <limits>
+
 namespace Opm {
 
 /*!
@@ -106,7 +108,7 @@ struct BlackOilVariableAndEquationIndices
      * Depending on the phases present, this variable is either interpreted as
      * water saturation or vapporized water in gas phase
      */
-    static constexpr int waterSwitchIdx = PVOffset + 0;
+    static constexpr unsigned waterSwitchIdx = PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the pressure
@@ -114,7 +116,7 @@ struct BlackOilVariableAndEquationIndices
      * Depending on the phases present, this variable is either interpreted as the
      * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
      */
-    static constexpr int pressureSwitchIdx = PVOffset + 1;
+    static constexpr unsigned pressureSwitchIdx = PVOffset + 1;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the
@@ -124,42 +126,50 @@ struct BlackOilVariableAndEquationIndices
      * saturation of the gas phase, as the mole fraction of the gas component in the oil
      * phase or as the mole fraction of the oil component in the gas phase.
      */
-    static constexpr int compositionSwitchIdx = PVOffset + 2;
+    static constexpr unsigned compositionSwitchIdx = PVOffset + 2;
 
     //! Index of the primary variable for the first solvent
-    static constexpr int solventSaturationIdx =
-        enableSolvent ? PVOffset + numPhases : -1000;
+    static constexpr unsigned solventSaturationIdx =
+        enableSolvent ? PVOffset + numPhases
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first extbo component
-    static constexpr int zFractionIdx =
-        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned zFractionIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first polymer
-    static constexpr int polymerConcentrationIdx =
-        enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned polymerConcentrationIdx =
+        enablePolymer ? PVOffset + numPhases + numSolvents
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the second polymer primary variable (molecular weight)
-    static constexpr int polymerMoleWeightIdx =
-        numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
+    static constexpr unsigned polymerMoleWeightIdx =
+        numPolymers > 1 ? polymerConcentrationIdx + 1
+                        : std::numeric_limits<unsigned>::max();
 
     //! No bioeffects for three phase indices
-    static constexpr int microbialConcentrationIdx = -1000;
-    static constexpr int oxygenConcentrationIdx = -1000;
-    static constexpr int ureaConcentrationIdx = -1000;
-    static constexpr int biofilmVolumeFractionIdx = -1000;
-    static constexpr int calciteVolumeFractionIdx = -1000;
+    static constexpr unsigned microbialConcentrationIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned oxygenConcentrationIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned ureaConcentrationIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned biofilmVolumeFractionIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned calciteVolumeFractionIdx = std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the foam
-    static constexpr int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers : -1000;
+    static constexpr unsigned foamConcentrationIdx =
+        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the brine
-    static constexpr int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam : -1000;
+    static constexpr unsigned saltConcentrationIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for temperature
-    static constexpr int temperatureIdx  =
-        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : - 1000;
+    static constexpr unsigned temperatureIdx  =
+        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents +
+                                     numExtbos + numPolymers + numFoam + numBrine
+                                   : std::numeric_limits<unsigned>::max();
 
 
     ////////

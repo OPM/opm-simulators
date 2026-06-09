@@ -44,6 +44,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 
@@ -82,13 +83,14 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     // primary variable indices
-    enum { waterSwitchIdx = Indices::waterSwitchIdx };
-    enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
-    enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
-    enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
-    enum { solventSaturationIdx  = Indices::solventSaturationIdx };
+    static constexpr unsigned waterSwitchIdx = Indices::waterSwitchIdx;
+    static constexpr unsigned pressureSwitchIdx = Indices::pressureSwitchIdx;
+    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
+    static constexpr unsigned saltConcentrationIdx  = Indices::saltConcentrationIdx;
+    static constexpr unsigned solventSaturationIdx  = Indices::solventSaturationIdx;
 
-    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool waterEnabled = Indices::waterEnabled;
     static constexpr bool gasEnabled = Indices::gasEnabled;
     static constexpr bool oilEnabled = Indices::oilEnabled;

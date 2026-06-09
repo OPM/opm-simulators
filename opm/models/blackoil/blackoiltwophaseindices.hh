@@ -31,6 +31,7 @@
 #include <opm/common/utility/ConstexprAssert.hpp>
 
 #include <cassert>
+#include <limits>
 
 namespace Opm {
 
@@ -119,7 +120,9 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase gas-oil models this is disabled.
      */
-    static constexpr int waterSwitchIdx  = waterEnabled ? PVOffset + 0 : -10000;
+    static constexpr unsigned waterSwitchIdx  =
+        waterEnabled ? PVOffset + 0
+                     : std::numeric_limits<unsigned>::max();
 
     /*!
      * \brief Index of the switching variable which determines the pressure
@@ -127,7 +130,9 @@ struct BlackOilTwoPhaseIndices
      * Depending on the phases present, this variable is either interpreted as the
      * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
      */
-    static constexpr int pressureSwitchIdx  = waterEnabled ? PVOffset + 1 : PVOffset + 0;
+    static constexpr unsigned pressureSwitchIdx =
+        waterEnabled ? PVOffset + 1
+                     : PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the
@@ -135,48 +140,60 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase water oil and water gas models this is disabled.
      */
-    static constexpr int compositionSwitchIdx = (gasEnabled && oilEnabled) ? PVOffset + 1 : -10000;
+    static constexpr unsigned compositionSwitchIdx =
+        gasEnabled && oilEnabled ? PVOffset + 1
+                                 : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first solvent
-    static constexpr int solventSaturationIdx =
-        enableSolvent ? PVOffset + numPhases : -1000;
+    static constexpr unsigned solventSaturationIdx =
+        enableSolvent ? PVOffset + numPhases
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first extbo component
-    static constexpr int zFractionIdx =
-        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned zFractionIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first polymer
-    static constexpr int polymerConcentrationIdx =
-        enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned polymerConcentrationIdx =
+        enablePolymer ? PVOffset + numPhases + numSolvents
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the second polymer primary variable (molecular weight)
-    static constexpr int polymerMoleWeightIdx =
-        numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
+    static constexpr unsigned polymerMoleWeightIdx =
+        numPolymers > 1 ? polymerConcentrationIdx + 1
+                        : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first microbial component
-    static constexpr int microbialConcentrationIdx =
-        enableBiofilm ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned microbialConcentrationIdx =
+        enableBiofilm ? PVOffset + numPhases + numSolvents
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the biofilm component
-    static constexpr int biofilmVolumeFractionIdx =
-        enableBiofilm ? PVOffset + numPhases + numSolvents + 1 : -1000;
+    static constexpr unsigned biofilmVolumeFractionIdx =
+        enableBiofilm ? PVOffset + numPhases + numSolvents + 1
+                      : std::numeric_limits<unsigned>::max();
 
     //! MICP only available for one phase indices
-    static constexpr int oxygenConcentrationIdx = -1000;
-    static constexpr int ureaConcentrationIdx = -1000;
-    static constexpr int calciteVolumeFractionIdx = -1000;
+    static constexpr unsigned oxygenConcentrationIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned ureaConcentrationIdx = std::numeric_limits<unsigned>::max();
+    static constexpr unsigned calciteVolumeFractionIdx = std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the foam
-    static constexpr int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numBioComp : -1000;
+    static constexpr unsigned foamConcentrationIdx =
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numBioComp
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the salt
-    static constexpr int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numBioComp + numFoam : -1000;
+    static constexpr unsigned saltConcentrationIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numBioComp + numFoam
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for temperature
-    static constexpr int temperatureIdx  =
-        (enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine : - 1000;
+    static constexpr unsigned temperatureIdx  =
+        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos +
+                                     numPolymers + numBioComp + numFoam + numBrine
+                                   : std::numeric_limits<unsigned>::max();
 
     //////////////////////
     // Equation indices

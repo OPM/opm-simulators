@@ -367,7 +367,7 @@ class BlackOilBrineIntensiveQuantities<TypeTag, /*enableBrineV=*/true>
     using BrineModule = BlackOilBrineModule<TypeTag, true>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
+    static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;

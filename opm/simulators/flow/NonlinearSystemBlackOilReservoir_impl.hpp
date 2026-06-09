@@ -410,7 +410,7 @@ relativeChange() const
             FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             priVarsNew.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            assert(Indices::compositionSwitchIdx >= 0);
+            assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
             saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
             oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
         }
@@ -441,7 +441,7 @@ relativeChange() const
 
             if (priVarsOld.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
             {
-                assert(Indices::compositionSwitchIdx >= 0 );
+                assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
                 saturationsOld[FluidSystem::gasPhaseIdx] =
                     priVarsOld[Indices::compositionSwitchIdx];
                 oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
@@ -608,8 +608,10 @@ typename NonlinearSystemBlackOilReservoir<TypeTag>::MaxSolutionUpdateData
 NonlinearSystemBlackOilReservoir<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
-    static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
-    static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
+    static constexpr bool enableSolvent =
+        Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
+    static constexpr bool enableBrine =
+        Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
 
     // Init output
     Scalar dPMax = 0.0;
@@ -620,11 +622,11 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     // Loop over solution update, get the correct variables and calculate max.
     for (const auto& ix : ixCells) {
         const auto& value = solUpd_[ix];
-        for (int pvIdx = 0; pvIdx < static_cast<int>(value.size()); ++pvIdx) {
+        for (unsigned pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
             if (pvIdx == Indices::pressureSwitchIdx) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
-            else if ( (pvIdx == Indices::waterSwitchIdx
+            else if ((pvIdx == Indices::waterSwitchIdx
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
                       || (pvIdx == Indices::compositionSwitchIdx
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)

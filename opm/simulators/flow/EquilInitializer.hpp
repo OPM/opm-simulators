@@ -39,6 +39,7 @@
 
 #include <opm/simulators/flow/equil/InitStateEquil.hpp>
 
+#include <limits>
 #include <vector>
 
 namespace Opm {
@@ -74,12 +75,14 @@ class EquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
+    static constexpr bool enableDissolution =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
-    enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
+    static constexpr bool enableDissolvedGas =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
 

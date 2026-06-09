@@ -31,6 +31,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <cassert>
+#include <limits>
 
 namespace Opm {
 
@@ -60,7 +61,7 @@ ComponentName<FluidSystem,Indices>::ComponentName()
         names_[Indices::polymerConcentrationIdx] = "Polymer";
     }
 
-    if constexpr (Indices::polymerMoleWeightIdx >= 0) {
+    if constexpr (Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max()) {
         assert(Indices::enablePolymer);
         names_[Indices::polymerMoleWeightIdx] = "MolecularWeightP";
     }

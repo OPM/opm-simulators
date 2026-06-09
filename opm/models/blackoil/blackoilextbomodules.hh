@@ -379,7 +379,7 @@ class BlackOilExtboIntensiveQuantities<TypeTag, /*enableExtboV=*/true>
 
     using ExtboModule = BlackOilExtboModule<TypeTag, true>;
 
-    static constexpr int zFractionIdx = Indices::zFractionIdx;
+    static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
 

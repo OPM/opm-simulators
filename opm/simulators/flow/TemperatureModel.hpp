@@ -42,10 +42,13 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <string>
+#include <memory>
+#include <limits>
+#include <set>
 #include <vector>
 
 namespace Opm::Properties {
@@ -78,7 +81,8 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
     public:
     using EvaluationTemp = DenseAd::Evaluation<Scalar, 1>;
@@ -225,7 +229,7 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    static constexpr int temperatureIdx = 0;
+    static constexpr unsigned temperatureIdx = 0;
 
 public:
     explicit TemperatureModel(Simulator& simulator)

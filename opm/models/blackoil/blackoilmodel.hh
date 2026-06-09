@@ -56,6 +56,7 @@
 
 #include <cassert>
 #include <istream>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -350,7 +351,8 @@ private:
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
@@ -421,7 +423,7 @@ public:
     /*!
      * \copydoc FvBaseDiscretization::primaryVarName
      */
-    std::string primaryVarName(int pvIdx) const
+    std::string primaryVarName(unsigned pvIdx) const
     {
         if (pvIdx == Indices::waterSwitchIdx) {
             return "water_switching";
@@ -429,7 +431,7 @@ public:
         else if (pvIdx == Indices::pressureSwitchIdx) {
             return "pressure_switching";
         }
-        else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx) {
+        else if (pvIdx == Indices::compositionSwitchIdx) {
             return "composition_switching";
         }
 
@@ -510,7 +512,7 @@ public:
         }
 
         // saturations are always in the range [0, 1]!
-        if (int(Indices::waterSwitchIdx) == int(pvIdx)) {
+        if (Indices::waterSwitchIdx == pvIdx) {
             return 1.0;
         }
 
@@ -549,7 +551,7 @@ public:
         }
 
         // if the primary variable is either the gas saturation, Rs or Rv
-        assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
+        assert(Indices::compositionSwitchIdx == pvIdx);
 
         switch (this->solution(0)[globalDofIdx].primaryVarsMeaningGas()) {
         case PrimaryVariables::GasMeaning::Sg: return 1.0; // gas saturation

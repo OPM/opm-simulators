@@ -42,6 +42,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 namespace Opm::Properties {
@@ -207,13 +208,20 @@ protected:
                                  const EqVector& update,
                                  const EqVector& currentResidual)
     {
-        static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
-        static constexpr bool enableExtbo = Indices::zFractionIdx >= 0;
-        static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
-        static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
-        static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
-        static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
-        static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
+        static constexpr bool enableSolvent =
+            Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enableExtbo =
+            Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enablePolymer =
+            Indices::polymerConcentrationIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enablePolymerWeight =
+            Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enableFullyImplicitThermal =
+            Indices::temperatureIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enableFoam =
+            Indices::foamConcentrationIdx != std::numeric_limits<unsigned>::max();
+        static constexpr bool enableBrine =
+            Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enableMICP = Indices::enableMICP;
 
         currentValue.checkDefined();
@@ -228,17 +236,23 @@ protected:
 
         if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
-            deltaSw = update[Indices::waterSwitchIdx];
-            deltaSo -= deltaSw;
+            if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSw = update[Indices::waterSwitchIdx];
+                deltaSo -= deltaSw;
+            }
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            deltaSg = update[Indices::compositionSwitchIdx];
-            deltaSo -= deltaSg;
+            if constexpr (Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSg = update[Indices::compositionSwitchIdx];
+                deltaSo -= deltaSg;
+            }
         }
         if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            deltaSs = update[Indices::solventSaturationIdx];
-            deltaSo -= deltaSs;
+            if constexpr (Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max()) {
+                deltaSs = update[Indices::solventSaturationIdx];
+                deltaSo -= deltaSs;
+            }
         }
 
         // maximum saturation delta
@@ -253,7 +267,7 @@ protected:
             satAlpha = bparams_.dsMax_ / maxSatDelta;
         }
 
-        for (int pvIdx = 0; pvIdx < int(numEq); ++pvIdx) {
+        for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
             // calculate the update of the current primary variable. For the black-oil
             // model we limit the pressure delta relative to the pressure's current
             // absolute value (Default: 30%) and saturation deltas to an absolute change

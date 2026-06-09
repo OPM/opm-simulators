@@ -29,6 +29,7 @@
 #define EWOMS_BLACK_OIL_ONE_PHASE_INDICES_HH
 
 #include <cassert>
+#include <limits>
 
 #include <opm/common/utility/ConstexprAssert.hpp>
 
@@ -119,7 +120,7 @@ struct BlackOilOnePhaseIndices
      *
      * \note For one-phase models this is disabled.
      */
-    static constexpr int waterSwitchIdx  = -10000;
+    static constexpr unsigned waterSwitchIdx = std::numeric_limits<unsigned>::max();
 
     /*!
      * \brief Index of the switching variable which determines the pressure
@@ -127,7 +128,7 @@ struct BlackOilOnePhaseIndices
      * Depending on the phases present, this variable is either interpreted as the
      * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
      */
-     static constexpr int pressureSwitchIdx  = PVOffset + 0;
+    static constexpr unsigned pressureSwitchIdx = PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the
@@ -135,55 +136,68 @@ struct BlackOilOnePhaseIndices
      *
      * \note For one-phase models this is disabled.
      */
-    static constexpr int compositionSwitchIdx = -10000;
+    static constexpr unsigned compositionSwitchIdx = std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first solvent
-    static constexpr int solventSaturationIdx =
-        enableSolvent ? PVOffset + numPhases : -1000;
+    static constexpr unsigned solventSaturationIdx =
+        enableSolvent ? PVOffset + numPhases
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first extbo component
-    static constexpr int zFractionIdx =
-        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned zFractionIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first polymer
-    static constexpr int polymerConcentrationIdx =
-        enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned polymerConcentrationIdx =
+        enablePolymer ? PVOffset + numPhases + numSolvents
+                      : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the second polymer primary variable (molecular weight)
-    static constexpr int polymerMoleWeightIdx =
-        numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
+    static constexpr unsigned polymerMoleWeightIdx =
+        numPolymers > 1 ? polymerConcentrationIdx + 1
+                        : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the first MICP component
-    static constexpr int microbialConcentrationIdx =
-        enableMICP ? PVOffset + numPhases + numSolvents : -1000;
+    static constexpr unsigned microbialConcentrationIdx =
+        enableMICP ? PVOffset + numPhases + numSolvents
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the second MICP component
-    static constexpr int oxygenConcentrationIdx =
-        numMICPs > 1 ? microbialConcentrationIdx + 1 : -1000;
+    static constexpr unsigned oxygenConcentrationIdx =
+        numMICPs > 1 ? microbialConcentrationIdx + 1
+                     : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the third MICP component
-    static constexpr int ureaConcentrationIdx =
-        numMICPs > 2 ? oxygenConcentrationIdx + 1 : -1000;
+    static constexpr unsigned ureaConcentrationIdx =
+        numMICPs > 2 ? oxygenConcentrationIdx + 1
+                     : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the fourth MICP component
-    static constexpr int biofilmVolumeFractionIdx =
-        numMICPs > 3 ? ureaConcentrationIdx + 1 : -1000;
+    static constexpr unsigned biofilmVolumeFractionIdx =
+        numMICPs > 3 ? ureaConcentrationIdx + 1
+                     : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the fifth MICP component
-    static constexpr int calciteVolumeFractionIdx =
-        numMICPs > 4 ? biofilmVolumeFractionIdx + 1 : -1000;
+    static constexpr unsigned calciteVolumeFractionIdx =
+        numMICPs > 4 ? biofilmVolumeFractionIdx + 1
+                     : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the foam
-    static constexpr int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
+    static constexpr unsigned foamConcentrationIdx =
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs
+                   : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for the salt
-    static constexpr int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam : -1000;
+    static constexpr unsigned saltConcentrationIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam
+                    : std::numeric_limits<unsigned>::max();
 
     //! Index of the primary variable for temperature
-    static constexpr int temperatureIdx  =
-        (enableFullyImplicitThermal) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine : - 1000;
+    static constexpr unsigned temperatureIdx  =
+        enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos +
+                                     numPolymers + numMICPs + numFoam + numBrine
+                                   : std::numeric_limits<unsigned>::max();
 
     //////////////////////
     // Equation indices
