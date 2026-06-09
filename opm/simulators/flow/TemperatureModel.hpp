@@ -42,10 +42,13 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <memory>
 #include <limits>
+#include <set>
 #include <vector>
 
 namespace Opm::Properties {
