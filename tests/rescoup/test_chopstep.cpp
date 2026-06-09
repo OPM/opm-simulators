@@ -181,8 +181,8 @@ struct SimulatorFixture
         rc_master_.resizeSlaveActivationDates(2);
         rc_master_.resizeNextReportDates(2);
         rc_master_.resizeSlaveStartDates(2);
-        rc_master_.setSlaveStartDate(0, start_date_);
-        rc_master_.setSlaveStartDate(1, start_date_);
+        rc_master_.setSlaveStartDate(0, schedule_.getStartTime());
+        rc_master_.setSlaveStartDate(1, schedule_.getStartTime());
     }
 
     void checkEq(double a, double b) const { BOOST_CHECK_CLOSE(a, b, 1e-16); }
