@@ -87,6 +87,11 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 
     void matvec_mul(double *y,    float const *A, double const * x);
     void matvec_mulsub(double *y, float const *A, double const * x);
+    void mat_copy(double *C, double const * A);
+    void mat_inv(double *invA, const double *A);
+    void mat_mulsub(double *C, double const *A, double const * B);
+    void mat_rmul(double *C, double const *A);
+    void mat_lmul(double const *A, double *C);
 };
 
 template <class M, class X, class Y>
@@ -94,26 +99,96 @@ void MixedPreconditioner<M,X,Y>::
 update ()
 {
     // transpose each dense block to make them column-major
-    int const b = block_size;
-    int const bb=b*b;
-    double B[bb];
+    int const N = block_size;
+    int const NN=N*N;
+    double B[NN];
     for(int k=0;k<nnz_;k++)
     {
-        for(int i=0;i<b;i++) for(int j=0;j<b;j++) B[b*j+i] = double_data_[bb*k + b*i + j];
-        for(int i=0;i<bb;i++) mixed_matrix_->dbl[bb*k + i] = B[i];
+        for(int i=0;i<N;i++) for(int j=0;j<N;j++) B[N*j+i] = double_data_[NN*k + N*i + j];
+        for(int i=0;i<NN;i++) mixed_matrix_->dbl[NN*k + i] = B[i];
     }
 
-    //use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_); // choose dilu or ilu0
-
-    if      constexpr(b==1){printf("MixedPreconditioner::update does not support block size == 1!\n");getchar();}
-    else if constexpr(b==2) use_dilu_ ? prec_dilu_factorize2(prec_, mixed_matrix_) : prec_ilu0_factorize2(prec_, mixed_matrix_);
-    else if constexpr(b==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
-    else if constexpr(b==4) use_dilu_ ? prec_dilu_factorize4(prec_, mixed_matrix_) : prec_ilu0_factorize4(prec_, mixed_matrix_);
+    if      constexpr(N==1){printf("MixedPreconditioner::update does not support block size == 1!\n");getchar();}
+    else if constexpr(N==2) use_dilu_ ? prec_dilu_factorize2(prec_, mixed_matrix_) : prec_ilu0_factorize2(prec_, mixed_matrix_);
+    else if constexpr(N==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
+    else if constexpr(N==4) use_dilu_ ? prec_dilu_factorize4(prec_, mixed_matrix_) : prec_ilu0_factorize4(prec_, mixed_matrix_);
     else
     {
-        prec_test();
-        printf("MixedPreconditioner::update only supports block sizes < 5!\n");
-        getchar();
+        bsr_matrix const *A = mixed_matrix_;
+        bsr_matrix *L=prec_->L;
+        bsr_matrix *D=prec_->D;
+        bsr_matrix *U=prec_->U;
+
+        int const nrows = A->nrows;
+
+        // Splitting values of A into L, D, and U, respectively
+        int kU=0;
+        for(int i=0;i<nrows;i++)
+        {
+            for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+            {
+                int j=A->colidx[k];
+                if(j<i)       // struct-transpose of L
+                {
+                    int kL = L->rowptr[j];
+                    mat_copy(L->dbl + NN*kL, A->dbl + NN*k);
+                    L->rowptr[j]++;
+                }
+                else if(j==i) // struct-copy of D
+                {
+                    mat_copy(D->dbl + NN*i, A->dbl + NN*k);
+                }
+                else if(j>i) // struct-copy of U
+                {
+                    mat_copy(U->dbl + NN*kU, A->dbl + NN*k);
+                    kU++;
+                }
+            }
+        }
+        // reset rowptr of L
+        for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+        L->rowptr[0]=0;
+
+        // Factorizing
+        int idx=0;
+        int next = prec_->offsets[idx][0];
+        double scale[NN];
+        for(int i=0;i<A->nrows;i++)
+        {
+            mat_inv(scale,D->dbl+i*NN);
+            mat_copy(D->dbl+NN*i, scale); //store inverse instead to simplify application
+            for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+            {
+                //scale column i of L
+                mat_rmul(L->dbl+k*NN,scale);
+
+                //update diagonal D
+                int j=L->colidx[k];
+                mat_mulsub(D->dbl+j*NN,L->dbl+k*NN,U->dbl+k*NN);
+            }
+
+            if (!use_dilu_)
+            while(next<U->rowptr[i+1])
+            {
+                int ij = prec_->offsets[idx][0];
+                int ik = prec_->offsets[idx][1];
+                int jk = prec_->offsets[idx][2];
+
+                //update off-diagonals L and U
+                mat_mulsub(U->dbl+jk*NN,L->dbl+ij*NN,U->dbl+ik*NN);
+                mat_mulsub(L->dbl+jk*NN,L->dbl+ik*NN,U->dbl+ij*NN);
+
+                //update marker
+                next=prec_->offsets[++idx][0];
+            }
+
+            for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+            {
+                //scale row i of U
+                mat_lmul(scale,U->dbl+k*NN);
+            }
+        }
+        //prec_test();
     }
 
     prec_downcast(prec_);
@@ -170,13 +245,6 @@ apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
         }
 
     }
-/*
-    else
-    {
-        printf("MixedPreconditioner::apply only supports block sizes < 5!\n");
-        getchar();
-    }
-*/
 }
 
 template <class M, class X, class Y>
@@ -208,6 +276,96 @@ matvec_mulsub(double *y, float const *A, double const * x)
     }
     for(int i=0;i<N;i++) y[i] -= z[i];
 }
+
+template <class M, class X, class Y>
+void MixedPreconditioner<M,X,Y>::
+mat_copy(double *C, double const * A)
+{
+    int const N = block_size;
+    int const NN =N*N;
+    for(int i=0;i<NN;i++) C[i] = A[i];
+}
+
+template <class M, class X, class Y>
+void MixedPreconditioner<M,X,Y>::
+mat_inv(double *invA, const double *A)
+{
+    int const N = block_size;
+    int const NN =N*N;
+    double T[NN];
+    mat_copy(T,A);
+
+    for(int k=0;k<N;k++)
+    {
+        double scale=-1.0/T[(N+1)*k];
+        for(int i=0;i<N;i++) T[i+N*k] *= i==k?0:scale; // scale column k
+        for(int j=0;j<N;j++)
+        {
+            if (j==k) continue;
+            for(int i=0;i<N;i++) T[i+N*j] += i==k?0:T[i+N*k]*T[k+N*j]; //sweep
+        }
+        scale=-scale;
+        for(int j=0;j<N;j++) T[k+N*j] *= scale; // scale row k
+        T[(N+1)*k] = scale;
+    }
+    mat_copy(invA,T);
+}
+
+template <class M, class X, class Y>
+void MixedPreconditioner<M,X,Y>::
+mat_mulsub(double *C, double const *A, double const * B)
+{
+    int const N = block_size;
+    double z[N];
+    for(int j=0;j<N;j++)
+    {
+        for(int k=0;k<N;k++) z[k] = 0.0;
+        for(int k=0;k<N;k++)
+        {
+            double xk = B[k+N*j];
+            for(int i=0;i<N;i++) z[i] += A[i+N*k]*xk;
+        }
+        for(int i=0;i<N;i++) C[i+N*j] -= z[i];
+    }
+}
+
+template <class M, class X, class Y>
+void MixedPreconditioner<M,X,Y>::
+mat_rmul(double *C, double const *A)
+{
+    int const N = block_size;
+    int const NN =N*N;
+    double T[NN];
+    for(int j=0;j<N;j++)
+    {
+        for(int k=0;k<N;k++) T[k+N*j] = 0.0;
+        for(int k=0;k<N;k++)
+        {
+            double xk = A[k+N*j];
+            for(int i=0;i<N;i++) T[i+N*j] += C[i+N*k]*xk;
+        }
+    }
+    mat_copy(C,T);
+}
+
+template <class M, class X, class Y>
+void MixedPreconditioner<M,X,Y>::
+mat_lmul(double const *A, double *C)
+{
+    int const N = block_size;
+    double z[N];
+    for(int j=0;j<N;j++)
+    {
+        for(int k=0;k<N;k++) z[k] = 0.0;
+        for(int k=0;k<N;k++)
+        {
+            double xk = C[k+N*j];
+            for(int i=0;i<N;i++) z[i] += A[i+N*k]*xk;
+        }
+        for(int i=0;i<N;i++) C[i+N*j] = z[i];
+    }
+}
+
 
 }
 #endif // OPM_MIXED_PREC_HEADER_INCLUDED
