@@ -184,7 +184,8 @@ public:
                                                                             linsolver);
     }
 
-    void prepare(const Matrix& M, Vector& b)
+    using ISTLSolver<TypeTag>::prepare;
+    void prepare(const Matrix& M, Vector& b) override
     {
         OPM_TIMEBLOCK(prepare);
         [[maybe_unused]] const bool firstcall = (this->matrix_ == nullptr);
