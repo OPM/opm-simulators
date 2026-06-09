@@ -140,7 +140,7 @@ public:
         // Make sure the last element is nullptr, this is required by MPI_Init()
         this->argv_.push_back(nullptr);
         char **argv = this->argv_.data();
-        int argc = this->argv_.size() - 1;
+        int argc = static_cast<int>(this->argv_.size()) - 1;
         this->main_ = std::make_unique<MainTestWrapper>(argc, argv);
     }
 
