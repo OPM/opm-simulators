@@ -52,19 +52,21 @@ public:
     { return Dune::GeometryType(/*topologyId=*/(1 << dim) - 1, dim); }
 
     template <class CornerContainer>
-    void setCorners(const CornerContainer& corners, unsigned nCorners)
+    void setCorners(const CornerContainer& corners, std::size_t nCorners)
     {
-        for (unsigned cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
+        for (std::size_t cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
             for (unsigned j = 0; j < dim; ++j) {
                 corners_[cornerIdx][j] = corners[cornerIdx][j];
             }
         }
 
         center_ = 0;
-        for (unsigned cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
+        for (std::size_t cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
             center_ += corners_[cornerIdx];
         }
-        center_ /= nCorners;
+        if (nCorners != 0) {
+            center_ /= static_cast<Scalar>(nCorners);
+        }
     }
 
     /*!
