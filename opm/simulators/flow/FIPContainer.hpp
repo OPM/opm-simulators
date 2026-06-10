@@ -121,7 +121,8 @@ public:
                                   const Scalar   oilInPlaceGas);
 
     void assignPoreVolume(const unsigned globalDofIdx,
-                          const Scalar   value);
+                          const Scalar   poreVolume,
+                          const Scalar   dynamicPoreVolume);
 
     void assignVolumesSurface(const unsigned globalDofIdx,
                               const std::array<Scalar, numPhases>& fip);
