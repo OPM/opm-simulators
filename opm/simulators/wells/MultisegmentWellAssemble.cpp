@@ -146,7 +146,8 @@ assembleControlEq(const GroupStateHelperType& groupStateHelper,
             break;
         }
         default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
+            OPM_THROW(std::runtime_error,
+                      "Expected WATER, OIL or GAS as type for injectors " + well.name());
         }
         const EvalWell injection_rate = primary_variables.getWQTotal() / scaling;
         // Setup function for evaluation of BHP from THP (used only if needed).
