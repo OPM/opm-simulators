@@ -726,7 +726,7 @@ getRateWithGroupLimit_(Rate rate_type,
                 }
             }
         }
-        if (group_name) {
+        if (group_name != nullptr) {
             if (this->debug) {
                 const std::string msg = fmt::format("limiting {} rate from {} to {} to meet group target {} "
                                                     "for group {}. Computed group rate was: {}",
