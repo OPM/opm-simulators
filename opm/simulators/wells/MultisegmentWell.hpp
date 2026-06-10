@@ -67,6 +67,15 @@ namespace Opm {
 
         using typename Base::Scalar;
 
+        // Scaling factor applied to the well-side energy equation so that its residual
+        // lands on the same numerical scale as the mass-balance equations (the raw
+        // energy flux/accumulation is ~1e4-1e9, while mass residuals are ~O(1)).
+        // We reuse the very same factor the reservoir energy equation uses (see
+        // BlackOilEnergyScalingFactor in blackoilmodel.hh) so the coupled well and
+        // reservoir energy equations live on the same scale.
+        static constexpr Scalar energy_scaling_factor_ =
+            getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+
         /// the matrix and vector types for the reservoir
         using typename Base::BVector;
         using typename Base::Eval;
