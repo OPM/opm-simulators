@@ -905,6 +905,50 @@ namespace Opm {
                     }
                 }
 
+                // WELOPEN/COMPDAT can reopen individual connections shut at run
+                // time by physical/economic limits, without touching the rest
+                // of the well.  Act only when the well is open (a SHUT well
+                // would not flow) and the schedule changed completions this
+                // step (global COMPLETION_CHANGE, set by both COMPDAT and
+                // WELOPEN).
+                auto& well_test_state = this->wellTestState();
+                const auto& sched_state = this->schedule()[report_step];
+                const bool may_reopen_completions =
+                    ws.status == Well::Status::OPEN &&
+                    sched_state.events().hasEvent(ScheduleEvents::COMPLETION_CHANGE) &&
+                    well_test_state.num_closed_completions() > 0;
+
+                if (may_reopen_completions) {
+                    const auto& completion_events = sched_state.wellcompletion_events();
+                    for (const auto& connection : well_ecl.getConnections()) {
+                        const int complnum = connection.complnum();
+
+                        // Reopen only connections currently shut at run time
+                        // that are explicitly requested OPEN this step.
+                        if (!well_test_state.completion_is_closed(well_name, complnum) ||
+                            !completion_events.hasEvent(well_name, complnum, ScheduleEvents::REQUEST_OPEN_COMPLETION)) {
+                            continue;
+                        }
+
+                        // ... but not one closed during the current timestep
+                        const bool closed_this_step = (well_test_state.lastTestTime(well_name) == simulator_.time());
+                        if (closed_this_step) {
+                            continue;
+                        }
+
+                        well_test_state.open_completion(well_name, complnum);
+                        local_deferredLogger.info(
+                            fmt::format("Completion {} - block ({}, {}, {}) for well {} "
+                                        "is reopened due to an explicit WELOPEN/COMPDAT "
+                                        "OPEN request",
+                                        complnum,
+                                        connection.getI() + 1,
+                                        connection.getJ() + 1,
+                                        connection.getK() + 1,
+                                        well_name));
+                    }
+                }
+
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState().hasWell(well_name)?
                 if (this->wellTestState().well_is_closed(well_name))
