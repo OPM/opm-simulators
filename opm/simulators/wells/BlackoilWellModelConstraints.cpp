@@ -395,8 +395,7 @@ updateGroupIndividualControl(const Group& group,
     bool changed = false;
     if (group.isInjectionGroup())
     {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
+        for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
