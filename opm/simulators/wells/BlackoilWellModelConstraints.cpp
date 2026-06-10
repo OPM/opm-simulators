@@ -62,125 +62,120 @@ checkGroupInjectionConstraints(const Group& group,
     }
 
     auto currentControl = wellModel_.groupState().injection_control(group.name(), phase);
-    if (group.has_control(phase, Group::InjectionCMode::RATE))
+    if (group.has_control(phase, Group::InjectionCMode::RATE) &&
+        currentControl != Group::InjectionCMode::RATE)
     {
-        if (currentControl != Group::InjectionCMode::RATE)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
+        Scalar current_rate = 0.0;
+        current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
 
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
+        // sum over all nodes
+        current_rate = wellModel_.comm().sum(current_rate);
 
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            Scalar target = controls.surface_max_rate;
+        const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+        Scalar target = controls.surface_max_rate;
 
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
-                target = wellModel_.groupState().gpmaint_target(group.name());
+        if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
+            target = wellModel_.groupState().gpmaint_target(group.name());
+        }
+
+        if (target < current_rate) {
+            Scalar scale = 1.0;
+            if (current_rate > 1e-12) {
+                scale = target / current_rate;
             }
-
-            if (target < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12) {
-                    scale = target / current_rate;
-                }
-                return std::make_pair(Group::InjectionCMode::RATE, scale);
-            }
+            return std::make_pair(Group::InjectionCMode::RATE, scale);
         }
     }
-    if (group.has_control(phase, Group::InjectionCMode::RESV))
+
+    if (group.has_control(phase, Group::InjectionCMode::RESV) &&
+        currentControl != Group::InjectionCMode::RESV)
     {
-        if (currentControl != Group::InjectionCMode::RESV)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
+        Scalar current_rate = 0.0;
+        current_rate += groupStateHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
+        // sum over all nodes
+        current_rate = wellModel_.comm().sum(current_rate);
 
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            Scalar target = controls.resv_max_rate;
+        const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+        Scalar target = controls.resv_max_rate;
 
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
-                target = wellModel_.groupState().gpmaint_target(group.name());
+        if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
+            target = wellModel_.groupState().gpmaint_target(group.name());
+        }
+
+        if (target < current_rate) {
+            Scalar scale = 1.0;
+            if (current_rate > 1e-12) {
+                scale = target / current_rate;
             }
-
-            if (target < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12) {
-                    scale = target / current_rate;
-                }
-                return std::make_pair(Group::InjectionCMode::RESV, scale);
-            }
+            return std::make_pair(Group::InjectionCMode::RESV, scale);
         }
     }
-    if (group.has_control(phase, Group::InjectionCMode::REIN))
+
+    if (group.has_control(phase, Group::InjectionCMode::REIN) &&
+        currentControl != Group::InjectionCMode::REIN)
     {
-        if (currentControl != Group::InjectionCMode::REIN)
-        {
-            Scalar production_Rate = 0.0;
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += groupStateHelper().sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
+        Scalar production_Rate = 0.0;
+        const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+        const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
+        production_Rate += groupStateHelper().sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
 
-            // sum over all nodes
-            production_Rate = wellModel_.comm().sum(production_Rate);
+        // sum over all nodes
+        production_Rate = wellModel_.comm().sum(production_Rate);
 
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
+        Scalar current_rate = 0.0;
+        current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
 
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
+        // sum over all nodes
+        current_rate = wellModel_.comm().sum(current_rate);
 
-            if (controls.target_reinj_fraction * production_Rate < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12) {
-                    scale = controls.target_reinj_fraction*production_Rate / current_rate;
-                }
-                return std::make_pair(Group::InjectionCMode::REIN, scale);
+        if (controls.target_reinj_fraction * production_Rate < current_rate) {
+            Scalar scale = 1.0;
+            if (current_rate > 1e-12) {
+                scale = controls.target_reinj_fraction*production_Rate / current_rate;
             }
+            return std::make_pair(Group::InjectionCMode::REIN, scale);
         }
     }
-    if (group.has_control(phase, Group::InjectionCMode::VREP))
+
+    if (group.has_control(phase, Group::InjectionCMode::VREP) &&
+        currentControl != Group::InjectionCMode::VREP)
     {
-        if (currentControl != Group::InjectionCMode::VREP)
-        {
-            Scalar voidage_rate = 0.0;
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                       /*is_injector=*/false);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                       /*is_injector=*/false);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                       /*is_injector=*/false);
+        Scalar voidage_rate = 0.0;
+        const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+        const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
+        voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
+                                                   pu.canonicalToActivePhaseIdx(waterPhaseIdx),
+                                                   /*is_injector=*/false);
+        voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
+                                                   pu.canonicalToActivePhaseIdx(oilPhaseIdx),
+                                                   /*is_injector=*/false);
+        voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
+                                                   pu.canonicalToActivePhaseIdx(gasPhaseIdx),
+                                                   /*is_injector=*/false);
 
-            // sum over all nodes
-            voidage_rate = wellModel_.comm().sum(voidage_rate);
+        // sum over all nodes
+        voidage_rate = wellModel_.comm().sum(voidage_rate);
 
-            Scalar total_rate = 0.0;
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                     /*is_injector=*/true);
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                     /*is_injector=*/true);
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                     /*is_injector=*/true);
+        Scalar total_rate = 0.0;
+        total_rate += groupStateHelper().sumWellResRates(group,
+                                                 pu.canonicalToActivePhaseIdx(waterPhaseIdx),
+                                                 /*is_injector=*/true);
+        total_rate += groupStateHelper().sumWellResRates(group,
+                                                 pu.canonicalToActivePhaseIdx(oilPhaseIdx),
+                                                 /*is_injector=*/true);
+        total_rate += groupStateHelper().sumWellResRates(group,
+                                                 pu.canonicalToActivePhaseIdx(gasPhaseIdx),
+                                                 /*is_injector=*/true);
 
-            // sum over all nodes
-            total_rate = wellModel_.comm().sum(total_rate);
+        // sum over all nodes
+        total_rate = wellModel_.comm().sum(total_rate);
 
-            if (controls.target_void_fraction * voidage_rate < total_rate) {
-                Scalar scale = 1.0;
-                if (total_rate > 1e-12) {
-                    scale = controls.target_void_fraction*voidage_rate / total_rate;
-                }
-                return std::make_pair(Group::InjectionCMode::VREP, scale);
+        if (controls.target_void_fraction * voidage_rate < total_rate) {
+            Scalar scale = 1.0;
+            if (total_rate > 1e-12) {
+                scale = controls.target_void_fraction*voidage_rate / total_rate;
             }
+            return std::make_pair(Group::InjectionCMode::VREP, scale);
         }
     }
 
