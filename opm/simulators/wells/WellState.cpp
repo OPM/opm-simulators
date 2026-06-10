@@ -172,9 +172,9 @@ base_init(const std::vector<Scalar>& cellPressures,
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
-        const int nw = wells_ecl.size();
+        const auto nw = wells_ecl.size();
         // const int np = wells->number_of_phases;
-        for (int w = 0; w < nw; ++w) {
+        for (std::size_t w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
@@ -309,7 +309,7 @@ init(const std::vector<Scalar>& cellPressures,
         return;
     }
 
-    const int nw = wells_ecl.size();
+    const auto nw = wells_ecl.size();
 
     // Initialize perfphaserates_, which must be done here.
     const int np = this->numPhases();
@@ -323,14 +323,14 @@ init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    for (int w = 0; w < nw; ++w) {
+    for (std::size_t w = 0; w < nw; ++w) {
         // Initialize perfphaserates_ to well
         // rates divided by the number of perforations.
         const auto& ecl_well = wells_ecl[w];
         auto& ws = this->well(w);
         auto& perf_data = ws.perf_data;
         const int num_perf_this_well = perf_data.size();
-        const int global_num_perf_this_well = ecl_well.getConnections().num_open();
+        const auto global_num_perf_this_well = ecl_well.getConnections().num_open();
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
@@ -342,7 +342,7 @@ init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    for (int w = 0; w < nw; ++w) {
+    for (std::size_t w = 0; w < nw; ++w) {
         auto& ws = this->well(w);
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
@@ -362,7 +362,7 @@ init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    for (int w = 0; w < nw; ++w) {
+    for (std::size_t w = 0; w < nw; ++w) {
         switch (wells_ecl[w].getStatus()) {
         case Well::Status::SHUT:
             this->shutWell(w);
@@ -381,7 +381,7 @@ init(const std::vector<Scalar>& cellPressures,
     // intialize wells that have been there before
     // order may change so the mapping is based on the well name
     if ((prevState != nullptr) && (prevState->size() > 0)) {
-        for (int w = 0; w < nw; ++w) {
+        for (std::size_t w = 0; w < nw; ++w) {
             const auto old_index = prevState->index(wells_ecl[w].name());
             if (! old_index.has_value()) {
                 continue;
@@ -523,7 +523,7 @@ template<typename Scalar, typename IndexTraits>
 data::Wells
 WellState<Scalar, IndexTraits>::
 report(const int*                            globalCellIdxMap,
-       const std::function<bool(const int)>& wasDynamicallyClosed,
+       const std::function<bool(const std::size_t)>& wasDynamicallyClosed,
        const RsConstInfo&                    rsConst) const
 {
     if (this->numWells() == 0) {
@@ -716,7 +716,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     const WellState* prev_well_state)
 {
     // still using the order in wells
-    const int nw = wells_ecl.size();
+    const auto nw = wells_ecl.size();
     if (nw == 0) {
         return;
     }
@@ -728,7 +728,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
-    for (int w = 0; w < nw; ++w) {
+    for (std::size_t w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
         if (this->is_permanently_inactive_well(well_ecl.name()))
             continue;
@@ -741,7 +741,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
             ws.segments = SegmentState<Scalar>{np, segment_set};
-            const int well_nseg = segment_set.size();
+            const auto well_nseg = segment_set.size();
             int n_activeperf = 0;
             int n_activeperf_local = 0;
 
@@ -802,7 +802,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
 
             std::vector<std::vector<int>> segment_inlets(well_nseg);
-            for (int seg = 0; seg < well_nseg; ++seg) {
+            for (std::size_t seg = 0; seg < well_nseg; ++seg) {
                 const Segment& segment = segment_set[seg];
                 const int segment_number = segment.segmentNumber();
                 const int outlet_segment_number = segment.outletSegment();
@@ -846,8 +846,9 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             assert(perf_data.size() == perf_press.size());
             assert(perf_data.size() * np == perf_rates.size());
-            for (size_t perf = 0; perf < perf_data.size(); ++perf) {
-                if (auto candidate = active_perf_index_local_to_global.find(perf); candidate != active_perf_index_local_to_global.end()) {
+            for (std::size_t perf = 0; perf < perf_data.size(); ++perf) {
+                if (auto candidate = active_perf_index_local_to_global.find(static_cast<int>(perf));
+                    candidate != active_perf_index_local_to_global.end()) {
                     const int global_active_perf_index = candidate->second;
                     perforation_pressures[global_active_perf_index] = perf_press[perf];
                     for (int i = 0; i < np; i++) {
@@ -878,7 +879,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
-                for (int seg = 1; seg < well_nseg; ++seg) {
+                for (std::size_t seg = 1; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
@@ -917,7 +918,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
     }
 
     if (prev_well_state) {
-        for (int w = 0; w < nw; ++w) {
+        for (std::size_t w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
@@ -956,7 +957,7 @@ calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
     // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
     // the first segment is always the top segment, its rates should be equal to the well rates.
     assert(segment_inlets.size() == segment_perforations.size());
-    const int well_nseg = segment_inlets.size();
+    const auto well_nseg = segment_inlets.size();
     if (segment == 0) { // beginning the calculation
         segment_rates.resize(np * well_nseg, 0.0);
     }
@@ -992,28 +993,28 @@ calculateSegmentRates(const ParallelWellInfo<Scalar>& pw_info,
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellState<Scalar, IndexTraits>::stopWell(int well_index)
+void WellState<Scalar, IndexTraits>::stopWell(std::size_t well_index)
 {
     auto& ws = this->well(well_index);
     ws.stop();
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellState<Scalar, IndexTraits>::openWell(int well_index)
+void WellState<Scalar, IndexTraits>::openWell(std::size_t well_index)
 {
     auto& ws = this->well(well_index);
     ws.open();
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellState<Scalar, IndexTraits>::shutWell(int well_index)
+void WellState<Scalar, IndexTraits>::shutWell(std::size_t well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
 }
 
 template<typename Scalar, typename IndexTraits>
-void WellState<Scalar, IndexTraits>::updateStatus(int well_index, WellStatus status)
+void WellState<Scalar, IndexTraits>::updateStatus(std::size_t well_index, WellStatus status)
 {
     auto& ws = this->well(well_index);
     ws.updateStatus(status);

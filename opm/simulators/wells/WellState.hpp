@@ -173,7 +173,7 @@ public:
 
     data::Wells
     report(const int*                            globalCellIdxMap,
-           const std::function<bool(const int)>& wasDynamicallyClosed,
+           const std::function<bool(const std::size_t)>& wasDynamicallyClosed,
            const RsConstInfo&                    rsConst = RsConstInfo{}) const;
 
     void reportConnections(std::vector<data::Connection>& connections,
@@ -255,11 +255,11 @@ public:
         return this->global_well_info.value().isRank0();
     }
 
-    void updateStatus(int well_index, WellStatus status);
+    void updateStatus(std::size_t well_index, WellStatus status);
 
-    void openWell(int well_index);
-    void shutWell(int well_index);
-    void stopWell(int well_index);
+    void openWell(std::size_t well_index);
+    void shutWell(std::size_t well_index);
+    void stopWell(std::size_t well_index);
 
     /// The number of phases present.
     constexpr int numPhases() const
