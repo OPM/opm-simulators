@@ -90,41 +90,38 @@ void setupPattern(int N, M& mat, Dune::ParallelIndexSet<G,L,s>& indices, int ove
     typename M::CreateIterator iter = mat.createbegin();
     indices.beginResize();
 
-    for(int j=0; j < N; j++)
-        for(int i=overlapStart; i < overlapEnd; i++, ++iter) {
-            int global = j*N+i;
-            GridFlag flag = GridAttributes::owner;
-            bool isPublic = false;
+    auto flag = [N, start, end](int i)
+    {
+        return (i < start && i > 0) || (i >= end && i < N - 1)
+            ? GridAttributes::copy
+            : GridAttributes::owner;
+    };
 
-            if((i<start && i > 0) || (i>= end && i < N-1))
-                flag=GridAttributes::copy;
+    auto insertIf = [&iter](int val, int ival, int ofs, int istart, int iend)
+    {
+        if (val > istart) {
+            iter.insert(ival - ofs);
+        }
+        if (val < iend - 1) {
+            iter.insert(ival + ofs);
+        }
+    };
 
-            if(i<start+1 || i>= end-1) {
-                isPublic = true;
-                indices.add(global, LocalIndex(iter.index(), flag, isPublic));
+    for(int j = 0; j < N; ++j)
+        for(int i = overlapStart; i < overlapEnd; ++i, ++iter) {
+            const int global = j * N + i;
+
+            if (i < start + 1 || i >= end - 1) {
+                indices.add(global, LocalIndex(iter.index(), flag(i), true));
             }
 
-
             iter.insert(iter.index());
-
-            // i direction
-            if(i > overlapStart )
-                // We have a left neighbour
-                iter.insert(iter.index()-1);
-
-            if(i < overlapEnd-1)
-                // We have a rigt neighbour
-                iter.insert(iter.index()+1);
+            insertIf(i, iter.index(), 1, overlapStart, overlapEnd);
 
             // j direction
             // Overlap is a dirichlet border, discard neighbours
-            if(flag != GridAttributes::copy) {
-                if(j>0)
-                    // lower neighbour
-                    iter.insert(iter.index()-n);
-                if(j<N-1)
-                    // upper neighbour
-                    iter.insert(iter.index()+n);
+            if (flag(i) != GridAttributes::copy) {
+                insertIf(j, iter.index(), n, 0, N);
             }
         }
     indices.endResize();

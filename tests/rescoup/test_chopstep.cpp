@@ -140,7 +140,7 @@ public:
         // Make sure the last element is nullptr, this is required by MPI_Init()
         this->argv_.push_back(nullptr);
         char **argv = this->argv_.data();
-        int argc = this->argv_.size() - 1;
+        int argc = static_cast<int>(this->argv_.size()) - 1;
         this->main_ = std::make_unique<MainTestWrapper>(argc, argv);
     }
 
@@ -181,8 +181,8 @@ struct SimulatorFixture
         rc_master_.resizeSlaveActivationDates(2);
         rc_master_.resizeNextReportDates(2);
         rc_master_.resizeSlaveStartDates(2);
-        rc_master_.setSlaveStartDate(0, start_date_);
-        rc_master_.setSlaveStartDate(1, start_date_);
+        rc_master_.setSlaveStartDate(0, schedule_.getStartTime());
+        rc_master_.setSlaveStartDate(1, schedule_.getStartTime());
     }
 
     void checkEq(double a, double b) const { BOOST_CHECK_CLOSE(a, b, 1e-16); }

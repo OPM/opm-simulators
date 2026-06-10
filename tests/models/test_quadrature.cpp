@@ -48,6 +48,8 @@ using AluGrid = Dune::ALUGrid<dim, dim, elType, Dune::nonconforming, Dune::ALUGr
 
 #include <opm/models/discretization/vcfv/vcfvstencil.hh>
 
+#include <array>
+
 const unsigned dim = 3;
 using Scalar = double;
 using QuadratureGeom = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
@@ -77,15 +79,17 @@ void testIdenityMapping()
 {
     QuadratureGeom foo;
 
-    Scalar corners[][3] = { { 0, 0, 0 },
-                            { 1, 0, 0 },
-                            { 0, 1, 0 },
-                            { 1, 1, 0 },
-                            { 0, 0, 1 },
-                            { 1, 0, 1 },
-                            { 0, 1, 1 },
-                            { 1, 1, 1 } };
-    foo.setCorners(corners, 8);
+    const auto corners = std::array{
+        std::array{0.0, 0.0, 0.0},
+        std::array{1.0, 0.0, 0.0},
+        std::array{0.0, 1.0, 0.0},
+        std::array{1.0, 1.0, 0.0},
+        std::array{0.0, 0.0, 1.0},
+        std::array{1.0, 0.0, 1.0},
+        std::array{0.0, 1.0, 1.0},
+        std::array{1.0, 1.0, 1.0},
+    };
+    foo.setCorners(corners, corners.size());
 
     std::cout << "testing identity mapping...\n";
     unsigned n = 100;
@@ -172,9 +176,14 @@ void testTetrahedron()
     using Grid = AluGrid<dim, Dune::simplex>;
     using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
-    Scalar corners[][3] = { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+    const auto corners = std::array{
+        std::array{0.0, 0.0, 0.0},
+        std::array{1.0, 0.0, 0.0},
+        std::array{0.0, 1.0, 0.0},
+        std::array{0.0, 0.0, 1.0},
+    };
 
-    for (unsigned i = 0; i < sizeof(corners) / sizeof(corners[0]); ++i) {
+    for (std::size_t i = 0; i < corners.size(); ++i) {
         GlobalPosition pos;
         for (unsigned j = 0; j < dim; ++j)
             pos[j] = corners[i][j];
@@ -252,16 +261,18 @@ void testCube()
     using Grid = AluGrid<dim, Dune::cube>;
     using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
-    Scalar corners[][3] = { { 0, 0, 0 },
-                            { 1, 0, 0 },
-                            { 0, 2, 0 },
-                            { 3, 3, 0 },
-                            { 0, 0, 4 },
-                            { 5, 0, 5 },
-                            { 0, 6, 6 },
-                            { 7, 7, 7 }, };
+    const auto corners = std::array{
+        std::array{0.0, 0.0, 0.0},
+        std::array{1.0, 0.0, 0.0},
+        std::array{0.0, 2.0, 0.0},
+        std::array{3.0, 3.0, 0.0},
+        std::array{0.0, 0.0, 4.0},
+        std::array{5.0, 0.0, 5.0},
+        std::array{0.0, 6.0, 6.0},
+        std::array{7.0, 7.0, 7.0},
+    };
 
-    for (unsigned i = 0; i < sizeof(corners) / sizeof(corners[0]); ++i) {
+    for (std::size_t i = 0; i < corners.size(); ++i) {
         GlobalPosition pos;
         for (unsigned j = 0; j < dim; ++j)
             pos[j] = corners[i][j];
@@ -338,7 +349,7 @@ void testQuadrature()
 }
 
 int main(int argc, char **argv)
-{
+try {
     // initialize MPI, finalize is done automatically on exit
     Dune::MPIHelper::instance(argc, argv);
 
@@ -354,4 +365,12 @@ int main(int argc, char **argv)
     testQuadrature();
 
     return 0;
+}
+catch (const std::exception& e) {
+    std::cerr << "Exception caught: " << e.what() << std::endl;
+    return 1;
+}
+catch (...) {
+    std::cerr << "Unknown exception caught" << std::endl;
+    return 2;
 }
