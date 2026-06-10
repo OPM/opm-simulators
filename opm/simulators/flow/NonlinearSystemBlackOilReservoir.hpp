@@ -149,7 +149,7 @@ public:
                   const bool terminal_output);
 
     const EclipseState& eclState() const
-    { return simulator_.vanguard().eclState(); }
+    { return this->simulator_.vanguard().eclState(); }
 
     /// Called once before each time step.
     /// \param[in] timer                  simulation timer
@@ -180,11 +180,11 @@ public:
 
     /// Number of linear iterations used in last call to solveJacobianSystem().
     int linearIterationsLastSolve() const
-    { return simulator_.model().newtonMethod().linearSolver().iterations (); }
+    { return this->simulator_.model().newtonMethod().linearSolver().iterations (); }
 
     // Obtain reference to linear solver setup time
     double& linearSolveSetupTime()
-    { return linear_solve_setup_time_; }
+    { return this->linear_solve_setup_time_; }
 
     /// Solve the Jacobian system Jx = r where J is the Jacobian and
     /// r is the residual.
@@ -287,19 +287,6 @@ public:
     { return nlddSolver_ != nullptr; }
 
 protected:
-    using ParentType::compNames_;
-    using ParentType::convergence_reports_;
-    using ParentType::current_relaxation_;
-    using ParentType::dx_old_;
-    using ParentType::failureReport_;
-    using ParentType::grid_;
-    using ParentType::param_;
-    using ParentType::popLastStepReport;
-    using ParentType::residual_norms_history_;
-    using ParentType::simulator_;
-    using ParentType::terminal_output_;
-    using ParentType::well_model_;
-
     // ---------  Data members  ---------
     static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -320,10 +307,10 @@ protected:
     BlackoilModelConvergenceMonitor<Scalar> conv_monitor_;
 
 private:
-    Scalar dpMaxRel() const { return param_.dp_max_rel_; }
-    Scalar dsMax() const { return param_.ds_max_; }
-    Scalar drMaxRel() const { return param_.dr_max_rel_; }
-    Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
+    Scalar dpMaxRel() const { return this->param_.dp_max_rel_; }
+    Scalar dsMax() const { return this->param_.ds_max_; }
+    Scalar drMaxRel() const { return this->param_.dr_max_rel_; }
+    Scalar maxResidualAllowed() const { return this->param_.max_residual_allowed_; }
     double linear_solve_setup_time_;
     std::vector<bool> wasSwitched_;
 };

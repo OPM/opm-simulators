@@ -83,21 +83,21 @@ NonlinearSystemBlackOilReservoir(Simulator& simulator,
     , conv_monitor_(param.monitor_params_)
 {
     // compute global sum of number of cells
-    global_nc_ = detail::countGlobalCells(grid_);
-    convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
+    global_nc_ = detail::countGlobalCells(this->grid_);
+    this->convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
     // TODO: remember to fix!
-    if (param_.nonlinear_solver_ == "nldd") {
+    if (this->param_.nonlinear_solver_ == "nldd") {
         if (terminal_output) {
             OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
         }
         nlddSolver_ = std::make_unique<NonlinearSystemNldd<TypeTag>>(*this);
-    } else if (param_.nonlinear_solver_ == "newton") {
+    } else if (this->param_.nonlinear_solver_ == "newton") {
         if (terminal_output) {
             OpmLog::info("Using Newton nonlinear solver.");
         }
     } else {
         OPM_THROW(std::runtime_error, "Unknown nonlinear solver option: " +
-                                      param_.nonlinear_solver_);
+                                      this->param_.nonlinear_solver_);
     }
 }
 
@@ -112,11 +112,11 @@ prepareStep(const SimulatorTimerInterface& timer)
     Dune::Timer perfTimer;
     perfTimer.start();
 
-    unsigned numDof = simulator_.model().numGridDof();
+    unsigned numDof = this->simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-    if (param_.update_equations_scaling_) {
+    if (this->param_.update_equations_scaling_) {
         OpmLog::error("Equation scaling not supported");
         //updateEquationsScaling();
     }
@@ -136,9 +136,9 @@ prepareStep(const SimulatorTimerInterface& timer)
 
         return -1;
     };
-    const auto& schedule = simulator_.vanguard().schedule();
-    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
-    rst_conv.init(simulator_.vanguard().globalNumCells(),
+    const auto& schedule = this->simulator_.vanguard().schedule();
+    auto& rst_conv = this->simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    rst_conv.init(this->simulator_.vanguard().globalNumCells(),
                   schedule[timer.reportStepNum()].rst_config(),
                   {getIdx(FluidSystem::oilPhaseIdx),
                    getIdx(FluidSystem::gasPhaseIdx),
@@ -172,28 +172,28 @@ initialLinearization(SimulatorReportSingle& report,
     {
         auto convrep = getConvergence(timer, maxIter, residual_norms);
         report.converged = convrep.converged() &&
-                           simulator_.problem().iterationContext().iteration() >= minIter;
+                           this->simulator_.problem().iterationContext().iteration() >= minIter;
         ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
-        convergence_reports_.back().report.push_back(std::move(convrep));
+        this->convergence_reports_.back().report.push_back(std::move(convrep));
 
         // Throw if any NaN or too large residual found.
         if (severity == ConvergenceReport::Severity::NotANumber) {
-            failureReport_ += report;
+            this->failureReport_ += report;
             OPM_THROW_PROBLEM(NumericalProblem, "NaN residual found!");
         } else if (severity == ConvergenceReport::Severity::TooLarge) {
-            failureReport_ += report;
+            this->failureReport_ += report;
             OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
         } else if (severity == ConvergenceReport::Severity::ConvergenceMonitorFailure) {
-            failureReport_ += report;
+            this->failureReport_ += report;
             OPM_THROW_PROBLEM(ConvergenceMonitorFailure,
                               fmt::format(
                                   "Total penalty count exceeded cut-off-limit of {}",
-                                  param_.monitor_params_.cutoff_
+                                  this->param_.monitor_params_.cutoff_
                               ));
         }
     }
     report.update_time += perfTimer.stop();
-    residual_norms_history_.push_back(residual_norms);
+    this->residual_norms_history_.push_back(residual_norms);
 }
 
 template <class TypeTag>
@@ -207,10 +207,10 @@ nonlinearIteration(const SimulatorTimerInterface& timer,
     // markTimestepInitialized() is called later in initialLinearization(),
     // after assembleReservoir() has triggered the well model's prepareTimeStep().
     if (this->simulator_.problem().iterationContext().needsTimestepInit()) {
-        residual_norms_history_.clear();
-        conv_monitor_.reset();
-        current_relaxation_ = 1.0;
-        dx_old_ = 0.0;
+        this->residual_norms_history_.clear();
+        this->conv_monitor_.reset();
+        this->current_relaxation_ = 1.0;
+        this->dx_old_ = 0.0;
         this->convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
         this->convergence_reports_.back().report.reserve(11);
     }
@@ -280,22 +280,22 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
 
         this->wellModel().postSolve(x);
 
-        if (param_.use_update_stabilization_) {
+        if (this->param_.use_update_stabilization_) {
             bool isOscillate = false;
             bool isStagnate = false;
-            nonlinear_solver.detectOscillations(residual_norms_history_,
-                                                residual_norms_history_.size() - 1,
+            nonlinear_solver.detectOscillations(this->residual_norms_history_,
+                                                this->residual_norms_history_.size() - 1,
                                                 isOscillate,
                                                 isStagnate);
             if (isOscillate) {
-                current_relaxation_ -= nonlinear_solver.relaxIncrement();
-                current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
+                this->current_relaxation_ -= nonlinear_solver.relaxIncrement();
+                this->current_relaxation_ = std::max(this->current_relaxation_, nonlinear_solver.relaxMax());
                 if (this->terminalOutputEnabled()) {
                     OpmLog::info("    Oscillating behavior detected: Relaxation set to "
-                                 + std::to_string(current_relaxation_));
+                                 + std::to_string(this->current_relaxation_));
                 }
             }
-            nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
+            nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
         }
 
         this->updateSolution(x);
@@ -313,11 +313,11 @@ relativeChange() const
     Scalar resultDelta = 0.0;
     Scalar resultDenom = 0.0;
 
-    const auto& elemMapper = simulator_.model().elementMapper();
-    const auto& gridView = simulator_.gridView();
+    const auto& elemMapper = this->simulator_.model().elementMapper();
+    const auto& gridView = this->simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         unsigned globalElemIdx = elemMapper.index(elem);
-        const auto& priVarsNew = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
+        const auto& priVarsNew = this->simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
         Scalar pressureNew;
         pressureNew = priVarsNew[Indices::pressureSwitchIdx];
@@ -345,7 +345,7 @@ relativeChange() const
             saturationsNew[FluidSystem::oilPhaseIdx] = oilSaturationNew;
         }
 
-        const auto& priVarsOld = simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
+        const auto& priVarsOld = this->simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
         Scalar pressureOld;
         pressureOld = priVarsOld[Indices::pressureSwitchIdx];
@@ -397,13 +397,13 @@ void
 NonlinearSystemBlackOilReservoir<TypeTag>::
 solveJacobianSystem(BVector& x)
 {
-    auto& jacobian = simulator_.model().linearizer().jacobian().istlMatrix();
-    auto& residual = simulator_.model().linearizer().residual();
-    auto& linSolver = simulator_.model().newtonMethod().linearSolver();
+    auto& jacobian = this->simulator_.model().linearizer().jacobian().istlMatrix();
+    auto& residual = this->simulator_.model().linearizer().residual();
+    auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
 
     const int numSolvers = linSolver.numAvailableSolvers();
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {
-        if (terminal_output_) {
+        if (this->terminal_output_) {
             OpmLog::debug("\nRunning speed test for comparing available linear solvers.");
         }
 
@@ -424,15 +424,15 @@ solveJacobianSystem(BVector& x)
             linSolver.solve(x_trial[solver]);
             times[solver] = perfTimer.stop();
             perfTimer.reset();
-            if (terminal_output_) {
+            if (this->terminal_output_) {
                 OpmLog::debug(fmt::format(fmt::runtime("Solver time {}: {}"), solver, times[solver]));
             }
         }
 
         int fastest_solver = std::ranges::min_element(times) - times.begin();
         // Use timing on rank 0 to determine fastest, must be consistent across ranks.
-        grid_.comm().broadcast(&fastest_solver, 1, 0);
-        linear_solve_setup_time_ = setupTimes[fastest_solver];
+        this->grid_.comm().broadcast(&fastest_solver, 1, 0);
+        this->linear_solve_setup_time_ = setupTimes[fastest_solver];
         x = x_trial[fastest_solver];
         linSolver.setActiveSolver(fastest_solver);
     }
@@ -442,7 +442,7 @@ solveJacobianSystem(BVector& x)
         Dune::Timer perfTimer;
         perfTimer.start();
         linSolver.prepare(jacobian, residual);
-        linear_solve_setup_time_ = perfTimer.stop();
+        this->linear_solve_setup_time_ = perfTimer.stop();
         linSolver.setResidual(residual);
         // actually, the error needs to be calculated after setResidual in order to
         // account for parallelization properly. since the residual of ECFV
@@ -467,15 +467,15 @@ NonlinearSystemBlackOilReservoir<TypeTag>::
 prepareSolutionUpdate()
 {
     // Init. solution update vector
-    unsigned nc = simulator_.model().numGridDof();
+    unsigned nc = this->simulator_.model().numGridDof();
     solUpd_.resize(nc);
 
-    const auto& elemMapper = simulator_.model().elementMapper();
-    const auto& gridView = simulator_.gridView();
+    const auto& elemMapper = this->simulator_.model().elementMapper();
+    const auto& gridView = this->simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         // Copy solution vector to transfer primary variables meaning
         unsigned globalElemIdx = elemMapper.index(elem);
-        solUpd_[globalElemIdx] = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
+        solUpd_[globalElemIdx] = this->simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
         // Ensure each element is zero
         std::ranges::fill(solUpd_[globalElemIdx], 0.0);
@@ -487,8 +487,8 @@ void
 NonlinearSystemBlackOilReservoir<TypeTag>::
 storeSolutionUpdate(const GlobalEqVector& dx)
 {
-    const auto& elemMapper = simulator_.model().elementMapper();
-    const auto& gridView = simulator_.gridView();
+    const auto& elemMapper = this->simulator_.model().elementMapper();
+    const auto& gridView = this->simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         // Get cell vectors
         unsigned globalElemIdx = elemMapper.index(elem);
@@ -583,12 +583,12 @@ localConvergenceData(std::vector<Scalar>& R_sum,
     OPM_TIMEBLOCK(localConvergenceData);
     Scalar pvSumLocal = 0.0;
     Scalar numAquiferPvSumLocal = 0.0;
-    const auto& model = simulator_.model();
-    const auto& problem = simulator_.problem();
+    const auto& model = this->simulator_.model();
+    const auto& problem = this->simulator_.problem();
 
-    const auto& residual = simulator_.model().linearizer().residual();
+    const auto& residual = this->simulator_.model().linearizer().residual();
 
-    ElementContext elemCtx(simulator_);
+    ElementContext elemCtx(this->simulator_);
     const auto& gridView = this->simulator().gridView();
     IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
     OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -612,12 +612,12 @@ localConvergenceData(std::vector<Scalar>& R_sum,
                           B_avg, R_sum, maxCoeff, maxCoeffCell);
     }
 
-    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", grid_.comm());
+    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", this->grid_.comm());
 
     // compute local average in terms of global number of elements
     const int bSize = B_avg.size();
     for (int i = 0; i < bSize; ++i) {
-        B_avg[i] /= Scalar(global_nc_);
+        B_avg[i] /= Scalar(this->global_nc_);
     }
 
     return {pvSumLocal, numAquiferPvSumLocal};
@@ -716,7 +716,7 @@ getReservoirConvergence(const double reportTime,
     OPM_TIMEBLOCK(getReservoirConvergence);
     using Vector = std::vector<Scalar>;
 
-    const auto& iterCtx = simulator_.problem().iterationContext();
+    const auto& iterCtx = this->simulator_.problem().iterationContext();
 
     ConvergenceReport report{reportTime};
 
@@ -810,12 +810,12 @@ getReservoirConvergence(const double reportTime,
 
     // Ensure that CNV convergence criteria is met when max.
     // solution change tolerances have been fulfilled
-    Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : param_.tolerance_cnv_relaxed_;
+    Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : this->param_.tolerance_cnv_relaxed_;
 
-    const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : param_.tolerance_cnv_;
-    const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
-    const auto tol_cnv_energy = use_relaxed_cnv ? param_.tolerance_cnv_energy_relaxed_ : param_.tolerance_cnv_energy_;
-    const auto tol_eb = use_relaxed_mb ? param_.tolerance_energy_balance_relaxed_ : param_.tolerance_energy_balance_;
+    const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : this->param_.tolerance_cnv_;
+    const auto tol_mb  = use_relaxed_mb ? this->param_.tolerance_mb_relaxed_ : this->param_.tolerance_mb_;
+    const auto tol_cnv_energy = use_relaxed_cnv ? this->param_.tolerance_cnv_energy_relaxed_ : this->param_.tolerance_cnv_energy_;
+    const auto tol_eb = use_relaxed_mb ?  this->param_.tolerance_energy_balance_relaxed_ : this->param_.tolerance_energy_balance_;
 
     // Finish computation
     std::vector<Scalar> CNV(numComp);
@@ -955,17 +955,17 @@ convergencePerCell(const std::vector<Scalar>& B_avg,
                    const double tol_cnv,
                    const double tol_cnv_energy)
 {
-    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    auto& rst_conv = this->simulator_.problem().eclWriter().mutableOutputModule().getConv();
     if (!rst_conv.hasConv()) {
         return;
     }
 
-    if (simulator_.problem().iterationContext().isFirstGlobalIteration()) {
+    if (this->simulator_.problem().iterationContext().isFirstGlobalIteration()) {
         rst_conv.prepareConv();
     }
 
-    const auto& residual = simulator_.model().linearizer().residual();
-    const auto& gridView = this->simulator().gridView();
+    const auto& residual = this->simulator_.model().linearizer().residual();
+    const auto& gridView = this->simulator_.gridView();
     const IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
     ElementContext elemCtx(this->simulator());
     std::vector<int> convNewt(residual.size(), 0);
@@ -976,8 +976,8 @@ convergencePerCell(const std::vector<Scalar>& B_avg,
         elemCtx.updatePrimaryStencil(elem);
 
         const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-        const auto pvValue = simulator_.problem().referencePorosity(cell_idx, /*timeIdx=*/0) *
-                             simulator_.model().dofTotalVolume(cell_idx);
+        const auto pvValue = this->simulator_.problem().referencePorosity(cell_idx, /*timeIdx=*/0) *
+                             this->simulator_.model().dofTotalVolume(cell_idx);
         for (int compIdx = 0; compIdx < numComp; ++compIdx) {
             const auto tol = (has_energy_ && compIdx == contiEnergyEqIdx) ? tol_cnv_energy : tol_cnv;
             const Scalar cnv = std::abs(B_avg[compIdx] * residual[cell_idx][compIdx]) * dt / pvValue;
@@ -1012,7 +1012,7 @@ getConvergence(const SimulatorTimerInterface& timer,
                                                        /*checkWellGroupControlsAndNetwork*/report.converged());
     }
 
-    conv_monitor_.checkPenaltyCard(report, simulator_.problem().iterationContext().iteration());
+    conv_monitor_.checkPenaltyCard(report, this->simulator_.problem().iterationContext().iteration());
 
     return report;
 }
