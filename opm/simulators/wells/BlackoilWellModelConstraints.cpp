@@ -72,17 +72,14 @@ checkGroupInjectionConstraints(const Group& group,
         current_rate = wellModel_.comm().sum(current_rate);
 
         const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-        Scalar target = controls.surface_max_rate;
-
-        if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
-            target = wellModel_.groupState().gpmaint_target(group.name());
-        }
+        const Scalar target = group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)
+            ? wellModel_.groupState().gpmaint_target(group.name())
+            : controls.surface_max_rate;
 
         if (target < current_rate) {
-            Scalar scale = 1.0;
-            if (current_rate > 1e-12) {
-                scale = target / current_rate;
-            }
+            const Scalar scale = current_rate > 1e-12
+                ? target / current_rate
+                : 1.0;
             return std::make_pair(Group::InjectionCMode::RATE, scale);
         }
     }
@@ -96,17 +93,14 @@ checkGroupInjectionConstraints(const Group& group,
         current_rate = wellModel_.comm().sum(current_rate);
 
         const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-        Scalar target = controls.resv_max_rate;
-
-        if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
-            target = wellModel_.groupState().gpmaint_target(group.name());
-        }
+        const Scalar target = group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)
+            ? wellModel_.groupState().gpmaint_target(group.name())
+            : controls.resv_max_rate;
 
         if (target < current_rate) {
-            Scalar scale = 1.0;
-            if (current_rate > 1e-12) {
-                scale = target / current_rate;
-            }
+            const Scalar scale = current_rate > 1e-12
+                ? target / current_rate
+                : 1.0;
             return std::make_pair(Group::InjectionCMode::RESV, scale);
         }
     }
@@ -129,10 +123,9 @@ checkGroupInjectionConstraints(const Group& group,
         current_rate = wellModel_.comm().sum(current_rate);
 
         if (controls.target_reinj_fraction * production_Rate < current_rate) {
-            Scalar scale = 1.0;
-            if (current_rate > 1e-12) {
-                scale = controls.target_reinj_fraction*production_Rate / current_rate;
-            }
+            const Scalar scale = current_rate > 1e-12
+                ? controls.target_reinj_fraction * production_Rate / current_rate
+                : 1.0;
             return std::make_pair(Group::InjectionCMode::REIN, scale);
         }
     }
@@ -171,10 +164,9 @@ checkGroupInjectionConstraints(const Group& group,
         total_rate = wellModel_.comm().sum(total_rate);
 
         if (controls.target_void_fraction * voidage_rate < total_rate) {
-            Scalar scale = 1.0;
-            if (total_rate > 1e-12) {
-                scale = controls.target_void_fraction*voidage_rate / total_rate;
-            }
+            const Scalar scale = total_rate > 1e-12
+                ? controls.target_void_fraction * voidage_rate / total_rate
+                : 1.0;
             return std::make_pair(Group::InjectionCMode::VREP, scale);
         }
     }
