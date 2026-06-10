@@ -21,8 +21,6 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellSegments.hpp>
 
-#include "examples/problems/co2injectionproblem.hh"
-
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/AICD.hpp>
