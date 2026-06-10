@@ -221,7 +221,7 @@ public:
     void communicateFirstPerforation(bool hasFirst);
 
     // \brief Set the activePerfToLocalPerf-Map for multisegment wells, to be called from WellState::initWellStateMSWell
-    void setActivePerfToLocalPerfMap(const std::unordered_map<int,int> active_to_local_map) const;
+    void setActivePerfToLocalPerfMap(const std::unordered_map<int,int>& active_to_local_map) const;
     // \brief Convert a global active perforation index to a local active perforation index
     int activePerfToLocalPerf(const int activeIndex) const;
     // \brief Convert a local active perforation index to a global active perforation index

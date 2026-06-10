@@ -537,7 +537,7 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 }
 
 template<class Scalar>
-void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_map<int,int> active_to_local_map) const {
+void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_map<int,int>& active_to_local_map) const {
     //active_to_local_map_ is marked as mutable
     active_to_local_map_ = active_to_local_map;
     for (const auto& [key, value] : active_to_local_map) {
