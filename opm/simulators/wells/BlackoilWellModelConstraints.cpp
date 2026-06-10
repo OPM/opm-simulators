@@ -381,6 +381,136 @@ actionOnBrokenConstraints(const Group& group,
 
 template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
+updateInjectionGroupControl(const Group& group,
+                            const int reportStepIdx,
+                            const int max_number_of_group_switch,
+                            const bool update_group_switching_log,
+                            std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
+                            GroupState<Scalar>& group_state,
+                            WellState<Scalar, IndexTraits>& well_state,
+                            DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+        if (!group.hasInjectionControl(phase)) {
+            continue;
+        }
+        bool group_is_oscillating = false;
+        const auto currentControl = group_state.injection_control(group.name(), phase);
+        if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
+            auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
+            const int number_of_switches = std::ranges::count(ctrls, currentControl);
+            group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
+            if (group_is_oscillating) {
+                const bool output_first_time = (number_of_switches == max_number_of_group_switch);
+                if (output_first_time) {
+                    if (wellModel_.comm().rank() == 0 ) {
+                        std::ostringstream os;
+                        os << phase;
+                        const std::string msg =
+                            fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
+                                        std::move(os).str(),
+                                        group.name(),
+                                        Group::InjectionCMode2String(currentControl));
+                        deferred_logger.info(msg);
+                    }
+                    ctrls.push_back(currentControl);
+                }
+            }
+        }
+
+        if (group_is_oscillating) {
+            continue;
+        }
+
+        const auto& changed_this = this->checkGroupInjectionConstraints(group,
+                                                                        reportStepIdx,
+                                                                        phase);
+        if (changed_this.first != Group::InjectionCMode::NONE) {
+            auto& group_log = switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
+            if (update_group_switching_log || group_log.empty()) {
+                group_log.push_back(currentControl);
+            }
+            this->actionOnBrokenConstraints(group, changed_this.first, phase,
+                                            group_state, deferred_logger);
+            groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                           group,
+                                                           /*is_injector=*/false,
+                                                           well_state);
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
+updateProductionGroupControl(const Group& group,
+                             const int max_number_of_group_switch,
+                             const bool update_group_switching_log,
+                             std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
+                             std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
+                             GroupState<Scalar>& group_state,
+                             WellState<Scalar, IndexTraits>& well_state,
+                             DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    const Group::ProductionCMode currentControl = group_state.production_control(group.name());
+    if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
+        auto& ctrls = groupPos->second;
+        const int number_of_switches = std::ranges::count(ctrls, currentControl);
+        const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
+        if (group_is_oscillating) {
+            const bool output_first_time = (number_of_switches == max_number_of_group_switch);
+            if (output_first_time) {
+                if (wellModel_.comm().rank() == 0) {
+                    const std::string msg =
+                    fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
+                                group.name(),
+                                Group::ProductionCMode2String(currentControl));
+                    deferred_logger.info(msg);
+                }
+                ctrls.push_back(currentControl);
+            }
+            return false;
+        }
+    }
+
+    const auto& changed_this = this->checkGroupProductionConstraints(group);
+    const auto controls = group.productionControls(wellModel_.summaryState());
+
+    if (changed_this.first != Group::ProductionCMode::NONE) {
+        std::optional<std::string> worst_offending_well = std::nullopt;
+        changed = this->actionOnBrokenConstraints(group,
+                                                  controls.group_limit_action,
+                                                  changed_this.first,
+                                                  worst_offending_well,
+                                                  group_state, deferred_logger);
+
+        if (changed) {
+            if (update_group_switching_log || switched_prod[group.name()].empty()) {
+                switched_prod[group.name()].push_back(currentControl);
+            }
+
+            groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                           group,
+                                                           /*is_injector=*/false,
+                                                           well_state);
+        }
+        else if (worst_offending_well) {
+            closed_offending_wells.insert_or_assign(group.name(),
+                        std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
+        }
+    }
+
+    return changed;
+}
+
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
                              const int max_number_of_group_switch,
@@ -393,106 +523,26 @@ updateGroupIndividualControl(const Group& group,
                              DeferredLogger& deferred_logger) const
 {
     bool changed = false;
-    if (group.isInjectionGroup())
-    {
-        for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            bool group_is_oscillating = false;
-            const auto currentControl = group_state.injection_control(group.name(), phase);
-            if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
-                auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
-                const int number_of_switches = std::ranges::count(ctrls, currentControl);
-                group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
-                if (group_is_oscillating) {
-                    const bool output_first_time = (number_of_switches == max_number_of_group_switch);
-                    if (output_first_time) {
-                        if (wellModel_.comm().rank() == 0 ) {
-                            std::ostringstream os;
-                            os << phase;
-                            const std::string msg =
-                                fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
-                                            std::move(os).str(),
-                                            group.name(),
-                                            Group::InjectionCMode2String(currentControl));
-                            deferred_logger.info(msg);
-                        }
-                        ctrls.push_back(currentControl);
-                    }
-                }
-            }
-
-            if (group_is_oscillating) {
-                continue;
-            }
-
-            const auto& changed_this = this->checkGroupInjectionConstraints(group,
-                                                                            reportStepIdx,
-                                                                            phase);
-            if (changed_this.first != Group::InjectionCMode::NONE) {
-                auto& group_log = switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
-                if (update_group_switching_log || group_log.empty()) {
-                    group_log.push_back(currentControl);
-                }
-                this->actionOnBrokenConstraints(group, changed_this.first, phase,
-                                                group_state, deferred_logger);
-                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                               group,
-                                                               /*is_injector=*/false,
-                                                               well_state);
-                changed = true;
-            }
-        }
+    if (group.isInjectionGroup()) {
+        changed = updateInjectionGroupControl(group,
+                                              reportStepIdx,
+                                              max_number_of_group_switch,
+                                              update_group_switching_log,
+                                              switched_inj,
+                                              group_state,
+                                              well_state,
+                                              deferred_logger);
     }
+
     if (group.isProductionGroup()) {
-        const Group::ProductionCMode currentControl = group_state.production_control(group.name());
-        if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
-            auto& ctrls = groupPos->second;
-            const int number_of_switches = std::ranges::count(ctrls, currentControl);
-            const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
-            if (group_is_oscillating) {
-                const bool output_first_time = (number_of_switches == max_number_of_group_switch);
-                if (output_first_time) {
-                    if (wellModel_.comm().rank() == 0) {
-                        const std::string msg =
-                        fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
-                                    group.name(),
-                                    Group::ProductionCMode2String(currentControl));
-                        deferred_logger.info(msg);
-                    }
-                    ctrls.push_back(currentControl);
-                }
-                return false;
-            }
-        }
-
-        const auto& changed_this = this->checkGroupProductionConstraints(group);
-        const auto controls = group.productionControls(wellModel_.summaryState());
-
-        if (changed_this.first != Group::ProductionCMode::NONE) {
-            std::optional<std::string> worst_offending_well = std::nullopt;
-            changed = this->actionOnBrokenConstraints(group,
-                                                      controls.group_limit_action,
-                                                      changed_this.first,
-                                                      worst_offending_well,
-                                                      group_state, deferred_logger);
-
-            if (changed) {
-                if (update_group_switching_log || switched_prod[group.name()].empty()) {
-                    switched_prod[group.name()].push_back(currentControl);
-                }
-
-                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                               group,
-                                                               /*is_injector=*/false,
-                                                               well_state);
-            }
-            else if (worst_offending_well) {
-                closed_offending_wells.insert_or_assign(group.name(),
-                            std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
-            }
-        }
+        changed = changed || updateProductionGroupControl(group,
+                                                          max_number_of_group_switch,
+                                                          update_group_switching_log,
+                                                          switched_prod,
+                                                          closed_offending_wells,
+                                                          group_state,
+                                                          well_state,
+                                                          deferred_logger);
     }
 
     return changed;
