@@ -368,6 +368,13 @@ void
 ReservoirCouplingSlave<Scalar>::
 sendAndReceiveInitialData() {
     // Communication order must match master's spawn() method.
+    // First, send status OK to let master know we initialized successfully.
+    this->sendStatusToMasterProcess_(/*ok=*/true);
+    // Then wait for the master's go-ahead. If another slave failed to
+    // initialize, the master replies "abort" here so that we disconnect our
+    // communicator collectively (the master cannot disconnect it on its own
+    // while we are still mid-handshake). On "proceed" we continue normally.
+    this->receiveInitStatusFromMasterProcess_();
     // We receive master group names before sending activation date so that
     // we can detect history matching mode (no master groups) and use start_date as activation.
     this->sendSimulationStartDateToMasterProcess_();
@@ -691,6 +698,55 @@ sendSimulationStartDateToMasterProcess_() const
         );
         this->logger_.debug("Sent start date to master");
    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+sendStatusToMasterProcess_(bool ok) {
+    if (this->comm_.rank() == 0) {
+        int status = ok ? 0 : 1;
+        MPI_Send(
+            &status,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveStatus),
+            this->slave_master_comm_
+        );
+        this->logger_.debug(fmt::format("Sent status {} to master", ok ? "OK" : "FAILED"));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveInitStatusFromMasterProcess_() {
+    // Receive the master's go-ahead after we reported our OK status: 0 = proceed,
+    // non-zero = abort (another slave failed). On rank 0 we receive from the
+    // master and broadcast to all slave ranks so that the collective
+    // MPI_Comm_disconnect below is matched on every rank.
+    int proceed = 1;  // default to abort if nothing is received
+    if (this->comm_.rank() == 0) {
+        MPI_Recv(
+            &proceed,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::MasterInitStatus),
+            this->slave_master_comm_,
+            MPI_STATUS_IGNORE
+        );
+    }
+    this->comm_.broadcast(&proceed, /*count=*/1, /*emitter_rank=*/0);
+    if (proceed != 0) {
+        this->logger_.info(
+            "Master signaled initialization abort (another slave failed to initialize)");
+        MPI_Comm_disconnect(&this->slave_master_comm_);
+        this->slave_master_comm_ = MPI_COMM_NULL;
+        RCOUP_LOG_THROW(std::runtime_error,
+            "Reservoir coupling initialization aborted by master");
+    }
 }
 
 // Explicit template instantiations

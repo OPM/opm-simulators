@@ -48,12 +48,16 @@ public:
     void debug(const std::string &msg) const;
     DeferredLogger& deferredLogger() { return *deferred_logger_; }
     DeferredLogger& deferredLogger() const { return *deferred_logger_; }
+    void error(const std::string &msg) const;
     bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
     void info(const std::string &msg) const;
     void warning(const std::string &msg) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
 
 private:
+    template<typename DeferredFn, typename OpmLogFn>
+    void forward_(const std::string &msg, DeferredFn deferred_fn, OpmLogFn opmlog_fn) const;
+
     const Parallel::Communication& comm_;
     DeferredLogger *deferred_logger_ = nullptr;
 };
@@ -137,6 +141,7 @@ enum class MessageTag : int {
     MasterGroupNames,
     MasterGroupNamesSize,
     MasterGroupNodePressures,
+    MasterInitStatus,
     MasterStartOfReportStep,
     NumMasterGroupNodePressures,
     NumSlaveGroupConstraints,
@@ -152,6 +157,7 @@ enum class MessageTag : int {
     SlaveProductionData,
     SlaveSimulationStartDate,
     SlaveStartOfReportStep,
+    SlaveStatus,
 };
 
 /// @brief Phase indices for reservoir coupling, we currently only support black-oil phases

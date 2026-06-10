@@ -192,12 +192,20 @@ private:
     std::pair<double, bool> getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const;
     bool historyMatchingMode_() const { return this->history_matching_mode_; }
     std::size_t numMasterGroups_() const { return this->slave_to_master_group_map_.size(); }
+    //! \brief Receive the master's go-ahead after reporting our OK status.
+    //!
+    //! Blocks until the master replies "proceed" (continue the handshake) or
+    //! "abort" (another slave failed to initialize). On abort, all slave ranks
+    //! disconnect the master communicator collectively and throw, so the master
+    //! can tear down cleanly instead of deadlocking on the disconnect.
+    void receiveInitStatusFromMasterProcess_();
     void receiveMasterGroupNamesFromMasterProcess_();
     void receiveSlaveNameFromMasterProcess_();
     void saveMasterGroupNamesAsMapAndEstablishOrder_(const std::vector<char>& group_names);
     void sendActivationDateToMasterProcess_();
     void sendActivationHandshakeToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
+    void sendStatusToMasterProcess_(bool ok);
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
