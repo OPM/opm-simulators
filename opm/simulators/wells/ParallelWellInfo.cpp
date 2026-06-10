@@ -139,13 +139,17 @@ void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
-    if (comm_.size() == 1)
-        return localIndex;
-    if (!l2g_map_built_)
+    if (comm_.size() == 1) {
+        return static_cast<int>(localIndex);
+    }
+    if (!l2g_map_built_) {
         buildLocalToGlobalMap();
+    }
     auto it = local_to_global_map_.find(localIndex);
-    if (it == local_to_global_map_.end())
-        OPM_THROW(std::logic_error, fmt::format("There is no global index for the localIndex {}.", localIndex));
+    if (it == local_to_global_map_.end()) {
+        OPM_THROW(std::logic_error,
+                  fmt::format("There is no global index for the localIndex {}.", localIndex));
+    }
     return it->second;
 }
 
@@ -160,15 +164,18 @@ void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
-    if (comm_.size() == 1)
+    if (comm_.size() == 1) {
         return globalIndex;
+    }
     if (!g2l_map_built_) {
         buildGlobalToLocalMap();
     }
     auto it = global_to_local_map_.find(globalIndex);
-    if (it == global_to_local_map_.end())
+    if (it == global_to_local_map_.end()) {
         return -1; // Global index not found
-    return it->second;
+    }
+
+    return static_cast<int>(it->second);
 }
 
 template<class Scalar>
