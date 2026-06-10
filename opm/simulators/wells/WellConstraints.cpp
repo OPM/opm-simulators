@@ -20,14 +20,16 @@
 */
 
 #include <config.h>
-
 #include <opm/simulators/wells/WellConstraints.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include "opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp"
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
@@ -116,7 +118,8 @@ activeInjectionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
             break;
         }
         default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + well_.name());
+            OPM_THROW(std::runtime_error,
+                      "Expected WATER, OIL or GAS as type for injectors " + well_.name());
         }
 
         if (controls.surface_rate < current_rate)

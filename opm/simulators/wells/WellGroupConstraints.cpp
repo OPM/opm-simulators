@@ -67,7 +67,8 @@ checkGroupConstraintsInj(const Group& group,
         break;
     }
     default:
-        throw("Expected WATER, OIL or GAS as type for injector " + well_.name());
+        OPM_THROW(std::runtime_error,
+                  "Expected WATER, OIL or GAS as type for injector " + well_.name());
     }
 
     // Make conversion factors for RESV <-> surface rates.

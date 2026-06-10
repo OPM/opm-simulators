@@ -563,7 +563,9 @@ checkGconsaleLimits(const Group& group,
             break;
         }
         default:
-            throw("Invalid procedure for maximum rate limit selected for group" + group.name());
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid procedure for maximum rate limit selected for group " + group.name(),
+                             deferred_logger);
         }
     }
     if (sales_rate < gconsale.min_sales_rate) {

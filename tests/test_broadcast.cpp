@@ -29,12 +29,17 @@
 #include <opm/simulators/utils/MPISerializer.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <exception>
 #include <numeric>
 
 #if HAVE_MPI
-struct MPIError
+struct MPIError : public std::exception
 {
     MPIError(std::string s, int e) : errorstring(std::move(s)), errorcode(e){}
+
+    const char* what() const noexcept override
+    { return errorstring.c_str(); }
+
     std::string errorstring;
     int errorcode;
 };
