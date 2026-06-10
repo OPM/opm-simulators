@@ -763,10 +763,7 @@ template<typename Scalar, typename IndexTraits>
 void GasLiftStage2<Scalar, IndexTraits>::
 sortGradients_(std::vector<GradPair>& grads)
 {
-    auto cmp = [](GradPair a, GradPair b) {
-         return a.second <  b.second;
-    };
-    std::ranges::sort(grads, cmp);
+    std::ranges::sort(grads, {}, &GradPair::second);
 }
 
 template<typename Scalar, typename IndexTraits>
