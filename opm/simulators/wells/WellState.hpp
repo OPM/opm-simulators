@@ -337,9 +337,9 @@ public:
         if (serializer.isSerializing()) {
             serializer(wells_.size());
         } else {
-            std::size_t size = 0;
-            serializer(size);
-            if (size != wells_.size()) {
+            std::size_t serialized_size = 0;
+            serializer(serialized_size);
+            if (serialized_size != wells_.size()) {
                 OPM_THROW(std::runtime_error, "Error deserializing WellState: size mismatch");
             }
         }
