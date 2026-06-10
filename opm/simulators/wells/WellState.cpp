@@ -70,11 +70,11 @@ public:
                              XConn&       global);
 
     // Pack all data associated with link.
-    void pack(const int link, MessageBufferType& buffer);
+    void pack(const int link, MessageBufferType& buffer) override;
 
     // Unpack all data associated with link.
     void unpack([[maybe_unused]] const int link,
-                MessageBufferType&         buffer);
+                MessageBufferType&         buffer) override;
 
 private:
     const XConn& local_;
