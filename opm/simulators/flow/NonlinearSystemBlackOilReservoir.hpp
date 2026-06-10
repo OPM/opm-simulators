@@ -26,6 +26,8 @@
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 
+#include <opm/simulators/flow/NonlinearSystem.hpp>
+
 #include <opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp>
 #include <opm/simulators/flow/NonlinearSystemNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelProperties.hpp>
@@ -57,12 +59,13 @@ namespace Opm {
 /// uses an industry-standard TPFA discretization with per-phase
 /// upwind weighting of mobilities.
 template <class TypeTag>
-class NonlinearSystemBlackOilReservoir
+class NonlinearSystemBlackOilReservoir : public NonlinearSystem<TypeTag>
 {
 public:
     // ---------  Types and enums  ---------
-    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using ParentType = NonlinearSystem<TypeTag>;
+    using Simulator = typename ParentType::Simulator;
+    using Grid = typename ParentType::Grid;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
@@ -73,6 +76,7 @@ public:
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GlobalEqVector = typename ParentType::GlobalEqVector;
     using ModelParameters = BlackoilModelParameters<Scalar>;
 
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
@@ -144,11 +148,8 @@ public:
                   BlackoilWellModel<TypeTag>& well_model,
                   const bool terminal_output);
 
-    bool isParallel() const
-    { return grid_.comm().size() > 1; }
-
     const EclipseState& eclState() const
-    { return simulator_.vanguard().eclState(); }
+    { return this->simulator_.vanguard().eclState(); }
 
     /// Called once before each time step.
     /// \param[in] timer                  simulation timer
@@ -157,7 +158,7 @@ public:
     void initialLinearization(SimulatorReportSingle& report,
                               const int minIter,
                               const int maxIter,
-                              const SimulatorTimerInterface& timer);
+                              const SimulatorTimerInterface& timer) override;
 
     /// Called once per nonlinear iteration.
     /// This model will perform a Newton-Raphson update, changing reservoir_state
@@ -174,35 +175,26 @@ public:
     SimulatorReportSingle nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                                                    NonlinearSolverType& nonlinear_solver);
 
-    /// Assemble the residual and Jacobian of the nonlinear system.
-    SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& timer);
-
     // compute the "relative" change of the solution between time steps
     Scalar relativeChange() const;
 
     /// Number of linear iterations used in last call to solveJacobianSystem().
     int linearIterationsLastSolve() const
-    { return simulator_.model().newtonMethod().linearSolver().iterations (); }
+    { return this->simulator_.model().newtonMethod().linearSolver().iterations (); }
 
     // Obtain reference to linear solver setup time
     double& linearSolveSetupTime()
-    { return linear_solve_setup_time_; }
+    { return this->linear_solve_setup_time_; }
 
     /// Solve the Jacobian system Jx = r where J is the Jacobian and
     /// r is the residual.
     void solveJacobianSystem(BVector& x);
 
-    /// Apply an update to the primary variables.
-    void updateSolution(const BVector& dx);
-
     /// Get solution update vector as a PrimaryVariable
-    void prepareStoringSolutionUpdate();
-    void storeSolutionUpdate(const BVector& dx);
+    bool shouldStoreSolutionUpdate() const override;
+    void prepareSolutionUpdate() override;
+    void storeSolutionUpdate(const GlobalEqVector& dx) override;
     MaxSolutionUpdateData getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
-
-    /// Return true if output to cout is wanted.
-    bool terminalOutputEnabled() const
-    { return terminal_output_; }
 
     std::tuple<Scalar,Scalar>
     convergenceReduction(Parallel::Communication comm,
@@ -234,9 +226,6 @@ public:
                             const double tol_cnv,
                             const double tol_cnv_energy);
 
-    void updateTUNING(const Tuning& tuning);
-    void updateTUNINGDP(const TuningDp& tuning_dp);
-
     ConvergenceReport
     getReservoirConvergence(const double reportTime,
                             const double dt,
@@ -254,10 +243,6 @@ public:
                    const int maxIter,
                    std::vector<Scalar>& residual_norms);
 
-    /// The number of active fluid phases in the model.
-    int numPhases() const
-    { return Indices::numPhases; }
-
     /// Wrapper required due to not following generic API
     template<class T>
     std::vector<std::vector<Scalar> >
@@ -268,16 +253,6 @@ public:
     std::vector<std::vector<Scalar> >
     computeFluidInPlace(const std::vector<int>& /*fipnum*/) const;
 
-    const Simulator& simulator() const
-    { return simulator_; }
-
-    Simulator& simulator()
-    { return simulator_; }
-
-    /// return the statistics if the nonlinearIteration() method failed
-    const SimulatorReportSingle& failureReport() const
-    { return failureReport_; }
-
     /// return the statistics of local solves accumulated for this rank
     const SimulatorReport& localAccumulatedReports() const;
 
@@ -287,32 +262,14 @@ public:
     /// Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
     void writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const;
 
-    const std::vector<StepReport>& stepReports() const
-    { return convergence_reports_; }
-
     /// Remove the last convergence report entry and residual norms history entry.
     void popLastConvergenceReport()
     {
-        convergence_reports_.back().report.pop_back();
-        residual_norms_history_.pop_back();
+        this->popLastStepReport();
+        this->residual_norms_history_.pop_back();
     }
 
     void writePartitions(const std::filesystem::path& odir) const;
-
-    /// return the StandardWells object
-    BlackoilWellModel<TypeTag>&
-    wellModel()
-    { return well_model_; }
-
-    const BlackoilWellModel<TypeTag>&
-    wellModel() const
-    { return well_model_; }
-
-    void beginReportStep()
-    { simulator_.problem().beginEpisode(); }
-
-    void endReportStep()
-    { simulator_.problem().endEpisode(); }
 
     template<class FluidState, class Residual>
     void getMaxCoeff(const unsigned cell_idx,
@@ -325,22 +282,12 @@ public:
                      std::vector<Scalar>& maxCoeff,
                      std::vector<int>& maxCoeffCell);
 
-    //! \brief Returns const reference to model parameters.
-    const ModelParameters& param() const
-    { return param_; }
-
-    //! \brief Returns const reference to component names.
-    const ComponentName& compNames() const
-    { return compNames_; }
-
     //! \brief Returns true if an NLDD solver exists
     bool hasNlddSolver() const
     { return nlddSolver_ != nullptr; }
 
 protected:
     // ---------  Data members  ---------
-    Simulator& simulator_;
-    const Grid& grid_;
     static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
@@ -351,34 +298,19 @@ protected:
     static constexpr bool has_bioeffects_ = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp_ = Indices::enableMICP;
 
-    ModelParameters                 param_;
-    SimulatorReportSingle failureReport_;
-
-    // Well Model
-    BlackoilWellModel<TypeTag>& well_model_;
-
-    /// \brief Whether we print something to std::cout
-    bool terminal_output_;
     /// \brief The number of cells of the global grid.
     long int global_nc_;
 
-    std::vector<std::vector<Scalar>> residual_norms_history_;
-    Scalar current_relaxation_;
-    BVector dx_old_;
-
     SolutionVector solUpd_;
-
-    std::vector<StepReport> convergence_reports_;
-    ComponentName compNames_{};
 
     std::unique_ptr<NonlinearSystemNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
     BlackoilModelConvergenceMonitor<Scalar> conv_monitor_;
 
 private:
-    Scalar dpMaxRel() const { return param_.dp_max_rel_; }
-    Scalar dsMax() const { return param_.ds_max_; }
-    Scalar drMaxRel() const { return param_.dr_max_rel_; }
-    Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
+    Scalar dpMaxRel() const { return this->param_.dp_max_rel_; }
+    Scalar dsMax() const { return this->param_.ds_max_; }
+    Scalar drMaxRel() const { return this->param_.dr_max_rel_; }
+    Scalar maxResidualAllowed() const { return this->param_.max_residual_allowed_; }
     double linear_solve_setup_time_;
     std::vector<bool> wasSwitched_;
 };

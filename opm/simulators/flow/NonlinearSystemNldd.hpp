@@ -79,7 +79,7 @@ namespace Opm {
 
 template<class TypeTag> class NonlinearSystemBlackOilReservoir;
 
-/// A NLDD implementation for three-phase black oil.
+/// A NLDD implementation used by the reservoir nonlinear system.
 template <class TypeTag>
 class NonlinearSystemNldd
 {
@@ -89,7 +89,7 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using ModelParameters = BlackoilModelParameters<Scalar>;
+    using ModelParameters = typename NonlinearSystemBlackOilReservoir<TypeTag>::ModelParameters;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
     using BVector = typename NonlinearSystemBlackOilReservoir<TypeTag>::BVector;
@@ -100,9 +100,7 @@ public:
     static constexpr int numEq = Indices::numEq;
 
     //! \brief The constructor sets up the subdomains.
-    //! \param model BlackOil model to solve for
-    //! \param param param Model parameters
-    //! \param compNames Names of the solution components
+    //! \param model Owning nonlinear system to solve for
     explicit NonlinearSystemNldd(NonlinearSystemBlackOilReservoir<TypeTag>& model)
         : model_(model)
         , wellModel_(model.wellModel())
@@ -849,22 +847,18 @@ private:
             CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                     CR::ReservoirFailure::Type::Cnv };
             Scalar tol[2] = { tol_mb, tol_cnv };
-            for (int ii : {0, 1}) {
-                if (std::isnan(res[ii])) {
-                    report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                    logger.debug("NaN residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] > model_.param().max_residual_allowed_) {
-                    report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                    logger.debug("Too large residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] < 0.0) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    logger.debug("Negative residual for " + model_.compNames().name(compIdx) + " equation.");
-                } else if (res[ii] > tol[ii]) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                }
-
-                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
-            }
+            model_.addReservoirConvergenceMetrics(
+                report,
+                compIdx,
+                model_.compNames().name(compIdx),
+                std::span<const Scalar>{res},
+                std::span<const CR::ReservoirFailure::Type>{types},
+                std::span<const Scalar>{tol},
+                model_.param().max_residual_allowed_,
+                [&logger](const std::string& message)
+                {
+                    logger.debug(message);
+                });
         }
 
         // Output of residuals. If converged at initial state, log nothing.

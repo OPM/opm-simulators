@@ -61,7 +61,7 @@ namespace Opm {
 
     class Deck;
 
-    // The FlowMain class is the black-oil simulator.
+    // The FlowMain class is the standard fully implicit flow simulator.
     template <class TypeTag>
     class FlowMain
     {
