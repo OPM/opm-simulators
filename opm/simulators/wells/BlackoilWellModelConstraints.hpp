@@ -41,7 +41,6 @@ template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelConstraints
 {
 public:
-
     constexpr static int waterPhaseIdx = IndexTraits::waterPhaseIdx;
     constexpr static int oilPhaseIdx = IndexTraits::oilPhaseIdx;
     constexpr static int gasPhaseIdx = IndexTraits::gasPhaseIdx;
