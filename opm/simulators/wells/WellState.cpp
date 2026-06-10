@@ -431,7 +431,7 @@ init(const std::vector<Scalar>& cellPressures,
             const int unchanged_globally = new_well.parallel_info.get().communication()
                 .min(unchanged_locally);
 
-            if (unchanged_globally) {
+            if (unchanged_globally != 0) {
                 new_well.perf_data.try_assign(prev_well.perf_data);
             } else {
                 const auto num_perf_this_well = new_well.perf_data.size();
