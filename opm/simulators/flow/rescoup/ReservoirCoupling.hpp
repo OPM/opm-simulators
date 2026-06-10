@@ -141,6 +141,7 @@ enum class MessageTag : int {
     MasterGroupNames,
     MasterGroupNamesSize,
     MasterGroupNodePressures,
+    MasterInitStatus,
     MasterStartOfReportStep,
     NumMasterGroupNodePressures,
     NumSlaveGroupConstraints,

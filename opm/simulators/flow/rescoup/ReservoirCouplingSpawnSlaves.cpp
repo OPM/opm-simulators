@@ -272,10 +272,17 @@ receiveSlaveStatus_()
 {
     auto num_slaves = this->master_.numSlavesStarted();
     if (this->comm_.rank() == 0) {
+        // Step 1: receive the init status from every slave that finished spawning.
+        // We must receive from all slaves before disconnecting any communicator:
+        // a slave that reported OK proceeds with the rest of the handshake and is
+        // not sitting at MPI_Comm_disconnect, so disconnecting its (collective)
+        // communicator out from under it would deadlock. See step 2.
+        std::vector<int> statuses(num_slaves, 0);
+        bool any_failed = false;
+        unsigned int first_failed = 0;
         for (unsigned int i = 0; i < num_slaves; i++) {
-            int status = 0;
             MPI_Recv(
-                &status,
+                &statuses[i],
                 /*count=*/1,
                 /*datatype=*/MPI_INT,
                 /*source_rank=*/0,
@@ -283,27 +290,60 @@ receiveSlaveStatus_()
                 this->master_.getSlaveComm(i),
                 MPI_STATUS_IGNORE
             );
-            if (status != 0) {
+            if (statuses[i] != 0) {
                 this->logger_.error(fmt::format(
-                    "Slave '{}' failed to initialize (parse error or other failure). "
-                    "The master cannot continue without all slaves.",
+                    "Received FAILED status from slave '{}': it failed to initialize "
+                    "(parse error or other failure). The master cannot continue "
+                    "without all slaves.",
                     this->master_.getSlaveName(i)
                 ));
-                // Disconnect from all slave communicators to avoid hanging
-                for (unsigned int j = 0; j < num_slaves; j++) {
-                    auto comm = this->master_.getSlaveComm(j);
-                    if (comm != MPI_COMM_NULL) {
-                        MPI_Comm_disconnect(&comm);
-                    }
+                if (!any_failed) {
+                    any_failed = true;
+                    first_failed = i;
                 }
-                RCOUP_LOG_THROW(std::runtime_error,
-                    "Reservoir coupling slave '" + this->master_.getSlaveName(i) +
-                    "' failed to initialize"
+            }
+            else {
+                this->logger_.debug(fmt::format(
+                    "Received OK status from slave '{}'", this->master_.getSlaveName(i)
+                ));
+            }
+        }
+        // Step 2: tell every slave that reported OK whether to proceed (0) or
+        // abort (1). A slave that reported FAILED has already disconnected its
+        // parent communicator (see Main::notifyMasterSlaveInitFailed_()) and is
+        // not waiting for a reply, so we do not send it one. An OK slave blocks
+        // on this reply right after sending its status, so on abort it will reach
+        // MPI_Comm_disconnect and the disconnect below is collectively matched.
+        int reply = any_failed ? 1 : 0;
+        for (unsigned int i = 0; i < num_slaves; i++) {
+            if (statuses[i] == 0) {
+                MPI_Send(
+                    &reply,
+                    /*count=*/1,
+                    /*datatype=*/MPI_INT,
+                    /*dest_rank=*/0,
+                    /*tag=*/static_cast<int>(MessageTag::MasterInitStatus),
+                    this->master_.getSlaveComm(i)
                 );
             }
-            this->logger_.debug(fmt::format(
-                "Received OK status from slave '{}'", this->master_.getSlaveName(i)
-            ));
+        }
+        if (any_failed) {
+            // Disconnect from all slave communicators. Failed slaves are already in MPI_Comm_disconnect;
+            // OK slaves received the abort reply and disconnect in response.
+            for (unsigned int i = 0; i < num_slaves; i++) {
+                // MPI_Comm is a copyable handle, so disconnecting a copy releases the underlying communicator.
+                auto comm = this->master_.getSlaveComm(i);
+                if (comm != MPI_COMM_NULL) {
+                    MPI_Comm_disconnect(&comm);
+                    this->logger_.debug(fmt::format(
+                        "Disconnected from slave '{}'", this->master_.getSlaveName(i)
+                    ));
+                }
+            }
+            RCOUP_LOG_THROW(std::runtime_error,
+                "Reservoir coupling slave '" + this->master_.getSlaveName(first_failed) +
+                "' failed to initialize"
+            );
         }
     }
 }

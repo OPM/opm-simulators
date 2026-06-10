@@ -285,6 +285,13 @@ void Main::notifyMasterSlaveInitFailed_()
     if (Parameters::Get<Parameters::Slave>()) {
         MPI_Comm parent_comm = MPI_COMM_NULL;
         MPI_Comm_get_parent(&parent_comm);
+        // MPI_Comm_get_parent() returns MPI_COMM_NULL when this process was not
+        // spawned by a master. --slave is a private flag the master sets when
+        // spawning, so this normally cannot happen. If it does (e.g. a deck run
+        // standalone with --slave), there is simply no master to notify. We do
+        // NOT MPI_Abort() here: this is the cooperative-shutdown path (the parse
+        // error is already reported and we return EXIT_FAILURE), and with no
+        // spawned master there is no peer that could hang.
         if (parent_comm != MPI_COMM_NULL) {
             int rank;
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -297,6 +304,11 @@ void Main::notifyMasterSlaveInitFailed_()
                 );
             }
             MPI_Comm_disconnect(&parent_comm);
+        }
+        else if (outputCout_) {
+            std::cerr << "Warning: --slave was set but this process has no parent "
+                         "communicator; running standalone, no master to notify."
+                      << std::endl;
         }
     }
 #endif

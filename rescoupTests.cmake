@@ -76,3 +76,27 @@ add_test(NAME rc_slave_parsing_err
   CONFIGURATIONS Integration
 )
 set_tests_properties(rc_slave_parsing_err PROPERTIES TIMEOUT 30)
+
+# Multi-slave parse error test: one slave fails to parse while another is
+# healthy. Verifies the master aborts the healthy slave cleanly (exit 1) instead
+# of deadlocking on a collective MPI_Comm_disconnect.
+add_custom_target(test_rc_slave_parsing_err_2slaves
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error_2slaves
+    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error_2slaves
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
+    ${CMAKE_CURRENT_BINARY_DIR}/tests/include
+  COMMENT "Copying slave_parse_error_2slaves test data to build tree"
+  DEPENDS ${_rescoup_simulator}
+)
+add_test(NAME rc_slave_parsing_err_2slaves
+  COMMAND
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error_2slaves/run_ctest.sh
+    $<TARGET_FILE:${_rescoup_simulator}>
+    ${_rescoup_mpiexec}
+  WORKING_DIRECTORY
+    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error_2slaves
+  CONFIGURATIONS Integration
+)
+set_tests_properties(rc_slave_parsing_err_2slaves PROPERTIES TIMEOUT 40)
