@@ -55,7 +55,7 @@ bool GlobalWellInfo<Scalar>::
 in_injecting_group(const std::string& wname) const
 {
     auto global_well_index = this->name_map.at(wname);
-    return this->m_in_injecting_group[global_well_index];
+    return this->m_in_injecting_group[global_well_index] != 0;
 }
 
 template<class Scalar>
@@ -63,7 +63,7 @@ bool GlobalWellInfo<Scalar>::
 in_producing_group(const std::string& wname) const
 {
     auto global_well_index = this->name_map.at(wname);
-    return this->m_in_producing_group[global_well_index];
+    return this->m_in_producing_group[global_well_index] != 0;
 }
 
 template<class Scalar>
@@ -71,7 +71,7 @@ bool GlobalWellInfo<Scalar>::
 is_open(const std::string& wname) const
 {
     auto global_well_index = this->name_map.at(wname);
-    return this->m_is_open[global_well_index];
+    return this->m_is_open[global_well_index] != 0;
 }
 
 template<class Scalar>
