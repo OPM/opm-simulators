@@ -1974,7 +1974,9 @@ namespace Opm
 
                 if constexpr (has_energy) {
                     const EvalWell segment_energy = this->computeSegmentEnergy(seg);
-                    const EvalWell accumulation_term_energy = regularization_factor * (segment_energy - segment_initial_energy_[seg]) / dt;
+                    // scaled to the same magnitude as the mass-balance equations, see energy_scaling_factor_
+                    const EvalWell accumulation_term_energy =
+                        energy_scaling_factor_ * regularization_factor * (segment_energy - segment_initial_energy_[seg]) / dt;
                     MultisegmentWellAssemble(*this).
                         assembleAccumulationTerm(seg, MSWEval::PrimaryVariables::Temperature, accumulation_term_energy, this->linSys_);
                 }
@@ -2685,7 +2687,8 @@ namespace Opm
                                              seg, context, deferred_logger);
             energy_rate += reservoir_rate * upwind_fs.enthalpy(phaseIdx) * upwind_fs.density(phaseIdx);
         }
-        return energy_rate;
+        // scaled to the same magnitude as the mass-balance equations, see energy_scaling_factor_
+        return energy_scaling_factor_ * energy_rate;
     }
 
     template <typename TypeTag>
@@ -2758,12 +2761,17 @@ namespace Opm
             }
         }
         energy_flux *= this->well_efficiency_factor_;
+        // connectionRates_ is the source term fed into the reservoir energy equation; it is
+        // kept in raw energy units here (the reservoir scales it centrally in computeSource(),
+        // just like for standard wells) and must not be pre-scaled.
         this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx] = Base::restrictEval(energy_flux);
 
+        // The well-side energy equation, on the other hand, is scaled to the same magnitude
+        // as the mass-balance equations, see energy_scaling_factor_.
         MultisegmentWellAssemble(*this).
             assemblePerforationEq(seg, local_perf_index,
                                   MSWEval::PrimaryVariables::Temperature,
-                                  energy_flux,
+                                  energy_scaling_factor_ * energy_flux,
                                   this->linSys_);
     }
 

@@ -152,15 +152,17 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             const Scalar energy_residual = maximum_residual[eq_idx];
             // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
             constexpr int dummy_phase = -1;
-            constexpr Scalar tolerance_energy_wells = 1.e-5; // TODO: need to determine a reasonable value for this
-            constexpr Scalar relaxed_tolerance_energy_wells = 1.e-4; // TODO: need to determine a reasonable value for this
+            // The well-side energy equation is scaled (by MultisegmentWell::energy_scaling_factor_,
+            // the same factor the reservoir energy equation uses) so that its residual is on the
+            // same magnitude as the mass-balance equations. We can therefore reuse the mass-balance
+            // well tolerances rather than a hand-tuned energy-specific constant.
             if (std::isnan(energy_residual)) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_phase, baseif_.name()});
-            } else if (std::isinf(energy_residual)) {
+            } else if (energy_residual > max_residual_allowed) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_phase, baseif_.name()});
-            } else if (!relax_tolerance && energy_residual > tolerance_energy_wells) {
+            } else if (!relax_tolerance && energy_residual > tolerance_wells) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
-            } else if (energy_residual > relaxed_tolerance_energy_wells) {
+            } else if (energy_residual > relaxed_inner_tolerance_flow_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
             }
         } else if (eq_idx == SPres) { // pressure equation
