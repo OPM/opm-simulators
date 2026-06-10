@@ -1467,12 +1467,13 @@ forceShutWellByName(const std::string& wellname,
     // Communicate across processes if a well was shut.
     well_was_shut = comm_.max(well_was_shut);
 
-    // the wellTesteState is updated between timesteps and we also need to update the privous WGstate
-    if(well_was_shut)
+    // The wellTestState is updated between timesteps and we also need to update the previous WGstate.
+    if (well_was_shut != 0) {
         this->commitWGState();
+    }
 
     // Only log a message on the output rank.
-    if (terminal_output_ && well_was_shut) {
+    if (terminal_output_ && well_was_shut != 0) {
         const std::string msg = "Well " + wellname
             + " will be shut because it fails to converge.";
         OpmLog::info(msg);
