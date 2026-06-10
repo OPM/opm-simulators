@@ -767,11 +767,11 @@ namespace Opm
 
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
 
-        // after updating the primary variables, we need to update the segment fluid state
-        updateSegmentFluidState(info, deferred_logger);
-
         computeInitialSegmentFluids(info, deferred_logger);
         if constexpr (has_energy) {
+            // after updating the primary variables, we need to update the segment fluid state
+            // it is only consumed by the energy equation, so we only do it when energy is active
+            updateSegmentFluidState(info, deferred_logger);
             computeInitialSegmentEnergy();
         }
     }
@@ -1607,6 +1607,11 @@ namespace Opm
             try{
                 dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
+                if constexpr (has_energy) {
+                    // segment fluid state is only consumed by the energy equation
+                    const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+                    updateSegmentFluidState(info, deferred_logger);
+                }
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
@@ -1789,8 +1794,11 @@ namespace Opm
             try{
                 const BVectorWell dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
-                const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
-                updateSegmentFluidState(info, deferred_logger);
+                if constexpr (has_energy) {
+                    // segment fluid state is only consumed by the energy equation
+                    const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+                    updateSegmentFluidState(info, deferred_logger);
+                }
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
