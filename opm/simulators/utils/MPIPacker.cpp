@@ -75,7 +75,7 @@ std::size_t Packing<false,std::string>::
 packSize(const std::string& data, Parallel::MPIComm comm)
 {
     int size;
-    MPI_Pack_size(1, Dune::MPITraits<std::size_t>::getType(), comm, &size);
+    MPI_Pack_size(1, Dune::MPITraits<int>::getType(), comm, &size);
     int totalSize = size;
     MPI_Pack_size(static_cast<int>(data.size()), MPI_CHAR, comm, &size);
     return totalSize + size;
@@ -87,9 +87,9 @@ pack(const std::string& data,
      std::size_t& position,
      Parallel::MPIComm comm)
 {
-    const auto length = data.size();
+    const int length = static_cast<int>(data.size());
     int int_position = 0;
-    MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data() + position,
+    MPI_Pack(&length, 1, Dune::MPITraits<int>::getType(), buffer.data() + position,
              mpi_buffer_size(buffer.size(), position), &int_position, comm);
     MPI_Pack(data.data(), static_cast<int>(length), MPI_CHAR,
              buffer.data()+position, mpi_buffer_size(buffer.size(), position),
@@ -107,7 +107,7 @@ unpack(std::string& data,
     int int_position = 0;
     MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position),
                &int_position, &length, 1,
-               Dune::MPITraits<std::size_t>::getType(), comm);
+               Dune::MPITraits<int>::getType(), comm);
     std::vector<char> cStr(length+1, '\0');
     MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position),
                &int_position, cStr.data(), length,
