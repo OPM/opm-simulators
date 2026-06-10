@@ -43,6 +43,7 @@
 #include <dune/fem/misc/mpimanager.hh>
 #endif
 
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -149,6 +150,17 @@ static inline int setupParameters_(int argc,
                 Parameters::printUsage(argv[0], std::cerr, oss.str());
             }
             return /*status=*/1;
+        }
+    }
+
+    {
+        const char* home = std::getenv("HOME");
+        if (home != nullptr) {
+            const std::string userRcFilename = std::string(home) + "/.config/OpmFlow/user_parameters.param";
+            const bool readFromUserRc = Parameters::parseParameterFile(userRcFilename, /*overwrite=*/false);
+            if (readFromUserRc && myRank == 0) {
+                std::cerr << "Read parameters from " << userRcFilename << ".\n";
+            }
         }
     }
 
