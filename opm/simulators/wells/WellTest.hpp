@@ -95,6 +95,14 @@ private:
                          const SingleWellState<Scalar, IndexTraits>& ws,
                          DeferredLogger& deferred_logger) const;
 
+    //! \brief Apply the CON / +CON (close-connection) workover procedure.
+    void closeOffendingCompletion(int offending_completion,
+                                  bool close_connections_below,
+                                  double simulation_time,
+                                  bool write_message_to_opmlog,
+                                  WellTestState& well_test_state,
+                                  DeferredLogger& deferred_logger) const;
+
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };

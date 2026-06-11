@@ -29,6 +29,8 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
+#include <fmt/format.h>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -447,6 +449,92 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                 deferred_logger.warning("NOT_SUPPORTED_WORKOVER_TYPE",
                                         "not supporting workover type " + WellEconProductionLimits::EconWorkover2String(workover));
             }
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellTest<Scalar, IndexTraits>::
+closeOffendingCompletion(const int offending_completion,
+                         const bool close_connections_below,
+                         const double simulation_time,
+                         const bool write_message_to_opmlog,
+                         WellTestState& well_test_state,
+                         DeferredLogger& deferred_logger) const
+{
+    // Completion numbers are positive (1-based). Non-positive values are
+    // sentinels from the parallel worst-offender search (e.g. INT_MIN when no
+    // rank holds a valid candidate) and must not be registered as closed.
+    if (offending_completion <= 0) {
+        deferred_logger.warning("ECON_WORKOVER_INVALID_COMPLETION",
+                                fmt::format("Economic limit workover for well {} did not find a "
+                                            "valid completion to close (completion number {}). "
+                                            "No connection will be closed.",
+                                            well_.name(), offending_completion));
+        return;
+    }
+
+    // The wellbore ordering of the connections is the one given by COMPORD and
+    // reflected in the order of the connections returned by getConnections().
+    const auto& connections = well_.wellEcl().getConnections();
+
+    // Build the list of completions to close. For CON it is just the
+    // worst-offending completion; for +CON it additionally contains every
+    // completion located below the worst-offending one in the wellbore.
+    // "Below" means further from the wellhead according to the connection ordering.
+    std::vector<int> completions_to_close;
+    if (!close_connections_below) {
+        completions_to_close.push_back(offending_completion);
+    } else {
+        completions_to_close.push_back(offending_completion);
+        bool below_worst_offender = false;
+        for (const auto& connection : connections) {
+            if (!below_worst_offender &&
+                connection.complnum() == offending_completion) {
+                below_worst_offender = true;
+                continue;
+            }
+            if (below_worst_offender) {
+                completions_to_close.push_back(connection.complnum());
+            }
+        }
+    }
+
+    for (const int completion : completions_to_close) {
+        well_test_state.close_completion(well_.name(), completion, simulation_time);
+    }
+
+    if (write_message_to_opmlog) {
+        const std::string below_msg = close_connections_below
+            ? " and all connections below it" : "";
+        std::string block_msg;
+        for (const auto& connection : connections) {
+            if (connection.complnum() == offending_completion) {
+                block_msg = fmt::format(" - block ({}, {}, {})",
+                                        connection.getI() + 1,
+                                        connection.getJ() + 1,
+                                        connection.getK() + 1);
+                break;
+            }
+        }
+        deferred_logger.info(fmt::format("Completion {}{} for well {}{} will be closed due to economic limit",
+                                         offending_completion, block_msg,
+                                         well_.name(), below_msg));
+    }
+
+    bool allCompletionsClosed = true;
+    for (const auto& connection : connections) {
+        if (connection.state() == Connection::State::OPEN
+            && !well_test_state.completion_is_closed(well_.name(), connection.complnum())) {
+            allCompletionsClosed = false;
+        }
+    }
+
+    if (allCompletionsClosed) {
+        well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+        // if all the completion/connections are closed, the well can only be SHUT
+        if (write_message_to_opmlog) {
+            deferred_logger.info(fmt::format("{} will be shut due to last completion closed", well_.name()));
         }
     }
 }
