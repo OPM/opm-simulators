@@ -111,6 +111,15 @@ namespace Opm
         /// i.e. the time step preparation of the wells (including the
         /// standalone well solves) and the control/network updates.
         double well_facility_time = 0.0;
+        /// Part of well_control_network_time used for updating and
+        /// communicating the group data, checking the well controls and
+        /// updating the guide rates.
+        double group_control_time = 0.0;
+        /// Part of well_control_network_time used for balancing the network.
+        double network_balance_time = 0.0;
+        /// Part of well_control_network_time used for the well solves
+        /// triggered by control changes (prepareWellsBeforeAssembling).
+        double control_well_solve_time = 0.0;
         unsigned int total_well_potential_iterations = 0;
         unsigned int total_network_iterations = 0;
 
@@ -178,6 +187,9 @@ namespace Opm
             serializer(well_control_network_time);
             serializer(gaslift_time);
             serializer(well_facility_time);
+            serializer(group_control_time);
+            serializer(network_balance_time);
+            serializer(control_well_solve_time);
             serializer(total_well_potential_iterations);
             serializer(total_network_iterations);
         }

@@ -38,7 +38,8 @@ namespace Opm
                                      true, false, false, 19, 20.0, 21.0,
                                      22, 23, 24, 25, 26, 27, 28, 29,
                                      30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0,
-                                     38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46, 47};
+                                     38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0,
+                                     46.0, 47.0, 48.0, 49, 50};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -91,6 +92,9 @@ namespace Opm
                this->well_control_network_time == rhs.well_control_network_time &&
                this->gaslift_time == rhs.gaslift_time &&
                this->well_facility_time == rhs.well_facility_time &&
+               this->group_control_time == rhs.group_control_time &&
+               this->network_balance_time == rhs.network_balance_time &&
+               this->control_well_solve_time == rhs.control_well_solve_time &&
                this->total_well_potential_iterations == rhs.total_well_potential_iterations &&
                this->total_network_iterations == rhs.total_network_iterations;
     }
@@ -123,6 +127,9 @@ namespace Opm
         well_control_network_time += sr.well_control_network_time;
         gaslift_time += sr.gaslift_time;
         well_facility_time += sr.well_facility_time;
+        group_control_time += sr.group_control_time;
+        network_balance_time += sr.network_balance_time;
+        control_well_solve_time += sr.control_well_solve_time;
         output_write_time += sr.output_write_time;
         total_time += sr.total_time;
         total_well_iterations += sr.total_well_iterations;
@@ -199,6 +206,22 @@ namespace Opm
                                 100*failureReport->assemble_time_well/noZero(t));
             }
             os << std::endl;
+
+            // part of the well assembly used for the facility calculations
+            // (further details in the Facility calculations section below)
+            t = well_facility_time + (failureReport ? failureReport->well_facility_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("      Facility calculations:  {:7.2f} s", t);
+                os << std::endl;
+
+                t = well_control_network_time + (failureReport ? failureReport->well_control_network_time : 0.0);
+                os << fmt::format("        Control/network:      {:7.2f} s", t);
+                os << std::endl;
+
+                t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
+                os << fmt::format("        Well solves:          {:7.2f} s", t);
+                os << std::endl;
+            }
 
             t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
             os << fmt::format("  Linear solve time:        {:9.2f} s", t);
@@ -361,11 +384,25 @@ namespace Opm
             os << fmt::format("  Control/network:            {:7.2f} s", t);
             os << std::endl;
 
+            t = group_control_time + (failureReport ? failureReport->group_control_time : 0.0);
+            os << fmt::format("    Group/control updates:    {:7.2f} s", t);
+            os << std::endl;
+
+            t = network_balance_time + (failureReport ? failureReport->network_balance_time : 0.0);
+            if (t > 0.0) {
+                os << fmt::format("    Network balance:          {:7.2f} s", t);
+                os << std::endl;
+            }
+
             t = gaslift_time + (failureReport ? failureReport->gaslift_time : 0.0);
             if (t > 0.0) {
                 os << fmt::format("    Gas lift optimize:        {:7.2f} s", t);
                 os << std::endl;
             }
+
+            t = control_well_solve_time + (failureReport ? failureReport->control_well_solve_time : 0.0);
+            os << fmt::format("    Well solves (control):    {:7.2f} s", t);
+            os << std::endl;
 
             t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
             os << fmt::format("  Well solves:                {:7.2f} s", t);
