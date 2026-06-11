@@ -70,6 +70,50 @@ namespace Opm
         int accepted_unconverged_domains = 0;
         int skipped_domains = 0;
 
+        /// Part of update_time used for evaluating properties
+        /// (intensive quantities) after a solution update.
+        double props_time = 0.0;
+        /// Part of update_time used for the convergence checks
+        /// (reservoir and wells).
+        double convergence_check_time = 0.0;
+        /// Part of pre_post_time used for the extra evaluations related
+        /// to output (endTimeStep: summary evaluation, actions etc.).
+        double output_eval_time = 0.0;
+        /// Part of pre_post_time used for solving the tracer equations.
+        double tracer_solve_time = 0.0;
+        /// Part of pre_post_time used for the sequential implicit
+        /// temperature solve.
+        double temperature_solve_time = 0.0;
+        /// Time used by the actual (possibly asynchronous) output writes.
+        double output_disk_write_time = 0.0;
+        /// Part of linear_solve_time spent in the actual solver apply.
+        double linear_solve_apply_time = 0.0;
+        /// Part of linear_solve_setup_time used for creating and updating
+        /// the preconditioner.
+        double precond_setup_time = 0.0;
+        /// Part of linear_solve_apply_time used for applying the
+        /// preconditioner.
+        double precond_apply_time = 0.0;
+        /// Statistics for the separate (standalone) well solves, i.e. the
+        /// local solves of the well equations done outside the global
+        /// linearizations (prepareTimeStep, well testing) and the well
+        /// potential calculations.
+        double well_solve_time = 0.0;
+        double well_potential_solve_time = 0.0;
+        double well_solve_assemble_time = 0.0;
+        double well_solve_linear_solve_time = 0.0;
+        /// Part of assemble_time_well used for updating well controls,
+        /// group targets and balancing the network.
+        double well_control_network_time = 0.0;
+        /// Part of well_control_network_time used for gas lift optimization.
+        double gaslift_time = 0.0;
+        /// Part of assemble_time_well used for the facility calculations,
+        /// i.e. the time step preparation of the wells (including the
+        /// standalone well solves) and the control/network updates.
+        double well_facility_time = 0.0;
+        unsigned int total_well_potential_iterations = 0;
+        unsigned int total_network_iterations = 0;
+
         static SimulatorReportSingle serializationTestObject();
 
         bool operator==(const SimulatorReportSingle&) const;
@@ -78,7 +122,10 @@ namespace Opm
         /// Print a report suitable for a single simulation step.
         void reportStep(std::ostream& os) const;
         /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
-        void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
+        /// With performance_details, additional detailed timings are included.
+        void reportFullyImplicit(std::ostream& os,
+                                 const SimulatorReportSingle* failedReport = nullptr,
+                                 bool performance_details = false) const;
         void reportNLDD(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -115,6 +162,24 @@ namespace Opm
             serializer(unconverged_domains);
             serializer(accepted_unconverged_domains);
             serializer(skipped_domains);
+            serializer(props_time);
+            serializer(convergence_check_time);
+            serializer(output_eval_time);
+            serializer(tracer_solve_time);
+            serializer(temperature_solve_time);
+            serializer(output_disk_write_time);
+            serializer(linear_solve_apply_time);
+            serializer(precond_setup_time);
+            serializer(precond_apply_time);
+            serializer(well_solve_time);
+            serializer(well_potential_solve_time);
+            serializer(well_solve_assemble_time);
+            serializer(well_solve_linear_solve_time);
+            serializer(well_control_network_time);
+            serializer(gaslift_time);
+            serializer(well_facility_time);
+            serializer(total_well_potential_iterations);
+            serializer(total_network_iterations);
         }
     };
 
@@ -129,7 +194,7 @@ namespace Opm
         bool operator==(const SimulatorReport&) const;
         void operator+=(const SimulatorReportSingle& sr);
         void operator+=(const SimulatorReport& sr);
-        void reportFullyImplicit(std::ostream& os) const;
+        void reportFullyImplicit(std::ostream& os, bool performance_details = false) const;
         void reportNLDD(std::ostream& os) const;
         void fullReports(std::ostream& os) const;
 

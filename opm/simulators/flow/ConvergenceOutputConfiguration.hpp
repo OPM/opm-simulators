@@ -39,6 +39,9 @@ namespace Opm {
 ///   * "iterations" -- Want additional convergence output pertaining to each
 ///                     non-linar ieration in each timestep.
 ///
+///   * "performance" -- Want additional performance details in the summary
+///                      at the end of the simulation.
+///
 /// Option value "none" overrides all other options.  In other words, if the
 /// user requests "none", then there will be no additional convergence
 /// output, even if there are other options in the option string.
@@ -54,6 +57,7 @@ public:
         None = 0,
         Steps = 1 << 1,
         Iterations = 1 << 2,
+        Performance = 1 << 3,
     };
 
     /// Constructor

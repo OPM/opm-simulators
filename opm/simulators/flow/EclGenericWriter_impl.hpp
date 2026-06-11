@@ -65,6 +65,7 @@
 #include <cmath>
 #include <functional>
 #include <map>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -153,6 +154,9 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     bool writeDoublePrecision_;
     /// \brief True if there was an EXIT keyword in ACTIONX causing a simulation end
     bool forcedSimulationFinished_;
+    /// \brief Accumulates the time used by the actual write. Written by the
+    /// output thread; only to be read after a barrier on the tasklet runner.
+    double* writeTime_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
                              const Opm::WellTestState& wtestState,
@@ -165,7 +169,8 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              double secondsElapsed,
                              std::vector<Opm::RestartValue> restartValue,
                              bool writeDoublePrecision,
-                             bool forcedSimulationFinished)
+                             bool forcedSimulationFinished,
+                             double* writeTime)
         : actionState_(actionState)
         , wtestState_(wtestState)
         , summaryState_(summaryState)
@@ -178,10 +183,22 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , restartValue_(std::move(restartValue))
         , writeDoublePrecision_(writeDoublePrecision)
         , forcedSimulationFinished_(forcedSimulationFinished)
+        , writeTime_(writeTime)
     {}
 
     // callback to eclIO serial writeTimeStep method
     void run() override
+    {
+        const auto start = std::chrono::steady_clock::now();
+        this->writeTimeStep_();
+        const auto end = std::chrono::steady_clock::now();
+        if (this->writeTime_ != nullptr) {
+            *this->writeTime_ += std::chrono::duration<double>(end - start).count();
+        }
+    }
+
+private:
+    void writeTimeStep_()
     {
         if (this->restartValue_.size() == 1) {
             this->eclIO_.writeTimeStep(this->actionState_,
@@ -1010,7 +1027,7 @@ doWriteOutput(const int                          reportStepNum,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
         reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValues), doublePrecision,
-        isForcedFinalOutput);
+        isForcedFinalOutput, &this->asyncWriteTime_);
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));

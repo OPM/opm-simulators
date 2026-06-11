@@ -22,6 +22,8 @@
 #ifndef OPM_ISTLSOLVER_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_HEADER_INCLUDED
 
+#include <dune/common/timer.hh>
+
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/solver.hh>
 
@@ -415,6 +417,25 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             solveCount_ = 0;
         }
 
+        double popPreconditionerApplyTime() override
+        {
+            auto* timed = timedPreconditioner_();
+            return timed ? timed->popApplyTime() : 0.0;
+        }
+
+        double popPreconditionerUpdateTime() override
+        {
+            // include the time used for (re)creating the solver, which is
+            // dominated by the construction of the preconditioner
+            double t = solver_create_time_;
+            solver_create_time_ = 0.0;
+            auto* timed = timedPreconditioner_();
+            if (timed) {
+                t += timed->popUpdateTime();
+            }
+            return t;
+        }
+
         bool solve(Vector& x) override
         {
             OPM_TIMEBLOCK(istlSolverSolve);
@@ -486,6 +507,17 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #endif
         }
 
+        //! \brief Access the timing decorator around the active preconditioner,
+        //! or nullptr if not available.
+        Dune::TimedPreconditioner<Vector, Vector>* timedPreconditioner_()
+        {
+            if (flexibleSolver_.empty() || !flexibleSolver_[activeSolverNum_].pre_) {
+                return nullptr;
+            }
+            return dynamic_cast<Dune::TimedPreconditioner<Vector, Vector>*>(
+                flexibleSolver_[activeSolverNum_].pre_);
+        }
+
         void prepareFlexibleSolver()
         {
             OPM_TIMEBLOCK(flexibleSolverPrepare);
@@ -503,6 +535,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 }
                 std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
+                Dune::Timer createTimer;
+                createTimer.start();
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),
                                                          isParallel(),
                                                          prm_[activeSolverNum_],
@@ -510,6 +544,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                          weightCalculator,
                                                          forceSerial_,
                                                          comm_.get());
+                solver_create_time_ += createTimer.stop();
             }
             else
             {
@@ -656,6 +691,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         const Simulator& simulator_;
         mutable int iterations_;
         mutable int solveCount_;
+        // time used for (re)creating the linear solver, dominated by the
+        // construction of the preconditioner
+        double solver_create_time_ = 0.0;
         std::any parallelInformation_;
 
         // non-const to be able to scale the linear system
