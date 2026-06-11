@@ -931,7 +931,8 @@ namespace Opm {
                         }
 
                         // ... but not one closed during the current timestep
-                        const bool closed_this_step = (well_test_state.lastTestTime(well_name) == simulator_.time());
+                        const bool closed_this_step =
+                            (well_test_state.lastCompletionCloseTime(well_name, complnum) == simulator_.time());
                         if (closed_this_step) {
                             continue;
                         }
