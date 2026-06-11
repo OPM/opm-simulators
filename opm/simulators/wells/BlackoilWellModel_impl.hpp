@@ -1314,16 +1314,26 @@ namespace Opm {
             this->rescoupHelper_.receiveMasterGroupNodePressuresFromMaster();
         }
 #endif
+        Dune::Timer groupTimer;
+        groupTimer.start();
         this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
         // We need to call updateWellControls before we update the network as
         // network updates are only done on thp controlled wells.
         // Note that well controls are allowed to change during updateNetwork
         // and in prepareWellsBeforeAssembling during well solves.
         bool well_group_control_changed = updateWellControls(local_deferredLogger);
+        last_report_.group_control_time += groupTimer.stop();
+
+        Dune::Timer networkBalanceTimer;
+        networkBalanceTimer.start();
         const auto [more_inner_network_update, network_imbalance] =
                 this->network_.update(mandatory_network_balance,
                                       local_deferredLogger,
                                       relax_network_tolerance);
+        // only account for the time when a network is active
+        if (this->schedule()[reportStepIdx].network().active()) {
+            last_report_.network_balance_time += networkBalanceTimer.stop();
+        }
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingMaster()) {
             this->rescoupHelper_.maybeExchangeNetworkOuterIterationWithSlaves(more_inner_network_update);
@@ -1352,7 +1362,12 @@ namespace Opm {
                     last_report_.gaslift_time += gliftTimer.stop();
                 }
             }
+            // the well solves triggered by control changes are part of the
+            // control/network update, keep track of the time separately
+            Dune::Timer prepareWellsTimer;
+            prepareWellsTimer.start();
             prepareWellsBeforeAssembling(dt);
+            last_report_.control_well_solve_time += prepareWellsTimer.stop();
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "updateWellControlsAndNetworkIteration() failed: ",
@@ -1362,12 +1377,15 @@ namespace Opm {
         if (alq_updated || BlackoilWellModelGuideRates(*this).
                               guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = simulator_.time();
+            Dune::Timer guideRateTimer;
+            guideRateTimer.start();
             // NOTE: For reservoir coupling: Slave group potentials are only communicated
             //    at the start of the time step, see beginTimeStep(). Here, we assume those
             //    potentials remain unchanged during the time step when updating guide rates below.
             this->guide_rate_handler_.updateGuideRates(
                 reportStepIdx, simulationTime, this->wellState(), this->groupState()
             );
+            last_report_.group_control_time += guideRateTimer.stop();
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
