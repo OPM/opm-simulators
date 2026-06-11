@@ -200,35 +200,6 @@ namespace Opm
             }
             os << std::endl;
 
-            // The facility calculations cover the time step preparation of
-            // the wells and the control/network updates. The indented items
-            // below are parts of their parent, but do not necessarily add
-            // up to it (e.g. well solves also happen during the
-            // control/network updates).
-            t = well_facility_time + (failureReport ? failureReport->well_facility_time : 0.0);
-            if (performance_details && t > 0.0) {
-                os << fmt::format("      Facility calculations:  {:7.2f} s", t);
-                os << std::endl;
-            }
-
-            t = well_control_network_time + (failureReport ? failureReport->well_control_network_time : 0.0);
-            if (performance_details && t > 0.0) {
-                os << fmt::format("        Control/network:      {:7.2f} s", t);
-                os << std::endl;
-            }
-
-            t = gaslift_time + (failureReport ? failureReport->gaslift_time : 0.0);
-            if (performance_details && t > 0.0) {
-                os << fmt::format("          Gas lift optimize:  {:7.2f} s", t);
-                os << std::endl;
-            }
-
-            t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
-            if (performance_details && t > 0.0) {
-                os << fmt::format("        Well solves:          {:7.2f} s", t);
-                os << std::endl;
-            }
-
             t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
             os << fmt::format("  Linear solve time:        {:9.2f} s", t);
             if (failureReport) {
@@ -364,32 +335,53 @@ namespace Opm
                 os << std::endl;
             }
 
-            const double total_well_solve_time =
-                well_solve_time + well_potential_solve_time +
-                (failureReport ? failureReport->well_solve_time +
-                                 failureReport->well_potential_solve_time : 0.0);
-            if (performance_details && total_well_solve_time > 0.0) {
-                os << fmt::format("  Well solve time:            {:7.2f} s", total_well_solve_time);
-                if (failureReport) {
-                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
-                                    failureReport->well_solve_time + failureReport->well_potential_solve_time,
-                                    100*(failureReport->well_solve_time + failureReport->well_potential_solve_time)
-                                       /noZero(total_well_solve_time));
-                }
-                os << std::endl;
+        }
 
-                t = well_solve_assemble_time + (failureReport ? failureReport->well_solve_assemble_time : 0.0);
-                os << fmt::format("    Assembly:                 {:7.2f} s", t);
-                os << std::endl;
+        // Summary of all time used in the wells/facility. This cuts across
+        // the simulation phases above: the control/network updates and the
+        // normal well solves happen during the assembly, while the well
+        // potential solves are part of the pre/post step (output
+        // evaluation). The indented items are parts of their parent, but do
+        // not necessarily add up to it.
+        const double total_facility_time =
+            well_facility_time + well_potential_solve_time +
+            (failureReport ? failureReport->well_facility_time +
+                             failureReport->well_potential_solve_time : 0.0);
+        if (performance_details && total_facility_time > 0.0) {
+            os << fmt::format("Facility calculations:      {:9.2f} s", total_facility_time);
+            if (failureReport) {
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                failureReport->well_facility_time + failureReport->well_potential_solve_time,
+                                100*(failureReport->well_facility_time + failureReport->well_potential_solve_time)
+                                   /noZero(total_facility_time));
+            }
+            os << std::endl;
 
-                t = well_solve_linear_solve_time + (failureReport ? failureReport->well_solve_linear_solve_time : 0.0);
-                os << fmt::format("    Linear solve:             {:7.2f} s", t);
-                os << std::endl;
+            double t = well_control_network_time + (failureReport ? failureReport->well_control_network_time : 0.0);
+            os << fmt::format("  Control/network:            {:7.2f} s", t);
+            os << std::endl;
 
-                t = well_potential_solve_time + (failureReport ? failureReport->well_potential_solve_time : 0.0);
-                os << fmt::format("    Potential solves:         {:7.2f} s", t);
+            t = gaslift_time + (failureReport ? failureReport->gaslift_time : 0.0);
+            if (t > 0.0) {
+                os << fmt::format("    Gas lift optimize:        {:7.2f} s", t);
                 os << std::endl;
             }
+
+            t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
+            os << fmt::format("  Well solves:                {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_solve_assemble_time + (failureReport ? failureReport->well_solve_assemble_time : 0.0);
+            os << fmt::format("    Assembly:                 {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_solve_linear_solve_time + (failureReport ? failureReport->well_solve_linear_solve_time : 0.0);
+            os << fmt::format("    Linear solve:             {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_potential_solve_time + (failureReport ? failureReport->well_potential_solve_time : 0.0);
+            os << fmt::format("  Potential solves:           {:7.2f} s", t);
+            os << std::endl;
         }
 
         int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
