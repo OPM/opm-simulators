@@ -535,6 +535,10 @@ finalize()
         Dune::Timer finalOutputTimer;
         finalOutputTimer.start();
 
+        // collect the time used by the actual (possibly asynchronous)
+        // output writes before the writer is destroyed below
+        report_.success.output_disk_write_time +=
+            simulator_.problem().eclWriter().finalizeAsyncWriteTime();
         simulator_.problem().finalizeOutput();
         report_.success.output_write_time += finalOutputTimer.stop();
     }

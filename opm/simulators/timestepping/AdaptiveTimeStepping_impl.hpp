@@ -922,7 +922,14 @@ run()
             full_report += substep_report;
             problem.setSimulationReport(full_report);
             problem.endTimeStep();
-            substep_report.pre_post_time += perfTimer.stop();
+            // The post-step part (endTimeStep) is dominated by the extra
+            // evaluations related to output (summary evaluation, actions)
+            // and the tracer solve, keep track of them separately.
+            const double post_step_time = perfTimer.stop();
+            const double tracer_solve_time = problem.popTracerSolveTime();
+            substep_report.pre_post_time += post_step_time;
+            substep_report.tracer_solve_time += tracer_solve_time;
+            substep_report.output_eval_time += post_step_time - tracer_solve_time;
 
             report += substep_report;
 

@@ -114,6 +114,14 @@ public:
 
     void extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map);
 
+    /// \brief Wait for any pending output tasklet to finish and return the
+    /// accumulated time used by the actual (possibly asynchronous) writes.
+    double finalizeAsyncWriteTime()
+    {
+        taskletRunner_->barrier();
+        return asyncWriteTime_;
+    }
+
 protected:
     const TransmissibilityType& globalTrans() const;
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;
@@ -162,6 +170,9 @@ protected:
     const EclipseState& eclState_;
     std::unique_ptr<EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
+    // time used by the actual output writes; written by the output thread,
+    // only read after a barrier on the tasklet runner
+    double asyncWriteTime_ = 0.0;
     Scalar restartTimeStepSize_;
     const TransmissibilityType* globalTrans_ = nullptr;
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;

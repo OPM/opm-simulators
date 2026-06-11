@@ -33,6 +33,7 @@
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/timer.hh>
 
 #include <opm/common/utility/TimeService.hpp>
 
@@ -445,7 +446,16 @@ public:
 
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
-        this->tracerModel_.endTimeStep();
+        {
+            // keep track of the time used for solving the tracers, so it
+            // can be reported separately in the performance summary
+            Dune::Timer tracerTimer;
+            tracerTimer.start();
+            this->tracerModel_.endTimeStep();
+            if (this->tracerModel_.numTracers() > 0) {
+                tracer_solve_time_ += tracerTimer.stop();
+            }
+        }
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -467,7 +477,13 @@ public:
 
         // Drift compensation needs to be updated before calling the temperature equation
         if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
+            // keep track of the time used for the sequential implicit
+            // temperature solve, so it can be reported separately in the
+            // performance summary
+            Dune::Timer temperatureTimer;
+            temperatureTimer.start();
             this->temperatureModel_.endTimeStep(wellModel_.wellState());
+            temperature_solve_time_ += temperatureTimer.stop();
         }
     }
 
@@ -667,6 +683,24 @@ public:
 
     TracerModel& tracerModel()
     { return tracerModel_; }
+
+    /// Return the time used for solving the tracer equations since the last
+    /// call to this function, and reset the counter.
+    double popTracerSolveTime()
+    {
+        const double t = tracer_solve_time_;
+        tracer_solve_time_ = 0.0;
+        return t;
+    }
+
+    /// Return the time used for the sequential implicit temperature solve
+    /// since the last call to this function, and reset the counter.
+    double popTemperatureSolveTime()
+    {
+        const double t = temperature_solve_time_;
+        temperature_solve_time_ = 0.0;
+        return t;
+    }
 
     TemperatureModel& temperatureModel() // need for restart
     { return temperatureModel_; }
@@ -1819,6 +1853,8 @@ protected:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
     TemperatureModel temperatureModel_;
+    double tracer_solve_time_ = 0.0;
+    double temperature_solve_time_ = 0.0;
 
     template<class T>
     struct BCData

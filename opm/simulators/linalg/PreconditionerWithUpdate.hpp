@@ -21,6 +21,7 @@
 #define OPM_PRECONDITIONERWITHUPDATE_HEADER_INCLUDED
 
 #include <dune/istl/preconditioner.hh>
+#include <chrono>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -92,6 +93,75 @@ getDummyUpdateWrapper(Args&&... args)
 {
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
+
+/// Decorator measuring the time spent in apply() and update() of the wrapped
+/// preconditioner, for reporting in the performance summary.
+template <class X, class Y>
+class TimedPreconditioner : public PreconditionerWithUpdate<X, Y>
+{
+public:
+    explicit TimedPreconditioner(std::shared_ptr<PreconditionerWithUpdate<X, Y>> precond)
+        : precond_(std::move(precond))
+    {
+    }
+
+    virtual void pre(X& x, Y& b) override
+    {
+        precond_->pre(x, b);
+    }
+
+    virtual void apply(X& v, const Y& d) override
+    {
+        const auto start = std::chrono::steady_clock::now();
+        precond_->apply(v, d);
+        apply_time_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    }
+
+    virtual void post(X& x) override
+    {
+        precond_->post(x);
+    }
+
+    virtual SolverCategory::Category category() const override
+    {
+        return precond_->category();
+    }
+
+    virtual void update() override
+    {
+        const auto start = std::chrono::steady_clock::now();
+        precond_->update();
+        update_time_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    }
+
+    virtual bool hasPerfectUpdate() const override
+    {
+        return precond_->hasPerfectUpdate();
+    }
+
+    /// Return the time used in apply() since the last call to this
+    /// function, and reset the counter.
+    double popApplyTime()
+    {
+        const double t = apply_time_;
+        apply_time_ = 0.0;
+        return t;
+    }
+
+    /// Return the time used in update() since the last call to this
+    /// function, and reset the counter.
+    double popUpdateTime()
+    {
+        const double t = update_time_;
+        update_time_ = 0.0;
+        return t;
+    }
+
+private:
+    std::shared_ptr<PreconditionerWithUpdate<X, Y>> precond_;
+    double apply_time_ = 0.0;
+    double update_time_ = 0.0;
+};
 
 /// @brief Interface class ensuring make function is overriden
 /// @tparam OriginalPreconditioner - An arbitrary Preconditioner type

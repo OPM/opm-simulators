@@ -29,6 +29,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/flow/Banners.hpp>
+#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
@@ -421,7 +422,13 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
+            const auto extraConvOutput = ConvergenceOutputConfiguration {
+                Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
+                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))"
+            };
+
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report,
+                             extraConvOutput.want(ConvergenceOutputConfiguration::Option::Performance));
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),

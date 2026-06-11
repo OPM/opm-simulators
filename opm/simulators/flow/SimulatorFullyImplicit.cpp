@@ -40,7 +40,9 @@ void registerSimulatorParameters()
          "\"none\" gives no extra output and "
          "overrides all other options, "
          "\"steps\" generates an INFOSTEP file, "
-         "\"iterations\" generates an INFOITER file. "
+         "\"iterations\" generates an INFOITER file, "
+         "\"performance\" adds detailed timings to the "
+         "performance summary at the end of the simulation. "
          "Combine options with commas, e.g., "
          "\"steps,iterations\" for multiple outputs.");
     Parameters::Register<Parameters::SaveStep>

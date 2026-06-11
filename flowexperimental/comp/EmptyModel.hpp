@@ -71,6 +71,7 @@ public:
     void endIteration()const{};
     void endTimeStep(){};
     void endEpisode(){};
+    int numTracers() const { return 0; }
     void applyInitial() override {}
     auto aquiferData() const {
         return data::Aquifers{};
