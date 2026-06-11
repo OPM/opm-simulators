@@ -95,6 +95,11 @@ public:
     void deserialize(Restarter& /*res*/)
     {}
 
+    // OPMRST restart of compositional wells is not supported yet
+    template<class Serializer>
+    void serializeOp(Serializer& /*serializer*/)
+    {}
+
 
     void beginEpisode() { beginReportStep(simulator_.episodeIndex()); }
     void beginReportStep(unsigned report_step);
