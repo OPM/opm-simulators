@@ -944,12 +944,21 @@ public:
      * \brief Return if the storage term of the first iteration is identical to the storage
      *        term for the solution of the previous time step.
      *
-     * For quite technical reasons, the storage term cannot be recycled if either DRSDT
-     * or DRVDT are active. Nor if the porosity is changes between timesteps
-     * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
+     * Storage recycling is disabled for configurations where the first iteration storage
+     * can differ from the previous timestep storage:
+     * 1. DRSDT/DRVDT update dissolved/vaporized composition limits explicitly.
+     * 2. Rock compaction multipliers make pore volume state-dependent across timesteps.
+     * 3. TPSA geomechanics can update mechanics state between coupled Flow/TPSA solves,
+     *    which changes porosity/pore-volume terms used by Flow.
      */
     bool recycleFirstIterationStorage() const
     {
+        const auto& rspec = this->simulator().vanguard().eclState().runspec();
+        const bool tpsaActive = rspec.mech() && rspec.mechSolver().tpsa();
+        if (tpsaActive) {
+            return false;
+        }
+
         int episodeIdx = this->episodeIndex();
         return !this->mixControls_.drsdtActive(episodeIdx) &&
                !this->mixControls_.drvdtActive(episodeIdx) &&
