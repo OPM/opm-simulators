@@ -392,39 +392,19 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
         const auto workover = econ_production_limits.workover();
         switch (workover) {
         case WellEconProductionLimits::EconWorkover::CON:
+        case WellEconProductionLimits::EconWorkover::CONP:
             {
-                const int worst_offending_completion = ratio_report.worst_offending_completion;
-
-                well_test_state.close_completion(well_.name(), worst_offending_completion, simulation_time);
-                if (write_message_to_opmlog) {
-                    if (worst_offending_completion < 0) {
-                        const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
-                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
-                        deferred_logger.info(msg);
-                    } else {
-                        const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion)
-                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
-                        deferred_logger.info(msg);
-                    }
-                }
-
-                bool allCompletionsClosed = true;
-                const auto& connections = well_.wellEcl().getConnections();
-                for (const auto& connection : connections) {
-                    if (connection.state() == Connection::State::OPEN
-                        && !well_test_state.completion_is_closed(well_.name(), connection.complnum())) {
-                        allCompletionsClosed = false;
-                    }
-                }
-
-                if (allCompletionsClosed) {
-                    well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
-                    // if all the completion/connections are closed, the well can only be SHUT
-                    if (write_message_to_opmlog) {
-                        const std::string msg = well_.name() + std::string(" will be shut due to last completion closed");
-                        deferred_logger.info(msg);
-                    }
-                }
+                // CON  : shut the worst-offending connection/completion only.
+                // +CON : shut the worst-offending connection/completion and all
+                //        connections below it in the wellbore.
+                const bool close_connections_below =
+                    (workover == WellEconProductionLimits::EconWorkover::CONP);
+                this->closeOffendingCompletion(ratio_report.worst_offending_completion,
+                                               close_connections_below,
+                                               simulation_time,
+                                               write_message_to_opmlog,
+                                               well_test_state,
+                                               deferred_logger);
                 break;
             }
         case WellEconProductionLimits::EconWorkover::WELL:
