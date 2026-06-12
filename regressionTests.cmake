@@ -2682,6 +2682,8 @@ add_test_compareECLFiles(
     ${rel_tol}
   DIR
     gecon
+  TEST_ARGS
+    --solver-max-time-step-in-days=15
 )
 
 if(BUILD_FLOW_POLY_GRID)
