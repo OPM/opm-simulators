@@ -73,7 +73,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"CARFIN", {true, std::nullopt}},
         {"CART", {true, std::nullopt}},
         {"CBMOPTS", {true, std::nullopt}},
-        {"CECON", {true, std::nullopt}},
         {"CECONT", {true, std::nullopt}},
         {"COAL", {true, std::nullopt}},
         {"COALADS", {true, std::nullopt}},
