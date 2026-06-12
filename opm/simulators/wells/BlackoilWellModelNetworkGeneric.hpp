@@ -138,6 +138,7 @@ protected:
                      const int reportStepIdx,
                      const Parallel::Communication& comm) const;
 
+    void updateActiveStateImpl(const Network::ExtNetwork& network);
 
     bool active_{false};
     BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model_;
