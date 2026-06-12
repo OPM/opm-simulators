@@ -93,8 +93,7 @@ update(const bool mandatory_network_balance,
 {
     OPM_TIMEFUNCTION();
     const int episodeIdx = well_model_.simulator().episodeIndex();
-    const auto& network = well_model_.schedule()[episodeIdx].network();
-    if (!well_model_.wellsActive() && !network.active()) {
+    if (!well_model_.wellsActive() && !details::anyNetworkActive(well_model_.schedule(), episodeIdx)) {
         return {/*more_network_update=*/false, /*network_imbalance=*/0.0};
     }
 
