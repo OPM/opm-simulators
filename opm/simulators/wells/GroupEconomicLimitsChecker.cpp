@@ -372,7 +372,11 @@ closeWellsRecursive(const Group& group, int level)
                     "closing well {}", well_name);
                 displayDebugMessage(msg);
             }
-            const std::string msg = fmt::format("\n{} Closing well {}", indent, well_name);
+            const bool will_shut =
+                this->schedule_.getWell(well_name, this->report_step_idx_).getAutomaticShutIn();
+            const std::string msg = fmt::format("\n{} {} well {}", indent,
+                                                will_shut ? "Shutting" : "Stopping",
+                                                well_name);
             this->message_ += msg;
 
             // Only update the well_test_state_ on ranks that have the well in question.
@@ -624,15 +628,18 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
         const Scalar group_ratio_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.ratio);
         const Scalar limit_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.limit);
         const std::string unit_name = this->unit_system_.name(ratio_details.measure);
+        const bool will_shut =
+            this->schedule_.getWell(worst_well, this->report_step_idx_).getAutomaticShutIn();
 
         const std::string msg = fmt::format(
-            "{}\nAt time = {:.2f} {} (date = {}): Well {} will close because:\n"
+            "{}\nAt time = {:.2f} {} (date = {}): Well {} will be {} because:\n"
             "  {} for group {} = {:.4e} {} exceeds the limit {:.4e} {}.\n{}",
             this->message_separator(),
             this->unit_system_.from_si(UnitSystem::measure::time, this->simulation_time_),
             this->unit_system_.name(UnitSystem::measure::time),
             this->date_string_,
             worst_well,
+            will_shut ? "shut" : "stopped",
             ratio_details.ratio_type,
             this->group_.name(),
             group_ratio_display, unit_name,
