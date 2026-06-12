@@ -270,8 +270,8 @@ struct EnableBioeffects<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>> {
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>
-struct EnableDebuggingChecks<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>{ 
-    static constexpr bool value = false; 
+struct EnableDebuggingChecks<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>{
+    static constexpr bool value = false;
 };
 
 // disable thermal flux boundaries by default
