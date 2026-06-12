@@ -46,4 +46,6 @@ private:
 
 } // namespace Opm
 
+#include "ComponentName_impl.hpp"
+
 #endif

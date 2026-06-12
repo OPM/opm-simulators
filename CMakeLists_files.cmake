@@ -70,28 +70,6 @@ endmacro()
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  flowexperimental/BlackOilEnergyIntensiveQuantitiesGlobalIndex.hpp
-  flowexperimental/BlackOilIntensiveQuantitiesGlobalIndex.hpp
-  flowexperimental/comp/EmptyModel.hpp
-  flowexperimental/comp/flow_comp.hpp
-  flowexperimental/comp/flowexp_comp.hpp
-  flowexperimental/comp/wells/CompWellModel.hpp
-  flowexperimental/comp/wells/CompWellModel_impl.hpp
-  flowexperimental/comp/wells/CompWellEquations.hpp
-  flowexperimental/comp/wells/CompWellEquations_impl.hpp
-  flowexperimental/comp/wells/CompWell.hpp
-  flowexperimental/comp/wells/CompWell_impl.hpp
-  flowexperimental/comp/wells/CompWellInterface.hpp
-  flowexperimental/comp/wells/CompWellInterface_impl.hpp
-  flowexperimental/comp/wells/CompWellPrimaryVariables.hpp
-  flowexperimental/comp/wells/CompWellPrimaryVariables_impl.hpp
-  flowexperimental/comp/wells/CompWellState.hpp
-  flowexperimental/comp/wells/CompWellState_impl.hpp
-  flowexperimental/comp/wells/SingleCompWellState.hpp
-  flowexperimental/comp/wells/SingleCompWellState_impl.hpp
-  flowexperimental/FIBlackOilModelNoCache.hpp
-  flowexperimental/flowexp.hpp
-  flowexperimental/FlowExpNewtonMethod.hpp
   opm/models/blackoil/blackoilbioeffectsparams.cpp
   opm/models/blackoil/blackoilbrineparams.cpp
   opm/models/blackoil/blackoilextboparams.cpp
@@ -157,8 +135,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NlddReporting.cpp
   opm/simulators/flow/NonlinearSolver.cpp
-  opm/simulators/flow/NonlinearSystemCompositional.hpp
-  opm/simulators/flow/NonlinearSystemCompositional_impl.hpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RFTContainer.cpp
   opm/simulators/flow/RSTConv.cpp
@@ -205,8 +181,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
-  opm/simulators/utils/ComponentName.cpp
-  opm/simulators/utils/ComponentNameFlowExp.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
