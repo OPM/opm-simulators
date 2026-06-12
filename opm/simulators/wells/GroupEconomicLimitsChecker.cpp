@@ -519,7 +519,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
         const Scalar ratio = (water_rate <= 0.0) ? Scalar{0}
                            : (gas_rate <= 0.0)   ? Scalar{big_value}
                                                   : water_rate / gas_rate;
-        return RatioDetails{RatioViolation::WGR, "water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::gas_oil_ratio};
+        return RatioDetails{RatioViolation::WGR, "Water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::gas_oil_ratio};
     }
     case RatioViolation::GOR: {
         const auto max_gor = this->gecon_props_.maxGasOilRatio();
@@ -533,7 +533,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
         const Scalar ratio = (gas_rate <= 0.0) ? Scalar{0}
                            : (oil_rate <= 0.0) ? Scalar{big_value}
                                                : gas_rate / oil_rate;
-        return RatioDetails{RatioViolation::GOR, "gas-oil ratio", ratio, static_cast<Scalar>(max_gor.value()), UnitSystem::measure::gas_oil_ratio};
+        return RatioDetails{RatioViolation::GOR, "Gas-oil ratio", ratio, static_cast<Scalar>(max_gor.value()), UnitSystem::measure::gas_oil_ratio};
     }
     case RatioViolation::WATER_CUT: {
         const auto max_water_cut = this->gecon_props_.maxWaterCut();
@@ -549,7 +549,7 @@ groupRatioDetails(const RatioViolation ratio_violation) const
                            : (water_rate < 0.0)   ? Scalar{0}
                            : (oil_rate < 0.0)     ? Scalar{1}
                                                    : water_rate / liquid_rate;
-        return RatioDetails{RatioViolation::WATER_CUT, "water cut", ratio, static_cast<Scalar>(max_water_cut.value()), UnitSystem::measure::water_cut};
+        return RatioDetails{RatioViolation::WATER_CUT, "Water cut", ratio, static_cast<Scalar>(max_water_cut.value()), UnitSystem::measure::water_cut};
     }
     case RatioViolation::NONE:
     default:
@@ -604,14 +604,7 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
     }
 
 
-    // Perform the actual close on the owning rank(s). The well's automatic
-    // shut-in instruction (WELSPECS item 9) selects between SHUT and STOP for
-    // the log message; the underlying WellTestState::close_well call is the
-    // same in either case (the well status is updated subsequently).
-    const auto& well_ecl =
-        this->schedule_.getWell(worst_well, this->report_step_idx_);
-    const std::string action = well_ecl.getAutomaticShutIn() ? "shut" : "stopped";
-
+    // Perform the actual close on the owning rank(s).
     bool well_was_closed_locally = false;
     if (this->well_model_.hasLocalWell(worst_well)) {
         if (!this->well_test_state_.well_is_closed(worst_well)) {
@@ -628,24 +621,20 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
     }
 
     if (this->well_model_.comm().rank() == 0) {
-        const Scalar well_ratio_display = this->unit_system_.from_si(ratio_details.measure, worst_ratio);
         const Scalar group_ratio_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.ratio);
         const Scalar limit_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.limit);
         const std::string unit_name = this->unit_system_.name(ratio_details.measure);
 
         const std::string msg = fmt::format(
-            "{}\nwell {} ({} {:.4e} {}) is {} at time {:.2f} {} (date = {}),\n"
-            "because the group {} {} {:.4e} {}"
-            " exceeds the limit {:.4e} {}.\n{}",
+            "{}\nAt time = {:.2f} {} (date = {}): Well {} will close because:\n"
+            "  {} for group {} = {:.4e} {} exceeds the limit {:.4e} {}.\n{}",
             this->message_separator(),
-            worst_well,
-            ratio_details.ratio_type, well_ratio_display, unit_name,
-            action,
             this->unit_system_.from_si(UnitSystem::measure::time, this->simulation_time_),
             this->unit_system_.name(UnitSystem::measure::time),
             this->date_string_,
-            this->group_.name(),
+            worst_well,
             ratio_details.ratio_type,
+            this->group_.name(),
             group_ratio_display, unit_name,
             limit_display, unit_name,
             this->message_separator());
