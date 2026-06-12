@@ -140,6 +140,13 @@ thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+halfTransmissibility(unsigned insideElemIdx, unsigned outsideElemIdx) const
+{
+    return halfTrans_.at(details::directionalIsId(insideElemIdx, outsideElemIdx));
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
 {
     return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx));
@@ -211,6 +218,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
     }
 
     transBoundary_.clear();
+
+    if (storeHalfTrans_) {
+        halfTrans_.clear();
+        if (num_threads == 1) {
+            halfTrans_.reserve(numElements*6*1.05);
+        }
+    }
 
     // if energy is enabled, let's do the same for the "thermal half transmissibilities"
     if ( enableEnergy_ && !onlyTrans) {
@@ -312,6 +326,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                   MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder thermalHalfTrans(thermalHalfTrans_, num_threads,
                                           MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder halfTransMap(halfTrans_, num_threads,
+                                      MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder diffusivity(diffusivity_, num_threads,
                                      MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder dispersivity(dispersivity_, num_threads,
@@ -457,6 +473,22 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
                 Scalar trans = computeHalfMean(computeHalfTrans_, permeability_);
 
+                if (storeHalfTrans_) {
+                    // one-sided half transmissibilities (NTG applied),
+                    // for the adjoint permeability chain rule
+                    auto onesided = computeHalf(computeHalfTrans_,
+                                                permeability_[inside.elemIdx],
+                                                permeability_[outside.elemIdx]);
+                    applyNtg_(onesided[0], inside, ntg);
+                    applyNtg_(onesided[1], outside, ntg);
+                    halfTransMap.insert_or_assign(
+                        details::directionalIsId(inside.elemIdx, outside.elemIdx),
+                        onesided[0]);
+                    halfTransMap.insert_or_assign(
+                        details::directionalIsId(outside.elemIdx, inside.elemIdx),
+                        onesided[1]);
+                }
+
                 // apply the full face transmissibility multipliers
                 // for the inside ...
                 if (!pinchActive) {
@@ -559,6 +591,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
 #pragma omp section
 #endif
         dispersivity.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        halfTransMap.finalize();
     }
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
