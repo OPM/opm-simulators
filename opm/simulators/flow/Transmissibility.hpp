@@ -100,6 +100,24 @@ public:
      */
     Scalar thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const;
 
+    /*!
+     * \brief One-sided (half) transmissibility of the face between two
+     *        cells, seen from the inside cell (NTG applied, before face
+     *        multipliers). Only available when setStoreHalfTrans(true)
+     *        was called before update(); used by the adjoint module for
+     *        the permeability chain rule
+     *        dT/dK_inside = (h_out/(h_in+h_out))^2 dh_in/dK_inside.
+     */
+    Scalar halfTransmissibility(unsigned insideElemIdx, unsigned outsideElemIdx) const;
+
+    //! \brief Enable storage of the one-sided half transmissibilities
+    //!        (call before update()).
+    void setStoreHalfTrans(bool yesno)
+    { storeHalfTrans_ = yesno; }
+
+    bool storeHalfTrans() const
+    { return storeHalfTrans_; }
+
     Scalar thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const;
 
     const std::map<std::pair<unsigned, unsigned>, Scalar>& getThermalHalfTransBoundary() const;
@@ -296,6 +314,8 @@ protected:
     bool enableDispersivity_;
     bool warnEditNNC_ = true;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
+    std::unordered_map<std::uint64_t, Scalar> halfTrans_; // directional, only filled when storeHalfTrans_
+    bool storeHalfTrans_ = false;
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
     std::unordered_map<std::uint64_t, Scalar> dispersivity_;
 
