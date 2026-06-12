@@ -193,7 +193,7 @@ updatePressures(const int reportStepIdx,
 
     const auto previous_node_pressures = node_pressures_;
 
-    node_pressures_ = this->computePressures(network,
+    std::tie(node_pressures_, branch_data_) = this->computePressures(network,
                                              *well_model_.getVFPProperties().getProd(),
                                              well_model_.schedule().getUnits(),
                                              reportStepIdx,
@@ -259,12 +259,15 @@ updatePressures(const int reportStepIdx,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
-                 const int reportStepIdx) const
+assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
+                          std::map<std::string, data::BranchData>& branchvalues,
+                          std::map<std::string, data::BranchData>& converged_branchvalues,
+                          const int reportStepIdx) const
 {
     nodevalues.clear();
+    branchvalues.clear();
+    converged_branchvalues.clear();
     if (reportStepIdx < 0) return;
-
     for (const auto& [node, pressure] : node_pressures_) {
         nodevalues.emplace(node, data::NodeData{pressure});
         // Assign node values of well groups to GPR:WELLNAME
@@ -277,13 +280,18 @@ assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
             nodevalues.emplace(wellname, data::NodeData{pressure});
         }
     }
+    for (const auto& [branch, branch_data] : branch_data_) {
+        branchvalues.emplace(branch, branch_data);
+        // Skip wells (do not consider well->group a branch, at least not for now)
+    }
 
     const auto& network = well_model_.schedule()[reportStepIdx].network();
     if (!network.active()) {
         return;
     }
 
-    auto converged_pressures = this->computePressures(network,
+    auto converged_pressures = node_pressures_;
+    std::tie(converged_pressures, converged_branchvalues) = this->computePressures(network,
                                                       *well_model_.getVFPProperties().getProd(),
                                                       well_model_.schedule().getUnits(),
                                                       reportStepIdx,
@@ -336,7 +344,7 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 }
 
 template <typename Scalar, typename IndexTraits>
-std::map<std::string, Scalar>
+std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 computePressures(const Network::ExtNetwork& network,
                  const VFPProdProperties<Scalar>& vfp_prod_props,
@@ -364,7 +372,9 @@ operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
     return
            this->active_ == rhs.active_
         && this->node_pressures_ == rhs.node_pressures_
-        && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_;
+        && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
+        && this->branch_data_ == rhs.branch_data_
+        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_;
 }
 
 template class BlackoilWellModelNetworkGeneric<double, BlackOilDefaultFluidSystemIndices>;

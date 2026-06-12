@@ -1213,7 +1213,7 @@ groupAndNetworkData(const int reportStepIdx) const
     auto grp_nwrk_values = data::GroupAndNetworkValues{};
 
     this->assignGroupValues(reportStepIdx, grp_nwrk_values.groupData);
-    this->genNetwork_.assignNodeValues(grp_nwrk_values.nodeData, reportStepIdx - 1); // Schedule state info at previous step
+    this->genNetwork_.assignNodeAndBranchValues(grp_nwrk_values.nodeData, grp_nwrk_values.branchData, grp_nwrk_values.convergedBranchData, reportStepIdx - 1); // Schedule state info at previous step
 
     return grp_nwrk_values;
 }
