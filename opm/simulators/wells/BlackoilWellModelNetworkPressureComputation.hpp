@@ -307,8 +307,11 @@ private:
                     // If terminal pressure is specified on a non-root node, we still want to calculate the branch data for the uptree branch.
                     const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
                     auto rates = node_inflows.at(node);
-                    Calc::prepareRates(rates);
-                    branch_data_.emplace(node, data::BranchData{*terminal_pressure - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
+                    branch_data_.try_emplace(node,
+                                             *terminal_pressure - up_press,
+                                             rates[IndexTraits::oilPhaseIdx],
+                                             rates[IndexTraits::waterPhaseIdx],
+                                             rates[IndexTraits::gasPhaseIdx]);
                 } else {
                     // Root node with terminal pressure and no uptree branch, inserting a zero-valued placeholder.
                     branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
@@ -327,8 +330,11 @@ private:
                     node_pressures_[node] = up_press;
                 }
                 auto rates = node_inflows.at(node);
-                Calc::prepareRates(rates);
-                branch_data_.emplace(node, data::BranchData{node_pressures_[node] - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
+                branch_data_.try_emplace(node,
+                                         node_pressures_[node] - up_press,
+                                         rates[IndexTraits::oilPhaseIdx],
+                                         rates[IndexTraits::waterPhaseIdx],
+                                         rates[IndexTraits::gasPhaseIdx]);
                 continue;
             }
 
@@ -338,7 +344,12 @@ private:
             Calc::prepareRates(rates);
             auto node_pressure = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
             node_pressures_[node] = node_pressure;
-            branch_data_.emplace(node, data::BranchData{node_pressure - up_press, -rates[IndexTraits::oilPhaseIdx], -rates[IndexTraits::waterPhaseIdx], -rates[IndexTraits::gasPhaseIdx]});
+            // Prefer inserting after computing the pressure, hence negating rates
+            branch_data_.try_emplace(node,
+                                     node_pressure - up_press,
+                                     -rates[IndexTraits::oilPhaseIdx],
+                                     -rates[IndexTraits::waterPhaseIdx],
+                                     -rates[IndexTraits::gasPhaseIdx]);
         }
     }
 
