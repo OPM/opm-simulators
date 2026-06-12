@@ -100,12 +100,21 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 updateActiveState(const int report_step)
 {
-    const auto& network = well_model_.schedule()[report_step].network();
+    this->active_ = false;
+    for (const auto& network : details::activeNetworks(well_model_.schedule(), report_step)) {
+        updateActiveStateImpl(network);
+    }
+    this->active_ = well_model_.comm().max(active_);
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+updateActiveStateImpl(const Network::ExtNetwork& network)
+{
     if (!network.active()) {
         this->active_ = false;
         return;
     }
-
     bool network_active = false;
     for (const auto& well : well_model_.genericWells()) {
         const bool is_partof_network = network.has_node(well->wellEcl().groupName());
@@ -143,7 +152,7 @@ updateActiveState(const int report_step)
         }
     }
 #endif
-    this->active_ = well_model_.comm().max(network_active);
+    this->active_ = this->active_ || network_active;
 }
 
 template<typename Scalar, typename IndexTraits>
