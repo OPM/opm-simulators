@@ -44,6 +44,18 @@ namespace Opm {
 
 namespace Opm {
 
+namespace details {
+
+    /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
+    bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);
+
+    /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
+    std::vector<std::reference_wrapper<const Network::ExtNetwork>>
+    activeNetworks(const Schedule& schedule, const int timeStepIdx);
+
+} // namespace details
+
+
 /// Class for handling the blackoil well network model.
 template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelNetworkGeneric

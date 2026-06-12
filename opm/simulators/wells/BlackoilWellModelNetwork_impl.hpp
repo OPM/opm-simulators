@@ -166,6 +166,10 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 {
     OPM_TIMEFUNCTION();
     const int reportStepIdx = well_model_.simulator().episodeIndex();
+    // This function is only relevant for auto-choke groups, and
+    // therefore as of now only relevant for the production network.
+    // \TODO: If we later also want to support auto-choke groups in the
+    // injection network, we should change this function also.
     const auto& network = well_model_.schedule()[reportStepIdx].network();
     const auto& balance = well_model_.schedule()[reportStepIdx].network_balance();
     const Scalar thp_tolerance = balance.thp_tolerance();
