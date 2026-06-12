@@ -39,6 +39,40 @@
 
 namespace Opm {
 
+namespace details {
+    /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
+    bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx)
+    {
+        const auto& sstate = schedule[timeStepIdx];
+        return sstate.network().active()
+            || (sstate.injectionNetwork.get_ptr(Phase::GAS) != nullptr
+                && sstate.injectionNetwork.get_ptr(Phase::GAS)->active())
+            || (sstate.injectionNetwork.get_ptr(Phase::WATER) != nullptr
+                && sstate.injectionNetwork.get_ptr(Phase::WATER)->active());
+    }
+
+    /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
+    std::vector<std::reference_wrapper<const Network::ExtNetwork>>
+    activeNetworks(const Schedule& schedule, const int timeStepIdx)
+    {
+        std::vector<std::reference_wrapper<const Network::ExtNetwork>> active_networks;
+        const auto& sstate = schedule[timeStepIdx];
+        if (sstate.network().active()) {
+            active_networks.push_back(std::cref(sstate.network()));
+        }
+        if (sstate.injectionNetwork.get_ptr(Phase::GAS) != nullptr
+            && sstate.injectionNetwork.get_ptr(Phase::GAS)->active()) {
+            active_networks.push_back(std::cref(*sstate.injectionNetwork.get_ptr(Phase::GAS)));
+        }
+        if (sstate.injectionNetwork.get_ptr(Phase::WATER) != nullptr
+            && sstate.injectionNetwork.get_ptr(Phase::WATER)->active()) {
+            active_networks.push_back(std::cref(*sstate.injectionNetwork.get_ptr(Phase::WATER)));
+        }
+        return active_networks;
+    }
+} // namespace details
+
+
 template<typename Scalar, typename IndexTraits>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model)
