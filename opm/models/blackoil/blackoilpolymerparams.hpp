@@ -49,32 +49,6 @@ struct BlackOilPolymerParams {
     template<bool enablePolymer, bool enablePolymerMolarWeight>
     void initFromState(const EclipseState& eclState);
 
-    /*!
-     * \brief Specify the number of satuation regions.
-     *
-     * This must be called before setting the PLYROCK and PLYADS of any region.
-     */
-    void setNumSatRegions(unsigned numRegions);
-
-    /*!
-     * \brief Specify the number of mix regions.
-     *
-     * This must be called before setting the PLYMAC and PLMIXPAR of any region.
-     */
-    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight);
-
-    /*!
-     * \brief Specify the polymer rock properties a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    void setPlyrock(unsigned satRegionIdx,
-                    const Scalar& plyrockDeadPoreVolume,
-                    const Scalar& plyrockResidualResistanceFactor,
-                    const Scalar& plyrockRockDensityFactor,
-                    const Scalar& plyrockAdsorbtionIndex,
-                    const Scalar& plyrockMaxAdsorbtion);
-
     // a struct containing the constants to calculate polymer viscosity
     // based on Mark-Houwink equation and Huggins equation, the constants are provided
     // by the keyword PLYVMH
@@ -110,6 +84,91 @@ struct BlackOilPolymerParams {
     std::map<int, TabulatedTwoDFunction> skprwatTables_{};
 
     std::map<int, SkprpolyTable> skprpolyTables_{};
+
+private:
+    /*!
+     * \brief Specify the number of saturation regions.
+     *
+     * This must be called before setting the PLYROCK and PLYADS of any region.
+     */
+    void setNumSatRegions(unsigned numRegions);
+
+    /*!
+     * \brief Specify the number of mix regions.
+     *
+     * This must be called before setting the PLYMAX and PLMIXPAR of any region.
+     */
+    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight);
+
+    /*!
+     * \brief Specify the polymer rock properties a single region.
+     *
+     * The index of specified here must be in range [0, numSatRegions)
+     */
+    void setPlyrock(unsigned satRegionIdx,
+                    const Scalar& plyrockDeadPoreVolume,
+                    const Scalar& plyrockResidualResistanceFactor,
+                    const Scalar& plyrockRockDensityFactor,
+                    const Scalar& plyrockAdsorbtionIndex,
+                    const Scalar& plyrockMaxAdsorbtion);
+
+    /*!
+     * \brief Process the Plyrock data.
+     */
+    void processPlyrock(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyads data.
+     */
+    void processPlyads(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyvisc data.
+     */
+    template<bool enablePolymerMolarWeight>
+    void processPlyvisc(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plymax data.
+     */
+    template<bool enablePolymerMolarWeight>
+    void processPlymax(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plmixpar data.
+     */
+    template<bool enablePolymerMolarWeight>
+    void processPlmixpar(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyshlog data.
+     */
+    void processPlyshlog(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Shrate data.
+     */
+    void processShrate(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plyvmh data.
+     */
+    void processPlyvmh(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Plymwinj data.
+     */
+    void processPlymwinj(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Skprwat data.
+     */
+    void processSkprwat(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the Skprpoly data.
+     */
+    void processSkprpoly(const EclipseState& eclState);
 };
 
 } // namespace Opm

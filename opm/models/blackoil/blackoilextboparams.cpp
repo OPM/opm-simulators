@@ -37,6 +37,48 @@
 #include <cstddef>
 #include <stdexcept>
 
+namespace {
+
+template<bool enableExtbo>
+void verifyState(const Opm::EclipseState& eclState)
+{
+    // some sanity checks: if extended BO is enabled, the PVTSOL keyword must be
+    // present, if extended BO is disabled the keyword must not be present.
+    if constexpr (enableExtbo) {
+        if (!eclState.runspec().phases().active(Opm::Phase::ZFRACTION)) {
+            throw std::runtime_error("Extended black oil treatment requested at compile "
+                                     "time, but the deck does not contain the PVTSOL keyword");
+        }
+    }
+    else {
+        if (eclState.runspec().phases().active(Opm::Phase::ZFRACTION)) {
+            throw std::runtime_error("Extended black oil treatment disabled at compile time, but the deck "
+                                     "contains the PVTSOL keyword");
+        }
+    }
+}
+
+template<class Scalar>
+std::vector<Scalar>
+parseSdensity(const Opm::EclipseState& eclState,
+              const std::size_t numPvtRegions)
+{
+    const auto& sdensityTables = eclState.getTableManager().getSolventDensityTables();
+    if (sdensityTables.size() == numPvtRegions) {
+        std::vector<Scalar> zReferenceDensity(numPvtRegions);
+        for (std::size_t regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
+            const Scalar rhoRefS = sdensityTables[regionIdx].getSolventDensityColumn().front();
+            zReferenceDensity[regionIdx] = rhoRefS;
+        }
+        return zReferenceDensity;
+    }
+    else {
+        throw std::runtime_error("Extbo: kw SDENSITY is missing or not aligned with NTPVT\n");
+    }
+}
+
+}
+
 namespace Opm {
 
 template<class Scalar>
@@ -44,31 +86,16 @@ template<bool enableExtbo>
 void BlackOilExtboParams<Scalar>::
 initFromState(const EclipseState& eclState)
 {
-    // some sanity checks: if extended BO is enabled, the PVTSOL keyword must be
-    // present, if extended BO is disabled the keyword must not be present.
-    if constexpr (enableExtbo) {
-        if (!eclState.runspec().phases().active(Phase::ZFRACTION)) {
-            throw std::runtime_error("Extended black oil treatment requested at compile "
-                                     "time, but the deck does not contain the PVTSOL keyword");
-        }
-    }
-    else {
-        if (!enableExtbo && eclState.runspec().phases().active(Phase::ZFRACTION)) {
-            throw std::runtime_error("Extended black oil treatment disabled at compile time, but the deck "
-                                     "contains the PVTSOL keyword");
-        }
-    }
-
+    verifyState<enableExtbo>(eclState);
     if (!eclState.runspec().phases().active(Phase::ZFRACTION)) {
         return; // solvent treatment is supposed to be disabled
     }
 
     // pvt properties from kw PVTSOL:
-
     const auto& tableManager = eclState.getTableManager();
     const auto& pvtsolTables = tableManager.getPvtsolTables();
 
-    std::size_t numPvtRegions = pvtsolTables.size();
+    const std::size_t numPvtRegions = pvtsolTables.size();
 
     BO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
     BG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
@@ -120,7 +147,7 @@ initFromState(const EclipseState& eclState)
             PBUB_RV_[regionIdx].appendXPos(ZCO2);
 
             const auto& underSaturatedTable = pvtsolTable.getUnderSaturatedTable(outerIdx);
-            std::size_t numRows = underSaturatedTable.numRows();
+            const std::size_t numRows = underSaturatedTable.numRows();
 
             Scalar bo0 = 0.0;
             Scalar po0 = 0.0;
@@ -138,7 +165,7 @@ initFromState(const EclipseState& eclState)
                 if (bo0 > bo) { // This is undersaturated oil-phase for ZCO2 <= zLim ...
                     // Here we assume tabulated bo to decay beyond boiling point
                     if (extractCmpFromPvt) {
-                        Scalar cmpFactor = (bo - bo0) / (po - po0);
+                        const Scalar cmpFactor = (bo - bo0) / (po - po0);
                         oilCmp[outerIdx] = cmpFactor;
                         zLim_[regionIdx] = ZCO2;
                         //std::cout << "### cmpFactorOil: " << cmpFactor << "  zLim: " << zLim_[regionIdx] << std::endl;
@@ -147,9 +174,9 @@ initFromState(const EclipseState& eclState)
                 } else if (bo0 == bo) { // This is undersaturated gas-phase for ZCO2 > zLim ...
                     // Here we assume tabulated bo to be constant extrapolated beyond dew point
                     if (innerIdx+1 < numRows && ZCO2<1.0 && extractCmpFromPvt) {
-                        Scalar rvNxt = underSaturatedTable.get("RV", innerIdx + 1) + innerIdx * 1.0e-10;
-                        Scalar bgNxt = underSaturatedTable.get("B_G", innerIdx + 1);
-                        Scalar cmpFactor = (bgNxt - bg) / (rvNxt - rv);
+                        const Scalar rvNxt = underSaturatedTable.get("RV", innerIdx + 1) + innerIdx * 1.0e-10;
+                        const Scalar bgNxt = underSaturatedTable.get("B_G", innerIdx + 1);
+                        const Scalar cmpFactor = (bgNxt - bg) / (rvNxt - rv);
                         gasCmp[outerIdx] = cmpFactor;
                         //std::cout << "### cmpFactorGas: " << cmpFactor << "  zLim: " << zLim_[regionIdx] << std::endl;
                     }
@@ -189,17 +216,8 @@ initFromState(const EclipseState& eclState)
         gasCmp_[regionIdx].setXYContainers(zArg, gasCmp, /*sortInput=*/false);
     }
 
-           // Reference density for pure z-component taken from kw SDENSITY
-    const auto& sdensityTables = eclState.getTableManager().getSolventDensityTables();
-    if (sdensityTables.size() == numPvtRegions) {
-        zReferenceDensity_.resize(numPvtRegions);
-        for (unsigned regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
-            Scalar rhoRefS = sdensityTables[regionIdx].getSolventDensityColumn().front();
-            zReferenceDensity_[regionIdx] = rhoRefS;
-        }
-    }
-    else
-        throw std::runtime_error("Extbo:  kw SDENSITY is missing or not aligned with NTPVT\n");
+    // Reference density for pure z-component taken from kw SDENSITY
+    zReferenceDensity_ = parseSdensity<Scalar>(eclState, numPvtRegions);
 }
 
 #define INSTANTIATE_TYPE(T)                                                          \

@@ -80,8 +80,9 @@ struct BlackOilSolventParams
     bool co2sol_ = false;
     bool h2sol_ = false;
 
+private:
     /*!
-     * \brief Specify the number of satuation regions.
+     * \brief Specify the number of saturation regions.
      *
      * This must be called before setting the SSFN of any region.
      */
@@ -95,6 +96,57 @@ struct BlackOilSolventParams
     void setMsfn(unsigned satRegionIdx,
                  const TabulatedFunction& msfnKrsg,
                  const TabulatedFunction& msfnKro);
+
+    /*!
+     * \brief Setup active pvt members.
+     */
+    void setupPvts(const EclipseState& eclState,
+                   const Schedule& schedule);
+
+    /*!
+     * \brief Process the SSFN data.
+     */
+    void processSsfn(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SOF2 data.
+     */
+    void processSof2(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the MISC data.
+     */
+    void processMisc(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the PMISC data.
+     */
+    void processPmisc(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the MSFN data.
+     */
+    void processMsfn(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SORWMIS data.
+     */
+    void processSorwmis(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the SGCWMIS data.
+     */
+    void processSgcwmis(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the TLMIXPAR data.
+     */
+    void processTlmixpar(const EclipseState& eclState);
+
+    /*!
+     * \brief Process the TLPMIXPA data.
+     */
+    void processTlpmixpa(const EclipseState& eclState);
 };
 
 } // namespace Opm
