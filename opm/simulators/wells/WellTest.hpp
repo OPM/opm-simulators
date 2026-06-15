@@ -38,6 +38,7 @@ namespace Opm
 
 class DeferredLogger;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
+class UnitSystem;
 class WellEconProductionLimits;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 class WellTestState;
@@ -70,6 +71,8 @@ public:
                                   const double simulation_time,
                                   const bool write_message_to_opmlog,
                                   WellTestState& well_test_state,
+                                  const UnitSystem& unit_system,
+                                  const std::time_t start_time,
                                   DeferredLogger& deferred_logger) const;
 
     void updateWellTestStatePhysical(const double simulation_time,
