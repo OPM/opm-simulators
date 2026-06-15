@@ -96,11 +96,10 @@ private:
                               std::vector<std::string>& well_names) const;
 
     /// Compute the relevant ratio (per \p ratio_violation) for a single well.
-    /// Returns \c std::numeric_limits<Scalar>::lowest() if the well is not owned
-    /// by the current rank or is already shut, so that an MPI max-reduction picks
-    /// up the value from the owning rank.
-    Scalar computeWellRatio(const std::string& well_name,
-                            const RatioViolation ratio_violation) const;
+    /// Returns \c std::nullopt if the ratio is not applicable (e.g. the well is
+    /// not owned by the current rank or is already shut).
+    std::optional<Scalar> computeWellRatio(const std::string& well_name,
+                                           const RatioViolation ratio_violation) const;
 
     /// Implements the WELL workover procedure: identify the worst-offending
     /// producer in the group hierarchy and close it (shut/stop based on

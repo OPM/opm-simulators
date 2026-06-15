@@ -422,29 +422,27 @@ collectProducerWells(const Group& group, std::vector<std::string>& well_names) c
 }
 
 template<typename Scalar, typename IndexTraits>
-Scalar GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+std::optional<Scalar> GroupEconomicLimitsChecker<Scalar, IndexTraits>::
 computeWellRatio(const std::string& well_name,
                  const RatioViolation ratio_violation) const
 {
-    constexpr Scalar invalid_ratio = std::numeric_limits<Scalar>::lowest();
-
     // The checks below avoid accessing WellState data for wells that are already closed,
     // not present on this rank, or not owned by this rank (important for parallel runs).
     if (this->well_test_state_.well_is_closed(well_name)) {
-        return invalid_ratio;
+        return std::nullopt;
     }
 
     const auto well_index = this->well_state_.index(well_name);
     if (!well_index.has_value()) {
-        return invalid_ratio;
+        return std::nullopt;
     }
     if (!this->well_state_.wellIsOwned(well_index.value(), well_name)) {
-        return invalid_ratio;
+        return std::nullopt;
     }
 
     const auto& ws = this->well_state_.well(well_index.value());
     if (ws.status != Well::Status::OPEN) {
-        return invalid_ratio;
+        return std::nullopt;
     }
 
     const auto& pu = this->well_model_.phaseUsage();
@@ -455,7 +453,7 @@ computeWellRatio(const std::string& well_name,
         if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
             !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
         {
-            return invalid_ratio;
+            return std::nullopt;
         }
         const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
@@ -472,7 +470,7 @@ computeWellRatio(const std::string& well_name,
         if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
             !pu.phaseIsActive(IndexTraits::gasPhaseIdx))
         {
-            return invalid_ratio;
+            return std::nullopt;
         }
         const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
@@ -487,7 +485,7 @@ computeWellRatio(const std::string& well_name,
         if (!pu.phaseIsActive(IndexTraits::gasPhaseIdx) ||
             !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
         {
-            return invalid_ratio;
+            return std::nullopt;
         }
         const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
@@ -500,7 +498,7 @@ computeWellRatio(const std::string& well_name,
     }
     case RatioViolation::NONE:
     default:
-        return invalid_ratio;
+        return std::nullopt;
     }
 }
 
@@ -574,18 +572,19 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
     std::vector<std::string> producer_wells;
     this->collectProducerWells(this->group_, producer_wells);
 
-    // Determine the worst-offending well consistently across all ranks.
-    // Each rank reports its locally-owned ratio (or "lowest" for non-owned).
-    // Reduce all ratios in one bulk MPI max-reduction, then select the
-    // globally worst ratio locally from the reduced array.
-    std::string worst_well;
-    Scalar worst_ratio = std::numeric_limits<Scalar>::lowest();
+    // Each rank reports its locally-owned ratio, or a negative sentinel where the
+    // ratio is not applicable. Ratios are non-negative, so the sentinel never wins
+    // the MPI max-reduction; the worst ratio is then picked from the reduced array.
+    constexpr Scalar not_applicable = std::numeric_limits<Scalar>::lowest();
     std::vector<Scalar> global_ratios;
     global_ratios.reserve(producer_wells.size());
     for (const std::string& well_name : producer_wells) {
-        global_ratios.push_back(this->computeWellRatio(well_name, ratio_details.violation));
+        const auto ratio = this->computeWellRatio(well_name, ratio_details.violation);
+        global_ratios.push_back(ratio.value_or(not_applicable));
     }
 
+    std::string worst_well;
+    Scalar worst_ratio = not_applicable;
     if (!global_ratios.empty()) {
         this->well_model_.comm().max(global_ratios.data(), global_ratios.size());
         for (std::size_t i = 0; i < global_ratios.size(); ++i) {
@@ -596,9 +595,7 @@ closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
         }
     }
 
-    if (worst_well.empty() ||
-        worst_ratio == std::numeric_limits<Scalar>::lowest())
-    {
+    if (worst_well.empty()) {
         // No candidate producer found (e.g. all already closed).
         if (this->debug_) {
             displayDebugMessage(
