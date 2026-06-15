@@ -895,6 +895,16 @@ macro(opm-simulators_targets_hook)
       opmsimulators
   )
 
+  opm_add_executable(
+    TARGET
+      flowexp_graphwell
+    SOURCES
+      flowexperimental/graphwell/flowexp_graphwell.cpp
+      $<TARGET_OBJECTS:moduleVersion>
+    LIBRARIES
+      opmsimulators
+  )
+
   if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
     opm_add_executable(
       TARGET
@@ -921,6 +931,7 @@ macro(opm-simulators_targets_hook)
 
   if(NOT BUILD_FLOW_VARIANTS)
     foreach(target flowexp_blackoil
+                   flowexp_graphwell
                    flowexp_comp
                    flow_blackoil_alugrid
                    flow_blackoil_float

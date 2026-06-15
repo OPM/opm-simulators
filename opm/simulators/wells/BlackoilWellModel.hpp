@@ -517,7 +517,9 @@ template<class Scalar> class WellContributions;
             // create the well container
             void createWellContainer(const int report_step) override;
 
-            WellInterfacePtr
+            // virtual so experimental well models (e.g. the GraphWell formulation
+            // in flowexperimental) can substitute their own well type.
+            virtual WellInterfacePtr
             createWellPointer(const int wellID,
                               const int report_step) const;
 
