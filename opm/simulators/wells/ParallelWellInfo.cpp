@@ -139,13 +139,17 @@ void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
-    if (comm_.size() == 1)
-        return localIndex;
-    if (!l2g_map_built_)
+    if (comm_.size() == 1) {
+        return static_cast<int>(localIndex);
+    }
+    if (!l2g_map_built_) {
         buildLocalToGlobalMap();
+    }
     auto it = local_to_global_map_.find(localIndex);
-    if (it == local_to_global_map_.end())
-        OPM_THROW(std::logic_error, fmt::format("There is no global index for the localIndex {}.", localIndex));
+    if (it == local_to_global_map_.end()) {
+        OPM_THROW(std::logic_error,
+                  fmt::format("There is no global index for the localIndex {}.", localIndex));
+    }
     return it->second;
 }
 
@@ -160,15 +164,18 @@ void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
-    if (comm_.size() == 1)
+    if (comm_.size() == 1) {
         return globalIndex;
+    }
     if (!g2l_map_built_) {
         buildGlobalToLocalMap();
     }
     auto it = global_to_local_map_.find(globalIndex);
-    if (it == global_to_local_map_.end())
+    if (it == global_to_local_map_.end()) {
         return -1; // Global index not found
-    return it->second;
+    }
+
+    return static_cast<int>(it->second);
 }
 
 template<class Scalar>
@@ -474,7 +481,7 @@ void ParallelWellInfo<Scalar>::DestroyComm::operator()(Parallel::Communication* 
 {
 #if HAVE_MPI
     // Only delete custom communicators.
-    bool del = comm
+    bool del = comm != nullptr
         && (*comm != Dune::MPIHelper::getLocalCommunicator())
         && (*comm != MPI_COMM_WORLD && *comm != MPI_COMM_NULL);
 
@@ -530,7 +537,7 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 }
 
 template<class Scalar>
-void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_map<int,int> active_to_local_map) const {
+void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_map<int,int>& active_to_local_map) const {
     //active_to_local_map_ is marked as mutable
     active_to_local_map_ = active_to_local_map;
     for (const auto& [key, value] : active_to_local_map) {
@@ -540,49 +547,59 @@ void ParallelWellInfo<Scalar>::setActivePerfToLocalPerfMap(const std::unordered_
 
 template<class Scalar>
 int ParallelWellInfo<Scalar>::localPerfToActivePerf(std::size_t localIndex) const {
-    if (comm_->size() == 1)
-        return localIndex;
-    auto it = local_to_active_map_.find(localIndex);
-    if (it == local_to_active_map_.end())
+    if (comm_->size() == 1) {
+        return static_cast<int>(localIndex);
+    }
+    auto it = local_to_active_map_.find(static_cast<int>(localIndex));
+    if (it == local_to_active_map_.end()) {
         return -1; // Active index not found
-    return it->second;
+    }
+
+    return static_cast<int>(it->second);
 }
 
 template<class Scalar>
 int ParallelWellInfo<Scalar>::activePerfToLocalPerf(const int activeIndex) const {
-    if (comm_->size() == 1)
+    if (comm_->size() == 1) {
         return activeIndex;
+    }
     auto it = active_to_local_map_.find(activeIndex);
-    if (it == active_to_local_map_.end())
+    if (it == active_to_local_map_.end()) {
         return -1; // Active index not found
-    return it->second;
+    }
+
+    return static_cast<int>(it->second);
 }
 
 template<class Scalar>
 int ParallelWellInfo<Scalar>::localPerfToGlobalPerf(std::size_t localIndex) const {
-    if(globalPerfCont_)
+    if (globalPerfCont_) {
         return globalPerfCont_->localToGlobal(localIndex);
-    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
-        return localIndex;
+    }
+    else { // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+        return static_cast<int>(localIndex);
+    }
 }
 
 template<class Scalar>
 int ParallelWellInfo<Scalar>::globalPerfToLocalPerf(const int globalIndex) const {
-    if(globalPerfCont_)
+    if (globalPerfCont_) {
         return globalPerfCont_->globalToLocal(globalIndex);
-    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+    }
+    else { // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
         return globalIndex;
+    }
 }
 
 template<class Scalar>
 void ParallelWellInfo<Scalar>::communicateFirstPerforation(bool hasFirst)
 {
-    int first = hasFirst;
+    int first = hasFirst ? 1 : 0;
     std::vector<int> firstVec(comm_->size());
     comm_->allgather(&first, 1, firstVec.data());
     const auto found =
         std::ranges::find_if(firstVec,
-                             [](int i) -> bool { return i; });
+                             [](int i) -> bool { return i != 0; });
     if (found != firstVec.end())
         rankWithFirstPerf_ = found - firstVec.begin();
 }
