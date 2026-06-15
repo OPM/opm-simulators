@@ -286,7 +286,7 @@ WGR()
                 displayDebugMessage(msg);
             }
             addPrintMessage("  Water/gas ratio = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
-                                details->ratio, details->limit, details->measure); // Same units
+                                details->ratio, details->limit, details->measure);
             return details;
         }
     }
@@ -443,7 +443,7 @@ computeWellRatio(const std::string& well_name,
     }
 
     const auto& ws = this->well_state_.well(well_index.value());
-    if (ws.status == Well::Status::SHUT) {
+    if (ws.status != Well::Status::OPEN) {
         return invalid_ratio;
     }
 
