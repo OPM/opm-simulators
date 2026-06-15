@@ -399,7 +399,7 @@ protected:
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
 
-    bool wasDynamicallyShutThisTimeStep(const int well_index) const;
+    bool wasDynamicallyShutThisTimeStep(const std::size_t well_index) const;
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,

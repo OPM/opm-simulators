@@ -941,7 +941,7 @@ wellPI(const std::string& well_name) const
 
 template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
-wasDynamicallyShutThisTimeStep(const int well_index) const
+wasDynamicallyShutThisTimeStep(const std::size_t well_index) const
 {
     return wasDynamicallyShutThisTimeStep(this->wells_ecl_[well_index].name());
 }

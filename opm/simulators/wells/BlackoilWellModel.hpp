@@ -208,7 +208,7 @@ template<class Scalar> class WellContributions;
             {
                 auto wsrpt = this->wellState()
                     .report(this->simulator_.vanguard().globalCell().data(),
-                            [this](const int well_index)
+                            [this](const std::size_t well_index)
                             { return this->wasDynamicallyShutThisTimeStep(well_index); },
                             this->rsConstInfo());
 
