@@ -25,7 +25,9 @@
 
 #include <array>
 #include <map>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace Opm
 {
@@ -40,6 +42,22 @@ template<typename Scalar, typename IndexTraits>
 class GroupEconomicLimitsChecker
 {
 public:
+    enum class RatioViolation {
+        NONE,
+        WATER_CUT,
+        GOR,
+        WGR
+    };
+
+    struct RatioDetails
+    {
+        RatioViolation violation;
+        std::string ratio_type;
+        Scalar ratio;
+        Scalar limit;
+        UnitSystem::measure measure;
+    };
+
     GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model,
                                WellTestState& well_test_state,
                                const Group& group,
@@ -49,10 +67,11 @@ public:
     void closeWells();
     bool minGasRate();
     bool minOilRate();
-    bool waterCut();
-    bool GOR();
-    bool WGR();
-    void doWorkOver();
+    std::optional<RatioDetails> waterCut();
+    std::optional<RatioDetails> GOR();
+    std::optional<RatioDetails> WGR();
+    std::optional<RatioDetails> ratioViolation();
+    void doWorkOver(const RatioDetails& ratio_details);
     bool endRun();
     int numProducersOpenInitially();
     int numProducersOpen();
@@ -71,6 +90,23 @@ private:
                          const UnitSystem::measure measure);
     bool closeWellsRecursive(const Group& group, int level = 0);
     void throwNotImplementedError(const std::string& error) const;
+
+    /// Collect names of all producer wells belonging to \p group (recursively).
+    void collectProducerWells(const Group& group,
+                              std::vector<std::string>& well_names) const;
+
+    /// Compute the relevant ratio (per \p ratio_violation) for a single well.
+    /// Returns \c std::nullopt if the ratio is not applicable (e.g. the well is
+    /// not owned by the current rank or is already shut).
+    std::optional<Scalar> computeWellRatio(const std::string& well_name,
+                                           const RatioViolation ratio_violation) const;
+
+    /// Implements the WELL workover procedure: identify the worst-offending
+    /// producer in the group hierarchy and close it (shut/stop based on
+    /// WELSPECS automatic shut-in policy).
+    void closeWorstOffendingRatioWell(const RatioDetails& ratio_details);
+
+    std::optional<RatioDetails> groupRatioDetails(const RatioViolation ratio_violation) const;
 
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& well_model_;
     const Group& group_;

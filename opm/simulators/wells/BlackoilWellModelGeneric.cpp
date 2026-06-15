@@ -458,8 +458,11 @@ checkGEconLimits(
     if (checker.minOilRate() || checker.minGasRate()) {
         checker.closeWells();
     }
-    else if (checker.waterCut() || checker.GOR() || checker.WGR()) {
-        checker.doWorkOver();
+    else {
+        const auto ratio_details = checker.ratioViolation();
+        if (ratio_details.has_value()) {
+            checker.doWorkOver(ratio_details.value());
+        }
     }
     if (checker.endRun() && (checker.numProducersOpenInitially() >= 1)
                              && (checker.numProducersOpen() == 0))

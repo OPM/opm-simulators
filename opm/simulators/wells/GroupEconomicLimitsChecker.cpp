@@ -24,7 +24,9 @@
 
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
@@ -32,13 +34,17 @@
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <fmt/format.h>
 
-#include <ctime>
 #include <chrono>
-#include <sstream>
+#include <ctime>
 #include <iomanip>
+#include <limits>
+#include <sstream>
+#include <vector>
 
 namespace Opm {
 
@@ -106,10 +112,19 @@ closeWells()
 
 template<typename Scalar, typename IndexTraits>
 void GroupEconomicLimitsChecker<Scalar, IndexTraits>::
-doWorkOver()
+doWorkOver(const RatioDetails& ratio_details)
 {
-    if (this->gecon_props_.workover() != GroupEconProductionLimits::EconWorkover::NONE) {
-        throwNotImplementedError("workover procedure");
+    switch (this->gecon_props_.workover()) {
+    case GroupEconProductionLimits::EconWorkover::NONE:
+        break;
+    case GroupEconProductionLimits::EconWorkover::WELL:
+        this->closeWorstOffendingRatioWell(ratio_details);
+        break;
+    default:
+        const auto workover_name = GroupEconProductionLimits::econWorkoverToString(this->gecon_props_.workover());
+        throwNotImplementedError(fmt::format(
+            "workover procedure {}",
+            workover_name));
     }
 }
 
@@ -124,37 +139,25 @@ endRun()
 }
 
 template<typename Scalar, typename IndexTraits>
-bool GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
 GOR()
 {
-    auto oil_phase_idx = this->phase_idx_reverse_map_[IndexTraits::oilPhaseIdx];
-    auto gas_phase_idx = this->phase_idx_reverse_map_[IndexTraits::gasPhaseIdx];
-    auto oil_rate = this->production_rates_[oil_phase_idx];
-    auto gas_rate = this->production_rates_[gas_phase_idx];
-    Scalar gor;
-    if (gas_rate <= 0.0) {
-        gor = 0.0;
-    }
-    else if (oil_rate <= 0.0) {
-        gor = 1e100;
-    }
-    else {
-        gor = gas_rate / oil_rate;
-    }
-    if (auto max_gor = this->gecon_props_.maxGasOilRatio(); max_gor) {
-        if (gor > *max_gor) {
+    const auto details = this->groupRatioDetails(RatioViolation::GOR);
+    if (details.has_value()) {
+        if (details->ratio > details->limit) {
             if (this->debug_) {
                 const std::string msg = fmt::format(
                     "GOR={} is greater than maximum: {}",
-                    gor, *max_gor);
+                    details->ratio, details->limit);
                 displayDebugMessage(msg);
             }
-            addPrintMessage("  Gas/oil ratio = {:.2f} {} which is greater than the minimum economic value = {:.2f} {}",
-                                gor, *max_gor, UnitSystem::measure::gas_oil_ratio);
-            return true;
+            addPrintMessage("  Gas/oil ratio = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
+                                details->ratio, details->limit, details->measure);
+            return details;
         }
     }
-    return false;
+    return std::nullopt;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -225,78 +228,69 @@ numProducersOpenInitially()
     return 1;
 }
 
-template<typename Scalar, typename IndexTraits>
-bool GroupEconomicLimitsChecker<Scalar, IndexTraits>::
-waterCut()
+template <typename Scalar, typename IndexTraits>
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+ratioViolation()
 {
-    auto oil_phase_idx = this->phase_idx_reverse_map_[IndexTraits::oilPhaseIdx];
-    auto water_phase_idx = this->phase_idx_reverse_map_[IndexTraits::waterPhaseIdx];
-    auto oil_rate = this->production_rates_[oil_phase_idx];
-    auto water_rate = this->production_rates_[water_phase_idx];
-    auto liquid_rate = oil_rate + water_rate;
-    Scalar water_cut;
-    if (liquid_rate == 0.0) {
-        water_cut = 0.0;
+    if (auto water_cut_details = this->waterCut(); water_cut_details.has_value())
+    {
+        return water_cut_details;
     }
-    else {
-        if (water_rate < 0.0) {
-            water_cut = 0.0;
-        }
-        else if (oil_rate < 0.0) {
-            water_cut = 1.0;
-        }
-        else {
-            water_cut = water_rate / liquid_rate;
-        }
+    else if (auto gor_details = this->GOR(); gor_details.has_value())
+    {
+        return gor_details;
     }
-    if (auto max_water_cut = this->gecon_props_.maxWaterCut(); max_water_cut) {
-        if (water_cut > *max_water_cut) {
-            if (this->debug_) {
-                const std::string msg = fmt::format(
-                    "water_cut={} is greater than maximum: {}",
-                    water_cut, *max_water_cut);
-                displayDebugMessage(msg);
-            }
-            addPrintMessage("  Water cut = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
-                                water_cut, *max_water_cut, UnitSystem::measure::water_cut);
-            return true;
-        }
+    else if (auto wgr_details = this->WGR(); wgr_details.has_value())
+    {
+        return wgr_details;
     }
-    return false;
+
+    return std::nullopt;
 }
 
 template<typename Scalar, typename IndexTraits>
-bool GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+waterCut()
+{
+    const auto details = this->groupRatioDetails(RatioViolation::WATER_CUT);
+    if (details.has_value()) {
+        if (details->ratio > details->limit) {
+            if (this->debug_) {
+                const std::string msg = fmt::format(
+                    "water_cut={} is greater than maximum: {}",
+                    details->ratio, details->limit);
+                displayDebugMessage(msg);
+            }
+            addPrintMessage("  Water cut = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
+                                details->ratio, details->limit, details->measure);
+            return details;
+        }
+    }
+    return std::nullopt;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
 WGR()
 {
-    auto water_phase_idx = this->phase_idx_reverse_map_[IndexTraits::waterPhaseIdx];
-    auto gas_phase_idx = this->phase_idx_reverse_map_[IndexTraits::gasPhaseIdx];
-    auto water_rate = this->production_rates_[water_phase_idx];
-    auto gas_rate = this->production_rates_[gas_phase_idx];
-    Scalar wgr;
-    if (water_rate <= 0.0) {
-        wgr = 0.0;
-    }
-    else if (gas_rate <= 0.0) {
-        wgr = 1e100;
-    }
-    else {
-        wgr = water_rate / gas_rate;
-    }
-    if (auto max_wgr = this->gecon_props_.maxWaterGasRatio(); max_wgr) {
-        if (wgr > *max_wgr) {
+    const auto details = this->groupRatioDetails(RatioViolation::WGR);
+    if (details.has_value()) {
+        if (details->ratio > details->limit) {
             if (this->debug_) {
                 const std::string msg = fmt::format(
                     "WGR={} is greater than maximum: {}",
-                    wgr, *max_wgr);
+                    details->ratio, details->limit);
                 displayDebugMessage(msg);
             }
             addPrintMessage("  Water/gas ratio = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
-                                wgr, *max_wgr, UnitSystem::measure::gas_oil_ratio); // Same units
-            return true;
+                                details->ratio, details->limit, details->measure);
+            return details;
         }
     }
-    return false;
+    return std::nullopt;
 }
 
 /****************************************
@@ -378,7 +372,11 @@ closeWellsRecursive(const Group& group, int level)
                     "closing well {}", well_name);
                 displayDebugMessage(msg);
             }
-            const std::string msg = fmt::format("\n{} Closing well {}", indent, well_name);
+            const bool will_shut =
+                this->schedule_.getWell(well_name, this->report_step_idx_).getAutomaticShutIn();
+            const std::string msg = fmt::format("\n{} {} well {}", indent,
+                                                will_shut ? "Shutting" : "Stopping",
+                                                well_name);
             this->message_ += msg;
 
             // Only update the well_test_state_ on ranks that have the well in question.
@@ -405,6 +403,247 @@ throwNotImplementedError(const std::string& error) const
     const std::string msg = fmt::format("Group: {} : GECON : {} not implemented",
                                         this->group_.name(), error);
     OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
+}
+
+template<typename Scalar, typename IndexTraits>
+void GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+collectProducerWells(const Group& group, std::vector<std::string>& well_names) const
+{
+    for (const std::string& group_name : group.groups()) {
+        const auto& sub_group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        this->collectProducerWells(sub_group, well_names);
+    }
+    for (const std::string& well_name : group.wells()) {
+        const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_idx_);
+        if (well_ecl.isProducer()) {
+            well_names.push_back(well_name);
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<Scalar> GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+computeWellRatio(const std::string& well_name,
+                 const RatioViolation ratio_violation) const
+{
+    // The checks below avoid accessing WellState data for wells that are already closed,
+    // not present on this rank, or not owned by this rank (important for parallel runs).
+    if (this->well_test_state_.well_is_closed(well_name)) {
+        return std::nullopt;
+    }
+
+    const auto well_index = this->well_state_.index(well_name);
+    if (!well_index.has_value()) {
+        return std::nullopt;
+    }
+    if (!this->well_state_.wellIsOwned(well_index.value(), well_name)) {
+        return std::nullopt;
+    }
+
+    const auto& ws = this->well_state_.well(well_index.value());
+    if (ws.status != Well::Status::OPEN) {
+        return std::nullopt;
+    }
+
+    const auto& pu = this->well_model_.phaseUsage();
+    constexpr Scalar big_value = std::numeric_limits<Scalar>::max();
+
+    switch (ratio_violation) {
+    case RatioViolation::WATER_CUT: {
+        if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+        {
+            return std::nullopt;
+        }
+        const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        // Surface rates are negative for producers in WellState; flip sign here.
+        const Scalar oil_rate = -ws.surface_rates[oil_pos];
+        const Scalar water_rate = -ws.surface_rates[water_pos];
+        const Scalar liquid = oil_rate + water_rate;
+        if (liquid <= 0.0)      return Scalar{0};
+        if (water_rate <= 0.0)  return Scalar{0};
+        if (oil_rate   <= 0.0)  return Scalar{1};
+        return water_rate / liquid;
+    }
+    case RatioViolation::GOR: {
+        if (!pu.phaseIsActive(IndexTraits::oilPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::gasPhaseIdx))
+        {
+            return std::nullopt;
+        }
+        const auto oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        // Surface rates are negative for producers in WellState; flip sign here.
+        const Scalar oil_rate = -ws.surface_rates[oil_pos];
+        const Scalar gas_rate = -ws.surface_rates[gas_pos];
+        if (gas_rate <= 0.0)    return Scalar{0};
+        if (oil_rate <= 0.0)    return big_value;
+        return gas_rate / oil_rate;
+    }
+    case RatioViolation::WGR: {
+        if (!pu.phaseIsActive(IndexTraits::gasPhaseIdx) ||
+            !pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+        {
+            return std::nullopt;
+        }
+        const auto gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+        const auto water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+        // Surface rates are negative for producers in WellState; flip sign here.
+        const Scalar gas_rate = -ws.surface_rates[gas_pos];
+        const Scalar water_rate = -ws.surface_rates[water_pos];
+        if (water_rate <= 0.0)  return Scalar{0};
+        if (gas_rate   <= 0.0)  return big_value;
+        return water_rate / gas_rate;
+    }
+    case RatioViolation::NONE:
+    default:
+        return std::nullopt;
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<typename GroupEconomicLimitsChecker<Scalar, IndexTraits>::RatioDetails>
+GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+groupRatioDetails(const RatioViolation ratio_violation) const
+{
+    constexpr Scalar big_value = std::numeric_limits<Scalar>::max();
+    switch (ratio_violation) {
+    case RatioViolation::WGR: {
+        const auto max_wgr = this->gecon_props_.maxWaterGasRatio();
+        if (!max_wgr.has_value()) {
+            return std::nullopt;
+        }
+        const auto water_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::waterPhaseIdx);
+        const auto gas_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::gasPhaseIdx);
+        const Scalar water_rate = this->production_rates_[water_phase_idx];
+        const Scalar gas_rate = this->production_rates_[gas_phase_idx];
+        const Scalar ratio = (water_rate <= 0.0) ? Scalar{0}
+                           : (gas_rate <= 0.0)   ? Scalar{big_value}
+                                                  : water_rate / gas_rate;
+        return RatioDetails{RatioViolation::WGR, "Water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::water_gas_ratio};
+    }
+    case RatioViolation::GOR: {
+        const auto max_gor = this->gecon_props_.maxGasOilRatio();
+        if (!max_gor.has_value()) {
+            return std::nullopt;
+        }
+        const auto oil_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::oilPhaseIdx);
+        const auto gas_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::gasPhaseIdx);
+        const Scalar oil_rate = this->production_rates_[oil_phase_idx];
+        const Scalar gas_rate = this->production_rates_[gas_phase_idx];
+        const Scalar ratio = (gas_rate <= 0.0) ? Scalar{0}
+                           : (oil_rate <= 0.0) ? Scalar{big_value}
+                                               : gas_rate / oil_rate;
+        return RatioDetails{RatioViolation::GOR, "Gas-oil ratio", ratio, static_cast<Scalar>(max_gor.value()), UnitSystem::measure::gas_oil_ratio};
+    }
+    case RatioViolation::WATER_CUT: {
+        const auto max_water_cut = this->gecon_props_.maxWaterCut();
+        if (!max_water_cut.has_value()) {
+            return std::nullopt;
+        }
+        const auto oil_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::oilPhaseIdx);
+        const auto water_phase_idx = this->phase_idx_reverse_map_.at(IndexTraits::waterPhaseIdx);
+        const Scalar oil_rate = this->production_rates_[oil_phase_idx];
+        const Scalar water_rate = this->production_rates_[water_phase_idx];
+        const Scalar liquid_rate = oil_rate + water_rate;
+        const Scalar ratio = (liquid_rate == 0.0) ? Scalar{0}
+                           : (water_rate < 0.0)   ? Scalar{0}
+                           : (oil_rate < 0.0)     ? Scalar{1}
+                                                   : water_rate / liquid_rate;
+        return RatioDetails{RatioViolation::WATER_CUT, "Water cut", ratio, static_cast<Scalar>(max_water_cut.value()), UnitSystem::measure::water_cut};
+    }
+    case RatioViolation::NONE:
+    default:
+        return std::nullopt;
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void GroupEconomicLimitsChecker<Scalar, IndexTraits>::
+closeWorstOffendingRatioWell(const RatioDetails& ratio_details)
+{
+    if (ratio_details.violation == RatioViolation::NONE) {
+        // Should not happen: doWorkOver() is only called after a ratio
+        // violation was reported, but guard against misuse.
+        return;
+    }
+
+    std::vector<std::string> producer_wells;
+    this->collectProducerWells(this->group_, producer_wells);
+
+    // Each rank reports its locally-owned ratio, or a negative sentinel where the
+    // ratio is not applicable. Ratios are non-negative, so the sentinel never wins
+    // the MPI max-reduction; the worst ratio is then picked from the reduced array.
+    constexpr Scalar not_applicable = std::numeric_limits<Scalar>::lowest();
+    std::vector<Scalar> global_ratios;
+    global_ratios.reserve(producer_wells.size());
+    for (const std::string& well_name : producer_wells) {
+        const auto ratio = this->computeWellRatio(well_name, ratio_details.violation);
+        global_ratios.push_back(ratio.value_or(not_applicable));
+    }
+
+    std::string worst_well;
+    Scalar worst_ratio = not_applicable;
+    if (!global_ratios.empty()) {
+        this->well_model_.comm().max(global_ratios.data(), global_ratios.size());
+        for (std::size_t i = 0; i < global_ratios.size(); ++i) {
+            if (global_ratios[i] > worst_ratio) {
+                worst_ratio = global_ratios[i];
+                worst_well = producer_wells[i];
+            }
+        }
+    }
+
+    if (worst_well.empty()) {
+        // No candidate producer found (e.g. all already closed).
+        if (this->debug_) {
+            displayDebugMessage(
+                "GECON WELL workover: no open producer well found to close.");
+        }
+        return;
+    }
+
+
+    // Perform the actual close on the owning rank(s).
+    bool well_was_closed_locally = false;
+    if (this->well_model_.hasLocalWell(worst_well)) {
+        if (!this->well_test_state_.well_is_closed(worst_well)) {
+            this->well_test_state_.close_well(
+                worst_well, WellTestConfig::Reason::GROUP, this->simulation_time_);
+            this->well_model_.updateClosedWellsThisStep(worst_well);
+            well_was_closed_locally = true;
+        }
+    }
+
+    if (this->well_model_.comm().max(static_cast<int>(well_was_closed_locally)) == 0) {
+        // Nothing to do (well was already closed everywhere).
+        return;
+    }
+
+    if (this->well_model_.comm().rank() == 0) {
+        const Scalar group_ratio_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.ratio);
+        const Scalar limit_display = this->unit_system_.from_si(ratio_details.measure, ratio_details.limit);
+        const std::string unit_name = this->unit_system_.name(ratio_details.measure);
+        const bool will_shut =
+            this->schedule_.getWell(worst_well, this->report_step_idx_).getAutomaticShutIn();
+
+        const std::string msg = fmt::format(
+            "{}\nAt time = {:.2f} {} (date = {}): Well {} will be {} because:\n"
+            "  {} for group {} = {:.4e} {} exceeds the limit {:.4e} {}.\n{}",
+            this->message_separator(),
+            this->unit_system_.from_si(UnitSystem::measure::time, this->simulation_time_),
+            this->unit_system_.name(UnitSystem::measure::time),
+            this->date_string_,
+            worst_well,
+            will_shut ? "shut" : "stopped",
+            ratio_details.ratio_type,
+            this->group_.name(),
+            group_ratio_display, unit_name,
+            limit_display, unit_name,
+            this->message_separator());
+        this->deferred_logger_.info(msg);
+    }
 }
 
 template class GroupEconomicLimitsChecker<double, BlackOilDefaultFluidSystemIndices>;

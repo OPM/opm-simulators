@@ -107,7 +107,7 @@ partiallySupported()
          {
             "GECON",
             {
-               {7,{true, allow_values<std::string> {"NONE"}, "GECON(WORKOVER): Workover procedures not implemented"}},
+               {7,{true, allow_values<std::string> {"NONE", "WELL"}, "GECON(WORKOVER): Workover procedures only implemented for WELL and NONE"}},
                {8,{true, allow_values<std::string> {"NO"}, "GECON(ENDRUN): End run not implemented"}},
             },
          },
