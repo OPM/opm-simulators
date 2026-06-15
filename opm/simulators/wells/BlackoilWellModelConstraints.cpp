@@ -36,6 +36,184 @@
 
 #include <stdexcept>
 
+namespace {
+
+template<typename IndexTraits>
+int activePhasePos(const Opm::Phase phase,
+                   const Opm::PhaseUsageInfo<IndexTraits>& pu)
+{
+    if (phase == Opm::Phase::GAS && pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        return pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+    }
+    else if (phase == Opm::Phase::OIL && pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        return pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    }
+    else if (phase == Opm::Phase::WATER && pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        return pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+    }
+
+    OPM_THROW(std::runtime_error, "Unknown phase");
+}
+
+template<class Scalar, class IndexTraits>
+std::optional<std::pair<Opm::Group::InjectionCMode, Scalar>>
+checkRateConstraint(const Opm::Group& group,
+                    const Opm::Phase& phase,
+                    const Opm::Group::InjectionCMode currentControl,
+                    const Opm::BlackoilWellModelGeneric<Scalar,IndexTraits>& wellModel)
+{
+    if (group.has_control(phase, Opm::Group::InjectionCMode::RATE) &&
+        currentControl != Opm::Group::InjectionCMode::RATE)
+    {
+        const int phasePos = activePhasePos(phase, wellModel.phaseUsage());
+        Scalar current_rate =
+            wellModel.groupStateHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
+
+        // sum over all nodes
+        current_rate = wellModel.comm().sum(current_rate);
+
+        const auto& controls = group.injectionControls(phase, wellModel.summaryState());
+        const Scalar target = group.has_gpmaint_control(phase, Opm::Group::InjectionCMode::RATE)
+            ? wellModel.groupState().gpmaint_target(group.name())
+            : controls.surface_max_rate;
+
+        if (target < current_rate) {
+            const Scalar scale = current_rate > 1e-12
+                ? target / current_rate
+                : 1.0;
+            return std::make_pair(Opm::Group::InjectionCMode::RATE, scale);
+        }
+    }
+
+    return std::nullopt;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<std::pair<Opm::Group::InjectionCMode, Scalar>>
+checkResvConstraint(const Opm::Group& group,
+                    const Opm::Phase& phase,
+                    const Opm::Group::InjectionCMode currentControl,
+                    const Opm::BlackoilWellModelGeneric<Scalar,IndexTraits>& wellModel)
+{
+    if (group.has_control(phase, Opm::Group::InjectionCMode::RESV) &&
+        currentControl != Opm::Group::InjectionCMode::RESV)
+    {
+        const int phasePos = activePhasePos(phase, wellModel.phaseUsage());
+        Scalar current_rate =
+            wellModel.groupStateHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
+        // sum over all nodes
+        current_rate = wellModel.comm().sum(current_rate);
+
+        const auto& controls = group.injectionControls(phase, wellModel.summaryState());
+        const Scalar target = group.has_gpmaint_control(phase, Opm::Group::InjectionCMode::RESV)
+            ? wellModel.groupState().gpmaint_target(group.name())
+            : controls.resv_max_rate;
+
+        if (target < current_rate) {
+            const Scalar scale = current_rate > 1e-12
+                ? target / current_rate
+                : 1.0;
+            return std::make_pair(Opm::Group::InjectionCMode::RESV, scale);
+        }
+    }
+
+    return std::nullopt;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<std::pair<Opm::Group::InjectionCMode, Scalar>>
+checkReinConstraint(const Opm::Group& group,
+                    const Opm::Phase& phase,
+                    const Opm::Group::InjectionCMode currentControl,
+                    const int reportStepIdx,
+                    const Opm::BlackoilWellModelGeneric<Scalar,IndexTraits>& wellModel)
+{
+    if (group.has_control(phase, Opm::Group::InjectionCMode::REIN) &&
+        currentControl != Opm::Group::InjectionCMode::REIN)
+    {
+        const auto& controls = group.injectionControls(phase, wellModel.summaryState());
+        const Opm::Group& groupRein = wellModel.schedule().getGroup(controls.reinj_group, reportStepIdx);
+        const int phasePos = activePhasePos(phase, wellModel.phaseUsage());
+        const auto& groupStateHelper = wellModel.groupStateHelper();
+        Scalar production_Rate =
+            groupStateHelper.sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
+
+        // sum over all nodes
+        production_Rate = wellModel.comm().sum(production_Rate);
+
+        Scalar current_rate = 0.0;
+        current_rate += groupStateHelper.sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
+
+        // sum over all nodes
+        current_rate = wellModel.comm().sum(current_rate);
+
+        if (controls.target_reinj_fraction * production_Rate < current_rate) {
+            const Scalar scale = current_rate > 1e-12
+                ? controls.target_reinj_fraction * production_Rate / current_rate
+                : 1.0;
+            return std::make_pair(Opm::Group::InjectionCMode::REIN, scale);
+        }
+    }
+
+    return std::nullopt;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<std::pair<Opm::Group::InjectionCMode, Scalar>>
+checkVrepConstraint(const Opm::Group& group,
+                    const Opm::Phase& phase,
+                    const Opm::Group::InjectionCMode currentControl,
+                    const int reportStepIdx,
+                    const Opm::BlackoilWellModelGeneric<Scalar,IndexTraits>& wellModel)
+{
+    if (group.has_control(phase, Opm::Group::InjectionCMode::VREP) &&
+        currentControl != Opm::Group::InjectionCMode::VREP)
+    {
+        const auto& pu = wellModel.phaseUsage();
+        const auto& controls = group.injectionControls(phase, wellModel.summaryState());
+        const Opm::Group& groupVoidage = wellModel.schedule().getGroup(controls.voidage_group, reportStepIdx);
+        const auto& groupStateHelper = wellModel.groupStateHelper();
+        Scalar voidage_rate =
+            groupStateHelper.sumWellResRates(groupVoidage,
+                                             pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+                                             /*is_injector=*/false);
+        voidage_rate += groupStateHelper.sumWellResRates(groupVoidage,
+                                                 pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
+                                                 /*is_injector=*/false);
+        voidage_rate += groupStateHelper.sumWellResRates(groupVoidage,
+                                                 pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx),
+                                                 /*is_injector=*/false);
+
+        // sum over all nodes
+        voidage_rate = wellModel.comm().sum(voidage_rate);
+
+        Scalar total_rate =
+            groupStateHelper.sumWellResRates(group,
+                                             pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+                                             /*is_injector=*/true);
+        total_rate += groupStateHelper.sumWellResRates(group,
+                                               pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
+                                               /*is_injector=*/true);
+        total_rate += groupStateHelper.sumWellResRates(group,
+                                               pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx),
+                                               /*is_injector=*/true);
+
+        // sum over all nodes
+        total_rate = wellModel.comm().sum(total_rate);
+
+        if (controls.target_void_fraction * voidage_rate < total_rate) {
+            const Scalar scale = total_rate > 1e-12
+                ? controls.target_void_fraction * voidage_rate / total_rate
+                : 1.0;
+            return std::make_pair(Opm::Group::InjectionCMode::VREP, scale);
+        }
+    }
+
+    return std::nullopt;
+}
+
+}
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -45,134 +223,21 @@ checkGroupInjectionConstraints(const Group& group,
                                const int reportStepIdx,
                                const Phase& phase) const
 {
-    const auto& pu = wellModel_.phaseUsage();
+    const auto currentControl = wellModel_.groupState().injection_control(group.name(), phase);
 
-    int phasePos;
-    if (phase == Phase::GAS && pu.phaseIsActive(gasPhaseIdx) )
-        phasePos = pu.canonicalToActivePhaseIdx(gasPhaseIdx);
-    else if (phase == Phase::OIL && pu.phaseIsActive(oilPhaseIdx) )
-        phasePos = pu.canonicalToActivePhaseIdx(oilPhaseIdx);
-    else if (phase == Phase::WATER && pu.phaseIsActive(waterPhaseIdx) )
-        phasePos = pu.canonicalToActivePhaseIdx(waterPhaseIdx);
-    else
-        OPM_THROW(std::runtime_error, "Unknown phase" );
-
-    auto currentControl = wellModel_.groupState().injection_control(group.name(), phase);
-    if (group.has_control(phase, Group::InjectionCMode::RATE))
-    {
-        if (currentControl != Group::InjectionCMode::RATE)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*isInjector*/true);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            Scalar target = controls.surface_max_rate;
-
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE))
-                target = wellModel_.groupState().gpmaint_target(group.name());
-
-            if (target < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::InjectionCMode::RATE, scale);
-            }
-        }
+    if (auto c = checkRateConstraint(group, phase, currentControl, wellModel_); c.has_value()) {
+        return *c;
     }
-    if (group.has_control(phase, Group::InjectionCMode::RESV))
-    {
-        if (currentControl != Group::InjectionCMode::RESV)
-        {
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellResRates(group, phasePos, /*is_injector=*/true);
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            Scalar target = controls.resv_max_rate;
-
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV))
-                target = wellModel_.groupState().gpmaint_target(group.name());
-
-            if (target < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::InjectionCMode::RESV, scale);
-            }
-        }
+    if (auto c = checkResvConstraint(group, phase, currentControl, wellModel_); c.has_value()) {
+        return *c;
     }
-    if (group.has_control(phase, Group::InjectionCMode::REIN))
-    {
-        if (currentControl != Group::InjectionCMode::REIN)
-        {
-            Scalar production_Rate = 0.0;
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += groupStateHelper().sumWellSurfaceRates(groupRein, phasePos, /*is_injector=*/false);
-
-            // sum over all nodes
-            production_Rate = wellModel_.comm().sum(production_Rate);
-
-            Scalar current_rate = 0.0;
-            current_rate += groupStateHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true);
-
-            // sum over all nodes
-            current_rate = wellModel_.comm().sum(current_rate);
-
-            if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                Scalar scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.target_reinj_fraction*production_Rate / current_rate;
-                return std::make_pair(Group::InjectionCMode::REIN, scale);
-            }
-        }
+    if (auto c = checkReinConstraint(group, phase, currentControl, reportStepIdx, wellModel_); c.has_value()) {
+        return *c;
     }
-    if (group.has_control(phase, Group::InjectionCMode::VREP))
-    {
-        if (currentControl != Group::InjectionCMode::VREP)
-        {
-            Scalar voidage_rate = 0.0;
-            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                       /*is_injector=*/false);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                       /*is_injector=*/false);
-            voidage_rate += groupStateHelper().sumWellResRates(groupVoidage,
-                                                       pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                       /*is_injector=*/false);
-
-            // sum over all nodes
-            voidage_rate = wellModel_.comm().sum(voidage_rate);
-
-            Scalar total_rate = 0.0;
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(waterPhaseIdx),
-                                                     /*is_injector=*/true);
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(oilPhaseIdx),
-                                                     /*is_injector=*/true);
-            total_rate += groupStateHelper().sumWellResRates(group,
-                                                     pu.canonicalToActivePhaseIdx(gasPhaseIdx),
-                                                     /*is_injector=*/true);
-
-            // sum over all nodes
-            total_rate = wellModel_.comm().sum(total_rate);
-
-            if (controls.target_void_fraction*voidage_rate < total_rate) {
-                Scalar scale = 1.0;
-                if (total_rate > 1e-12)
-                    scale = controls.target_void_fraction*voidage_rate / total_rate;
-                return std::make_pair(Group::InjectionCMode::VREP, scale);
-            }
-        }
+    if (auto c = checkVrepConstraint(group, phase, currentControl, reportStepIdx, wellModel_); c.has_value()) {
+        return *c;
     }
+
     return std::make_pair(Group::InjectionCMode::NONE, 1.0);
 }
 
@@ -316,6 +381,136 @@ actionOnBrokenConstraints(const Group& group,
 
 template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
+updateInjectionGroupControl(const Group& group,
+                            const int reportStepIdx,
+                            const int max_number_of_group_switch,
+                            const bool update_group_switching_log,
+                            std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
+                            GroupState<Scalar>& group_state,
+                            WellState<Scalar, IndexTraits>& well_state,
+                            DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+        if (!group.hasInjectionControl(phase)) {
+            continue;
+        }
+        bool group_is_oscillating = false;
+        const auto currentControl = group_state.injection_control(group.name(), phase);
+        if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
+            auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
+            const int number_of_switches = std::ranges::count(ctrls, currentControl);
+            group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
+            if (group_is_oscillating) {
+                const bool output_first_time = (number_of_switches == max_number_of_group_switch);
+                if (output_first_time) {
+                    if (wellModel_.comm().rank() == 0 ) {
+                        std::ostringstream os;
+                        os << phase;
+                        const std::string msg =
+                            fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
+                                        std::move(os).str(),
+                                        group.name(),
+                                        Group::InjectionCMode2String(currentControl));
+                        deferred_logger.info(msg);
+                    }
+                    ctrls.push_back(currentControl);
+                }
+            }
+        }
+
+        if (group_is_oscillating) {
+            continue;
+        }
+
+        const auto& changed_this = this->checkGroupInjectionConstraints(group,
+                                                                        reportStepIdx,
+                                                                        phase);
+        if (changed_this.first != Group::InjectionCMode::NONE) {
+            auto& group_log = switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
+            if (update_group_switching_log || group_log.empty()) {
+                group_log.push_back(currentControl);
+            }
+            this->actionOnBrokenConstraints(group, changed_this.first, phase,
+                                            group_state, deferred_logger);
+            groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                           group,
+                                                           /*is_injector=*/false,
+                                                           well_state);
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
+updateProductionGroupControl(const Group& group,
+                             const int max_number_of_group_switch,
+                             const bool update_group_switching_log,
+                             std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
+                             std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
+                             GroupState<Scalar>& group_state,
+                             WellState<Scalar, IndexTraits>& well_state,
+                             DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    const Group::ProductionCMode currentControl = group_state.production_control(group.name());
+    if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
+        auto& ctrls = groupPos->second;
+        const int number_of_switches = std::ranges::count(ctrls, currentControl);
+        const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
+        if (group_is_oscillating) {
+            const bool output_first_time = (number_of_switches == max_number_of_group_switch);
+            if (output_first_time) {
+                if (wellModel_.comm().rank() == 0) {
+                    const std::string msg =
+                    fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
+                                group.name(),
+                                Group::ProductionCMode2String(currentControl));
+                    deferred_logger.info(msg);
+                }
+                ctrls.push_back(currentControl);
+            }
+            return false;
+        }
+    }
+
+    const auto& changed_this = this->checkGroupProductionConstraints(group);
+    const auto controls = group.productionControls(wellModel_.summaryState());
+
+    if (changed_this.first != Group::ProductionCMode::NONE) {
+        std::optional<std::string> worst_offending_well = std::nullopt;
+        changed = this->actionOnBrokenConstraints(group,
+                                                  controls.group_limit_action,
+                                                  changed_this.first,
+                                                  worst_offending_well,
+                                                  group_state, deferred_logger);
+
+        if (changed) {
+            if (update_group_switching_log || switched_prod[group.name()].empty()) {
+                switched_prod[group.name()].push_back(currentControl);
+            }
+
+            groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                           group,
+                                                           /*is_injector=*/false,
+                                                           well_state);
+        }
+        else if (worst_offending_well) {
+            closed_offending_wells.insert_or_assign(group.name(),
+                        std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
+        }
+    }
+
+    return changed;
+}
+
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelConstraints<Scalar, IndexTraits>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
                              const int max_number_of_group_switch,
@@ -328,109 +523,26 @@ updateGroupIndividualControl(const Group& group,
                              DeferredLogger& deferred_logger) const
 {
     bool changed = false;
-    if (group.isInjectionGroup())
-    {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            bool group_is_oscillating = false;
-            const auto currentControl = group_state.injection_control(group.name(), phase);
-            if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
-                auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
-                const int number_of_switches = std::ranges::count(ctrls, currentControl);
-                group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
-                if (group_is_oscillating) {
-                    const bool output_first_time = (number_of_switches == max_number_of_group_switch);
-                    if (output_first_time) {
-                        if (wellModel_.comm().rank() == 0 ) {
-                            std::ostringstream os;
-                            os << phase;
-                            const std::string msg =
-                                fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
-                                            std::move(os).str(),
-                                            group.name(),
-                                            Group::InjectionCMode2String(currentControl));
-                            deferred_logger.info(msg);
-                        }
-                        ctrls.push_back(currentControl);
-                    }
-                }
-            }
-
-            if (group_is_oscillating) {
-                continue;
-            }
-
-            const auto& changed_this = this->checkGroupInjectionConstraints(group,
-                                                                            reportStepIdx,
-                                                                            phase);
-            if (changed_this.first != Group::InjectionCMode::NONE)
-            {
-                auto& group_log = switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
-                if (update_group_switching_log || group_log.empty()) {
-                    group_log.push_back(currentControl);
-                }
-                this->actionOnBrokenConstraints(group, changed_this.first, phase,
-                                                group_state, deferred_logger);
-                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                               group,
-                                                               /*is_injector=*/false,
-                                                               well_state);
-                changed = true;
-            }
-        }
+    if (group.isInjectionGroup()) {
+        changed = updateInjectionGroupControl(group,
+                                              reportStepIdx,
+                                              max_number_of_group_switch,
+                                              update_group_switching_log,
+                                              switched_inj,
+                                              group_state,
+                                              well_state,
+                                              deferred_logger);
     }
+
     if (group.isProductionGroup()) {
-
-        const Group::ProductionCMode currentControl = group_state.production_control(group.name());
-        if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
-            auto& ctrls = groupPos->second;
-            const int number_of_switches = std::ranges::count(ctrls, currentControl);
-            const bool group_is_oscillating = (number_of_switches >= max_number_of_group_switch);
-            if (group_is_oscillating) {
-                const bool output_first_time = (number_of_switches == max_number_of_group_switch);
-                if (output_first_time) {
-                    if (wellModel_.comm().rank() == 0) {
-                        const std::string msg =
-                        fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
-                                    group.name(),
-                                    Group::ProductionCMode2String(currentControl));
-                        deferred_logger.info(msg);
-                    }
-                    ctrls.push_back(currentControl);
-                }
-                return false;
-            }
-        }
-
-        const auto& changed_this = this->checkGroupProductionConstraints(group);
-        const auto controls = group.productionControls(wellModel_.summaryState());
-
-        if (changed_this.first != Group::ProductionCMode::NONE)
-        {
-            std::optional<std::string> worst_offending_well = std::nullopt;
-            changed = this->actionOnBrokenConstraints(group,
-                                                      controls.group_limit_action,
-                                                      changed_this.first,
-                                                      worst_offending_well,
-                                                      group_state, deferred_logger);
-
-            if(changed) {
-                if (update_group_switching_log || switched_prod[group.name()].empty()) {
-                    switched_prod[group.name()].push_back(currentControl);
-                }
-
-                groupStateHelper().updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                               group,
-                                                               /*is_injector=*/false,
-                                                               well_state);
-            } else if (worst_offending_well) {
-                closed_offending_wells.insert_or_assign(group.name(),
-                            std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
-            }
-        }
+        changed = changed || updateProductionGroupControl(group,
+                                                          max_number_of_group_switch,
+                                                          update_group_switching_log,
+                                                          switched_prod,
+                                                          closed_offending_wells,
+                                                          group_state,
+                                                          well_state,
+                                                          deferred_logger);
     }
 
     return changed;

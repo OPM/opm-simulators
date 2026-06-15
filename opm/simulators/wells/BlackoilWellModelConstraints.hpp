@@ -41,7 +41,6 @@ template<typename Scalar, typename IndexTraits>
 class BlackoilWellModelConstraints
 {
 public:
-
     constexpr static int waterPhaseIdx = IndexTraits::waterPhaseIdx;
     constexpr static int oilPhaseIdx = IndexTraits::oilPhaseIdx;
     constexpr static int gasPhaseIdx = IndexTraits::gasPhaseIdx;
@@ -90,6 +89,26 @@ private:
     //! \brief Check and return value and type of constraints for a production well group.
     std::pair<Group::ProductionCMode, Scalar>
     checkGroupProductionConstraints(const Group& group) const;
+
+    //! \brief Update the individual controls for wells in an injection group. Returns true if a group control is changed.
+    bool updateInjectionGroupControl(const Group& group,
+                                     const int reportStepIdx,
+                                     const int max_number_of_group_switch,
+                                     const bool update_group_switching_log,
+                                     std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
+                                     GroupState<Scalar>& group_state,
+                                     WellState<Scalar, IndexTraits>& well_state,
+                                     DeferredLogger& deferred_logger) const;
+
+    //! \brief Update the individual controls for wells in a production group. Returns true if a group control is changed.
+    bool updateProductionGroupControl(const Group& group,
+                                      const int max_number_of_group_switch,
+                                      const bool update_group_switching_log,
+                                      std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
+                                      std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
+                                      GroupState<Scalar>& group_state,
+                                      WellState<Scalar, IndexTraits>& well_state,
+                                      DeferredLogger& deferred_logger) const;
 
     const GroupStateHelperType& groupStateHelper() const { return wellModel_.groupStateHelper(); }
     const BlackoilWellModelGeneric<Scalar, IndexTraits>& wellModel_; //!< Reference to well model
