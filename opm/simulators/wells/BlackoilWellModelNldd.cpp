@@ -104,7 +104,11 @@ logDomains() const
         std::ostringstream os;
         os << "Well name      Rank      Domain\n";
         for (const auto& [wname, domain] : this->well_domain_) {
-            os << wname << std::setw(19 - wname.size()) << rank << std::setw(12) << domain << '\n';
+            const std::streamsize pad =
+                19 - static_cast<std::streamsize>(wname.size());
+            os << wname
+               << std::setw(pad > 0 ? pad : 0)
+               << rank << std::setw(12) << domain << '\n';
         }
         local_log.debug(os.str());
     }

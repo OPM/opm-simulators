@@ -655,8 +655,7 @@ checkGroupHigherConstraints(const Group& group,
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         std::vector<Scalar> rates_available =
             this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/true);
-        const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
-        for (Phase phase : all) {
+        for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             const auto currentControl = this->groupState().injection_control(group.name(), phase);
             bool group_is_oscillating = false;
             if (auto groupPos = switched_inj_groups_.find(group.name()); groupPos != switched_inj_groups_.end()) {
@@ -1250,11 +1249,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         this->updateNupcolWGState();
     } else {
         for (const auto& gr_name : schedule().groupNames(reportStepIdx)) {
-            const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
-            for (Phase phase : all) {
+            for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
                 if (this->groupState().has_injection_control(gr_name, phase)) {
                     if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP ||
-                        this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
+                        this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN)
+                    {
 		        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
                         const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
                         const Group& group = schedule().getGroup(gr_name, reportStepIdx);
@@ -1468,12 +1467,13 @@ forceShutWellByName(const std::string& wellname,
     // Communicate across processes if a well was shut.
     well_was_shut = comm_.max(well_was_shut);
 
-    // the wellTesteState is updated between timesteps and we also need to update the privous WGstate
-    if(well_was_shut)
+    // The wellTestState is updated between timesteps and we also need to update the previous WGstate.
+    if (well_was_shut != 0) {
         this->commitWGState();
+    }
 
     // Only log a message on the output rank.
-    if (terminal_output_ && well_was_shut) {
+    if (terminal_output_ && well_was_shut != 0) {
         const std::string msg = "Well " + wellname
             + " will be shut because it fails to converge.";
         OpmLog::info(msg);
@@ -1936,8 +1936,7 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
         }
     }
     for (const auto& [grname, grdata] : this->switched_inj_groups_) {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
+        for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             if (!this->groupState().has_injection_control(grname, phase)) {
                 continue;
             }
