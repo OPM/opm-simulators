@@ -351,7 +351,7 @@ updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
         WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState,
                                                     zero_group_target, unit_system, start_time, deferred_logger);
         WellTest(*this).updateWellTestStateCECON(ws, simulationTime, writeMessageToOPMLog, wellTestState,
-                                                 deferred_logger);
+                                                 unit_system, start_time, deferred_logger);
     } else {
         // updating well test state based on physical (THP/BHP) limits.
         WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
