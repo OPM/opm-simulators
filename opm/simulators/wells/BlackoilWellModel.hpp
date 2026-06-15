@@ -344,6 +344,16 @@ template<class Scalar> class WellContributions;
                 return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
             }
 
+            int compressedIndexForInteriorOrOverlap(int cartesian_cell_idx) const override
+            {
+                return simulator_.vanguard().compressedIndexForInteriorOrOverlap(cartesian_cell_idx);
+            }
+
+            int compressedIndexForOverlap(int cartesian_cell_idx) const override
+            {
+                return simulator_.vanguard().compressedIndexForOverlap(cartesian_cell_idx);
+            }
+
             int compressedIndexForInteriorLGR(const std::string& lgr_tag, const Connection& conn) const override
             {
                 return simulator_.vanguard().compressedIndexForInteriorLGR(lgr_tag, conn);

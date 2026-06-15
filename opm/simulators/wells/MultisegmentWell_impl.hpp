@@ -913,6 +913,13 @@ namespace Opm
                                                well_state);
     }
 
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    addWellOverlapConnectionsToPressureEquations([[maybe_unused]] PressureMatrix& mat,
+                                                 [[maybe_unused]] const int cell_number) const
+    {}
+
 
     template<typename TypeTag>
     template<class Value>
