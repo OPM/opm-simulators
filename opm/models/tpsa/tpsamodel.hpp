@@ -423,6 +423,32 @@ public:
     }
 
     /*!
+    * \brief Output rotation vector
+    *
+    * \param globalIdx Cell index
+    * \returns Rotation vector at grid cell
+    */
+    DimVector rotation(const unsigned globalIdx) const
+    {
+        DimVector rot;
+        for (std::size_t i = 0; i < 3; ++i) {
+            rot[i] = decay<Scalar>(materialState_[globalIdx].rotation(i));
+        }
+        return rot;
+    }
+
+    /*!
+     * \brief Output solid pressure
+     *
+     * \param globalIdx Cell index
+     * \return Solid pressure at grid cell
+     */
+    Scalar solidPressure(const unsigned globalIdx) const
+    {
+        return decay<Scalar>(materialState_[globalIdx].solidPressure());
+    }
+
+    /*!
     * \brief Output (del?)stress tensor
     *
     * \param globalIdx Cell index
