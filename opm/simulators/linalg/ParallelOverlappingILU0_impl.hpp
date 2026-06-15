@@ -200,9 +200,11 @@ size_t set_interiorSize( [[maybe_unused]] size_t N, size_t interiorSize, [[maybe
 template<>
 size_t set_interiorSize(size_t N, size_t interiorSize, const Dune::OwnerOverlapCopyCommunication<int,int>& comm)
 {
-    if (interiorSize<N)
+    if (interiorSize<=N)
         return interiorSize;
     auto indexSet = comm.indexSet();
+    if (indexSet.size() == 0)
+        return 0;
 
     size_t new_is = 0;
     for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx)

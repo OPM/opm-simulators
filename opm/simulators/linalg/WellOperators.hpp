@@ -470,6 +470,8 @@ private:
     size_t setInteriorSize(const communication_type& comm) const
     {
         auto indexSet = comm.indexSet();
+        if (indexSet.size() == 0)
+            return 0;
 
         size_t is = 0;
         // Loop over index set
@@ -484,7 +486,7 @@ private:
                 }
             }
         }
-        return is + 1; //size is plus 1 since we start at 0
+        return is + 1; //size is plus 1 since we start at 0, except when indexSet is empty
     }
     const std::shared_ptr<const matrix_type> A_ ;
     const communication_type&  comm_;
