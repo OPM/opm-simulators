@@ -390,7 +390,7 @@ mpiSyncLocalToGlobalGradVector_(const std::vector<GradPair>& grads_local,
 
     std::vector<int> sizes_(this->comm_.size());
     std::vector<int> displ_(this->comm_.size() + 1, 0);
-    int mySize = grads_local_tmp.size();
+    int mySize = static_cast<int>(grads_local_tmp.size());
     this->comm_.allgather(&mySize, 1, sizes_.data());
     std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
     std::vector<Pair> grads_global_tmp(displ_.back());
@@ -763,10 +763,7 @@ template<typename Scalar, typename IndexTraits>
 void GasLiftStage2<Scalar, IndexTraits>::
 sortGradients_(std::vector<GradPair>& grads)
 {
-    auto cmp = [](GradPair a, GradPair b) {
-         return a.second <  b.second;
-    };
-    std::ranges::sort(grads, cmp);
+    std::ranges::sort(grads, {}, &GradPair::second);
 }
 
 template<typename Scalar, typename IndexTraits>
