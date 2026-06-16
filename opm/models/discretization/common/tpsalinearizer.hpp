@@ -72,6 +72,8 @@ class TpsaLinearizer
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
 
+    using StressInfoVector = Dune::FieldVector<Scalar, 3>;
+
 public:
     // ///
     // Public functions
@@ -302,6 +304,16 @@ public:
     { return linearizationType_; }
 
     /*!
+     * Container with information to compute stress output
+     *
+     * \returns Stress info. container
+     */
+    const auto& getStressInfo() const
+    {
+        return stressInfo_;
+    }
+
+    /*!
     * \brief Get constraints map
     *
     * \returns Constraints map
@@ -347,6 +359,11 @@ private:
         unsigned numCells = flowModel.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
         std::vector<NeighborInfo> loc_nbinfo;
+
+        stressInfo_.reserve(numCells, 6 * numCells);
+        std::vector<StressInfo> loc_stressinfo;
+        StressInfoVector nullTraction(0.0);
+        StressInfoVector nullFaceNormal(0.0);
         for (const auto& elem : elements(gridView_())) {
             // Loop over primary dofs in the element
             stencil.update(elem);
@@ -355,6 +372,10 @@ private:
                 // Build up neighboring information for curret primary dof
                 const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
                 loc_nbinfo.resize(stencil.numDof() - 1);
+
+                // Build information for stress output
+                const int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
+                loc_stressinfo.resize(numFaces);
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     // NOTE: NeighborInfo could/should be expanded with cell face parameters located in problem_()
@@ -366,6 +387,10 @@ private:
                         const auto& scvf = stencil.interiorFace(scvfIdx);
                         const Scalar area = scvf.area();
                         loc_nbinfo[dofIdx - 1] = NeighborInfo{ neighborIdx, area, nullptr };
+
+                        int faceId = scvf.dirId();
+                        loc_stressinfo[dofIdx - 1] =
+                            StressInfo{faceId, nullTraction, nullFaceNormal, area};
                     }
                 }
 
@@ -379,6 +404,13 @@ private:
                         // Get boundary face direction
                         const auto& bf = stencil.boundaryFace(bfIndex);
                         const int dir_id = bf.dirId();
+                        const auto bfArea = bf.area();
+
+                        // Initialize boundary information for stress output container
+                        // OBS: NNCs are not implemented with TPSA, hence traction and face
+                        // normal vector will stay zero for NNC connections!
+                        loc_stressinfo[stencil.numInteriorFaces() + bfIndex] =
+                            StressInfo{dir_id, nullTraction, nullFaceNormal, bfArea};
 
                         // Skip NNCs
                         if (dir_id < 0) {
@@ -395,7 +427,7 @@ private:
                         }
 
                         // Insert boundary condition data in container
-                        BoundaryConditionData bcdata { type, displacement, bfIndex, bf.area() };
+                        BoundaryConditionData bcdata { type, displacement, bfIndex, bfArea };
                         boundaryInfo_.push_back( { myIdx, dir_id, bfIndex, bcdata } );
                         ++bfIndex;
                         continue;
@@ -405,6 +437,7 @@ private:
                         continue;
                     }
                 }
+                stressInfo_.appendRow(loc_stressinfo.begin(), loc_stressinfo.end());
             }
         }
 
@@ -462,6 +495,7 @@ private:
                 OPM_TIMEBLOCK_LOCAL(faceCalculationForEachCellTPSA, Subsystem::Assembly);
 
                 // Loop over neighboring cells
+                short loc = 0;
                 for (const auto& nbInfo : nbInfos) {
                     OPM_TIMEBLOCK_LOCAL(calculationForEachFaceTPSA, Subsystem::Assembly);
 
@@ -501,6 +535,16 @@ private:
                     // SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
                     bMat *= -1.0;
                     *nbInfo.matBlockAddress += bMat;
+
+                    // Insert interior traction vector
+                    // OBS: Assume traction vector is the three first entries in residual!
+                    const auto& faceNormal = problem.cellFaceNormal(globI, globJ);
+                    stressInfo_[globI][loc].faceNormal = faceNormal;
+                    stressInfo_[globI][loc].faceArea = nbInfo.faceArea;
+                    for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
+                        stressInfo_[globI][loc].traction[tractionIdx] = res[tractionIdx];
+                    }
+                    ++loc;
                 }
             }
 
@@ -582,6 +626,17 @@ private:
             // Insert contribution to (globI, globI) sub-block
             // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
+
+            // Insert boundary traction vector
+            // OBS: Assume traction vector is the three first entries in residual!
+            const auto& nbInfos = neighborInfo_[globI];
+            short loc = nbInfos.size() + bdyInfo.bfIndex;
+            const auto& bndyNormal = problem.cellFaceNormalBoundary(globI, bdyInfo.bfIndex);
+            stressInfo_[globI][loc].faceNormal = bndyNormal;
+            stressInfo_[globI][loc].faceArea = bdyInfo.bcdata.faceArea;
+            for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
+                stressInfo_[globI][loc].traction[tractionIdx] = res[tractionIdx];
+            }
         }
     }
 
@@ -705,6 +760,19 @@ private:
         MatrixBlock* matBlockAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_{};
+
+    /*!
+     * \brief Face stress information
+    */
+    struct StressInfo
+    {
+        int faceId;
+        StressInfoVector traction;
+        StressInfoVector faceNormal;
+        double faceArea;
+    };
+
+    SparseTable<StressInfo> stressInfo_{};
 
     /*!
     * \brief Information for boundary conditions

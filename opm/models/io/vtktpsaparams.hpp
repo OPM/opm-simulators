@@ -32,6 +32,7 @@ namespace Opm::Parameters {
 struct VtkWriteDisplacement { static constexpr bool value = true; };
 struct VtkWriteRotation { static constexpr bool value = true; };
 struct VtkWriteSolidPressure { static constexpr bool value = true; };
+struct VtkWriteStress { static constexpr bool value = true; };
 
 }  // namespace Opm::Parameters
 
@@ -48,6 +49,7 @@ struct VtkTpsaParams
     bool displacementOutput_;
     bool rotationOutput_;
     bool solidPressureOutput_;
+    bool stressOutput_;
 };
 
 }  // namespace Opm
