@@ -108,6 +108,9 @@ struct MatrixAddWellContributions { static constexpr bool value = false; };
 
 struct UseMultisegmentWell { static constexpr bool value = true; };
 
+// Use the experimental GraphWell (entity-split) formulation for multisegment wells.
+struct UseGraphWell { static constexpr bool value = false; };
+
 template<class Scalar>
 struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
 
@@ -307,6 +310,10 @@ public:
     /// if it is false, we will handle multisegment wells as standard wells, which will be
     /// the default behavoir for the moment. Later, we might set it to be true by default if necessary
     bool use_multisegment_well_;
+
+    /// if true, multisegment wells use the experimental GraphWell (entity-split)
+    /// formulation instead of the production MultisegmentWell.
+    bool use_graph_well_;
 
     /// The file name of the deck
     std::string deck_file_name_;

@@ -98,7 +98,6 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/graphwell/GraphWellAssembler.hpp
   flowexperimental/graphwell/GraphMultisegmentWell.hpp
   flowexperimental/graphwell/GraphMultisegmentWell_impl.hpp
-  flowexperimental/graphwell/FlowExpGraphWellModel.hpp
   flowexperimental/FIBlackOilModelNoCache.hpp
   flowexperimental/flowexp.hpp
   flowexperimental/FlowExpNewtonMethod.hpp

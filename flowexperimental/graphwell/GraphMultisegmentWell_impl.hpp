@@ -220,10 +220,16 @@ assembleWellEqWithoutIteration(const Simulator& simulator,
 
     const Scalar reg = this->regularize_ ? this->param_.regularization_factor_wells_ : Scalar{1};
 
+    // Pressure-drop model from the deck's WELSEGS flow model (H__ / HF- / HFA).
+    typename GAsm::PdropOptions pdrop;
+    pdrop.friction = this->frictionalPressureLossConsidered();
+    pdrop.acceleration = this->accelerationalPressureLossConsidered();
+    pdrop.average_density = this->param_.use_average_density_ms_wells_;
+
     // Native AD assembly of mass conservation + momentum + perforation rates.
     assembler_.assemble(topo_, gpv_, fp, perfs, ctrl, static_cast<Scalar>(dt),
                         this->gravity(), allow_cf, old_sv, graph_eqns_,
-                        /*make_solver=*/false, /*assemble_control=*/false, reg);
+                        /*make_solver=*/false, /*assemble_control=*/false, reg, pdrop);
 
     assembleControl(simulator, groupStateHelper, well_state, inj_controls, prod_controls,
                     solving_with_zero_rate);
@@ -287,13 +293,6 @@ assembleControl(const Simulator& simulator,
                 const Well::ProductionControls& prod_controls,
                 bool solving_with_zero_rate)
 {
-    // Compact AD type for the control equation: derivative slots are the top segment
-    // DOFs [0,NP) plus the surface-connection flux at slot NP.
-    static constexpr int QSlot = NP;
-    using CEval = DenseAd::Evaluation<Scalar, NP + 1>;
-    using CMath = MathToolbox<CEval>;
-    static_cast<void>(CMath{});
-
     const int top = topo_.topSegment();
     const int sc = topo_.surfaceConnection();
 
@@ -680,6 +679,95 @@ getWellConvergence(const GroupStateHelperType& groupStateHelper,
                                   std::abs(resConn[topo_.surfaceConnection()][0]),
                                   well_is_stopped, report, deferred_logger);
     return report;
+}
+
+template<typename TypeTag>
+typename GraphMultisegmentWell<TypeTag>::CEval
+GraphMultisegmentWell<TypeTag>::topBhpCEval() const
+{
+    CEval bhp(gpv_.segValue(topo_.topSegment(), 0));
+    bhp.setDerivative(0, Scalar{1});
+    return bhp;
+}
+
+template<typename TypeTag>
+typename GraphMultisegmentWell<TypeTag>::CEval
+GraphMultisegmentWell<TypeTag>::surfaceRateCEval(int comp) const
+{
+    const int top = topo_.topSegment();
+    CEval Q(gpv_.connValue(topo_.surfaceConnection()));
+    Q.setDerivative(QSlot, Scalar{1});
+
+    const Scalar inv_scale = Scalar{1} / scale_comp_[comp];
+    CEval vfs(Scalar{0});
+    if (comp == ref_comp_) {
+        Scalar v = Scalar{1};
+        for (int k = 1; k < NP; ++k) {
+            v -= gpv_.segValue(top, k);
+            vfs.setDerivative(k, -inv_scale);
+        }
+        vfs.setValue(v * inv_scale);
+    } else {
+        for (int k = 1; k < NP; ++k) {
+            if (gdof_comp_[k] == comp) {
+                vfs.setValue(gpv_.segValue(top, k) * inv_scale);
+                vfs.setDerivative(k, inv_scale);
+                break;
+            }
+        }
+    }
+    // getQs(comp) = WQTotal * volumeFractionScaled, WQTotal = -Q
+    return (-Q) * vfs;
+}
+
+template<typename TypeTag>
+void GraphMultisegmentWell<TypeTag>::
+updateIPRImplicit(const Simulator& simulator,
+                  const GroupStateHelperType& groupStateHelper,
+                  WellStateType& well_state)
+{
+    using namespace Dune::Indices;
+    if (!this->isOperableAndSolvable() && !this->wellIsStopped())
+        return;
+    auto& ws = well_state.well(this->index_of_well_);
+    std::ranges::fill(ws.implicit_ipr_a, 0.0);
+    std::ranges::fill(ws.implicit_ipr_b, 0.0);
+
+    // Implicit IPR from the converged GraphWell system, mirroring
+    // MultisegmentWell::updateIPRImplicit but solving the entity-split system:
+    // dr/dbhp = -(dr/dx) inv(dEq/dx) (dEq/dbhp), with a bhp-controlled assembly.
+    auto inj_controls = Well::InjectionControls(0);
+    auto prod_controls = Well::ProductionControls(0);
+    prod_controls.addControl(Well::ProducerCMode::BHP);
+    prod_controls.bhp_limit = ws.bhp;
+    const auto cmode = ws.production_cmode;
+    ws.production_cmode = Well::ProducerCMode::BHP;
+    const double dt = simulator.timeStepSize();
+    assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
+                                   well_state, /*solving_with_zero_rate=*/false);
+
+    // perturb the control (surface-connection) equation by -1
+    typename GraphEqns::BVectorWell rhs;
+    rhs[_0].resize(topo_.numSegments());
+    rhs[_1].resize(topo_.numConnections());
+    rhs[_0] = 0.0;
+    rhs[_1] = 0.0;
+    rhs[_1][topo_.surfaceConnection()][0] = -1.0;
+    const typename GraphEqns::BVectorWell x = graph_eqns_.solve(rhs);
+
+    const int top = topo_.topSegment();
+    const int sc = topo_.surfaceConnection();
+    for (int comp = 0; comp < this->numConservationQuantities(); ++comp) {
+        const CEval qs = surfaceRateCEval(comp);
+        Scalar ipr_b = 0.0;
+        for (int k = 0; k < NP; ++k)
+            ipr_b -= x[_0][top][k] * qs.derivative(k);
+        ipr_b -= x[_1][sc][0] * qs.derivative(QSlot);
+        const int idx = FluidSystem::activeCompToActivePhaseIdx(comp);
+        ws.implicit_ipr_b[idx] = ipr_b;
+        ws.implicit_ipr_a[idx] = ipr_b * ws.bhp - qs.value();
+    }
+    ws.production_cmode = cmode;
 }
 
 template<typename TypeTag>

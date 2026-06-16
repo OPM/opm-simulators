@@ -71,6 +71,15 @@ public:
         bool producer{true};
     };
 
+    //! Pressure-drop model options, mirroring the deck's WELSEGS compPressureDrop flag
+    //! (H__ / HF- / HFA) and the use-average-density-MS-wells option.
+    struct PdropOptions
+    {
+        bool friction{true};        //!< include friction (HF- and HFA)
+        bool acceleration{true};    //!< include acceleration (HFA only)
+        bool average_density{false};//!< hydrostatic uses 0.5*(down+up) density
+    };
+
     void assemble(const Topo& topo,
                   const PV& pv,
                   const FP& fp,
@@ -83,7 +92,8 @@ public:
                   Eqns& eqns,
                   bool make_solver = true,
                   bool assemble_control = true,
-                  Scalar regularization_factor = 1.0) const
+                  Scalar regularization_factor = 1.0,
+                  const PdropOptions& pdrop = {}) const
     {
         eqns.clear();
         assembleAccumulation(topo, pv, fp, dt, old_surface_volumes, regularization_factor, eqns);
@@ -96,7 +106,7 @@ public:
                 if (assemble_control)
                     assembleControl(topo, pv, fp, controls, c, eqns);
             } else {
-                assemblePressureDrop(topo, pv, fp, gravity, c, eqns);
+                assemblePressureDrop(topo, pv, fp, gravity, c, pdrop, eqns);
             }
         }
         if (make_solver)
@@ -190,7 +200,7 @@ private:
 
     //! r_c = p_down - p_up - dp_hydro - dp_friction - dp_acceleration
     void assemblePressureDrop(const Topo& topo, const PV& pv, const FP& fp, Scalar gravity,
-                              int c, Eqns& eqns) const
+                              int c, const PdropOptions& pdrop, Eqns& eqns) const
     {
         const auto& conn = topo.connection(c);
         const int down = conn.down;
@@ -202,32 +212,40 @@ private:
         // p_down (Self) - p_up (Other)
         Eval r = pv.segPressure(down, Role::Self) - pv.segPressure(up, Role::Other);
 
-        // hydrostatic: density of the down (deeper) segment
+        // hydrostatic: density of the down (deeper) segment, or the average of the two
         const Eval rho_down = fp.density(down, Role::Self);
-        r -= rho_down * gravity * conn.depth_diff;
+        Eval rho_hydro = rho_down;
+        if (pdrop.average_density)
+            rho_hydro = Scalar{0.5} * (rho_down + fp.density(up, Role::Other));
+        r -= rho_hydro * gravity * conn.depth_diff;
 
-        // mass rate = Q * sum_comp F(upwind) * surf_dens
-        const Eval Q = pv.connRate(c);
-        Eval mass_rate(Scalar{0});
-        for (int comp = 0; comp < NP; ++comp) {
-            const Eval F = pv.volumeFractionScaled(u, comp, uprole);
-            mass_rate += Q * F * fp.surfaceDensity(comp);
+        if (pdrop.friction || pdrop.acceleration) {
+            // mass rate = Q * sum_comp F(upwind) * surf_dens
+            const Eval Q = pv.connRate(c);
+            Eval mass_rate(Scalar{0});
+            for (int comp = 0; comp < NP; ++comp) {
+                const Eval F = pv.volumeFractionScaled(u, comp, uprole);
+                mass_rate += Q * F * fp.surfaceDensity(comp);
+            }
+            const Eval rho_up = fp.density(u, uprole);
+            const Eval mu_up = fp.viscosity(u, uprole);
+
+            if (pdrop.friction) {
+                // friction: magnitude * sign(Q)
+                const Scalar signQ = (Qval >= Scalar{0}) ? Scalar{1} : Scalar{-1};
+                const Eval fric = graphwellhelpers::frictionPressureLoss(
+                    conn.length, conn.diameter, conn.area, conn.roughness, rho_up, mass_rate, mu_up);
+                r -= signQ * fric;
+            }
+            if (pdrop.acceleration) {
+                // acceleration: velocity-head difference across the connection (local form)
+                const Eval rho_a = fp.density(down, Role::Self);
+                const Eval rho_b = fp.density(up, Role::Other);
+                const Eval accel = graphwellhelpers::velocityHead(conn.area, mass_rate, rho_b)
+                                 - graphwellhelpers::velocityHead(conn.area, mass_rate, rho_a);
+                r -= accel;
+            }
         }
-        const Eval rho_up = fp.density(u, uprole);
-        const Eval mu_up = fp.viscosity(u, uprole);
-
-        // friction: magnitude * sign(Q)
-        const Scalar signQ = (Qval >= Scalar{0}) ? Scalar{1} : Scalar{-1};
-        const Eval fric = graphwellhelpers::frictionPressureLoss(
-            conn.length, conn.diameter, conn.area, conn.roughness, rho_up, mass_rate, mu_up);
-        r -= signQ * fric;
-
-        // acceleration: velocity-head difference across the connection (local form)
-        const Eval rho_a = fp.density(down, Role::Self);
-        const Eval rho_b = fp.density(up, Role::Other);
-        const Eval accel = graphwellhelpers::velocityHead(conn.area, mass_rate, rho_b)
-                         - graphwellhelpers::velocityHead(conn.area, mass_rate, rho_a);
-        r -= accel;
 
         scatterConn(eqns, c, /*self*/ down, /*other*/ up, r);
     }

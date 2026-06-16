@@ -74,6 +74,14 @@ public:
 
     using GraphTopo = GraphWellTopology<Scalar>;
     using GraphEqns = GraphWellEquations<Scalar, NP, NumResEq>;
+
+    // Compact AD type for the control / IPR equations: derivative slots are the top
+    // segment DOFs [0,NP) plus the surface-connection flux at slot NP. Padded to at
+    // least 3 so the generic WellAssemble / WellBhpThpCalculator helpers (instantiated
+    // from size 3) cover single-phase wells too.
+    static constexpr int QSlot = NP;
+    static constexpr int CEvalSize = (NP + 1 < 3) ? 3 : NP + 1;
+    using CEval = DenseAd::Evaluation<Scalar, CEvalSize>;
     using GPV = GraphWellPrimaryVariables<FluidSystem, NP, NumResEq>;
     using GFP = GraphWellFluidProperties<FluidSystem, NP, NumResEq>;
     using GAsm = GraphWellAssembler<FluidSystem, NP, NumResEq>;
@@ -128,6 +136,12 @@ public:
                                                const GroupStateHelperType& groupStateHelper,
                                                WellStateType& well_state) override;
 
+    //! The production updateIPRImplicit solves the base MultisegmentWell linear system,
+    //! which the GraphWell never assembles. Use the explicit IPR fallback instead.
+    void updateIPRImplicit(const Simulator& simulator,
+                           const GroupStateHelperType& groupStateHelper,
+                           WellStateType& well_state) override;
+
 protected:
     bool iterateWellEqWithControl(const Simulator& simulator,
                                   const double dt,
@@ -179,6 +193,12 @@ private:
                             const GroupStateHelperType& groupStateHelper,
                             WellStateType& well_state,
                             Scalar relaxation_factor = 1.0);
+
+    //! Top-segment bhp as a compact control AD value (derivative in slot 0).
+    CEval topBhpCEval() const;
+    //! Top surface phase rate getQs(comp) = -Q_surface * volumeFractionScaled(top,comp)
+    //! as a compact control AD value (derivatives in the top-segment + flux slots).
+    CEval surfaceRateCEval(int comp) const;
 
     //! Embed a reservoir Eval into the GraphWell Eval (reservoir derivative slots).
     GEval fromRes(const Eval& e) const
