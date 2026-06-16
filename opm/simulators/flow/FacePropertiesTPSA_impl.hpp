@@ -217,7 +217,8 @@ update()
                 if (inside.faceIdx == -1) {
                     const auto id = details::isIdTPSA(inside.elemIdx, outside.elemIdx);
                     weightsAvgMap.insert_or_assign(id, 0.0);
-                    distanceMap.insert_or_assign(id, 0.0);
+                    weightsProdMap.insert_or_assign(id, 0.0);
+                    distanceMap.insert_or_assign(id, 1.0);
                     faceNormalMap.insert_or_assign(id, DimVector{0.0, 0.0, 0.0});
 
                     continue;

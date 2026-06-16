@@ -121,6 +121,12 @@ public:
                 OpmLog::error(msg);
                 throw std::runtime_error(msg);
             }
+
+            // Warn against using aquifers with TPSA
+            if (simulator.vanguard().eclState().aquifer().active()) {
+                OpmLog::warning("TPSA geomechanics does not handle numerical or analytical "
+                                "aquifers, hence results may be inaccurate!");
+            }
         }
         else {
             // Sanity check
