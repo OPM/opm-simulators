@@ -496,6 +496,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_interregflows.cpp
   tests/test_invert.cpp
   tests/test_keyword_validator.cpp
+  tests/test_LgrBlockData.cpp
   tests/test_linearleastsquares.cpp
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp

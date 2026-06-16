@@ -37,6 +37,8 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -461,6 +463,37 @@ public:
     { this->globalGroupAndNetworkData_.read(buffer); }
 };
 
+// Shared serialisation for the block-summary gather handles.  The global B* map is
+// keyed by std::pair<keyword, cartesian-index>; the LGR LB* map by
+// std::tuple<keyword, level, level-local-cartesian-index>.  std::apply serialises
+// either key shape: write the map size, then every key field (pair or tuple) followed
+// by the value -- one body, thin per-key callers (mirrors the producer-side
+// makeExtractor de-duplication).
+template <class KeyedMap, class MessageBufferType>
+void packKeyedBlockMap(const KeyedMap& localData, MessageBufferType& buffer)
+{
+    const unsigned int size = localData.size();
+    buffer.write(size);
+    for (const auto& [key, value] : localData) {
+        std::apply([&buffer](const auto&... field) { (buffer.write(field), ...); }, key);
+        buffer.write(value);
+    }
+}
+
+template <class KeyedMap, class MessageBufferType>
+void unpackKeyedBlockMap(KeyedMap& globalData, MessageBufferType& buffer)
+{
+    unsigned int size = 0;
+    buffer.read(size);
+    for (unsigned int i = 0; i < size; ++i) {
+        typename KeyedMap::key_type key{};
+        std::apply([&buffer](auto&... field) { (buffer.read(field), ...); }, key);
+        typename KeyedMap::mapped_type value{};
+        buffer.read(value);
+        globalData[key] = value;
+    }
+}
+
 class PackUnPackBlockData : public P2PCommunicatorType::DataHandleInterface
 {
     const std::map<std::pair<std::string, int>, double>& localBlockData_;
@@ -490,31 +523,52 @@ public:
         if (link != 0)
             throw std::logic_error("link in method pack is not 0 as expected");
 
-        // write all block data
-        unsigned int size = localBlockData_.size();
-        buffer.write(size);
-        for (const auto& map : localBlockData_) {
-            buffer.write(map.first.first);
-            buffer.write(map.first.second);
-            buffer.write(map.second);
-        }
+        packKeyedBlockMap(localBlockData_, buffer);
     }
 
     // unpack all data associated with link
     void unpack(int /*link*/, MessageBufferType& buffer)
     {
-        // read all block data
-        unsigned int size = 0;
-        buffer.read(size);
-        for (std::size_t i = 0; i < size; ++i) {
-            std::string name;
-            int idx;
-            double data;
-            buffer.read(name);
-            buffer.read(idx);
-            buffer.read(data);
-            globalBlockValues_[std::make_pair(name, idx)] = data;
+        unpackKeyedBlockMap(globalBlockValues_, buffer);
+    }
+};
+
+class PackUnPackLgrBlockData : public P2PCommunicatorType::DataHandleInterface
+{
+    const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData_;
+    std::map<std::tuple<std::string, int, int>, double>& globalLgrBlockValues_;
+
+public:
+    PackUnPackLgrBlockData(const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData,
+                           std::map<std::tuple<std::string, int, int>, double>& globalLgrBlockValues,
+                           bool isIORank)
+        : localLgrBlockData_(localLgrBlockData)
+        , globalLgrBlockValues_(globalLgrBlockValues)
+    {
+        if (isIORank) {
+            MessageBufferType buffer;
+            pack(0, buffer);
+
+            // pass a dummyLink to satisfy virtual class
+            int dummyLink = -1;
+            unpack(dummyLink, buffer);
         }
+    }
+
+    // pack all data associated with link
+    void pack(int link, MessageBufferType& buffer)
+    {
+        // we should only get one link
+        if (link != 0)
+            throw std::logic_error("link in method pack is not 0 as expected");
+
+        packKeyedBlockMap(localLgrBlockData_, buffer);
+    }
+
+    // unpack all data associated with link
+    void unpack(int /*link*/, MessageBufferType& buffer)
+    {
+        unpackKeyedBlockMap(globalLgrBlockValues_, buffer);
     }
 };
 
