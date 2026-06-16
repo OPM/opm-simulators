@@ -48,6 +48,8 @@
 #include <tuple>
 #include <vector>
 
+#include <fmt/format.h>
+
 namespace Opm::Properties {
     namespace TTag {
         struct TpsaTestTypeTag {
@@ -147,6 +149,8 @@ struct BoundaryConditionData
 {
     Opm::BCMECHType type;
     std::vector<double> displacement;
+    double shearModulus;
+    double distance;
     unsigned boundaryFaceIndex;
     double faceArea;
 };
@@ -199,7 +203,33 @@ BOOST_AUTO_TEST_CASE(TestElasticityResidual) {
 
     // Boundary info
     // TODO: FIXED and FREE tests
-    BoundaryConditionData bcdata { Opm::BCMECHType::NONE, std::vector<double> {0.0}, 0, 0.0 };
+    BoundaryConditionData bcdataNone{Opm::BCMECHType::NONE,
+                                     std::vector<double>{0.0},
+                                     0,
+                                     0.0,
+                                     0,
+                                     0.0};
+
+    BoundaryConditionData bcdataFree{Opm::BCMECHType::FREE,
+                                     std::vector<double>{0.0},
+                                     0,
+                                     0.0,
+                                     0,
+                                     0.0};
+
+    BoundaryConditionData bcdataSpringNone{Opm::BCMECHType::SPRING,
+                                           std::vector<double>{0.0},
+                                           3.0e9,
+                                           0.0,
+                                           0,
+                                           100.0 * 100.0};
+
+    BoundaryConditionData bcdataSpringFree{Opm::BCMECHType::SPRING,
+                                           std::vector<double>{0.0},
+                                           3.0e9,
+                                           1e20,
+                                           0,
+                                           100.0 * 100.0};
 
     //
     // Volume term
@@ -274,21 +304,56 @@ BOOST_AUTO_TEST_CASE(TestElasticityResidual) {
     //
     // Boundary term
     //
-    FVector bndryTerm;
-    LocalResidual::computeBoundaryTerm(bndryTerm,
+    FVector bndryTermNone;
+    LocalResidual::computeBoundaryTerm(bndryTermNone,
                                        materialStateIn,
-                                       bcdata,
+                                       bcdataNone,
                                        problem,
                                        globI);
-    for (std::size_t i = 0; i < bndryTerm.size(); ++i) {
+
+    for (std::size_t i = 0; i < bndryTermNone.size(); ++i) {
         if (i < 2) {
-            BOOST_CHECK_CLOSE(bndryTerm[i].value(), 120000001.0, 1.0e-6);
+            BOOST_CHECK_CLOSE(bndryTermNone[i].value(), 120000001.0, 1.0e-6);
+        } else if (i == 2) {
+            BOOST_CHECK_CLOSE(bndryTermNone[i].value(), 119999999.0, 1.0e-6);
+        } else {
+            BOOST_CHECK_CLOSE(bndryTermNone[i].value(), 0.0, 1.0e-6);
         }
-        else if (i == 2) {
-            BOOST_CHECK_CLOSE(bndryTerm[i].value(), 119999999.0, 1.0e-6);
-        }
-        else {
-            BOOST_CHECK_CLOSE(bndryTerm[i].value(), 0.0, 1.0e-6);
-        }
+    }
+
+    // Check SPRING bc with zero distance, which should be equal to NONE
+    FVector bndryTermSpringNone;
+    LocalResidual::computeBoundaryTerm(bndryTermSpringNone,
+                                       materialStateIn,
+                                       bcdataSpringNone,
+                                       problem,
+                                       globI);
+
+    for (std::size_t i = 0; i < bndryTermSpringNone.size(); ++i) {
+        BOOST_CHECK_CLOSE(bndryTermSpringNone[i].value(), bndryTermNone[i].value(), 1.0e-6);
+    }
+
+    // Check SPRING with large distance which should, in the limit, be equal to FREE
+    FVector bndryTermFree;
+    LocalResidual::computeBoundaryTerm(bndryTermFree,
+                                       materialStateIn,
+                                       bcdataFree,
+                                       problem,
+                                       globI);
+
+    FVector bndryTermSpringFree;
+    LocalResidual::computeBoundaryTerm(bndryTermSpringFree,
+                                       materialStateIn,
+                                       bcdataSpringFree,
+                                       problem,
+                                       globI);
+
+    const double abstol = 1e-10;
+    for (std::size_t i = 0; i < bndryTermSpringFree.size(); ++i) {
+        BOOST_CHECK_MESSAGE(
+            std::abs(bndryTermSpringFree[i].value() - bndryTermFree[i].value()) <= abstol,
+            fmt::format(
+                "SPRING with large distance (={}) do not match FREE within the tolerance (={})!",
+                bcdataSpringFree.distance, abstol));
     }
 }

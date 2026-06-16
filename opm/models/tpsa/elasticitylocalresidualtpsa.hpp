@@ -43,6 +43,19 @@
 
 namespace Opm {
 
+namespace detail {
+
+/*! \brief Computes modulo 3 of possibly negative integers to get indices in cross product.
+ *
+ * If i = x-dir(=0), we want y-dir(=1) and z-dir(=2), hence -1 mod 3 must equal 2 and not -1
+*/
+inline int modNeg(int i)
+{
+    return ((i % 3) + 3) % 3;
+}
+
+} // namespace detail
+
 /*!
 * \brief Calculation of (linear) elasticity model terms for the residual
 *
@@ -167,15 +180,11 @@ public:
         // ///
         // Displacement, rotation and solid pressure (directional-dependent) equations
         // ///
-        // Lambda function for computing modulo 3 of possibly negative integers to get indices in cross product.
-        // E.g. if i = x-dir(=0), we want y-dir(=1) and z-dir(=2), hence -1 mod 3 must equal 2 and not -1
-        auto modNeg = [](int i) { return ((i % 3) + 3) % 3; };
-
         // Loop over x-, y- and z-dir (corresponding to dirIdx = 0, 1, 2)
         for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
             // Direction indices in cross-product
-            unsigned dirIdxNeg = modNeg(dirIdx - 1);
-            unsigned dirIdxPos = modNeg(dirIdx + 1);
+            unsigned dirIdxNeg = detail::modNeg(dirIdx - 1);
+            unsigned dirIdxPos = detail::modNeg(dirIdx + 1);
 
             // Displacement equation
             const Scalar faceNormalDir = faceNormal[dirIdx];
@@ -247,6 +256,13 @@ public:
                                     problem,
                                     globalIndex);
             break;
+        case BCMECHType::SPRING:
+            computeBoundaryTermSpring(bndryTerm,
+                                      materialState,
+                                      bdyInfo,
+                                      problem,
+                                      globalIndex);
+            break;
         default:
             throw std::logic_error("Unknown boundary condition type " +
                                     std::to_string(static_cast<int>(bdyInfo.type)) +
@@ -295,15 +311,11 @@ public:
         // ///
         // Displacement equation
         // ///
-        // Lambda function for computing modulo 3 of possibly negative integers to get indices in cross product.
-        // E.g. if i = x-dir(=0), we want y-dir(=1) and z-dir(=2), hence -1 mod 3 must equal 2 and not -1
-        auto modNeg = [](int i) { return ((i % 3) + 3) % 3; };
-
         // Loop over x-, y- and z-dir (corresponding to dirIdx = 0, 1, 2)
         for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
             // Direction indices in cross-product
-            unsigned dirIdxNeg = modNeg(dirIdx - 1);
-            unsigned dirIdxPos = modNeg(dirIdx + 1);
+            unsigned dirIdxNeg = detail::modNeg(dirIdx - 1);
+            unsigned dirIdxPos = detail::modNeg(dirIdx + 1);
 
             // Displacement equation
             const Scalar faceNormalDir = faceNormal[dirIdx];
@@ -362,10 +374,6 @@ public:
         // ///
         // Rotation and solid pressure (directional-dependent) equations
         // ///
-        // Lambda function for computing modulo 3 of possibly negative integers to get indices in cross product.
-        // E.g. if i = x-dir(=0), we want y-dir(=1) and z-dir(=2), hence -1 mod 3 must equal 2 and not -1
-        auto modNeg = [](int i) { return ((i % 3) + 3) % 3; };
-
         // Pre-compute dot product for rotation equation
         Evaluation dotProd = 0;
         for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
@@ -375,8 +383,8 @@ public:
         // Loop over x-, y- and z-dir (corresponding to dirIdx = 0, 1, 2)
         for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
             // Direction indices in cross-product
-            unsigned dirIdxNeg = modNeg(dirIdx - 1);
-            unsigned dirIdxPos = modNeg(dirIdx + 1);
+            unsigned dirIdxNeg = detail::modNeg(dirIdx - 1);
+            unsigned dirIdxPos = detail::modNeg(dirIdx + 1);
 
             // Rotation equation
             const Scalar faceNormalDir = faceNormal[dirIdx];
@@ -397,6 +405,98 @@ public:
 
             bndryTerm[contiSolidPresEqIdx] +=
                 - faceNormalDir * weightAvg * disp;
+        }
+    }
+
+    /*!
+    * \brief Calculate spring boundary condition in TPSA formulation
+    *
+    * \param bndryTerm Boundary term vector
+    * \param materialState Material state container
+    * \param bdyInfo Boundary condition info container
+    * \param problem Flow problem
+    * \param globalIndex Cell index
+    *
+    * \note Spring boundary condition sets a shear modulus at fictitious point outside a certain
+    * distance outside the boundary
+    */
+    template <class BoundaryConditionData>
+    static void computeBoundaryTermSpring(Dune::FieldVector<Evaluation, numEq>& bndryTerm,
+                                          const MaterialState& materialState,
+                                          const BoundaryConditionData& bdyInfo,
+                                          Problem& problem,
+                                          unsigned globalIndex)
+    {
+        // Reset boundary term
+        bndryTerm = 0.0;
+
+        // Extract cell and boundary information
+        const unsigned bfIdx = bdyInfo.boundaryFaceIndex;
+        const auto& faceNormal = problem.cellFaceNormalBoundary(globalIndex, bfIdx);
+        const Scalar distIn = problem.normalDistanceBoundary(globalIndex, bfIdx);
+        const Scalar distEx = bdyInfo.distance;
+        const Scalar sModulusIn = problem.shearModulus(globalIndex);
+        const Scalar sModulusEx = bdyInfo.shearModulus;
+
+        // Calculate face properties
+        const Scalar weightIn = distIn / sModulusIn;
+        const Scalar weightEx = distEx / sModulusEx;
+        const Scalar weightAvgIn = weightIn / (weightIn + weightEx);
+        const Scalar weightAvgEx = 1.0 - weightAvgIn;
+        const Scalar weightProd = weightIn * weightEx;
+        const Scalar normDist = distIn + distEx;
+
+        // Effective shear modulus
+        const Scalar eff_sModulus = weightAvgIn * sModulusIn + weightAvgEx * sModulusEx;
+
+        // Distance ratio
+        const Scalar distRatio = 0.5 * weightProd / normDist;
+
+        // Solid pressure equation (direction-independent equation)
+        const Evaluation& solidP = materialState.solidPressure();
+        bndryTerm[contiSolidPresEqIdx] +=
+            distRatio * eff_sModulus * solidP;
+
+        // Pre-compute dot product for rotation equation
+        Evaluation dotProd = 0;
+        for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
+            dotProd += faceNormal[dirIdx] * materialState.rotation(dirIdx);
+        }
+
+        // Loop over x-, y- and z-dir (corresponding to dirIdx = 0, 1, 2)
+        for (int dirIdx = 0; dirIdx < 3; ++dirIdx) {
+            // Direction indices in cross-product
+            unsigned dirIdxNeg = detail::modNeg(dirIdx - 1);
+            unsigned dirIdxPos = detail::modNeg(dirIdx + 1);
+
+            // Displacement equation
+            const Scalar faceNormalDir = faceNormal[dirIdx];
+            const Scalar faceNormalNeg = faceNormal[dirIdxNeg];
+            const Scalar faceNormalPos = faceNormal[dirIdxPos];
+
+            const Evaluation& disp = materialState.displacement(dirIdx);
+
+            const Evaluation& rotNeg = materialState.rotation(dirIdxNeg);
+            const Evaluation& rotPos = materialState.rotation(dirIdxPos);
+
+            bndryTerm[conti0EqIdx + dirIdx] +=
+                2.0 * (eff_sModulus / normDist) * disp
+                - weightAvgIn * (faceNormalNeg * rotPos - faceNormalPos * rotNeg)
+                - faceNormalDir * weightAvgIn * solidP;
+
+            // Rotation equation
+            const Evaluation& dispNeg = materialState.displacement(dirIdxNeg);
+            const Evaluation& dispPos = materialState.displacement(dirIdxPos);
+
+            const Evaluation& rot = materialState.rotation(dirIdx);
+
+            bndryTerm[contiRotEqIdx + dirIdx] +=
+                - weightAvgEx * (faceNormalNeg * dispPos - faceNormalPos * dispNeg)
+                + distRatio * eff_sModulus * (dotProd * faceNormalDir - rot);
+
+            // Solid pressure (directional-dependent) equation
+            bndryTerm[contiSolidPresEqIdx] +=
+                - faceNormalDir * weightAvgEx * disp;
         }
     }
 

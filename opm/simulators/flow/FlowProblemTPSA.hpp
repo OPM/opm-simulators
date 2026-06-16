@@ -92,9 +92,19 @@ public:
 
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
     using FaceProperties = FacePropertiesTPSA<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     using InitialMaterialState = MaterialStateTPSA<Scalar>;
     using Toolbox = MathToolbox<Evaluation>;
+
+    // Boundary condition helper struct
+    struct MechBCData
+    {
+        BCMECHType type;
+        EvalDimVector displacement;
+        Scalar distance;
+        Scalar shearModulus;
+    };
 
     // ///
     // Public functions
@@ -292,15 +302,14 @@ public:
     *
     * Output from this function is used in LocalResidual::computeBoundaryTerm
     *
-    * \note Only BCMECHTYPE = FREE and NONE implemented. FIXED will/should throw an error when computed in local
-    * residual!
+    * \note Only BCMECH TYPE = FREE, SPRING and NONE implemented
     */
-    std::pair<BCMECHType, Dune::FieldVector<Evaluation, 3>>
+    MechBCData
     mechBoundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
     {
         // Default boundary conditions if BCCON/BCMECH not defined
         if (!this->nonTrivialBoundaryConditions()) {
-            return { BCMECHType::NONE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
+            return {BCMECHType::NONE, EvalDimVector{0.0, 0.0, 0.0}, 0.0, 0.0};
         }
 
         // Default for BCMECH index = 0 or no BCMECH defined at current episode
@@ -308,18 +317,23 @@ public:
         const auto& schedule = this->simulator().vanguard().schedule();
         if (this->bcindex_(dir)[globalSpaceIdx] == 0
             || schedule[this->episodeIndex()].bcstate.size() == 0) {
-            return {BCMECHType::NONE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
+            return {BCMECHType::NONE, EvalDimVector{0.0, 0.0, 0.0}, 0.0, 0.0};
         }
 
         // Get current BC
         const auto& bc =
             schedule[this->episodeIndex()].bcstate[this->bcindex_(dir)[globalSpaceIdx]];
         if (bc.bcmechtype == BCMECHType::FREE) {
-            return { BCMECHType::FREE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
+            return {BCMECHType::FREE, EvalDimVector{0.0, 0.0, 0.0}, 0.0, 0.0};
         }
-        else {
-            return { bc.bcmechtype, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
+        if (bc.bcmechtype == BCMECHType::SPRING) {
+            const auto& mechbcval = bc.mechbcvalue;
+            return {BCMECHType::SPRING, EvalDimVector{0.0, 0.0, 0.0},
+                    mechbcval.distance, mechbcval.shearmodulus};
         }
+
+        // Default return
+        return {bc.bcmechtype, EvalDimVector{0.0, 0.0, 0.0}, 0.0, 0.0};
     }
 
     /*!

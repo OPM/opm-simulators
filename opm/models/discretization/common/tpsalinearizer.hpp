@@ -244,17 +244,19 @@ public:
     {
         for (auto& bdyInfo : boundaryInfo_) {
             // Get boundary information from problem
-            const auto [type, displacementAD] = problem_().mechBoundaryCondition(bdyInfo.cell, bdyInfo.dir);
+            const auto& mechBC = problem_().mechBoundaryCondition(bdyInfo.cell, bdyInfo.dir);
 
             // Strip the unnecessary (and zero anyway) derivatives off displacement
             std::vector<double> displacement(3, 0.0);
             for (std::size_t ii = 0; ii < displacement.size(); ++ii) {
-                displacement[ii] = displacementAD[ii].value();
+                displacement[ii] = mechBC.displacement[ii].value();
             }
 
             // Update boundary information
-            bdyInfo.bcdata.type = type;
+            bdyInfo.bcdata.type = mechBC.type;
             bdyInfo.bcdata.displacement = displacement;
+            bdyInfo.bcdata.shearModulus = mechBC.shearModulus;
+            bdyInfo.bcdata.distance = mechBC.distance;
         }
     }
 
@@ -496,16 +498,21 @@ private:
                         }
 
                         // Get boundary information from problem()
-                        const auto [type, displacementAD] = problem_().mechBoundaryCondition(myIdx, dir_id);
+                        const auto& mechBC = problem_().mechBoundaryCondition(myIdx, dir_id);
 
                         // Strip the unnecessary (and zero anyway) derivatives off displacement
                         std::vector<double> displacement(3, 0.0);
                         for (std::size_t ii = 0; ii < displacement.size(); ++ii) {
-                            displacement[ii] = displacementAD[ii].value();
+                            displacement[ii] = mechBC.displacement[ii].value();
                         }
 
                         // Insert boundary condition data in container
-                        BoundaryConditionData bcdata { type, displacement, bfIndex, bfArea };
+                        BoundaryConditionData bcdata{mechBC.type,
+                                                     displacement,
+                                                     mechBC.shearModulus,
+                                                     mechBC.distance,
+                                                     bfIndex,
+                                                     bfArea};
                         boundaryInfo_.push_back( { myIdx, dir_id, bfIndex, bcdata } );
                         ++bfIndex;
                         continue;
@@ -837,6 +844,8 @@ private:
     {
         BCMECHType type;
         std::vector<double> displacement;
+        Scalar shearModulus;
+        Scalar distance;
         unsigned boundaryFaceIndex;
         double faceArea;
     };
