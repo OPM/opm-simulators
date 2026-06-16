@@ -1025,10 +1025,12 @@ collect(const data::Solution&                                localCellData,
         const WellTestState&                                 localWellTestState,
         const InterRegFlowMap&                               localInterRegFlows,
         const std::array<FlowsData<double>, 3>&              localFlowsn,
-        const std::array<FlowsData<double>, 3>&              localFloresn)
+        const std::array<FlowsData<double>, 3>&              localFloresn,
+        const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
+    globalLgrBlockData_.clear();
     std::map<std::pair<std::string,int>,double> globalExtraBlockData;
     globalWellData_.clear();
     globalWBPData_.values.clear();
@@ -1090,6 +1092,12 @@ collect(const data::Solution&                                localCellData,
         this->isIORank()
     };
 
+    PackUnPackLgrBlockData packUnpackLgrBlockData {
+        localLgrBlockData,
+        this->globalLgrBlockData_,
+        this->isIORank()
+    };
+
     PackUnPackWBPData packUnpackWBPData {
         localWBPData,
         this->globalWBPData_,
@@ -1131,6 +1139,7 @@ collect(const data::Solution&                                localCellData,
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
     toIORankComm_.exchange(packUnpackBlockData);
     toIORankComm_.exchange(packUnpackExtraBlockData);
+    toIORankComm_.exchange(packUnpackLgrBlockData);
     toIORankComm_.exchange(packUnpackWBPData);
     toIORankComm_.exchange(packUnpackAquiferData);
     toIORankComm_.exchange(packUnpackWellTestState);

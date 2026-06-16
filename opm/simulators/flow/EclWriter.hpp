@@ -265,7 +265,8 @@ public:
                                            localWellTestState,
                                            this->outputModule_->getInterRegFlows(),
                                            {},
-                                           {});
+                                           {},
+                                           this->outputModule_->getLgrBlockData());
 
             if (this->collectOnIORank_.isIORank()) {
                 auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
@@ -336,9 +337,9 @@ public:
                 ? this->collectOnIORank_.globalBlockData()
                 : this->outputModule_->getBlockData();
 
-            // LGR block summary values: single-process only.  Parallel
-            // is a separate part of the project.
-            const auto& lgrBlockData = this->outputModule_->getLgrBlockData();
+            const auto& lgrBlockData = this->collectOnIORank_.isParallel()
+                ? this->collectOnIORank_.globalLgrBlockData()
+                : this->outputModule_->getLgrBlockData();
 
             const auto& interRegFlows = this->collectOnIORank_.isParallel()
                 ? this->collectOnIORank_.globalInterRegFlows()
@@ -506,7 +507,8 @@ public:
                                            localWellTestState,
                                            /* interRegFlows = */ {},
                                            flowsn,
-                                           floresn);
+                                           floresn,
+                                           /* lgrBlockData = */ {});
             if (this->collectOnIORank_.isIORank()) {
                 this->outputModule_->assignGlobalFieldsToSolution(this->collectOnIORank_.globalCellData());
             }

@@ -86,7 +86,8 @@ public:
                  const WellTestState&                                 localWellTestState,
                  const InterRegFlowMap&                               interRegFlows,
                  const std::array<FlowsData<double>, 3>&              localFlowsn,
-                 const std::array<FlowsData<double>, 3>&              localFloresn);
+                 const std::array<FlowsData<double>, 3>&              localFloresn,
+                 const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData);
 
     const std::map<std::pair<std::string, int>, double>& globalBlockData() const
     { return globalBlockData_; }
