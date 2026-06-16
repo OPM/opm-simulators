@@ -65,6 +65,8 @@
 #include <cstddef>
 #include <functional>
 #include <limits>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -182,14 +184,35 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
-        // Allocate slots for LB* summary nodes that name a cell inside an
-        // LGR.  Single-process only: the gather of LGR-cell values to the I/O
-        // rank is a separate change, so skip setup under MPI to keep the LGR
-        // producer path inert and avoid desyncing the ranks in the collective
-        // output walk.  Empty for runs without LB* requests (zero non-LGR cost).
-        if (! collectOnIORank.isParallel()) {
-            this->setupLgrBlockData(simulator.vanguard().eclState().getInputGrid());
+        // Allocate slots for LB* summary nodes that name a cell inside an LGR.
+        // Runs per-rank (serial and parallel): each rank allocates only the LGR
+        // leaf cells it owns, so lgrBlockData_ is per-rank disjoint and the
+        // gather to the I/O rank is a clean union.  Ownership is taken from the
+        // same InteriorEntity leaf-level decision the fill walk uses, collected
+        // here once.  Empty for runs without LB* requests (zero non-LGR cost);
+        // constexpr-elided on non-CpGrid builds (LGRs are CpGrid-only).
+        std::set<std::pair<int, int>> ownedLgrCells;
+        std::map<std::string, int> lgrNameToLevel;
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            // CpGrid name->level map is replicated on every rank (unlike the
+            // root-only EclipseState input grid).
+            lgrNameToLevel = simulator.vanguard().grid().getLgrNameToLevel();
+            for (const auto& element : elements(simulator.gridView())) {
+                const int level = element.level();
+                if (level > 0 && element.partitionType() == Dune::InteriorEntity) {
+                    const int levelCompressed = element.getLevelElem().index();
+                    const int levelCart = simulator.vanguard()
+                                              .levelCartesianIndexMapper()
+                                              .cartesianIndex(levelCompressed, level);
+                    ownedLgrCells.emplace(level, levelCart);
+                }
+            }
         }
+        this->setupLgrBlockData(
+            lgrNameToLevel,
+            [&ownedLgrCells](const int level, const int levelCart) {
+                return ownedLgrCells.count(std::make_pair(level, levelCart)) > 0;
+            });
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";

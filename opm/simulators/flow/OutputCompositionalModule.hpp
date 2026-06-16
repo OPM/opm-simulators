@@ -127,13 +127,15 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
-        // Allocate slots for LB* summary nodes that name a cell inside an
-        // LGR.  Single-process only: the gather of LGR-cell values to the I/O
-        // rank is a separate change, so skip setup under MPI to keep the LGR
-        // producer path inert and avoid desyncing the ranks in the collective
-        // output walk.  Empty for runs without LB* requests (zero non-LGR cost).
+        // Allocate LB* summary slots.  The compositional block-data fill
+        // (processElementBlockData) is a stub, so no LB* values are produced
+        // here and the parallel gather has nothing to collect; the allocation
+        // is kept single-process and the ownership predicate is trivially true
+        // (there are no per-rank values to keep disjoint).
         if (! collectToIORank.isParallel()) {
-            this->setupLgrBlockData(simulator.vanguard().eclState().getInputGrid());
+            // Empty name->level map: the compositional block-data fill is a stub,
+            // so no LB* values are produced and nothing needs allocating.
+            this->setupLgrBlockData({}, [](const int, const int) { return true; });
         }
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {

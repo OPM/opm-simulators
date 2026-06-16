@@ -386,7 +386,8 @@ protected:
     // Caller-supplied via parameter rather than read from a member to keep
     // this module decoupled from EclipseState ownership (matching how the
     // existing block path receives its rank predicate as an argument).
-    void setupLgrBlockData(const EclipseGrid& eclGrid);
+    void setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
+                           const std::function<bool(int, int)>& isLgrCellOnThisRank);
 
     virtual bool isDefunctParallelWell(const std::string& wname) const = 0;
     virtual bool isOwnedByCurrentRank(const std::string& wname) const = 0;
