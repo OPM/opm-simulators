@@ -132,6 +132,10 @@ public:
                 f.setDerivative(b + k, Scalar{-1});
             }
             f.setValue(Scalar{1} - sum);
+            // Match MSW: a reference fraction that turns slightly negative due to
+            // round-off / Newton overshoot is clamped to zero in value (derivatives kept).
+            if (f.value() < Scalar{0})
+                f.setValue(Scalar{0});
             return f;
         }
         for (int k = 1; k < NumPhases; ++k) {
@@ -186,18 +190,47 @@ public:
     }
 
 private:
-    //! Keep fractions in a physically sensible range (0 <= f_k, sum_k f_k <= 1).
+    //! Keep fractions in a physically sensible range, using the exact clamp/renormalize
+    //! sequence of MultisegmentWellPrimaryVariables::processFractions (water, then gas,
+    //! then oil): if a phase fraction is negative, set it to zero and divide the other
+    //! active phase fractions by (1 - negative_value) so the set still sums to one.
     void processFractions(int s)
     {
-        Scalar sum = 0;
+        // Reconstruct the full active-component fraction vector with the reference
+        // component carrying the remainder.
+        std::array<Scalar, NumPhases> f{};
+        Scalar sum_nonref = 0;
         for (int k = 1; k < NumPhases; ++k) {
-            seg_[s][k] = std::max(seg_[s][k], Scalar{0});
-            sum += seg_[s][k];
+            f[frac_comp_[k]] = seg_[s][k];
+            sum_nonref += seg_[s][k];
         }
-        if (sum > Scalar{1}) {
-            for (int k = 1; k < NumPhases; ++k)
-                seg_[s][k] /= sum;
+        f[ref_comp_] = Scalar{1} - sum_nonref;
+
+        const bool wat = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        const int wc = wat ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx) : -1;
+        const int oc = oil ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx) : -1;
+        const int gc = gas ? FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx) : -1;
+
+        if (wat && f[wc] < Scalar{0}) {
+            if (gas) f[gc] /= (Scalar{1} - f[wc]);
+            if (oil) f[oc] /= (Scalar{1} - f[wc]);
+            f[wc] = Scalar{0};
         }
+        if (gas && f[gc] < Scalar{0}) {
+            if (wat) f[wc] /= (Scalar{1} - f[gc]);
+            if (oil) f[oc] /= (Scalar{1} - f[gc]);
+            f[gc] = Scalar{0};
+        }
+        if (oil && f[oc] < Scalar{0}) {
+            if (wat) f[wc] /= (Scalar{1} - f[oc]);
+            if (gas) f[gc] /= (Scalar{1} - f[oc]);
+            f[oc] = Scalar{0};
+        }
+
+        for (int k = 1; k < NumPhases; ++k)
+            seg_[s][k] = f[frac_comp_[k]];
     }
 
     std::vector<std::array<Scalar, NumPhases>> seg_;

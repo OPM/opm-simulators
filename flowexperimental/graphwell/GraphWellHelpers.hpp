@@ -27,7 +27,7 @@
 namespace Opm::graphwellhelpers {
 
 /// Haaland friction factor (copied from mswellhelpers; inlined so the GraphWell
-/// prototype works with arbitrary Evaluation sizes without extra instantiations).
+/// works with arbitrary Evaluation sizes without extra instantiations).
 template <typename ValueType, typename Scalar>
 ValueType haalandFormula(const ValueType& re, const Scalar diameter, const Scalar roughness)
 {
@@ -61,12 +61,75 @@ ValueType frictionPressureLoss(const Scalar l, const Scalar diameter,
     return 2. * f * l * w * w / (area * area * diameter * density);
 }
 
+/// Valve constriction pressure-loss magnitude (>= 0). Mirrors
+/// Opm::mswellhelpers::valveContrictionPressureLoss.
+template <typename ValueType, typename Scalar>
+ValueType valveContrictionPressureLoss(const ValueType& mass_rate, const ValueType& density,
+                                       const Scalar area_con, const Scalar cv)
+{
+    const Scalar area = (area_con > 1.e-10 ? area_con : 1.e-10);
+    return mass_rate * mass_rate / (2. * density * cv * cv * area * area);
+}
+
 /// Velocity head mass_rate^2 / (area^2 * density). Mirrors
 /// Opm::mswellhelpers::velocityHead.
 template <typename ValueType, typename Scalar>
 ValueType velocityHead(const Scalar area, const ValueType& mass_rate, const ValueType& density)
 {
     return mass_rate * mass_rate / (area * area * density);
+}
+
+/// Water-in-oil emulsion viscosity (copied from mswellhelpers).
+template <typename ValueType, typename Scalar>
+ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity,
+                               const ValueType& water_liquid_fraction,
+                               const Scalar max_visco_ratio)
+{
+    const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction));
+    const ValueType viscosity_ratio = pow(temp_value, 2.5);
+    return (viscosity_ratio <= max_visco_ratio) ? oil_viscosity * viscosity_ratio
+                                                : oil_viscosity * max_visco_ratio;
+}
+
+/// Oil-in-water emulsion viscosity (copied from mswellhelpers).
+template <typename ValueType, typename Scalar>
+ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
+                               const ValueType& water_liquid_fraction,
+                               const Scalar max_visco_ratio)
+{
+    const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction));
+    const ValueType viscosity_ratio = pow(temp_value, 2.5);
+    return (viscosity_ratio <= max_visco_ratio) ? water_viscosity * viscosity_ratio
+                                                : water_viscosity * max_visco_ratio;
+}
+
+/// Emulsion viscosity for a spiral-ICD (copied from mswellhelpers::emulsionViscosity,
+/// but taking the three SICD parameters as scalars instead of the SICD object).
+template <typename ValueType, typename Scalar>
+ValueType emulsionViscosity(const ValueType& water_fraction, const ValueType& water_viscosity,
+                            const ValueType& oil_fraction, const ValueType& oil_viscosity,
+                            const Scalar width_transition, const Scalar critical_value,
+                            const Scalar max_visco_ratio)
+{
+    const ValueType transition_start_value = critical_value - width_transition / 2.0;
+    const ValueType transition_end_value = critical_value + width_transition / 2.0;
+
+    const ValueType liquid_fraction = water_fraction + oil_fraction;
+    if (liquid_fraction == 0.)
+        return ValueType{0.};
+
+    const ValueType water_liquid_fraction = water_fraction / liquid_fraction;
+
+    if (water_liquid_fraction <= transition_start_value) {
+        return WIOEmulsionViscosity(oil_viscosity, water_liquid_fraction, max_visco_ratio);
+    } else if (water_liquid_fraction >= transition_end_value) {
+        return OIWEmulsionViscosity(water_viscosity, water_liquid_fraction, max_visco_ratio);
+    } else {
+        const ValueType v_start = WIOEmulsionViscosity(oil_viscosity, transition_start_value, max_visco_ratio);
+        const ValueType v_end = OIWEmulsionViscosity(water_viscosity, transition_end_value, max_visco_ratio);
+        return (v_start * (transition_end_value - water_liquid_fraction)
+                + v_end * (water_liquid_fraction - transition_start_value)) / width_transition;
+    }
 }
 
 } // namespace Opm::graphwellhelpers

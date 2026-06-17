@@ -37,19 +37,22 @@ namespace Opm {
 /// \brief Multisegment well built on the GraphWell entity-split formulation with a
 /// native AD face-based assembler.
 ///
-/// This derives from the production MultisegmentWell and reuses its control / THP /
-/// group machinery (the well control equation is borrowed from the base assembly).
-/// Everything else -- the mass-conservation equations on segments, the momentum
-/// (pressure-drop) equations on connections, and the perforation inflow -- is built
-/// from scratch by GraphWellAssembler using fixed-size AD with upwind weighting, into
-/// a Dune::MultiTypeBlockMatrix. The whole well (inner control iterations and the
-/// global reservoir coupling) is then driven by that system.
+/// The well equations are assembled entirely natively by GraphWellAssembler using
+/// fixed-size AD with upwind weighting into a Dune::MultiTypeBlockMatrix: the
+/// mass-conservation equations on segments, the momentum (pressure-drop, incl.
+/// WSEGVALV/WSEGSICD/WSEGAICD device drops) equations on connections, the perforation
+/// inflow, the well control equation (BHP/rate/THP), the Schur reservoir coupling and
+/// the CPRW well-pressure coupling. The inner control iterations and the global
+/// reservoir coupling are driven by that system.
 ///
-/// The GraphWell unknowns map onto the MultisegmentWell unknowns by the tree
-/// bijection (segment pressure/fractions shared; one flux per connection with
-/// Q_c = -WQTotal_{down(c)}), which is used to read the linearisation point from the
-/// base primary variables, to borrow the control row, and to push Newton increments
-/// back through the base well-state update.
+/// It still derives from the production MultisegmentWell to reuse the surrounding
+/// (non-equation) infrastructure: primary-variable / well-state management, segment
+/// geometry setup, well potentials, THP/operability limits and well-state I/O. The
+/// GraphWell unknowns map onto the MultisegmentWell unknowns by the tree bijection
+/// (segment pressure/fractions shared; one flux per connection with
+/// Q_c = -WQTotal_{down(c)}), used to read the linearisation point from the base
+/// primary variables and to push Newton increments back through the base well-state
+/// update.
 template<typename TypeTag>
 class GraphMultisegmentWell : public MultisegmentWell<TypeTag>
 {
@@ -122,9 +125,9 @@ public:
     void apply(const BVector& x, BVector& Ax) const override;
     void apply(BVector& r) const override;
 
-    //! CPRW well-pressure coupling is not supported by the GraphWell formulation; the
-    //! well is handled through the Schur apply() path instead (run with a non-CPRW
-    //! linear solver, or accept a CPR preconditioner without well-pressure coupling).
+    //! CPRW well-pressure coupling: collapse the GraphWell to a single well-pressure
+    //! unknown coupled to the perforated cells (ported from
+    //! MultisegmentWellEquations::extractCPRPressureMatrix using the GraphWell B/C blocks).
     void addWellPressureEquations(PressureMatrix& mat,
                                   const BVector& x,
                                   const int pressureVarIndex,
@@ -136,8 +139,8 @@ public:
                                                const GroupStateHelperType& groupStateHelper,
                                                WellStateType& well_state) override;
 
-    //! The production updateIPRImplicit solves the base MultisegmentWell linear system,
-    //! which the GraphWell never assembles. Use the explicit IPR fallback instead.
+    //! Implicit IPR via the GraphWell Schur system (a -1 perturbation of the control row,
+    //! solved through the multitype system and contracted with the surface-rate derivatives).
     void updateIPRImplicit(const Simulator& simulator,
                            const GroupStateHelperType& groupStateHelper,
                            WellStateType& well_state) override;
@@ -194,8 +197,6 @@ private:
                             WellStateType& well_state,
                             Scalar relaxation_factor = 1.0);
 
-    //! Top-segment bhp as a compact control AD value (derivative in slot 0).
-    CEval topBhpCEval() const;
     //! Top surface phase rate getQs(comp) = -Q_surface * volumeFractionScaled(top,comp)
     //! as a compact control AD value (derivatives in the top-segment + flux slots).
     CEval surfaceRateCEval(int comp) const;
@@ -216,9 +217,10 @@ private:
 
     // segment -> connection whose 'down' end is that segment (bijection on a tree)
     std::vector<int> outlet_conn_;
+    // per-connection pressure-drop components from the last assembly (for SPRD reporting)
+    std::vector<typename GAsm::PdropReport> pdrop_report_;
     // MultisegmentWell primary-variable index -> GraphWell segment DOF (-1 for WQTotal)
     std::array<int, MSWEval::numWellEq> var_to_gdof_;
-    int msw_wqtotal_{0};
 
     // phase map for the native control equation
     int ref_comp_{0};

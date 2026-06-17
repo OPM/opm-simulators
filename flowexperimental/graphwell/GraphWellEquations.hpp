@@ -97,6 +97,8 @@ public:
     DCC& Dcc() { using namespace Dune::Indices; return D_[_1][_1]; }
     OffDiagMat& B() { return duneB_; }
     OffDiagMat& C() { return duneC_; }
+    const OffDiagMat& B() const { return duneB_; }
+    const OffDiagMat& C() const { return duneC_; }
     SegVector& resSeg() { using namespace Dune::Indices; return resWell_[_0]; }
     ConnVector& resConn() { using namespace Dune::Indices; return resWell_[_1]; }
     const BVectorWell& residual() const { return resWell_; }

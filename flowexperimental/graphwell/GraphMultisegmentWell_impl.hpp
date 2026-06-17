@@ -20,10 +20,15 @@
 #ifndef OPM_GRAPH_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
 #define OPM_GRAPH_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/MSW/AICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/MSW/icd.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/material/densead/Math.hpp>
 
@@ -74,6 +79,9 @@ init(const std::vector<Scalar>& depth_arg,
                   "multiple MPI ranks (well " + this->name() + ").");
     }
 
+    // The GraphWell connection momentum supports hydrostatic + friction + acceleration and
+    // the WSEGVALV / WSEGSICD / WSEGAICD flow-control device drops.
+
     topo_ = GraphTopo::fromWellSegments(this->wellEcl().getSegments(),
                                         this->wellEcl().getConnections());
     graph_eqns_.init(topo_);
@@ -86,7 +94,6 @@ init(const std::vector<Scalar>& depth_arg,
     // MultisegmentWell primary-variable index -> GraphWell segment DOF
     using PVt = typename MSWEval::PrimaryVariables;
     var_to_gdof_.fill(-1);
-    msw_wqtotal_ = PVt::WQTotal;
     var_to_gdof_[PVt::SPres] = 0;
     int gdof = 1;
     if constexpr (PVt::has_wfrac_variable)
@@ -179,6 +186,11 @@ gatherPerforations(const Simulator& simulator,
             this->getTransMult(trans_mult, simulator, cell_idx);
             in.Tw = this->wellIndex()[perf] * trans_mult;
             in.cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
+            // Use the same perforation depth source as the production MultisegmentWell
+            // (PerforationData depth, not the raw WellConnections connection depth), so the
+            // segment->perforation hydrostatic correction — and hence the per-perforation
+            // drawdown split — is identical.
+            in.perf_depth_diff = this->perfDepth()[perf] - topo_.segment(seg).depth;
         }
     }
 }
@@ -197,6 +209,15 @@ assembleWellEqWithoutIteration(const Simulator& simulator,
         return;
 
     setGraphStateFromBase();
+
+    // Keep the base MultisegmentWell segment secondary quantities (densities_, viscosities_,
+    // mass_rates_, upwinding_segments_, phase_*) in sync with the current primary variables.
+    // The GraphWell's own assembly uses the GFP/topology, but the *inherited*
+    // computeWellPotentials / computeWellRatesWithBhp / computeBhpAtThpLimit{Prod,Inj} (used
+    // for group control and THP operability) read these base quantities; without this they
+    // would be stale and give wrong potentials / THP-limit BHP.
+    this->segments_.updateUpwindingSegments(this->primary_variables_);
+    this->computeSegmentFluidProperties(simulator, groupStateHelper.deferredLogger());
 
     // fluid properties from the GraphWell PVT port
     GFP fp(this->pvtRegionIdx());
@@ -226,10 +247,75 @@ assembleWellEqWithoutIteration(const Simulator& simulator,
     pdrop.acceleration = this->accelerationalPressureLossConsidered();
     pdrop.average_density = this->param_.use_average_density_ms_wells_;
 
+    // Per-connection flow-control devices (WSEGVALV). The connection whose 'down' end is a
+    // device segment carries that segment's device pressure drop. The constriction area can
+    // be a UDA, so it is resolved here against the current summary state, as in MSW.
+    std::vector<typename GAsm::ConnDevice> devices(topo_.numConnections());
+    {
+        const auto& segs = this->wellEcl().getSegments();
+        const auto& summary_state = simulator.vanguard().summaryState();
+        for (int c = 0; c < topo_.numConnections(); ++c) {
+            if (c == topo_.surfaceConnection())
+                continue;
+            const int seg = topo_.connection(c).down;
+            if (seg == GraphTopo::surface_node)
+                continue;
+            const auto& segment = segs[seg];
+            if (segment.isValve()) {
+                const auto& v = segment.valve();
+                auto& d = devices[c];
+                d.kind = GAsm::ConnDevice::Kind::Valve;
+                d.shut = (v.status() == ICDStatus::SHUT);
+                d.length = static_cast<Scalar>(v.pipeAdditionalLength());
+                d.diameter = static_cast<Scalar>(v.pipeDiameter());
+                d.area = static_cast<Scalar>(v.pipeCrossArea());
+                d.roughness = static_cast<Scalar>(v.pipeRoughness());
+                const ValveUDAEval uda_eval{summary_state, this->name(),
+                                            static_cast<std::size_t>(segment.segmentNumber())};
+                d.area_con = static_cast<Scalar>(v.conCrossArea(uda_eval));
+                d.cv = static_cast<Scalar>(v.conFlowCoefficient());
+            } else if (segment.isSpiralICD()) {
+                const auto& icd = segment.spiralICD();
+                auto& d = devices[c];
+                d.kind = GAsm::ConnDevice::Kind::SpiralICD;
+                d.shut = (icd.status() == ICDStatus::SHUT);
+                d.scaling_factor = static_cast<Scalar>(icd.scalingFactor());
+                d.visc_cali = static_cast<Scalar>(icd.viscosityCalibration());
+                d.dens_cali = static_cast<Scalar>(icd.densityCalibration());
+                d.strength = static_cast<Scalar>(icd.strength());
+                d.width_transition = static_cast<Scalar>(icd.widthTransitionRegion());
+                d.critical_value = static_cast<Scalar>(icd.criticalValue());
+                d.max_visco_ratio = static_cast<Scalar>(icd.maxViscosityRatio());
+            } else if (segment.isAICD()) {
+                const auto& icd = segment.autoICD();
+                auto& d = devices[c];
+                d.kind = GAsm::ConnDevice::Kind::AutoICD;
+                d.shut = (icd.status() == ICDStatus::SHUT);
+                d.scaling_factor = static_cast<Scalar>(icd.scalingFactor());
+                d.visc_cali = static_cast<Scalar>(icd.viscosityCalibration());
+                d.dens_cali = static_cast<Scalar>(icd.densityCalibration());
+                d.strength = static_cast<Scalar>(icd.strength());
+                d.flow_rate_exp = static_cast<Scalar>(icd.flowRateExponent());
+                d.visc_exp = static_cast<Scalar>(icd.viscExponent());
+                d.dens_exp = static_cast<Scalar>(icd.densityExponent());
+                d.wat_visc_exp = static_cast<Scalar>(icd.waterViscExponent());
+                d.oil_visc_exp = static_cast<Scalar>(icd.oilViscExponent());
+                d.gas_visc_exp = static_cast<Scalar>(icd.gasViscExponent());
+                d.wat_dens_exp = static_cast<Scalar>(icd.waterDensityExponent());
+                d.oil_dens_exp = static_cast<Scalar>(icd.oilDensityExponent());
+                d.gas_dens_exp = static_cast<Scalar>(icd.gasDensityExponent());
+                d.unit_volume_rate = static_cast<Scalar>(
+                    simulator.vanguard().eclState().getUnits().to_si(
+                        UnitSystem::measure::geometric_volume_rate, 1.0));
+            }
+        }
+    }
+
     // Native AD assembly of mass conservation + momentum + perforation rates.
     assembler_.assemble(topo_, gpv_, fp, perfs, ctrl, static_cast<Scalar>(dt),
                         this->gravity(), allow_cf, old_sv, graph_eqns_,
-                        /*make_solver=*/false, /*assemble_control=*/false, reg, pdrop);
+                        /*make_solver=*/false, /*assemble_control=*/false, reg, pdrop,
+                        this->well_efficiency_factor_, devices, &pdrop_report_);
 
     assembleControl(simulator, groupStateHelper, well_state, inj_controls, prod_controls,
                     solving_with_zero_rate);
@@ -267,7 +353,7 @@ updateWellStateRates(const GFP& fp,
                 cmix_s[comp] = gpv_.surfaceVolumeFraction(seg, comp, Role::Self);
             std::array<GEval, NP> cq_s;
             assembler_.computePerfRate(perfs[perf], p_seg, rho_seg, cmix_s,
-                                       topo_.perforationDepthDiff(perf), this->gravity(),
+                                       perfs[perf].perf_depth_diff, this->gravity(),
                                        producer, allow_cf, cq_s);
             for (int comp = 0; comp < NP; ++comp) {
                 const GEval cq_eff = cq_s[comp] * this->well_efficiency_factor_;
@@ -276,10 +362,25 @@ updateWellStateRates(const GFP& fp,
                            + FluidSystem::activeCompToActivePhaseIdx(comp)] = cq_s[comp].value();
             }
             const Scalar perf_seg_press_diff = this->gravity() * rho_seg.value()
-                * topo_.perforationDepthDiff(perf);
+                * perfs[perf].perf_depth_diff;
             perf_press[perf] = p_seg.value() + perf_seg_press_diff;
             if (watComp >= 0)
                 perf_data.wat_mass_rates[perf] = cq_s[watComp].value() * rhow;
+        }
+    }
+
+    // Segment pressure-drop components (SPRD/SPRDH/SPRDF/SPRDA): the drop "of segment s" is
+    // carried by the connection whose down end is s (its outlet connection). The top segment
+    // (no outlet) keeps zero, matching MultisegmentWell.
+    if (!pdrop_report_.empty()) {
+        for (int seg = 0; seg < topo_.numSegments(); ++seg) {
+            const int c = outlet_conn_[seg];
+            if (c < 0 || c == topo_.surfaceConnection())
+                continue;
+            const auto& rep = pdrop_report_[c];
+            ws.segments.pressure_drop_friction[seg] = rep.friction;
+            ws.segments.pressure_drop_hydrostatic[seg] = rep.hydrostatic;
+            ws.segments.pressure_drop_accel[seg] = rep.acceleration;
         }
     }
 }
@@ -683,15 +784,6 @@ getWellConvergence(const GroupStateHelperType& groupStateHelper,
 
 template<typename TypeTag>
 typename GraphMultisegmentWell<TypeTag>::CEval
-GraphMultisegmentWell<TypeTag>::topBhpCEval() const
-{
-    CEval bhp(gpv_.segValue(topo_.topSegment(), 0));
-    bhp.setDerivative(0, Scalar{1});
-    return bhp;
-}
-
-template<typename TypeTag>
-typename GraphMultisegmentWell<TypeTag>::CEval
 GraphMultisegmentWell<TypeTag>::surfaceRateCEval(int comp) const
 {
     const int top = topo_.topSegment();
@@ -783,14 +875,73 @@ apply(const BVector& x, BVector& Ax) const
 
 template<typename TypeTag>
 void GraphMultisegmentWell<TypeTag>::
-addWellPressureEquations(PressureMatrix& /*mat*/,
-                         const BVector& /*x*/,
-                         const int /*pressureVarIndex*/,
+addWellPressureEquations(PressureMatrix& jacobian,
+                         const BVector& weights,
+                         const int pressureVarIndex,
                          const bool /*use_well_weights*/,
-                         const WellStateType& /*well_state*/) const
+                         const WellStateType& well_state) const
 {
-    // No-op: the GraphWell does not contribute to the CPRW well-pressure system.
-    // The well is fully accounted for through the Schur apply() path.
+    // CPRW well-pressure coupling: collapse the GraphWell to a single well-pressure unknown
+    // and couple it to the perforated cells, mirroring
+    // MultisegmentWellEquations::extractCPRPressureMatrix using the GraphWell B/C blocks.
+    // The well-pressure equation is taken from the segment pressure DOF (slot 0) of each
+    // segment's mass block (the analogue of MSW's SPres row).
+    if (this->number_of_local_perforations_ == 0)
+        return;
+
+    const auto& B = graph_eqns_.B();   // [seg][perf] block: [comp][resEq]
+    const auto& C = graph_eqns_.C();   // [seg][perf] block: [segVar][comp]
+    const auto& cells = this->cells();
+    const int number_cells = weights.size();
+    const int welldof_ind = number_cells + this->indexOfWell();
+    constexpr int seg_pressure_var = 0;   // GraphWell segment pressure DOF
+
+    const bool pressure_controlled = this->isPressureControlled(well_state);
+
+    // coupling from well to reservoir (cell rows, well-pressure column)
+    if (!pressure_controlled) {
+        for (std::size_t rowC = 0; rowC < C.N(); ++rowC) {
+            for (auto colC = C[rowC].begin(), endC = C[rowC].end(); colC != endC; ++colC) {
+                const auto cell = cells[colC.index()];
+                const auto& bw = weights[cell];
+                Scalar matel = 0.0;
+                for (int i = 0; i < NumResEq; ++i)
+                    matel += bw[i] * (*colC)[seg_pressure_var][i];
+                jacobian[cell][welldof_ind] += matel;
+            }
+        }
+    }
+
+    if (!pressure_controlled) {
+        // well CPR weight = average of the perforation cells' reservoir weights
+        auto well_weight = weights[0];
+        well_weight = 0.0;
+        int num_perfs = 0;
+        for (std::size_t rowB = 0; rowB < B.N(); ++rowB) {
+            for (auto colB = B[rowB].begin(), endB = B[rowB].end(); colB != endB; ++colB) {
+                well_weight += weights[cells[colB.index()]];
+                ++num_perfs;
+            }
+        }
+        assert(num_perfs > 0);
+        well_weight /= num_perfs;
+
+        // coupling from reservoir to well (well row, cell columns) + diagonal
+        Scalar diag_el = 0.0;
+        for (std::size_t rowB = 0; rowB < B.N(); ++rowB) {
+            for (auto colB = B[rowB].begin(), endB = B[rowB].end(); colB != endB; ++colB) {
+                const auto cell = cells[colB.index()];
+                Scalar matel = 0.0;
+                for (int i = 0; i < NP; ++i)
+                    matel += well_weight[i] * (*colB)[i][pressureVarIndex];
+                jacobian[welldof_ind][cell] += matel;
+                diag_el -= matel;
+            }
+        }
+        jacobian[welldof_ind][welldof_ind] = diag_el;
+    } else {
+        jacobian[welldof_ind][welldof_ind] = 1.0;
+    }
 }
 
 template<typename TypeTag>

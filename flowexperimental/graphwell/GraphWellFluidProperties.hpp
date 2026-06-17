@@ -25,6 +25,7 @@
 #include <opm/material/densead/Math.hpp>
 
 #include <algorithm>
+#include <array>
 #include <vector>
 
 namespace Opm {
@@ -68,6 +69,9 @@ public:
         density_.assign(nseg, Eval{Scalar{0}});
         viscosity_.assign(nseg, Eval{Scalar{0}});
         vol_ratio_.assign(nseg, Eval{Scalar{0}});
+        phase_volfrac_.assign(nseg, {});
+        phase_visc_.assign(nseg, {});
+        phase_dens_.assign(nseg, {});
         for (int s = 0; s < nseg; ++s)
             computeSegment(pv, s, temperature);
     }
@@ -92,6 +96,19 @@ public:
     //! Mixture viscosity of segment \c s, in the requested role.
     Eval viscosity(int s, Role role) const
     { return role == Role::Self ? viscosity_[s] : shiftToOther(viscosity_[s]); }
+
+    //! Reservoir volume fraction of component \c comp (= mix/b/vol_ratio), in the
+    //! requested role. Mirrors MultisegmentWellSegments::phase_fractions_.
+    Eval phaseVolumeFraction(int s, int comp, Role role) const
+    { return role == Role::Self ? phase_volfrac_[s][comp] : shiftToOther(phase_volfrac_[s][comp]); }
+
+    //! Phase viscosity of component \c comp, in the requested role.
+    Eval phaseViscosity(int s, int comp, Role role) const
+    { return role == Role::Self ? phase_visc_[s][comp] : shiftToOther(phase_visc_[s][comp]); }
+
+    //! Phase mass density of component \c comp, in the requested role.
+    Eval phaseDensity(int s, int comp, Role role) const
+    { return role == Role::Self ? phase_dens_[s][comp] : shiftToOther(phase_dens_[s][comp]); }
 
 private:
     void computeSegment(const PV& pv, int s, Scalar temperature)
@@ -180,9 +197,15 @@ private:
         density_[s] = rho / vol_ratio;
 
         // mixture viscosity: sum visc_c * fraction_c, fraction_c = mix_c / b_c / vol_ratio
+        // also store the per-phase reservoir volume fraction and viscosity (for ICD devices)
         Eval mu(Scalar{0});
-        for (int c = 0; c < NumPhases; ++c)
-            mu += visc[c] * (mix[c] / b[c] / vol_ratio);
+        for (int c = 0; c < NumPhases; ++c) {
+            const Eval frac = mix[c] / b[c] / vol_ratio;
+            phase_volfrac_[s][c] = frac;
+            phase_visc_[s][c] = visc[c];
+            phase_dens_[s][c] = dens[c];
+            mu += visc[c] * frac;
+        }
         viscosity_[s] = mu;
     }
 
@@ -191,6 +214,9 @@ private:
     std::vector<Eval> density_;
     std::vector<Eval> viscosity_;
     std::vector<Eval> vol_ratio_;
+    std::vector<std::array<Eval, NumPhases>> phase_volfrac_;
+    std::vector<std::array<Eval, NumPhases>> phase_visc_;
+    std::vector<std::array<Eval, NumPhases>> phase_dens_;
 };
 
 } // namespace Opm
