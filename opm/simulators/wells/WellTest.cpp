@@ -36,6 +36,9 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <cassert>
+#include <unordered_set>
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -442,31 +445,20 @@ closeOffendingCompletion(const int offending_completion,
                          WellTestState& well_test_state,
                          DeferredLogger& deferred_logger) const
 {
-    // Completion numbers are positive (1-based). Non-positive values are
-    // sentinels from the parallel worst-offender search (e.g. INT_MIN when no
-    // rank holds a valid candidate) and must not be registered as closed.
-    if (offending_completion <= 0) {
-        deferred_logger.warning("ECON_WORKOVER_INVALID_COMPLETION",
-                                fmt::format("Economic limit workover for well {} did not find a "
-                                            "valid completion to close (completion number {}). "
-                                            "No connection will be closed.",
-                                            well_.name(), offending_completion));
-        return;
-    }
+    assert(offending_completion > 0);
 
     // The wellbore ordering of the connections is the one given by COMPORD and
     // reflected in the order of the connections returned by getConnections().
     const auto& connections = well_.wellEcl().getConnections();
 
-    // Build the list of completions to close. For CON it is just the
+    // Build the set of completions to close. For CON it is just the
     // worst-offending completion; for +CON it additionally contains every
     // completion located below the worst-offending one in the wellbore.
-    // "Below" means further from the wellhead according to the connection ordering.
-    std::vector<int> completions_to_close;
-    if (!close_connections_below) {
-        completions_to_close.push_back(offending_completion);
-    } else {
-        completions_to_close.push_back(offending_completion);
+    // "Below" means further from the wellhead according to the connection
+    // ordering. A set is used because a completion spanning several connections
+    // would otherwise be inserted multiple times.
+    std::unordered_set<int> completions_to_close{offending_completion};
+    if (close_connections_below) {
         bool below_worst_offender = false;
         for (const auto& connection : connections) {
             if (!below_worst_offender &&
@@ -475,7 +467,7 @@ closeOffendingCompletion(const int offending_completion,
                 continue;
             }
             if (below_worst_offender) {
-                completions_to_close.push_back(connection.complnum());
+                completions_to_close.insert(connection.complnum());
             }
         }
     }
