@@ -54,6 +54,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <vector>

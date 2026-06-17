@@ -592,6 +592,13 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
         // supported; their use is flagged at deck validation time.
         const auto& limits = connection.econLimits();
 
+        // CECON item 10 (CHECK_STOPPED): only the NO option is currently
+        // supported (enforced at deck validation), meaning stopped wells are
+        // not checked. The flag is honoured per connection so that supporting
+        // the YES option later requires no change here.
+        if (well_.wellIsStopped() && !limits.check_stopped_wells)
+            continue;
+
         // Sum rates over all perforations belonging to this completion. For a
         // distributed well each rank contributes its local perforations and the
         // result is summed over the well communicator, so that all ranks reach
