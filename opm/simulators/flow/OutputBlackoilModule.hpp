@@ -365,8 +365,8 @@ public:
                 const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
                 const auto be_it  = this->blockExtractors_.find(cartesianIdx);
                 const auto bee_it = this->extraBlockExtractors_.find(cartesianIdx);
-                if (be_it  != this->blockExtractors_.end())      be_extractors  = &be_it->second;
-                if (bee_it != this->extraBlockExtractors_.end()) bee_extractors = &bee_it->second;
+                if (be_it  != this->blockExtractors_.end())      { be_extractors  = &be_it->second; }
+                if (bee_it != this->extraBlockExtractors_.end()) { bee_extractors = &bee_it->second; }
             }
             else if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
                 // Cells inside a local grid refinement.  LGRs are a
@@ -413,9 +413,9 @@ public:
                 elemCtx,
             };
 
-            if (be_extractors  != nullptr) BlockExtractor::process(*be_extractors,  ectx);
-            if (bee_extractors != nullptr) BlockExtractor::process(*bee_extractors, ectx);
-            if (lgr_extractors != nullptr) BlockExtractor::process(*lgr_extractors, ectx);
+            if (be_extractors  != nullptr) { BlockExtractor::process(*be_extractors,  ectx); }
+            if (bee_extractors != nullptr) { BlockExtractor::process(*bee_extractors, ectx); }
+            if (lgr_extractors != nullptr) { BlockExtractor::process(*lgr_extractors, ectx); }
         }
     }
 

@@ -559,8 +559,9 @@ public:
     void pack(int link, MessageBufferType& buffer)
     {
         // we should only get one link
-        if (link != 0)
+        if (link != 0) {
             throw std::logic_error("link in method pack is not 0 as expected");
+        }
 
         packKeyedBlockMap(localLgrBlockData_, buffer);
     }
