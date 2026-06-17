@@ -127,6 +127,17 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
+        // Allocate LB* summary slots.  The compositional block-data fill
+        // (processElementBlockData) is a stub, so no LB* values are produced
+        // here and the parallel gather has nothing to collect; the allocation
+        // is kept single-process and the ownership predicate is trivially true
+        // (there are no per-rank values to keep disjoint).
+        if (! collectToIORank.isParallel()) {
+            // Empty name->level map: the compositional block-data fill is a stub,
+            // so no LB* values are produced and nothing needs allocating.
+            this->setupLgrBlockData({}, [](const int, const int) { return true; });
+        }
+
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {

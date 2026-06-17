@@ -35,8 +35,14 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <ranges>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -461,6 +467,73 @@ public:
     { this->globalGroupAndNetworkData_.read(buffer); }
 };
 
+// Shared serialisation for the block-summary gather handles.  The global B* map is
+// keyed by std::pair<keyword, cartesian-index>; the LGR LB* map by
+// std::tuple<keyword, level, level-local-cartesian-index>.  std::apply serialises
+// either key shape: write the map size, then every key field (pair or tuple) followed
+// by the value -- one body, thin per-key callers (mirrors the producer-side
+// makeExtractor de-duplication).
+// Constrain the container to a map-like type (key_type/mapped_type +
+// insert_or_assign) rather than hard-coding std::map/std::unordered_map.
+template <typename C>
+concept MapLikeContainer =
+    std::ranges::input_range<C> &&
+    requires {
+        typename C::key_type;
+        typename C::mapped_type;
+    } &&
+    requires (C& container,
+              const typename C::key_type& key,
+              typename C::mapped_type     value)
+    {
+        { container.insert_or_assign(key, std::move(value)) };
+    };
+
+// range_value_t of a map is std::pair<const Key, Value>, so first_type is
+// const-qualified; strip the const so the unpack side can fill a writable key.
+template <MapLikeContainer C>
+using KeyTypeOf = std::remove_const_t<typename std::ranges::range_value_t<C>::first_type>;
+
+template <MapLikeContainer C>
+using MappedTypeOf = typename std::ranges::range_value_t<C>::second_type;
+
+template <MapLikeContainer KeyedMap, class MessageBufferType>
+void packKeyedBlockMap(const KeyedMap& localData, MessageBufferType& buffer)
+{
+    const unsigned int size = localData.size();
+    buffer.write(size);
+    for (const auto& [key, value] : localData) {
+        std::apply([&buffer](const auto&... field) { (buffer.write(field), ...); }, key);
+        buffer.write(value);
+    }
+}
+
+template <MapLikeContainer KeyedMap, class MessageBufferType>
+void unpackKeyedBlockMap(KeyedMap& globalData, MessageBufferType& buffer)
+{
+    unsigned int size = 0;
+    buffer.read(size);
+
+    // std::map has no reserve(); the probe compiles the call out for it, but keeps
+    // the helper correct should a hashed container be substituted later.
+    if constexpr (requires (KeyedMap& m, std::size_t n) { m.reserve(n); }) {
+        globalData.reserve(globalData.size() + size);
+    }
+
+    for (unsigned int i = 0; i < size; ++i) {
+        KeyTypeOf<KeyedMap> key{};
+        std::apply([&buffer](auto&... field) { (buffer.read(field), ...); }, key);
+
+        MappedTypeOf<KeyedMap> value{};
+        buffer.read(value);
+
+        // Duplicate keys are not expected here -- they would mean two ranks claim
+        // the same cell. Were one to occur, insert_or_assign() overwrites (last
+        // wins) and try_emplace() would keep the first; we overwrite.
+        globalData.insert_or_assign(std::move(key), std::move(value));
+    }
+}
+
 class PackUnPackBlockData : public P2PCommunicatorType::DataHandleInterface
 {
     const std::map<std::pair<std::string, int>, double>& localBlockData_;
@@ -490,31 +563,53 @@ public:
         if (link != 0)
             throw std::logic_error("link in method pack is not 0 as expected");
 
-        // write all block data
-        unsigned int size = localBlockData_.size();
-        buffer.write(size);
-        for (const auto& map : localBlockData_) {
-            buffer.write(map.first.first);
-            buffer.write(map.first.second);
-            buffer.write(map.second);
-        }
+        packKeyedBlockMap(localBlockData_, buffer);
     }
 
     // unpack all data associated with link
     void unpack(int /*link*/, MessageBufferType& buffer)
     {
-        // read all block data
-        unsigned int size = 0;
-        buffer.read(size);
-        for (std::size_t i = 0; i < size; ++i) {
-            std::string name;
-            int idx;
-            double data;
-            buffer.read(name);
-            buffer.read(idx);
-            buffer.read(data);
-            globalBlockValues_[std::make_pair(name, idx)] = data;
+        unpackKeyedBlockMap(globalBlockValues_, buffer);
+    }
+};
+
+class PackUnPackLgrBlockData : public P2PCommunicatorType::DataHandleInterface
+{
+    const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData_;
+    std::map<std::tuple<std::string, int, int>, double>& globalLgrBlockValues_;
+
+public:
+    PackUnPackLgrBlockData(const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData,
+                           std::map<std::tuple<std::string, int, int>, double>& globalLgrBlockValues,
+                           bool isIORank)
+        : localLgrBlockData_(localLgrBlockData)
+        , globalLgrBlockValues_(globalLgrBlockValues)
+    {
+        if (isIORank) {
+            MessageBufferType buffer;
+            pack(0, buffer);
+
+            // pass a dummyLink to satisfy virtual class
+            int dummyLink = -1;
+            unpack(dummyLink, buffer);
         }
+    }
+
+    // pack all data associated with link
+    void pack(int link, MessageBufferType& buffer)
+    {
+        // we should only get one link
+        if (link != 0) {
+            throw std::logic_error("link in method pack is not 0 as expected");
+        }
+
+        packKeyedBlockMap(localLgrBlockData_, buffer);
+    }
+
+    // unpack all data associated with link
+    void unpack(int /*link*/, MessageBufferType& buffer)
+    {
+        unpackKeyedBlockMap(globalLgrBlockValues_, buffer);
     }
 };
 
@@ -971,10 +1066,12 @@ collect(const data::Solution&                                localCellData,
         const WellTestState&                                 localWellTestState,
         const InterRegFlowMap&                               localInterRegFlows,
         const std::array<FlowsData<double>, 3>&              localFlowsn,
-        const std::array<FlowsData<double>, 3>&              localFloresn)
+        const std::array<FlowsData<double>, 3>&              localFloresn,
+        const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
+    globalLgrBlockData_.clear();
     std::map<std::pair<std::string,int>,double> globalExtraBlockData;
     globalWellData_.clear();
     globalWBPData_.values.clear();
@@ -1036,6 +1133,12 @@ collect(const data::Solution&                                localCellData,
         this->isIORank()
     };
 
+    PackUnPackLgrBlockData packUnpackLgrBlockData {
+        localLgrBlockData,
+        this->globalLgrBlockData_,
+        this->isIORank()
+    };
+
     PackUnPackWBPData packUnpackWBPData {
         localWBPData,
         this->globalWBPData_,
@@ -1077,6 +1180,7 @@ collect(const data::Solution&                                localCellData,
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
     toIORankComm_.exchange(packUnpackBlockData);
     toIORankComm_.exchange(packUnpackExtraBlockData);
+    toIORankComm_.exchange(packUnpackLgrBlockData);
     toIORankComm_.exchange(packUnpackWBPData);
     toIORankComm_.exchange(packUnpackAquiferData);
     toIORankComm_.exchange(packUnpackWellTestState);

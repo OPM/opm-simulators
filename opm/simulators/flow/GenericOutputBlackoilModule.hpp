@@ -53,6 +53,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -68,6 +69,7 @@ namespace Opm {
 
 namespace data { class Solution; }
 class EclHysteresisConfig;
+class EclipseGrid;
 class EclipseState;
 class Schedule;
 class SummaryConfig;
@@ -248,6 +250,16 @@ public:
         return extraBlockData_;
     }
 
+    // Per-LGR-cell block-summary results.  Cell identity is the
+    // (keyword, grid level, level-local linearised Cartesian cell index)
+    // tuple — the same identity data::Connection carries as
+    // (lgr_grid, index) for LC* connection vectors.  Empty for runs
+    // without LB* summary requests.
+    const std::map<std::tuple<std::string, int, int>, double>& getLgrBlockData() const
+    {
+        return lgrBlockData_;
+    }
+
     const Inplace* initialInplace() const
     {
         return this->initialInplace_.has_value()
@@ -360,6 +372,23 @@ protected:
     void setupExtraBlockData(const std::size_t        reportStepNum,
                              std::function<bool(int)> isCartIdxOnThisRank);
 
+    // Allocate lgrBlockData_ slots for every Block-category summary node
+    // that names an LGR cell.  The level component of the key is resolved
+    // through EclipseGrid::get_lgr_cell_index (the same call data::Connection
+    // uses for lgr_grid on LC* connection vectors); the level-local
+    // linearised Cartesian index is recovered from node.number - 1.
+    //
+    // No rank check here — ownership for LGR leaf cells is decided in the
+    // walk via Dune::InteriorEntity on the leaf entity; the existing
+    // isCartIdxOnThisRank predicate operates in the global Cartesian space,
+    // which LGR cells do not inhabit.
+    //
+    // Caller-supplied via parameter rather than read from a member to keep
+    // this module decoupled from EclipseState ownership (matching how the
+    // existing block path receives its rank predicate as an argument).
+    void setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
+                           const std::function<bool(int, int)>& isLgrCellOnThisRank);
+
     virtual bool isDefunctParallelWell(const std::string& wname) const = 0;
     virtual bool isOwnedByCurrentRank(const std::string& wname) const = 0;
     virtual bool isOnCurrentRank(const std::string& wname) const = 0;
@@ -470,6 +499,13 @@ protected:
     // Extra block data required for non-summary output reasons
     // Example is the block pressures for RPTSCHED WELLS=2
     std::map<std::pair<std::string, int>, double> extraBlockData_;
+
+    // Per-LGR-cell block-summary results.  Keyed by (keyword, grid level,
+    // level-local linearised Cartesian cell index).  The map type matches
+    // Summary::DynamicSimulatorState::LgrBlockValues so the writer can hand
+    // a pointer to this member directly to the summary engine.  Empty for
+    // runs that request no LB* summary vectors (zero non-LGR cost).
+    std::map<std::tuple<std::string, int, int>, double> lgrBlockData_;
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_{false};

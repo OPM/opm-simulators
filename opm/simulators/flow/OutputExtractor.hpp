@@ -39,6 +39,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <unordered_map>
 #include <set>
 #include <variant>
@@ -258,96 +259,113 @@ struct BlockExtractor
     /// A map of extraction executors, keyed by cartesian cell index
     using ExecMap = std::unordered_map<int, std::vector<Exec>>;
 
+    //! \brief Resolve a block-summary keyword to its bound extraction lambda.
+    //!
+    //! Searches the handler table for \p base_kw (the underlying B*-family
+    //! name, e.g. "BPR", "BOSAT") and, when found, returns the extraction
+    //! function ready to call -- selecting the correct phase for phase-valued
+    //! keywords.  Shared by setupExecMap (global B*, level 0) and
+    //! setupLgrExecMap (LGR-cell LB*, which pass the keyword with its leading
+    //! 'L' stripped).  Returns nullopt when no handler matches.
+    template<std::size_t size>
+    static std::optional<ScalarFunc>
+    makeExtractor(const std::string_view base_kw,
+                  const std::array<Entry,size>& handlers)
+    {
+        using PhaseViewArray = std::array<std::string_view, numPhases>;
+        using StringViewVec = std::vector<std::string_view>;
+
+        unsigned phase{};
+        const auto handler_info =
+            std::ranges::find_if(
+                handlers,
+                [&base_kw, &phase](const auto& handler)
+                {
+                    // Extract list of keyword names from handler
+                    const auto gen_handlers =
+                        std::visit(VisitorOverloadSet{
+                                      [](const ScalarEntry& entry)
+                                      {
+                                          return std::visit(VisitorOverloadSet{
+                                                                [](const std::string_view& kw) -> StringViewVec
+                                                                {
+                                                                    return {kw};
+                                                                },
+                                                                [](const StringViewVec& kws) -> StringViewVec
+                                                                { return kws; }
+                                                            }, entry.kw);
+                                      },
+                                      [](const PhaseEntry& entry)
+                                      {
+                                          return std::visit(VisitorOverloadSet{
+                                                                [](const PhaseViewArray& data)
+                                                                {
+                                                                    return StringViewVec{data.begin(), data.end()};
+                                                                },
+                                                                [](const std::array<PhaseViewArray,2>& data)
+                                                                {
+                                                                    StringViewVec res;
+                                                                    res.reserve(2*numPhases);
+                                                                    res.insert(res.end(),
+                                                                               data[0].begin(),
+                                                                               data[0].end());
+                                                                    res.insert(res.end(),
+                                                                               data[1].begin(),
+                                                                               data[1].end());
+                                                                    return res;
+                                                                }
+                                                            }, entry.kw);
+                                      }
+                                  }, handler);
+
+                    const auto found_handler =
+                        std::ranges::find(gen_handlers, base_kw);
+                    if (found_handler != gen_handlers.end()) {
+                        phase = std::distance(gen_handlers.begin(), found_handler) % numPhases;
+                    }
+                    return found_handler != gen_handlers.end();
+                }
+            );
+
+        if (handler_info == handlers.end()) {
+            return std::nullopt;
+        }
+
+        return std::visit(VisitorOverloadSet{
+                              [](const ScalarEntry& e) -> ScalarFunc
+                              {
+                                  return e.extract;
+                              },
+                              [phase](const PhaseEntry& e) -> ScalarFunc
+                              {
+                                  return [phase, extract = e.extract]
+                                         (const Context& ectx)
+                                         {
+                                             static constexpr auto phaseMap = std::array{
+                                                 waterPhaseIdx,
+                                                 oilPhaseIdx,
+                                                 gasPhaseIdx,
+                                             };
+                                             return extract(phaseMap[phase], ectx);
+                                         };
+                              }
+                          }, *handler_info);
+    }
+
     //! \brief Setup an extractor executor map from a map of evaluations to perform.
     template<std::size_t size>
     static ExecMap setupExecMap(std::map<std::pair<std::string, int>, double>& blockData,
                                 const std::array<Entry,size>& handlers)
     {
-        using PhaseViewArray = std::array<std::string_view, numPhases>;
-        using StringViewVec = std::vector<std::string_view>;
-
         ExecMap extractors;
 
         std::ranges::for_each(
             blockData,
             [&handlers, &extractors](auto& bd_info)
             {
-                unsigned phase{};
                 const auto& [key, cell] = bd_info.first;
-                const auto& handler_info =
-                    std::ranges::find_if(
-                        handlers,
-                        [&kw_name = bd_info.first.first, &phase](const auto& handler)
-                        {
-                           // Extract list of keyword names from handler
-                           const auto gen_handlers =
-                              std::visit(VisitorOverloadSet{
-                                            [](const ScalarEntry& entry)
-                                            {
-                                                return std::visit(VisitorOverloadSet{
-                                                                      [](const std::string_view& kw) -> StringViewVec
-                                                                      {
-                                                                          return {kw};
-                                                                      },
-                                                                      [](const StringViewVec& kws) -> StringViewVec
-                                                                      { return kws; }
-                                                                  }, entry.kw);
-                                            },
-                                            [](const PhaseEntry& entry)
-                                            {
-                                                return std::visit(VisitorOverloadSet{
-                                                                      [](const PhaseViewArray& data)
-                                                                      {
-                                                                          return StringViewVec{data.begin(), data.end()};
-                                                                      },
-                                                                      [](const std::array<PhaseViewArray,2>& data)
-                                                                      {
-                                                                          StringViewVec res;
-                                                                          res.reserve(2*numPhases);
-                                                                          res.insert(res.end(),
-                                                                                     data[0].begin(),
-                                                                                     data[0].end());
-                                                                          res.insert(res.end(),
-                                                                                     data[1].begin(),
-                                                                                     data[1].end());
-                                                                          return res;
-                                                                      }
-                                                                  }, entry.kw);
-                                            }
-                                        }, handler);
-
-                            const auto found_handler =
-                                std::ranges::find(gen_handlers, kw_name);
-                            if (found_handler != gen_handlers.end()) {
-                                phase = std::distance(gen_handlers.begin(), found_handler) % numPhases;
-                            }
-                            return found_handler != gen_handlers.end();
-                        }
-                    );
-
-                if (handler_info != handlers.end()) {
-                    extractors[cell - 1].emplace_back(
-                        &bd_info.second,
-                        std::visit(VisitorOverloadSet{
-                                       [](const ScalarEntry& e)
-                                       {
-                                           return e.extract;
-                                       },
-                                       [phase](const PhaseEntry& e) -> ScalarFunc
-                                       {
-                                           return [phase, extract = e.extract]
-                                                  (const Context& ectx)
-                                                  {
-                                                      static constexpr auto phaseMap = std::array{
-                                                          waterPhaseIdx,
-                                                          oilPhaseIdx,
-                                                          gasPhaseIdx,
-                                                      };
-                                                      return extract(phaseMap[phase], ectx);
-                                                  };
-                                       }
-                                   }, *handler_info)
-                     );
+                if (auto extract = makeExtractor(std::string_view{key}, handlers)) {
+                    extractors[cell - 1].emplace_back(&bd_info.second, std::move(*extract));
                 }
                 else {
                     OpmLog::warning("Unhandled output keyword",
@@ -367,6 +385,56 @@ struct BlockExtractor
         std::ranges::for_each(blockExtractors,
                              [&ectx](auto& bdata)
                              { *bdata.data = bdata.extract(ectx); });
+    }
+
+    /// A two-level map of extraction executors for cells inside an LGR,
+    /// keyed by (grid level, level-local linearised Cartesian cell index).
+    ///
+    /// Outer level identifies the LGR (0 = GLOBAL, 1..N = LGRs).  Inner
+    /// key is the cell's level-local linearised Cartesian index.  Both
+    /// keys come from the LgrBlockValues tuple the opm-common
+    /// LgrBlockValue evaluator reads.
+    using LgrExecMap = std::unordered_map<int,
+                                          std::unordered_map<int,
+                                                             std::vector<Exec>>>;
+
+    //! \brief Setup an LGR-cell extractor executor map.
+    //!
+    //! The LGR analogue of setupExecMap: identical per-keyword resolution
+    //! (shared via makeExtractor), but keyed by (grid level, level-local
+    //! linearised Cartesian index) instead of a single global Cartesian
+    //! index.  The keyword in lgrBlockData carries the LB* prefix ("LBPR",
+    //! "LBOSAT", ...); the leading 'L' is stripped before the handler lookup.
+    //! Extractors are grouped by grid level first so a per-DOF lookup
+    //! short-circuits O(1) on levels that have no LB* requests in this run.
+    template<std::size_t size>
+    static LgrExecMap setupLgrExecMap(std::map<std::tuple<std::string,int,int>,
+                                               double>& lgrBlockData,
+                                      const std::array<Entry,size>& handlers)
+    {
+        LgrExecMap extractors;
+
+        std::ranges::for_each(
+            lgrBlockData,
+            [&handlers, &extractors](auto& bd_info)
+            {
+                const auto& [lgr_kw, level, localCart] = bd_info.first;
+                // LB* keywords mirror the global B* names; drop the leading
+                // 'L' so the shared handler lookup sees "BPR", "BOSAT", ...
+                const auto base_kw = std::string_view{lgr_kw}.substr(1);
+                if (auto extract = makeExtractor(base_kw, handlers)) {
+                    extractors[level][localCart].emplace_back(&bd_info.second, std::move(*extract));
+                }
+                else {
+                    OpmLog::warning("Unhandled LGR output keyword",
+                                    fmt::format("Keyword '{}' (LGR mirror of '{}') is "
+                                                "unhandled for output to summary file.",
+                                                lgr_kw, base_kw));
+                }
+            }
+        );
+
+        return extractors;
     }
 };
 

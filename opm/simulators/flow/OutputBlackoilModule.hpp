@@ -29,6 +29,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/grid/CpGrid.hpp>
+
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
@@ -63,6 +65,8 @@
 #include <cstddef>
 #include <functional>
 #include <limits>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -180,6 +184,36 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
+        // Allocate slots for LB* summary nodes that name a cell inside an LGR.
+        // Runs per-rank (serial and parallel): each rank allocates only the LGR
+        // leaf cells it owns, so lgrBlockData_ is per-rank disjoint and the
+        // gather to the I/O rank is a clean union.  Ownership is taken from the
+        // same InteriorEntity leaf-level decision the fill walk uses, collected
+        // here once.  Empty for runs without LB* requests (zero non-LGR cost);
+        // constexpr-elided on non-CpGrid builds (LGRs are CpGrid-only).
+        std::set<std::pair<int, int>> ownedLgrCells;
+        std::map<std::string, int> lgrNameToLevel;
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            // CpGrid name->level map is replicated on every rank (unlike the
+            // root-only EclipseState input grid).
+            lgrNameToLevel = simulator.vanguard().grid().getLgrNameToLevel();
+            for (const auto& element : elements(simulator.gridView())) {
+                const int level = element.level();
+                if (level > 0 && element.partitionType() == Dune::InteriorEntity) {
+                    const int levelCompressed = element.getLevelElem().index();
+                    const int levelCart = simulator.vanguard()
+                                              .levelCartesianIndexMapper()
+                                              .cartesianIndex(levelCompressed, level);
+                    ownedLgrCells.emplace(level, levelCart);
+                }
+            }
+        }
+        this->setupLgrBlockData(
+            lgrNameToLevel,
+            [&ownedLgrCells](const int level, const int levelCart) {
+                return ownedLgrCells.count(std::make_pair(level, levelCart)) > 0;
+            });
+
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectOnIORank.isIORank()) {
@@ -244,6 +278,7 @@ public:
         this->extractors_.clear();
         this->blockExtractors_.clear();
         this->extraBlockExtractors_.clear();
+        this->lgrBlockExtractors_.clear();
     }
 
     /*!
@@ -303,19 +338,66 @@ public:
             return;
         }
 
-        if (this->blockExtractors_.empty() && this->extraBlockExtractors_.empty()) {
+        if (this->blockExtractors_.empty() &&
+            this->extraBlockExtractors_.empty() &&
+            this->lgrBlockExtractors_.empty())
+        {
             return;
         }
 
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            // Adding block data
-            const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
+        // For EcfvDiscretization there is one degree of freedom per
+        // element, so the element's level determines whether the cell
+        // sits in the global grid (level == 0) or inside a local grid
+        // refinement (level > 0).  Branching here keeps the global B*
+        // lookup off the LGR-cell path and vice versa; non-LGR runs
+        // never enter the LGR branch.
+        const auto& element = elemCtx.element();
+        const int   level   = element.level();
 
-            const auto be_it = this->blockExtractors_.find(cartesianIdx);
-            const auto bee_it = this->extraBlockExtractors_.find(cartesianIdx);
-            if (be_it == this->blockExtractors_.end() &&
-                bee_it == this->extraBlockExtractors_.end())
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+
+            const std::vector<typename BlockExtractor::Exec>* be_extractors  = nullptr;
+            const std::vector<typename BlockExtractor::Exec>* bee_extractors = nullptr;
+            const std::vector<typename BlockExtractor::Exec>* lgr_extractors = nullptr;
+
+            if (level == 0) {
+                const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
+                const auto be_it  = this->blockExtractors_.find(cartesianIdx);
+                const auto bee_it = this->extraBlockExtractors_.find(cartesianIdx);
+                if (be_it  != this->blockExtractors_.end())      { be_extractors  = &be_it->second; }
+                if (bee_it != this->extraBlockExtractors_.end()) { bee_extractors = &bee_it->second; }
+            }
+            else if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+                // Cells inside a local grid refinement.  LGRs are a
+                // CpGrid-only feature today; ALU and Polyhedral grids
+                // keep element.level() at 0 and never enter this
+                // branch, but the constexpr if filters it out at
+                // compile time on those builds so the CpGrid-specific
+                // getLevelElem() call never has to be instantiated
+                // for an unsupported entity type.  Ownership at the
+                // leaf level is decided by Dune::InteriorEntity; the
+                // global-Cartesian isCartIdxOnThisRank predicate used
+                // at setup time does not apply to LGR cells (they do
+                // not inhabit the global Cartesian space).
+                const auto level_it = this->lgrBlockExtractors_.find(level);
+                if (level_it != this->lgrBlockExtractors_.end() &&
+                    element.partitionType() == Dune::InteriorEntity)
+                {
+                    const int levelCompressed = element.getLevelElem().index();
+                    const int levelCart       = elemCtx.simulator().vanguard()
+                                                    .levelCartesianIndexMapper()
+                                                    .cartesianIndex(levelCompressed, level);
+                    const auto cell_it = level_it->second.find(levelCart);
+                    if (cell_it != level_it->second.end()) {
+                        lgr_extractors = &cell_it->second;
+                    }
+                }
+            }
+
+            if (be_extractors  == nullptr &&
+                bee_extractors == nullptr &&
+                lgr_extractors == nullptr)
             {
                 continue;
             }
@@ -331,12 +413,9 @@ public:
                 elemCtx,
             };
 
-            if (be_it != this->blockExtractors_.end()) {
-                BlockExtractor::process(be_it->second, ectx);
-            }
-            if (bee_it != this->extraBlockExtractors_.end()) {
-                BlockExtractor::process(bee_it->second, ectx);
-            }
+            if (be_extractors  != nullptr) { BlockExtractor::process(*be_extractors,  ectx); }
+            if (bee_extractors != nullptr) { BlockExtractor::process(*bee_extractors, ectx); }
+            if (lgr_extractors != nullptr) { BlockExtractor::process(*lgr_extractors, ectx); }
         }
     }
 
@@ -3095,6 +3174,12 @@ private:
 
         this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, handlers);
 
+        // The LGR-cell extractors reuse the same handler list -- the
+        // physics is identical, only the cell identification differs.
+        // Empty for runs without LB* requests (zero non-LGR cost).
+        this->lgrBlockExtractors_ =
+            BlockExtractor::setupLgrExecMap(this->lgrBlockData_, handlers);
+
         this->extraBlockData_.clear();
         if (reportStepNum > 0 && !isSubStep) {
             // check we need extra block pressures for RPTSCHED
@@ -3118,6 +3203,12 @@ private:
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;
     typename BlockExtractor::ExecMap extraBlockExtractors_;
+
+    // Per-LGR-cell extractor executor map.  Outer key is the grid level,
+    // inner key is the level-local linearised Cartesian cell index, so
+    // the per-DOF lookup in processElementBlockData short-circuits O(1)
+    // on levels with no LB* requests.  Empty for non-LGR runs.
+    typename BlockExtractor::LgrExecMap lgrBlockExtractors_;
 };
 
 } // namespace Opm

@@ -41,6 +41,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -85,10 +86,14 @@ public:
                  const WellTestState&                                 localWellTestState,
                  const InterRegFlowMap&                               interRegFlows,
                  const std::array<FlowsData<double>, 3>&              localFlowsn,
-                 const std::array<FlowsData<double>, 3>&              localFloresn);
+                 const std::array<FlowsData<double>, 3>&              localFloresn,
+                 const std::map<std::tuple<std::string, int, int>, double>& localLgrBlockData);
 
     const std::map<std::pair<std::string, int>, double>& globalBlockData() const
     { return globalBlockData_; }
+
+    const std::map<std::tuple<std::string, int, int>, double>& globalLgrBlockData() const
+    { return globalLgrBlockData_; }
 
     const data::Solution& globalCellData() const
     { return globalCellData_; }
@@ -156,6 +161,7 @@ protected:
     std::vector<int> globalRanks_;
     data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
+    std::map<std::tuple<std::string, int, int>, double> globalLgrBlockData_;
     data::Wells globalWellData_;
     data::WellBlockAveragePressures globalWBPData_;
     data::GroupAndNetworkValues globalGroupAndNetworkData_;
