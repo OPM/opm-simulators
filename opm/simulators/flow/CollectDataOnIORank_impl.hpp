@@ -35,9 +35,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -469,7 +473,31 @@ public:
 // either key shape: write the map size, then every key field (pair or tuple) followed
 // by the value -- one body, thin per-key callers (mirrors the producer-side
 // makeExtractor de-duplication).
-template <class KeyedMap, class MessageBufferType>
+// Constrain the container to a map-like type (key_type/mapped_type +
+// insert_or_assign) rather than hard-coding std::map/std::unordered_map.
+template <typename C>
+concept MapLikeContainer =
+    std::ranges::input_range<C> &&
+    requires {
+        typename C::key_type;
+        typename C::mapped_type;
+    } &&
+    requires (C& container,
+              const typename C::key_type& key,
+              typename C::mapped_type     value)
+    {
+        { container.insert_or_assign(key, std::move(value)) };
+    };
+
+// range_value_t of a map is std::pair<const Key, Value>, so first_type is
+// const-qualified; strip the const so the unpack side can fill a writable key.
+template <MapLikeContainer C>
+using KeyTypeOf = std::remove_const_t<typename std::ranges::range_value_t<C>::first_type>;
+
+template <MapLikeContainer C>
+using MappedTypeOf = typename std::ranges::range_value_t<C>::second_type;
+
+template <MapLikeContainer KeyedMap, class MessageBufferType>
 void packKeyedBlockMap(const KeyedMap& localData, MessageBufferType& buffer)
 {
     const unsigned int size = localData.size();
@@ -480,17 +508,29 @@ void packKeyedBlockMap(const KeyedMap& localData, MessageBufferType& buffer)
     }
 }
 
-template <class KeyedMap, class MessageBufferType>
+template <MapLikeContainer KeyedMap, class MessageBufferType>
 void unpackKeyedBlockMap(KeyedMap& globalData, MessageBufferType& buffer)
 {
     unsigned int size = 0;
     buffer.read(size);
+
+    // std::map has no reserve(); the probe compiles the call out for it, but keeps
+    // the helper correct should a hashed container be substituted later.
+    if constexpr (requires (KeyedMap& m, std::size_t n) { m.reserve(n); }) {
+        globalData.reserve(globalData.size() + size);
+    }
+
     for (unsigned int i = 0; i < size; ++i) {
-        typename KeyedMap::key_type key{};
+        KeyTypeOf<KeyedMap> key{};
         std::apply([&buffer](auto&... field) { (buffer.read(field), ...); }, key);
-        typename KeyedMap::mapped_type value{};
+
+        MappedTypeOf<KeyedMap> value{};
         buffer.read(value);
-        globalData[key] = value;
+
+        // Duplicate keys are not expected here -- they would mean two ranks claim
+        // the same cell. Were one to occur, insert_or_assign() overwrites (last
+        // wins) and try_emplace() would keep the first; we overwrite.
+        globalData.insert_or_assign(std::move(key), std::move(value));
     }
 }
 
