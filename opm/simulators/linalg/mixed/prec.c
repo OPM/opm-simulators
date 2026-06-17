@@ -1109,12 +1109,14 @@ void prec_info(prec_t *P)
 
 void prec_test()
 {
-#if 0
+//#if 0
     // verify 2x2 inverse and matrix-matrix multiplications
     double A[4] = {1,0.2,0.3,4};
     double B[4] = {1,0.2,0.3,4};
     double C[4] = {1,0.2,0.3,4};
     double I[4] = {1,0,0,1};
+
+    mat_show(A,2,"A");
 
     mat2_inv(A,A);
     mat_show(A,2,"A");
@@ -1127,7 +1129,7 @@ void prec_test()
 
     mat2_lmul(A,C);
     mat_show(C,2,"C");
-#endif
+//#endif
 #if 0
     // verify 4x4 inverse and matrix-matrix multiplications
     double AA[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
@@ -1148,6 +1150,7 @@ void prec_test()
     mat4_lmul(AA,CC);
     mat_show(CC,4,"CC");
 #endif
+#if 0
     // verify 4x4 inverse and matrix-matrix multiplications
     double A[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
     double B[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
@@ -1170,5 +1173,6 @@ void prec_test()
 
     mat4_lmul(A,C);
     mat_show(C,4,"C");
+#endif
 }
 

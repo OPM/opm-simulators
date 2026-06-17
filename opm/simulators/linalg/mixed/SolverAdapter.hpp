@@ -63,7 +63,7 @@ public:
         return std::sqrt(this->dot(x, x));
     }
 };
-
+/*
 //! @brief Generalized mixed precision operator interface
 //!
 //! @tparam Matrix the block-matrix used by linear operator
@@ -83,8 +83,10 @@ template <class Matrix, class Vector>
 struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
 {
     using type = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+    //using type = Dune::AssembledLinearOperator<Matrix,Vector,Vector>;
+    //using type = Opm::WellModelMatrixAdapter<Matrix, Vector, Vector>;
 };
-
+*/
 
 //! @brief Wraps mixed precision
 //!
@@ -100,8 +102,8 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
     using AbstractScalarProductType = Dune::ScalarProduct<Vector>;
 
     static constexpr auto block_size = Vector::block_type::dimension;
-    using MixedMatrixType      = Opm::MixedMatrixWrapper<Vector>;
-    using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
+    using MixedMatrixType      = Opm::MixedMatrixWrapper<Vector, block_size>;
+    //using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
     using OptimizedProductType = SeqOptmizedProduct<Vector>;
 
     //! @brief constructor
@@ -164,17 +166,50 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
 
         //initialize mixed operator and optimized scalar product
         double_operator_ = op;
-        if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
+        using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(op->getmat())>>;
+        if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Dune::MatrixAdapter<MatrixType, Vector, Vector>>)
         {
+            //OPM_THROW(std::invalid_argument, "Dune::MatrixAdapter\n");
+            using MixedOperatorType = Dune::MatrixAdapter<MixedMatrixType, Vector, Vector>;
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
+            scalar_product_ = std::make_shared<OptimizedProductType>();
+        }
+        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::GhostLastMatrixAdapter<MatrixType, Vector, Vector, Comm>>)
+        {
+            //OPM_THROW(std::invalid_argument, "Opm::GhostLastMatrixAdapter\n");
+            using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
+            scalar_product_ = sp;
+        }
+        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelMatrixAdapter<MatrixType, Vector, Vector>>)
+        {
+            //OPM_THROW(std::invalid_argument, "Opm::WellModelMatrixAdapter\n");
+            using MixedOperatorType = Opm::WellModelMatrixAdapter<MixedMatrixType, Vector, Vector>;
+            using WellOperatorType  = Opm::LinearOperatorExtra<Vector,Vector>;
+            const WellOperatorType &wellOper = op->getwellOper();
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_, wellOper);
+            scalar_product_ = std::make_shared<OptimizedProductType>();
+            //scalar_product_ = sp;
+        }
+        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelGhostLastMatrixAdapter<MatrixType, Vector, Vector, true>>)
+        {
+            OPM_THROW(std::invalid_argument, "Opm::WellModelGhostLastMatrixAdapter\n");
+        }
+/*
+        else if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
+        {
+            //mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,op->wellOper_);
+            using MixedOperatorType = Dune::MatrixAdapter<MixedMatrixType, Vector, Vector>;
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
             scalar_product_ = std::make_shared<OptimizedProductType>();
         }
         else
         {
+            using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
             scalar_product_ = sp;
         }
-
+*/
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
                                                               *mixed_operator_,
@@ -183,6 +218,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                                                               tol, // desired residual reduction factor
                                                               maxiter, // maximum number of iterations
                                                               verbosity);
+
     }
 
     virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
@@ -205,12 +241,13 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
     virtual Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};
 
     private:
-    using AbstractSolverType = Dune::InverseOperator<Vector,Vector>;
-
+    using AbstractSolverType   = Dune::InverseOperator<Vector,Vector>;
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MixedMatrixType,Vector,Vector>;
 
     Operator *double_operator_;
     std::shared_ptr<AbstractSolverType> solver_;
-    std::shared_ptr<MixedOperatorType> mixed_operator_;
+    //std::shared_ptr<MixedOperatorType> mixed_operator_;
+    std::shared_ptr<AbstractOperatorType> mixed_operator_;
     std::shared_ptr<MixedMatrixType> mixed_matrix_;
     std::shared_ptr<AbstractScalarProductType> scalar_product_;
     double const *double_data_;
