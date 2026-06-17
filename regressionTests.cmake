@@ -2681,6 +2681,63 @@ add_test_compareECLFiles(
     --solver-max-time-step-in-days=15
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    cecon_01
+  FILENAME
+    CECON-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    cecon_02
+  FILENAME
+    CECON-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    cecon_03
+  FILENAME
+    CECON-03
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(
     CASENAME
