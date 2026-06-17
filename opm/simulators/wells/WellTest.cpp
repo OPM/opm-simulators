@@ -45,8 +45,6 @@
 #include <cassert>
 #include <chrono>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 
@@ -65,9 +63,7 @@ std::string ceconDateString(const std::time_t start_time, const double sim_time)
     const auto duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
         std::chrono::duration<double>(sim_time));
     const std::time_t cur_time = std::chrono::system_clock::to_time_t(start_tp + duration);
-    std::ostringstream ss;
-    ss << std::put_time(std::localtime(&cur_time), "%d-%b-%Y");
-    return ss.str();
+    return fmt::format("{:%d-%b-%Y}", fmt::localtime(cur_time));
 }
 
 } // anonymous namespace
@@ -651,7 +647,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
             "at time {:.2f} {} (date = {})",
             unit_system.from_si(UnitSystem::measure::time, simulation_time),
             unit_system.name(UnitSystem::measure::time),
-            ceconDateString(start_time, simulation_time));
+            dateString(start_time, simulation_time));
 
         const std::string ratio_unit = unit_system.name(ratio_measure);
         const std::string unit_suffix = ratio_unit.empty() ? std::string{}
