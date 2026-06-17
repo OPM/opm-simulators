@@ -189,7 +189,7 @@ update ()
                 mat_lmul(scale,U->dbl+k*NN);
             }
         }
-        //prec_test();
+        //prec_test(); getchar();
     }
 
     prec_downcast(prec_);

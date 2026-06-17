@@ -36,6 +36,25 @@ void mat2_rmul(double *A, double const *B)
     for(int k=0;k<4;k++) A[k]=M[k];
 }
 
+
+/*
+ 0 2 | A C   0A  2B
+ 1 3 | B D   1A  3B   0A 1A 2B 3B  00 00 01 01 10 10 11 11
+
+*/
+/*
+void mat2_rmul(double *A, double const *B)
+{
+    // load matrices
+    __m256d vA, vB, vC;
+    vA = _mm256_loadu_pd(A);
+    vB = _mm256_loadu_pd(B);
+    vC = vA*_mm256_permute4x64_pd(vB,0x50);// + vA*_mm256_permute4x64_pd(vB,0x50);       // 0b01010000
+    //vC = _mm256_permute4x64_pd(vB,0xFA);// + vA*_mm256_permute4x64_pd(vB,0x50);       // 0b01010000
+    __m128d va = _mm256_extractf128_pd(vC,0) + _mm256_extractf128_pd(vC,1);
+    _mm_storeu_pd(A,va);
+}
+*/
 void mat2_lmul(double const *A, double *B)
 {
     double M[4];
@@ -81,7 +100,7 @@ void mat4_inv(double *invA, const double *A)
 
     for(int k=0;k<4;k++)
     {
-        double scale=-1.0/M[5*k];        
+        double scale=-1.0/M[5*k];
         for(int i=0;i<4;i++) M[i+4*k] *= i==k?0:scale; // scale column k
         for(int j=0;j<4;j++)
         {
