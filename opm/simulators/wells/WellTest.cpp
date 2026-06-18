@@ -43,7 +43,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <ctime>
 #include <string>
 #include <unordered_set>
@@ -55,15 +54,6 @@ std::string dateString(const std::time_t start_time, const double sim_time)
 {
     const std::time_t cur_time = Opm::TimeService::advance(start_time, sim_time);
     return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
-}
-
-std::string ceconDateString(const std::time_t start_time, const double sim_time)
-{
-    const auto start_tp = std::chrono::system_clock::from_time_t(start_time);
-    const auto duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
-        std::chrono::duration<double>(sim_time));
-    const std::time_t cur_time = std::chrono::system_clock::to_time_t(start_tp + duration);
-    return fmt::format("{:%d-%b-%Y}", fmt::localtime(cur_time));
 }
 
 } // anonymous namespace
