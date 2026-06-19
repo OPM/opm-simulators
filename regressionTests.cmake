@@ -790,6 +790,25 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    base_model_1_gridfile
+  FILENAME
+    BASE_MODEL_1_GRIDFILE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    model1
+  TEST_ARGS
+    --unstructured-grid-file-name=${OPM_TESTS_ROOT}/model1/base.grid
+)
+
+add_test_compareECLFiles(
+  CASENAME
     faults_model_1
   FILENAME
     FAULTS_MODEL_1
