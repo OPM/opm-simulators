@@ -421,13 +421,17 @@ namespace Opm {
         ValueType computeSegmentEnergy(int seg) const;
 
         // Convert per-component surface volumetric rates to a phase reservoir
-        // volumetric rate using the upwind segment fluid state. Handles the
+        // volumetric rate using @p fs as the upwind fluid state. Handles the
         // dissolved-gas/vaporized-oil coupling (rs/rv). When the determinant
         // (1 - rs*rv) is non-positive, falls back to the no-dissolution case
         // and logs a debug message tagged with @p context.
+        // @p fs may be either a wellbore SegmentFluidState (properties already
+        // EvalWell) or a reservoir-cell intensive-quantity fluid state (Eval,
+        // extended to EvalWell on the fly).
         // @return the reservoir volumetric rate of @p phaseIdx.
+        template <typename FluidStateT>
         EvalWell surfaceToReservoirRate(unsigned phaseIdx,
-                                        const SegmentFluidState<EvalWell>& segment_fs,
+                                        const FluidStateT& fs,
                                         const std::vector<EvalWell>& surface_rates,
                                         int seg,
                                         std::string_view context,

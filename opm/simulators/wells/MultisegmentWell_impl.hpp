@@ -2585,14 +2585,14 @@ namespace Opm
             }
         }
 
+        typename FluidSystem::template ParameterCache<ValueType> paramCache;
+        paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
             fluid_state.setSaturation(phaseIdx, saturations[phaseIdx] / sum_saturation);
 
-            typename FluidSystem::template ParameterCache<ValueType> paramCache;
-            paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
             paramCache.updatePhase(fluid_state, phaseIdx);
             fluid_state.setDensity(phaseIdx, FluidSystem::density(fluid_state, paramCache, phaseIdx));
             if constexpr (has_energy) {
@@ -2624,17 +2624,28 @@ namespace Opm
     }
 
     template <typename TypeTag>
+    template <typename FluidStateT>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     surfaceToReservoirRate(const unsigned phaseIdx,
-                           const SegmentFluidState<EvalWell>& segment_fs,
+                           const FluidStateT& fs,
                            const std::vector<EvalWell>& surface_rates,
                            const int seg,
                            const std::string_view context,
                            DeferredLogger& deferred_logger) const
     {
+        // A wellbore SegmentFluidState already stores EvalWell properties; a reservoir-cell
+        // fluid state stores reservoir Eval and must be extended to the well derivative space.
+        auto asEvalWell = [this](const auto& v) -> EvalWell {
+            if constexpr (std::is_same_v<std::decay_t<decltype(v)>, EvalWell>) {
+                return v;
+            } else {
+                return this->extendEval(v);
+            }
+        };
+
         const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-        const EvalWell& invB = segment_fs.invB(phaseIdx);
+        const EvalWell invB = asEvalWell(fs.invB(phaseIdx));
         const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                                && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
         if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
@@ -2642,8 +2653,8 @@ namespace Opm
         }
 
         // remove dissolved gas and vaporized oil
-        const EvalWell rs = segment_fs.Rs();
-        const EvalWell rv = segment_fs.Rv();
+        const EvalWell rs = asEvalWell(fs.Rs());
+        const EvalWell rv = asEvalWell(fs.Rv());
         const EvalWell d = 1. - rs * rv;
         if (d <= 0.0) {
             deferred_logger.debug(
@@ -2740,33 +2751,9 @@ namespace Opm
                 energy_flux += cq_r_thermal * seg_fs.enthalpy(phaseIdx) * seg_fs.density(phaseIdx);
             } else {
                 // producing connection: use reservoir cell fluid properties
-                const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                                       && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                const EvalWell invB = this->extendEval(fs.invB(phaseIdx));
-                if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
-                    cq_r_thermal = cq_s[activeCompIdx] / invB;
-                } else {
-                    const EvalWell rs = this->extendEval(fs.Rs());
-                    const EvalWell rv = this->extendEval(fs.Rv());
-                    const EvalWell d = 1. - rs * rv;
-                    if (d <= 0.0) {
-                        deferred_logger.debug(
-                            fmt::format("Problematic d value {} obtained for well {}"
-                                        " during energy assembly with rs {}, rv {}."
-                                        " Continue as if no dissolution (rs = 0) and"
-                                        " vaporization (rv = 0) for this connection.",
-                                        d, this->name(), rs, rv));
-                        cq_r_thermal = cq_s[activeCompIdx] / invB;
-                    } else {
-                        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                        const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                        if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                            cq_r_thermal = (cq_s[gasCompIdx] - rs * cq_s[oilCompIdx]) / (d * invB);
-                        } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
-                            cq_r_thermal = (cq_s[oilCompIdx] - rv * cq_s[gasCompIdx]) / (d * invB);
-                        }
-                    }
-                }
+                cq_r_thermal = this->surfaceToReservoirRate(phaseIdx, fs, cq_s,
+                                                            seg, "energy assembly (producing)",
+                                                            deferred_logger);
                 energy_flux += cq_r_thermal * this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
             }
         }
@@ -2855,6 +2842,7 @@ namespace Opm
 
         ValueType result {0.};
         const auto& segment_fluid_state = this->segment_fluid_state_[seg];
+        const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -2862,7 +2850,6 @@ namespace Opm
             const auto u = obtain(segment_fluid_state.internalEnergy(phaseIdx));
             const auto s = obtain(segment_fluid_state.saturation(phaseIdx));
             const auto rho = obtain(segment_fluid_state.density(phaseIdx));
-            const Scalar segment_volume = this->wellEcl().getSegments()[seg].volume();
             result += segment_volume * u * s * rho;
         }
         return result;
