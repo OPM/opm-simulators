@@ -207,6 +207,11 @@ public:
         return globalcell_;
     }
 
+    bool gridFromFile() const
+    {
+        return cellCentroidsFromGrid_;
+    }
+
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
          return elemIndex;
     }

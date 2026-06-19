@@ -324,6 +324,11 @@ public:
         }
     }
 
+    bool gridFromFile() const
+    {
+        return cellCentroidsFromGrid_;
+    }
+
     const std::vector<int>& globalCell()
     {
         return this->grid().globalCell();
@@ -351,7 +356,8 @@ protected:
                                                     getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
                                                     getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
-                                                    getPropValue<TypeTag, Properties::EnableDispersion>()));
+                                                    getPropValue<TypeTag, Properties::EnableDispersion>(),
+                                                    cellCentroidsFromGrid_));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
     }
 

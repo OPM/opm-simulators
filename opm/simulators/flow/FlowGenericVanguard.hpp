@@ -145,6 +145,11 @@ public:
      */
     static std::string canonicalDeckPath(const std::string& caseName);
 
+    bool gridFromFile() const
+    {
+        return false;
+    }
+
     /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
