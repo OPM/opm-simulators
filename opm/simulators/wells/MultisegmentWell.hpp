@@ -390,7 +390,9 @@ namespace Opm {
                                          const int local_perf_index,
                                          DeferredLogger& deferred_logger);
 
-        void updateWellHeadCondition(const Simulator& simulator, DeferredLogger& deferred_logger);
+        void updateWellHeadCondition(const Simulator& simulator,
+                                     const Scalar first_perf_temperature,
+                                     DeferredLogger& deferred_logger);
 
         void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
 

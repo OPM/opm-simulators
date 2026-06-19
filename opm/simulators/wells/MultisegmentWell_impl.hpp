@@ -2006,7 +2006,7 @@ namespace Opm
                 if constexpr (has_energy) {
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
                     if (top_injecting_segment) {
-                        this->updateWellHeadCondition(simulator, deferred_logger);
+                        this->updateWellHeadCondition(simulator, std::get<0>(info), deferred_logger);
                     }
 
                     // Energy carried by fluid flowing out of this segment toward its outlet.
@@ -2796,7 +2796,9 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator, DeferredLogger& deferred_logger)
+    MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator,
+                                                       const Scalar first_perf_temperature,
+                                                       DeferredLogger& deferred_logger)
     {
         if (!this->well_ecl_.isInjector()) return;
 
@@ -2805,7 +2807,12 @@ namespace Opm
         // temperature should be the injecting temperature
         // pressure should be the BHP
         const EvalWell bhp = this->primary_variables_.getSegmentPressure(0);
-        const EvalWell inj_temperature = this->well_ecl_.inj_temperature();
+        // Use WINJTEMP when set, otherwise the reservoir temperature at the first
+        // perforation (as in WellState::initSingleInjector). Calling inj_temperature()
+        // unconditionally would warn every assembly iteration, and throw with no default.
+        const EvalWell inj_temperature = this->well_ecl_.hasInjTemperature()
+            ? EvalWell{this->well_ecl_.inj_temperature()}
+            : EvalWell{first_perf_temperature};
 
         const auto controls = this->well_ecl_.injectionControls(simulator.vanguard().summaryState());
         switch (controls.injector_type) {
