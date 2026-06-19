@@ -527,9 +527,16 @@ template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
 assignPoreVolume(const unsigned globalDofIdx,
-                 const Scalar   value)
+                 const Scalar   poreVolume,
+                 const Scalar   dynamicPoreVolume)
 {
-    this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] = value;
+    if (this->has(Inplace::Phase::PoreVolume)) {
+        this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] = poreVolume;
+    }
+
+    if (this->has(Inplace::Phase::DynamicPoreVolume)) {
+        this->fip_[Inplace::Phase::DynamicPoreVolume][globalDofIdx] = dynamicPoreVolume;
+    }
 }
 
 template<class T> using FS = BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>;
