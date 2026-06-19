@@ -43,7 +43,10 @@
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/parallel/threadmanager.hpp>
+
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
 #include <algorithm>
 #include <array>
@@ -55,6 +58,7 @@
 #include <initializer_list>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
