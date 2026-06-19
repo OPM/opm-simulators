@@ -200,6 +200,10 @@ private:
         pt.put("relax.type", relaxation);
         if (coarsening.find("aggregation") != std::string::npos) {
             pt.put("coarsening.aggr.eps_strong", prm_.get<double>("strong_threshold", 0.08));
+        } else if (coarsening == "ruge_stuben") {
+            // Classical AMG strong-connection threshold (cf. Hypre BoomerAMG's
+            // strong_threshold, typically ~0.5). AMGCL's default is 0.25.
+            pt.put("coarsening.eps_strong", prm_.get<double>("strong_threshold", 0.25));
         }
         pt.put("npre", prm_.get<int>("npre", 1));
         pt.put("npost", prm_.get<int>("npost", 1));
