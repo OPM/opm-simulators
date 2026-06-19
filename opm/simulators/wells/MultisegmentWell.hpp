@@ -27,6 +27,7 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
+#include <limits>
 #include <string_view>
 
 namespace Opm {
@@ -65,6 +66,12 @@ namespace Opm {
         using Base::Gas;
 
         using typename Base::Scalar;
+
+        // True when the composition switch primary variable is active, i.e. both oil and
+        // gas phases are present so that Rs/Rv are stored in the fluid state. Matches the
+        // fluid state's enableDissolution flag (see WellInterface::BlackOilFluidStateType).
+        static constexpr bool compositionSwitchEnabled =
+            Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
         // Scaling factor applied to the well-side energy equation so that its residual
         // lands on the same numerical scale as the mass-balance equations (the raw
