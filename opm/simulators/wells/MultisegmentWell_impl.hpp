@@ -1867,6 +1867,9 @@ namespace Opm
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
+        if constexpr (has_energy) {
+            ws.energy_rate = 0.0;
+        }
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.
@@ -1939,6 +1942,10 @@ namespace Opm
                 // assembling the energy equation for the perforation if needed
                 if constexpr (has_energy) {
                     assemblePerforationEnergyEq(int_quants, cq_s, seg, local_perf_index, deferred_logger);
+                    // accumulate the well energy rate from the connection source term so that
+                    // summary vectors such as W*RHEA/W*IRHEA/W*PRHEA are reported, mirroring
+                    // the standard-well handling in StandardWell::assembleWellEqWithoutIterationImpl.
+                    ws.energy_rate += getValue(this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx]);
                 }
             }
         }
@@ -1946,6 +1953,9 @@ namespace Opm
         {
             const auto& comm = this->parallel_well_info_.communication();
             comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
+            if constexpr (has_energy) {
+                ws.energy_rate = comm.sum(ws.energy_rate);
+            }
         }
 
         if (this->parallel_well_info_.communication().size() > 1) {
