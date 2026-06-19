@@ -115,7 +115,7 @@ __global__ void co2GasPvtInternalEnergy(GpuViewCo2Pvt gpuViewCo2Pvt, Evaluation*
 
 // Kernel using a BrineCo2Pvt object on a GPU
 __global__ void brineCo2PvtInternalEnergy(GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt, Evaluation* temp, Evaluation* pressure, Evaluation* rs, Evaluation* saltConcentration, double* result) {
-    *result = gpuViewBrineCo2Pvt.internalEnergy(1, *temp, *pressure, *rs, *saltConcentration).value();
+    *result = gpuViewBrineCo2Pvt.internalEnergy(1, *temp, *pressure, *rs, *saltConcentration, Evaluation(0.0)).value();
 }
 
 // Helper function to launch a kernel and retrieve the result on the CPU to reduce code duplicatoin
@@ -283,7 +283,7 @@ BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     std::vector<double> salinities = {0.2, 0.3, 0.4};
 
     CpuBrineCo2Pvt cpuBrineCo2Pvt(salinities);
-    double internalEnergyReference = cpuBrineCo2Pvt.internalEnergy(1, temp, pressure, rs, saltConcentration).value();
+    double internalEnergyReference = cpuBrineCo2Pvt.internalEnergy(1, temp, pressure, rs, saltConcentration, Evaluation(0.0)).value();
 
     GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu(cpuBrineCo2Pvt);
     GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view(gpuBufBrineCo2Pvt);
