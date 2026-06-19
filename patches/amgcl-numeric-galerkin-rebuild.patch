@@ -1,0 +1,142 @@
+# AMGCL fast numeric-Galerkin rebuild patch
+# Base upstream commit: 28296c2a95894b3732a89b2f75f257a957b09857 (Merge pull request #315 from jeffdaily/moat-port)
+# Apply from the AMGCL source root with:  git apply patches/amgcl-numeric-galerkin-rebuild.patch
+#                                   or:   patch -p1 < patches/amgcl-numeric-galerkin-rebuild.patch
+#
+diff --git a/amgcl/amg.hpp b/amgcl/amg.hpp
+index e58a5f5..f619f0a 100644
+--- a/amgcl/amg.hpp
++++ b/amgcl/amg.hpp
+@@ -33,6 +33,9 @@ THE SOFTWARE.
+ 
+ #include <iostream>
+ #include <iomanip>
++#include <cstdio>
++#include <cstdlib>
++#include <chrono>
+ #include <list>
+ #include <memory>
+ 
+@@ -329,6 +332,73 @@ class amg {
+ 
+             std::shared_ptr<relax_type> relax;
+ 
++            // ---- OPM patch: cached numeric-only Galerkin (A_c = R*A*P) ----
++            // On the first build we record the coarse sparsity (taken from AMGCL's
++            // own coarse operator) and a "restriction map": for each coarse nonzero,
++            // the list of (R_val*P_val, index-into-fine-A.val) triples. Re-setups
++            // (same P,R structure, changed A values) then recompute coarse values
++            // only, parallel over coarse nonzeros (no atomics) — instead of a full
++            // symbolic+numeric SpGEMM. Valid for plain-Galerkin coarsenings
++            // (smoothed_aggregation, ruge_stuben) and scalar value_type.
++            struct galerkin_cache {
++                std::vector<ptr_type>   ptr;   // coarse row ptr (Nc+1)
++                std::vector<col_type>   col;   // coarse cols
++                std::vector<ptr_type>   off;   // triple offsets per coarse nz (nnz+1)
++                std::vector<value_type> coef;  // R_val * P_val
++                std::vector<ptr_type>   aidx;  // index into fine A.val
++            };
++            std::shared_ptr<galerkin_cache> gcache;
++
++            // Build the restriction map against an existing coarse matrix Ac (its
++            // sparsity, e.g. produced by C.coarse_operator) using fine A, P, R.
++            void build_galerkin_cache(const build_matrix &A, const build_matrix &P,
++                                      const build_matrix &R, const build_matrix &Ac)
++            {
++                if (std::getenv("OPM_AMGCL_DBG")) std::fprintf(stderr, "[amgcl-patch] build_galerkin_cache Nc=%zu\n", Ac.nrows);
++                gcache = std::make_shared<galerkin_cache>();
++                galerkin_cache &g = *gcache;
++                const ptrdiff_t Nc = static_cast<ptrdiff_t>(Ac.nrows);
++                const ptr_type nnz = Ac.ptr[Ac.nrows];
++                g.ptr.assign(Ac.ptr, Ac.ptr + Ac.nrows + 1);
++                g.col.assign(Ac.col, Ac.col + nnz);
++                g.off.assign(nnz + 1, 0);
++                std::vector<ptrdiff_t> colpos(Ac.ncols, -1);
++                for (ptrdiff_t I = 0; I < Nc; ++I) {
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = t;
++                    for (ptr_type rp = R.ptr[I]; rp < R.ptr[I+1]; ++rp) { col_type k = R.col[rp];
++                        for (ptr_type ap = A.ptr[k]; ap < A.ptr[k+1]; ++ap) { col_type j = A.col[ap];
++                            for (ptr_type pp = P.ptr[j]; pp < P.ptr[j+1]; ++pp) { ptrdiff_t e = colpos[P.col[pp]]; if (e >= 0) g.off[e+1]++; } } }
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = -1;
++                }
++                for (ptr_type e = 0; e < nnz; ++e) g.off[e+1] += g.off[e];
++                g.coef.resize(g.off[nnz]); g.aidx.resize(g.off[nnz]);
++                std::vector<ptr_type> cur(g.off.begin(), g.off.end() - 1);
++                for (ptrdiff_t I = 0; I < Nc; ++I) {
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = t;
++                    for (ptr_type rp = R.ptr[I]; rp < R.ptr[I+1]; ++rp) { col_type k = R.col[rp]; value_type rv = R.val[rp];
++                        for (ptr_type ap = A.ptr[k]; ap < A.ptr[k+1]; ++ap) { col_type j = A.col[ap]; ptr_type aix = ap;
++                            for (ptr_type pp = P.ptr[j]; pp < P.ptr[j+1]; ++pp) { ptrdiff_t e = colpos[P.col[pp]]; if (e >= 0) { ptr_type d = cur[e]++; g.coef[d] = rv * P.val[pp]; g.aidx[d] = aix; } } } }
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = -1;
++                }
++            }
++
++            // Numeric-only Galerkin: recompute coarse values from current fine A.
++            std::shared_ptr<build_matrix> galerkin_numeric(const build_matrix &A) const {
++                static bool dbg_once = false;
++                if (!dbg_once && std::getenv("OPM_AMGCL_DBG")) { dbg_once = true; std::fprintf(stderr, "[amgcl-patch] galerkin_numeric USED\n"); }
++                const galerkin_cache &g = *gcache;
++                const ptrdiff_t Nc = static_cast<ptrdiff_t>(g.ptr.size()) - 1;
++                const ptr_type nnz = g.ptr[Nc];
++                std::vector<value_type> vals(nnz);
++#pragma omp parallel for schedule(static)
++                for (ptrdiff_t e = 0; e < static_cast<ptrdiff_t>(nnz); ++e) {
++                    value_type s = value_type();
++                    for (ptr_type t = g.off[e]; t < g.off[e+1]; ++t) s += g.coef[t] * A.val[g.aidx[t]];
++                    vals[e] = s;
++                }
++                return std::make_shared<build_matrix>(static_cast<size_t>(Nc), static_cast<size_t>(Nc), g.ptr, g.col, vals);
++            }
++
+             size_t bytes() const {
+                 size_t b = 0;
+ 
+@@ -394,8 +464,10 @@ class amg {
+                 AMGCL_TOC("move to backend");
+ 
+                 AMGCL_TIC("coarse operator");
+-                A = C.coarse_operator(*A, *P, *R);
++                std::shared_ptr<build_matrix> Afine = A;
++                A = C.coarse_operator(*Afine, *P, *R);
+                 sort_rows(*A);
++                if (allow_rebuild) build_galerkin_cache(*Afine, *P, *R, *A);
+                 AMGCL_TOC("coarse operator");
+ 
+                 return A;
+@@ -429,22 +501,34 @@ class amg {
+                     AMGCL_TOC("move to backend");
+                 }
+ 
++                const bool dbg = std::getenv("OPM_AMGCL_DBG") != nullptr;
+                 if(relax) {
+                     AMGCL_TIC("relaxation");
++                    auto rt0 = std::chrono::steady_clock::now();
+                     relax = std::make_shared<relax_type>(*A, prm.relax, bprm);
++                    if (dbg) { static bool o=false; if(!o){o=true; std::fprintf(stderr,"[amgcl-patch] relax rebuild %.3f ms (rows=%zu)\n", std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-rt0).count(), backend::rows(*A)); } }
+                     AMGCL_TOC("relaxation");
+                 }
+ 
+                 if (solve) {
+                     AMGCL_TIC("coarsest level");
++                    auto st0 = std::chrono::steady_clock::now();
+                     solve = Backend::create_solver(A, bprm);
++                    if (dbg) { static bool o=false; if(!o){o=true; std::fprintf(stderr,"[amgcl-patch] coarse direct-solver rebuild %.3f ms (rows=%zu)\n", std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-st0).count(), backend::rows(*A)); } }
+                     AMGCL_TOC("coarsest level");
+                 }
+ 
+                 if (bP && bR) {
+                     AMGCL_TIC("coarse operator");
+-                    A = C.coarse_operator(*A, *bP, *bR);
+-                    sort_rows(*A);
++                    if (gcache) {
++                        // OPM patch: numeric-only re-setup; result already matches the
++                        // first-build coarse sparsity/order, so do NOT sort (would break
++                        // the next level's cached fine-index map).
++                        A = galerkin_numeric(*A);
++                    } else {
++                        A = C.coarse_operator(*A, *bP, *bR);
++                        sort_rows(*A);
++                    }
+                     AMGCL_TOC("coarse operator");
+                 }
+ 
