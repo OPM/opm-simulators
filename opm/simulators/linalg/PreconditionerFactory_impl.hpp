@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 
 #include <opm/simulators/linalg/DILU.hpp>
+#include <opm/simulators/linalg/DILU2.hpp>
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>

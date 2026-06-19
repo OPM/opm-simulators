@@ -1104,6 +1104,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/combinedcriterion.hh
   opm/simulators/linalg/convergencecriterion.hh
   opm/simulators/linalg/DILU.hpp
+  opm/simulators/linalg/DILU2.hpp
   opm/simulators/linalg/domesticoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/elementborderlistfromgrid.hh
   opm/simulators/linalg/exportSystem.hpp

@@ -163,6 +163,10 @@ struct StandardPreconditioners
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
+        F::addCreator("dilu2", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return wrapBlockPreconditioner<MultithreadDILU2<M, V, V>>(comm, op.getmat());
+        });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);

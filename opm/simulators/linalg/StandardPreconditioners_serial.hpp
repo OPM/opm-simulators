@@ -88,6 +88,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
         });
+        F::addCreator("dilu2", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return std::make_shared<MultithreadDILU2<M, V, V>>(op.getmat());
+        });
         F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);
