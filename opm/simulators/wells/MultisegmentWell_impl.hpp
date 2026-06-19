@@ -2496,7 +2496,7 @@ namespace Opm
 
             switch (phaseIdx) {
                 case FluidSystem::oilPhaseIdx: {
-                    if constexpr (Indices::compositionSwitchIdx >= 0) {
+                    if constexpr (compositionSwitchEnabled) {
                         if (both_oil_gas) {
                             // starting with saturated rs value
                             ValueType rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
@@ -2513,7 +2513,7 @@ namespace Opm
                     break;
                 }
                 case FluidSystem::gasPhaseIdx: {
-                    if constexpr (Indices::compositionSwitchIdx >= 0) {
+                    if constexpr (compositionSwitchEnabled) {
                         if (both_oil_gas) {
                             // starting with saturated rv value
                             ValueType rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
