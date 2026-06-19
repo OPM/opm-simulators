@@ -1098,6 +1098,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/aquifers/SupportsFaceTag.hpp
   opm/simulators/linalg/AbstractISTLSolver.hpp
+  opm/simulators/linalg/AmgclPreconditioner.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh

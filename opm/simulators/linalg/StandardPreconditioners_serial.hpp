@@ -92,6 +92,15 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU2<M, V, V>>(op.getmat());
         });
+#if HAVE_AMGCL
+        // AMGCL OpenMP AMG, scalar (1x1) only -> CPR pressure stage. Shared-memory
+        // (single process) use; not registered in the MPI factory.
+        if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
+            F::addCreator("amgcl", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+                return std::make_shared<Opm::AmgclPreconditioner<M, V, V>>(op.getmat(), prm);
+            });
+        }
+#endif
         F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);

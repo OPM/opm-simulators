@@ -267,6 +267,16 @@ struct StandardPreconditioners
                     });
             }
 #endif
+#if HAVE_AMGCL
+            // AMGCL (scalar/pressure only) under MPI = per-rank AMGCL wrapped as a
+            // block (restricted additive Schwarz) preconditioner. Shared-memory AMG
+            // on each rank's local pressure block + the usual overlap communication.
+            if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
+                F::addCreator("amgcl", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+                    return wrapBlockPreconditioner<Opm::AmgclPreconditioner<M, V, V>>(comm, op.getmat(), prm);
+                });
+            }
+#endif
         }
 
 
