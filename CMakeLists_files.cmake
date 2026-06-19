@@ -477,6 +477,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/models/test_tasklets_failure.cpp
   tests/test_ALQState.cpp
   tests/test_aquifergridutils.cpp
+  tests/test_aqantrc_flow_keyword.cpp
   tests/test_blackoil_amg.cpp
   tests/test_blackoilprimaryvariables.cpp
   tests/test_convergenceoutputconfiguration.cpp

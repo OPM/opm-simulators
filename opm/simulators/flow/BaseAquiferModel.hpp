@@ -50,6 +50,7 @@ class BaseAquiferModel
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     explicit BaseAquiferModel(Simulator& simulator)
@@ -114,6 +115,8 @@ public:
                      unsigned) const
     { }
 
+    Scalar cachedConnectionInfluxRate(unsigned) const
+    { return Scalar{0}; }
 
     /*!
      * \brief This method is called after each Newton-Raphson successful iteration.
