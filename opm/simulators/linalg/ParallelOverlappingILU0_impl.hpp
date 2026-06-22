@@ -207,15 +207,25 @@ size_t set_interiorSize(size_t N, size_t interiorSize, const Dune::OwnerOverlapC
         return 0;
 
     size_t new_is = 0;
+    bool anyOwner = false;
     for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx)
     {
         if (idx->local().attribute()==1)
         {
+            anyOwner = true;
             auto loc = idx->local().local();
             if (loc > new_is) {
                 new_is = loc;
             }
         }
+    }
+    // An owner local index of new_is implies new_is+1 interior rows (owners are
+    // ordered first). But on a partition with no owner cells (e.g. an empty/
+    // zero-row sub-system on this rank, which an LGR distribution can produce)
+    // there are zero interior rows; returning new_is+1 == 1 would exceed N == 0
+    // and trip the interiorSize_ <= A.N() assertion. Guard the empty case.
+    if (!anyOwner) {
+        return 0;
     }
     return new_is + 1;
 }
