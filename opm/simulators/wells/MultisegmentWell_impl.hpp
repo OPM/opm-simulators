@@ -274,6 +274,10 @@ namespace Opm
             this->linSys_.recoverSolutionWell(x, xw);
 
             updateWellState(simulator, xw, groupStateHelper, well_state);
+            if constexpr (has_energy) {
+                const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+                updateSegmentFluidState(info, deferred_logger);
+            }
         }
         catch (const NumericalProblem& exp) {
             // Add information about the well and log to deferred logger
