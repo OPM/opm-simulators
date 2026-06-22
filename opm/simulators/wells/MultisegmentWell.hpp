@@ -60,7 +60,6 @@ namespace Opm {
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::has_energy;
-        using Base::has_brine;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
