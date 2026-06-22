@@ -63,6 +63,113 @@ public:
         return std::sqrt(this->dot(x, x));
     }
 };
+
+
+template<class Vector, class Comm>
+class GhostLastScalarProduct : public ScalarProduct<Vector>
+{
+    public:
+
+    static constexpr auto block_size = Vector::block_type::dimension;
+
+    //! \brief The type of the vector to compute the scalar product on.
+    //!
+    //! E.g. BlockVector or another type fulfilling the ISTL
+    //! vector interface.
+
+    /*!
+    * \param com The communication object for syncing overlap and copy
+    * data points.
+    * \param cat parallel solver category (nonoverlapping or overlapping)
+    */
+    GhostLastScalarProduct (std::shared_ptr<const Comm> com, SolverCategory::Category cat)
+        : _communication(com), _category(cat)
+    {
+        count_ = getLocalCount();
+    }
+
+    /*!
+    * \param com The communication object for syncing overlap and copy
+    * data points.
+    * \param cat parallel solver category (nonoverlapping or overlapping)
+    * \note if you use this constructor you have to make sure com stays alive
+    */
+    GhostLastScalarProduct (const Comm& com, SolverCategory::Category cat)
+        : GhostLastScalarProduct(stackobject_to_shared_ptr(com), cat)
+    {}
+
+    /*! \brief Dot product of two vectors.
+    It is assumed that the vectors are consistent on the interior+border
+    partition.
+    */
+    void setLocalCount(int count){ count_ = count; }
+
+    virtual double dot (const Vector& vx, const Vector& vy) const override
+    {
+
+        // access underlying data
+        double const *x = &vx[0][0];
+        double const *y = &vy[0][0];
+
+        // total array length
+        int NN = block_size*count_;
+
+        //double result(0);
+
+        // unroll loop in multiples of 8
+        int n=NN/8;
+        int N=8*n;
+        double agg[8];
+        for(int i=0;i<8;i++) agg[i]=0.0;
+        for(int i=0;i<N;i+=8) for(int j=0;j<8;j++) agg[j]+=x[i+j]*y[i+j];
+        for(int j=0;j<4;j++) agg[j]+=agg[j+4];
+        for(int j=0;j<2;j++) agg[j]+=agg[j+2];
+        for(int j=0;j<1;j++) agg[j]+=agg[j+1];
+
+        // trailing end
+        for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
+
+        // Global summation
+        auto cc = _communication->communicator();
+        double result = cc.sum(agg[0]);
+        return result;
+    }
+
+    /*! \brief Norm of a right-hand side vector.
+    The vector must be consistent on the interior+border partition
+    */
+    virtual double norm (const Vector& x) const override
+    {
+        return sqrt(dot(x,x));
+    }
+
+    //! Category of the scalar product (see SolverCategory::Category)
+    virtual SolverCategory::Category category() const override
+    {
+        return _category;
+    }
+
+    private:
+    std::shared_ptr<const Comm> _communication;
+    SolverCategory::Category _category;
+    int count_;
+
+    //int getLocalCount(const Comm& comm) const
+    int  getLocalCount() const
+    {
+        int count = 0;
+        // Loop over index set
+        auto indexSet = _communication->indexSet();
+        for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx) {
+            if (idx->local().attribute()==1) count++; // count non-local indices
+        }
+        return count;
+    }
+
+};
+
+
+
 /*
 //! @brief Generalized mixed precision operator interface
 //!
@@ -104,7 +211,6 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
     static constexpr auto block_size = Vector::block_type::dimension;
     using MixedMatrixType      = Opm::MixedMatrixWrapper<Vector, block_size>;
     //using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
-    using OptimizedProductType = SeqOptmizedProduct<Vector>;
 
     //! @brief constructor
     //!
@@ -123,11 +229,53 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                  const int& verbosity,
                  const Comm &comm)
     {
+#if 1
+        int halo;
+        int nrows;
+        int nnz=0;
 
+        auto &A = op->getmat();
+        if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
+        {
+            halo = 0;
+            nrows = A.N();
+            nnz = A.nonzeroes();
+        }
+        else
+        {
+            local_ = new int[A.N()];
+
+            // number of ghost cells
+            halo = getHaloCount(comm);
+
+            // number of local cells
+            nrows = A.N() - halo;
+
+            // number of nonzeros for local cells
+            int irow=0;
+            //for(auto row=A.begin(); row!=A.end(); row++)
+            for(auto row=A.begin(); row.index() < nrows; row++)
+            {
+                if(local_[irow++]==1) for(auto col = row->begin(); col != row->end(); col++) nnz++;
+                //else break; // This line is used to verify that all local nodes have indices lower than all ghost nodes. This appears to be true!
+                //irow++;
+            }
+        }
+
+        printf("nnz           = %d\n",nnz);
+        printf("A.nonzeroes() = %ld\n",A.nonzeroes());
+
+        printf("local = %d\n",nrows);
+        printf("halo  = %d\n",halo);
+        printf("total = %ld\n",A.N());
+        //getchar();
+#endif
         // Access matrix data from double precision operator
+#if 0
         auto &A = op->getmat();
         int nrows = A.N();
         int nnz = A.nonzeroes();
+#endif
         double_data_ = &A[0][0][0][0];
 
         //allocate mixed matrix
@@ -140,7 +288,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         int irow = 0;
         int icol = 0;
         rows[0]  = 0;
-        for(auto row=A.begin(); row!=A.end(); row++)
+        for(auto row=A.begin(); row.index() < nrows; row++)
         {
             for(auto col = row->begin(); col != row->end(); ++col)
             {
@@ -172,14 +320,19 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             //OPM_THROW(std::invalid_argument, "Dune::MatrixAdapter\n");
             using MixedOperatorType = Dune::MatrixAdapter<MixedMatrixType, Vector, Vector>;
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
+            using OptimizedProductType = SeqOptmizedProduct<Vector>;
             scalar_product_ = std::make_shared<OptimizedProductType>();
         }
         else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::GhostLastMatrixAdapter<MatrixType, Vector, Vector, Comm>>)
         {
             //OPM_THROW(std::invalid_argument, "Opm::GhostLastMatrixAdapter\n");
-            using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
+            //using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
+            using MixedOperatorType = Opm::MixedGhostLastMatrixAdapter<MixedMatrixType, Vector, Comm>;
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
-            scalar_product_ = sp;
+
+            using OptimizedScalarProductType = GhostLastScalarProduct<Vector,Comm>;
+            scalar_product_ = std::make_shared<OptimizedScalarProductType>(comm,Dune::SolverCategory::overlapping);
+            //scalar_product_ = sp;
         }
         else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelMatrixAdapter<MatrixType, Vector, Vector>>)
         {
@@ -188,6 +341,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             using WellOperatorType  = Opm::LinearOperatorExtra<Vector,Vector>;
             const WellOperatorType &wellOper = op->getwellOper();
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_, wellOper);
+            using OptimizedProductType = SeqOptmizedProduct<Vector>;
             scalar_product_ = std::make_shared<OptimizedProductType>();
             //scalar_product_ = sp;
         }
@@ -195,21 +349,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         {
             OPM_THROW(std::invalid_argument, "Opm::WellModelGhostLastMatrixAdapter\n");
         }
-/*
-        else if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
-        {
-            //mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,op->wellOper_);
-            using MixedOperatorType = Dune::MatrixAdapter<MixedMatrixType, Vector, Vector>;
-            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
-            scalar_product_ = std::make_shared<OptimizedProductType>();
-        }
-        else
-        {
-            using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
-            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
-            scalar_product_ = sp;
-        }
-*/
+
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
                                                               *mixed_operator_,
@@ -241,17 +381,43 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
     virtual Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};
 
     private:
+
+    int getHaloCount(const Comm& comm) const
+    {
+        int count = 0;
+        // Loop over index set
+        auto indexSet = comm.indexSet();
+        for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx)
+        {
+            if (idx->local().attribute()!=1) count++; // count ghost indices
+/*
+            // This code snippet is used to check wheter or not all ghost indices occur last in the index set
+            // In general, that is NOT the case
+            if (idx->local().attribute()==1) count++; // count local indices
+            else
+            {
+                printf("debug: %d: %ld %d\n",count, idx->local().local(), idx->local().attribute());
+                break;
+            }
+*/
+            int i=idx->local().local(); // tag local indices
+            local_[i] = (idx->local().attribute()==1) ? 1 : 0;
+        }
+
+        return count;
+    }
+
     using AbstractSolverType   = Dune::InverseOperator<Vector,Vector>;
     using AbstractOperatorType = Dune::AssembledLinearOperator<MixedMatrixType,Vector,Vector>;
 
     Operator *double_operator_;
     std::shared_ptr<AbstractSolverType> solver_;
-    //std::shared_ptr<MixedOperatorType> mixed_operator_;
     std::shared_ptr<AbstractOperatorType> mixed_operator_;
     std::shared_ptr<MixedMatrixType> mixed_matrix_;
     std::shared_ptr<AbstractScalarProductType> scalar_product_;
     double const *double_data_;
 
+    int *local_;
 };
 
 }

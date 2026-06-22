@@ -168,5 +168,42 @@ update(double const *data)
     // downcast to single precision
     //bsr_downcast(M_);
 }
+
+
+template<class M, class V, class C>
+class MixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
+{
+public:
+
+    //! constructor: just store a reference to matrix and communicator
+    MixedGhostLastMatrixAdapter (const M& A, const C& comm) : A_( A ), comm_(comm) {}
+
+    // y = A * x
+    virtual void apply( const V& x, V& y ) const override
+    {
+        A_.mv(x,y);
+        comm_.project(y);
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd (double alpha, const V& x, V& y) const override
+    {
+        A_.usmv(alpha,x,y);
+        comm_.project(y);
+    }
+
+    virtual const M& getmat() const override { return A_; }
+
+    Dune::SolverCategory::Category category() const override
+    {
+        return Dune::SolverCategory::overlapping;
+    }
+
+private:
+    const M& A_;
+    const C& comm_;
+};
+
+
 } // namespace Opm
 #endif // OPM_MIXED_MATRIX_HEADER_INCLUDED
