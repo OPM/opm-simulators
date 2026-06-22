@@ -1562,6 +1562,13 @@ namespace Opm
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
+        // The first-perforation fluid-state info is needed to refresh the segment
+        // fluid state for the energy equation. It depends solely on the reservoir cell
+        // state, which does not change during the inner iterations.
+        [[maybe_unused]] FSInfo info{};
+        if constexpr (has_energy) {
+            info = this->getFirstPerforationFluidStateInfo(simulator);
+        }
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
             if (it > this->param_.strict_inner_iter_wells_) {
@@ -1613,7 +1620,6 @@ namespace Opm
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
-                    const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
                     updateSegmentFluidState(info, deferred_logger);
                 }
             }
@@ -1719,6 +1725,13 @@ namespace Opm
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
+        // The first-perforation fluid-state info is needed to refresh the segment
+        // fluid state for the energy equation. It depends solely on the reservoir cell
+        // state, which does not change during the inner iterations.
+        [[maybe_unused]] FSInfo info{};
+        if constexpr (has_energy) {
+            info = this->getFirstPerforationFluidStateInfo(simulator);
+        }
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
@@ -1800,7 +1813,6 @@ namespace Opm
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
-                    const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
                     updateSegmentFluidState(info, deferred_logger);
                 }
             }
