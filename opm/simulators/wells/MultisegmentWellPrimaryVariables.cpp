@@ -319,7 +319,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         segment_pressure[seg] = value_[seg][SPres];
 
         // update the segment temperature if thermal is active
-        if (enable_energy) {
+        if constexpr (enable_energy) {
             segment_temperature[seg] = value_[seg][Temperature];
             if (seg == 0) {
                 ws.temperature = segment_temperature[seg];
