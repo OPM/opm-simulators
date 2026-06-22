@@ -227,15 +227,26 @@ public:
             auto rset = this->eclState_.fieldProps().fip_regions();
             rset.push_back("PVTNUM");
 
-            // Note: We explicitly use decltype(auto) here because the
-            // default scheme (-> auto) will deduce an undesirable type.  We
-            // need the "reference to vector" semantics in this instance.
+            // The region arrays (PVTNUM, FIP regions) are given on the input
+            // grid, but RegionPhasePoreVolAverage indexes them by leaf cell.
+            // With LGRs the leaf has more cells, so map each onto the leaf (a
+            // refined cell inherits its parent cell's region; identity without
+            // LGRs) and let the lambda serve those. The map is captured by value
+            // so it outlives in the stored callable; decltype(auto) keeps the
+            // required "reference to vector" return semantics.
+            const LookUpData<Grid, GridView> lookUpData(this->simulator_.gridView());
+            std::map<std::string, std::vector<int>> leafRegions;
+            for (const auto& rsetName : rset) {
+                leafRegions[rsetName] = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+                    this->eclState_.fieldProps(), rsetName, /*needsTranslation=*/false);
+            }
+
             this->regionAvgDensity_
                 .emplace(this->simulator_.gridView().comm(),
                          FluidSystem::numPhases, rset,
-                         [fp = std::cref(this->eclState_.fieldProps())]
+                         [regions = std::move(leafRegions)]
                          (const std::string& rsetName) -> decltype(auto)
-                         { return fp.get().get_int(rsetName); });
+                         { return regions.at(rsetName); });
         }
     }
 
