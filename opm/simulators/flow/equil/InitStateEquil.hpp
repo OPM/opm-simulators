@@ -745,7 +745,7 @@ private:
                                  const bool co2store_or_h2store);
 
     template<class RMap>
-    void setRegionPvtIdx(const EclipseState& eclState, const RMap& reg);
+    void setRegionPvtIdx(const EclipseState& eclState, const GridView& gridView, const RMap& reg);
 
     template <class RMap, class MaterialLawManager, class Comm>
     void calcPressSatRsRv(const RMap& reg,
