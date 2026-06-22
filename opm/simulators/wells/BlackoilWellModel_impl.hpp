@@ -1342,6 +1342,20 @@ namespace Opm {
             more_network_update = more_network_update || more_cross_rescoup_update;
         }
 
+        // The network sub-iteration loop condition must be identical on all ranks.
+        // alq_updated (per-rank gas-lift) and the cross-rescoup signal can differ
+        // between ranks, so reduce here; otherwise ranks run a different number of
+        // sub-iterations and the per-iteration collectives (e.g. the allgather in
+        // getGroupFipnumAndPvtreg) deadlock under MPI. In a standard (non-coupled) MPI
+        // run these inputs are already identical on every rank, so this reduction is a
+        // no-op there; it is needed for reservoir coupling, where a slave group's
+        // control mode is imposed per-rank from the master target and can resolve
+        // differently across the slave's ranks.
+        {
+            int more = more_network_update ? 1 : 0;
+            more = this->grid().comm().max(more);
+            more_network_update = (more != 0);
+        }
         return {well_group_control_changed, more_network_update, network_imbalance};
     }
 
@@ -1604,9 +1618,21 @@ namespace Opm {
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
         if (checkWellGroupControlsAndNetwork) {
-            // the well_group_control_changed info is already communicated
-            report.setWellGroupTargetsViolated(this->lastReport().well_group_control_changed);
-            report.setNetworkNotYetBalancedForceAnotherNewtonIteration(network_needs_more_balancing_force_another_newton_iteration_);
+            // converged() depends on both flags below. gatherConvergenceReport() above
+            // does NOT cover them (they are set here, after the gather), so they carry
+            // rank-local values. If they differ across ranks the Newton loop runs a
+            // different number of iterations per rank, and the per-iteration collectives
+            // (e.g. the allgather in getGroupFipnumAndPvtreg) deadlock under MPI. Reduce
+            // each across ranks (OR) so the convergence decision is global. In a standard
+            // (non-coupled) MPI run these flags are already identical on every rank, so
+            // this is a no-op there; it is needed for reservoir coupling, where a slave
+            // group's per-rank master-imposed control mode can make them diverge.
+            const bool well_group_targets_violated =
+                comm.max(static_cast<int>(this->lastReport().well_group_control_changed)) > 0;
+            report.setWellGroupTargetsViolated(well_group_targets_violated);
+            const bool force_another_newton =
+                comm.max(static_cast<int>(network_needs_more_balancing_force_another_newton_iteration_)) > 0;
+            report.setNetworkNotYetBalancedForceAnotherNewtonIteration(force_another_newton);
         }
 
         if (this->terminal_output_) {
@@ -1660,6 +1686,17 @@ namespace Opm {
         const std::size_t max_iter = param_.well_group_constraints_max_iterations_;
         while(!changed_well_group && iter < max_iter) {
             changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx);
+            // The loop condition must be identical on all ranks: updateGroupControls()
+            // returns a rank-local OR of group-control changes, and each iteration calls
+            // collectives (e.g. the allgather in getGroupFipnumAndPvtreg). If the ranks
+            // disagree on whether a control changed they run a different number of
+            // iterations and those collectives deadlock. Reduce here, mirroring the
+            // comm.sum() reductions applied to the well-to-group and individual flags below.
+            // In a standard (non-coupled) MPI run the group state behind this flag is
+            // communicated and identical on every rank, so this is a no-op there; it is
+            // needed for reservoir coupling, where a slave group's per-rank master-imposed
+            // control mode can make the flag diverge.
+            changed_well_group = comm.sum(static_cast<int>(changed_well_group)) > 0;
 
             // Check wells' group constraints and communicate.
             bool changed_well_to_group = false;
@@ -1770,8 +1807,19 @@ namespace Opm {
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
         const bool update_group_switching_log = !iterCtx.withinNupcol(nupcol);
-        const bool changed_hc = this->checkGroupHigherConstraints(
+        bool changed_hc = this->checkGroupHigherConstraints(
             group, deferred_logger, reportStepIdx, update_group_switching_log);
+        // updateAndCommunicate() runs collectives (group-data communication and a
+        // parallel try/catch). checkGroupHigherConstraints() and updateGroupIndividualControl()
+        // both return rank-local change decisions, so gating the collective on them directly
+        // makes some ranks run it while others skip it, desyncing the collective stream and
+        // deadlocking under MPI. Reduce so all ranks agree before the call -- a group-control
+        // change is a global event, and updateAndCommunicate() is what reconciles the state.
+        // In a standard (non-coupled) MPI run the group state behind these flags is
+        // communicated and identical on every rank, so this is a no-op there. It is needed
+        // for reservoir coupling, where a slave group's control mode is imposed per-rank
+        // from the master target and can resolve differently across the slave's ranks.
+        changed_hc = this->comm_.max(static_cast<int>(changed_hc)) > 0;
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx);
@@ -1790,6 +1838,7 @@ namespace Opm {
                                              this->wellState(),
                                              deferred_logger);
 
+        changed_individual = this->comm_.max(static_cast<int>(changed_individual)) > 0;
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx);
