@@ -66,6 +66,12 @@ struct ParameterFile { static constexpr auto value = ""; };
 //! By default, do not force any time steps
 struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 
+//! By default, do not truncate the time step size to float precision.
+//! Enabling this makes accepted step sizes reproducible from the limited
+//! precision recorded in output files, which is used by the timestep-replay
+//! regression test. It is not meant for production runs.
+struct TruncateTimeStepToFloat { static constexpr bool value = false; };
+
 /*!
  * \brief Print all parameters on startup?
  *
