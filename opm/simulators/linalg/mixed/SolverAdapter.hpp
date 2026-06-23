@@ -86,6 +86,8 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
         : _communication(com), _category(cat)
     {
         count_ = getLocalCount();
+        int verify = verifyLocalCount();
+        if (count_ != verify) OPM_THROW(std::runtime_error, "Inconsistent local node count!!\n");
     }
 
     /*!
@@ -164,6 +166,26 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
             if (idx->local().attribute()==1) count++; // count non-local indices
         }
         return count;
+    }
+
+    int verifyLocalCount() const
+    {
+        auto indexSet = _communication->indexSet();
+
+        size_t is = 0;
+        // Loop over index set
+        for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx) {
+            //Only take "owner" indices
+            if (idx->local().attribute()==1) {
+                //get local index
+                auto loc = idx->local().local();
+                // if loc is higher than "old interior size", update it
+                if (loc > is) {
+                    is = loc;
+                }
+            }
+        }
+        return is + 1; //size is plus 1 since we start at 0
     }
 
 };
