@@ -62,7 +62,7 @@ public:
 
     data::Wells report() const;
 
-    // Copy dynamic well variables while keeping each instance's own config reference.
+    // Copy dynamic well variables function for now copy all
     void copyDynamicStateFrom(const CompWellState& other)
     {
       wells_ = other.wells_;

@@ -1166,6 +1166,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
   opm/simulators/utils/ComponentName.hpp
+  opm/simulators/utils/ComponentName_impl.hpp
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/ParallelEclipseState.hpp

@@ -215,7 +215,7 @@ void hideUnusedParameters()
     // the default eWoms checkpoint/restart mechanism does not work with flow
     Parameters::Hide<Parameters::RestartTime<Scalar>>();
     Parameters::Hide<Parameters::RestartWritingInterval>();
-    // hide all vtk related it is not currently possible to do this dependet on if the vtk writing
+    // hide all vtk related it is not currently possible to do this dependent on if the vtk writing
     // is used
     // if(not(Parameters::Get<Parameters::EnableVtkOutput>())){
     Parameters::HideIfRegistered<Parameters::VtkWriteOilFormationVolumeFactor>();
