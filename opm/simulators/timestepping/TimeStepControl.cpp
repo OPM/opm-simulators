@@ -41,6 +41,14 @@
 
 namespace Opm
 {
+    namespace {
+    double hardcodedTimeTolerance(const double a, const double b, const double c = 0.0)
+    {
+        const double scale = std::max({1.0, std::abs(a), std::abs(b), std::abs(c)});
+        return 64.0 * std::numeric_limits<double>::epsilon() * scale;
+    }
+    }
+
     ////////////////////////////////////////////////////////
     //
     //  InterationCountTimeStepControl Implementation
@@ -128,12 +136,14 @@ namespace Opm
         std::string::size_type sz;
         std::string line;
         while ( std::getline(infile, line)) {
-            if( line[0] != '-') { // ignore lines starting with '-'
+            if (!line.empty() && line[0] != '-') { // ignore lines starting with '-'
                 const double time = std::stod(line,&sz); // read the first number i.e. the actual substep time
                 subStepTime_.push_back( time * unit::day );
             }
 
         }
+
+        std::sort(subStepTime_.begin(), subStepTime_.end());
     }
 
     HardcodedTimeStepControl HardcodedTimeStepControl::serializationTestObject()
@@ -145,14 +155,25 @@ namespace Opm
     }
 
     double
-    HardcodedTimeStepControl::computeTimeStepSize(const double /*dt */,
+    HardcodedTimeStepControl::computeTimeStepSize(const double dt,
                                                   const int /*iterations */,
                                                   const RelativeChangeInterface& /* relativeChange */,
                                                   const AdaptiveSimulatorTimer& substepTimer) const
     {
-        auto nextTime
-            = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), substepTimer.simulationTimeElapsed());
-        return (*nextTime - substepTimer.simulationTimeElapsed());
+        const double currentTime = substepTimer.simulationTimeElapsed();
+        const double remaining = substepTimer.totalTime() - currentTime;
+        const double tol = hardcodedTimeTolerance(currentTime, substepTimer.totalTime(), dt);
+
+        auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), currentTime + tol);
+        while (nextTime != subStepTime_.end() && (*nextTime - currentTime) <= tol) {
+            ++nextTime;
+        }
+
+        if (nextTime == subStepTime_.end()) {
+            return remaining > tol ? remaining : std::max(dt, tol);
+        }
+
+        return std::max(*nextTime - currentTime, tol);
     }
 
     bool HardcodedTimeStepControl::operator==(const HardcodedTimeStepControl& ctrl) const
