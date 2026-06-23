@@ -16,6 +16,20 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+#define OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_SINGLE_COMP_WELL_STATE_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/SingleCompWellState.hpp>
+#endif
+
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
+#include <cassert>
+#include <numeric>
 
 namespace Opm {
 
@@ -155,3 +169,5 @@ get_total_surface_rate() const
 
 
 } // namespace Opm
+
+#endif

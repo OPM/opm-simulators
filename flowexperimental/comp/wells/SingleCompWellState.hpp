@@ -23,11 +23,15 @@
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
-
 namespace Opm {
+
+class CompositionalConfig;
+class SummaryState;
+class Well;
 
 template <typename Scalar>
 class CompConnectionData
