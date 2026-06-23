@@ -2738,3 +2738,49 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
       --tolerance-mb=1e-6
   )
 endif()
+
+###########################################################################
+# Deterministic timestep-replay regression tests
+###########################################################################
+# Run a case, record the accepted substep end times, then re-run with the
+# hardcoded timestep controller replaying those times and compare the output.
+# --truncate-timestep-to-float makes the recorded step sizes exactly
+# reproducible on replay (see Simulator::setTimeStepSize).
+set(timestep_replay_abs_tol 2e-14)
+set(timestep_replay_rel_tol 2e-14)
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-timestep-replay-regressionTest.sh "")
+
+add_test_compareECLFiles(CASENAME spe1_timestep_replay
+                         FILENAME SPE1CASE1
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR spe1
+                         TEST_ARGS --truncate-time-step-to-float=true
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+add_test_compareECLFiles(CASENAME spe9_timestep_replay
+                         FILENAME SPE9_CP_SHORT
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR spe9
+                         TEST_ARGS --truncate-time-step-to-float=true
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+# Larger model2 case: forcing the full report step initially exercises failed
+# steps and the per-step state rollback before the replay must still match.
+add_test_compareECLFiles(CASENAME model2_base_timestep_replay
+                         FILENAME 0_BASE_MODEL2
+                         SIMULATOR flow_blackoil
+                         PREFIX compareTimestepReplay
+                         ABS_TOL ${timestep_replay_abs_tol}
+                         REL_TOL ${timestep_replay_rel_tol}
+                         DIR model2
+                         TEST_ARGS --truncate-time-step-to-float=true --full-time-step-initially=true --cpr-reuse-setup=0 --newton-max-iterations=8 --tolerance-cnv-relaxed=1e-3
+                         TEST_ARGS_REPLAY --initial-time-step-in-days=11111111)
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")

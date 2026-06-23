@@ -156,6 +156,10 @@ template<class Scalar> class WellContributions;
 
             void beginTimeStep();
 
+            void updateFailed();
+
+            void advanceTimeLevel();
+
             void beginIteration()
             {
                 OPM_TIMEBLOCK(beginIteration);
