@@ -2582,6 +2582,17 @@ namespace Opm
                                             ", rv {}. Continue as if no dissolution (rs = 0) and"
                                             " vaporization (rv = 0)",
                                             d, this->name(), fluid_state.Rs(), fluid_state.Rv()) );
+                    // Reset Rs/Rv and refresh invB so the fluid state is consistent with the
+                    // "no dissolution/vaporization" fallback used here and in the subsequent
+                    // density/enthalpy evaluations.
+                    if constexpr (compositionSwitchEnabled) {
+                        fluid_state.setRs(zero_value);
+                        fluid_state.setRv(zero_value);
+                    }
+                    fluid_state.setInvB(FluidSystem::oilPhaseIdx,
+                                        FluidSystem::inverseFormationVolumeFactor(fluid_state, FluidSystem::oilPhaseIdx, fluid_state.pvtRegionIndex()));
+                    fluid_state.setInvB(FluidSystem::gasPhaseIdx,
+                                        FluidSystem::inverseFormationVolumeFactor(fluid_state, FluidSystem::gasPhaseIdx, fluid_state.pvtRegionIndex()));
                     const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
                     saturations[phaseIdx] = fluid_composition[activeCompIdx] / fluid_state.invB(phaseIdx);
                 } else {

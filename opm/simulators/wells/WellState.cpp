@@ -868,6 +868,7 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
             if (ws.parallel_info.get().communication().size() > 1) {
                 ws.parallel_info.get().communication().sum(perforation_rates.data(), perforation_rates.size());
                 ws.parallel_info.get().communication().sum(perforation_pressures.data(), perforation_pressures.size());
+                ws.parallel_info.get().communication().sum(perforation_temperature.data(), perforation_temperature.size());
             }
 
             calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
