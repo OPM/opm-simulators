@@ -193,10 +193,10 @@ prepareStep(const SimulatorTimerInterface& timer)
     }
 
     if (lastStepFailed) {
-        simulator_.model().updateFailed();
+        simulator_.problem().updateFailed();
     }
     else {
-        simulator_.model().advanceTimeLevel();
+        simulator_.problem().advanceTimeLevel();
     }
 
     // The model still needs the report-step time context even though flow owns time stepping.
