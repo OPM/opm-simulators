@@ -387,7 +387,9 @@ namespace Opm {
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 
         // this function can potentially be shared between multisegment wells and standard wells
-        // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
+        // The optional @p volume_ratio output receives the segment volume ratio (reservoir
+        // volume per unit surface volume, i.e. the sum of the unnormalized phase saturations),
+        // so callers can cache and reuse it for the segment surface volume.
         template <typename ValueType = EvalWell>
         SegmentFluidState<ValueType>
         createFluidState(const std::vector<ValueType>& fluid_composition,
@@ -397,7 +399,8 @@ namespace Opm {
                          DeferredLogger& deferred_logger) const;
 
         SegmentFluidState<EvalWell>
-        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
+        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger,
+                                EvalWell* volume_ratio = nullptr) const;
 
         void computeInitialSegmentEnergy();
 
