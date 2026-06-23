@@ -45,13 +45,6 @@
 #include <utility>
 #include <vector>
 
-namespace {
-    std::vector<std::string> toVector(const std::set<std::string>& string_set)
-    {
-        return { string_set.begin(), string_set.end() };
-    }
-}
-
 namespace Opm {
 
 // global id
@@ -939,7 +932,10 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                     const std::set<std::string>& fipRegionsInterregFlow)
     : toIORankComm_(grid.comm())
-    , globalInterRegFlows_(InterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
+    , globalInterRegFlows_(InterRegFlowMap::createMapFromNames({
+            fipRegionsInterregFlow.begin(),
+            fipRegionsInterregFlow.end()
+        }))
 {
     // Build index maps only when reordering is needed; skip in parallel runs for CpGrid with LGRs
     if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
