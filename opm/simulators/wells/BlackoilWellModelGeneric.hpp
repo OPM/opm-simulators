@@ -215,6 +215,35 @@ public:
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
+    // Snapshot dynamic state at start of timestep for failure recovery.
+    void advanceTimeLevel()
+    {
+        this->prev_timestep_wgstate_ = this->active_wgstate_;
+        this->prev_timestep_nupcol_wgstate_ = this->nupcol_wgstate_;
+        this->prev_timestep_closed_this_step_ = this->closed_this_step_;
+        // Guide rates are not updated during the Newton iterations, so they do not
+        // need to be snapshotted/reset across a failed timestep. (GuideRate is also
+        // non-copyable.) TODO: verify exact replay is still correct without this.
+        this->prev_timestep_well_open_times_ = this->well_open_times_;
+        this->prev_timestep_well_close_times_ = this->well_close_times_;
+        this->genNetwork_.commitState();
+    }
+
+    // Restore dynamic state captured at the start of the failing timestep.
+    void updateFailed()
+    {
+        this->active_wgstate_ = this->prev_timestep_wgstate_;
+        this->nupcol_wgstate_ = this->prev_timestep_nupcol_wgstate_;
+        this->closed_this_step_ = this->prev_timestep_closed_this_step_;
+        // Guide rates are not updated during the Newton iterations, so they do not
+        // need to be reset across a failed timestep. (GuideRate is also non-copyable.)
+        // TODO: verify exact replay is still correct without this.
+        this->well_open_times_ = this->prev_timestep_well_open_times_;
+        this->well_close_times_ = this->prev_timestep_well_close_times_;
+        this->genNetwork_.resetState();
+        this->group_state_helper_.updateState(this->wellState(), this->groupState());
+    }
+
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
@@ -257,11 +286,13 @@ public:
         serializer(last_run_wellpi_);
         serializer(local_shut_wells_);
         serializer(closed_this_step_);
+        serializer(prev_timestep_closed_this_step_);
         serializer(guideRate_);
         serializer(genNetwork_);
         serializer(prev_inj_multipliers_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
+        serializer(prev_timestep_wgstate_);
         serializer(nupcol_wgstate_);
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
@@ -535,9 +566,11 @@ protected:
 
     // Times at which wells were opened (for WCYCLE)
     std::map<std::string, double> well_open_times_;
+    std::map<std::string, double> prev_timestep_well_open_times_;
 
     // Times at which wells were shut (for WCYCLE)
     std::map<std::string, double> well_close_times_;
+    std::map<std::string, double> prev_timestep_well_close_times_;
 
     std::vector<ConnectionIndexMap> conn_idx_map_{};
     std::function<bool(const std::string&)> not_on_process_{};
@@ -555,6 +588,7 @@ protected:
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
+    std::unordered_set<std::string> prev_timestep_closed_this_step_;
 
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties<Scalar, IndexTraits>> vfp_properties_{};
@@ -573,7 +607,9 @@ protected:
     */
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
+    WGState<Scalar, IndexTraits> prev_timestep_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
+    WGState<Scalar, IndexTraits> prev_timestep_nupcol_wgstate_;
     GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 

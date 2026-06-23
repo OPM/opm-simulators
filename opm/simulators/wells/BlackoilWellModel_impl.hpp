@@ -557,6 +557,22 @@ namespace Opm {
 
     template<typename TypeTag>
     void
+    BlackoilWellModel<TypeTag>::
+    updateFailed()
+    {
+        this->BlackoilWellModelGeneric<Scalar, IndexTraits>::updateFailed();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    advanceTimeLevel()
+    {
+        this->BlackoilWellModelGeneric<Scalar, IndexTraits>::advanceTimeLevel();
+    }
+
+    template<typename TypeTag>
+    void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx,
                                             const double simulationTime,
                                             DeferredLogger& deferred_logger)
