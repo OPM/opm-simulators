@@ -523,6 +523,34 @@ maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_
     this->adaptive_time_stepping_.maybeModifySuggestedTimeStepAtBeginningOfReportStep_(
         original_time_step, this->is_event_
     );
+
+    if (this->adaptive_time_stepping_.time_step_control_type_ != TimeStepControlType::HardCodedTimeStep) {
+        return;
+    }
+
+    struct ZeroRelativeChange final : RelativeChangeInterface {
+        double relativeChange() const override { return 0.0; }
+    } zero_relative_change;
+
+    const auto* hardcoded_control = static_cast<const HardcodedTimeStepControl*>(
+        this->adaptive_time_stepping_.time_step_control_.get());
+    AdaptiveSimulatorTimer report_step_timer{
+        this->simulator_timer_.startDateTime(),
+        original_time_step,
+        this->simulator_timer_.simulationTimeElapsed(),
+        original_time_step,
+        this->simulator_timer_.reportStepNum(),
+        maxTimeStep_()
+    };
+
+    const double hardcoded_initial_step = hardcoded_control->computeTimeStepSize(
+        original_time_step,
+        0,
+        zero_relative_change,
+        report_step_timer);
+    if (std::isfinite(hardcoded_initial_step) && hardcoded_initial_step > 0.0) {
+        this->adaptive_time_stepping_.setSuggestedNextStep(hardcoded_initial_step);
+    }
 }
 
 // The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicit::runStep()
