@@ -244,7 +244,20 @@ public:
     void apply( const X& x, Y& y ) const override
     {
       OPM_TIMEBLOCK(apply);
-      A_.mv(x, y);
+      // Threaded SpMV (replaces A_.mv): one thread per output row, matrix
+      // read-only, so bit-identical to the sequential reduction order.
+      const auto nrows = A_.N();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+      for (std::size_t i = 0; i < nrows; ++i)
+      {
+          const auto& row = A_[i];
+          y[i] = 0;
+          const auto endc = row.end();
+          for (auto col = row.begin(); col != endc; ++col)
+              (*col).umv(x[col.index()], y[i]);
+      }
 
       // add well model modification to y
       wellOper_.apply(x, y);
@@ -254,7 +267,17 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
       OPM_TIMEBLOCK(applyscaleadd);
-      A_.usmv(alpha, x, y);
+      const auto nrows = A_.N();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+      for (std::size_t i = 0; i < nrows; ++i)
+      {
+          const auto& row = A_[i];
+          const auto endc = row.end();
+          for (auto col = row.begin(); col != endc; ++col)
+              (*col).usmv(alpha, x[col.index()], y[i]);
+      }
 
       // add scaled well model modification to y
       wellOper_.applyscaleadd(alpha, x, y);
@@ -325,12 +348,19 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
+        // Threaded over interior block rows: each output row y[i] is written by a
+        // single thread and the matrix is read-only, so this is bit-identical to
+        // the sequential apply (per-row reduction order is unchanged).
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (std::size_t i = 0; i < interiorSize_; ++i)
         {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
+            const auto& row = A_[i];
+            y[i] = 0;
+            const auto endc = row.end();
+            for (auto col = row.begin(); col != endc; ++col)
+                (*col).umv(x[col.index()], y[i]);
         }
 
         // add well model modification to y
@@ -343,11 +373,15 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (std::size_t i = 0; i < interiorSize_; ++i)
         {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+            const auto& row = A_[i];
+            const auto endc = row.end();
+            for (auto col = row.begin(); col != endc; ++col)
+                (*col).usmv(alpha, x[col.index()], y[i]);
         }
         // add scaled well model modification to y
         wellOper_.applyscaleadd(alpha, x, y);
@@ -431,12 +465,17 @@ public:
 
     virtual void apply( const X& x, Y& y ) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
+        const auto& A = *A_;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (std::size_t i = 0; i < interiorSize_; ++i)
         {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
+            const auto& row = A[i];
+            y[i] = 0;
+            const auto endc = row.end();
+            for (auto col = row.begin(); col != endc; ++col)
+                (*col).umv(x[col.index()], y[i]);
         }
 
         ghostLastProject( y );
@@ -445,11 +484,16 @@ public:
     // y += \alpha * A * x
     virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
+        const auto& A = *A_;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (std::size_t i = 0; i < interiorSize_; ++i)
         {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+            const auto& row = A[i];
+            const auto endc = row.end();
+            for (auto col = row.begin(); col != endc; ++col)
+                (*col).usmv(alpha, x[col.index()], y[i]);
         }
 
         ghostLastProject( y );

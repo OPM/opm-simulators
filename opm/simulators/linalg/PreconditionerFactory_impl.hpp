@@ -26,6 +26,10 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 
 #include <opm/simulators/linalg/DILU.hpp>
+#include <opm/simulators/linalg/DILU2.hpp>
+#if HAVE_AMGCL
+#include <opm/simulators/linalg/AmgclPreconditioner.hpp>
+#endif
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>

@@ -232,6 +232,17 @@ macro(opm-simulators_prereqs_hook)
     message(WARNING "Hypre requested but MPI not activated. Continuing without Hypre support.")
   endif()
 
+  # AMGCL as a CPU/OpenMP AMG preconditioner (independent of the GPU bridge).
+  # Header-only: point -DAMGCL_ROOT=<amgcl clone> (or rely on find_package(amgcl)).
+  if(NOT HAVE_AMGCL_CPU)
+    if(EXISTS "${AMGCL_ROOT}/amgcl/amg.hpp")
+      message(STATUS "Enabling header-only AMGCL preconditioner from ${AMGCL_ROOT}")
+      target_include_directories(opmsimulators SYSTEM PRIVATE "${AMGCL_ROOT}")
+      target_compile_definitions(opmsimulators PRIVATE HAVE_AMGCL=1)
+      set(HAVE_AMGCL_CPU ON)
+    endif()
+  endif()
+
   if(USE_OPENCL AND USE_GPU_BRIDGE)
     find_package(OpenCL)
 

@@ -163,6 +163,10 @@ struct StandardPreconditioners
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
+        F::addCreator("dilu2", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            DUNE_UNUSED_PARAMETER(prm);
+            return wrapBlockPreconditioner<MultithreadDILU2<M, V, V>>(comm, op.getmat());
+        });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
@@ -261,6 +265,16 @@ struct StandardPreconditioners
                     "hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
                         return std::make_shared<linalg::HyprePreconditioner<M, V, V, C>>(op.getmat(), prm, comm);
                     });
+            }
+#endif
+#if HAVE_AMGCL
+            // AMGCL (scalar/pressure only) under MPI = per-rank AMGCL wrapped as a
+            // block (restricted additive Schwarz) preconditioner. Shared-memory AMG
+            // on each rank's local pressure block + the usual overlap communication.
+            if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
+                F::addCreator("amgcl", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+                    return wrapBlockPreconditioner<Opm::AmgclPreconditioner<M, V, V>>(comm, op.getmat(), prm);
+                });
             }
 #endif
         }

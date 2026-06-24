@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/ThreadedScalarProduct.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
@@ -156,7 +157,7 @@ namespace Dune
                                                                        child ? *child : Opm::PropertyTree(),
                                                                        weightsCalculator,
                                                                        pressureIndex);
-        scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
+        scalarproduct_ = std::make_shared<Opm::ThreadedSeqScalarProduct<VectorType>>();
     }
 
 

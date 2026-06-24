@@ -1,0 +1,473 @@
+# AMGCL patch for OPM CPR OpenMP pressure stage
+# Base upstream commit: 28296c2a95894b3732a89b2f75f257a957b09857
+# Contents: (1) fast numeric-Galerkin rebuild() in amg.hpp;
+#           (2) multicolor DILU relaxation (relaxation/dilu.hpp) + runtime wiring.
+#   NOTE: DILU is EXPERIMENTAL — unstable on smoothed_aggregation/ruge_stuben
+#   coarse operators (use spai0). Kept for completeness / future aggregation.
+# Apply from the AMGCL source root:  git apply <thispatch>
+#
+diff --git a/amgcl/amg.hpp b/amgcl/amg.hpp
+index e58a5f5..f619f0a 100644
+--- a/amgcl/amg.hpp
++++ b/amgcl/amg.hpp
+@@ -33,6 +33,9 @@ THE SOFTWARE.
+ 
+ #include <iostream>
+ #include <iomanip>
++#include <cstdio>
++#include <cstdlib>
++#include <chrono>
+ #include <list>
+ #include <memory>
+ 
+@@ -329,6 +332,73 @@ class amg {
+ 
+             std::shared_ptr<relax_type> relax;
+ 
++            // ---- OPM patch: cached numeric-only Galerkin (A_c = R*A*P) ----
++            // On the first build we record the coarse sparsity (taken from AMGCL's
++            // own coarse operator) and a "restriction map": for each coarse nonzero,
++            // the list of (R_val*P_val, index-into-fine-A.val) triples. Re-setups
++            // (same P,R structure, changed A values) then recompute coarse values
++            // only, parallel over coarse nonzeros (no atomics) — instead of a full
++            // symbolic+numeric SpGEMM. Valid for plain-Galerkin coarsenings
++            // (smoothed_aggregation, ruge_stuben) and scalar value_type.
++            struct galerkin_cache {
++                std::vector<ptr_type>   ptr;   // coarse row ptr (Nc+1)
++                std::vector<col_type>   col;   // coarse cols
++                std::vector<ptr_type>   off;   // triple offsets per coarse nz (nnz+1)
++                std::vector<value_type> coef;  // R_val * P_val
++                std::vector<ptr_type>   aidx;  // index into fine A.val
++            };
++            std::shared_ptr<galerkin_cache> gcache;
++
++            // Build the restriction map against an existing coarse matrix Ac (its
++            // sparsity, e.g. produced by C.coarse_operator) using fine A, P, R.
++            void build_galerkin_cache(const build_matrix &A, const build_matrix &P,
++                                      const build_matrix &R, const build_matrix &Ac)
++            {
++                if (std::getenv("OPM_AMGCL_DBG")) std::fprintf(stderr, "[amgcl-patch] build_galerkin_cache Nc=%zu\n", Ac.nrows);
++                gcache = std::make_shared<galerkin_cache>();
++                galerkin_cache &g = *gcache;
++                const ptrdiff_t Nc = static_cast<ptrdiff_t>(Ac.nrows);
++                const ptr_type nnz = Ac.ptr[Ac.nrows];
++                g.ptr.assign(Ac.ptr, Ac.ptr + Ac.nrows + 1);
++                g.col.assign(Ac.col, Ac.col + nnz);
++                g.off.assign(nnz + 1, 0);
++                std::vector<ptrdiff_t> colpos(Ac.ncols, -1);
++                for (ptrdiff_t I = 0; I < Nc; ++I) {
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = t;
++                    for (ptr_type rp = R.ptr[I]; rp < R.ptr[I+1]; ++rp) { col_type k = R.col[rp];
++                        for (ptr_type ap = A.ptr[k]; ap < A.ptr[k+1]; ++ap) { col_type j = A.col[ap];
++                            for (ptr_type pp = P.ptr[j]; pp < P.ptr[j+1]; ++pp) { ptrdiff_t e = colpos[P.col[pp]]; if (e >= 0) g.off[e+1]++; } } }
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = -1;
++                }
++                for (ptr_type e = 0; e < nnz; ++e) g.off[e+1] += g.off[e];
++                g.coef.resize(g.off[nnz]); g.aidx.resize(g.off[nnz]);
++                std::vector<ptr_type> cur(g.off.begin(), g.off.end() - 1);
++                for (ptrdiff_t I = 0; I < Nc; ++I) {
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = t;
++                    for (ptr_type rp = R.ptr[I]; rp < R.ptr[I+1]; ++rp) { col_type k = R.col[rp]; value_type rv = R.val[rp];
++                        for (ptr_type ap = A.ptr[k]; ap < A.ptr[k+1]; ++ap) { col_type j = A.col[ap]; ptr_type aix = ap;
++                            for (ptr_type pp = P.ptr[j]; pp < P.ptr[j+1]; ++pp) { ptrdiff_t e = colpos[P.col[pp]]; if (e >= 0) { ptr_type d = cur[e]++; g.coef[d] = rv * P.val[pp]; g.aidx[d] = aix; } } } }
++                    for (ptr_type t = Ac.ptr[I]; t < Ac.ptr[I+1]; ++t) colpos[Ac.col[t]] = -1;
++                }
++            }
++
++            // Numeric-only Galerkin: recompute coarse values from current fine A.
++            std::shared_ptr<build_matrix> galerkin_numeric(const build_matrix &A) const {
++                static bool dbg_once = false;
++                if (!dbg_once && std::getenv("OPM_AMGCL_DBG")) { dbg_once = true; std::fprintf(stderr, "[amgcl-patch] galerkin_numeric USED\n"); }
++                const galerkin_cache &g = *gcache;
++                const ptrdiff_t Nc = static_cast<ptrdiff_t>(g.ptr.size()) - 1;
++                const ptr_type nnz = g.ptr[Nc];
++                std::vector<value_type> vals(nnz);
++#pragma omp parallel for schedule(static)
++                for (ptrdiff_t e = 0; e < static_cast<ptrdiff_t>(nnz); ++e) {
++                    value_type s = value_type();
++                    for (ptr_type t = g.off[e]; t < g.off[e+1]; ++t) s += g.coef[t] * A.val[g.aidx[t]];
++                    vals[e] = s;
++                }
++                return std::make_shared<build_matrix>(static_cast<size_t>(Nc), static_cast<size_t>(Nc), g.ptr, g.col, vals);
++            }
++
+             size_t bytes() const {
+                 size_t b = 0;
+ 
+@@ -394,8 +464,10 @@ class amg {
+                 AMGCL_TOC("move to backend");
+ 
+                 AMGCL_TIC("coarse operator");
+-                A = C.coarse_operator(*A, *P, *R);
++                std::shared_ptr<build_matrix> Afine = A;
++                A = C.coarse_operator(*Afine, *P, *R);
+                 sort_rows(*A);
++                if (allow_rebuild) build_galerkin_cache(*Afine, *P, *R, *A);
+                 AMGCL_TOC("coarse operator");
+ 
+                 return A;
+@@ -429,22 +501,34 @@ class amg {
+                     AMGCL_TOC("move to backend");
+                 }
+ 
++                const bool dbg = std::getenv("OPM_AMGCL_DBG") != nullptr;
+                 if(relax) {
+                     AMGCL_TIC("relaxation");
++                    auto rt0 = std::chrono::steady_clock::now();
+                     relax = std::make_shared<relax_type>(*A, prm.relax, bprm);
++                    if (dbg) { static bool o=false; if(!o){o=true; std::fprintf(stderr,"[amgcl-patch] relax rebuild %.3f ms (rows=%zu)\n", std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-rt0).count(), backend::rows(*A)); } }
+                     AMGCL_TOC("relaxation");
+                 }
+ 
+                 if (solve) {
+                     AMGCL_TIC("coarsest level");
++                    auto st0 = std::chrono::steady_clock::now();
+                     solve = Backend::create_solver(A, bprm);
++                    if (dbg) { static bool o=false; if(!o){o=true; std::fprintf(stderr,"[amgcl-patch] coarse direct-solver rebuild %.3f ms (rows=%zu)\n", std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-st0).count(), backend::rows(*A)); } }
+                     AMGCL_TOC("coarsest level");
+                 }
+ 
+                 if (bP && bR) {
+                     AMGCL_TIC("coarse operator");
+-                    A = C.coarse_operator(*A, *bP, *bR);
+-                    sort_rows(*A);
++                    if (gcache) {
++                        // OPM patch: numeric-only re-setup; result already matches the
++                        // first-build coarse sparsity/order, so do NOT sort (would break
++                        // the next level's cached fine-index map).
++                        A = galerkin_numeric(*A);
++                    } else {
++                        A = C.coarse_operator(*A, *bP, *bR);
++                        sort_rows(*A);
++                    }
+                     AMGCL_TOC("coarse operator");
+                 }
+ 
+diff --git a/amgcl/relaxation/dilu.hpp b/amgcl/relaxation/dilu.hpp
+new file mode 100644
+index 0000000..871022d
+--- /dev/null
++++ b/amgcl/relaxation/dilu.hpp
+@@ -0,0 +1,230 @@
++#ifndef AMGCL_RELAXATION_DILU_HPP
++#define AMGCL_RELAXATION_DILU_HPP
++
++/*
++The MIT License
++
++Copyright (c) 2012-2022 Denis Demidov <dennis.demidov@gmail.com>
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in
++all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++THE SOFTWARE.
++*/
++
++/**
++ * \file   amgcl/relaxation/dilu.hpp
++ * \brief  Multicolor DILU (diagonal-based ILU) relaxation scheme.
++ *
++ * DILU keeps the sparsity pattern of A and only modifies the diagonal:
++ *   M = (D + L) D^{-1} (D + U),   diag(M) = diag(A),
++ * where L/U are the strict lower/upper parts of A. It is as strong a smoother
++ * as ILU0 but needs only a diagonal of fill, so setup is one pass and the apply
++ * is two sparse triangular solves using the original off-diagonals plus D^{-1}.
++ *
++ * Threading: the unknowns are reordered by a greedy multicolor graph coloring of
++ * the sparsity pattern (rows of one color are mutually non-adjacent, hence
++ * independent). The factorization and the forward/backward solves then need only
++ * `#colors` parallel sweeps (a handful for grid graphs), each sweep being a plain
++ * `omp parallel for`. This mirrors OPM's MultithreadDILU2.
++ *
++ * NOTE: implemented for scalar (1x1) value types — the intended use is the CPR
++ * pressure stage. The arithmetic below assumes commuting scalar values.
++ */
++
++#include <vector>
++#include <memory>
++
++#include <amgcl/backend/interface.hpp>
++#include <amgcl/util.hpp>
++
++namespace amgcl {
++namespace relaxation {
++
++template <class Backend>
++struct dilu {
++    typedef typename Backend::value_type value_type;
++    typedef typename math::scalar_of<value_type>::type scalar_type;
++
++    typedef amgcl::detail::empty_params params;
++
++    template <class Matrix>
++    dilu(const Matrix &A, const params &, const typename Backend::params &)
++    {
++        n = backend::rows(A);
++
++        // --- 1) greedy multicolor coloring of the sparsity pattern ---
++        std::vector<int>    color(n, -1);
++        std::vector<size_t> marker;        // marker[c] == i: color c seen while coloring row i
++        marker.reserve(16);
++        int ncolors = 0;
++        for (size_t i = 0; i < n; ++i) {
++            for (auto a = backend::row_begin(A, i); a; ++a) {
++                ptrdiff_t j = a.col();
++                if (static_cast<size_t>(j) != i && color[j] >= 0)
++                    marker[color[j]] = i;
++            }
++            int c = 0;
++            while (c < ncolors && marker[c] == i) ++c;
++            if (c == ncolors) { marker.push_back(n); ++ncolors; }
++            color[i] = c;
++        }
++
++        // color-order position of each row (defines the L/U split)
++        std::vector<ptrdiff_t> count(ncolors, 0);
++        for (size_t i = 0; i < n; ++i) ++count[color[i]];
++        color_ptr.assign(ncolors + 1, 0);
++        for (int c = 0; c < ncolors; ++c) color_ptr[c + 1] = color_ptr[c] + count[c];
++        color_rows.resize(n);
++        std::vector<ptrdiff_t> cursor(color_ptr.begin(), color_ptr.end() - 1);
++        std::vector<ptrdiff_t> pos(n);     // natural -> color-order position
++        for (size_t i = 0; i < n; ++i) {
++            ptrdiff_t p = cursor[color[i]]++;
++            color_rows[p] = i;
++            pos[i] = p;
++        }
++
++        // --- 2) lower/upper neighbour split in color order + diagonal ---
++        lo_ptr.assign(n + 1, 0);
++        up_ptr.assign(n + 1, 0);
++        for (size_t i = 0; i < n; ++i) {
++            for (auto a = backend::row_begin(A, i); a; ++a) {
++                ptrdiff_t j = a.col();
++                if (static_cast<size_t>(j) == i) continue;
++                if (pos[j] < pos[i]) ++lo_ptr[i + 1]; else ++up_ptr[i + 1];
++            }
++        }
++        for (size_t i = 0; i < n; ++i) { lo_ptr[i + 1] += lo_ptr[i]; up_ptr[i + 1] += up_ptr[i]; }
++        lo_col.resize(lo_ptr[n]); lo_aij.resize(lo_ptr[n]); lo_aji.resize(lo_ptr[n]);
++        up_col.resize(up_ptr[n]); up_aij.resize(up_ptr[n]);
++        diag.assign(n, math::zero<value_type>());
++
++        for (size_t i = 0; i < n; ++i) {
++            ptrdiff_t lp = lo_ptr[i], up = up_ptr[i];
++            for (auto a = backend::row_begin(A, i); a; ++a) {
++                ptrdiff_t j = a.col();
++                value_type v = a.value();
++                if (static_cast<size_t>(j) == i) { diag[i] = v; continue; }
++                if (pos[j] < pos[i]) {
++                    lo_col[lp] = j; lo_aij[lp] = v;
++                    value_type aji = math::zero<value_type>();   // A[j,i] (transpose entry)
++                    for (auto b = backend::row_begin(A, j); b; ++b)
++                        if (b.col() == static_cast<ptrdiff_t>(i)) { aji = b.value(); break; }
++                    lo_aji[lp] = aji;
++                    ++lp;
++                } else {
++                    up_col[up] = j; up_aij[up] = v;
++                    ++up;
++                }
++            }
++        }
++
++        // --- 3) DILU factorization: D_i = A_ii - sum_{j<i} A_ij D_j^{-1} A_ji ---
++        // process colors in order; lower neighbours live in earlier colors and are
++        // already inverted, so each color is one parallel sweep.
++        dinv = diag;
++        for (int c = 0; c + 1 < static_cast<int>(color_ptr.size()); ++c) {
++#pragma omp parallel for
++            for (ptrdiff_t k = color_ptr[c]; k < color_ptr[c + 1]; ++k) {
++                ptrdiff_t i = color_rows[k];
++                value_type d = diag[i];
++                for (ptrdiff_t idx = lo_ptr[i]; idx < lo_ptr[i + 1]; ++idx)
++                    d -= lo_aij[idx] * dinv[lo_col[idx]] * lo_aji[idx];
++                dinv[i] = math::inverse(d);
++            }
++        }
++
++        y.resize(n);
++    }
++
++    // One DILU smoothing step: x += M^{-1} (rhs - A x).
++    template <class Matrix, class VectorRHS, class VectorX, class VectorTMP>
++    void apply_pre(const Matrix &A, const VectorRHS &rhs, VectorX &x, VectorTMP &tmp) const
++    {
++        backend::residual(rhs, A, x, tmp);   // tmp = rhs - A x
++        solve(tmp);                          // y = M^{-1} tmp
++#pragma omp parallel for
++        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(n); ++i) x[i] += y[i];
++    }
++
++    template <class Matrix, class VectorRHS, class VectorX, class VectorTMP>
++    void apply_post(const Matrix &A, const VectorRHS &rhs, VectorX &x, VectorTMP &tmp) const
++    {
++        apply_pre(A, rhs, x, tmp);
++    }
++
++    // As a standalone preconditioner: x = M^{-1} rhs.
++    template <class Matrix, class VectorRHS, class VectorX>
++    void apply(const Matrix &, const VectorRHS &rhs, VectorX &x) const
++    {
++        solve(rhs);
++#pragma omp parallel for
++        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(n); ++i) x[i] = y[i];
++    }
++
++    size_t bytes() const
++    {
++        return sizeof(value_type) * (dinv.size() + diag.size() + lo_aij.size() * 2 + up_aij.size() + y.size())
++             + sizeof(ptrdiff_t) * (color_ptr.size() + color_rows.size()
++                                    + lo_ptr.size() + lo_col.size() + up_ptr.size() + up_col.size());
++    }
++
++private:
++    // y = M^{-1} res, with res indexable; result left in member `y`.
++    template <class VectorRES>
++    void solve(const VectorRES &res) const
++    {
++        const int ncolors = static_cast<int>(color_ptr.size()) - 1;
++        // forward: (D + L) t = res  ->  t_i = D_i^{-1} (res_i - sum_{j<i} A_ij t_j)
++        for (int c = 0; c < ncolors; ++c) {
++#pragma omp parallel for
++            for (ptrdiff_t k = color_ptr[c]; k < color_ptr[c + 1]; ++k) {
++                ptrdiff_t i = color_rows[k];
++                value_type s = res[i];
++                for (ptrdiff_t idx = lo_ptr[i]; idx < lo_ptr[i + 1]; ++idx)
++                    s -= lo_aij[idx] * y[lo_col[idx]];
++                y[i] = dinv[i] * s;
++            }
++        }
++        // backward: (D + U) z = D t  ->  z_i = t_i - D_i^{-1} sum_{j>i} A_ij z_j
++        for (int c = ncolors - 1; c >= 0; --c) {
++#pragma omp parallel for
++            for (ptrdiff_t k = color_ptr[c]; k < color_ptr[c + 1]; ++k) {
++                ptrdiff_t i = color_rows[k];
++                value_type s = math::zero<value_type>();
++                for (ptrdiff_t idx = up_ptr[i]; idx < up_ptr[i + 1]; ++idx)
++                    s += up_aij[idx] * y[up_col[idx]];
++                y[i] -= dinv[i] * s;
++            }
++        }
++    }
++
++    size_t n;
++    std::vector<value_type> diag;   // original diagonal
++    std::vector<value_type> dinv;   // inverse modified diagonal
++    std::vector<ptrdiff_t>  color_ptr;   // ncolors+1
++    std::vector<ptrdiff_t>  color_rows;  // n, rows grouped by color
++    std::vector<ptrdiff_t>  lo_ptr, lo_col;
++    std::vector<value_type> lo_aij, lo_aji;
++    std::vector<ptrdiff_t>  up_ptr, up_col;
++    std::vector<value_type> up_aij;
++    mutable std::vector<value_type> y;   // scratch for the triangular solves
++};
++
++} // namespace relaxation
++} // namespace amgcl
++
++#endif
+diff --git a/amgcl/relaxation/runtime.hpp b/amgcl/relaxation/runtime.hpp
+index 1ae302a..36985ff 100644
+--- a/amgcl/relaxation/runtime.hpp
++++ b/amgcl/relaxation/runtime.hpp
+@@ -50,6 +50,7 @@ THE SOFTWARE.
+ #include <amgcl/relaxation/spai0.hpp>
+ #include <amgcl/relaxation/spai1.hpp>
+ #include <amgcl/relaxation/chebyshev.hpp>
++#include <amgcl/relaxation/dilu.hpp>
+ 
+ namespace amgcl {
+ namespace runtime {
+@@ -66,7 +67,8 @@ enum type {
+     damped_jacobi,              ///< Damped Jacobi
+     spai0,                      ///< Sparse approximate inverse of 0th order
+     spai1,                      ///< Sparse approximate inverse of 1st order
+-    chebyshev                   ///< Chebyshev relaxation
++    chebyshev,                  ///< Chebyshev relaxation
++    dilu                        ///< Multicolor DILU (diagonal-based ILU)
+ };
+ 
+ inline std::ostream& operator<<(std::ostream &os, type r)
+@@ -92,6 +94,8 @@ inline std::ostream& operator<<(std::ostream &os, type r)
+             return os << "spai1";
+         case chebyshev:
+             return os << "chebyshev";
++        case dilu:
++            return os << "dilu";
+         default:
+             return os << "???";
+     }
+@@ -122,9 +126,11 @@ inline std::istream& operator>>(std::istream &in, type &r)
+         r = spai1;
+     else if (val == "chebyshev")
+         r = chebyshev;
++    else if (val == "dilu")
++        r = dilu;
+     else
+         throw std::invalid_argument("Invalid relaxation value. Valid choices are:"
+-                "gauss_seidel, ilu0, ilu0_chow_patel, iluk, ilup, ilut, damped_jacobi, spai0, spai1, chebyshev.");
++                "gauss_seidel, ilu0, ilu0_chow_patel, iluk, ilup, ilut, damped_jacobi, spai0, spai1, chebyshev, dilu.");
+ 
+     return in;
+ }
+@@ -161,6 +167,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+ 
+@@ -187,6 +194,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+         }
+@@ -214,6 +222,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+ 
+@@ -244,6 +253,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+ 
+@@ -272,6 +282,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+ 
+@@ -297,6 +308,7 @@ struct wrapper {
+             AMGCL_RUNTIME_RELAXATION(spai0);
+             AMGCL_RUNTIME_RELAXATION(spai1);
+             AMGCL_RUNTIME_RELAXATION(chebyshev);
++            AMGCL_RUNTIME_RELAXATION(dilu);
+ 
+ #undef AMGCL_RUNTIME_RELAXATION
+ 

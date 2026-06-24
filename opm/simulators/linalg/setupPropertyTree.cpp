@@ -252,6 +252,14 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupDILU(conf, p);
     }
 
+    // Multicolor DILU variant (fewer synchronization levels, scales better with
+    // OpenMP threads at the cost of slightly different convergence per iteration).
+    if (conf == "dilu2") {
+        auto prm = setupDILU(conf, p);
+        prm.put("preconditioner.type", std::string("dilu2"));
+        return prm;
+    }
+
     if (conf == "umfpack") {
         return setupUMFPack(conf, p);
     }

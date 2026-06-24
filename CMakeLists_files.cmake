@@ -1101,12 +1101,14 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/aquifers/SupportsFaceTag.hpp
   opm/simulators/linalg/AbstractISTLSolver.hpp
+  opm/simulators/linalg/AmgclPreconditioner.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh
   opm/simulators/linalg/combinedcriterion.hh
   opm/simulators/linalg/convergencecriterion.hh
   opm/simulators/linalg/DILU.hpp
+  opm/simulators/linalg/DILU2.hpp
   opm/simulators/linalg/domesticoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/elementborderlistfromgrid.hh
   opm/simulators/linalg/exportSystem.hpp
@@ -1171,6 +1173,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/linalg/superlubackend.hh
+  opm/simulators/linalg/ThreadedScalarProduct.hpp
   opm/simulators/linalg/TPSALinearSolverParameters.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/vertexborderlistfromgrid.hh
