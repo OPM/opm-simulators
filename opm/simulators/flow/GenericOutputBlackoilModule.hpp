@@ -279,6 +279,18 @@ public:
         local_data_valid_ = true;
     }
 
+    //! \brief Whether the per-element extraction must run serially.
+    //!
+    //! The region-average density extractor accumulates into shared,
+    //! region-indexed storage (see RegionPhasePoreVolAverage::add), which is
+    //! neither race-free nor order-independent under threading. It is only
+    //! allocated for the relatively rare [FB]PP[OGW]/RPP* summary keywords, so
+    //! when it is active we fall back to a serial extraction walk to keep the
+    //! output bit-identical regardless of thread count.
+    bool requiresSerialExtraction() const {
+        return this->regionAvgDensity_.has_value();
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -351,7 +363,16 @@ protected:
 
     static bool isOutputCreationDirective_(const std::string& keyword);
 
-    // Sum Fip values over regions.
+    // Rank-local sum of Fip values over regions (no communication). Kept as a
+    // separate, communication-free step so that several of these independent
+    // per-quantity sweeps can run in parallel while the MPI reduction below
+    // stays on a single thread. The cell loop runs in ascending cell order, so
+    // the result is bit-identical regardless of thread count.
+    static ScalarBuffer regionSumLocal(const ScalarBuffer& property,
+                                       const std::vector<int>& regionId,
+                                       const std::size_t maxNumberOfRegions);
+
+    // Sum Fip values over regions (rank-local sweep followed by MPI reduction).
     static ScalarBuffer regionSum(const ScalarBuffer& property,
                                   const std::vector<int>& regionId,
                                   const std::size_t maxNumberOfRegions,

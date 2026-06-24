@@ -40,8 +40,11 @@
 #include <opm/output/eclipse/Inplace.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
+#include <opm/grid/utility/ElementChunks.hpp>
+
 #include <opm/models/blackoil/blackoilproperties.hh> // Properties::EnableMech, EnableSolvent
 #include <opm/models/common/multiphasebaseproperties.hh> // Properties::FluidSystem
+#include <opm/models/parallel/threadmanager.hpp> // Properties::ThreadManager
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
@@ -124,6 +127,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
@@ -812,8 +816,6 @@ private:
                          isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>(),
                          log, /*isRestart*/ false);
 
-        ElementContext elemCtx(simulator_);
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         {
@@ -821,19 +823,52 @@ private:
 
             this->outputModule_->prepareDensityAccumulation();
             this->outputModule_->setupExtractors(isSubStep, reportStepNum);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                this->outputModule_->processElement(elemCtx);
-                this->outputModule_->processElementBlockData(elemCtx);
+            // Both passes write per cell into storage owned by that cell: the
+            // element extractors into buffers indexed by the global dof index,
+            // and the block-data extractors through raw pointers into
+            // pre-allocated, per-named-cell slots (the maps are only read, never
+            // structurally modified, during processing). Distinct cells therefore
+            // never touch the same slot, so the loop threads without locking and
+            // stays bit-identical regardless of thread count. Each thread uses its
+            // own ElementContext.
+            //
+            // Exception: the region-average density extractor accumulates into
+            // shared region-indexed storage. When it is active we use a single
+            // chunk so the walk runs serially in cell order, keeping it race-free
+            // and deterministic. See OutputModule::requiresSerialExtraction().
+            const std::size_t num_chunks = this->outputModule_->requiresSerialExtraction()
+                ? 1 : ThreadManager::maxThreads();
+            const ElementChunks<GridView, Dune::Partitions::Interior> element_chunks
+                (gridView, Dune::Partitions::interior, num_chunks);
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for (const auto& chunk : element_chunks) {
+                ElementContext elemCtx(simulator_);
+                for (const auto& elem : chunk) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                    this->outputModule_->processElement(elemCtx);
+                    this->outputModule_->processElementBlockData(elemCtx);
+                }
             }
+
             this->outputModule_->clearExtractors();
 
             this->outputModule_->accumulateDensityParallel();
         }
 
         {
+            // Kept as a separate parallel pass on purpose. Folding it into the
+            // extractor walk above (reusing that walk's intensive quantities) was
+            // tried and gives no measurable gain: both passes are bound by the
+            // bandwidth of the output buffer *writes*, not by the intensive-quantity
+            // reads, so touching the quantities once instead of twice does not help.
+            // Keeping it separate also lets it stay threaded even when the density
+            // extractor forces the walk above to run serially
+            // (requiresSerialExtraction()).
             OPM_TIMEBLOCK(prepareFluidInPlace);
 
 #ifdef _OPENMP
