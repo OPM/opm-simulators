@@ -2505,12 +2505,22 @@ namespace Opm
                 case FluidSystem::oilPhaseIdx: {
                     if constexpr (compositionSwitchEnabled) {
                         if (both_oil_gas) {
-                            // starting with saturated rs value
+                            // Reproduce the legacy calculatePhaseProperties() Rs handling so the
+                            // segment fluid state matches the from-scratch path for all cases.
+                            // The decisive condition is whether *free gas* is present (it is what
+                            // can dissolve into the oil), not whether oil is present:
+                            //  - no free gas in the segment -> saturated oil (rs = rs_max)
+                            //  - free gas but no oil        -> dead oil      (rs = 0)
+                            //  - both present               -> rs = min(rs_max, gas/oil)
                             ValueType rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
-                            if (fluid_composition[activeCompIdx] > epsilon) {
-                                const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                                const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
-                                rs = std::min(rs, max_possible_rs);
+                            const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                            if (fluid_composition[gasCompIdx] > epsilon) {
+                                if (fluid_composition[activeCompIdx] > epsilon) {
+                                    const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
+                                    rs = std::min(rs, max_possible_rs);
+                                } else {
+                                    rs = zero_value;
+                                }
                             }
                             fluid_state.setRs(rs);
                         } else {
@@ -2522,12 +2532,21 @@ namespace Opm
                 case FluidSystem::gasPhaseIdx: {
                     if constexpr (compositionSwitchEnabled) {
                         if (both_oil_gas) {
-                            // starting with saturated rv value
+                            // Mirror of the oil branch above (legacy Rv handling). The decisive
+                            // condition is whether *oil* is present (it is what can vaporize into
+                            // the gas), not whether gas is present:
+                            //  - no oil in the segment -> saturated gas (rv = rv_max)
+                            //  - oil but no free gas   -> dry gas       (rv = 0)
+                            //  - both present          -> rv = min(rv_max, oil/gas)
                             ValueType rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
                             const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                            if (fluid_composition[activeCompIdx] > epsilon) {
-                                const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
-                                rv = std::min(rv, max_possible_rv);
+                            if (fluid_composition[oilCompIdx] > epsilon) {
+                                if (fluid_composition[activeCompIdx] > epsilon) {
+                                    const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
+                                    rv = std::min(rv, max_possible_rv);
+                                } else {
+                                    rv = zero_value;
+                                }
                             }
                             fluid_state.setRv(rv);
                         } else {
