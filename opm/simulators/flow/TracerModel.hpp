@@ -59,6 +59,16 @@ struct EnableTracerModel {
 
 } // namespace Opm::Properties
 
+namespace Opm::Parameters {
+
+// Use the ElementContext-free ("tpfa") tracer assembly, which reuses cached
+// intensive quantities and the linearizer's neighbour/transmissibility table
+// instead of recomputing intensive/extensive quantities per element. Threads
+// far better; ignored on discretisations without the tpfa neighbour table.
+struct TracerTpfaAssembly { static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 /*!
@@ -89,6 +99,7 @@ class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::G
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
 
     using TracerEvaluation = DenseAd::Evaluation<Scalar,1>;
 
@@ -115,7 +126,18 @@ public:
         , oil_(tbatch[1])
         , gas_(tbatch[2])
         , element_chunks_(simulator.gridView(), Dune::Partitions::all, ThreadManager::maxThreads())
+        , useTpfaAssembly_(Parameters::Get<Parameters::TracerTpfaAssembly>())
     { }
+
+    static void registerParameters()
+    {
+        Parameters::Register<Parameters::TracerTpfaAssembly>
+            ("Use the ElementContext-free (tpfa) tracer assembly. It reuses cached "
+             "intensive quantities and the linearizer's neighbour/transmissibility "
+             "table instead of recomputing intensive/extensive quantities per "
+             "element, which threads far better. Disable to use the ElementContext "
+             "assembly.");
+    }
 
 
     /*
@@ -362,6 +384,18 @@ protected:
                                       const Scalar dt,
                                       unsigned I,
                                       unsigned I1)
+    {
+        this->assembleTracerEquationVolume(tr, elemCtx.enableStorageCache(),
+                                           scvVolume, dt, I, I1);
+    }
+
+    template<class TrRe>
+    void assembleTracerEquationVolume(TrRe& tr,
+                                      const bool storageCache,
+                                      const Scalar scvVolume,
+                                      const Scalar dt,
+                                      unsigned I,
+                                      unsigned I1)
 
     {
         if (tr.numTracer() == 0) {
@@ -376,13 +410,13 @@ protected:
             // Free part
             const Scalar fStorageOfTimeIndex0 = fVol.value() * tr.concentration_[tIdx][I][Free];
             const Scalar fLocalStorage = (fStorageOfTimeIndex0 - storage1_<Free>(tr, tIdx, I, I1,
-                                                                                 elemCtx.enableStorageCache())) * scvVolume / dt;
+                                                                                 storageCache)) * scvVolume / dt;
             tr.residual_[tIdx][I][Free] += fLocalStorage; // residual + flux
 
             // Solution part
             const Scalar sStorageOfTimeIndex0 = sVol.value() * tr.concentration_[tIdx][I][Solution];
             const Scalar sLocalStorage = (sStorageOfTimeIndex0 - storage1_<Solution>(tr, tIdx, I, I1,
-                                                                                     elemCtx.enableStorageCache())) * scvVolume / dt;
+                                                                                     storageCache)) * scvVolume / dt;
             tr.residual_[tIdx][I][Solution] += sLocalStorage; // residual + flux
         }
 
@@ -707,6 +741,212 @@ protected:
         }
     }
 
+    // Per-face tracer flux assembly using a precomputed Darcy volume flux
+    // (from the ElementContext-free LocalResidual::computeFlux) and cached
+    // intensive quantities, instead of the ElementContext extensive quantities.
+    // Mirrors assembleTracerEquationFlux exactly: there fFlux.value() == A*v and
+    // fFlux.derivative(0) == A*v when the interior cell is upstream (0 otherwise),
+    // so the single scalar A*v plays both roles here.
+    template<class TrRe>
+    void assembleTracerEquationFluxTpfa_(TrRe& tr,
+                                         const RateVector& darcy,
+                                         unsigned I,
+                                         unsigned J,
+                                         const Scalar dt)
+    {
+        if (tr.numTracer() == 0) {
+            return;
+        }
+        auto& model = simulator_.model();
+
+        // darcy[conti0 + activeComp(phase)] == faceArea * (per-area phase volume
+        // flux), signed the same way as ElementContext volumeFlux(phase).
+        auto totalVolumeFlux = [&darcy](unsigned phaseIdx) -> Scalar {
+            const unsigned activeCompIdx =
+                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+            return decay<Scalar>(darcy[Indices::conti0EqIdx + activeCompIdx]);
+        };
+        // Interior cell I is upstream when the (interior->exterior) volume flux is
+        // positive. Matches ElementContext upstreamIndex()/interiorIndex().
+        auto interiorIsUpstream = [](Scalar q) { return q > Scalar{0}; };
+
+        // ---- Free part ----
+        const Scalar qF = totalVolumeFlux(tr.phaseIdx_);
+        const bool isUpF = interiorIsUpstream(qF);
+        const unsigned fUp = isUpF ? I : J;
+        const Scalar fFlux = qF *
+            decay<Scalar>(model.intensiveQuantities(fUp, 0).fluidState().invB(tr.phaseIdx_));
+
+        // ---- Solution part (vaporized oil / dissolved gas) ----
+        Scalar sFlux = 0.0;
+        bool isUpS = false;
+        if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+            const Scalar qS = totalVolumeFlux(FluidSystem::gasPhaseIdx);
+            isUpS = interiorIsUpstream(qS);
+            const auto& fsUp = model.intensiveQuantities(isUpS ? I : J, 0).fluidState();
+            sFlux = qS * decay<Scalar>(fsUp.invB(FluidSystem::gasPhaseIdx)) * decay<Scalar>(fsUp.Rv());
+        }
+        else if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+            const Scalar qS = totalVolumeFlux(FluidSystem::oilPhaseIdx);
+            isUpS = interiorIsUpstream(qS);
+            const auto& fsUp = model.intensiveQuantities(isUpS ? I : J, 0).fluidState();
+            sFlux = qS * decay<Scalar>(fsUp.invB(FluidSystem::oilPhaseIdx)) * decay<Scalar>(fsUp.Rs());
+        }
+
+        dVol_[Solution][tr.phaseIdx_][I] += sFlux * dt;
+        dVol_[Free][tr.phaseIdx_][I] += fFlux * dt;
+        const unsigned sUp = isUpS ? I : J;
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            tr.residual_[tIdx][I][Free] += fFlux * tr.concentration_[tIdx][fUp][Free];
+            tr.residual_[tIdx][I][Solution] += sFlux * tr.concentration_[tIdx][sUp][Solution];
+        }
+        if (isUpF) {
+            (*tr.mat)[J][I][Free][Free] = -fFlux;
+            (*tr.mat)[I][I][Free][Free] += fFlux;
+        }
+        if (isUpS) {
+            (*tr.mat)[J][I][Solution][Solution] = -sFlux;
+            (*tr.mat)[I][I][Solution][Solution] += sFlux;
+        }
+    }
+
+    // Alternative to assembleTracerEquations_() that avoids ElementContext: it
+    // reuses cached intensive quantities + the tpfa linearizer's neighbour /
+    // transmissibility table and the ElementContext-free LocalResidual::computeFlux,
+    // exactly as the reservoir tpfa assembly does. This removes the per-element
+    // updateAllIntensive/ExtensiveQuantities() recompute, whose heap allocation
+    // serializes on the allocator under threading.
+    void assembleTracerEquationsTpfa_()
+    {
+        DeferredLogger local_deferredLogger{};
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            OPM_TIMEBLOCK(tracerAssemble);
+            for (auto& tr : tbatch) {
+                if (tr.numTracer() != 0) {
+                    (*tr.mat) = 0.0;
+                    for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                        tr.residual_[tIdx] = 0.0;
+                    }
+                }
+            }
+
+            this->wellTracerRate_.clear();
+            this->wellFreeTracerRate_.clear();
+            this->wellSolTracerRate_.clear();
+            const auto num_msw = this->mSwTracerRate_.size();
+            this->mSwTracerRate_.clear();
+
+            // Well terms (identical to the ElementContext path)
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            this->wellTracerRate_.reserve(wellPtrs.size());
+            this->wellFreeTracerRate_.reserve(wellPtrs.size());
+            this->wellSolTracerRate_.reserve(wellPtrs.size());
+            this->mSwTracerRate_.reserve(num_msw);
+            for (const auto& wellPtr : wellPtrs) {
+                const auto& eclWell = wellPtr->wellEcl();
+                this->wellTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                this->wellFreeTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                this->wellSolTracerRate_[eclWell.seqIndex()].resize(this->numTracers());
+                auto* mswTracerRate = eclWell.isMultiSegment()
+                    ? &this->mSwTracerRate_[eclWell.seqIndex()]
+                    : nullptr;
+                if (mswTracerRate) {
+                    mswTracerRate->resize(this->numTracers());
+                }
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationWell(tr, *wellPtr);
+                }
+            }
+
+            auto& model = simulator_.model();
+            if constexpr (requires { model.linearizer().getNeighborInfo(); }) {
+                const auto& neighborInfo = model.linearizer().getNeighborInfo();
+                const auto& moduleParams = simulator_.problem().moduleParams();
+                const Scalar dt = simulator_.timeStepSize();
+                const bool storageCache = Parameters::Get<Parameters::EnableStorageCache>();
+
+                #ifdef _OPENMP
+                #pragma omp parallel for
+                #endif
+                for (const auto& chunk : element_chunks_) {
+                    RateVector flux;
+                    RateVector darcy;
+                    for (const auto& elem : chunk) {
+                        const unsigned I = model.dofMapper().index(elem);
+
+                        if (elem.partitionType() != Dune::InteriorEntity) {
+                            // Dirichlet rows for ghost/overlap cells. Each cell owns
+                            // its own diagonal, so this is race-free.
+                            for (const auto& tr : tbatch) {
+                                if (tr.numTracer() != 0) {
+                                    (*tr.mat)[I][I][0][0] = 1.;
+                                    (*tr.mat)[I][I][1][1] = 1.;
+                                }
+                            }
+                            continue;
+                        }
+
+                        const auto& iqIn = model.intensiveQuantities(I, /*timeIdx=*/0);
+                        const Scalar scvVolume = model.dofTotalVolume(I);
+                        const unsigned I1 = I; // static grid: same global index at timeIdx 1
+
+                        for (auto& tr : tbatch) {
+                            if (tr.numTracer() == 0) {
+                                continue;
+                            }
+                            this->assembleTracerEquationVolume(tr, storageCache, scvVolume, dt, I, I1);
+                        }
+
+                        // Flux terms over the cell's neighbours. Each (I,J) writes
+                        // residual[I], mat[I][I] and mat[J][I] only from cell I, so
+                        // parallelising over I is race-free (mirrors the old code).
+                        for (const auto& nbInfo : neighborInfo[I]) {
+                            const unsigned J = nbInfo.neighbor;
+                            const auto& iqEx = model.intensiveQuantities(J, /*timeIdx=*/0);
+                            LocalResidual::computeFlux(flux, darcy, I, J, iqIn, iqEx,
+                                                       nbInfo.res_nbinfo, moduleParams);
+                            for (auto& tr : tbatch) {
+                                if (tr.numTracer() == 0) {
+                                    continue;
+                                }
+                                this->assembleTracerEquationFluxTpfa_(tr, darcy, I, J, dt);
+                            }
+                        }
+
+                        for (auto& tr : tbatch) {
+                            if (tr.numTracer() == 0) {
+                                continue;
+                            }
+                            this->assembleTracerEquationSource(tr, dt, I);
+                        }
+                    }
+                }
+            }
+            else {
+                // Unreachable: advanceTracerFields() only dispatches here when the
+                // linearizer provides getNeighborInfo(). Kept for safety.
+                OPM_THROW(std::runtime_error,
+                          "The tpfa tracer assembly requires the TpfaLinearizer "
+                          "(getNeighborInfo); disable --tracer-tpfa-assembly.");
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "assembleTracerEquationsTpfa_() failed: ",
+                                       true, simulator_.gridView().comm())
+
+        // Communicate overlap using grid Communication
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() == 0) {
+                continue;
+            }
+            auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
+                                                                                      simulator_.gridView());
+            simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
+                                              Dune::ForwardCommunication);
+        }
+    }
+
     template<TracerTypeIdx Index, class TrRe>
     void updateElem(TrRe& tr,
                     const Scalar scvVolume,
@@ -797,7 +1037,21 @@ protected:
 
     void advanceTracerFields()
     {
-        assembleTracerEquations_();
+        // The tpfa (ElementContext-free) assembly needs the linearizer's
+        // neighbour/transmissibility table; fall back to the ElementContext
+        // assembly when it is not available (non-tpfa discretisations).
+        using ModelLinearizer = std::decay_t<decltype(simulator_.model().linearizer())>;
+        if constexpr (requires(ModelLinearizer& l) { l.getNeighborInfo(); }) {
+            if (useTpfaAssembly_) {
+                assembleTracerEquationsTpfa_();
+            }
+            else {
+                assembleTracerEquations_();
+            }
+        }
+        else {
+            assembleTracerEquations_();
+        }
 
         for (auto& tr : tbatch) {
             if (tr.numTracer() == 0) {
@@ -977,6 +1231,7 @@ protected:
     std::array<std::array<std::vector<Scalar>,numPhases>,2> vol1_;
     std::array<std::array<std::vector<Scalar>,numPhases>,2> dVol_;
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+    bool useTpfaAssembly_ = true;
 };
 
 } // namespace Opm
