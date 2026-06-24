@@ -93,7 +93,7 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
                   , public FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
                                               GetPropType<TypeTag, Properties::FluidSystem>>
 {
-public:
+protected:
     using BaseType = FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
                                         GetPropType<TypeTag, Properties::FluidSystem>>;
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;

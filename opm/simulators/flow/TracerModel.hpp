@@ -42,6 +42,7 @@
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -148,6 +149,8 @@ public:
 
     void prepareTracerBatches()
     {
+        DeferredLogger local_deferredLogger;
+
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
@@ -198,7 +201,13 @@ public:
             }
         }
 
-        this->buildAquiferTracerConnections_();
+        this->buildAquiferTracerConnections_(local_deferredLogger);
+
+        const auto& comm = simulator_.vanguard().grid().comm();
+        const auto global_logger = gatherDeferredLogger(local_deferredLogger, comm);
+        if (comm.rank() == 0) {
+            global_logger.logMessages();
+        }
     }
 
     void beginTimeStep()
@@ -805,7 +814,7 @@ protected:
         }
     }
 
-    void buildAquiferTracerConnections_()
+    void buildAquiferTracerConnections_(DeferredLogger& deferredLogger)
     {
         aquifer_tracer_cells_.clear();
 
@@ -832,8 +841,10 @@ protected:
 
             const auto tracer_pos = tracer_name_to_idx.find(spec.tracer_name);
             if (tracer_pos == tracer_name_to_idx.end()) {
-                OpmLog::warning(fmt::format("AQANTRC tracer '{}' is not declared in TRACER",
-                                            spec.tracer_name));
+                if (simulator_.vanguard().grid().comm().rank() == 0) {
+                    deferredLogger.warning(fmt::format("AQANTRC tracer '{}' is not declared in TRACER",
+                                                       spec.tracer_name));
+                }
                 continue;
             }
 
