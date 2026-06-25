@@ -592,6 +592,68 @@ add_test_compareECLFiles(
     10
 )
 
+# Alternative CPR weights can change nonlinear/linear iteration paths enough that
+# full restart/control vectors diverge from the default solver reference. Keep
+# these checks on the production summaries and use looser tolerances sized to the
+# observed summary drift.
+set(spe9_solver_variant_abs_tol 15.0)
+set(spe9_solver_variant_rel_tol 5e-3)
+
+add_test_compareECLFiles(
+  CASENAME
+    spe9_trueimpesanalytic
+  FILENAME
+    SPE9_CP_SHORT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${spe9_solver_variant_abs_tol}
+  REL_TOL
+    ${spe9_solver_variant_rel_tol}
+  DIR
+    spe9
+  PREFIX
+    compareECLFiles_trueimpesanalytic
+  TEST_ARGS
+    --linear-solver=cpr_trueimpesanalytic
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    spe9_coatsblackoil
+  FILENAME
+    SPE9_CP_SHORT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${spe9_solver_variant_abs_tol}
+  REL_TOL
+    ${spe9_solver_variant_rel_tol}
+  DIR
+    spe9
+  PREFIX
+    compareECLFiles_coatsblackoil
+  TEST_ARGS
+    --linear-solver=cpr_coatsblackoil
+)
+
+if (USE_DEV_SIMULATOR_IN_TESTS)
+  set(spe9_solver_variant_test_simulator flow_blackoil)
+else()
+  set(spe9_solver_variant_test_simulator flow)
+endif()
+
+set_tests_properties(
+  compareECLFiles_trueimpesanalytic_${spe9_solver_variant_test_simulator}+SPE9_CP_SHORT
+  compareECLFiles_coatsblackoil_${spe9_solver_variant_test_simulator}+SPE9_CP_SHORT
+  PROPERTIES
+    ENVIRONMENT "ghprbCommentBody=only_summary"
+)
+
 add_test_compareECLFiles(
   CASENAME
     spe9group

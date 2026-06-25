@@ -412,11 +412,52 @@ private:
                     m_weights->copyFromHostAsync(m_cpuWeights);
                     return *m_weights;
                 };
+            } else if (weightsType == "coatsblackoil") {
+                // Create CPU vector for the weights and initialize GPU vector
+                m_cpuWeights.resize(m_matrix->N());
+                m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                    const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
+                m_weights.emplace(m_cpuWeights);
+                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
+                // CPU implementation wrapped for GPU
+                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
+                    ElementContext elemCtx(m_simulator);
+                    Amg::getCoatsWeightsBlackoil(pressureIndex,
+                                                 m_cpuWeights,
+                                                 elemCtx, m_simulator.model(),
+                                                 m_element_chunks,
+                                                 enableThreadParallel);
+
+                    // Copy CPU vector to GPU vector using main stream and asynchronous transfer
+                    m_weights->copyFromHostAsync(m_cpuWeights);
+                    return *m_weights;
+                };
+            } else if (weightsType == "coatscompositional") {
+                // Create CPU vector for the weights and initialize GPU vector
+                m_cpuWeights.resize(m_matrix->N());
+                m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                    const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
+                m_weights.emplace(m_cpuWeights);
+                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
+                // CPU implementation wrapped for GPU
+                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
+                    ElementContext elemCtx(m_simulator);
+                    Amg::getCoatsWeightsCompositional(pressureIndex,
+                                                      m_cpuWeights,
+                                                      elemCtx, m_simulator.model(),
+                                                      m_element_chunks,
+                                                      enableThreadParallel);
+
+                    // Copy CPU vector to GPU vector using main stream and asynchronous transfer
+                    m_weights->copyFromHostAsync(m_cpuWeights);
+                    return *m_weights;
+                };
             } else {
                 OPM_THROW(std::invalid_argument,
                           "Weights type " + weightsType
                               + " not implemented for cpr."
-                                " Please use quasiimpes, trueimpes or trueimpesanalytic.");
+                                " Please use quasiimpes, trueimpes, trueimpesanalytic,"
+                                " coatsblackoil or coatscompositional.");
             }
         }
         return weightsCalculator;
