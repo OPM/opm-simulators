@@ -2758,14 +2758,11 @@ namespace Opm
                                 const int local_perf_index,
                                 DeferredLogger& deferred_logger)
     {
-        // TODO: this part of the implementation remains to be debugged
         const auto& fs = int_quants.fluidState();
         // segment fluid state for wellbore properties (used for injecting connections)
         const auto& seg_fs = this->segment_fluid_state_[seg];
 
         // TODO: should we only use the reservoir-cell properties for production cases?
-        // The reservoir cell fluid properties may be less accurate for injectors and
-        // could explain the abnormal results occasionally observed for them.
         EvalWell energy_flux(0.0);
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {

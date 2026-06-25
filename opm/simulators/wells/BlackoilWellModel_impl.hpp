@@ -268,7 +268,7 @@ namespace Opm {
             this->wbp_.initializeWBPCalculationService();
 
             if (this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
-                this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState());
+                this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState(), has_energy_);
             }
 
             this->initializeWellProdIndCalculators();

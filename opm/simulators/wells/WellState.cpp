@@ -468,14 +468,15 @@ resize(const std::vector<Well>& wells_ecl,
        const std::size_t numCells,
        const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
        const SummaryState& summary_state,
-       const bool enable_distributed_wells)
+       const bool enable_distributed_wells,
+       const bool thermal)
 {
     this->enableDistributedWells_ = enable_distributed_wells;
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
     init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, this->enableDistributedWells_);
 
     if (handle_ms_well) {
-        initWellStateMSWell(wells_ecl, nullptr);
+        initWellStateMSWell(wells_ecl, nullptr, thermal);
     }
 }
 
@@ -712,7 +713,8 @@ reportConnections(std::vector<data::Connection>& connections,
 template<typename Scalar, typename IndexTraits>
 void WellState<Scalar, IndexTraits>::
 initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                    const WellState* prev_well_state)
+                    const WellState* prev_well_state,
+                    const bool thermal)
 {
     // still using the order in wells
     const auto nw = wells_ecl.size();
@@ -883,23 +885,26 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 auto& segment_pressure = ws.segments.pressure;
                 auto& segment_temperature = ws.segments.temperature;
                 segment_pressure[0] = ws.bhp;
-                // TODO: the temperature remains to be made to be more consistent
-                // TODO: we probably should distinguish whether it is a thermal case to avoid having garbage data in the segment temperature
                 segment_temperature[0] = ws.temperature;
                 for (std::size_t seg = 1; seg < well_nseg; ++seg) {
+                    const int outlet_seg = segment_set[seg].outletSegment();
+                    const int outlet_seg_index = segment_set.segmentNumberToIndex(outlet_seg);
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
-                        // TODO: the temperature remains to be made to be more consistent
-                        const int outlet_seg = segment_set[seg].outletSegment();
-                        const int outlet_seg_index = segment_set.segmentNumberToIndex(outlet_seg);
-                        segment_temperature[seg] = ws.producer ? perforation_temperature[first_perf_global_index] : segment_temperature[outlet_seg_index];
+                        // TODO: the temperature initialisation remains to be made more consistent.
+                        // For a thermal run each segment carries its own temperature; an isothermal
+                        // run keeps the whole well at the single well temperature rather than storing
+                        // a per-segment profile that nothing consumes.
+                        segment_temperature[seg] = thermal
+                            ? (ws.producer ? perforation_temperature[first_perf_global_index]
+                                           : segment_temperature[outlet_seg_index])
+                            : ws.temperature;
                     } else {
                         // using the outlet segment pressure // it needs the ordering is correct
-                        const int outlet_seg = segment_set[seg].outletSegment();
-                        const int outlet_seg_index = segment_set.segmentNumberToIndex(outlet_seg);
                         segment_pressure[seg] = segment_pressure[outlet_seg_index];
-                        segment_temperature[seg] = segment_temperature[outlet_seg_index];
+                        segment_temperature[seg] = thermal ? segment_temperature[outlet_seg_index]
+                                                           : ws.temperature;
                     }
                 }
             }
