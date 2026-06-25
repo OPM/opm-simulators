@@ -88,6 +88,16 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/comp/wells/CompWellState_impl.hpp
   flowexperimental/comp/wells/SingleCompWellState.hpp
   flowexperimental/comp/wells/SingleCompWellState_impl.hpp
+  flowexperimental/graphwell/GraphWellTopology.cpp
+  flowexperimental/graphwell/GraphWellTopology.hpp
+  flowexperimental/graphwell/GraphWellPrimaryVariables.hpp
+  flowexperimental/graphwell/GraphWellFluidProperties.hpp
+  flowexperimental/graphwell/GraphWellHelpers.hpp
+  flowexperimental/graphwell/GraphWellEquations.hpp
+  flowexperimental/graphwell/GraphWellEquations_impl.hpp
+  flowexperimental/graphwell/GraphWellAssembler.hpp
+  flowexperimental/graphwell/GraphMultisegmentWell.hpp
+  flowexperimental/graphwell/GraphMultisegmentWell_impl.hpp
   flowexperimental/FIBlackOilModelNoCache.hpp
   flowexperimental/flowexp.hpp
   flowexperimental/FlowExpNewtonMethod.hpp
@@ -491,6 +501,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_gconsump.cpp
   tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
+  tests/test_graphwell.cpp
   tests/test_GroupState.cpp
   tests/test_injection_topup_phase_validation.cpp
   tests/test_interregflows.cpp

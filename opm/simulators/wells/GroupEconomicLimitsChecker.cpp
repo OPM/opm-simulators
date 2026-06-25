@@ -521,7 +521,9 @@ groupRatioDetails(const RatioViolation ratio_violation) const
         const Scalar ratio = (water_rate <= 0.0) ? Scalar{0}
                            : (gas_rate <= 0.0)   ? Scalar{big_value}
                                                   : water_rate / gas_rate;
-        return RatioDetails{RatioViolation::WGR, "Water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::water_gas_ratio};
+        // No dedicated water-gas-ratio measure exists; a water/gas ratio has the same
+        // (liquid volume / gas volume) units as the oil-gas ratio.
+        return RatioDetails{RatioViolation::WGR, "Water-gas ratio", ratio, static_cast<Scalar>(max_wgr.value()), UnitSystem::measure::oil_gas_ratio};
     }
     case RatioViolation::GOR: {
         const auto max_gor = this->gecon_props_.maxGasOilRatio();

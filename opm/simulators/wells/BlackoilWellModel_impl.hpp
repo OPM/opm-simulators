@@ -42,6 +42,8 @@
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
+
+#include <flowexperimental/graphwell/GraphMultisegmentWell.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
@@ -1054,6 +1056,10 @@ namespace Opm {
 
         if (! (this->param_.use_multisegment_well_ && is_multiseg)) {
             return this->template createTypedWellPointer<StandardWell<TypeTag>>(wellID, report_step);
+        }
+        else if (this->param_.use_graph_well_) {
+            // Experimental entity-split (GraphWell) multisegment-well formulation.
+            return this->template createTypedWellPointer<GraphMultisegmentWell<TypeTag>>(wellID, report_step);
         }
         else {
             return this->template createTypedWellPointer<MultisegmentWell<TypeTag>>(wellID, report_step);

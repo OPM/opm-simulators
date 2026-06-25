@@ -57,6 +57,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
     use_multisegment_well_ = Parameters::Get<Parameters::UseMultisegmentWell>();
+    use_graph_well_ = Parameters::Get<Parameters::UseGraphWell>();
     tolerance_pressure_ms_wells_ = Parameters::Get<Parameters::TolerancePressureMsWells<Scalar>>();
     relaxed_tolerance_flow_well_ = Parameters::Get<Parameters::RelaxedWellFlowTol<Scalar>>();
     relaxed_tolerance_pressure_ms_well_ = Parameters::Get<Parameters::RelaxedPressureTolMsw<Scalar>>();
@@ -190,6 +191,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::UseMultisegmentWell>
         ("Use the well model for multi-segment wells instead of the "
          "one for single-segment wells");
+    Parameters::Register<Parameters::UseGraphWell>
+        ("Use the experimental GraphWell (entity-split) formulation for "
+         "multi-segment wells instead of the production MultisegmentWell");
     Parameters::Register<Parameters::TolerancePressureMsWells<Scalar>>
         ("Tolerance for the pressure equations for multi-segment wells");
     Parameters::Register<Parameters::RelaxedWellFlowTol<Scalar>>
