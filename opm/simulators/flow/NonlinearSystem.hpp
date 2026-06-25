@@ -171,6 +171,9 @@ protected:
     std::vector<std::vector<Scalar>> residual_norms_history_;
     Scalar current_relaxation_;
     GlobalEqVector dx_old_;
+    // time used for the property (intensive quantities) evaluation in the
+    // last call to updateSolution()
+    double props_update_time_ = 0.0;
 };
 
 } // namespace Opm

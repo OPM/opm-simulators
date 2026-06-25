@@ -24,11 +24,14 @@
 #ifndef OPM_WELLINTERFACE_GENERIC_HEADER_INCLUDED
 #define OPM_WELLINTERFACE_GENERIC_HEADER_INCLUDED
 
+#include <dune/common/timer.hh>
+
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -211,7 +214,107 @@ public:
 
     void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
+    /// Statistics for the separate (standalone) well solves, i.e. the local
+    /// nonlinear solves of the single well equations done outside the global
+    /// linearizations (prepareTimeStep, well testing) and during the well
+    /// potential calculations.
+    struct WellSolveStats
+    {
+        double solve_time{0.0};            //!< time used by normal well solves
+        double potential_solve_time{0.0};  //!< time used by well potential solves
+        double assemble_time{0.0};         //!< assembly time in the well solves
+        double linear_solve_time{0.0};     //!< linear solve time in the well solves
+        unsigned int iterations{0};            //!< well iterations in normal solves
+        unsigned int potential_iterations{0};  //!< well iterations in potential solves
+    };
+
+    const WellSolveStats& solveStats() const { return *solve_stats_; }
+    void resetSolveStats() const { *solve_stats_ = WellSolveStats{}; }
+
 protected:
+    /// RAII helper marking a standalone well solve. Accumulates the elapsed
+    /// time and the number of well iterations into the solve statistics on
+    /// scope exit, attributing them to the well potential calculations if
+    /// such a calculation is in progress.
+    class WellSolveScope
+    {
+    public:
+        WellSolveScope(const WellInterfaceGeneric& well, const int& iterations)
+            : well_(well), iterations_(iterations)
+        {
+            well_.in_well_solve_ = true;
+            timer_.start();
+        }
+        ~WellSolveScope()
+        {
+            well_.in_well_solve_ = false;
+            auto& stats = *well_.solve_stats_;
+            if (well_.computing_well_potentials_) {
+                stats.potential_solve_time += timer_.stop();
+                stats.potential_iterations += iterations_;
+            } else {
+                stats.solve_time += timer_.stop();
+                stats.iterations += iterations_;
+            }
+        }
+    private:
+        const WellInterfaceGeneric& well_;
+        const int& iterations_;
+        Dune::Timer timer_{};
+    };
+
+    /// RAII helper accumulating the elapsed time into the given part of the
+    /// solve statistics, but only when inside a standalone well solve.
+    class SolvePartTimer
+    {
+    public:
+        SolvePartTimer(const WellInterfaceGeneric& well, double& target)
+            : well_(well), target_(target)
+        {
+            timer_.start();
+        }
+        ~SolvePartTimer()
+        {
+            if (well_.in_well_solve_) {
+                target_ += timer_.stop();
+            }
+        }
+    private:
+        const WellInterfaceGeneric& well_;
+        double& target_;
+        Dune::Timer timer_{};
+    };
+
+    /// RAII helper marking that a well potential calculation is in progress.
+    class PotentialCalculationScope
+    {
+    public:
+        explicit PotentialCalculationScope(const WellInterfaceGeneric& well)
+            : well_(well), previous_(well.computing_well_potentials_)
+        {
+            well_.computing_well_potentials_ = true;
+        }
+        ~PotentialCalculationScope()
+        {
+            well_.computing_well_potentials_ = previous_;
+        }
+    private:
+        const WellInterfaceGeneric& well_;
+        bool previous_;
+    };
+
+    WellSolveScope solveScope(const int& iterations) const
+    { return WellSolveScope(*this, iterations); }
+
+    SolvePartTimer solveAssembleTimer() const
+    { return SolvePartTimer(*this, solve_stats_->assemble_time); }
+
+    SolvePartTimer solveLinearSolveTimer() const
+    { return SolvePartTimer(*this, solve_stats_->linear_solve_time); }
+
+    PotentialCalculationScope potentialCalculationScope() const
+    { return PotentialCalculationScope(*this); }
+
     bool getAllowCrossFlow() const;
 
     Scalar wmicrobes_() const;
@@ -407,6 +510,14 @@ protected:
     std::vector<std::string> well_control_log_;
 
     bool changed_to_open_this_step_ = true;
+
+    // statistics for standalone well solves; shared so that well copies used
+    // during e.g. potential calculations contribute to the same statistics
+    std::shared_ptr<WellSolveStats> solve_stats_ = std::make_shared<WellSolveStats>();
+    // true while a well potential calculation is in progress
+    mutable bool computing_well_potentials_ = false;
+    // true while a standalone well solve is in progress
+    mutable bool in_well_solve_ = false;
 };
 
 }

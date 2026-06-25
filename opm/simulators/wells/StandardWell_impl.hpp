@@ -351,6 +351,8 @@ namespace Opm
         // for example, the matrices B C does not need to update if only_wells
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
+        const auto assemble_timer = this->solveAssembleTimer();
+
         // clear all entries
         this->linSys_.clear();
 
@@ -1429,7 +1431,10 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         dx_well[0].resize(this->primary_variables_.numWellEq());
-        this->linSys_.solve( dx_well);
+        {
+            const auto linear_solve_timer = this->solveLinearSolveTimer();
+            this->linSys_.solve( dx_well);
+        }
 
         updateWellState(simulator, dx_well, groupStateHelper, well_state);
     }
@@ -1809,6 +1814,10 @@ namespace Opm
         if (!compute_potential) {
             return;
         }
+
+        // attribute the well solves done below (also those done by well
+        // copies) to the well potential calculations in the solve statistics
+        const auto potential_scope = this->potentialCalculationScope();
 
         bool converged_implicit = false;
         // for newly opened wells we dont compute the potentials implicit
@@ -2404,6 +2413,7 @@ namespace Opm
 
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
+        const auto solve_scope = this->solveScope(it);
         bool converged;
         bool relax_convergence = false;
         this->regularize_ = false;
@@ -2471,6 +2481,7 @@ namespace Opm
 
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
+        const auto solve_scope = this->solveScope(it);
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;

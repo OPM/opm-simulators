@@ -143,6 +143,16 @@ public:
         return istlSolver_->getSolveCount();
     }
 
+    double popPreconditionerApplyTime() override
+    {
+        return istlSolver_->popPreconditionerApplyTime();
+    }
+
+    double popPreconditionerUpdateTime() override
+    {
+        return istlSolver_->popPreconditionerUpdateTime();
+    }
+
 private:
     std::unique_ptr<AbstractISTLSolver<SparseMatrixAdapter, Vector>> istlSolver_;
 

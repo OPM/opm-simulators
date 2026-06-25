@@ -559,6 +559,10 @@ template<class Scalar> class WellContributions;
             // and in the well equations.
             void assemble(const double dt);
 
+            // collect the statistics for the standalone well solves gathered
+            // since the last call into last_report_ and reset them.
+            void collectWellSolveStats();
+
             // well controls and network pressures affect each other and are solved in an iterative manner.
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
