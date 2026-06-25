@@ -632,11 +632,19 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
     [[maybe_unused]] int count = 0;
     Scalar sum = 0;
     // Loop over mass balance equations
-    // TODO: we should probably also do something related to the energy equation also
-    // in the residual measures
     for (int eq_idx = 0; eq_idx < baseif_.numConservationQuantities(); ++eq_idx) {
         if (residuals[eq_idx] > rate_tolerance) {
             sum += residuals[eq_idx] / rate_tolerance;
+            ++count;
+        }
+    }
+
+    // Energy equation. The well-side energy residual is scaled to the same
+    // magnitude as the mass-balance equations (see getWellConvergence), so the
+    // same rate tolerance applies.
+    if constexpr (enable_energy) {
+        if (residuals[Temperature] > rate_tolerance) {
+            sum += residuals[Temperature] / rate_tolerance;
             ++count;
         }
     }

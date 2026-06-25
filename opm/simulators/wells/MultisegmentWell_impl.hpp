@@ -2022,7 +2022,8 @@ namespace Opm
                 if constexpr (has_energy) {
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
                     if (top_injecting_segment) {
-                        this->updateWellHeadCondition(simulator, std::get<0>(info), deferred_logger);
+                        this->updateWellHeadCondition(simulator, std::get<0>(info),
+                                                      std::get<1>(info), deferred_logger);
                     }
 
                     // Energy carried by fluid flowing out of this segment toward its outlet.
@@ -2483,11 +2484,18 @@ namespace Opm
     createFluidState(const std::vector<ValueType>& fluid_composition,
                      const ValueType& pressure,
                      const ValueType& temperature,
+                     const ValueType& saltConcentration,
                      DeferredLogger& deferred_logger) const
     {
         SegmentFluidState<ValueType> fluid_state;
         if constexpr (has_energy) {
             fluid_state.setTemperature(temperature);
+        }
+        if constexpr (has_brine) {
+            // Salt concentration influences the brine PVT (invB), density and
+            // enthalpy, so it must be set before those properties are evaluated
+            // further down.
+            fluid_state.setSaltConcentration(saltConcentration);
         }
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2637,8 +2645,9 @@ namespace Opm
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
         const Scalar firstPerfTemperature = std::get<0>(info);
-        // TODO: we can extend the salt concentration to the createFluidState
-        // const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        // Salt concentration is not an MSW primary variable; use the constant
+        // first-perforation value (as for the non-thermal temperature).
+        const EvalWell seg_salt_concentration = std::get<1>(info);
         const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
@@ -2647,7 +2656,8 @@ namespace Opm
             fluid_composition[idx] = this->primary_variables_.surfaceVolumeFraction(seg, idx);
         }
 
-        return createFluidState(fluid_composition, seg_pressure, seg_temperature, deferred_logger);
+        return createFluidState(fluid_composition, seg_pressure, seg_temperature,
+                                seg_salt_concentration, deferred_logger);
     }
 
     template <typename TypeTag>
@@ -2812,6 +2822,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator,
                                                        const Scalar first_perf_temperature,
+                                                       const Scalar first_perf_salt_concentration,
                                                        DeferredLogger& deferred_logger)
     {
         if (!this->well_ecl_.isInjector()) return;
@@ -2850,7 +2861,12 @@ namespace Opm
             }
         }
 
-        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature, deferred_logger);
+        // No injection-salinity keyword is handled here; fall back to the
+        // first-perforation reservoir salt concentration (as for temperature).
+        const EvalWell inj_salt_concentration{first_perf_salt_concentration};
+
+        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature,
+                                                       inj_salt_concentration, deferred_logger);
     }
 
 

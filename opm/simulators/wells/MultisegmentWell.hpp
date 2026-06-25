@@ -397,6 +397,7 @@ namespace Opm {
         createFluidState(const std::vector<ValueType>& fluid_composition,
                          const ValueType& pressure,
                          const ValueType& temperature,
+                         const ValueType& saltConcentration,
                          DeferredLogger& deferred_logger) const;
 
         SegmentFluidState<EvalWell>
@@ -413,6 +414,7 @@ namespace Opm {
 
         void updateWellHeadCondition(const Simulator& simulator,
                                      const Scalar first_perf_temperature,
+                                     const Scalar first_perf_salt_concentration,
                                      DeferredLogger& deferred_logger);
 
         void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
@@ -423,7 +425,9 @@ namespace Opm {
         // Convert per-component surface volumetric rates to a phase reservoir
         // volumetric rate using @p fs as the upwind fluid state. Handles the
         // dissolved-gas/vaporized-oil coupling (rs/rv). When the determinant
-        // (1 - rs*rv) is non-positive, falls back to the no-dissolution case
+        // (1 - rs*rv) is non-positive, falls back to the uncoupled conversion
+        // (rate / invB), dropping the rs/rv cross-terms but keeping @p fs's
+        // existing invB (Rs/Rv are not reset and invB is not re-evaluated),
         // and logs a debug message tagged with @p context.
         // @p fs may be either a wellbore SegmentFluidState (properties already
         // EvalWell) or a reservoir-cell intensive-quantity fluid state (Eval,
