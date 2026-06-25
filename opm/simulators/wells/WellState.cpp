@@ -892,10 +892,8 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
-                        // TODO: the temperature initialisation remains to be made more consistent.
-                        // For a thermal run each segment carries its own temperature; an isothermal
-                        // run keeps the whole well at the single well temperature rather than storing
-                        // a per-segment profile that nothing consumes.
+                        // TODO: temperature initialisation could be more consistent.
+                        // Thermal: per-segment temperature; isothermal: the single well temperature.
                         segment_temperature[seg] = thermal
                             ? (ws.producer ? perforation_temperature[first_perf_global_index]
                                            : segment_temperature[outlet_seg_index])

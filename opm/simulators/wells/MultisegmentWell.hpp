@@ -74,12 +74,8 @@ namespace Opm {
         static constexpr bool compositionSwitchEnabled =
             Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
-        // Scaling factor applied to the well-side energy equation so that its residual
-        // lands on the same numerical scale as the mass-balance equations (the raw
-        // energy flux/accumulation is ~1e4-1e9, while mass residuals are ~O(1)).
-        // We reuse the very same factor the reservoir energy equation uses (see
-        // BlackOilEnergyScalingFactor in blackoilmodel.hh) so the coupled well and
-        // reservoir energy equations live on the same scale.
+        // Scales the well-side energy equation onto the mass-balance residual
+        // scale. Reuses the reservoir energy factor so both live on the same scale.
         static constexpr Scalar energy_scaling_factor_ =
             getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
 
@@ -218,7 +214,7 @@ namespace Opm {
         // regularize msw equation
         bool regularize_;
 
-        // the intial amount of fluids in each segment under surface condition
+        // the initial amount of fluids in each segment under surface condition
         std::vector<std::vector<Scalar> > segment_fluid_initial_;
         // total energy inside the segments at the beginning of the time step
         std::vector<Scalar> segment_initial_energy_;
@@ -423,15 +419,11 @@ namespace Opm {
         ValueType computeSegmentEnergy(int seg) const;
 
         // Convert per-component surface volumetric rates to a phase reservoir
-        // volumetric rate using @p fs as the upwind fluid state. Handles the
-        // dissolved-gas/vaporized-oil coupling (rs/rv). When the determinant
-        // (1 - rs*rv) is non-positive, falls back to the uncoupled conversion
-        // (rate / invB), dropping the rs/rv cross-terms but keeping @p fs's
-        // existing invB (Rs/Rv are not reset and invB is not re-evaluated),
-        // and logs a debug message tagged with @p context.
-        // @p fs may be either a wellbore SegmentFluidState (properties already
-        // EvalWell) or a reservoir-cell intensive-quantity fluid state (Eval,
-        // extended to EvalWell on the fly).
+        // volumetric rate, using @p fs (upwind) for the rs/rv coupling. If
+        // (1 - rs*rv) <= 0, falls back to rate / invB (drops the cross-terms but
+        // keeps @p fs's invB; Rs/Rv unchanged) and logs a @p context debug message.
+        // @p fs may be a wellbore SegmentFluidState (EvalWell) or a reservoir-cell
+        // fluid state (Eval, extended to EvalWell on the fly).
         // @return the reservoir volumetric rate of @p phaseIdx.
         template <typename FluidStateT>
         EvalWell surfaceToReservoirRate(unsigned phaseIdx,

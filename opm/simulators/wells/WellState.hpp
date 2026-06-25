@@ -182,9 +182,8 @@ public:
                            const int* globalCellIdxMap) const;
 
     /// init the MS well related.
-    /// \param thermal  whether the run is thermal; when false the segment
-    ///                 temperature is kept uniform at the well temperature
-    ///                 instead of storing an unused per-segment profile.
+    /// \param thermal  when false, segment temperature is kept uniform (no
+    ///                 unused per-segment profile).
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state,
                              const bool thermal);

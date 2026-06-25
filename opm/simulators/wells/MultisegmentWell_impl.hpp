@@ -2026,9 +2026,8 @@ namespace Opm
                                                       std::get<1>(info), deferred_logger);
                     }
 
-                    // Energy carried by fluid flowing out of this segment toward its outlet.
-                    // Use upwind segment fluid properties for enthalpy and density. For the
-                    // top injecting segment, use the wellhead fluid state instead.
+                    // Energy out toward the outlet, using the upwind segment fluid
+                    // state (the wellhead state for the top injecting segment).
                     const auto& upwind_fs = top_injecting_segment ? this->wellhead_fluid_state_
                                                                   : this->segment_fluid_state_[seg_upwind];
                     assert((top_injecting_segment && seg_upwind == 0) || !top_injecting_segment);
@@ -2058,8 +2057,7 @@ namespace Opm
                 if constexpr (has_energy) {
                     for (const int inlet : this->segments_.inlets()[seg]) {
                         const int inlet_upwind = this->segments_.upwinding_segment(inlet);
-                        // Energy carried by fluid flowing from inlet segment into this segment.
-                        // Use upwind segment fluid properties for enthalpy and density.
+                        // Energy in from the inlet, using the upwind segment fluid state.
                         const auto& upwind_fs = this->segment_fluid_state_[inlet_upwind];
                         const EvalWell energy_rate =
                             this->computeSegmentEnergyRate(inlet, inlet_upwind, upwind_fs,
@@ -2492,9 +2490,7 @@ namespace Opm
             fluid_state.setTemperature(temperature);
         }
         if constexpr (has_brine) {
-            // Salt concentration influences the brine PVT (invB), density and
-            // enthalpy, so it must be set before those properties are evaluated
-            // further down.
+            // Set before invB/density/enthalpy are evaluated below (brine PVT).
             fluid_state.setSaltConcentration(saltConcentration);
         }
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -2645,8 +2641,7 @@ namespace Opm
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
         const Scalar firstPerfTemperature = std::get<0>(info);
-        // Salt concentration is not an MSW primary variable; use the constant
-        // first-perforation value (as for the non-thermal temperature).
+        // Salt is not an MSW primary variable: use the constant first-perf value.
         const EvalWell seg_salt_concentration = std::get<1>(info);
         const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
 
@@ -2792,13 +2787,12 @@ namespace Opm
             }
         }
         energy_flux *= this->well_efficiency_factor_;
-        // connectionRates_ is the source term fed into the reservoir energy equation; it is
-        // kept in raw energy units here (the reservoir scales it centrally in computeSource(),
-        // just like for standard wells) and must not be pre-scaled.
+        // Reservoir energy source term: kept raw (the reservoir scales it
+        // centrally in computeSource(), as for standard wells) — do not pre-scale.
         this->connectionRates_[local_perf_index][Indices::contiEnergyEqIdx] = Base::restrictEval(energy_flux);
 
-        // The well-side energy equation, on the other hand, is scaled to the same magnitude
-        // as the mass-balance equations, see energy_scaling_factor_.
+        // The well-side energy equation is scaled onto the mass-balance scale
+        // (energy_scaling_factor_).
         MultisegmentWellAssemble(*this).
             assemblePerforationEq(seg, local_perf_index,
                                   MSWEval::PrimaryVariables::Temperature,
@@ -2858,8 +2852,7 @@ namespace Opm
             }
         }
 
-        // No injection-salinity keyword is handled here; fall back to the
-        // first-perforation reservoir salt concentration (as for temperature).
+        // No injection-salinity keyword yet; reuse the first-perf salt (as for temperature).
         const EvalWell inj_salt_concentration{first_perf_salt_concentration};
 
         this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature,

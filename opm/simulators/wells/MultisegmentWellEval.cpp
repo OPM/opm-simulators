@@ -206,10 +206,8 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             const Scalar energy_residual = maximum_residual[eq_idx];
             // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
             constexpr int dummy_phase = -1;
-            // The well-side energy equation is scaled (by MultisegmentWell::energy_scaling_factor_,
-            // the same factor the reservoir energy equation uses) so that its residual is on the
-            // same magnitude as the mass-balance equations. We can therefore reuse the mass-balance
-            // well tolerances rather than a hand-tuned energy-specific constant.
+            // The energy residual is scaled (energy_scaling_factor_) onto the
+            // mass-balance scale, so we reuse the mass-balance well tolerances.
             if (std::isnan(energy_residual)) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_phase, baseif_.name()});
             } else if (energy_residual > max_residual_allowed) {
@@ -639,9 +637,8 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
         }
     }
 
-    // Energy equation. The well-side energy residual is scaled to the same
-    // magnitude as the mass-balance equations (see getWellConvergence), so the
-    // same rate tolerance applies.
+    // Energy residual is scaled onto the mass-balance scale, so the same
+    // rate tolerance applies.
     if constexpr (enable_energy) {
         if (residuals[Temperature] > rate_tolerance) {
             sum += residuals[Temperature] / rate_tolerance;
