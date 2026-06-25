@@ -191,12 +191,15 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         if ( !std::filesystem::exists(conf) ) {
             OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
         }
+        PropertyTree tree;
         try {
-            return PropertyTree(conf);
+            tree = PropertyTree(conf);
         }
         catch (...) {
             OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
         }
+        validateSystemCPRTree(tree);
+        return tree;
     }
 
     // We use lower case as the internal canonical representation of solver names.
@@ -226,6 +229,17 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
                 p.linear_solver_reduction_ = 0.005;
             }
             return setupCPRW(conf, p);
+        }
+        
+        // System CPR configuration (coupled reservoir-well system solver).
+        if (conf == "system_cpr") {
+            if (!linearSolverMaxIterSet) {
+                p.linear_solver_maxiter_ = 20;
+            }
+            if (!linearSolverReductionSet) {
+                p.linear_solver_reduction_ = 0.005;
+            }
+            return setupSystemCPR(conf, p);
         }
     }
 
@@ -273,8 +287,10 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     else {
         OPM_THROW(std::invalid_argument,
                 conf + " is not a valid setting for --linear-solver-configuration."
-                " Please use ilu0, dilu, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic or isai");
+                " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
     }
+
+
 }
 
 std::string getSolverString(const FlowLinearSolverParameters& p)
@@ -457,6 +473,100 @@ setupUMFPack([[maybe_unused]] const std::string& conf, const FlowLinearSolverPar
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", "umfpack"s);
     return prm;
+}
+
+
+PropertyTree
+setupSystemCPR([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+
+    // Outer solver
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", getSolverString(p));
+
+    // Top-level preconditioner: system_cpr
+    prm.put("preconditioner.type", "system_cpr"s);
+
+    // --- Reservoir smoother ---
+    prm.put("preconditioner.reservoir_smoother.maxiter", 1);
+    prm.put("preconditioner.reservoir_smoother.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.reservoir_smoother.verbosity", 0);
+    // Apply the configured smoother once without loopsolver's extra defect
+    // updates and convergence bookkeeping.
+    prm.put("preconditioner.reservoir_smoother.solver", "preconditioner2inverseoperator"s);
+    prm.put("preconditioner.reservoir_smoother.preconditioner.type", "paroverilu0"s);
+    prm.put("preconditioner.reservoir_smoother.preconditioner.relaxation", 1.0);
+
+    // --- Reservoir solver (CPR with AMG coarse solver) ---
+    prm.put("preconditioner.reservoir_solver.maxiter", 1);
+    prm.put("preconditioner.reservoir_solver.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.reservoir_solver.verbosity", 0);
+    // Apply the configured reservoir preconditioner once without loopsolver's
+    // extra defect updates and convergence bookkeeping.
+    prm.put("preconditioner.reservoir_solver.solver", "preconditioner2inverseoperator"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.type", "cpr"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.relaxation", 1.0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.use_well_weights", "false"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.add_wells", "false"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.weight_type", "trueimpes"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.pre_smooth", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.post_smooth", 0);
+    // Set unused finesmoother to jac to avoid spending time setuping an ILU smoother that won't be used.
+    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.type", "jac"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.relaxation", 1.0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.verbosity", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.maxiter", 1);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.tol", 1e-1);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.solver", "loopsolver"s);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.verbosity", 0);
+    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type", "amg"s);
+    setupDuneAMG(prm, "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+
+    // --- Well solver ---
+    prm.put("preconditioner.well_solver.maxiter", 1);
+    prm.put("preconditioner.well_solver.tol", p.linear_solver_reduction_);
+    prm.put("preconditioner.well_solver.verbosity", 0);
+    prm.put("preconditioner.well_solver.solver", "umfpack"s);
+    return prm;
+}
+
+
+void validateSystemCPRTree(const PropertyTree& prm)
+{
+    if (prm.get("preconditioner.type", std::string{}) != "system_cpr") {
+        return;
+    }
+    for (const char* sub : {"reservoir_solver", "reservoir_smoother", "well_solver"}) {
+        if (!prm.get_child_optional(std::string("preconditioner.") + sub).has_value()) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("system_cpr JSON configuration is missing the required "
+                                  "'preconditioner.{}' sub-tree.", sub));
+        }
+    }
+    // Ensure reservoir_solver uses CPR preconditioner
+    auto reservoir_solver = prm.get_child_optional("preconditioner.reservoir_solver");
+    if (reservoir_solver) {
+        std::string precond_type = reservoir_solver->get<std::string>("preconditioner.type", "");
+        if (precond_type != "cpr") {
+            OPM_THROW(std::invalid_argument,
+                      "In system_cpr configuration, the reservoir_solver must use the CPR preconditioner "
+                      "(preconditioner.reservoir_solver.preconditioner.type = 'cpr').");
+        }
+    }
+}
+
+
+void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions)
+{
+    if (matrixAddWellContributions) {
+        OPM_THROW(std::invalid_argument,
+                  "--matrix-add-well-contributions=true is incompatible with "
+                  "--linear-solver=system_cpr because the system CPR implementation assumes that well contributions are not added to the matrix.");
+    }
 }
 
 

@@ -1,0 +1,70 @@
+{
+    "maxiter": "20",
+    "tol": "0.0050000000000000001",
+    "verbosity": "0",
+    "solver": "bicgstab",
+    "preconditioner": {
+        "type": "system_cpr",
+        "reservoir_smoother": {
+            "maxiter": "1",
+            "tol": "0.0050000000000000001",
+            "verbosity": "0",
+            "solver": "preconditioner2inverseoperator",
+            "preconditioner": {
+                "type": "paroverilu0",
+                "relaxation": "1"
+            }
+        },
+        "reservoir_solver": {
+            "maxiter": "1",
+            "tol": "0.0050000000000000001",
+            "verbosity": "0",
+            "solver": "preconditioner2inverseoperator",
+            "preconditioner": {
+                "relaxation": "1",
+                "use_well_weights": "false",
+                "add_wells": "false",
+                "weight_type": "trueimpes",
+                "pre_smooth": "0",
+                "post_smooth": "0",
+                "finesmoother": {
+                    "type": "jac",
+                    "relaxation": "1"
+                },
+                "verbosity": "0",
+                "coarsesolver": {
+                    "maxiter": "1",
+                    "tol": "0.10000000000000001",
+                    "solver": "loopsolver",
+                    "verbosity": "0",
+                    "preconditioner": {
+                        "type": "amg",
+                        "alpha": "0.33333333333300003",
+                        "relaxation": "1",
+                        "iterations": "1",
+                        "coarsenTarget": "1200",
+                        "pre_smooth": "1",
+                        "post_smooth": "1",
+                        "beta": "0",
+                        "smoother": "ilu0",
+                        "verbosity": "0",
+                        "maxlevel": "15",
+                        "skip_isolated": "0",
+                        "accumulate": "1",
+                        "prolongationdamping": "1",
+                        "maxdistance": "2",
+                        "maxconnectivity": "15",
+                        "maxaggsize": "6",
+                        "minaggsize": "4"
+                    }
+                }
+            }
+        },
+        "well_solver": {
+            "maxiter": "1",
+            "tol": "0.0050000000000000001",
+            "verbosity": "0",
+            "solver": "umfpack"
+        }
+    }
+}

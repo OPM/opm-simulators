@@ -368,6 +368,18 @@ public:
                                    const GroupStateHelperType& groupStateHelper,
                                    WellStateType& well_state) = 0;
 
+    static constexpr int numResDofs = Indices::numEq;
+    static constexpr int numWellDofs = numResDofs + 1;  // NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
+    virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+        std::vector<CMatrix>& c_matrices,
+        std::vector<DMatrix>& d_matrices,
+        Opm::SparseTable<int>& wcells) const = 0;
+
 protected:
     // simulation parameters
     std::vector<RateVector> connectionRates_;

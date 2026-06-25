@@ -29,6 +29,7 @@
 #include <dune/istl/matrixmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/grid/utility/SparseTable.hpp>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
@@ -41,6 +42,7 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/system/SystemTypes.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
@@ -283,6 +285,18 @@ template<class Scalar> class WellContributions;
             bool updateGroupControls(const Group& group,
                                     DeferredLogger& deferred_logger,
                                     const int reportStepIdx);
+
+            static constexpr int numResDofs = Indices::numEq;
+            static constexpr int numWellDofs = numResDofs + 1;//NB will fail for for thermal for now
+            using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+            using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+            using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+            using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
+            void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+                                            std::vector<CMatrix>& c_matrices,
+                                            std::vector<DMatrix>& d_matrices,
+                                            Opm::SparseTable<int>& wcells) const;
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
@@ -726,6 +740,14 @@ template<class Scalar> class WellContributions;
 
             // Store cell rates after assembling to avoid iterating all wells and connections for every element
             std::map<int, RateVector> cellRates_;
+
+            // Cached well solution from the system solver, consumed by
+            // recoverWellSolutionAndUpdateWellState during postSolve.
+            std::optional<WellVector<Scalar>> cachedSystemWellSolution_;
+            std::vector<int> cachedWellDofOffsets_;
+
+            void assignWellTracerRates(data::Wells& wsrpt) const;
+            void assignWellSpeciesRates(data::Wells& wsrpt) const;
 
             [[nodiscard]] auto rsConstInfo() const
                 -> typename WellState<Scalar,IndexTraits>::RsConstInfo;

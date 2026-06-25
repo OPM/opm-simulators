@@ -1,0 +1,40 @@
+{
+    "maxiter": "20",
+    "tol": "0.005",
+    "verbosity": "0",
+    "solver": "bicgstab",
+    "preconditioner": {
+        "type": "system_cpr",
+        "reservoir_smoother": {
+            "maxiter": "1",
+            "tol": "0.005",
+            "verbosity": "0",
+            "solver": "preconditioner2inverseoperator",
+            "preconditioner": {
+                "type": "paroverilu0",
+                "relaxation": "1"
+            }
+        },
+        "reservoir_solver": {
+            "maxiter": "1",
+            "tol": "0.005",
+            "verbosity": "0",
+            "solver": "preconditioner2inverseoperator",
+            "preconditioner": {
+                "type": "cpr",
+                "relaxation": "1",
+                "use_well_weights": "false",
+                "add_wells": "false",
+                "weight_type": "trueimpes",
+                "pre_smooth": "0",
+                "post_smooth": "0"
+            }
+        },
+        "well_solver": {
+            "maxiter": "1",
+            "tol": "0.005",
+            "verbosity": "0",
+            "solver": "umfpack"
+        }
+    }
+}
