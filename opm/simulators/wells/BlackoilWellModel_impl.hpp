@@ -1673,7 +1673,7 @@ namespace Opm {
     updateWellControls(DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        if (!this->wellsActive()) {
+        if (!this->wellsActive() && !this->isReservoirCouplingMaster()) {
             return false;
         }
         const int episodeIdx = simulator_.episodeIndex();
@@ -1793,15 +1793,6 @@ namespace Opm {
                         const int reportStepIdx)
     {
         OPM_TIMEFUNCTION();
-        // Reservoir coupling: a master group's control and target are assigned
-        // by RescoupConstraintsCalculator at the start of each sync step and
-        // must be treated as read-only for the remainder of the step.  Skip
-        // higher-level and individual-control checks so they don't override
-        // the assigned state.  Master groups have no subordinate wells or
-        // groups, so no recursion is needed.
-        if (this->isReservoirCouplingMasterGroup(group.name())) {
-            return false;
-        }
         const auto& iterCtx = simulator_.problem().iterationContext();
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
