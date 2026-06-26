@@ -493,6 +493,8 @@ namespace Opm
                                       /*writeMessageToOPMLog=*/ false,
                                       under_zero_target,
                                       welltest_state_temp,
+                                      simulator.vanguard().eclState().getUnits(),
+                                      simulator.vanguard().schedule().getStartTime(),
                                       deferred_logger);
             this->closeCompletions(welltest_state_temp);
 
