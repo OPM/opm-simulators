@@ -193,7 +193,7 @@ function(add_test_compareSeparateECLFiles)
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
     DRIVER_ARGS
