@@ -178,7 +178,7 @@ public:
         , dMatrices_(dMatrices)
         , wellCells_(wellCells)
     {
-        validateInputs();
+        assert(inputsAreValid());
     }
 
     bool hasSameStructure(const WellMatrixStructure& cachedStructure) const
@@ -250,12 +250,21 @@ public:
     }
 
 private:
-    void validateInputs() const
+    bool inputsAreValid() const
     {
         const auto numWells = bMatrices_.size();
-        assert(cMatrices_.size() == numWells);
-        assert(dMatrices_.size() == numWells);
-        assert(static_cast<std::size_t>(wellCells_.size()) == numWells);
+
+        if (cMatrices_.size() != numWells) {
+            return false;
+        }
+
+        if (dMatrices_.size() != numWells) {
+            return false;
+        }
+
+        if (static_cast<std::size_t>(wellCells_.size()) != numWells) {
+            return false;
+        }
 
         for (std::size_t well = 0; well < numWells; ++well) {
             const auto& B = bMatrices_[well];
@@ -263,13 +272,32 @@ private:
             const auto& D = dMatrices_[well];
             const auto& cells = wellCells_[well];
 
-            assert(cells.size() == B.M());
-            assert(cells.size() == C.N());
-            assert(B.N() == C.M());
-            assert(B.N() == D.N());
-            assert(C.M() == D.M());
-            assert(D.N() == D.M());
+            if (cells.size() != B.M()) {
+                return false;
+            }
+
+            if (cells.size() != C.N()) {
+                return false;
+            }
+
+            if (B.N() != C.M()) {
+                return false;
+            }
+
+            if (B.N() != D.N()) {
+                return false;
+            }
+
+            if (C.M() != D.M()) {
+                return false;
+            }
+
+            if (D.N() != D.M()) {
+                return false;
+            }
         }
+
+        return true;
     }
 
     template<class Matrix>
