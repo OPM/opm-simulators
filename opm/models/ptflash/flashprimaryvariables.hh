@@ -148,6 +148,13 @@ public:
         }
         os << ")" << std::flush;
     }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        using FV = Dune::FieldVector<Scalar, getPropValue<TypeTag, Properties::NumEq>()>;
+        serializer(static_cast<FV&>(*this));
+    }
 };
 
 } // namespace Opm

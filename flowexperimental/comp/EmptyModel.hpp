@@ -58,6 +58,10 @@ public:
     template <class Restarter>
     void deserialize(Restarter& /*res*/){};
 
+    // no state to round-trip through OPMRST files
+    template<class Serializer>
+    void serializeOp(Serializer& /*serializer*/){};
+
     void beginEpisode(){};
     void beginTimeStep(){};
     void beginIteration(){};

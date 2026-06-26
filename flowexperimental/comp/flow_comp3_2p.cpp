@@ -1,9 +1,5 @@
 /*
-  Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2014, 2015 Statoil ASA.
-  Copyright 2015 NTNU
-  Copyright 2015, 2016, 2017 IRIS AS
+  Copyright 2024, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -21,31 +17,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COMPONENT_NAME_HPP
-#define COMPONENT_NAME_HPP
+#include "config.h"
 
-#include <string>
-#include <vector>
+#include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
-namespace Opm {
+#include "flow_comp.hpp"
 
-template<class FluidSystem, class Indices>
-class ComponentName
+int main(int argc, char** argv)
 {
-public:
-    ComponentName();
-
-    const std::string& name(const int compIdx) const
-    {
-        return this->names_[compIdx];
-    }
-
-private:
-    std::vector<std::string> names_{};
-};
-
-} // namespace Opm
-
-#include "ComponentName_impl.hpp"
-
-#endif
+    return Opm::dispatchFlowComp<3, false>(argc, argv);
+}

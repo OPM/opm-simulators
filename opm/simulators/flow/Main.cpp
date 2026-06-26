@@ -215,6 +215,10 @@ void Main::initMPI()
     // The instance() method already checks if MPI has been initialized so we may
     // not need to check mpi_init_ here.
     if (this->mpi_init_) {
+        // dune-fem's MPI manager must be initialized explicitly; any later
+        // use of dune-fem facilities throws "MPIManager has not been
+        // initialized" otherwise. It initializes MPI itself if needed.
+        Dune::Fem::MPIManager::initialize(argc_, argv_);
         Dune::MPIHelper::instance(argc_, argv_);
     }
 #elif HAVE_MPI

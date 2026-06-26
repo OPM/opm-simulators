@@ -1,9 +1,5 @@
 /*
-  Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2014, 2015 Statoil ASA.
-  Copyright 2015 NTNU
-  Copyright 2015, 2016, 2017 IRIS AS
+  Copyright 2024, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -21,31 +17,23 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COMPONENT_NAME_HPP
-#define COMPONENT_NAME_HPP
+#include "config.h"
 
-#include <string>
-#include <vector>
+#include <opm/models/utils/start.hh>
 
-namespace Opm {
+#include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
+#include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
-template<class FluidSystem, class Indices>
-class ComponentName
+#include "flowexp_comp.hpp"
+
+int main(int argc, char** argv)
 {
-public:
-    ComponentName();
+  using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<3, false>;
 
-    const std::string& name(const int compIdx) const
-    {
-        return this->names_[compIdx];
-    }
+  Opm::Parameters::Register<Opm::Parameters::EnableAdaptiveTimeStepping>
+    ("Use adaptive time stepping between report steps");
+  Opm::registerEclTimeSteppingParameters<double>();
+  Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
 
-private:
-    std::vector<std::string> names_{};
-};
-
-} // namespace Opm
-
-#include "ComponentName_impl.hpp"
-
-#endif
+  return Opm::start<TypeTag>(argc, argv, false);
+}
