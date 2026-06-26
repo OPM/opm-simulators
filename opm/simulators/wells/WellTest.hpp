@@ -24,7 +24,12 @@
 #ifndef OPM_WELL_TEST_HEADER_INCLUDED
 #define OPM_WELL_TEST_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <cstddef>
+#include <ctime>
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace Opm
@@ -48,6 +53,8 @@ public:
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
                                      bool zero_group_target,
+                                     const UnitSystem& unit_system,
+                                     const std::time_t start_time,
                                      DeferredLogger& deferred_logger) const;
 
     void updateWellTestStatePhysical(const double simulation_time,
@@ -61,6 +68,12 @@ private:
         bool ratio_limit_violated = false;
         int worst_offending_completion = INVALIDCOMPLETION;
         Scalar violation_extent = 0.0;
+        //! \brief Metadata describing the most-violating ratio limit, used to
+        //!        build the human-readable workover message.
+        std::string ratio_name{};
+        UnitSystem::measure ratio_measure = UnitSystem::measure::identity;
+        Scalar ratio_value = 0.0;
+        Scalar ratio_limit = 0.0;
     };
 
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
@@ -84,6 +97,8 @@ private:
     void checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
                                        const Scalar max_ratio_limit,
                                        const RatioFunc& ratioFunc,
+                                       const std::string& ratio_name,
+                                       const UnitSystem::measure ratio_measure,
                                        RatioLimitCheckReport& report) const;
 
     bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
@@ -95,14 +110,31 @@ private:
                          const SingleWellState<Scalar, IndexTraits>& ws,
                          DeferredLogger& deferred_logger) const;
 
+    //! \brief Describe a completion as "Completion N - block (i, j, k)" when it
+    //!        owns a single connection, or just "Completion N" when it spans
+    //!        several connections/blocks.
+    std::string completionDescriptor(int complnum) const;
+
     //! \brief Apply the CON / +CON (close-connection) workover procedure.
+    //!
+    //! \param when    Human-readable "at time ... (date = ...)" clause shared
+    //!                with the triggering economic-limit message.
+    //! \param reason  Human-readable ratio-violation clause (e.g.
+    //!                "water-gas ratio 1.0353e-06 SM3/SM3 exceeds the limit ...").
     void closeOffendingCompletion(int offending_completion,
                                   bool close_connections_below,
                                   double simulation_time,
                                   bool write_message_to_opmlog,
                                   WellTestState& well_test_state,
+                                  const std::string& when,
+                                  const std::string& reason,
                                   DeferredLogger& deferred_logger) const;
 
+    //! \brief A line of \p sep_length repetitions of \p sep_char used to frame
+    //!        economic-limit workover messages (mirrors GroupEconomicLimitsChecker).
+    std::string message_separator(const char sep_char = '*',
+                                  const std::size_t sep_length = 110) const
+    { return std::string(sep_length, sep_char); }
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
