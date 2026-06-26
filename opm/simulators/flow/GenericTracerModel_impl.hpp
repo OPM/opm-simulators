@@ -120,7 +120,7 @@ freeTracerConcentration(int tracerIdx, int globalDofIdx) const
         return 0.0;
     }
 
-    return freeTracerConcentration_[tracerIdx][globalDofIdx];
+    return freeTracerConcentration_[tracerIdx][globalDofIdx][0];
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
@@ -131,14 +131,14 @@ solTracerConcentration(int tracerIdx, int globalDofIdx) const
         return 0.0;
     }
 
-    return solTracerConcentration_[tracerIdx][globalDofIdx];
+    return solTracerConcentration_[tracerIdx][globalDofIdx][0];
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 void GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 setFreeTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
 {
-    this->freeTracerConcentration_[tracerIdx][globalDofIdx] = value;
+    this->freeTracerConcentration_[tracerIdx][globalDofIdx][0] = value;
     this->tracerConcentration_[tracerIdx][globalDofIdx][0] = value;
 }
 
@@ -146,7 +146,7 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 void GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 setSolTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
 {
-    this->solTracerConcentration_[tracerIdx][globalDofIdx] = value;
+    this->solTracerConcentration_[tracerIdx][globalDofIdx][0] = value;
     this->tracerConcentration_[tracerIdx][globalDofIdx][1] = value;
 }
 
