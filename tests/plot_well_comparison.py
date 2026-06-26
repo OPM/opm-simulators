@@ -14,13 +14,14 @@ from opm.io.ecl import ESmry
 import os
 import pickle
 from scipy import integrate, stats
+import sys
 
 # Run analysis of a test.
 # Calculate the deviation for each curve
 # and generate a pdf with plots ordered according to deviation
-def run_analysis(ref_file_name, sys_file_name, test_name, ref_name, sim_name):
-    ref_file = ESmry(ref_file_name + '.SMSPEC')
-    sim_file = ESmry(sys_file_name + '.SMSPEC')
+def run_analysis(ref_smspec, sim_smspec, test_name, ref_name, sim_name):
+    ref_file = ESmry(ref_smspec)
+    sim_file = ESmry(sim_smspec)
 
     ref_time = ref_file.dates()
     sim_time = sim_file.dates()
@@ -98,6 +99,61 @@ def run_analysis(ref_file_name, sys_file_name, test_name, ref_name, sim_name):
         with open('max_devs.pkl', 'wb') as f:
             pickle.dump(max_deviations, f)
 
+
+# Analyze a case where no reference solution exists.
+# Generate plots for all non-empty curves from the simulation only.
+def analyze_new_case(sim_smspec, test_name, sim_name):
+    sim_file = ESmry(sim_smspec)
+    sim_time = sim_file.dates()
+
+    plt.rcParams['font.size'] = 8
+
+    p = PdfPages(f'{test_name}.pdf')
+    for r in sim_file.keys():
+        if r == 'TIME' or r == 'YEARS':
+            continue
+
+        try:
+            sim = sim_file[r]
+        except Exception:
+            continue
+
+        if len(sim) == 0:
+            continue
+
+        if not np.any(sim):
+            continue
+
+        fig, ax = plt.subplots()
+        ax.plot(sim_time, sim, linewidth=0.5, marker='x', markersize=1.0)
+        ax.legend([sim_name])
+        plt.title(r)
+        u = sim_file.units(r)
+        if u:
+            plt.ylabel(u)
+        myFmt = DateFormatter("%Y-%b")
+        ax.xaxis.set_major_formatter(myFmt)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(20))
+        plt.grid()
+        fig.autofmt_xdate()
+        fig.savefig(p, format='pdf')
+        plt.close(fig)
+
+    p.close()
+
+    with FileLock('max_devs.lck'):
+        if os.path.exists('max_devs.pkl'):
+            with open('max_devs.pkl', 'rb') as f:
+                max_deviations = pickle.load(f)
+        else:
+            max_deviations = {}
+
+        # No reference exists, so register zero deviation for ranking.
+        max_deviations[test_name] = 0.0
+
+        with open('max_devs.pkl', 'wb') as f:
+            pickle.dump(max_deviations, f)
+
 # Rename files to rank them according to maximum deviations
 def reorder_files():
     with open('max_devs.pkl', 'rb') as f:
@@ -121,6 +177,16 @@ args = parser.parse_args()
 
 if args.operation == 'plot':
     print(f"Processing {args.test_name}")
-    run_analysis(args.ref_file, args.sim_file, args.test_name, args.ref_name, args.sim_name)
+    sim_smspec = args.sim_file + '.SMSPEC'
+    ref_smspec = (args.ref_file + '.SMSPEC') if args.ref_file else None
+
+    if not os.path.exists(sim_smspec):
+        print(f"Cannot process {args.test_name}: missing simulation summary {sim_smspec}", file=sys.stderr)
+        sys.exit(1)
+
+    if ref_smspec and os.path.exists(ref_smspec):
+        run_analysis(ref_smspec, sim_smspec, args.test_name, args.ref_name, args.sim_name)
+    else:
+        analyze_new_case(sim_smspec, args.test_name, args.sim_name)
 else:
     reorder_files()
