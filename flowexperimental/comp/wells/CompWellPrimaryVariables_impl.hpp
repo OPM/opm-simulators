@@ -112,20 +112,23 @@ updateNewton(const BVectorWell& dwells)
     for (unsigned i = 0; i < value_.size(); ++i) {
         value_[i] -= damping * dwells[0][i];
     }
-    // TODO: more general indices here
-    value_[1] = std::clamp(value_[1], 1.e-10, 1.);
-    value_[2] = std::clamp(value_[2], 1.e-10, 1.);
+    // The mole-fraction primary variables occupy indices [1, numComponents - 1]
+    // (QTotal is at 0 and Bhp at numComponents). Clamp each of them, then
+    // renormalize so the full composition - including the implicit last
+    // component - sums to one.
     std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);
     Scalar sum_mole_fraction = 0.;
-    for (int i = 0; i < FluidSystem::numComponents-1; ++i) {
-        mole_fractions[i] = std::max(value_[i + 1], 1.e-10);
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
+        value_[i + 1] = std::clamp(value_[i + 1], 1.e-10, 1.);
+        mole_fractions[i] = value_[i + 1];
         sum_mole_fraction += mole_fractions[i];
     }
     mole_fractions[FluidSystem::numComponents - 1] = std::max(1.0 - sum_mole_fraction, 1.e-10);
     sum_mole_fraction += mole_fractions[FluidSystem::numComponents - 1];
     assert(sum_mole_fraction != 0.);
-    value_[1] = mole_fractions[0] / sum_mole_fraction;
-    value_[2] = mole_fractions[1] / sum_mole_fraction;
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
+        value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
+    }
 
     updateEvaluation();
 }
