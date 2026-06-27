@@ -222,6 +222,11 @@ getMobility(const Simulator& simulator,
         for (unsigned phase_idx = 0; phase_idx < FluidSystem::numPhases; ++phase_idx) {
             mob[phase_idx] = PrimaryVariables::extendEval(int_quants->mobility(phase_idx));
         }
+    } else {
+        // TODO: not sure how to handle this at the moment, throw for now
+        OPM_THROW(std::logic_error,
+                  "CompWell::getMobility: a connection saturation table differing from the "
+                  "cell saturation region is not supported yet");
     }
 
 }
