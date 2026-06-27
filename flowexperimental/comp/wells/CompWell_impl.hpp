@@ -584,8 +584,8 @@ updateWellControl(const SummaryState& summary_state,
                                       this->well_ecl_.name(), current_rate, rate_limit, well_state.bhp,
                                       fmt::join(well_state.surface_phase_rates, ", ")));
             if (current_rate > rate_limit) {
-                OpmLog::info(fmt::format("Well {} RATE control TRIGGERED: current_rate={:.6e} > rate_limit={:.6e}",
-                                         this->well_ecl_.name(), current_rate, rate_limit));
+                OpmLog::debug(fmt::format("Well {} RATE control TRIGGERED: current_rate={:.6e} > rate_limit={:.6e}",
+                                          this->well_ecl_.name(), current_rate, rate_limit));
                 well_state.injection_cmode = WellInjectorCMode::RATE;
                 changed = true;
             }
