@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2024, 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 

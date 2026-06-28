@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -38,7 +38,7 @@ namespace Opm {
 ///
 /// \tparam FluidSystem  compositional fluid system (oil/gas, two phases)
 /// \tparam T            value type of the fluid state: the fluid system's Scalar
-///                      for the explicit/old-time-level quantities, or an
+///                      for the explicit quantities, or an
 ///                      Evaluation for the AD path. The dispatch between the
 ///                      scalar and the AD flash solver is done on this type.
 /// \param flash_tolerance  convergence tolerance handed to the flash solver. The

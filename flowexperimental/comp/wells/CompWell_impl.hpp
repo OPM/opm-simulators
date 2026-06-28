@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2024, 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -27,6 +27,8 @@
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
+
+#include <stdexcept>
 
 namespace Opm {
 
@@ -56,8 +58,8 @@ calculateExplicitQuantities(const Simulator& simulator,
 {
     updatePrimaryVariables(simulator, well_state);
     {
-        // flash calculation in the wellbore to obtain the old-time-level
-        // (explicit) component masses
+        // flash calculation in the wellbore to obtain the explicit
+        // component masses
         auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
 
         flashFluidState_(fluid_state_scalar);

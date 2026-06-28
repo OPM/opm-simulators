@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -43,21 +43,49 @@
 
 #include <flowexperimental/comp/wells/CompWellFlash.hpp>
 
+#include <opm/material/components/C1.hpp>
+#include <opm/material/components/C10.hpp>
+#include <opm/material/components/SimpleCO2.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidsystems/ThreeComponentFluidSystem.hh>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <string>
+#include <type_traits>
 
 namespace {
 
 using Scalar = double;
-using FluidSystem = Opm::ThreeComponentFluidSystem<Scalar>;
+
+// Two-phase (oil/gas) three-component PT-flash fluid system. The generic fluid
+// system registers its component data at runtime, see
+// registerFluidSystemComponents() below.
+using FluidSystem = Opm::GenericOilGasWaterFluidSystem<Scalar, 3, /*enableWater=*/false>;
 
 constexpr int numComponents = FluidSystem::numComponents; // 3
+
+// Register the fixed CO2/Methane/Decane composition with the generic fluid
+// system. The component data is shared static state, so this must run before any
+// flash.
+void registerFluidSystemComponents()
+{
+    using CO2 = Opm::SimpleCO2<Scalar>;
+    using C1  = Opm::C1<Scalar>;
+    using C10 = Opm::C10<Scalar>;
+    using CompParam = FluidSystem::ComponentParam;
+
+    FluidSystem::init();
+    FluidSystem::addComponent(CompParam{CO2::name(), CO2::molarMass(), CO2::criticalTemperature(),
+                                        CO2::criticalPressure(), CO2::criticalVolume(), CO2::acentricFactor()});
+    FluidSystem::addComponent(CompParam{C1::name(), C1::molarMass(), C1::criticalTemperature(),
+                                        C1::criticalPressure(), C1::criticalVolume(), C1::acentricFactor()});
+    FluidSystem::addComponent(CompParam{C10::name(), C10::molarMass(), C10::criticalTemperature(),
+                                        C10::criticalPressure(), C10::criticalVolume(), C10::acentricFactor()});
+}
 
 // The wellbore primary variables that the component masses depend on are the
 // bottom-hole pressure and the first (numComponents - 1) overall mole
@@ -148,6 +176,8 @@ computeWellboreQuantities(const T& pressure,
 
 BOOST_AUTO_TEST_CASE(WellboreFlashDerivatives)
 {
+    registerFluidSystemComponents();
+
     // A composition/pressure that sits comfortably inside the two-phase region,
     // so the flash is smooth and the central differences are meaningful.
     const Scalar temperature = 300.0;            // K
