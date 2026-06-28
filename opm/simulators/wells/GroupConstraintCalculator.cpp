@@ -597,6 +597,9 @@ calculateGroupConstraint()
     // NOTE: Injection targets for VREP, RESV, and REIN modes are always sent as RATE
     //   control mode to the slave, see
     //   RescoupConstraintsCalculator.cpp::calculateSlaveGroupConstraints_()
+    // bottom_group_current_rate_available is a positive magnitude for producers (the sign is
+    // normalized at the source in getBottomGroupCurrentRateAvailable_()), so it is directly
+    // comparable to the positive full_target.
     if (bottom_group_current_rate_available > TARGET_RATE_TOLERANCE) {  // > 1e-12
         const auto toplevel_control_mode = this->getToplevelControlMode_();
         if ((bottom_group_current_rate_available > full_target)) {
@@ -721,9 +724,16 @@ getBottomGroupCurrentRateAvailable_() const
     }
     else {
         const auto& tcalc = std::get<TargetCalculator>(this->target_calculator_);
-        return tcalc.calcModeRateFromRates(
+        const Scalar avail = tcalc.calcModeRateFromRates(
             this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/false)
         );
+        // Source-level sign fix: getGroupRatesAvailableForHigherLevelControl() returns producer
+        // rates in the signed (negative) convention. Negate to a positive magnitude so the value
+        // is consistent with the (positive) top-level target everywhere it is used in
+        // calculateGroupConstraint() -- both the reduction add-back and the overshoot
+        // comparison/scaling. Mirrors the non-coupled path in GroupStateHelper.cpp, which uses
+        // current_rate_available = -tcalc.calcModeRateFromRates(rates) for producers.
+        return -avail;
     }
 }
 
