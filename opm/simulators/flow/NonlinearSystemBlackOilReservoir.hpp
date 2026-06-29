@@ -127,7 +127,14 @@ public:
         Scalar dRvMax = 0.0;
     };
 
-    // Output debug flags for which tolerances used
+    // Output debug flags for which tolerances used.
+    // NB: <windows.h> (pulled in transitively on Windows) defines STRICT as a
+    // macro, which would turn "STRICT = 0" into "1 = 0"; undef it (and RELAXED
+    // defensively) so the enum and its DebugFlags::STRICT users compile.
+#if defined(_WIN32)
+#  undef STRICT
+#  undef RELAXED
+#endif
     enum class DebugFlags {
         STRICT = 0,
         RELAXED = 1,

@@ -36,6 +36,11 @@
 #include <unistd.h>
 #include <vector>
 
+// MSVC's <sys/stat.h> defines _S_IFMT/_S_IFDIR but not the POSIX S_ISDIR macro.
+#if defined(_MSC_VER) && !defined(S_ISDIR)
+#  define S_ISDIR(mode) (((mode) & _S_IFMT) == _S_IFDIR)
+#endif
+
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
 #endif

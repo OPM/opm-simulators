@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <numeric>
 #include <functional>
 #include <vector>
 

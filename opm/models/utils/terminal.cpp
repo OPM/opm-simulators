@@ -43,7 +43,9 @@ const char* getSignalAbbrev(int sig)
         {SIGILL, "ILL"},
         {SIGABRT, "ABRT"},
         {SIGFPE, "FPE"},
-        {SIGKILL, "KILL"},
+#ifdef SIGKILL
+        {SIGKILL, "KILL"},   // not defined by MSVC's <signal.h>
+#endif
         {SIGSEGV, "SEGV"},
         {SIGTERM, "TERM"},
     };
@@ -131,11 +133,15 @@ void assignResetTerminalSignalHandlers()
     // program aborts
     if (isatty(STDIN_FILENO) != 0) {
         signal(SIGINT, resetTerminal);
-        signal(SIGHUP, resetTerminal);
+#ifdef SIGHUP
+        signal(SIGHUP, resetTerminal);   // not on Windows
+#endif
         signal(SIGABRT, resetTerminal);
         signal(SIGFPE, resetTerminal);
         signal(SIGSEGV, resetTerminal);
-        signal(SIGPIPE, resetTerminal);
+#ifdef SIGPIPE
+        signal(SIGPIPE, resetTerminal);  // not on Windows
+#endif
         signal(SIGTERM, resetTerminal);
     }
 }

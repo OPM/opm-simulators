@@ -37,13 +37,29 @@
 #include <thread>
 #include <unistd.h>
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
+
 namespace {
 
 unsigned long long getTotalSystemMemory()
 {
+#if defined(_WIN32)
+    // Windows has no sysconf(_SC_PHYS_PAGES); query the total physical memory.
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    if (GlobalMemoryStatusEx(&status)) {
+        return static_cast<unsigned long long>(status.ullTotalPhys);
+    }
+    return 0;
+#else
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
     return pages * page_size;
+#endif
 }
 
 }
@@ -58,7 +74,11 @@ void printPRTHeader(const int nprocs, const int nthreads,
     const double megabyte = 1024 * 1024;
     unsigned num_cpu = std::thread::hardware_concurrency();
     struct utsname arch;
+#if defined(_WIN32)
+    const char* user = getenv("USERNAME");  // no getlogin() on Windows
+#else
     const char* user = getlogin();
+#endif
     std::time_t now = std::time(0);
     struct std::tm  tstruct;
     char      tmstr[80];

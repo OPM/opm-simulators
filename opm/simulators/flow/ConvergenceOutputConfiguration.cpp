@@ -36,12 +36,18 @@ namespace {
     std::vector<std::string> tokenizeOptionValues(std::string_view options)
     {
         const auto split = std::regex { R"(\s*,\s*)" };
-        return {
-            std::cregex_token_iterator {
-                options.begin(), options.end(), split, -1
-            },
-            std::cregex_token_iterator {}
-        };
+        // Construct from the iterator range explicitly: a braced {first, last}
+        // is interpreted by MSVC as an initializer_list<cregex_token_iterator>
+        // rather than the (first, last) range constructor.
+        // Use data()/data()+size() raw pointers: std::cregex_token_iterator needs
+        // const char* iterators, but MSVC's std::string_view::begin() is a checked
+        // iterator class (not const char*), which does not convert.
+        return std::vector<std::string>(
+            std::cregex_token_iterator(
+                options.data(), options.data() + options.size(), split, -1
+            ),
+            std::cregex_token_iterator()
+        );
     }
 
     void reportUnsupportedOptionValuesAndThrow(std::vector<std::string> unsupp,

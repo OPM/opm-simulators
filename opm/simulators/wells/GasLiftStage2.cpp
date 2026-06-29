@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <numeric>
 #include <optional>
 #include <string>
 
