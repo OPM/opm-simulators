@@ -64,7 +64,8 @@ template<class RatioFunc>
 bool WellTest<Scalar, IndexTraits>::
 checkMaxRatioLimitWell(const SingleWellState<Scalar, IndexTraits>& ws,
                        const Scalar max_ratio_limit,
-                       const RatioFunc& ratioFunc) const
+                       const RatioFunc& ratioFunc,
+                       Scalar& well_ratio_value) const
 {
     const int np = well_.numPhases();
 
@@ -73,8 +74,8 @@ checkMaxRatioLimitWell(const SingleWellState<Scalar, IndexTraits>& ws,
         well_rates[p] = ws.surface_rates[p];
     }
 
-    const Scalar well_ratio = ratioFunc(well_rates, well_.phaseUsage());
-    return (well_ratio > max_ratio_limit);
+    well_ratio_value = ratioFunc(well_rates, well_.phaseUsage());
+    return (well_ratio_value > max_ratio_limit);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -82,6 +83,7 @@ template<class RatioFunc>
 void WellTest<Scalar, IndexTraits>::
 checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
                               const Scalar max_ratio_limit,
+                              const Scalar well_ratio_value,
                               const RatioFunc& ratioFunc,
                               const std::string& ratio_name,
                               const UnitSystem::measure ratio_measure,
@@ -131,12 +133,11 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
 
         report.worst_offending_completion = worst_offending_completion;
         report.violation_extent = violation_extent;
-        // Record which ratio limit was violated together with the worst
-        // completion's actual value and the limit, so the closing message can
-        // report the offending quantity.
+        // Report the well-level ratio (WECON); the completion ratio only
+        // selects the worst offender via violation_extent above.
         report.ratio_name = ratio_name;
         report.ratio_measure = ratio_measure;
-        report.ratio_value = max_ratio_completion;
+        report.ratio_value = well_ratio_value;
         report.ratio_limit = max_ratio_limit;
     }
 }
@@ -164,11 +165,12 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     const Scalar max_gor_limit = econ_production_limits.maxGasOilRatio();
     assert(max_gor_limit > 0.);
 
-    const bool gor_limit_violated = this->checkMaxRatioLimitWell(ws, max_gor_limit, gor);
+    Scalar well_gor = 0.0;
+    const bool gor_limit_violated = this->checkMaxRatioLimitWell(ws, max_gor_limit, gor, well_gor);
 
     if (gor_limit_violated) {
         report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_gor_limit, gor,
+        this->checkMaxRatioLimitCompletions(ws, max_gor_limit, well_gor, gor,
                                             "gas-oil ratio",
                                             UnitSystem::measure::gas_oil_ratio,
                                             report);
@@ -198,11 +200,12 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     const Scalar max_wgr_limit = econ_production_limits.maxWaterGasRatio();
     assert(max_wgr_limit > 0.);
 
-    const bool wgr_limit_violated = this->checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
+    Scalar well_wgr = 0.0;
+    const bool wgr_limit_violated = this->checkMaxRatioLimitWell(ws, max_wgr_limit, wgr, well_wgr);
 
     if (wgr_limit_violated) {
         report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_wgr_limit, wgr,
+        this->checkMaxRatioLimitCompletions(ws, max_wgr_limit, well_wgr, wgr,
                                             "water-gas ratio",
                                             UnitSystem::measure::water_gas_ratio,
                                             report);
@@ -236,12 +239,13 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     const Scalar max_water_cut_limit = econ_production_limits.maxWaterCut();
     assert(max_water_cut_limit > 0.);
 
+    Scalar well_water_cut = 0.0;
     const bool watercut_limit_violated =
-        this->checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut);
+        this->checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut, well_water_cut);
 
     if (watercut_limit_violated) {
         report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_water_cut_limit, waterCut,
+        this->checkMaxRatioLimitCompletions(ws, max_water_cut_limit, well_water_cut, waterCut,
                                             "water cut",
                                             UnitSystem::measure::water_cut,
                                             report);
@@ -540,8 +544,9 @@ closeOffendingCompletion(const int offending_completion,
             : fmt::format("{} in Well {}",
                           this->completionDescriptor(offending_completion), well_.name());
         const std::string sep = this->message_separator();
+        // WECON-driven: report "the well" ratio (CECON would say "its ...", will be addressed by CECON development).
         deferred_logger.info(
-            fmt::format("{}\n{} will be closed {},\nBecause its {}.\n{}",
+            fmt::format("{}\n{} will be closed {},\nBecause the well {}.\n{}",
                         sep, subject, when, reason, sep));
     }
 
