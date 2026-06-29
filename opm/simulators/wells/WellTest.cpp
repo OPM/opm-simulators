@@ -435,22 +435,26 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
     if (ratio_report.ratio_limit_violated) {
         const auto workover = econ_production_limits.workover();
 
-        // Build the "at time ... (date = ...)" and ratio-violation clauses that
-        // are shared by all the ratio-limit workover messages below.
-        const std::string when = fmt::format(
-            "at time {:.2f} {} (date = {})",
-            unit_system.from_si(UnitSystem::measure::time, simulation_time),
-            unit_system.name(UnitSystem::measure::time),
-            dateString(start_time, simulation_time));
+        // Shared "at time ..." and ratio-violation clauses for the messages
+        // below; only built when a message will actually be logged.
+        std::string when;
+        std::string reason;
+        if (write_message_to_opmlog) {
+            when = fmt::format(
+                "at time {:.2f} {} (date = {})",
+                unit_system.from_si(UnitSystem::measure::time, simulation_time),
+                unit_system.name(UnitSystem::measure::time),
+                dateString(start_time, simulation_time));
 
-        const std::string ratio_unit = unit_system.name(ratio_report.ratio_measure);
-        const std::string unit_suffix = ratio_unit.empty() ? std::string{}
-                                                           : " " + ratio_unit;
-        const std::string reason = fmt::format(
-            "{} {:.4e}{} exceeds the limit {:.4e}{}",
-            ratio_report.ratio_name,
-            unit_system.from_si(ratio_report.ratio_measure, ratio_report.ratio_value), unit_suffix,
-            unit_system.from_si(ratio_report.ratio_measure, ratio_report.ratio_limit), unit_suffix);
+            const std::string ratio_unit = unit_system.name(ratio_report.ratio_measure);
+            const std::string unit_suffix = ratio_unit.empty() ? std::string{}
+                                                               : " " + ratio_unit;
+            reason = fmt::format(
+                "{} {:.4e}{} exceeds the limit {:.4e}{}",
+                ratio_report.ratio_name,
+                unit_system.from_si(ratio_report.ratio_measure, ratio_report.ratio_value), unit_suffix,
+                unit_system.from_si(ratio_report.ratio_measure, ratio_report.ratio_limit), unit_suffix);
+        }
 
         switch (workover) {
         case WellEconProductionLimits::EconWorkover::CON:
@@ -504,7 +508,13 @@ closeOffendingCompletion(const int offending_completion,
                          const std::string& reason,
                          DeferredLogger& deferred_logger) const
 {
+    // complnum is always >= 1; a non-positive value would be a bug.
     assert(offending_completion > 0);
+
+    // Sentinel for "no offending completion"; normally filtered by the caller.
+    if (offending_completion == RatioLimitCheckReport::INVALIDCOMPLETION) {
+        return;
+    }
 
     // The wellbore ordering of the connections is the one given by COMPORD and
     // reflected in the order of the connections returned by getConnections().
