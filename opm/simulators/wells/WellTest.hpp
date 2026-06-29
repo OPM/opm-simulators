@@ -88,14 +88,18 @@ private:
                                const SingleWellState<Scalar, IndexTraits>& ws,
                                RatioLimitCheckReport& report) const;
 
+    //! \brief Check whether the well-level ratio exceeds \p max_ratio_limit;
+    //!        \p well_ratio_value returns the computed ratio (reported by WECON).
     template<class RatioFunc>
     bool checkMaxRatioLimitWell(const SingleWellState<Scalar, IndexTraits>& ws,
                                 const Scalar max_ratio_limit,
-                                const RatioFunc& ratioFunc) const;
+                                const RatioFunc& ratioFunc,
+                                Scalar& well_ratio_value) const;
 
     template<class RatioFunc>
     void checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
                                        const Scalar max_ratio_limit,
+                                       const Scalar well_ratio_value,
                                        const RatioFunc& ratioFunc,
                                        const std::string& ratio_name,
                                        const UnitSystem::measure ratio_measure,
