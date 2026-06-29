@@ -205,7 +205,7 @@ reportFailures(const ViolationLevel      level,
 // ===========================================================================
 
 template <typename Scalar>
-void Opm::SatfuncConsistencyChecks<Scalar>::ViolationSample::clear()
+void Opm::Detail::SatfuncConsistencyViolationSample<Scalar>::clear()
 {
     this->count.clear();
     this->pointID.clear();
