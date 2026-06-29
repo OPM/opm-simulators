@@ -105,11 +105,11 @@ public:
     void beginReportStep(unsigned report_step);
     void beginTimeStep();
     void beginIteration();
-     void restoreLastValidState();
+    void restoreLastValidState();
 
     void init();
     void endIteration() const {}
-     void endTimeStep();
+    void endTimeStep();
     void endEpisode() {}
 
     void computeTotalRatesForDof(RateVector& /*rate*/, unsigned /*globalIdx*/) const;
@@ -136,18 +136,18 @@ public:
     auto begin() const { return well_container_.begin(); }
     auto end() const { return well_container_.end(); }
 
-     const SimulatorReportSingle& lastReport() const { return last_report_; }
-     void prepareDeserialize(const int) {}
-     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
-     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
-     const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
-     bool forceShutWellByName(const std::string& well_name, double simulation_time, bool dont_shut_grup_wells);
+    const SimulatorReportSingle& lastReport() const { return last_report_; }
+    void prepareDeserialize(const int) {}
+    const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
+    const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
+    const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
+    bool forceShutWellByName(const std::string& well_name, double simulation_time, bool dont_shut_grup_wells);
 
-     template <class ReservoirCouplingSlave>
-     void setReservoirCouplingSlave(ReservoirCouplingSlave*) {}
+    template <class ReservoirCouplingSlave>
+    void setReservoirCouplingSlave(ReservoirCouplingSlave*) {}
 
-     template <class ReservoirCouplingMaster>
-     void setReservoirCouplingMaster(ReservoirCouplingMaster*) {}
+    template <class ReservoirCouplingMaster>
+    void setReservoirCouplingMaster(ReservoirCouplingMaster*) {}
 
     bool getWellConvergence() const;
 
@@ -169,8 +169,8 @@ private:
      // we will need two to handle the changes between time stepping
      CompWellState<FluidSystem> comp_well_states_;
 
-          // saved state at beginning of report step, used to restore on failed timestep
-          CompWellState<FluidSystem> last_valid_comp_well_states_;
+     // saved state at beginning of report step, used to restore on failed timestep
+     CompWellState<FluidSystem> last_valid_comp_well_states_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
