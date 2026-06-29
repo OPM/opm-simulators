@@ -284,18 +284,11 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowCompProblem> {
 
 } // namespace Opm::Properties
 
-namespace Opm {
-
-template<int numComp, bool EnableWater>
-int dispatchFlowComp(int argc, char** argv)
-{
-    using TypeTag = Properties::TTag::FlowCompProblem<numComp, EnableWater>;
-    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
-    const auto ret = mainObject->runStatic<TypeTag>();
-    mainObject.reset();
-    return ret;
-}
-
-} // namespace Opm
+// dispatchFlowComp() is only declared here; each (numComp, EnableWater)
+// combination is defined as an explicit specialization in its own translation
+// unit (flow_comp_dispatch<N>.cpp / flow_comp_dispatch<N>_2p.cpp). Keeping the
+// definition out of this header limits each translation unit to a single
+// instantiation of the simulator stack, so per-process compile memory stays
+// bounded and the configurations compile in parallel.
 
 #endif
