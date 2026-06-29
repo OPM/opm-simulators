@@ -893,6 +893,16 @@ macro(opm-simulators_targets_hook)
       opmsimulators
   )
 
+  # One translation unit per (component, water) combination, each defining a
+  # single explicit specialization of dispatchFlowComp<>. Instantiating one
+  # configuration per file keeps per-process compile memory bounded and lets
+  # make -j compile the configurations in parallel.
+  set(FLOW_COMP_DISPATCH_SOURCES)
+  foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+    list(APPEND FLOW_COMP_DISPATCH_SOURCES flowexperimental/comp/flow_comp_dispatch${component}.cpp)
+    list(APPEND FLOW_COMP_DISPATCH_SOURCES flowexperimental/comp/flow_comp_dispatch${component}_2p.cpp)
+  endforeach()
+
   opm_add_executable(
     TARGET
       flow_comp
@@ -904,6 +914,7 @@ macro(opm-simulators_targets_hook)
       opmsimulators
     SOURCES
       flowexperimental/comp/flow_comp.cpp
+      ${FLOW_COMP_DISPATCH_SOURCES}
       $<TARGET_OBJECTS:moduleVersion>
   )
   target_compile_definitions(flow_comp
@@ -916,6 +927,7 @@ macro(opm-simulators_targets_hook)
       flow_comp2_2p
     SOURCES
       flowexperimental/comp/flow_comp2_2p.cpp
+      flowexperimental/comp/flow_comp_dispatch2_2p.cpp
       $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
@@ -926,6 +938,7 @@ macro(opm-simulators_targets_hook)
       flow_comp3_2p
     SOURCES
       flowexperimental/comp/flow_comp3_2p.cpp
+      flowexperimental/comp/flow_comp_dispatch3_2p.cpp
       $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
