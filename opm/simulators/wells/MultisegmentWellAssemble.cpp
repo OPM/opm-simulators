@@ -352,7 +352,17 @@ assembleOutflowTerm(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
-    // pressure derivative should be zero
+    // pressure derivative should be zero for non-thermal cases
+
+    if constexpr (enable_energy) {
+        // Only the energy equation depends on pressure and temperature; the mass
+        // surface rates carry no SPres/Temperature derivatives.
+        if (comp_idx == Temperature) {
+            // energy flux depends on the pressure and temperature
+            eqns.D()[seg][seg_upwind][comp_idx][SPres] -= segment_rate.derivative(SPres + Indices::numEq);
+            eqns.D()[seg][seg_upwind][comp_idx][Temperature] -= segment_rate.derivative(Temperature + Indices::numEq);
+        }
+    }
 }
 
 template<class FluidSystem, class Indices>
@@ -377,7 +387,17 @@ assembleInflowTerm(const int seg,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
-    // pressure derivative should be zero
+    // pressure derivative should be zero for non-thermal cases
+
+    if constexpr (enable_energy) {
+        // Only the energy equation depends on pressure and temperature; the mass
+        // surface rates carry no SPres/Temperature derivatives.
+        if (comp_idx == Temperature) {
+            // energy flux depends on the pressure and temperature
+            eqns.D()[seg][inlet_upwind][comp_idx][SPres] += inlet_rate.derivative(SPres + Indices::numEq);
+            eqns.D()[seg][inlet_upwind][comp_idx][Temperature] += inlet_rate.derivative(Temperature + Indices::numEq);
+        }
+    }
 }
 
 template<class FluidSystem, class Indices>

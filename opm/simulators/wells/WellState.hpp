@@ -145,7 +145,8 @@ public:
                 const std::size_t numCells,
                 const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                 const SummaryState& summary_state,
-                const bool enable_distributed_wells);
+                const bool enable_distributed_wells,
+                const bool thermal);
 
     void setCurrentWellRates(const std::string& wellName,
                              const std::vector<Scalar>& new_rates)
@@ -181,8 +182,11 @@ public:
                            const int* globalCellIdxMap) const;
 
     /// init the MS well related.
+    /// \param thermal  when false, segment temperature is kept uniform (no
+    ///                 unused per-segment profile).
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                             const WellState* prev_well_state);
+                             const WellState* prev_well_state,
+                             const bool thermal);
 
     static void calculateSegmentRates(const ParallelWellInfo<Scalar>&      pw_info,
                                       const std::vector<std::vector<int>>& segment_inlets,
@@ -408,6 +412,7 @@ private:
     void initSingleProducer(const Well& well,
                             const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
+                            Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 

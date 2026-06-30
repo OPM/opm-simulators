@@ -268,7 +268,7 @@ namespace Opm {
             this->wbp_.initializeWBPCalculationService();
 
             if (this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
-                this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState());
+                this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState(), has_energy_);
             }
 
             this->initializeWellProdIndCalculators();
@@ -2105,6 +2105,9 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numConservationQuantities() const
     {
+        // TODO: energy is also a conservation equation, so numConservationQuantities()
+        // may need refactoring once it is enabled outside MSW.
+
         // The numPhases() functions returns 1-3, depending on which
         // of the (oil, water, gas) phases are active. For each of those phases,
         // if the phase is active the corresponding component is present and

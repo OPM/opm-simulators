@@ -60,6 +60,7 @@ public:
         serializer(pressure_drop_friction);
         serializer(pressure_drop_hydrostatic);
         serializer(pressure_drop_accel);
+        serializer(temperature);
         serializer(m_segment_number);
     }
 
@@ -103,6 +104,8 @@ public:
     std::vector<Scalar> pressure_drop_friction;
     std::vector<Scalar> pressure_drop_hydrostatic;
     std::vector<Scalar> pressure_drop_accel;
+
+    std::vector<Scalar> temperature;
 
 private:
     std::vector<int>    m_segment_number;

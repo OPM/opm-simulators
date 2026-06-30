@@ -190,7 +190,7 @@ namespace {
                    false /*enableDistributedWells*/);
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
-                                  nullptr);
+                                  nullptr, false /*thermal*/);
 
         return state;
     }

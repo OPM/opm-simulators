@@ -231,7 +231,8 @@ initFromRestartFile(const RestartValue& restartValues,
     // Resize for restart step
     this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                              this->schedule(), handle_ms_well, numCells,
-                             this->well_perf_data_, this->summaryState_, enable_distributed_wells);
+                             this->well_perf_data_, this->summaryState_, enable_distributed_wells,
+                             this->eclState().getSimulationConfig().isThermal());
 
     BlackoilWellModelRestart(*this).
         loadRestartData(restartValues.wells,
@@ -276,7 +277,8 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool enable_dist
         const bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
         this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                                  this->schedule(), handle_ms_well, numCells,
-                                 this->well_perf_data_, this->summaryState_, enable_distributed_wells);
+                                 this->well_perf_data_, this->summaryState_, enable_distributed_wells,
+                                 this->eclState().getSimulationConfig().isThermal());
 
     }
     this->wellState().clearWellRates();
