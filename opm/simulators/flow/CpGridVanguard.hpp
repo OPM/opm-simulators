@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <array>
 #include <functional>
@@ -220,12 +221,55 @@ public:
     void releaseGlobalTransmissibilities()
     {
         globalTrans_.reset();
+        refinedGlobalTrans_.reset();
     }
 
     const TransmissibilityType& globalTransmissibility() const
     {
         assert( globalTrans_ != nullptr );
         return *globalTrans_;
+    }
+
+    // Refined transmissibility over the GLOBAL (equil) refined leaf grid, for parallel LGR INIT output.
+    // The output path (EclGenericWriter::computeTrans_) queries trans with global/refined cell indices,
+    // which the coarse per-rank globalTrans_ cannot answer (it only holds this rank's distributed slice).
+    // Built lazily on the I/O rank from finishInit, where equilGrid is fully refined. update(false) skips
+    // the broadcast in Transmissibility::update (gated on its `global` argument), so this rank-0-only
+    // build does no collective. Kept as a member because setTransmissibilities stores a raw pointer.
+    const TransmissibilityType& refinedGlobalTransmissibility()
+    {
+#if HAVE_MPI
+        if (refinedGlobalTrans_ == nullptr) {
+            auto& parallelEclState = dynamic_cast<ParallelEclipseState&>(this->eclState());
+            parallelEclState.switchToGlobalProps();
+            // Guarantee the distributed props are restored even if the build throws — leaving global
+            // props active would corrupt the subsequent run.
+            try {
+                // Centroids MUST come from the GLOBAL (equil) grid. FlowBaseVanguard::cellCentroids_ hardcodes
+                // the distributed gridView(), so indexing it by equil leaf cells segfaults. Query the equil
+                // CpGrid directly (the same call LookUpCellCentroid makes internally).
+                std::function<std::array<double, 3>(int)> equilCentroids =
+                    [this](int elemIdx) { return this->equilGrid().getEclCentroid(elemIdx); };
+                refinedGlobalTrans_ = std::make_unique<TransmissibilityType>(
+                    this->eclState(),
+                    this->equilGrid().leafGridView(),
+                    this->equilCartesianIndexMapper(),
+                    this->equilGrid(),
+                    equilCentroids,
+                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
+                    getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal,
+                    getPropValue<TypeTag, Properties::EnableDiffusion>(),
+                    getPropValue<TypeTag, Properties::EnableDispersion>());
+                refinedGlobalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
+            } catch (...) {
+                parallelEclState.switchToDistributedProps();
+                throw;
+            }
+            parallelEclState.switchToDistributedProps();
+        }
+#endif
+        assert( refinedGlobalTrans_ != nullptr );
+        return *refinedGlobalTrans_;
     }
 
     /*!
@@ -364,6 +408,11 @@ protected:
     // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
     // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
+
+    // Refined transmissibility over the global (equil) refined leaf grid — built lazily on the I/O rank
+    // for parallel LGR INIT output (TRANS/NNC). Separate from globalTrans_ (kept coarse, for domain
+    // decomposition). See refinedGlobalTransmissibility(); reset by releaseGlobalTransmissibilities().
+    std::unique_ptr<TransmissibilityType> refinedGlobalTrans_;
 };
 
 } // namespace Opm
