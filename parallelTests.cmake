@@ -1011,3 +1011,29 @@ add_test_compareSeparateECLFiles(
     --matrix-add-well-contributions=true
     --linear-solver=ilu0
 )
+
+# Parallel LGR INIT/EGRID regression.
+# Runs an embedded synthetic single-LGR deck serial and parallel with --enable-dry-run=true
+# (NOSIM: writes INIT + EGRID, skips the simulation loop -> no UNRST), then compares the two
+# runs' EGRID and INIT with compareECL. Guards the parallel LGR INIT transmissibility output
+# (CpGridVanguard::refinedGlobalTransmissibility): pre-fix the parallel run deadlocks here.
+if(MPI_FOUND AND MPIEXEC_MAX_NUMPROCS GREATER_EQUAL 4)
+  if(USE_DEV_SIMULATOR_IN_TESTS)
+    set(_lgr_init_simulator flow_blackoil)
+  else()
+    set(_lgr_init_simulator flow)
+  endif()
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-init-regressionTest.sh "")
+  opm_add_test(compareParallelInitSim_${_lgr_init_simulator}+LGR-WELL-3X3-1LGR
+    EXE_TARGET
+      ${_lgr_init_simulator}
+    DRIVER_ARGS
+      -r ${BASE_RESULT_PATH}/parallel/${_lgr_init_simulator}+LGR-WELL-3X3-1LGR-init
+      -a 1e-3
+      -t 1e-5
+      -c $<TARGET_FILE:compareECL>
+      -n 4
+  )
+  set_tests_properties(compareParallelInitSim_${_lgr_init_simulator}+LGR-WELL-3X3-1LGR
+                       PROPERTIES PROCESSORS 4)
+endif()
