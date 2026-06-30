@@ -2465,7 +2465,8 @@ namespace Opm
                      const ValueType& pressure,
                      const ValueType& temperature,
                      const ValueType& saltConcentration,
-                     DeferredLogger& deferred_logger) const
+                     DeferredLogger& deferred_logger,
+                     ValueType* volume_ratio) const
     {
         SegmentFluidState<ValueType> fluid_state;
         if constexpr (enable_temperature) {
@@ -2665,7 +2666,7 @@ namespace Opm
         }
 
         return createFluidState(fluid_composition, seg_pressure, seg_temperature,
-                                seg_salt_concentration, deferred_logger);
+                                seg_salt_concentration, deferred_logger, volume_ratio);
     }
 
     template <typename TypeTag>

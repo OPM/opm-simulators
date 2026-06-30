@@ -74,6 +74,13 @@ namespace Opm {
         static constexpr bool compositionSwitchEnabled =
             Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
+        // True when the segment fluid state stores a temperature (any thermal mode, not just
+        // the fully implicit one). Matches the fluid state's enableTemperature flag (see
+        // WellInterface::BlackOilFluidStateType); used to decide whether createFluidState()
+        // must set the temperature explicitly.
+        static constexpr bool enable_temperature =
+            Base::energyModuleType != EnergyModules::NoTemperature;
+
         // Scales the well-side energy equation onto the mass-balance residual
         // scale. Reuses the reservoir energy factor so both live on the same scale.
         static constexpr Scalar energy_scaling_factor_ =
@@ -396,7 +403,8 @@ namespace Opm {
                          const ValueType& pressure,
                          const ValueType& temperature,
                          const ValueType& saltConcentration,
-                         DeferredLogger& deferred_logger) const;
+                         DeferredLogger& deferred_logger,
+                         ValueType* volume_ratio = nullptr) const;
 
         SegmentFluidState<EvalWell>
         createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger,
