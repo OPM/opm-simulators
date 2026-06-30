@@ -160,7 +160,7 @@ struct RcNetworkLooseCoupling { static constexpr bool value = false; };
 struct NonlinearSolver { static constexpr auto value = "newton"; };
 struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
 struct MaxLocalSolveIterations { static constexpr int value = 20; };
-struct NewtonMinIterations { static constexpr int value = 2; };
+struct NewtonMinIterations { static constexpr int value = 1; };
 
 struct WellGroupConstraintsMaxIterations { static constexpr int value = 1; };
 template<class Scalar>
