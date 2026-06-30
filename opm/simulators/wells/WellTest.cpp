@@ -491,6 +491,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                                        write_message_to_opmlog,
                                                        well_test_state,
                                                        when, reason,
+                                                       "the well", // WECON reports a well-level ratio
                                                        closed_this_event,
                                                        deferred_logger);
                     if (well_shut) {
@@ -711,6 +712,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                 this->closeOffendingCompletion(complnum, close_below,
                                                simulation_time, write_message_to_opmlog,
                                                well_test_state, when, reason,
+                                               "its", // CECON reports the completion's own ratio
                                                closed_this_event, deferred_logger);
                 if (well_test_state.well_is_closed(well_.name()))
                     return;
@@ -745,6 +747,7 @@ closeOffendingCompletion(const int offending_completion,
                          WellTestState& well_test_state,
                          const std::string& when,
                          const std::string& reason,
+                         const std::string& ratio_subject,
                          std::unordered_set<int>& closed_this_event,
                          DeferredLogger& deferred_logger) const
 {
@@ -798,11 +801,11 @@ closeOffendingCompletion(const int offending_completion,
             : fmt::format("{} in Well {}",
                           this->completionDescriptor(offending_completion), well_.name());
         const std::string& sep = economicLimitMessageSeparator();
-        // WECON-driven: report "the well" ratio (CECON would say "its ..."; that
-        // distinction will be addressed by the CECON development).
+        // \p ratio_subject identifies the owner of the violated ratio: WECON
+        // reports a well-level ratio ("the well"), CECON the completion's ("its").
         deferred_logger.info(
-            fmt::format("{}\n{} will be closed {},\nBecause the well {}.\n{}",
-                        sep, subject, when, reason, sep));
+            fmt::format("{}\n{} will be closed {},\nBecause {} {}.\n{}",
+                        sep, subject, when, ratio_subject, reason, sep));
     }
 
     bool allCompletionsClosed = true;
