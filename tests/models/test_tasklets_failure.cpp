@@ -33,9 +33,16 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <cassert>
+
+#if defined(_WIN32)
+#include <cstdlib>
+#include <cstring>
+#include <process.h>
+#else
 #include <sys/wait.h>
 #include <unistd.h>
-#include <cassert>
+#endif
 
 #include "config.h"
 #include <opm/models/parallel/tasklets.hpp>
@@ -127,6 +134,21 @@ void execute () {
     runner->barrier();
 }
 
+#if defined(_WIN32)
+int main(int argc, char** argv)
+{
+    // Windows has no fork(); re-run this executable as a child process so the
+    // parent can verify the child exits with EXIT_FAILURE when a tasklet fails.
+    if (argc > 1 && std::strcmp(argv[1], "--child") == 0) {
+        execute();
+        return 0;  // execute() is expected to exit(EXIT_FAILURE) before reaching here
+    }
+    std::cout << "Checking failure of child process with parent process" << std::endl;
+    const intptr_t status = _spawnl(_P_WAIT, argv[0], argv[0], "--child",
+                                    static_cast<const char*>(nullptr));
+    assert(status == EXIT_FAILURE);  // Check that the child exited with EXIT_FAILURE
+}
+#else
 int main()
 {
     pid_t pid = fork(); // Create a new process, such that this child process can call exit(EXIT_FAILURE)
@@ -145,3 +167,4 @@ int main()
         assert(WEXITSTATUS(status) == EXIT_FAILURE);  // Check if the exit status is EXIT_FAILURE
     }
 }
+#endif

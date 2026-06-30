@@ -100,9 +100,9 @@ BOOST_FIXTURE_TEST_CASE(WithOutputDir, Fixture)
                                  PathPair{input_path / "subdir", input_path / "output2"},
                                  PathPair{input_path / "subdir" / "subdir", input_path / "output3"}}) {
             const std::string output_path = "--output-dir=" + Case.second.string();
-            const std::string input_file_path = (Case.first / "INPUT.DATA");
+            const std::string input_file_path = (Case.first / "INPUT.DATA").string();
 
-            const std::string output_dbg_path = (Case.second / "INPUT.DBG");
+            const std::string output_dbg_path = (Case.second / "INPUT.DBG").string();
             if (createFaultyFileWithDirectory) {
                 std::filesystem::create_directories(Case.second);
                 // Create file with faulty content
@@ -143,9 +143,9 @@ BOOST_FIXTURE_TEST_CASE(NoOutputDir, Fixture)
 
     for (const auto& Case : {input_path / "subdir" / "subdir",
                              input_path / "subdir"}) {
-        const std::string input_file_path = (Case / "INPUT.DATA");
+        const std::string input_file_path = (Case / "INPUT.DATA").string();
 
-        const std::string output_dbg_path = (Case / "INPUT.DBG");
+        const std::string output_dbg_path = (Case / "INPUT.DBG").string();
         // Create file with faulty content
         std::string dummy = R"(dummy)";
         std::ofstream of(output_dbg_path);
