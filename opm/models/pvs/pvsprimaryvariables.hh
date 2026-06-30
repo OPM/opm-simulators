@@ -46,6 +46,19 @@
 #include <ostream>
 #include <type_traits>
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+// MSVC lacks the POSIX ffs() (find first set bit, 1-indexed). Provide an
+// equivalent using the _BitScanForward intrinsic.
+static inline int ffs(int value)
+{
+    unsigned long index;
+    return _BitScanForward(&index, static_cast<unsigned long>(value))
+               ? static_cast<int>(index) + 1
+               : 0;
+}
+#endif
+
 namespace Opm {
 
 /*!
