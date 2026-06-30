@@ -134,6 +134,10 @@ private:
     //!                with the triggering economic-limit message.
     //! \param reason  Human-readable ratio-violation clause (e.g.
     //!                "water-gas ratio 1.0353e-06 SM3/SM3 exceeds the limit ...").
+    //! \param ratio_subject  Owner of the violated ratio in the closing message,
+    //!                inserted as "Because \p ratio_subject \p reason". WECON
+    //!                reports a well-level ratio ("the well"); CECON reports the
+    //!                completion's own ratio ("its").
     void closeOffendingCompletion(int offending_completion,
                                   bool close_connections_below,
                                   double simulation_time,
@@ -141,6 +145,7 @@ private:
                                   WellTestState& well_test_state,
                                   const std::string& when,
                                   const std::string& reason,
+                                  const std::string& ratio_subject,
                                   DeferredLogger& deferred_logger) const;
 
     //! \brief A line of \p sep_length repetitions of \p sep_char used to frame
