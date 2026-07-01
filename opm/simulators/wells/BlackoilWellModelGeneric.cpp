@@ -1555,7 +1555,7 @@ updateWellPotentials(const int reportStepIdx,
                      const SummaryConfig& summaryConfig,
                      DeferredLogger& deferred_logger)
 {
-    auto well_state_copy = this->wellState();
+    auto& potential_well_state = this->potentialWellState();
 
     const bool write_restart_file = schedule().write_rst_file(reportStepIdx);
     auto exc_type = ExceptionType::NONE;
@@ -1600,7 +1600,7 @@ updateWellPotentials(const int reportStepIdx,
         const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
         if (compute_potential)
         {
-            this->computePotentials(widx, well_state_copy, exc_msg, exc_type);
+            this->computePotentials(widx, potential_well_state, exc_msg, exc_type);
         }
         ++widx;
     }

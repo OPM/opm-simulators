@@ -2206,7 +2206,7 @@ namespace Opm
             std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             if (thp_update_iterations) {
                 computeWellRatesWithBhpIterations(simulator, *bhp_at_thp_limit,
-                                                  groupStateHelper, rates);
+                                                  groupStateHelper, well_state, rates);
             } else {
                 computeWellRatesWithBhp(simulator, *bhp_at_thp_limit,
                                         rates, deferred_logger);
