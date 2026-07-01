@@ -1836,6 +1836,8 @@ namespace Opm {
                                       /*writeMessageToOPMLog=*/ true,
                                       under_zero_target,
                                       wellTestState,
+                                      this->eclipseState().getUnits(),
+                                      this->schedule().getStartTime(),
                                       local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
