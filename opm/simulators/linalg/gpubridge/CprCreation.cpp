@@ -144,7 +144,7 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
                 int end = mat->rowPointers[row + 1];
                 for (int idx = start; idx < end; ++idx) {
                     int col = mat->colIndices[idx];
-                    (*dune_coarse)[row][col] = coarse_vals[idx];
+                    (*dune_coarse)[row][col][0][0] = coarse_vals[idx];
                 }
             }
 
@@ -183,7 +183,7 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
                 int end = mat->rowPointers[row + 1];
                 for (int idx = start; idx < end; ++idx) {
                     int col = mat->colIndices[idx];
-                    (*dune_coarse)[row][col] = coarse_vals[idx];
+                    (*dune_coarse)[row][col][0][0] = coarse_vals[idx];
                 }
             }
 
@@ -242,7 +242,7 @@ analyzeHierarchy()
         const bool fillDiagIndices = diagIndices[level].empty();
         for (typename DuneMat::const_iterator r = A.begin(); r != A.end(); ++r) {
             for (auto c = r->begin(); c != r->end(); ++c) {
-                Amatrices.back().nnzValues[nnz_idx] = A[r.index()][c.index()];
+                Amatrices.back().nnzValues[nnz_idx] = A[r.index()][c.index()][0][0];
                 if (fillDiagIndices && r.index() == c.index()) {
                     diagIndices[level].emplace_back(nnz_idx);
                 }
