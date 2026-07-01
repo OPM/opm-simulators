@@ -246,7 +246,8 @@ public:
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (const auto& chunk : element_chunks_) {
+        for (std::size_t ci = 0; ci < element_chunks_.size(); ++ci) {
+            const auto chunk = element_chunks_[ci];
             for (const auto& elem : chunk) {
                 const unsigned globalIdx = elementMapper.index(elem);
                 auto& currSol = solution(/*timeIdx=*/0)[globalIdx];
