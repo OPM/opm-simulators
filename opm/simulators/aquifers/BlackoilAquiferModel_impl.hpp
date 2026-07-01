@@ -126,6 +126,17 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
 }
 
 template <typename TypeTag>
+typename BlackoilAquiferModel<TypeTag>::Scalar
+BlackoilAquiferModel<TypeTag>::cachedConnectionInfluxRate(unsigned globalSpaceIdx) const
+{
+    Scalar rate{0};
+    for (const auto& aquifer : this->aquifers) {
+        rate += aquifer->cachedConnectionInfluxRate(globalSpaceIdx);
+    }
+    return rate;
+}
+
+template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::endIteration()
 {}

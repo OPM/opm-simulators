@@ -50,6 +50,7 @@ class BlackoilAquiferModel
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 
 public:
@@ -65,6 +66,7 @@ public:
     template <class Context>
     void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx) const;
     void addToSource(RateVector& rates, unsigned globalSpaceIdx, unsigned timeIdx) const;
+    Scalar cachedConnectionInfluxRate(unsigned globalSpaceIdx) const;
     void endIteration();
     void endTimeStep();
     void endEpisode();
@@ -83,7 +85,6 @@ public:
 protected:
     // ---------      Types      ---------
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     Simulator& simulator_;
 

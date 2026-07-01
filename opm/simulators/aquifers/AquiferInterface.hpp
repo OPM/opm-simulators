@@ -76,6 +76,13 @@ public:
                              const unsigned cellIdx,
                              const unsigned timeIdx) = 0;
 
+    /// Scalar influx from the last flow Newton iteration (decoupled tracer solve only).
+    /// Do not use this in addToSource: Qai_ must stay as Evaluation for the Jacobian.
+    virtual Scalar cachedConnectionInfluxRate(unsigned cellIdx) const
+    {
+        return Scalar{0};
+    }
+
     int aquiferID() const { return this->aquiferID_; }
 
 protected:

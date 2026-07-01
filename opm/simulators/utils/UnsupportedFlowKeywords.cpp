@@ -52,7 +52,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"APIVD", {true, std::nullopt}},
         {"AQANCONL", {true, std::nullopt}},
         {"AQANNC", {true, std::nullopt}},
-        {"AQANTRC", {true, std::nullopt}},
         {"AQUALIST", {true, std::nullopt}},
         {"AQUCHGAS", {true, std::nullopt}},
         {"AQUCHWAT", {true, std::nullopt}},
