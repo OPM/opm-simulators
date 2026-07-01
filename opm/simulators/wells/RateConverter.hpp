@@ -104,6 +104,7 @@ namespace Opm {
                     ra.saltConcentration = 0.0;
                     ra.rsw = 0.0;
                     ra.rvw = 0.0;
+                    ra.depth = 0.0;
                 }
 
                 // quantities for pore volume average
@@ -142,7 +143,7 @@ namespace Opm {
                     const int reg = rmap_.region(cellIdx);
                     assert(reg >= 0);
 
-                    // sum p, rs, rv, and T.
+                    // sum p, rs, rv, T, salt and depth.
                     const Scalar hydrocarbonPV = pv_cell*hydrocarbon;
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
@@ -160,6 +161,7 @@ namespace Opm {
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
+                        attr.depth += simulator.problem().dofCenterDepth(cellIdx) * hydrocarbonPV;
                         if (FluidSystem::enableDissolvedGasInWater()) {
                             attr.rsw += fs.Rsw().value() * hydrocarbonPV; // scale with total volume?
                         }
@@ -187,6 +189,7 @@ namespace Opm {
                             attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
+                        attr.depth += simulator.problem().dofCenterDepth(cellIdx) * pv_cell;
                         if (FluidSystem::enableDissolvedGasInWater()) {
                             attr.rsw += fs.Rsw().value() * pv_cell;
                         }
@@ -255,6 +258,7 @@ namespace Opm {
                         const Scalar  rvw,
                         const Scalar  T,
                         const Scalar  saltConcentration,
+                        const Scalar  depth,
                         Coeff&        coeff) const;
 
             template <class Coeff>
@@ -332,6 +336,7 @@ namespace Opm {
                                            const Scalar        rvw,
                                            const Scalar        T,
                                            const Scalar        saltConcentration,
+                                           const Scalar        depth,
                                            const SurfaceRates& surface_rates,
                                            VoidageRates&       voidage_rates) const;
 
@@ -385,6 +390,7 @@ namespace Opm {
                     , rvw(data[5])
                     , pv(data[6])
                     , saltConcentration(data[7])
+                    , depth(data[8])
                 {}
 
                 Attributes(const Attributes& rhs)
@@ -399,7 +405,7 @@ namespace Opm {
                     return *this;
                 }
 
-                std::array<Scalar,8> data;
+                std::array<Scalar,9> data;
                 Scalar& pressure;
                 Scalar& temperature;
                 Scalar& rs;
@@ -408,6 +414,7 @@ namespace Opm {
                 Scalar& rvw;
                 Scalar& pv;
                 Scalar& saltConcentration;
+                Scalar& depth;
             };
 
             void sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
