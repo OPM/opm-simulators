@@ -64,7 +64,15 @@ SatfuncConsistencyChecks(SatfuncConsistencyChecks&& rhs)
     , startCheckValues_ { std::move(rhs.startCheckValues_) }
     , violations_       { std::move(rhs.violations_) }
     , battery_          { std::move(rhs.battery_) }
-{}
+{
+    // violations_ is a std::vector but is semantically fixed at NumLevels
+    // entries (see header; it replaced a std::array only to satisfy MSVC).
+    // Moving it leaves the source empty, so restore the source to NumLevels so
+    // a moved-from SatfuncConsistencyChecks keeps that invariant and any later
+    // violations_[index(level)] access stays in bounds.
+    rhs.violations_ = ViolationCollection(
+        static_cast<std::size_t>(ViolationLevel::NumLevels));
+}
 
 template <typename Scalar>
 Opm::SatfuncConsistencyChecks<Scalar>&
@@ -76,6 +84,10 @@ Opm::SatfuncConsistencyChecks<Scalar>::operator=(SatfuncConsistencyChecks&& rhs)
     this->startCheckValues_ = std::move(rhs.startCheckValues_);
     this->violations_       = std::move(rhs.violations_);
     this->battery_          = std::move(rhs.battery_);
+
+    // Keep the moved-from source's fixed-size invariant (see move ctor).
+    rhs.violations_ = ViolationCollection(
+        static_cast<std::size_t>(ViolationLevel::NumLevels));
 
     this->urbg_.reset();
 
