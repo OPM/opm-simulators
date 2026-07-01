@@ -84,8 +84,8 @@ void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_stat
             fluid_state.setLvalue(L);
         }
     }
-    T So = Opm::max((L * Z_L / (L * Z_L + (1 - L) * Z_V)), 0.0);
-    T Sg = Opm::max(1 - So, 0.0);
+    T So = max((L * Z_L / (L * Z_L + (1 - L) * Z_V)), 0.0);
+    T Sg = max(1 - So, 0.0);
     T sumS = So + Sg;
     So /= sumS;
     Sg /= sumS;

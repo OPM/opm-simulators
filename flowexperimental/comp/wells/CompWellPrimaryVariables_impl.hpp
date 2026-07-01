@@ -22,6 +22,8 @@
 
 #include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
+#include <algorithm>
+
 namespace Opm {
 
 template <typename FluidSystem, typename Indices>

@@ -20,12 +20,11 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/models/immiscible/immisciblemodel.hh>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
 
 #include <stdexcept>
