@@ -130,8 +130,12 @@ public:
     // Output debug flags for which tolerances used.
     // NB: <windows.h> (pulled in transitively on Windows) defines STRICT as a
     // macro, which would turn "STRICT = 0" into "1 = 0"; undef it (and RELAXED
-    // defensively) so the enum and its DebugFlags::STRICT users compile.
+    // defensively) so the enum and its DebugFlags::STRICT users compile. Use
+    // push/pop so the undef is scoped to just this enum and does not strip the
+    // Windows SDK STRICT definition from the rest of the translation unit.
 #if defined(_WIN32)
+#  pragma push_macro("STRICT")
+#  pragma push_macro("RELAXED")
 #  undef STRICT
 #  undef RELAXED
 #endif
@@ -140,6 +144,10 @@ public:
         RELAXED = 1,
         TUNINGDP = 2
     };
+#if defined(_WIN32)
+#  pragma pop_macro("RELAXED")
+#  pragma pop_macro("STRICT")
+#endif
 
     // ---------  Public methods  ---------
 
