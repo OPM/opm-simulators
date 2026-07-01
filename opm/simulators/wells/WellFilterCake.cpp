@@ -121,10 +121,10 @@ applyCleaning(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
 template<typename Scalar, typename IndexTraits>
 void WellFilterCake<Scalar, IndexTraits>::
 updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
-                  WellState<Scalar, IndexTraits>& well_state,
-                  const double dt,
-                  const std::size_t water_index,
-                  DeferredLogger& deferred_logger)
+                                WellState<Scalar, IndexTraits>& well_state,
+                                const double dt,
+                                const std::size_t water_index,
+                                DeferredLogger& deferred_logger)
 {
     const auto nperf = well.numLocalPerfs();
     inj_fc_multiplier_.assign(nperf, 1.0);
@@ -157,16 +157,33 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
     for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
         const auto& connection = connections[perf_ecl_index];
-        if (!connection.filterCakeActive())
-            continue;
 
         // Use xflow-factor to ensure mass balance of injected filtrate
-        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
-        const Scalar filtrate_rate = water_rates * conc * xfact;
-        const Scalar filtrate_particle_volume = filtrate_rate * dt;
         auto& filtrate_data = perf_data.filtrate_data;
+        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
+        Scalar filtrate_rate = water_rates * conc * xfact;
+
+        // exclude flux in fracture
+        {
+            Scalar well_fracture_factor = filtrate_data.flow_factor[perf];
+            if (well_fracture_factor < 0) {
+                std::cout << "Negative fracture factor?" << std::endl;
+            }
+            if (well_fracture_factor > 1) {
+                std::cout << "Fracture factor?" << std::endl;
+            }
+
+            filtrate_data.fracture_rate[perf] = conc*water_rates*(1-well_fracture_factor);
+            filtrate_rate *= well_fracture_factor;
+        }
+
+        const Scalar filtrate_particle_volume = filtrate_rate * dt;
+
         filtrate_data.rates[perf] = filtrate_rate;
         filtrate_data.total[perf] += filtrate_particle_volume;
+
+        if (!connection.filterCakeActive())
+            continue;
 
         const auto& filter_cake = connection.getFilterCake();
         const Scalar area = connection.getFilterCakeArea();
