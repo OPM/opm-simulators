@@ -28,29 +28,12 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <dune/common/parallel/mpihelper.hh>
-
 // The pressure computation uses a Dune parallel Communication, which requires
-// MPIHelper::instance() to have been called first when built with MPI. Do it
-// once via a global fixture (a no-op in a serial build). Mirrors the fixture in
-// test_parallelwellinfo.cpp.
-struct MPIFixture
-{
-    MPIFixture()
-    {
-#if HAVE_MPI
-        int argc = boost::unit_test::framework::master_test_suite().argc;
-        char** argv = boost::unit_test::framework::master_test_suite().argv;
-        Dune::MPIHelper::instance(argc, argv);
-#endif
-    }
-    ~MPIFixture()
-    {
-#if HAVE_MPI
-        MPI_Finalize();
-#endif
-    }
-};
+// MPIHelper::instance() to have been called first when built with MPI. Use the
+// shared global fixture (a no-op in a serial build), which also installs an MPI
+// error handler that prints a diagnostic string on failure.
+#include "MpiFixture.hpp"
+
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
