@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2024, 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,6 +18,8 @@
 */
 
 #include <opm/simulators/linalg/matrixblock.hh>
+
+#include <cmath>
 
 namespace Opm {
 
@@ -98,11 +100,29 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 invert()
 {
+    // On a singular well matrix, fall back to the identity to keep the Newton
+    // update finite. Singularity surfaces differently per block size (throw or
+    // silent inf/NaN), so guard against both below.
+    bool singular = false;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
         detail::invertMatrix(invDuneD_[0][0]);
-    } catch (NumericalProblem&) {
-        // for singular matrices, use identity as the inverse
+    } catch (const NumericalProblem&) {
+        singular = true;
+    } catch (const Dune::FMatrixError&) {
+        singular = true;
+    }
+
+    // Catch the silent inf/NaN paths that do not throw.
+    for (std::size_t i = 0; !singular && i < invDuneD_[0][0].rows; ++i) {
+        for (std::size_t j = 0; !singular && j < invDuneD_[0][0].cols; ++j) {
+            if (!std::isfinite(invDuneD_[0][0][i][j])) {
+                singular = true;
+            }
+        }
+    }
+
+    if (singular) {
         invDuneD_[0][0] = 0.0;
         for (std::size_t i = 0; i < invDuneD_[0][0].rows; ++i) {
            invDuneD_[0][0][i][i] = 1.0;
