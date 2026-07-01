@@ -146,7 +146,7 @@ void writeNonlinearIterationsPerCell(
 
     // Only rank 0 writes the file
     if (rank == 0) {
-        details::writeNlddFile(odir / "ResInsight_nonlinear_iterations.txt",
+        details::writeNlddFile((odir / "ResInsight_nonlinear_iterations.txt").string(),
                                "NLDD_ITER", full_iterations);
     }
 }
@@ -189,7 +189,7 @@ void writePartitions(
 
     // Only rank 0 writes the file
     if (rank == 0) {
-        details::writeNlddFile(odir / "ResInsight_compatible_partition.txt",
+        details::writeNlddFile((odir / "ResInsight_compatible_partition.txt").string(),
                                "NLDD_DOM", full_partition);
     }
 

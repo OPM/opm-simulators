@@ -40,6 +40,8 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <numeric>
+
 namespace Opm
 {
 

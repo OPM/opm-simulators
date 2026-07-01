@@ -54,7 +54,7 @@ private:
     std::pair<std::vector<char>, std::size_t>
         getMasterGroupNamesForSlave_(std::size_t slave_idx) const;
     std::vector<char *> getSlaveArgv_(
-        const std::filesystem::path &data_file,
+        const std::string &data_file,
         const std::string &slave_name,
         std::string &log_filename) const;
     void receiveActivationDateFromSlaves_();

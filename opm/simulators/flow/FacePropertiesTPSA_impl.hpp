@@ -150,11 +150,13 @@ update()
     ThreadSafeMapBuilder distanceBoundaryMap(distanceBoundary_, num_threads, MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder faceNormalBoundaryMap(faceNormalBoundary_, num_threads, MapBuilderInsertionMode::Insert_Or_Assign);
 
+    // Loop over grid element an compute face properties
+    const auto element_chunks = ElementChunks(gridView_, Dune::Partitions::all, num_threads);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    // Loop over grid element an compute face properties
-    for (const auto& chunk : ElementChunks(gridView_, Dune::Partitions::all, num_threads)) {
+    for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
+        const auto chunk = element_chunks[ci];
         for (const auto& elem : chunk) {
             // Init. face info for inside/outside cells
             FaceInfo inside;

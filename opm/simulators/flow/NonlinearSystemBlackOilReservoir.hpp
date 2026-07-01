@@ -127,7 +127,18 @@ public:
         Scalar dRvMax = 0.0;
     };
 
-    // Output debug flags for which tolerances used
+    // Output debug flags for which tolerances used.
+    // NB: <windows.h> (pulled in transitively on Windows) defines STRICT as a
+    // macro (=1); we also drop RELAXED defensively. This would turn "STRICT = 0"
+    // into "1 = 0" in the enum below. Undef them *permanently* for this TU rather
+    // than scoping the undef to the enum with push/pop: the enumerators
+    // DebugFlags::STRICT / RELAXED are referenced throughout the corresponding
+    // _impl.hpp, so restoring the macro afterwards would make those uses expand
+    // to "F::1". OPM never uses the Windows STRICT feature macro.
+#if defined(_WIN32)
+#  undef STRICT
+#  undef RELAXED
+#endif
     enum class DebugFlags {
         STRICT = 0,
         RELAXED = 1,
