@@ -350,8 +350,10 @@ public:
                 if (simulator.vanguard().grid().comm().rank() == 0) {
                     // Parallel LGR: the output path (computeTrans_) indexes trans on the GLOBAL refined
                     // (equil) grid, which the coarse per-rank globalTrans_ cannot answer (out_of_range).
-                    // Decide on equilGrid().maxLevel() (the GLOBAL refinement) -- NOT grid().maxLevel(),
-                    // which is this rank's partition and would be 0 if rank 0 owns no refined cells.
+                    // Gate on equilGrid().maxLevel() -- the global (undistributed) view, whose maxLevel is
+                    // the authoritative refinement depth and the same grid the refined trans below is built
+                    // over. (grid().maxLevel() is in fact identical on every rank: CpGrid::maxLevel counts
+                    // the level grids, one per global LGR, so it is not this rank's partition depth.)
                     if (simulator.vanguard().equilGrid().maxLevel() > 0)
                         eclWriter_->setTransmissibilities(&simulator.vanguard().refinedGlobalTransmissibility());
                     else
