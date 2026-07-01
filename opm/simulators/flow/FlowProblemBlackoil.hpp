@@ -347,8 +347,18 @@ public:
         // we try to avoid for the parallel running, has both global trans_ and transmissibilities_ allocated at the same time
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
-                if (simulator.vanguard().grid().comm().rank() == 0)
-                    eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                if (simulator.vanguard().grid().comm().rank() == 0) {
+                    // Parallel LGR: the output path (computeTrans_) indexes trans on the GLOBAL refined
+                    // (equil) grid, which the coarse per-rank globalTrans_ cannot answer (out_of_range).
+                    // Gate on equilGrid().maxLevel() -- the global (undistributed) view, whose maxLevel is
+                    // the authoritative refinement depth and the same grid the refined trans below is built
+                    // over. (grid().maxLevel() is in fact identical on every rank: CpGrid::maxLevel counts
+                    // the level grids, one per global LGR, so it is not this rank's partition depth.)
+                    if (simulator.vanguard().equilGrid().maxLevel() > 0)
+                        eclWriter_->setTransmissibilities(&simulator.vanguard().refinedGlobalTransmissibility());
+                    else
+                        eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                }
             } else {
                 finishTransmissibilities();
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
