@@ -33,14 +33,16 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <sys/utsname.h>
 #include <thread>
-#include <unistd.h>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <cstdlib> // getenv
+#else
+#include <sys/utsname.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -73,7 +75,6 @@ void printPRTHeader(const int nprocs, const int nthreads,
 {
     const double megabyte = 1024 * 1024;
     unsigned num_cpu = std::thread::hardware_concurrency();
-    struct utsname arch;
 #if defined(_WIN32)
     const char* user = getenv("USERNAME");  // no getlogin() on Windows
 #else
@@ -95,6 +96,17 @@ void printPRTHeader(const int nprocs, const int nthreads,
     ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
     ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
     ss << "Flow Version     =  " << moduleVersion << "\n";
+#if defined(_WIN32)
+    // Windows has no uname()/utsname; query the machine name via the Win32 API.
+    char computer_name[MAX_COMPUTERNAME_LENGTH + 1] = {};
+    DWORD computer_name_len = sizeof(computer_name);
+    const char* nodename =
+        GetComputerNameA(computer_name, &computer_name_len) ? computer_name : "unknown";
+    ss << "Machine name     =  " << nodename << " (Number of logical cores: " << num_cpu;
+    ss << ", Memory size: " << std::fixed << std::setprecision(2) << mem_size << " MB) \n";
+    ss << "Build time       =  " << compileTimestamp << "\n";
+#else
+    struct utsname arch;
     if (uname(&arch) == 0) {
        ss << "Machine name     =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
        ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
@@ -102,6 +114,7 @@ void printPRTHeader(const int nprocs, const int nthreads,
        ss << ", " << arch.version << " )\n";
        ss << "Build time       =  " << compileTimestamp << "\n";
     }
+#endif
     if (user) {
        ss << "User             =  " << user << std::endl;
     }
