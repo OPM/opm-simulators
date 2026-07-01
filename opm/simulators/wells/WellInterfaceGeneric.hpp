@@ -127,6 +127,8 @@ public:
 
     int currentStep() const { return this->current_step_; }
 
+    const ModelParameters& modelParameters() const { return this->param_; }
+
     int pvtRegionIdx() const { return pvtRegionIdx_; }
 
     const GuideRate* guideRate() const { return guide_rate_; }
