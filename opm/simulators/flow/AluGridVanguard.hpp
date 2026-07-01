@@ -279,6 +279,14 @@ public:
         return *globalTrans_;
     }
 
+    // No local grid refinement (LGR) for this grid, so "refined global" == global. Present so
+    // FlowProblemBlackoil::finishInit() (instantiated for every grid type) compiles; the
+    // equilGrid().maxLevel() > 0 branch that reaches here is never taken for this grid.
+    const TransmissibilityType& refinedGlobalTransmissibility() const
+    {
+        return globalTransmissibility();
+    }
+
     const std::vector<int>& globalCell()
     {
         return cartesianCellId_;
