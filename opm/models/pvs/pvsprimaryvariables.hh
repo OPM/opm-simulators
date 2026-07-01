@@ -41,23 +41,11 @@
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/pvs/pvsproperties.hh>
 
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <ostream>
 #include <type_traits>
-
-#if defined(_MSC_VER)
-#include <intrin.h>
-// MSVC lacks the POSIX ffs() (find first set bit, 1-indexed). Provide an
-// equivalent using the _BitScanForward intrinsic.
-static inline int ffs(int value)
-{
-    unsigned long index;
-    return _BitScanForward(&index, static_cast<unsigned long>(value))
-               ? static_cast<int>(index) + 1
-               : 0;
-}
-#endif
 
 namespace Opm {
 
@@ -229,7 +217,15 @@ public:
      * \brief Returns the phase with the lowest index that is present.
      */
     unsigned lowestPresentPhaseIdx() const
-    { return static_cast<unsigned>(ffs(phasePresence_) - 1); }
+    {
+        // No phase present: guard against an out-of-bounds index.
+        if (phasePresence_ == 0) [[unlikely]]
+            return 0;
+
+        // std::countr_zero requires an unsigned argument; its count of trailing
+        // zeros is the index of the lowest set bit, i.e. the lowest phase present.
+        return static_cast<unsigned>(std::countr_zero(static_cast<unsigned short>(phasePresence_)));
+    }
 
     /*!
      * \brief Assignment operator from an other primary variables object
