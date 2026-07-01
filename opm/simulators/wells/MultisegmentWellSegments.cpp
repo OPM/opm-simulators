@@ -225,14 +225,15 @@ updateUpwindingSegments(const PrimaryVariables& primary_variables)
             // we are not supposed to have injecting producers and producing injectors
             assert(!(well_.isProducer() && primary_variables.eval(seg)[primary_variables.WQTotal] > 0.));
             assert(!(well_.isInjector() && primary_variables.eval(seg)[primary_variables.WQTotal] < 0.));
-            upwinding_segments_[seg] = seg;
+            upwinding_segments_[seg] = static_cast<int>(seg);
             continue;
         }
 
         // for other normal segments
         if (primary_variables.eval(seg)[primary_variables.WQTotal] <= 0.) {
-            upwinding_segments_[seg] = seg;
-        } else {
+            upwinding_segments_[seg] = static_cast<int>(seg);
+        }
+        else {
             const auto& segment_set = well_.wellEcl().getSegments();
             const int outlet_segment_index = segment_set.segmentNumberToIndex(segment_set[seg].outletSegment());
             upwinding_segments_[seg] = outlet_segment_index;
