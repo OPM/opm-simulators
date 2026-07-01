@@ -72,6 +72,32 @@ BOOST_AUTO_TEST_CASE(JSONReservoirSolverPreconditionerTypeMissingOrWrong)
     BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm2), std::invalid_argument);
 }
 
+// Unit tests for system_cprw – same structural requirements as system_cpr.
+BOOST_AUTO_TEST_CASE(JSONSystemCPRWMissingWellSolver)
+{
+    Opm::PropertyTree prm("options_system_cprw_missing_well.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(JSONSystemCPRWMissingReservoirSolver)
+{
+    Opm::PropertyTree prm("options_system_cprw_missing_ressolver.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(JSONSystemCPRWMissingReservoirSmoother)
+{
+    Opm::PropertyTree prm("options_system_cprw_missing_smoother.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+}
+
+// system_cprw's reservoir_solver must use cprw, not plain cpr.
+BOOST_AUTO_TEST_CASE(JSONSystemCPRWReservoirSolverMustUseCPRW)
+{
+    Opm::PropertyTree prm("options_system_cprw_res_precond_not_cprw.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+}
+
 // Regression test: --matrix-add-well-contributions=true is incompatible
 // with system_cpr and must throw in both serial and parallel (MPI) runs.
 //

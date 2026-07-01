@@ -152,6 +152,8 @@ private:
     using SysSolverType = Dune::InverseOperator<SystemVector<Scalar>, SystemVector<Scalar>>;
     using SysPrecondType = Dune::PreconditionerWithUpdate<SystemVector<Scalar>, SystemVector<Scalar>>;
     using SeqSysPrecondType = SystemPreconditioner<Scalar, SeqResOperator<Scalar>>;
+    using SeqSysCprwPrecondType = SystemPreconditioner<Scalar, SeqResOperator<Scalar>,
+                                                        Dune::Amg::SequentialInformation, true>;
 #if HAVE_MPI
     using ParSysPrecondType = SystemPreconditioner<Scalar, ParResOperator<Scalar>, ParResComm>;
 #endif
@@ -236,10 +238,14 @@ private:
 
         if (auto* precond = dynamic_cast<SeqSysPrecondType*>(sysPrecond_)) {
             precond->updateForChangedWellStructure();
-        } else
-        { // Rebuild the solver if the sequential preconditioner cannot be updated in-place
-            createSystemSolver(prm);
+            return;
         }
+        if (auto* precond = dynamic_cast<SeqSysCprwPrecondType*>(sysPrecond_)) {
+            precond->updateForChangedWellStructure();
+            return;
+        }
+        // Rebuild the solver if the sequential preconditioner cannot be updated in-place
+        createSystemSolver(prm);
     }
 
     void createSystemSolver(const Opm::PropertyTree& prm)
