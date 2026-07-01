@@ -25,8 +25,8 @@
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioners.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
     const int N = 5;
     const int nonZeroes = N * 3 - 2;
     using M = Dune::FieldMatrix<T, 1, 1>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 1>>;
     using GpuILU0 = Opm::gpuistl::GpuSeqILU0<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
     const int N = 5;
     const int nonZeroes = N * 3 - 2;
     using M = Dune::FieldMatrix<T, 2, 2>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 2>>;
     using GpuILU0 = Opm::gpuistl::GpuSeqILU0<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 

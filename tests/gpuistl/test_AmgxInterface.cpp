@@ -26,9 +26,9 @@
 #include <opm/simulators/linalg/gpuistl/AmgxInterface.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <cstddef>
 #include <random>
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(TestMatrixTransfer)
     const int blockSize = 1;
 
     using FieldMatrix = Dune::FieldMatrix<double, blockSize, blockSize>;
-    using BCRSMatrix = Dune::BCRSMatrix<FieldMatrix>;
+    using BCRSMatrix = Opm::BlockSparseMatrix<FieldMatrix>;
 
     BCRSMatrix dune_matrix(N, N, BCRSMatrix::row_wise);
 

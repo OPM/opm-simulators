@@ -27,7 +27,6 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/amg.hh>
 
 #include <fstream>

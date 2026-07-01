@@ -29,6 +29,8 @@
 #endif
 #endif
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
+
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -273,8 +275,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             const double w = prm.get<double>("relaxation", 1.0);
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
-            using matrix_type_to =
-                typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
+            using matrix_type_to = BlockSparseMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
             using GpuILU0 = typename gpuistl::
                 GpuSeqILU0<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
             using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GpuILU0>;
@@ -337,7 +338,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
 
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
-            using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
+            using matrix_type_to = BlockSparseMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
             using GpuDILU = typename gpuistl::GpuDILU<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
             using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<float>,
                 gpuistl::GpuVector<float>, GpuDILU, matrix_type_to>;

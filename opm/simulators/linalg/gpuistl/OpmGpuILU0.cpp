@@ -18,11 +18,11 @@
 */
 #include <config.h>
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/OpmGpuILU0.hpp>
@@ -432,10 +432,10 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 
 } // namespace Opm::gpuistl
 #define INSTANTIATE_GPUILU_DUNE(realtype, blockdim)                                                                    \
-    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+    template class ::Opm::gpuistl::OpmGpuILU0<Opm::BlockSparseMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
-    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+    template class ::Opm::gpuistl::OpmGpuILU0<Opm::BlockSparseMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 
