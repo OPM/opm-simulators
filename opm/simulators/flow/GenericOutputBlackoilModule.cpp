@@ -557,10 +557,9 @@ setRestart(const data::Solution& sol,
 template<class FluidSystem>
 typename GenericOutputBlackoilModule<FluidSystem>::ScalarBuffer
 GenericOutputBlackoilModule<FluidSystem>::
-regionSum(const ScalarBuffer& property,
-          const std::vector<int>& regionId,
-          std::size_t maxNumberOfRegions,
-          const Parallel::Communication& comm)
+regionSumLocal(const ScalarBuffer& property,
+               const std::vector<int>& regionId,
+               std::size_t maxNumberOfRegions)
 {
     ScalarBuffer totals(maxNumberOfRegions, 0.0);
 
@@ -584,6 +583,19 @@ regionSum(const ScalarBuffer& property,
         assert(regionIdx < static_cast<int>(maxNumberOfRegions));
         totals[regionIdx] += property[j];
     }
+
+    return totals;
+}
+
+template<class FluidSystem>
+typename GenericOutputBlackoilModule<FluidSystem>::ScalarBuffer
+GenericOutputBlackoilModule<FluidSystem>::
+regionSum(const ScalarBuffer& property,
+          const std::vector<int>& regionId,
+          std::size_t maxNumberOfRegions,
+          const Parallel::Communication& comm)
+{
+    auto totals = regionSumLocal(property, regionId, maxNumberOfRegions);
 
     comm.sum(totals.data(), totals.size());
 
@@ -1021,26 +1033,33 @@ makeRegionSum(Inplace& inplace,
     const auto& region = this->regions_.at(region_name);
     const std::size_t ntFip = this->regionMax(region, comm);
 
-    auto update_inplace =
-        [&inplace, &region, &region_name, &comm, ntFip, this]
-        (const Inplace::Phase       phase,
-         const std::vector<Scalar>& value)
-    {
-        update(inplace, region_name, phase, ntFip,
-               this->regionSum(value, region, ntFip, comm));
-    };
-
-    update_inplace(Inplace::Phase::PressurePV,
-                   this->pressureTimesPoreVolume_);
-
-    update_inplace(Inplace::Phase::HydroCarbonPV,
-                   this->hydrocarbonPoreVolume_);
-
-    update_inplace(Inplace::Phase::PressureHydroCarbonPV,
-                   this->pressureTimesHydrocarbonVolume_);
-
+    // Collect the (phase, value-buffer) quantities to reduce over regions. The
+    // value buffers are stable references into members (and into fipC_'s map),
+    // so storing pointers is safe for the duration of this function.
+    struct Quantity { Inplace::Phase phase; const std::vector<Scalar>* value; };
+    std::vector<Quantity> quantities;
+    quantities.push_back({Inplace::Phase::PressurePV,            &this->pressureTimesPoreVolume_});
+    quantities.push_back({Inplace::Phase::HydroCarbonPV,         &this->hydrocarbonPoreVolume_});
+    quantities.push_back({Inplace::Phase::PressureHydroCarbonPV, &this->pressureTimesHydrocarbonVolume_});
     for (const auto& phase : Inplace::phases()) {
-        update_inplace(phase, this->fipC_.get(phase));
+        quantities.push_back({phase, &this->fipC_.get(phase)});
+    }
+
+    // Compute the rank-local region sums in parallel; each sweep is independent
+    // and runs in ascending cell order, so the result is bit-identical across
+    // thread counts. The MPI reduction and the Inplace updates below stay serial
+    // (MPI need not be thread-safe, and serial updates keep ordering fixed).
+    std::vector<ScalarBuffer> localTotals(quantities.size());
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+    for (std::size_t i = 0; i < quantities.size(); ++i) {
+        localTotals[i] = regionSumLocal(*quantities[i].value, region, ntFip);
+    }
+
+    for (std::size_t i = 0; i < quantities.size(); ++i) {
+        comm.sum(localTotals[i].data(), localTotals[i].size());
+        update(inplace, region_name, quantities[i].phase, ntFip, localTotals[i]);
     }
 }
 

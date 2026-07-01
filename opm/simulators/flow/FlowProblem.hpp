@@ -187,6 +187,8 @@ public:
     {
         ParentType::registerParameters();
 
+        TracerModel::registerParameters();
+
         registerFlowProblemParameters<Scalar>();
     }
 
@@ -391,7 +393,6 @@ public:
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
         temperatureModel_.beginTimeStep();
-
     }
 
     /*!
