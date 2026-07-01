@@ -795,6 +795,33 @@ protected:
         }
     }
 
+    void convertEffectiveRatesToRawRates() {
+        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        for (const auto& wellPtr : wellPtrs) {
+            const auto& eclWell = wellPtr->wellEcl();
+            const auto well_seq_index = eclWell.seqIndex();
+            const auto inv_well_eff_factor = 1.0 / std::max(Scalar{1.0e-10}, wellPtr->wellEfficiencyFactor());
+
+            std::ranges::for_each(this->wellTracerRate_[well_seq_index], [&](WellTracerRate<Scalar>& wtr) {
+                wtr.rate *= inv_well_eff_factor;
+            });
+            std::ranges::for_each(this->wellFreeTracerRate_[well_seq_index], [&](WellTracerRate<Scalar>& wtr) {
+                wtr.rate *= inv_well_eff_factor;
+            });
+            std::ranges::for_each(this->wellSolTracerRate_[well_seq_index], [&](WellTracerRate<Scalar>& wtr) {
+                wtr.rate *= inv_well_eff_factor;
+            });
+            if (eclWell.isMultiSegment()) {
+                std::ranges::for_each(this->mSwTracerRate_[well_seq_index], [&](MSWellTracerRate<Scalar>& wtr) {
+                    std::ranges::for_each(wtr.rate, [&](auto& item) {
+                        item.second *= inv_well_eff_factor;
+                    });
+                });
+            }
+        }
+    }
+
+
     void advanceTracerFields()
     {
         assembleTracerEquations_();
@@ -906,6 +933,7 @@ protected:
                 }
             }
         }
+        convertEffectiveRatesToRawRates();
     }
 
     Simulator& simulator_;
