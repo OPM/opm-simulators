@@ -39,6 +39,14 @@ partiallySupported()
             },
          },
          {
+            "CECON",
+            {
+               {9,{true, allow_values<std::string> {"CON", "+CON", "WELL"}, "CECON(PROCEDURE): only CON, +CON and WELL workover procedures are supported"}}, // WORKOVER_PROCEDURE
+               {10,{true, allow_values<std::string> {"NO"}, "CECON(CHECK_STOPPED): only the NO option is supported"}}, // CHECK_STOPPED
+               {13,{true, allow_values<std::string> {}, "CECON(FOLLOW_ON_WELL): follow-on well is not supported and should be defaulted"}}, // FOLLOW_ON_WELL
+            },
+         },
+         {
             "EDITNNC",
             {
                {12,{true, allow_values<std::string> {"NONE"}, "EDITNNC(FACE1): not supported use default."}}, // FACE_FLOW12
@@ -264,7 +272,7 @@ partiallySupported()
          {
             "WECON",
             {
-               {7,{true, allow_values<std::string> {"NONE", "CON", "WELL"}, "WECON(ACTION): Only NONE, CON and WELL options are supported"}}, // ACTION
+               {7,{true, allow_values<std::string> {"NONE", "CON", "+CON", "WELL"}, "WECON(ACTION): Only NONE, CON, +CON and WELL options are supported"}}, // ACTION
                {8,{true, allow_values<std::string> {"NO"}, "WECON(ENDRUN): only the NO option is supported"}}, // END_RUN
                // Item 9 (follow-on well) is supported (but not validated here because it is a string with no specific allowed values).
                {10,{true, allow_values<std::string> {"POTN", "RATE"}, "WECON(ELTOPT): Valid options are POTN and RATE"}}, // ELTOPT
@@ -541,6 +549,13 @@ partiallySupported()
             {
                {8,{false, allow_values<double> {0}, "AQUFETP(SALTCON): option is not used and should be defaulted – value ignored"}}, // SALINITY
                {9,{false, allow_values<double> {}, "AQUFETP(TEMP): option is not used and should be defaulted – value ignored"}}, // TEMP
+            },
+         },
+         {
+            "CECON",
+            {
+               {11,{false, allow_values<double> {}, "CECON(MIN_OIL): minimum oil rate limit is not supported and should be defaulted (1*) – value ignored"}}, // MIN_OIL
+               {12,{false, allow_values<double> {}, "CECON(MIN_GAS): minimum gas rate limit is not supported and should be defaulted (1*) – value ignored"}}, // MIN_GAS
             },
          },
          {

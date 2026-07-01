@@ -28,6 +28,7 @@
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 
+#include <ctime>
 #include <map>
 #include <optional>
 #include <string>
@@ -38,6 +39,7 @@ namespace Opm
 
 class DeferredLogger;
 class GuideRate;
+class UnitSystem;
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 class SummaryState;
@@ -182,6 +184,8 @@ public:
                              const bool& writeMessageToOPMLog,
                              const bool zero_group_target,
                              WellTestState& wellTestState,
+                             const UnitSystem& unit_system,
+                             const std::time_t start_time,
                              DeferredLogger& deferred_logger) const;
 
     bool isPressureControlled(const WellStateType& well_state) const;
