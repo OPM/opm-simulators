@@ -74,8 +74,13 @@ updateSolution(const GlobalEqVector& dx)
     auto& newtonMethod = simulator_.model().newtonMethod();
     auto& solution = simulator_.model().solution(/*timeIdx=*/0);
 
+    // updatePrimaryVariables_ implementations chop and clamp the update
+    // relative to the current solution, so the current solution they read
+    // must not alias the solution being written.
+    const auto currentSolution = solution;
+
     newtonMethod.applyUpdate(/*nextSolution=*/solution,
-                             /*curSolution=*/solution,
+                             /*curSolution=*/currentSolution,
                              /*update=*/dx,
                              /*resid=*/dx);
 
