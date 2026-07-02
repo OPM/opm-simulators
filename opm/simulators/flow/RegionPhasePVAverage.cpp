@@ -29,8 +29,8 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <numeric>
 #include <functional>
+#include <numeric>
 #include <vector>
 
 namespace {

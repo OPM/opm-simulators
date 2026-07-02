@@ -32,7 +32,9 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #if defined(_WIN32)
@@ -61,6 +63,34 @@ unsigned long long getTotalSystemMemory()
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
     return pages * page_size;
+#endif
+}
+
+struct SystemDescription
+{
+    std::string nodename;
+    std::string os; // empty when no operating-system description is available
+};
+
+std::optional<SystemDescription> getSystemDescription()
+{
+#if defined(_WIN32)
+    // Windows has no uname()/utsname; query the machine name via the Win32 API.
+    char computer_name[MAX_COMPUTERNAME_LENGTH + 1] = {};
+    DWORD computer_name_len = sizeof(computer_name);
+    return SystemDescription {
+        GetComputerNameA(computer_name, &computer_name_len) ? computer_name : "unknown",
+        ""
+    };
+#else
+    struct utsname arch;
+    if (uname(&arch) != 0) {
+        return std::nullopt;
+    }
+    std::ostringstream os;
+    os << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release
+       << ", " << arch.version << " )";
+    return SystemDescription { arch.nodename, os.str() };
 #endif
 }
 
@@ -96,25 +126,14 @@ void printPRTHeader(const int nprocs, const int nthreads,
     ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
     ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
     ss << "Flow Version     =  " << moduleVersion << "\n";
-#if defined(_WIN32)
-    // Windows has no uname()/utsname; query the machine name via the Win32 API.
-    char computer_name[MAX_COMPUTERNAME_LENGTH + 1] = {};
-    DWORD computer_name_len = sizeof(computer_name);
-    const char* nodename =
-        GetComputerNameA(computer_name, &computer_name_len) ? computer_name : "unknown";
-    ss << "Machine name     =  " << nodename << " (Number of logical cores: " << num_cpu;
-    ss << ", Memory size: " << std::fixed << std::setprecision(2) << mem_size << " MB) \n";
-    ss << "Build time       =  " << compileTimestamp << "\n";
-#else
-    struct utsname arch;
-    if (uname(&arch) == 0) {
-       ss << "Machine name     =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
-       ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
-       ss << "Operating system =  " << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release;
-       ss << ", " << arch.version << " )\n";
-       ss << "Build time       =  " << compileTimestamp << "\n";
+    if (const auto sys = getSystemDescription()) {
+        ss << "Machine name     =  " << sys->nodename << " (Number of logical cores: " << num_cpu;
+        ss << ", Memory size: " << std::fixed << std::setprecision(2) << mem_size << " MB) \n";
+        if (!sys->os.empty()) {
+            ss << "Operating system =  " << sys->os << "\n";
+        }
+        ss << "Build time       =  " << compileTimestamp << "\n";
     }
-#endif
     if (user) {
        ss << "User             =  " << user << std::endl;
     }
