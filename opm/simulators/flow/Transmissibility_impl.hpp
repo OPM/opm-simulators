@@ -324,7 +324,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 #pragma omp parallel for
 #endif
     for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
-        const auto chunk = element_chunks[ci];
+        const auto& chunk = element_chunks[ci];
         for (const auto& elem : chunk) {
             FaceInfo inside;
             FaceInfo outside;

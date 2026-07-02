@@ -156,7 +156,7 @@ update()
 #pragma omp parallel for
 #endif
     for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
-        const auto chunk = element_chunks[ci];
+        const auto& chunk = element_chunks[ci];
         for (const auto& elem : chunk) {
             // Init. face info for inside/outside cells
             FaceInfo inside;

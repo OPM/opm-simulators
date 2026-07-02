@@ -94,7 +94,7 @@ public:
 #pragma omp parallel for
 #endif
             for (std::size_t ci = 0; ci < element_chunks_.size(); ++ci) {
-                const auto chunk = element_chunks_[ci];
+                const auto& chunk = element_chunks_[ci];
                 ElementContext elemCtx(this->simulator_);
                 for (const auto& elem : chunk) {
                     elemCtx.updatePrimaryStencil(elem);
@@ -259,7 +259,7 @@ protected:
 #pragma omp parallel for
 #endif
         for (std::size_t ci = 0; ci < element_chunks_.size(); ++ci) {
-            const auto chunk = element_chunks_[ci];
+            const auto& chunk = element_chunks_[ci];
             for (const auto& elem : chunk) {
                 this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
             }
