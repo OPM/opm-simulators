@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     // parent can verify the child exits with EXIT_FAILURE when a tasklet fails.
     if (argc > 1 && std::strcmp(argv[1], "--child") == 0) {
         execute();
-        return 0;  // execute() is expected to exit(EXIT_FAILURE) before reaching here
+        return EXIT_FAILURE;  // execute() is expected to exit(EXIT_FAILURE) before reaching here
     }
     std::cout << "Checking failure of child process with parent process" << std::endl;
     const intptr_t status = _spawnl(_P_WAIT, argv[0], argv[0], "--child",
