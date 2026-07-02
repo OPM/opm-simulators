@@ -644,7 +644,7 @@ void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions)
     if (matrixAddWellContributions) {
         OPM_THROW(std::invalid_argument,
                   "--matrix-add-well-contributions=true is incompatible with "
-                  "--linear-solver=system_cpr because the system CPR/CPRW implementation assumes that well contributions are not added to the matrix.");
+                  "--linear-solver=system_cpr or system_cprw because these implementations assume that well contributions are not added to the matrix.");
     }
 }
 

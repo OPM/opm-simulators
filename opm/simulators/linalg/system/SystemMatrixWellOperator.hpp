@@ -22,6 +22,7 @@ Copyright Equinor ASA 2026
 
 #include "SystemTypes.hpp"
 
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 
 #include <algorithm>
@@ -159,25 +160,9 @@ public:
             BwtArray& bwt = wellBwt[w];
             bwt.fill(Scalar(0));
 
-            if (use_well_weights) {
-                // bwt = inv(D[w][w])^T * e_bhp  →  row bhp of inv(D[w][w])
-                auto invD = (*S_.D)[w][w];   // 4×4 copy
-                detail::invertMatrix(invD);
-                Scalar abs_max = 0;
-                for (int i = 0; i < numWellDofs; ++i) {
-                    bwt[i] = invD[bhpIdx][i];
-                    abs_max = std::max(abs_max, std::abs(bwt[i]));
-                }
-                if (abs_max > 0) {
-                    for (int i = 0; i < numWellDofs; ++i) {
-                        bwt[i] /= abs_max;
-                    }
-                    wellDiag[w] = Scalar(1) / abs_max;
-                } else {
-                    wellDiag[w] = Scalar(1);
-                }
-            } else {
-                // bwt: average across all perforated reservoir cells (IMPES weights)
+            const auto setDefaultWellWeights = [&]() {
+                // Use averaged reservoir IMPES weights as a robust fallback when
+                // quasi-IMPES well weights are unavailable.
                 std::vector<Scalar> totalWeights(numResDofs, 0.0);
                 int nperf = 0;
                 for (auto colIt = (*S_.B)[w].begin(); colIt != (*S_.B)[w].end(); ++colIt) {
@@ -209,6 +194,31 @@ public:
                         break;
                     }
                 }
+            };
+
+            if (use_well_weights) {
+                // bwt = inv(D[w][w])^T * e_bhp  →  row bhp of inv(D[w][w])
+                try {
+                    auto invD = (*S_.D)[w][w];   // 4x4 copy
+                    detail::invertMatrix(invD);
+                    Scalar abs_max = 0;
+                    for (int i = 0; i < numWellDofs; ++i) {
+                        bwt[i] = invD[bhpIdx][i];
+                        abs_max = std::max(abs_max, std::abs(bwt[i]));
+                    }
+                    if (abs_max > 0) {
+                        for (int i = 0; i < numWellDofs; ++i) {
+                            bwt[i] /= abs_max;
+                        }
+                        wellDiag[w] = Scalar(1) / abs_max;
+                    } else {
+                        wellDiag[w] = Scalar(1);
+                    }
+                } catch (const NumericalProblem&) {
+                    setDefaultWellWeights();
+                }
+            } else {
+                setDefaultWellWeights();
             }
 
             // Set diagonal entry
