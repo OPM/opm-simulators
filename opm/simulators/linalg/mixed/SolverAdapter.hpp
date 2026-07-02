@@ -100,7 +100,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     using AbstractScalarProductType = Dune::ScalarProduct<Vector>;
 
     static constexpr auto block_size = Vector::block_type::dimension;
-    using MixedMatrixType      = Opm::MixedMatrixWrapper<Vector, block_size>;
+    using MixedMatrixType      = Opm::MixedMatrixWrapper<Vector>;
     using MixedOperatorType    = MixedOperator<MixedMatrixType, Vector, Comm>::type;
     using OptimizedProductType = SeqOptmizedProduct<Vector>;
 

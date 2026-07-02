@@ -14,10 +14,14 @@ namespace Opm
 //!
 //! @tparam Vector the block-vector used by linear operator
 //! @tparam b block size
-template <class Vector, int b>
+template <class Vector>
 class MixedMatrixWrapper
 {
     public:
+
+    // extract block size
+    static constexpr auto block_size = Vector::block_type::dimension;
+
     virtual void mv(const Vector& x, Vector& y) const;
     virtual void umv(const Vector& x, Vector& y) const;
     virtual void usmv(double alpha, const Vector& x, Vector& y) const;
@@ -30,7 +34,7 @@ class MixedMatrixWrapper
     {
         nnz_=nnz;
         M_ = bsr_alloc();
-        bsr_init(M_, nrows, nnz, b);
+        bsr_init(M_, nrows, nnz, block_size);
     }
 
     //! @brief destructor
@@ -46,36 +50,37 @@ class MixedMatrixWrapper
     bsr_matrix  *M_;
 };
 
-template <class Vector, int b>
-void MixedMatrixWrapper<Vector,b>::
+template <class Vector>
+void MixedMatrixWrapper<Vector>::
 mv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv (y = M.x)
     bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
 }
 
-template <class Vector, int b>
-void MixedMatrixWrapper<Vector,b>::
+template <class Vector>
+void MixedMatrixWrapper<Vector>::
 umv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv with update (y += M.x)
     bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
 }
 
-template <class Vector, int b>
-void MixedMatrixWrapper<Vector,b>::
+template <class Vector>
+void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
     // scaled mixed-precision block spmv with update (y += alpha *  M.x)
     bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
 }
 
-template <class Vector, int b>
-void MixedMatrixWrapper<Vector,b>::
+template <class Vector>
+void MixedMatrixWrapper<Vector>::
 update(double const *data)
 {
     // transpose each dense block to make them column-major
-    int bb=b*b;
+    int const b = block_size;
+    int const bb=b*b;
     double B[bb];
     for(int k=0;k<nnz_;k++)
     {
