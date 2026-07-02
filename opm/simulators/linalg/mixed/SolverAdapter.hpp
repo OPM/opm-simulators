@@ -92,7 +92,7 @@ struct MixedOperator<Matrix, Vector, Dune::Amg::SequentialInformation>
 //! @tparam Operator the linear operator passed to FlexibleLinearSolver
 //! @tparam Vector the block vector passed to FlexibleLinearSolver
 template <class Comm, class Operator, class Vector>
-class MixedAdapter:public InverseOperator<Vector, Vector>
+class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
 {
     public:
 
@@ -113,7 +113,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
     //! @param maxit maximum number of iterations for the linear solver
     //! @param verbose verbosity level
     //! @param comm the communication object.
-    MixedAdapter(Operator *op,
+    MixedBiCGSTABSolver(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,
                  std::shared_ptr<AbstractPrecondType> prec,
                  const double& tol,
@@ -186,7 +186,7 @@ class MixedAdapter:public InverseOperator<Vector, Vector>
         x=0;
         b=0;
         res.reduction = reduction;
-        OPM_THROW(std::invalid_argument, "MixedAdapter::apply(...) not implemented yet.");
+        OPM_THROW(std::invalid_argument, "MixedBiCGSTABSolver::apply(...) not implemented yet.");
     }
 
     virtual Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};

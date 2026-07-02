@@ -239,7 +239,7 @@ namespace Dune
             }
             // mixed-solver adapter starts here
           } else if (solver_type == "mixed-precision") {
-                linsolver_ = std::make_shared<Dune::MixedAdapter<Comm,Operator,VectorType>>(linearoperator_for_solver_,
+                linsolver_ = std::make_shared<Dune::MixedBiCGSTABSolver<Comm,Operator,VectorType>>(linearoperator_for_solver_,
                                                                             scalarproduct_,
                                                                             preconditioner_,
                                                                             tol, // desired residual reduction factor
