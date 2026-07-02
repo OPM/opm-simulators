@@ -149,6 +149,20 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             irow++;
         }
 
+        // The following skeleton is in preparation for better support for various MatrixAdapter. For now, it simply throws an error if
+        // the operator provided is not supported.
+        using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(op->getmat())>>;
+        if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Dune::MatrixAdapter<MatrixType, Vector, Vector>>)
+        {
+        }
+        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::GhostLastMatrixAdapter<MatrixType, Vector, Vector, Comm>>)
+        {
+        }
+        else
+        {
+            OPM_THROW(std::invalid_argument, "MixedBiCGSTABSolver only supports Dune::MatrixAdapter and Opm::GhostLastMatrixAdapter\n");
+        }
+
         //initialize mixed operator and optimized scalar product
         double_operator_ = op;
         if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)

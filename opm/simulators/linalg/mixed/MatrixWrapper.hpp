@@ -32,6 +32,8 @@ class MixedMatrixWrapper
     //! @param nnz number of nonzero blocks
     MixedMatrixWrapper(int nrows, int nnz)
     {
+        if constexpr(block_size!=3) OPM_THROW(std::invalid_argument, "MixedMatrixWrapper only supports block size == 3! \n");
+
         nnz_=nnz;
         M_ = bsr_alloc();
         bsr_init(M_, nrows, nnz, block_size);
