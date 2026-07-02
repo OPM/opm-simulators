@@ -28,13 +28,30 @@
 #include <mpi.h>
 #endif
 
+#include <chrono>
 #include <csignal>
+#include <cstdio>
 #include <iostream>
+#include <thread>
 #include <unordered_map>
+
+#if defined(_WIN32)
+#include <io.h>  // _isatty, _fileno
+#else
 #include <sys/ioctl.h>
 #include <unistd.h>
+#endif
 
 namespace {
+
+bool isTty(std::FILE* stream)
+{
+#if defined(_WIN32)
+    return _isatty(_fileno(stream)) != 0;
+#else
+    return isatty(fileno(stream)) != 0;
+#endif
+}
 
 const char* getSignalAbbrev(int sig)
 {
@@ -112,7 +129,7 @@ std::string breakLines(const std::string& msg,
 int getTtyWidth()
 {
     int ttyWidth = 10*1000; // effectively do not break lines at all.
-    if (isatty(STDOUT_FILENO) != 0) {
+    if (isTty(stdout)) {
 #if defined TIOCGWINSZ
         // This is a bit too linux specific, IMO. let's do it anyway
         struct winsize ttySize;
@@ -131,7 +148,7 @@ void assignResetTerminalSignalHandlers()
 {
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts
-    if (isatty(STDIN_FILENO) != 0) {
+    if (isTty(stdin)) {
         signal(SIGINT, resetTerminal);
 #ifdef SIGHUP
         signal(SIGHUP, resetTerminal);   // not on Windows
@@ -157,8 +174,9 @@ void resetTerminal()
 
     // it seems like some terminals sometimes takes their time to react, so let's
     // accommodate them.
-    usleep(/*usec=*/500*1000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+#if !defined(_WIN32)
     // this requires the 'stty' command to be available in the command search path. on
     // most linux systems, is the case. (but even if the system() function fails, the
     // worst thing which can happen is that the TTY stays potentially choked up...)
@@ -166,6 +184,7 @@ void resetTerminal()
         std::cout << "Executing the 'stty' command failed."
                   << " Terminal might be left in an undefined state!\n";
     }
+#endif
 }
 
 void resetTerminal(int signum)
@@ -184,7 +203,7 @@ void resetTerminal(int signum)
     }
 #endif
 
-    if (isatty(fileno(stdout)) != 0 && isatty(fileno(stdin)) != 0) {
+    if (isTty(stdout) && isTty(stdin)) {
         std::cout << "\n\nReceived signal " << signum
                   << " (\"" << getSignalAbbrev(signum) << "\")."
                   << " Trying to reset the terminal.\n";

@@ -22,6 +22,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -281,12 +282,9 @@ namespace Opm {
 
         /// Collection of consistency check violations.
         ///
-        /// One set of violations for each severity level. Uses std::vector
-        /// (fixed at NumLevels entries) rather than std::array: MSVC fails to
-        /// treat the dependent element type as complete when it is the element
-        /// of a std::array data member of this class template (C2079), whereas
-        /// std::vector imposes no such completeness requirement at declaration.
-        using ViolationCollection = std::vector<ViolationSample>;
+        /// One set of violations for each severity level.
+        using ViolationCollection = std::array
+            <ViolationSample, static_cast<std::size_t>(ViolationLevel::NumLevels)>;
 
         /// Name/category of the points in this set of checks.
         ///
@@ -311,8 +309,7 @@ namespace Opm {
         /// Collection of sampled consistency check violations.
         ///
         /// One collection for each severity level.
-        ViolationCollection violations_ =
-            ViolationCollection(static_cast<std::size_t>(ViolationLevel::NumLevels));
+        ViolationCollection violations_{};
 
         /// Collection of checks to run against the saturation function
         /// end-points.
