@@ -218,9 +218,12 @@ public:
      */
     unsigned lowestPresentPhaseIdx() const
     {
-        // No phase present: guard against an out-of-bounds index.
-        if (phasePresence_ == 0) [[unlikely]]
-            return 0;
+        // No phase present: fail fast instead of returning a bogus phase index.
+        // The previous ffs()-based code returned ffs(0)-1, a huge index whose
+        // out-of-bounds access surfaced the corrupt state immediately.
+        if (phasePresence_ == 0) [[unlikely]] {
+            throw NumericalProblem("Phase presence is 0, i.e., no fluid is present");
+        }
 
         // std::countr_zero requires an unsigned argument; its count of trailing
         // zeros is the index of the lowest set bit, i.e. the lowest phase present.

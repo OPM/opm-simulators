@@ -141,12 +141,23 @@ int main(int argc, char** argv)
     // parent can verify the child exits with EXIT_FAILURE when a tasklet fails.
     if (argc > 1 && std::strcmp(argv[1], "--child") == 0) {
         execute();
-        return EXIT_FAILURE;  // execute() is expected to exit(EXIT_FAILURE) before reaching here
+        // execute() is expected to exit(EXIT_FAILURE) before reaching here;
+        // returning success makes the parent's check fail if it does not
+        // (mirrors the _exit(0) "should never reach here" of the POSIX branch).
+        return EXIT_SUCCESS;
     }
     std::cout << "Checking failure of child process with parent process" << std::endl;
     const intptr_t status = _spawnl(_P_WAIT, argv[0], argv[0], "--child",
                                     static_cast<const char*>(nullptr));
-    assert(status == EXIT_FAILURE);  // Check that the child exited with EXIT_FAILURE
+    // status is the child's exit code, or -1 if it could not be spawned.
+    // Check explicitly rather than with assert() so the test still fails
+    // in NDEBUG (Release) builds when the tasklet failure mechanism breaks.
+    if (status != EXIT_FAILURE) {
+        std::cerr << "Child process did not exit with EXIT_FAILURE (status: "
+                  << status << ")" << std::endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
 #else
 int main()
