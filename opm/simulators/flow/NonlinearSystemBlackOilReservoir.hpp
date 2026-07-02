@@ -128,23 +128,12 @@ public:
     };
 
     // Output debug flags for which tolerances used.
-    // NB: <windows.h> (pulled in transitively on Windows) defines STRICT as a
-    // macro (=1); we also drop RELAXED defensively. This would turn "STRICT = 0"
-    // into "1 = 0" in the enum below. Save the macros with push_macro and undef
-    // them here; they are restored with pop_macro at the very end of this header
-    // (after the _impl.hpp include), so the undef covers every in-TU use of the
-    // DebugFlags::STRICT / RELAXED enumerators without leaking out to code that
-    // includes this header. OPM never uses the Windows STRICT feature macro.
-#if defined(_WIN32)
-#  pragma push_macro("STRICT")
-#  pragma push_macro("RELAXED")
-#  undef STRICT
-#  undef RELAXED
-#endif
+    // NB: not named STRICT/RELAXED because <windows.h> (pulled in transitively
+    // on Windows) defines STRICT as a macro.
     enum class DebugFlags {
-        STRICT = 0,
-        RELAXED = 1,
-        TUNINGDP = 2
+        Strict = 0,
+        Relaxed = 1,
+        TuningDP = 2
     };
 
     // ---------  Public methods  ---------
@@ -331,10 +320,5 @@ private:
 } // namespace Opm
 
 #include <opm/simulators/flow/NonlinearSystemBlackOilReservoir_impl.hpp>
-
-#if defined(_WIN32)
-#  pragma pop_macro("RELAXED")
-#  pragma pop_macro("STRICT")
-#endif
 
 #endif // OPM_NONLINEAR_SYSTEM_BLACK_OIL_RESERVOIR_HEADER_INCLUDED
