@@ -33,11 +33,11 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
+#include <algorithm>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <type_traits>
-
 
 namespace Opm
 {

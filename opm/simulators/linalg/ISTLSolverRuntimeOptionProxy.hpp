@@ -51,7 +51,7 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using Matrix =  SparseMatrixAdapter::IstlMatrix;
+    using Matrix =  typename SparseMatrixAdapter::IstlMatrix;
 
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
