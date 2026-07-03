@@ -946,6 +946,33 @@ add_test_compare_parallel_simulation(
     --linear-solver-reduction=1e-7
 )
 
+# Parallel LGR INIT/EGRID regression: reuses the existing SPE1CASE1_CARFIN deck (opm-tests/lgr,
+# already registered for spe1case1_carfin/spe1case1_carfin_parallel in compareECLFiles.cmake) and
+# the existing run-parallel-regressionTest.sh driver (COMPARE_MODE init: dry-run, compares
+# EGRID+INIT instead of SMRY+UNRST). Guards the parallel LGR INIT transmissibility output
+# (gatherLgrOutputTrans + the EclGenericWriter gathered-record lookups) -- pre-fix, the
+# parallel run deadlocks here.
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1case1_carfin
+  FILENAME
+    SPE1CASE1_CARFIN
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-5
+  COMPARE_MODE
+    init
+  TEST_ARGS
+    --parsing-strictness=low
+)
+
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
 add_test_compareSeparateECLFiles(
@@ -1011,3 +1038,4 @@ add_test_compareSeparateECLFiles(
     --matrix-add-well-contributions=true
     --linear-solver=ilu0
 )
+
