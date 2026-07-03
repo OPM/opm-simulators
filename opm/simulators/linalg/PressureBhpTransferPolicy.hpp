@@ -244,10 +244,10 @@ namespace Opm
             if (transpose) {
                 const auto& bw = weights_[block.index()];
                 for (std::size_t i = 0; i < block->size(); ++i) {
-                    (*block)[i] = this->lhs_[block - begin] * bw[i];
+                    (*block)[i] = this->lhs_[block - begin][0] * bw[i];
                 }
             } else {
-                (*block)[pressure_var_index_] = this->lhs_[block - begin];
+                (*block)[pressure_var_index_] = this->lhs_[block - begin][0];
             }
         }
     }
