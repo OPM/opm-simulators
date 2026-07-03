@@ -31,6 +31,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -41,6 +42,7 @@
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -48,7 +50,10 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm::Properties {
 
@@ -144,6 +149,8 @@ public:
 
     void prepareTracerBatches()
     {
+        DeferredLogger local_deferredLogger;
+
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
@@ -192,6 +199,14 @@ public:
                     tr.mat = std::make_unique<TracerMatrix>(*base);
                 }
             }
+        }
+
+        this->buildAquiferTracerConnections_(local_deferredLogger);
+
+        const auto& comm = simulator_.vanguard().grid().comm();
+        auto global_logger = gatherDeferredLogger(local_deferredLogger, comm);
+        if (comm.rank() == 0) {
+            global_logger.logMessages();
         }
     }
 
@@ -623,6 +638,10 @@ protected:
                 }
             }
 
+            for (auto& tr : tbatch) {
+                this->assembleTracerEquationAquifer_(tr);
+            }
+
             // Parallel loop over element chunks
             #ifdef _OPENMP
             #pragma omp parallel for
@@ -790,6 +809,110 @@ protected:
                 splitRate[tr.idx_[tIdx]].rate += delta;
                 if (eclWell.isMultiSegment()) {
                     (*mswTracerRate)[tr.idx_[tIdx]].rate[eclWell.getConnections().get(i).segment()] += delta;
+                }
+            }
+        }
+    }
+
+    void buildAquiferTracerConnections_(DeferredLogger& deferredLogger)
+    {
+        aquifer_tracer_cells_.clear();
+
+        const auto& aquifer_cfg = this->eclState_.aquifer();
+        if (!aquifer_cfg.active()) {
+            return;
+        }
+
+        const auto& specs = aquifer_cfg.aquiferTracers();
+        if (specs.empty()) {
+            return;
+        }
+
+        std::unordered_map<std::string, int> tracer_name_to_idx;
+        for (int tracerIdx = 0; tracerIdx < this->numTracers(); ++tracerIdx) {
+            tracer_name_to_idx.emplace(this->name(tracerIdx), tracerIdx);
+        }
+
+        const auto& vanguard = simulator_.vanguard();
+        for (const auto& spec : specs) {
+            if (!aquifer_cfg.hasAnalyticalAquifer(spec.aquifer_id)) {
+                continue;
+            }
+
+            const auto tracer_pos = tracer_name_to_idx.find(spec.tracer_name);
+            if (tracer_pos == tracer_name_to_idx.end()) {
+                if (simulator_.vanguard().grid().comm().rank() == 0) {
+                    deferredLogger.warning(fmt::format("AQANTRC tracer '{}' is not declared in TRACER",
+                                                       spec.tracer_name));
+                }
+                continue;
+            }
+
+            if (!aquifer_cfg.connections().hasAquiferConnections(spec.aquifer_id)) {
+                continue;
+            }
+
+            const int tracerIdx = tracer_pos->second;
+            const int phaseIdx = this->tracerPhaseIdx_[tracerIdx];
+
+            for (const auto& conn : aquifer_cfg.connections().getConnections(spec.aquifer_id)) {
+                const int cellIdx = vanguard.compressedIndex(conn.global_index);
+                if (cellIdx < 0) {
+                    continue;
+                }
+
+                aquifer_tracer_cells_[cellIdx].push_back(
+                    AquiferTracerCellSpec { tracerIdx, phaseIdx, static_cast<Scalar>(spec.concentration) });
+            }
+        }
+    }
+
+    template<class TrRe>
+    void assembleTracerEquationAquifer_(TrRe& tr)
+    {
+        if (tr.numTracer() == 0 || aquifer_tracer_cells_.empty()) {
+            return;
+        }
+
+        const auto& aquiferModel = simulator_.problem().aquiferModel();
+        const Scalar dt = simulator_.timeStepSize();
+
+        for (const auto& [cellIdx, specs] : aquifer_tracer_cells_) {
+            // Scalar influx from converged Qai_; do not recalculate or use getValue()
+            // in the flow Newton path (see AquiferAnalytical::addToSource).
+            const Scalar rate = aquiferModel.cachedConnectionInfluxRate(cellIdx);
+            if (rate == Scalar{0}) {
+                continue;
+            }
+
+            const unsigned I = cellIdx;
+            const Scalar rate_f = rate;
+
+            for (const auto& spec : specs) {
+                if (spec.phaseIdx != tr.phaseIdx_) {
+                    continue;
+                }
+
+                int localTIdx = -1;
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    if (tr.idx_[tIdx] == spec.tracerIdx) {
+                        localTIdx = tIdx;
+                        break;
+                    }
+                }
+                if (localTIdx < 0) {
+                    continue;
+                }
+
+                if (rate_f > 0) {
+                    const Scalar delta = rate_f * spec.concentration;
+                    tr.residual_[localTIdx][I][Free] -= delta;
+                    dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
+                }
+                else if (rate_f < 0) {
+                    tr.residual_[localTIdx][I][Free] -= rate_f * tr.concentration_[localTIdx][I][Free];
+                    dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
+                    (*tr.mat)[I][I][Free][Free] -= rate_f * variable<TracerEvaluation>(1.0, 0).derivative(0);
                 }
             }
         }
@@ -977,6 +1100,14 @@ protected:
     std::array<std::array<std::vector<Scalar>,numPhases>,2> vol1_;
     std::array<std::array<std::vector<Scalar>,numPhases>,2> dVol_;
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+
+    struct AquiferTracerCellSpec {
+        int tracerIdx{};
+        int phaseIdx{};
+        Scalar concentration{};
+    };
+
+    std::unordered_map<unsigned, std::vector<AquiferTracerCellSpec>> aquifer_tracer_cells_;
 };
 
 } // namespace Opm
