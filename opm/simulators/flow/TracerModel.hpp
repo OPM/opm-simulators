@@ -204,7 +204,7 @@ public:
         this->buildAquiferTracerConnections_(local_deferredLogger);
 
         const auto& comm = simulator_.vanguard().grid().comm();
-        const auto global_logger = gatherDeferredLogger(local_deferredLogger, comm);
+        auto global_logger = gatherDeferredLogger(local_deferredLogger, comm);
         if (comm.rank() == 0) {
             global_logger.logMessages();
         }
