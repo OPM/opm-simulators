@@ -862,7 +862,7 @@ protected:
                 }
 
                 aquifer_tracer_cells_[cellIdx].push_back(
-                    AquiferTracerCellSpec { tracerIdx, phaseIdx, spec.concentration });
+                    AquiferTracerCellSpec { tracerIdx, phaseIdx, static_cast<Scalar>(spec.concentration) });
             }
         }
     }

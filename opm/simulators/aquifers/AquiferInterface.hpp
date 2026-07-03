@@ -78,7 +78,7 @@ public:
 
     /// Scalar influx from the last flow Newton iteration (decoupled tracer solve only).
     /// Do not use this in addToSource: Qai_ must stay as Evaluation for the Jacobian.
-    virtual Scalar cachedConnectionInfluxRate(unsigned cellIdx) const
+    virtual Scalar cachedConnectionInfluxRate([[maybe_unused]] unsigned cellIdx) const
     {
         return Scalar{0};
     }
