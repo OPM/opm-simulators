@@ -52,6 +52,7 @@
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/LgrOutputTransGather.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
@@ -72,6 +73,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace Opm {
@@ -347,8 +349,43 @@ public:
         // we try to avoid for the parallel running, has both global trans_ and transmissibilities_ allocated at the same time
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
-                if (simulator.vanguard().grid().comm().rank() == 0)
+                bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
+                // Parallel LGR: reuse the simulator's own (distributed) transmissibilities for the
+                // INIT output -- each rank contributes its interior connections, gathered on the
+                // I/O rank and keyed by level-Cartesian indices so the output walk over the global
+                // (equil) grid can look them up directly. This reuses the values already computed
+                // in parallel for the simulation itself instead of recomputing a whole-grid
+                // transmissibility. finishTransmissibilities() is idempotent; calling it here only
+                // moves the (anyway required) local trans build before the INIT write.
+                if constexpr (std::is_same_v<GetPropType<TypeTag, Properties::Grid>, Dune::CpGrid>) {
+                    // Gate on the deck's LGRs -- the same condition the writer keys its LGR
+                    // output walk on (writeInit / extractOutputTransAndNNC). Grid refinement
+                    // alone (grid().maxLevel() > 0, e.g. after adapt()) must not enable the
+                    // gathered mode: the writer would look up different keys than the ones
+                    // the leaf-grid walk records.
+                    if (simulator.vanguard().eclState().getLgrs().size() > 0) {
+                        if (simulator.vanguard().numOverlap() < 1) {
+                            throw std::runtime_error("Parallel LGR output requires at least one "
+                                                     "overlap layer (--num-overlap >= 1): a "
+                                                     "rank-boundary connection is recorded by the "
+                                                     "rank owning the lower-index cell, which needs "
+                                                     "the partner cell in its overlap layer.");
+                        }
+                        finishTransmissibilities();
+                        const auto& localTrans = simulator.problem().eclTransmissibilities();
+                        eclWriter_->setGatheredLgrTrans(
+                            gatherLgrOutputTrans(simulator.vanguard().grid(),
+                                                 simulator.vanguard().gridView(),
+                                                 [&localTrans](unsigned c1, unsigned c2)
+                                                 { return static_cast<double>(localTrans.transmissibility(c1, c2)); }));
+                        // All output values (TRANX/Y/Z and NNC) come from the gathered records --
+                        // no whole-grid transmissibility object is needed on the I/O rank.
+                        wholeGridTransNeeded = false;
+                    }
+                }
+                if (wholeGridTransNeeded) {
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                }
             } else {
                 finishTransmissibilities();
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
