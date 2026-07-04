@@ -2651,7 +2651,7 @@ namespace Opm
 
     template <typename TypeTag>
     template <typename ValueType>
-    WellInterface<TypeTag>::template FluidState<ValueType>
+    std::pair<typename WellInterface<TypeTag>::template FluidState<ValueType>, ValueType>
     WellInterface<TypeTag>::createFluidState(const std::vector<ValueType>& fluid_composition,
                                              const ValueType& pressure,
                                              const ValueType& temperature,
@@ -2689,7 +2689,7 @@ namespace Opm
                 FluidSystem::solventComponentIndex(phaseIdx));
             switch (phaseIdx) {
             case FluidSystem::oilPhaseIdx: {
-                if constexpr (Indices::compositionSwitchIdx >= 0) {
+                if constexpr (compositionSwitchEnabled) {
                     if (both_oil_gas) {
                         const ValueType saturated_rs = FluidSystem::saturatedDissolutionFactor(
                             fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
@@ -2706,7 +2706,7 @@ namespace Opm
                 break;
             }
             case FluidSystem::gasPhaseIdx: {
-                if constexpr (Indices::compositionSwitchIdx >= 0) {
+                if constexpr (compositionSwitchEnabled) {
                     if (both_oil_gas) {
                         const ValueType saturated_rv = FluidSystem::saturatedVaporizationFactor(
                             fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
@@ -2763,21 +2763,10 @@ namespace Opm
 
         if constexpr (has_solvent) {
             const unsigned pvtRegionIdx = fluid_state.pvtRegionIndex();
-            ValueType solventInvB;
-            Scalar solventRefDensity;
-            const ValueType rv(0.0);
-            const ValueType rvw(0.0);
+            const ValueType solventInvB =
+                SolventModule::solventInverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure);
+            const Scalar solventRefDensity = SolventModule::solventReferenceDensity(pvtRegionIdx);
             if (SolventModule::isCO2Sol() || SolventModule::isH2Sol()) {
-                if (SolventModule::isCO2Sol()) {
-                    const auto& co2gasPvt = SolventModule::co2GasPvt();
-                    solventInvB = co2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rv, rvw);
-                    solventRefDensity = co2gasPvt.gasReferenceDensity(pvtRegionIdx);
-                } else {
-                    const auto& h2gasPvt = SolventModule::h2GasPvt();
-                    solventInvB = h2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure, rv, rvw);
-                    solventRefDensity = h2gasPvt.gasReferenceDensity(pvtRegionIdx);
-                }
-
                 // compute and set dissolved solvent in water (rsSolw)
                 const auto rsSolw = SolventModule::solubilityLimit(pvtRegionIdx, temperature, pressure,
                                                                     ValueType(saltConcentration));
@@ -2795,10 +2784,6 @@ namespace Opm
                         fluid_state.setInvB(FluidSystem::waterPhaseIdx, bw);
                     }
                 }
-            } else {
-                const auto& solventPvt = SolventModule::solventPvt();
-                solventInvB = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, temperature, pressure);
-                solventRefDensity = solventPvt.referenceDensity(pvtRegionIdx);
             }
             fluid_state.setSolventInvB(solventInvB);
             fluid_state.setSolventDensity(solventInvB * solventRefDensity);
@@ -2937,9 +2922,7 @@ namespace Opm
             fluid_state.setSolventSaturation(solvent_volume / total_volume);
         }
 
-        fluid_state.setVolumeRatio(total_volume);
-
-        return fluid_state;
+        return {std::move(fluid_state), std::move(total_volume)};
     }
 
 } // namespace Opm
