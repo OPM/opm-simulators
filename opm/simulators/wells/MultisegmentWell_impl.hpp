@@ -276,7 +276,7 @@ namespace Opm
             updateWellState(simulator, xw, groupStateHelper, well_state);
             if constexpr (has_energy) {
                 const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
-                updateSegmentFluidState(info, deferred_logger);
+                updateSegmentFluidState(info);
             }
         }
         catch (const NumericalProblem& exp) {
@@ -775,7 +775,7 @@ namespace Opm
         if constexpr (has_energy) {
             // after updating the primary variables, we need to update the segment fluid state
             // it is only consumed by the energy equation, so we only do it when energy is active
-            updateSegmentFluidState(info, deferred_logger);
+            updateSegmentFluidState(info);
             computeInitialSegmentEnergy();
         }
     }
@@ -1620,7 +1620,7 @@ namespace Opm
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
-                    updateSegmentFluidState(info, deferred_logger);
+                    updateSegmentFluidState(info);
                 }
             }
             catch(const NumericalProblem& exp) {
@@ -1813,7 +1813,7 @@ namespace Opm
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
-                    updateSegmentFluidState(info, deferred_logger);
+                    updateSegmentFluidState(info);
                 }
             }
             catch(const NumericalProblem& exp) {
@@ -2448,175 +2448,17 @@ namespace Opm
         this->primary_variables_.scaledWellFractions(scaled_fractions, deferred_logger);
     }
 
-    template <typename TypeTag>
-    template <typename ValueType>
-    MultisegmentWell<TypeTag>::SegmentFluidState<ValueType>
-    MultisegmentWell<TypeTag>::
-    createFluidState(const std::vector<ValueType>& fluid_composition,
-                     const ValueType& pressure,
-                     const ValueType& temperature,
-                     const ValueType& saltConcentration,
-                     DeferredLogger& deferred_logger) const
-    {
-        SegmentFluidState<ValueType> fluid_state;
-        if constexpr (has_energy) {
-            fluid_state.setTemperature(temperature);
-        }
-        if constexpr (has_brine) {
-            // Set before invB/density/enthalpy are evaluated below (brine PVT).
-            fluid_state.setSaltConcentration(saltConcentration);
-        }
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-            // we assume there is no capillary pressure in the wellbore
-            fluid_state.setPressure(phaseIdx, pressure);
-        }
-        fluid_state.setPvtRegionIndex(this->pvtRegionIdx());
-
-        const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-
-        const ValueType zero_value {0.};
-        // let us handle the dissolution first
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-
-            const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-            constexpr Scalar epsilon = std::numeric_limits<Scalar>::epsilon();
-
-            switch (phaseIdx) {
-                case FluidSystem::oilPhaseIdx: {
-                    if constexpr (compositionSwitchEnabled) {
-                        if (both_oil_gas) {
-                            // starting with saturated rs value
-                            ValueType rs = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx,  fluid_state.pvtRegionIndex());
-                            if (fluid_composition[activeCompIdx] > epsilon) {
-                                const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                                const ValueType max_possible_rs = fluid_composition[gasCompIdx] / fluid_composition[activeCompIdx];
-                                rs = std::min(rs, max_possible_rs);
-                            }
-                            fluid_state.setRs(rs);
-                        } else {
-                            fluid_state.setRs(zero_value);
-                        }
-                    }
-                    break;
-                }
-                case FluidSystem::gasPhaseIdx: {
-                    if constexpr (compositionSwitchEnabled) {
-                        if (both_oil_gas) {
-                            // starting with saturated rv value
-                            ValueType rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-                            const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                            if (fluid_composition[activeCompIdx] > epsilon) {
-                                const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];
-                                rv = std::min(rv, max_possible_rv);
-                            }
-                            fluid_state.setRv(rv);
-                        } else {
-                            fluid_state.setRv(zero_value);
-                        }
-                    }
-                    break;
-                }
-                case FluidSystem::waterPhaseIdx: {
-                    // TODO: handle the water phase dissolution with gas later
-                    break;
-                }
-                default: {
-                    throw std::logic_error("Unhandled phase index " + std::to_string(phaseIdx));
-                }
-            }
-            const auto& inv_b = FluidSystem::inverseFormationVolumeFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-            fluid_state.setInvB(phaseIdx, inv_b);
-        }
-
-        std::vector<ValueType> saturations (FluidSystem::numPhases, zero_value);
-        ValueType sum_saturation {0.0};
-        // calculate the saturation for all the phases
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-            if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
-                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                saturations[phaseIdx] = fluid_composition[activeCompIdx] / fluid_state.invB(phaseIdx);
-                sum_saturation += saturations[phaseIdx];
-            } else {
-                // remove dissolved gas and vaporized oil
-                // q_os = q_or * b_o + rv * q_gr * b_g
-                // q_gs = q_gr * g_g + rs * q_or * b_o
-                // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                // d = 1.0 - rs * rv
-                const ValueType d = 1.0 - fluid_state.Rv() * fluid_state.Rs();
-                if (d <= 0.0) {
-                    deferred_logger.debug(
-                                fmt::format("Problematic d value {} obtained for well {}"
-                                            " during createFluidState with rs {}"
-                                            ", rv {}. Continue as if no dissolution (rs = 0) and"
-                                            " vaporization (rv = 0)",
-                                            d, this->name(), fluid_state.Rs(), fluid_state.Rv()) );
-                    // Reset Rs/Rv and refresh invB so the fluid state is consistent with the
-                    // "no dissolution/vaporization" fallback used here and in the subsequent
-                    // density/enthalpy evaluations.
-                    if constexpr (compositionSwitchEnabled) {
-                        fluid_state.setRs(zero_value);
-                        fluid_state.setRv(zero_value);
-                    }
-                    fluid_state.setInvB(FluidSystem::oilPhaseIdx,
-                                        FluidSystem::inverseFormationVolumeFactor(fluid_state, FluidSystem::oilPhaseIdx, fluid_state.pvtRegionIndex()));
-                    fluid_state.setInvB(FluidSystem::gasPhaseIdx,
-                                        FluidSystem::inverseFormationVolumeFactor(fluid_state, FluidSystem::gasPhaseIdx, fluid_state.pvtRegionIndex()));
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                    saturations[phaseIdx] = fluid_composition[activeCompIdx] / fluid_state.invB(phaseIdx);
-                } else {
-                    const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                    const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                    if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                        saturations[phaseIdx] = (fluid_composition[gasCompIdx] -
-                                                 fluid_state.Rs() * fluid_composition[oilCompIdx]) /
-                                                (d * fluid_state.invB(phaseIdx));
-                    } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
-                        saturations[phaseIdx] = (fluid_composition[oilCompIdx] -
-                                                 fluid_state.Rv() * fluid_composition[gasCompIdx]) /
-                                                (d * fluid_state.invB(phaseIdx));
-                    }
-                }
-                sum_saturation += saturations[phaseIdx];
-            }
-        }
-
-        typename FluidSystem::template ParameterCache<ValueType> paramCache;
-        paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-            fluid_state.setSaturation(phaseIdx, saturations[phaseIdx] / sum_saturation);
-
-            paramCache.updatePhase(fluid_state, phaseIdx);
-            fluid_state.setDensity(phaseIdx, FluidSystem::density(fluid_state, paramCache, phaseIdx));
-            if constexpr (has_energy) {
-                fluid_state.setEnthalpy(phaseIdx, FluidSystem::enthalpy(fluid_state, paramCache, phaseIdx));
-            }
-        }
-        return fluid_state;
-    }
-
     // it looks like these functions should go to MultisegmentWellSegments class
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::template SegmentFluidState<typename MultisegmentWell<TypeTag>::EvalWell>
-    MultisegmentWell<TypeTag>::createSegmentFluidState(const int seg, const FSInfo& info,
-                                                       DeferredLogger& deferred_logger) const
+    MultisegmentWell<TypeTag>::createSegmentFluidState(const int seg, const FSInfo& info) const
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-        const Scalar firstPerfTemperature = std::get<0>(info);
+        const Scalar firstPerfTemperature = info.first;
         // Salt is not an MSW primary variable: use the constant first-perf value.
-        const EvalWell seg_salt_concentration = std::get<1>(info);
-        const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
+        const Scalar seg_salt_concentration = info.second;
+        const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg)
+                                                    : EvalWell{firstPerfTemperature};
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
         std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
@@ -2624,8 +2466,8 @@ namespace Opm
             fluid_composition[idx] = this->primary_variables_.surfaceVolumeFraction(seg, idx);
         }
 
-        return createFluidState(fluid_composition, seg_pressure, seg_temperature,
-                                seg_salt_concentration, deferred_logger);
+        return Base::createFluidState(fluid_composition, seg_pressure, seg_temperature,
+                                      seg_salt_concentration).first;
     }
 
     template <typename TypeTag>
@@ -2792,7 +2634,7 @@ namespace Opm
     {
         if (!this->well_ecl_.isInjector()) return;
 
-        std::vector<EvalWell> fluid_composition(FluidSystem::numPhases, 0.0);
+        std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
 
         // temperature should be the injecting temperature
         // pressure should be the BHP
@@ -2822,15 +2664,15 @@ namespace Opm
                 break;
             }
             default: {
-                throw std::logic_error("Unsupported injection type " + std::to_string(static_cast<int>(controls.injector_type)));
+                OPM_DEFLOG_THROW(std::logic_error,
+                                 "Unsupported injection type " + std::to_string(static_cast<int>(controls.injector_type)),
+                                 deferred_logger);
             }
         }
 
         // No injection-salinity keyword yet; reuse the first-perf salt (as for temperature).
-        const EvalWell inj_salt_concentration{first_perf_salt_concentration};
-
-        this->wellhead_fluid_state_ = createFluidState(fluid_composition, bhp, inj_temperature,
-                                                       inj_salt_concentration, deferred_logger);
+        this->wellhead_fluid_state_ = Base::createFluidState(fluid_composition, bhp, inj_temperature,
+                                                             first_perf_salt_concentration).first;
     }
 
 
@@ -2865,11 +2707,10 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::updateSegmentFluidState(const FSInfo& info,
-                                                       DeferredLogger& deferred_logger)
+    MultisegmentWell<TypeTag>::updateSegmentFluidState(const FSInfo& info)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_fluid_state_[seg] = this->createSegmentFluidState(seg, info, deferred_logger);
+            segment_fluid_state_[seg] = this->createSegmentFluidState(seg, info);
         }
     }
 

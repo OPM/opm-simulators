@@ -384,18 +384,9 @@ namespace Opm {
         void updateIPR(const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger) const override;
 
-        // this function can potentially be shared between multisegment wells and standard wells
         // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
-        template <typename ValueType = EvalWell>
-        SegmentFluidState<ValueType>
-        createFluidState(const std::vector<ValueType>& fluid_composition,
-                         const ValueType& pressure,
-                         const ValueType& temperature,
-                         const ValueType& saltConcentration,
-                         DeferredLogger& deferred_logger) const;
-
         SegmentFluidState<EvalWell>
-        createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
+        createSegmentFluidState(int seg, const FSInfo& info) const;
 
         void computeInitialSegmentEnergy();
 
@@ -411,7 +402,7 @@ namespace Opm {
                                      const Scalar first_perf_salt_concentration,
                                      DeferredLogger& deferred_logger);
 
-        void updateSegmentFluidState(const FSInfo& info, DeferredLogger& deferred_logger);
+        void updateSegmentFluidState(const FSInfo& info);
 
         template <typename ValueType = EvalWell>
         ValueType computeSegmentEnergy(int seg) const;
