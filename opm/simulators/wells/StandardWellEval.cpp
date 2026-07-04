@@ -195,6 +195,23 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
 
     }
 
+    if constexpr (enable_energy) {
+        const Scalar energy_residual = res[Temperature];
+        // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
+        constexpr int dummy_phase = -1;
+        // The energy residual is scaled (energy_scaling_factor_) onto the
+        // mass-balance scale, so we reuse the mass-balance well tolerances.
+        if (std::isnan(energy_residual)) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_phase, baseif_.name()});
+        } else if (energy_residual > maxResidualAllowed) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_phase, baseif_.name()});
+        } else if (!relax_tolerance && energy_residual > tol_wells) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        } else if (energy_residual > relaxed_tolerance_flow) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        }
+    }
+
     WellConvergence(baseif_).
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
