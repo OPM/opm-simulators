@@ -72,7 +72,6 @@ namespace Opm
         using typename Base::SparseMatrixAdapter;
         using typename Base::RateVector;
         using typename Base::GroupStateHelperType;
-        using typename Base::SolventModule;
 
         using Base::has_solvent;
         using Base::has_zFraction;
@@ -476,9 +475,6 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
-        EvalWell getWellBoreSurfaceVolume(const Simulator& simulator,
-                                          DeferredLogger& deferred_logger) const;
-
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
 
@@ -490,20 +486,26 @@ namespace Opm
         // at the beginning of the time step
         std::vector<Scalar> fluids_initial_;
 
+        // fluid state representing the mixture in the wellbore, based on the
+        // well primary variables. it is used for the accumulation term of the
+        // well equations
         FluidState<EvalWell> well_fluid_state_;
+
+        // the in-situ (wellbore condition) volume per unit surface volume of the
+        // wellbore mixture, consistent with well_fluid_state_
+        EvalWell wellbore_volume_ratio_{1.0};
+
+        // temperature and salt concentration of the first perforated cell,
+        // used as explicit quantities for the wellbore fluid state
+        typename Base::FSInfo first_perf_fs_info_{Scalar{288.71}, // 60 Fahrenheit
+                                                  Scalar{0.0}};
 
         // computing the accumulation term for later use in conservation equations for wells
         void computeInitialFluids();
 
-        // we might not need to have the ValueType template parameter
-        template <typename ValueType>
+        // update well_fluid_state_ and wellbore_volume_ratio_ from the current
+        // primary variables
         void updateWellFluidState();
-
-        // this function can be static or to helper class
-        template <typename ValueType>
-        ValueType wellboreComponentSurfaceVolume(const FluidState<ValueType>& fs,
-                                                 unsigned compIdx,
-                                                 ValueType wellboreVolume) const;
     };
 
 }
