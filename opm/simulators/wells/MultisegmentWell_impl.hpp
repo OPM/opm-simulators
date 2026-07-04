@@ -1947,7 +1947,7 @@ namespace Opm
                     this->connectionRates_[local_perf_index][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, local_perf_index, comp_idx, cq_s_effective, this->linSys_);
+                        assemblePerforationEq(seg, local_perf_index, comp_idx, comp_idx, cq_s_effective, this->linSys_);
                 }
 
                 // assembling the energy equation for the perforation if needed
@@ -2768,6 +2768,7 @@ namespace Opm
         MultisegmentWellAssemble(*this).
             assemblePerforationEq(seg, local_perf_index,
                                   MSWEval::PrimaryVariables::Temperature,
+                                  Indices::contiEnergyEqIdx,
                                   energy_scaling_factor_ * energy_flux,
                                   this->linSys_);
     }
