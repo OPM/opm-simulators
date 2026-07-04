@@ -74,8 +74,13 @@ public:
                                StandardWellEquationsType& eqns) const;
 
     //! \brief Assemble equation for a perforation.
+    //! \details componentIdx is the index of the well equation, while
+    //! reservoirEqIdx is the index of the corresponding reservoir equation
+    //! (for the coupling matrix C). They coincide for the mass conservation
+    //! equations, but can differ for the energy equation.
     void assemblePerforationEq(const EvalWell& cq_s_effective,
                                const int componentIdx,
+                               const int reservoirEqIdx,
                                const int cell_idx,
                                const int numWellEq,
                                StandardWellEquationsType& eqns) const;
