@@ -131,6 +131,12 @@ public:
     static constexpr bool has_bioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp = Indices::enableMICP;
 
+    // True when the composition switch primary variable is active, i.e. both oil and
+    // gas phases are present so that Rs/Rv are stored in the fluid state. Matches the
+    // fluid state's enableDissolution flag below.
+    static constexpr bool compositionSwitchEnabled =
+        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+
     // For the conversion between the surface volume rate and reservoir voidage rate
     template <typename ValueType>
     using FluidState = BlackOilFluidState<ValueType,
@@ -538,9 +544,12 @@ protected:
    FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 
    // \Note: at the current stage, the function is only used for well calculation
-   //  it is possible to make it a function in FluidState
+   // Returns the fluid state together with the volume ratio, i.e. the in-situ
+   // (wellbore condition) volume per unit surface volume of the mixture. The
+   // volume ratio is not a property of the fluid state, so it is kept by the
+   // well itself.
    template <typename ValueType>
-   FluidState<ValueType>
+   std::pair<FluidState<ValueType>, ValueType>
    createFluidState(const std::vector<ValueType>& fluid_composition,
                     const ValueType& pressure,
                     const ValueType& temperature,
