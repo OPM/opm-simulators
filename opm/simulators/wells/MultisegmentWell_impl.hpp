@@ -2486,7 +2486,12 @@ namespace Opm
                      DeferredLogger& deferred_logger) const
     {
         SegmentFluidState<ValueType> fluid_state;
-        if constexpr (has_energy) {
+        if constexpr (enable_temperature) {
+            // Set the temperature whenever the fluid state can store it (any thermal mode).
+            // In the fully implicit case @p temperature is the segment temperature primary
+            // variable; otherwise it is the (fixed) first-perforation temperature. When the
+            // fluid state does not store a temperature it falls back to the reservoir
+            // temperature.
             fluid_state.setTemperature(temperature);
         }
         if constexpr (has_brine) {
