@@ -88,7 +88,7 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
-        using FSInfo = std::tuple<Scalar, Scalar>;
+        using FSInfo = typename Base::FSInfo;
 
         using BMatrix = typename Base::BMatrix;
         using CMatrix = typename Base::CMatrix;
