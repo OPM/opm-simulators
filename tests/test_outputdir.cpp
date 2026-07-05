@@ -25,9 +25,12 @@
 
 #include <opm/simulators/flow/Main.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <system_error>
 
 namespace {
 
@@ -68,7 +71,8 @@ END
 
         input_path = std::filesystem::temp_directory_path() / "outputdir_test/";
 
-        std::filesystem::remove_all(input_path);
+        std::error_code ec;
+        std::filesystem::remove_all(input_path, ec);
         std::filesystem::create_directories(input_path / "subdir" / "subdir");
 
         for (const auto& file_path : {input_path / "INPUT.DATA",
@@ -81,7 +85,16 @@ END
 
     ~Fixture()
     {
-        std::filesystem::remove_all(input_path);
+        // The test cases chdir into input_path and the global OpmLog still
+        // holds the last case's PRT/DBG files open. On Windows, deleting the
+        // current directory or an open file fails, and a filesystem_error
+        // escaping this (implicitly noexcept) destructor terminates the
+        // process. Move out of the tree, drop the log backends, and use the
+        // non-throwing remove_all overload.
+        Opm::OpmLog::removeAllBackends();
+        std::error_code ec;
+        std::filesystem::current_path(std::filesystem::temp_directory_path(), ec);
+        std::filesystem::remove_all(input_path, ec);
     }
 
     std::filesystem::path input_path;
