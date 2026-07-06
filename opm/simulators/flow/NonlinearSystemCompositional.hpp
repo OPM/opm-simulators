@@ -83,6 +83,11 @@ public:
 
     void solveJacobianSystem(BVector& x);
 
+    /// Fetch the updated ghost-cell primary variables from the owning
+    /// processes before the intensive quantities are recomputed; the linear
+    /// solver leaves the rows of ghost cells untouched.
+    void postSolutionUpdate() override;
+
     bool hasNlddSolver() const
     { return false; }
 
