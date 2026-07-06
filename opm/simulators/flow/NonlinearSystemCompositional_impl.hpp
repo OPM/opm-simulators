@@ -332,7 +332,12 @@ reservoirResidualMetrics() const
 
     std::vector<Scalar> residualMetrics(numEq, 0.0);
 
-    for (unsigned dofIdx = 0; dofIdx < residual.size(); ++dofIdx) {
+    // Only the interior cells: the residual of a ghost cell misses the flux
+    // contributions of neighbors outside the overlap layer and does not
+    // converge, and its converged value lives on the owning process.
+    const auto& elemMapper = model.elementMapper();
+    for (const auto& elem : elements(this->simulator_.gridView(), Dune::Partitions::interior)) {
+        const unsigned dofIdx = elemMapper.index(elem);
         if (dofIdx >= model.numGridDof() || model.dofTotalVolume(dofIdx) <= 0.0) {
             continue;
         }
