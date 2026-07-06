@@ -144,17 +144,26 @@ public:
                 [&vg = this->simulator().vanguard()](const unsigned int it) { return vg.gridIdxToEquilGridIdx(it); });
             updated = true;
         };
-        // TODO: we might need to do the same with FlowProblemBlackoil for parallel
 
         finishTransmissibilities();
 
         if (enableEclOutput_) {
-            eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            // The output of TRANX, TRANY, TRANZ and NNC is on the whole grid: the
+            // I/O rank needs the global transmissibilities when running in parallel.
+            if (simulator.vanguard().grid().comm().size() > 1) {
+                if (simulator.vanguard().grid().comm().rank() == 0) {
+                    eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                }
+            }
+            else {
+                eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            }
             std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
                 return simulator.vanguard().gridEquilIdxToGridIdx(i);
             };
             eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
         }
+        simulator.vanguard().releaseGlobalTransmissibilities();
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
