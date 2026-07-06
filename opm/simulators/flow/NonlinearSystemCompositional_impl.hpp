@@ -277,6 +277,14 @@ relativeChange() const
 template <class TypeTag>
 void
 NonlinearSystemCompositional<TypeTag>::
+postSolutionUpdate()
+{
+    this->simulator_.model().syncOverlap();
+}
+
+template <class TypeTag>
+void
+NonlinearSystemCompositional<TypeTag>::
 solveJacobianSystem(BVector& x)
 {
     auto& jacobian = this->simulator_.model().linearizer().jacobian();
