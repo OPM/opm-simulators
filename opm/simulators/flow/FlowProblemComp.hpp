@@ -1,7 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2024 SINTEF Digital
+  Copyright 2024, 2026 SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -34,6 +34,7 @@
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
+#include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -450,7 +451,29 @@ protected:
 
     void readEquilInitialCondition_() override
     {
-        throw std::logic_error("Equilibration is not supported by compositional modeling yet");
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
+
+        // Zero-based equilibration region of every cell (EQLNUM, or region 0).
+        std::vector<int> eqlnum(this->model().numGridDof(), 0);
+        if (eclState.fieldProps().has_int("EQLNUM")) {
+            const auto& e = eclState.fieldProps().get_int("EQLNUM");
+            std::ranges::transform(e, eqlnum.begin(), [](const int r) { return r - 1; });
+        }
+
+        EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
+            eclState,
+            getEosType(),
+            vanguard.cellCenterDepths(),
+            eqlnum,
+            vanguard.gridView().comm(),
+            this->gravity()[dimWorld - 1],
+            this->numPressurePointsEquil());
+
+        initialFluidStates_ = std::move(initialState.fluidStates());
+        // The primary variables are formed from the total composition; see initial().
+        zmf_initialization_ = true;
     }
 
     void readEclRestartSolution_()

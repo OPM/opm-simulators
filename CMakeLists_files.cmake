@@ -1086,6 +1086,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/equil/EquilibrationHelpers.hpp
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp
+  opm/simulators/flow/equil/InitStateEquilComp.hpp
   opm/simulators/flow/equil/InitStateEquil_impl.hpp
   opm/simulators/flow/equil/PressureFunction.hpp
   opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp

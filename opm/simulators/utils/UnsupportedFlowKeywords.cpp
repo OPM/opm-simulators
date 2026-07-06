@@ -730,7 +730,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"WTHPMAX", {true, std::nullopt}},
         {"ZIPPY2", {false, std::nullopt}},
         {"ZIPP2OFF", {false, std::nullopt}},
-        {"ZMFVD", {false, std::nullopt}},
     };
 
     return unsupported_keywords;
