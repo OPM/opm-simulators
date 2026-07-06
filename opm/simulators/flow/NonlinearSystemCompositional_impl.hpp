@@ -277,6 +277,32 @@ relativeChange() const
 template <class TypeTag>
 void
 NonlinearSystemCompositional<TypeTag>::
+updateSolution(const BVector& dx)
+{
+    OPM_TIMEBLOCK(updateSolution);
+
+    auto& model = this->simulator_.model();
+    auto& solution = model.solution(/*timeIdx=*/0);
+
+    model.newtonMethod().applyUpdate(/*nextSolution=*/solution,
+                                     /*curSolution=*/solution,
+                                     /*update=*/dx,
+                                     /*resid=*/dx);
+
+    // The linear solver leaves the rows of ghost cells untouched: fetch their
+    // updated primary variables from the owning processes before the intensive
+    // quantities are recomputed.
+    model.syncOverlap();
+
+    {
+        OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
+        model.invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+    }
+}
+
+template <class TypeTag>
+void
+NonlinearSystemCompositional<TypeTag>::
 solveJacobianSystem(BVector& x)
 {
     auto& jacobian = this->simulator_.model().linearizer().jacobian();
