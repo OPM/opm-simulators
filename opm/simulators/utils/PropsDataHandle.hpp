@@ -37,6 +37,7 @@
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/partitionset.hh>
 #include <dune/common/parallel/mpihelper.hh>
+#include <numeric>
 #include <unordered_map>
 #include <iostream>
 
@@ -72,12 +73,23 @@ public:
             m_intKeys = globalProps.keys<int>();
             m_doubleKeys = globalProps.keys<double>();
             m_distributed_fieldProps.copyTran(globalProps);
+
+            // Some keywords, e.g. the compositional ZMF, carry multiple values
+            // per cell (stored with the cell index varying fastest).
+            m_doubleMult.reserve(m_doubleKeys.size());
+            for (const auto& doubleKey : m_doubleKeys)
+            {
+                const auto& fieldData = globalProps.get_double_field_data(doubleKey,
+                                                                          /* allow_unsupported = */ true);
+                m_doubleMult.push_back(fieldData.numValuePerCell());
+            }
         }
 
         Parallel::MpiSerializer ser(comm);
         ser.broadcast(Parallel::RootRank{0}, *this);
 
-        m_no_data = m_intKeys.size() + m_doubleKeys.size();
+        m_no_data = m_intKeys.size() +
+                    std::accumulate(m_doubleMult.begin(), m_doubleMult.end(), std::size_t{0});
 
         if (comm.rank() == 0) {
             const FieldPropsManager& globalProps = eclState.globalFieldProps();
@@ -86,6 +98,7 @@ public:
             using ElementMapper =
                 Dune::MultipleCodimMultipleGeomTypeMapper<typename Grid::LevelGridView>;
             ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+            const std::size_t numCells = gridView.size(0);
 
             for (const auto &element : elements(gridView, Dune::Partitions::interiorBorder))
             {
@@ -101,14 +114,18 @@ public:
                                       static_cast<unsigned char>(fieldData.value_status[index]));
                 }
 
-                for (const auto& doubleKey : m_doubleKeys)
+                for (std::size_t keyIdx = 0; keyIdx < m_doubleKeys.size(); ++keyIdx)
                 {
                     // We need to allow unsupported keywords to get the data
                     // for TranCalculator, too.
-                    const auto& fieldData = globalProps.get_double_field_data(doubleKey,
+                    const auto& fieldData = globalProps.get_double_field_data(m_doubleKeys[keyIdx],
                                                                               /* allow_unsupported = */ true);
-                    data.emplace_back(fieldData.data[index],
-                                      static_cast<unsigned char>(fieldData.value_status[index]));
+                    for (std::size_t comp = 0; comp < m_doubleMult[keyIdx]; ++comp)
+                    {
+                        const auto dataIdx = comp * numCells + index;
+                        data.emplace_back(fieldData.data[dataIdx],
+                                          static_cast<unsigned char>(fieldData.value_status[dataIdx]));
+                    }
                 }
             }
         }
@@ -117,16 +134,18 @@ public:
     ~PropsDataHandle()
     {
         // distributed grid is now correctly set up.
+        const std::size_t numCells = m_grid.size(0);
         for (const auto& intKey : m_intKeys)
         {
-            m_distributed_fieldProps.m_intProps[intKey].data.resize(m_grid.size(0));
-            m_distributed_fieldProps.m_intProps[intKey].value_status.resize(m_grid.size(0));
+            m_distributed_fieldProps.m_intProps[intKey].data.resize(numCells);
+            m_distributed_fieldProps.m_intProps[intKey].value_status.resize(numCells);
         }
 
-        for (const auto& doubleKey : m_doubleKeys)
+        for (std::size_t keyIdx = 0; keyIdx < m_doubleKeys.size(); ++keyIdx)
         {
-            m_distributed_fieldProps.m_doubleProps[doubleKey].data.resize(m_grid.size(0));
-            m_distributed_fieldProps.m_doubleProps[doubleKey].value_status.resize(m_grid.size(0));
+            auto& props = m_distributed_fieldProps.m_doubleProps[m_doubleKeys[keyIdx]];
+            props.data.resize(m_doubleMult[keyIdx] * numCells);
+            props.value_status.resize(m_doubleMult[keyIdx] * numCells);
         }
 
         // copy data for the persistent mao to the field properties
@@ -151,11 +170,15 @@ public:
                 m_distributed_fieldProps.m_intProps[intKey].value_status[index] = static_cast<value::status>(pair.second);
             }
 
-            for (const auto& doubleKey : m_doubleKeys)
+            for (std::size_t keyIdx = 0; keyIdx < m_doubleKeys.size(); ++keyIdx)
             {
-                const auto& pair = data->second[counter++];
-                m_distributed_fieldProps.m_doubleProps[doubleKey].data[index] = pair.first;
-                m_distributed_fieldProps.m_doubleProps[doubleKey].value_status[index] = static_cast<value::status>(pair.second);
+                auto& props = m_distributed_fieldProps.m_doubleProps[m_doubleKeys[keyIdx]];
+                for (std::size_t comp = 0; comp < m_doubleMult[keyIdx]; ++comp)
+                {
+                    const auto& pair = data->second[counter++];
+                    props.data[comp * numCells + index] = pair.first;
+                    props.value_status[comp * numCells + index] = static_cast<value::status>(pair.second);
+                }
             }
         }
     }
@@ -208,6 +231,7 @@ public:
     {
         serializer(m_intKeys);
         serializer(m_doubleKeys);
+        serializer(m_doubleMult);
         m_distributed_fieldProps.serializeOp(serializer);
     }
 
@@ -220,6 +244,8 @@ private:
     std::vector<std::string> m_intKeys;
     //! \brief The names of the keys of the double fields.
     std::vector<std::string> m_doubleKeys;
+    //! \brief The number of values per cell of each double field.
+    std::vector<std::size_t> m_doubleMult;
     /// \brief The data per element as a vector mapped from the local id.
     ///
     /// each entry is a pair of data and value_status.
