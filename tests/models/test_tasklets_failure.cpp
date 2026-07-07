@@ -39,6 +39,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <process.h>
+#include <string>
 #else
 #include <sys/wait.h>
 #include <unistd.h>
@@ -147,7 +148,13 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
     std::cout << "Checking failure of child process with parent process" << std::endl;
-    const intptr_t status = _spawnl(_P_WAIT, argv[0], argv[0], "--child",
+    // _spawnl concatenates its arguments into a single command line that the
+    // child's CRT re-parses, so an argv[0] containing spaces (e.g. a build
+    // tree under "C:\Users\First Last\...") must be quoted or it gets split
+    // into several arguments. The preceding path parameter is used directly
+    // to locate the executable and must remain unquoted.
+    const std::string quoted_self = '"' + std::string(argv[0]) + '"';
+    const intptr_t status = _spawnl(_P_WAIT, argv[0], quoted_self.c_str(), "--child",
                                     static_cast<const char*>(nullptr));
     // status is the child's exit code, or -1 if it could not be spawned.
     // Check explicitly rather than with assert() so the test still fails
