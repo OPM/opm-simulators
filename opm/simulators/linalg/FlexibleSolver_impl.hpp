@@ -239,6 +239,9 @@ namespace Dune
             }
             // mixed-solver adapter starts here
           } else if (solver_type == "mixed-precision") {
+            if constexpr (std::is_same_v<typename VectorType::field_type, float>){
+                OPM_THROW(std::invalid_argument, "mixed-precision solver not supported for single precision.");
+            } else {
                 linsolver_ = std::make_shared<Dune::MixedBiCGSTABSolver<Comm,Operator,VectorType>>(linearoperator_for_solver_,
                                                                             scalarproduct_,
                                                                             preconditioner_,
@@ -246,6 +249,7 @@ namespace Dune
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity,
                                                                             comm);
+            }
 #endif
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
