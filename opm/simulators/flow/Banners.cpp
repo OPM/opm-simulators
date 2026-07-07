@@ -75,12 +75,19 @@ struct SystemDescription
 std::optional<SystemDescription> getSystemDescription()
 {
 #if defined(_WIN32)
-    // Windows has no uname()/utsname; query the machine name via the Win32 API.
+    // Windows has no uname()/utsname; query the machine name via the Win32
+    // API and the processor architecture (AMD64, ARM64, ...) from the
+    // environment, so the PRT header keeps its "Operating system" line.
     char computer_name[MAX_COMPUTERNAME_LENGTH + 1] = {};
     DWORD computer_name_len = sizeof(computer_name);
+    std::string os = "Windows";
+    if (const char* processor_arch = std::getenv("PROCESSOR_ARCHITECTURE")) {
+        os += ' ';
+        os += processor_arch;
+    }
     return SystemDescription {
         GetComputerNameA(computer_name, &computer_name_len) ? computer_name : "unknown",
-        ""
+        os
     };
 #else
     struct utsname arch;
