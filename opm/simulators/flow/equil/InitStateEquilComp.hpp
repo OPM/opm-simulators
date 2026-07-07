@@ -34,6 +34,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
+#include <opm/material/constraintsolvers/SaturationPressure.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
@@ -421,7 +422,14 @@ private:
 
         const CompVec liquid = composition(reg, reg.zgoc);
         const Scalar temp = reg.tempVdTable.eval(reg.zgoc, /*extrapolate=*/true);
-        const auto [psat, vapor] = saturationPressure(liquid, temp);
+        Scalar psat{};
+        CompVec vapor{};
+        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
+                                                                     psat, vapor)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The saturation pressure calculation at the gas-oil "
+                                  "contact of region {} did not converge.", regionIdx + 1));
+        }
         reg.vaporComposition = vapor;
 
         // The datum pressure should already equal the saturation pressure at
@@ -488,102 +496,6 @@ private:
         for (int c = 0; c < numComponents; ++c) {
             fs.setMoleFraction(c, z[c]);
         }
-    }
-
-    /// The saturation (bubble-point) pressure of a liquid with composition \p x
-    /// at temperature \p temp, along with the equilibrium vapour composition.
-    /// Successive substitution on the fugacity ratios combined with a pressure
-    /// update that drives sum_c K_c x_c towards one.
-    std::pair<Scalar, CompVec> saturationPressure(const CompVec& x, const Scalar temp) const
-    {
-        auto wilsonK = [&x, temp](const Scalar press) {
-            CompVec K;
-            for (int c = 0; c < numComponents; ++c) {
-                K[c] = (FluidSystem::criticalPressure(c) / press) *
-                       std::exp(5.373 * (1.0 + FluidSystem::acentricFactor(c)) *
-                                (1.0 - FluidSystem::criticalTemperature(c) / temp));
-            }
-            return K;
-        };
-
-        // The Wilson correlation provides the initial pressure, solving
-        // sum_c K_c(p) x_c = 1 exactly since K ~ 1/p.
-        Scalar press = 0.0;
-        for (int c = 0; c < numComponents; ++c) {
-            press += x[c] * FluidSystem::criticalPressure(c) *
-                     std::exp(5.373 * (1.0 + FluidSystem::acentricFactor(c)) *
-                              (1.0 - FluidSystem::criticalTemperature(c) / temp));
-        }
-        CompVec K = wilsonK(press);
-
-        CompositionalFluidState<Scalar, FluidSystem> fs;
-        fs.setTemperature(temp);
-        for (int c = 0; c < numComponents; ++c) {
-            fs.setMoleFraction(FluidSystem::oilPhaseIdx, c, x[c]);
-        }
-
-        constexpr int maxOuter = 200;
-        for (int outer = 0; outer < maxOuter; ++outer) {
-            fs.setPressure(FluidSystem::oilPhaseIdx, press);
-            fs.setPressure(FluidSystem::gasPhaseIdx, press);
-
-            // Fugacity equality at fixed pressure: K_c = phi_liquid / phi_vapour.
-            bool trivial = false;
-            for (int inner = 0; inner < 100; ++inner) {
-                Scalar sum = 0.0;
-                for (int c = 0; c < numComponents; ++c) {
-                    sum += K[c] * x[c];
-                }
-                for (int c = 0; c < numComponents; ++c) {
-                    fs.setMoleFraction(FluidSystem::gasPhaseIdx, c, K[c] * x[c] / sum);
-                }
-
-                typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
-                paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
-                paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
-
-                Scalar change = 0.0;
-                trivial = true;
-                for (int c = 0; c < numComponents; ++c) {
-                    const Scalar phiL = FluidSystem::fugacityCoefficient(
-                        fs, paramCache, FluidSystem::oilPhaseIdx, c);
-                    const Scalar phiV = FluidSystem::fugacityCoefficient(
-                        fs, paramCache, FluidSystem::gasPhaseIdx, c);
-                    const Scalar newK = phiL / phiV;
-                    change = std::max(change, std::abs(newK - K[c]));
-                    trivial = trivial && (std::abs(newK - 1.0) < 1.0e-5);
-                    K[c] = newK;
-                }
-                if (change < 1.0e-12) {
-                    break;
-                }
-            }
-
-            if (trivial) {
-                // The compositions collapsed: the pressure is above the
-                // saturation pressure.  Retry lower with fresh estimates.
-                press *= 0.7;
-                K = wilsonK(press);
-                continue;
-            }
-
-            Scalar sum = 0.0;
-            for (int c = 0; c < numComponents; ++c) {
-                sum += K[c] * x[c];
-            }
-            if (std::abs(sum - 1.0) < 1.0e-10) {
-                CompVec y;
-                for (int c = 0; c < numComponents; ++c) {
-                    y[c] = K[c] * x[c] / sum;
-                }
-                return {press, y};
-            }
-            press *= std::clamp(sum, Scalar{0.5}, Scalar{2.0});
-        }
-
-        OPM_THROW(std::runtime_error,
-                  fmt::format("The saturation pressure calculation at the gas-oil "
-                              "contact did not converge within {} iterations.", maxOuter));
     }
 
     CompositionalConfig::EOSType eosType_;
