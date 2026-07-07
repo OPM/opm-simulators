@@ -332,9 +332,13 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     BOOST_CHECK_CLOSE(s.vfp_inj_props.bhp(3, 0.0, 0.0, gasrate, thp), expected_bhp, 1e-7);
     using Comm = Dune::Communication<int>;
 
+    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // we need to make sure that their lifetime is longer than the constructor lasts
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
     // Test using mock setup.
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, UnitSystem {}, 0, Comm{});
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(463.483, bars);
@@ -353,8 +357,12 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
 
     // Test using mock setup.
     using Comm = Dune::Communication<int>;
+    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // we need to make sure that their lifetime is longer than the constructor lasts
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, UnitSystem {}, 0, Comm{});
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(150.488, bars);
@@ -373,9 +381,12 @@ BOOST_AUTO_TEST_CASE(production_pressure_computation)
     BOOST_CHECK_CLOSE(s.vfp_prod_props.bhp(3, waterrate, oilrate, 0.0, thp, 0.0, 0.5, 0.0, false), expected_bhp, 1e-7);
 
     // Test using mock setup.
-    using Comm = Dune::Communication<int>;
+    using Comm = Dune::Communication<int>;    // NetworkPressureComputation stores const references to comm and unit system, hence
+    // we need to make sure that their lifetime is longer than the constructor lasts
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_prod_props, UnitSystem {}, 0, Comm{});
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(31.0, bars);
