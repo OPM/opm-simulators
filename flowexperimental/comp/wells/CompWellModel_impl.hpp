@@ -26,6 +26,8 @@
 #include <flowexperimental/comp/wells/CompWellModel.hpp>
 #endif
 
+#include <algorithm>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
@@ -42,6 +44,7 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , comm_(simulator.gridView().comm())
     , comp_config_(ecl_state_.compositionalConfig())
     , comp_well_states_(comp_config_)
+    , last_valid_comp_well_states_(comp_config_)
 {
     local_num_cells_ = simulator.gridView().size(0);
 }
@@ -52,9 +55,35 @@ CompWellModel<TypeTag>::
 beginReportStep(unsigned report_step)
 {
     // TODO: not considering the parallel running yet
+    report_step_start_events_ = schedule_[report_step].wellgroup_events();
     wells_ecl_ = schedule_.getWells(report_step);
+
+    constexpr auto events_mask = ScheduleEvents::WELL_STATUS_CHANGE |
+                                 ScheduleEvents::REQUEST_OPEN_WELL |
+                                 ScheduleEvents::REQUEST_SHUT_WELL;
+    for (const auto& well_ecl : wells_ecl_) {
+        if (!well_ecl.hasConnections()) {
+            continue;
+        }
+
+        if (!report_step_start_events_.hasEvent(well_ecl.name(), events_mask)) {
+            continue;
+        }
+
+        if (well_ecl.getStatus() == WellStatus::OPEN) {
+            well_open_times_.insert_or_assign(well_ecl.name(), simulator_.time());
+            well_close_times_.erase(well_ecl.name());
+        }
+        else if (well_ecl.getStatus() == WellStatus::SHUT) {
+            well_close_times_.insert_or_assign(well_ecl.name(), simulator_.time());
+            well_open_times_.erase(well_ecl.name());
+        }
+    }
+
     initWellConnectionData();
     initWellState();
+    // Save the initial accepted state for this report step.
+    last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
 }
 
 template <typename TypeTag>
@@ -64,6 +93,24 @@ beginTimeStep()
 {
     createWellContainer();
     initWellContainer();
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+restoreLastValidState()
+{
+    comp_well_states_.copyDynamicStateFrom(last_valid_comp_well_states_);
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+endTimeStep()
+{
+    // Persist the accepted well state so failed retries restart from the last
+    // successful timestep rather than from the beginning of the report step.
+    last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
 }
 
 template <typename TypeTag>
@@ -83,6 +130,12 @@ createWellContainer()
     const auto nw = wells_ecl_.size(); // not considering the parallel running yet
     well_container_.clear();
     for (auto w = 0 * nw; w < nw; ++w) {
+        const auto& well_name = wells_ecl_[w].name();
+        if (comp_well_states_.has(well_name)
+            && comp_well_states_[well_name].status == WellStatus::SHUT) {
+            continue;
+        }
+
         well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w]));
     }
 }
@@ -180,11 +233,15 @@ initWellState()
     OPM_END_PARALLEL_TRY_CATCH("ComposotionalWellModel::initializeWellState() failed: ",
                            this->simulator_.vanguard().grid().comm());
 
-    /* TODO: no prev well state for now */
-    // \Note:: we are not supporting dynamic temperature, so the temperature is constant, so we just pass in a single value
+    // Start each report step from freshly initialized schedule state. Retry
+    // recovery still comes from last_valid_comp_well_states_ via
+    // restoreLastValidState()/endTimeStep(). Passing the last valid state as
+    // prev_well_state here would carry dynamic state across report steps, but
+    // that currently changes regression results, so we pass nullptr for now.
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, cell_temperature[0], cell_mole_fractions, this->well_connection_data_,
-                                 this->summary_state_);
+                                 this->summary_state_,
+                                 /*prev_well_state=*/nullptr);
 }
 
 
@@ -291,6 +348,38 @@ recoverWellSolutionAndUpdateWellState(const BVector& x)
             well->recoverWellSolutionAndUpdateWellState(x_local_, ws);
         }
     }
+}
+
+template <typename TypeTag>
+bool
+CompWellModel<TypeTag>::
+forceShutWellByName(const std::string& well_name,
+                    double simulation_time,
+                    bool)
+{
+    int well_was_shut = 0;
+
+    if (comp_well_states_.has(well_name)) {
+        auto& well_state = comp_well_states_[well_name];
+        if (well_state.status != WellStatus::SHUT) {
+            well_state.status = WellStatus::SHUT;
+            well_close_times_.insert_or_assign(well_name, simulation_time);
+            well_open_times_.erase(well_name);
+
+            if (last_valid_comp_well_states_.has(well_name)) {
+                last_valid_comp_well_states_[well_name].status = WellStatus::SHUT;
+            }
+
+            std::erase_if(well_container_,
+                          [&well_name](const auto& well)
+                          { return well->name() == well_name; });
+
+            well_was_shut = 1;
+        }
+    }
+
+    well_was_shut = comm_.max(well_was_shut);
+    return well_was_shut == 1;
 }
 
 template <typename TypeTag>

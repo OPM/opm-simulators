@@ -636,17 +636,18 @@ doAllocBuffers(const unsigned bufferSize,
         this->summaryConfig_.hasKeyword("FPR") ||
         this->summaryConfig_.hasKeyword("FPRP");
 
-    const auto needPoreVolume = needAvgPress    ||
-        this->summaryConfig_.hasKeyword("FHPV") ||
-        this->summaryConfig_.match("RHPV*");
+    const auto needPoreVolume = needAvgPress     ||
+        this->summaryConfig_.hasKeyword("FRPV")  ||
+        this->summaryConfig_.match("RRPV*") ||
+        this->summaryConfig_.hasKeyword("FHPV")  ||
+        this->summaryConfig_.match("RHPV*") ;
 
     if (needPoreVolume) {
         this->fipC_.add(Inplace::Phase::PoreVolume);
-        this->dynamicPoreVolume_.resize(bufferSize, 0.0);
+        this->fipC_.add(Inplace::Phase::DynamicPoreVolume);
         this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
     }
     else {
-        this->dynamicPoreVolume_.clear();
         this->hydrocarbonPoreVolume_.clear();
     }
 
@@ -1037,9 +1038,6 @@ makeRegionSum(Inplace& inplace,
 
     update_inplace(Inplace::Phase::PressureHydroCarbonPV,
                    this->pressureTimesHydrocarbonVolume_);
-
-    update_inplace(Inplace::Phase::DynamicPoreVolume,
-                   this->dynamicPoreVolume_);
 
     for (const auto& phase : Inplace::phases()) {
         update_inplace(phase, this->fipC_.get(phase));

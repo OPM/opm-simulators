@@ -462,7 +462,7 @@ protected:
             const auto pvValue =  simulator_.problem().referencePorosity(globI, /*timeIdx=*/0)
             *  simulator_.model().dofTotalVolume(globI);
 
-            const Scalar scaled_norm = dt * std::abs(this->energyVector_[globI])/ pvValue;
+            const Scalar scaled_norm = dt * std::abs(this->energyVector_[globI][0])/ pvValue;
             maxNorm = max(maxNorm, scaled_norm);
             sumNorm += scaled_norm;
             if (!isNumericalAquiferCell(elem)) {
@@ -605,7 +605,7 @@ protected:
                 Scalar storefac = volume / dt;
                 Evaluation storage = 0.0;
                 computeStorageTerm(globI, storage);
-                this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
+                this->energyVector_[globI][0] += storefac * ( getValue(storage) - storage1_[globI][0] );
                 bMat[0][0] = storefac * storage.derivative(temperatureIdx);
                 *diagMatAddress_[globI] += bMat;
             }
@@ -639,7 +639,7 @@ protected:
                     Evaluation heatFlux = 0.0;
                     computeHeatFluxTerm(intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, heatFlux);
                     heatFlux += flux;
-                    this->energyVector_[globI] += getValue(heatFlux);
+                    this->energyVector_[globI][0] += getValue(heatFlux);
                     bMat[0][0] = heatFlux.derivative(temperatureIdx);
                     *diagMatAddress_[globI] += bMat;
                     bMat *= -1.0;

@@ -21,6 +21,7 @@
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/models/utils/propertysystem.hh>
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
 #endif
@@ -31,6 +32,9 @@
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
 #endif
 
+#include <opm/simulators/linalg/system/ISTLSolverSystem.hpp>
+
+#include <filesystem>
 #include <fmt/format.h>
 
 namespace Opm
@@ -150,6 +154,38 @@ private:
     template <class... Args>
     void createSolver(const Simulator& simulator, Args&&... args)
     {
+        auto linSolverConf = Parameters::Get<Parameters::LinearSolver>();
+        bool useSystemCpr = (linSolverConf == "system_cpr");
+        if (!useSystemCpr && linSolverConf.size() > 5
+            && linSolverConf.ends_with(".json")
+            && std::filesystem::exists(linSolverConf)) {
+            try {
+                PropertyTree prm(linSolverConf);
+                useSystemCpr = (prm.get<std::string>("preconditioner.type", "") == "system_cpr");
+            } catch (...) {}
+        }
+        if (useSystemCpr) {
+            using Indices = GetPropType<TypeTag, Properties::Indices>;
+            const auto backend = Parameters::linearSolverAcceleratorTypeFromCLI();
+            if (backend != Parameters::LinearSolverAcceleratorType::CPU) {
+                OPM_THROW(std::invalid_argument,
+                          "The system_cpr preconditioner currently only "
+                          "supports --linear-solver-accelerator=cpu");
+            }
+            // System solver types are hardcoded for 3-equation blackoil (see SystemTypes.hpp).
+            if constexpr (Indices::numEq == 3) {
+                istlSolver_ = std::make_unique<ISTLSolverSystem<TypeTag>>(
+                    simulator, std::forward<Args>(args)...);
+            } else {
+                OPM_THROW(std::invalid_argument,
+                          "The system_cpr preconditioner is only supported for "
+                          "standard 3-phase blackoil (3 equations). This model has " +
+                              std::to_string(Indices::numEq) + " equations.");
+            }
+            checkSystemCPRMatrixAddWell(Parameters::Get<Parameters::MatrixAddWellContributions>());
+            return;
+        }
+
         const auto backend = Parameters::linearSolverAcceleratorTypeFromCLI();
         if (backend == Parameters::LinearSolverAcceleratorType::CPU) {
         // Note that for now we keep the old behavior of using the bridge solver if it is available.

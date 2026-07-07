@@ -23,6 +23,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <flowexperimental/comp/wells/CompWellEquations.hpp>
+#include <flowexperimental/comp/wells/CompWellFlash.hpp>
 #include <flowexperimental/comp/wells/CompWellInterface.hpp>
 #include <flowexperimental/comp/wells/CompWellPrimaryVariables.hpp>
 

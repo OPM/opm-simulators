@@ -461,6 +461,11 @@ BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
     current.add(Opm::Inplace::Phase::GasResVolume, 4.0);
     current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 11.0 + offset);
 
+    // Keep region-level reservoir volumes stable regardless of phase list order.
+    current.add("FIPNUM", Opm::Inplace::Phase::OilResVolume, 1, 27.0);
+    current.add("FIPNUM", Opm::Inplace::Phase::WaterResVolume, 1, 26.0);
+    current.add("FIPNUM", Opm::Inplace::Phase::GasResVolume, 1, 28.0);
+
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.fipResv(current, "FIPNUM");
 

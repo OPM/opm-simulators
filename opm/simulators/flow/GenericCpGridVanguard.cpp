@@ -35,6 +35,7 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
@@ -221,12 +222,16 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             : std::vector<Well>{};
 
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
+                const bool useTransToFilterOverlap =
+                        !(eclState1.getSimulationConfig().isThermal() ||
+                            eclState1.getSimulationConfig().isTemp());
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
             this->distributeGrid(edgeWeightsMethod, ownersFirst,
                                  addCorners, numOverlap, partitionMethod,
                                  serialPartitioning, enableDistributedWells,
-                                 imbalanceTol, loadBalancerSet != 0,
+                                                                 imbalanceTol, loadBalancerSet != 0,
+                                                                 useTransToFilterOverlap,
                                  faceTrans, wells,
                                  possibleFutureConnections,
                                  eclState1, parallelWells);
@@ -365,6 +370,7 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                const bool                                            enableDistributedWells,
                const double                                          imbalanceTol,
                const bool                                            loadBalancerSet,
+               const bool                                            useTransToFilterOverlap,
                const std::vector<double>&                            faceTrans,
                const std::vector<Well>&                              wells,
                const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
@@ -377,7 +383,8 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
         this->distributeGrid(edgeWeightsMethod, ownersFirst, addCorners,
                              numOverlap, partitionMethod,
                              serialPartitioning, enableDistributedWells,
-                             imbalanceTol, loadBalancerSet, faceTrans,
+                             imbalanceTol, loadBalancerSet,
+                             useTransToFilterOverlap, faceTrans,
                              wells, possibleFutureConnections,
                              eclState, parallelWells);
     }
@@ -407,6 +414,7 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                const bool                                            enableDistributedWells,
                const double                                          imbalanceTol,
                const bool                                            loadBalancerSet,
+               const bool                                            useTransToFilterOverlap,
                const std::vector<double>&                            faceTrans,
                const std::vector<Well>&                              wells,
                const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
@@ -442,7 +450,8 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                                       faceTrans.data(), ownersFirst,
                                       addCornerCells, overlapLayers,
                                       partitionMethod, imbalanceTol,
-                                      enableDistributedWells));
+                                      enableDistributedWells,
+                                      useTransToFilterOverlap));
     }
 }
 

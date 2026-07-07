@@ -93,6 +93,58 @@ getDummyUpdateWrapper(Args&&... args)
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
 
+template <class X, class Y>
+class DirectSolverUpdatePreconditioner : public PreconditionerWithUpdate<X, Y>
+{
+public:
+    explicit DirectSolverUpdatePreconditioner(SolverCategory::Category category)
+        : category_(category)
+        , needs_rebuild_(false)
+    {
+    }
+
+    void update() override
+    {
+        needs_rebuild_ = true;
+    }
+
+    bool hasPerfectUpdate() const override
+    {
+        return true;
+    }
+
+    bool needsRebuild() const
+    {
+        return needs_rebuild_;
+    }
+
+    void resetNeedsRebuild()
+    {
+        needs_rebuild_ = false;
+    }
+
+    void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override
+    {
+    }
+
+    void post([[maybe_unused]] X& x) override
+    {
+    }
+
+    void apply([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override
+    {
+    }
+
+    SolverCategory::Category category() const override
+    {
+        return category_;
+    }
+
+private:
+    SolverCategory::Category category_;
+    bool needs_rebuild_;
+};
+
 /// @brief Interface class ensuring make function is overriden
 /// @tparam OriginalPreconditioner - An arbitrary Preconditioner type
 template <class OriginalPreconditioner>

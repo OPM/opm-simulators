@@ -127,18 +127,22 @@ public:
     static constexpr bool has_bioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp = Indices::enableMICP;
 
-    // For the conversion between the surface volume rate and reservoir voidage rate
-    using FluidState = BlackOilFluidState<Eval,
-                                          FluidSystem,
-                                          energyModuleType != EnergyModules::NoTemperature,
-                                          energyModuleType == EnergyModules::FullyImplicitThermal,
-                                          Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
-                                          has_watVapor,
-                                          has_brine,
-                                          has_saltPrecip,
-                                          has_disgas_in_water,
-                                          has_solvent,
-                                          Indices::numPhases >;
+    template<class ValueType>
+    using BlackOilFluidStateType = BlackOilFluidState<ValueType,
+                                                      FluidSystem,
+                                                      energyModuleType != EnergyModules::NoTemperature,
+                                                      energyModuleType == EnergyModules::FullyImplicitThermal,
+                                                      Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
+                                                      has_watVapor,
+                                                      has_brine,
+                                                      has_saltPrecip,
+                                                      has_disgas_in_water,
+                                                      has_solvent,
+                                                      Indices::numPhases>;
+
+    // fluid state for the reservoir fluid
+    using FluidState = BlackOilFluidStateType<Eval>;
+
     /// Constructor
     WellInterface(const Well& well,
                   const ParallelWellInfo<Scalar>& pw_info,
@@ -367,6 +371,18 @@ public:
     virtual void updateIPRImplicit(const Simulator& simulator,
                                    const GroupStateHelperType& groupStateHelper,
                                    WellStateType& well_state) = 0;
+
+    static constexpr int numResDofs = Indices::numEq;
+    static constexpr int numWellDofs = numResDofs + 1;  // NB will fail for for thermal for now
+    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+
+    virtual void addBCDMatrix(std::vector<BMatrix>& b_matrices,
+        std::vector<CMatrix>& c_matrices,
+        std::vector<DMatrix>& d_matrices,
+        Opm::SparseTable<int>& wcells) const = 0;
 
 protected:
     // simulation parameters

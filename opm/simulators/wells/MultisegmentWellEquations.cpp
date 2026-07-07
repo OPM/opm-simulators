@@ -377,6 +377,9 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const int seg_pressure_var_ind,
                          const WellState<Scalar, IndexTraits>& well_state) const
 {
+    using BlockType = PressureMatrix::block_type;
+    static_assert(BlockType::rows == 1);
+    static_assert(BlockType::cols == 1);
     // Add the pressure contribution to the cpr system for the well
 
     // Add for coupling from well to reservoir
@@ -389,12 +392,12 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                 // map the well perforated cell index to global cell index
                 const auto row_index = cells_[colC.index()];
                 const auto& bw = weights[row_index];
-                double matel = 0.0;
+                Scalar matel = 0.0;
 
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
                 }
-                jacobian[row_index][welldof_ind] += matel;
+                jacobian[row_index][welldof_ind][0][0] += matel;
             }
         }
     }
@@ -419,18 +422,18 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         assert(num_perfs > 0);
 
         // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
-        double diag_ell = 0.0;
+        Scalar diag_ell = 0.0;
         for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
             const auto& bw = well_weight;
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
                 // map the well perforated cell index to global cell index
                 const auto col_index = cells_[colB.index()];
-                double matel = 0.0;
+                Scalar matel = 0.0;
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i] *(*colB)[i][pressureVarIndex];
                 }
-                jacobian[welldof_ind][col_index] += matel;
+                jacobian[welldof_ind][col_index][0][0] += matel;
                 diag_ell -= matel;
             }
         }
@@ -446,9 +449,9 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         }
 #endif
 #undef EXTRA_DEBUG_MSW
-        jacobian[welldof_ind][welldof_ind] = diag_ell;
+        jacobian[welldof_ind][welldof_ind][0][0] = diag_ell;
     } else {
-        jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
+        jacobian[welldof_ind][welldof_ind][0][0] = Scalar{1.0}; // maybe we could have used diag_ell if calculated
     }
 }
 
@@ -484,7 +487,9 @@ sumDistributed(Parallel::Communication comm)
     INSTANTIATE(T,3,4)      \
     INSTANTIATE(T,4,3)      \
     INSTANTIATE(T,4,4)      \
-    INSTANTIATE(T,4,5)
+    INSTANTIATE(T,4,5)      \
+    INSTANTIATE(T,5,4)      \
+    INSTANTIATE(T,5,5)
 
 INSTANTIATE_TYPE(double)
 

@@ -247,6 +247,23 @@ namespace Opm
         void getScaledWellFractions(std::vector<Scalar>& scaled_fractions,
                                     DeferredLogger& deferred_logger) const override;
 
+
+        void addBCDMatrix(std::vector<typename Base::BMatrix>& b_matrices,
+                          std::vector<typename Base::CMatrix>& c_matrices,
+                          std::vector<typename Base::DMatrix>& d_matrices,
+                          Opm::SparseTable<int>& wcells) const override
+        {
+            // System_cpr preconditioner is only supported when well DOF dimensions
+            // match between WellInterface and StandardWellEval (standard 3-phase blackoil).
+            if constexpr (Base::numWellDofs == StdWellEval::numWellDofs) {
+                StdWellEval::addBCDMatrix(b_matrices, c_matrices, d_matrices, wcells);
+            } else {
+                OPM_THROW(std::runtime_error,
+                          "system_cpr preconditioner with standard wells is only supported for standard "
+                          "3-phase blackoil (Indices::numEq == 3). This model has different equation count.");
+            }
+        }
+
     protected:
         bool regularize_;
 

@@ -954,11 +954,10 @@ private:
         const double pv = totVolume * intQuants.porosity().value();
         const auto hydrocarbon = this->hydroCarbonFraction(fs);
 
+        this->fipC_.assignPoreVolume(globalDofIdx,
+                                totVolume * intQuants.referencePorosity(),
+                                pv);
         if (! this->hydrocarbonPoreVolume_.empty()) {
-            this->fipC_.assignPoreVolume(globalDofIdx,
-                                         totVolume * intQuants.referencePorosity());
-
-            this->dynamicPoreVolume_[globalDofIdx] = pv;
             this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
         }
 

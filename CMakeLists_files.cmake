@@ -70,27 +70,6 @@ endmacro()
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  flowexperimental/BlackOilEnergyIntensiveQuantitiesGlobalIndex.hpp
-  flowexperimental/BlackOilIntensiveQuantitiesGlobalIndex.hpp
-  flowexperimental/comp/EmptyModel.hpp
-  flowexperimental/comp/flowexp_comp.hpp
-  flowexperimental/comp/wells/CompWellModel.hpp
-  flowexperimental/comp/wells/CompWellModel_impl.hpp
-  flowexperimental/comp/wells/CompWellEquations.hpp
-  flowexperimental/comp/wells/CompWellEquations_impl.hpp
-  flowexperimental/comp/wells/CompWell.hpp
-  flowexperimental/comp/wells/CompWell_impl.hpp
-  flowexperimental/comp/wells/CompWellInterface.hpp
-  flowexperimental/comp/wells/CompWellInterface_impl.hpp
-  flowexperimental/comp/wells/CompWellPrimaryVariables.hpp
-  flowexperimental/comp/wells/CompWellPrimaryVariables_impl.hpp
-  flowexperimental/comp/wells/CompWellState.hpp
-  flowexperimental/comp/wells/CompWellState_impl.hpp
-  flowexperimental/comp/wells/SingleCompWellState.hpp
-  flowexperimental/comp/wells/SingleCompWellState_impl.hpp
-  flowexperimental/FIBlackOilModelNoCache.hpp
-  flowexperimental/flowexp.hpp
-  flowexperimental/FlowExpNewtonMethod.hpp
   opm/models/blackoil/blackoilbioeffectsparams.cpp
   opm/models/blackoil/blackoilbrineparams.cpp
   opm/models/blackoil/blackoilextboparams.cpp
@@ -192,6 +171,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory7.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/system/SystemPreconditioner.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
@@ -202,7 +182,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
-  opm/simulators/utils/ComponentName.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
@@ -477,8 +456,11 @@ list (APPEND TEST_SOURCE_FILES
   tests/models/test_tasklets_failure.cpp
   tests/test_ALQState.cpp
   tests/test_aquifergridutils.cpp
+  tests/test_aqantrc_flow_keyword.cpp
   tests/test_blackoil_amg.cpp
   tests/test_blackoilprimaryvariables.cpp
+  tests/test_compwell_equations.cpp
+  tests/test_compwell_jacobian.cpp
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
@@ -513,6 +495,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_preconditionerfactory.cpp
   tests/test_privarspacking.cpp
   tests/test_propertytree.cpp
+  tests/test_setuppropertytree.cpp
   tests/test_region_phase_pvaverage.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
@@ -530,6 +513,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
+  tests/test_WellMatrixMerger.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
@@ -698,6 +682,12 @@ list (APPEND TEST_DATA_FILES
   tests/options_flexiblesolver_1x1.json
   tests/options_flexiblesolver_3x3.json
   tests/options_flexiblesolver_simple.json
+  tests/options_system_cpr_complete.json
+  tests/options_system_cpr_missing_precond_type.json
+  tests/options_system_cpr_missing_ressolver.json
+  tests/options_system_cpr_missing_smoother.json
+  tests/options_system_cpr_missing_well.json
+  tests/options_system_cpr_res_precond_not_cpr.json
   tests/GCONSUMP.DATA
   tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
@@ -996,6 +986,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSystemBlackOilReservoirTPSA.hpp
   opm/simulators/flow/NonlinearSystem.hpp
   opm/simulators/flow/NonlinearSystem_impl.hpp
+  opm/simulators/flow/NonlinearSystemCompositional.hpp
+  opm/simulators/flow/NonlinearSystemCompositional_impl.hpp
   opm/simulators/flow/CO2H2Container.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
@@ -1126,6 +1118,12 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/is_gpu_operator.hpp
   opm/simulators/linalg/ISTLSolver.hpp
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
+  opm/simulators/linalg/Preconditioner2InverseOperator.hpp
+  opm/simulators/linalg/system/MultiComm.hpp
+  opm/simulators/linalg/system/SystemPreconditioner.hpp
+  opm/simulators/linalg/system/SystemPreconditionerFactory.hpp
+  opm/simulators/linalg/system/SystemTypes.hpp
+  opm/simulators/linalg/system/WellMatrixMerger.hpp
   opm/simulators/linalg/ISTLSolverTPSA.hpp
   opm/simulators/linalg/istlpreconditionerwrappers.hh
   opm/simulators/linalg/istlsolverwrappers.hh
@@ -1189,6 +1187,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
   opm/simulators/utils/ComponentName.hpp
+  opm/simulators/utils/ComponentName_impl.hpp
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/ParallelEclipseState.hpp

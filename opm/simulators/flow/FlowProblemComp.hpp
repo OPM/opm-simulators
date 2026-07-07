@@ -424,6 +424,18 @@ public:
     EclWriterType& eclWriter()
     { return *eclWriter_; }
 
+    void setSubStepReport(const SimulatorReportSingle& report)
+    { return eclWriter_->setSubStepReport(report); }
+
+    void setSimulationReport(const SimulatorReport& report)
+    { return eclWriter_->setSimulationReport(report); }
+
+    void finalizeOutput()
+    {
+        OPM_TIMEBLOCK(finalizeOutput);
+        eclWriter_.reset();
+    }
+
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)

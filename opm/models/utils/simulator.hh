@@ -123,6 +123,7 @@ public:
         if (!predetTimeStepFile.empty()) {
             forcedTimeSteps_ = readTimeStepFile<Scalar>(predetTimeStepFile);
         }
+        truncateTimeStepToFloat_ = Parameters::Get<Parameters::TruncateTimeStepToFloat>();
 
         episodeIdx_ = 0;
         episodeStartTime_ = 0;
@@ -222,6 +223,10 @@ public:
         Parameters::Register<Parameters::PredeterminedTimeStepsFile>
             ("A file with a list of predetermined time step sizes "
              "(one time step per line)");
+        Parameters::Register<Parameters::TruncateTimeStepToFloat>
+            ("Truncate the time step size to float precision. Only used to make "
+             "time steps reproducible for the timestep-replay regression test; "
+             "do not enable for production runs.");
 
         Vanguard::registerParameters();
         Model::registerParameters();
@@ -395,7 +400,7 @@ public:
      * \param value The new value for the time step size \f$\mathrm{[s]}\f$
      */
     void setTimeStepSize(Scalar value)
-    { timeStepSize_ = value; }
+    { timeStepSize_ = truncateTimeStepToFloat_ ? static_cast<Scalar>(float(value)) : value; }
 
     /*!
      * \brief Set the current time step index to a given value.
@@ -958,6 +963,7 @@ private:
 
     bool finished_;
     bool verbose_;
+    bool truncateTimeStepToFloat_ = false;
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     ReservoirCouplingMaster<Scalar> *reservoirCouplingMaster_ = nullptr;

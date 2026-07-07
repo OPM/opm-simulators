@@ -36,6 +36,16 @@ PropertyTree setupPropertyTree(FlowLinearSolverParameters p,
 
 PropertyTree setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
+PropertyTree setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p);
+
+// Validates that a PropertyTree with preconditioner.type == "system_cpr" contains
+// all three required sub-trees. Throws std::invalid_argument if any are missing.
+// No-op when the preconditioner type is not system_cpr.
+void validateSystemCPRTree(const PropertyTree& prm);
+
+// Throws std::invalid_argument when system_cpr is combined with
+// --matrix-add-well-contributions=true. Call this after detecting system_cpr is active.
+void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions);
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupMixedILU(const std::string& conf, const FlowLinearSolverParameters& p);

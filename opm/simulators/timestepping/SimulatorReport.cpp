@@ -395,7 +395,7 @@ namespace Opm
         os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    LocSol    Update    Output WellIt Lins NewtIt LinIt Conv\n";
         for (std::size_t i = 0; i < this->stepreports.size(); ++i) {
             const SimulatorReportSingle& sr = this->stepreports[i];
-            os.precision(10);
+            os.precision(20);
             os << std::defaultfloat;
             os << std::setw(11) << unit::convert::to(sr.global_time, unit::day) << " ";
             os << std::setw(11) << unit::convert::to(sr.timestep_length, unit::day) << " ";

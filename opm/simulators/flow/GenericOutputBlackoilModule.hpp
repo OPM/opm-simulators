@@ -433,7 +433,6 @@ protected:
     ScalarBuffer hydrocarbonPoreVolume_;
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
-    ScalarBuffer dynamicPoreVolume_;
     ScalarBuffer rPorV_;
     ScalarBuffer fluidPressure_;
     ScalarBuffer temperature_;

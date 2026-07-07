@@ -1,5 +1,5 @@
 /*
-  Copyright 2024, SINTEF Digital
+  Copyright 2024, 2026, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,13 +17,17 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/models/immiscible/immisciblemodel.hh>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
+
+#include <stdexcept>
 
 namespace Opm {
 
@@ -53,28 +57,13 @@ calculateExplicitQuantities(const Simulator& simulator,
 {
     updatePrimaryVariables(simulator, well_state);
     {
-        // flash calculation in the wellbore
+        // flash calculation in the wellbore to obtain the explicit
+        // component masses
         auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
 
         flashFluidState_(fluid_state_scalar);
 
-        std::array<Scalar, FluidSystem::numComponents> oil_mass_fractions;
-        std::array<Scalar, FluidSystem::numComponents> gas_mass_fractions;
-        for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            oil_mass_fractions[compidx] = fluid_state_scalar.massFraction(FluidSystem::oilPhaseIdx, compidx);
-            gas_mass_fractions[compidx] = fluid_state_scalar.massFraction(FluidSystem::gasPhaseIdx, compidx);
-        }
-
-        const Scalar wellbore_volume = this->wellbore_volume_;
-        const auto& so = fluid_state_scalar.saturation(FluidSystem::oilPhaseIdx);
-        const auto& sg = fluid_state_scalar.saturation(FluidSystem::gasPhaseIdx);
-        const auto& density_oil = fluid_state_scalar.density(FluidSystem::oilPhaseIdx);
-        const auto& density_gas = fluid_state_scalar.density(FluidSystem::gasPhaseIdx);
-
-        for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            this->component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * so +
-                                          gas_mass_fractions[compidx] * density_gas * sg) * wellbore_volume;
-        }
+        this->component_masses_ = wellboreComponentMasses(fluid_state_scalar, this->wellbore_volume_);
     }
 }
 
@@ -107,29 +96,24 @@ updateTotalMass()
 
     flashFluidState_(fluid_state);
 
-    std::array<EvalWell, FluidSystem::numComponents> oil_mass_fractions;
-    std::array<EvalWell, FluidSystem::numComponents> gas_mass_fractions;
-    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        oil_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-        gas_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
-    }
+    this->new_component_masses_ = wellboreComponentMasses(fluid_state, this->wellbore_volume_);
 
     EvalWell total_mass = 0.;
+    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
+        total_mass += this->new_component_masses_[compidx];
+    }
+
     const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
     const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
     const auto& density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
     const auto& density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
-    const Scalar wellbore_volume = this->wellbore_volume_;
-    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        this->new_component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * so +
-                                      gas_mass_fractions[compidx] * density_gas * sg) * wellbore_volume;
-        total_mass += this->new_component_masses_[compidx];
-    }
-
     // TODO: some properties should go to the fluid_state?
     fluid_density_ = density_oil * so + density_gas * sg;
 
-    // TODO: the derivative of the mass fractions does not look correct
+    // The AD derivatives of the component masses and mass fractions with respect
+    // to the wellbore primary variables (pressure and composition), including the
+    // dependence that flows through the flash, are checked against finite
+    // differences in tests/test_compwell_jacobian.cpp.
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
     }
@@ -219,6 +203,11 @@ getMobility(const Simulator& simulator,
         for (unsigned phase_idx = 0; phase_idx < FluidSystem::numPhases; ++phase_idx) {
             mob[phase_idx] = PrimaryVariables::extendEval(int_quants->mobility(phase_idx));
         }
+    } else {
+        // TODO: not sure how to handle this at the moment, throw for now
+        OPM_THROW(std::logic_error,
+                  "CompWell::getMobility: a connection saturation table differing from the "
+                  "cell saturation region is not supported yet");
     }
 
 }
@@ -563,6 +552,8 @@ updateWellControl(const SummaryState& summary_state,
         if (injection_controls.hasControl(Well::InjectorCMode::BHP) && current_control != WellInjectorCMode::BHP) {
             const Scalar bhp_limit = injection_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
+            OpmLog::debug(fmt::format("Well {} BHP control check: current_bhp={:.6e}, bhp_limit={:.6e}, exceeds_limit={}",
+                                      this->well_ecl_.name(), current_bhp, bhp_limit, (current_bhp > bhp_limit)));
             if (current_bhp > bhp_limit) {
                 well_state.bhp = bhp_limit;
                 well_state.injection_cmode = WellInjectorCMode::BHP;
@@ -575,7 +566,12 @@ updateWellControl(const SummaryState& summary_state,
             // TODO: hack to get the injection rate
             const Scalar current_rate = std::accumulate(well_state.surface_phase_rates.begin(),
                                                         well_state.surface_phase_rates.end(), 0.0);
+            OpmLog::debug(fmt::format("Well {} RATE control check: current_rate={:.6e}, rate_limit={:.6e}, bhp={:.6e}, phase_rates=[{}]",
+                                      this->well_ecl_.name(), current_rate, rate_limit, well_state.bhp,
+                                      fmt::join(well_state.surface_phase_rates, ", ")));
             if (current_rate > rate_limit) {
+                OpmLog::debug(fmt::format("Well {} RATE control TRIGGERED: current_rate={:.6e} > rate_limit={:.6e}",
+                                          this->well_ecl_.name(), current_rate, rate_limit));
                 well_state.injection_cmode = WellInjectorCMode::RATE;
                 changed = true;
             }
@@ -633,47 +629,9 @@ flashFluidState_(FluidState<T>& fluid_state)
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::flashFluidState_");
 
-    bool single_phase = false;
-    if constexpr (std::is_same_v<T, Scalar>) {
-        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
-    } else { // EvalWell
-        single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
-    }
-
-    constexpr Scalar R = Constants<Scalar>::R;
-    typename FluidSystem::template ParameterCache<T> param_cache {CompositionalConfig::EOSType::PR};
-    param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
-    const auto Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
-                     (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
-    param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
-    const auto Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
-                     (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
-
-    auto L = fluid_state.L();
-    if (single_phase) {
-        // we check whether the phase label is correct
-        if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
-            L = 0.;
-            fluid_state.setLvalue(L);
-        } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
-            L = 1.;
-            fluid_state.setLvalue(L);
-        }
-    }
-    T So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-    T Sg = Opm::max(1 - So, 0.0);
-    T sumS = So + Sg;
-    So /= sumS;
-    Sg /= sumS;
-
-    fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
-    fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-
-    fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-    fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-
-    fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
-    fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
+    // The wellbore flash is a free function so it can be unit tested in
+    // isolation (see tests/test_compwell_jacobian.cpp).
+    flashWellboreFluidState(fluid_state);
 }
 
 } // end of namespace Opm

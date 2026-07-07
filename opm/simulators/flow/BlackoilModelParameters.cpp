@@ -20,6 +20,8 @@
 #include <config.h>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/nonlinear/newtonmethodparams.hpp>

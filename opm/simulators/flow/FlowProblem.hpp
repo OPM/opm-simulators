@@ -395,6 +395,24 @@ public:
     }
 
     /*!
+     * \brief Called by the simulator to restore the state captured at the
+     *        beginning of the timestep after a failed timestep.
+     */
+    void updateFailed()
+    {
+        this->model().updateFailed();
+    }
+
+    /*!
+     * \brief Called by the simulator to accept the current state as the new
+     *        time level after a successful timestep.
+     */
+    void advanceTimeLevel()
+    {
+        this->model().advanceTimeLevel();
+    }
+
+    /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
     void beginIteration()
