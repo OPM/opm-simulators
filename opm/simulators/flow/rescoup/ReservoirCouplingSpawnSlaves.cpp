@@ -34,6 +34,8 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <string>
+#include <system_error>
 #include <vector>
 
 #include <fmt/format.h>
@@ -469,7 +471,42 @@ void
 ReservoirCouplingSpawnSlaves<Scalar>::
 spawnSlaveProcesses_()
 {
-    char *flow_program_name = this->master_.getArgv(0);
+    // Resolve the program name to an absolute path before handing it to
+    // MPI_Comm_spawn: the command is launched by the MPI process manager
+    // (an mpiexec/hydra daemon, or on Windows the hydra service), whose
+    // working directory is not necessarily ours, so a relative path such as
+    // "./flow" or "build/bin/flow" may not resolve there. A bare program
+    // name without a directory component is left untouched so the process
+    // manager can look it up in PATH, as it was resolved for the master.
+    std::string program_name{this->master_.getArgv(0)};
+    if (const std::filesystem::path program_path{program_name};
+        program_path.has_parent_path() && !program_path.is_absolute())
+    {
+        std::error_code ec;
+        const auto abs_path = std::filesystem::absolute(program_path, ec);
+        if (!ec) {
+            program_name = abs_path.string();
+        }
+    }
+
+    // Pin the slaves' working directory to the master's own: with
+    // MPI_INFO_NULL the working directory of the spawned processes is
+    // implementation-defined (often that of the process-manager daemon,
+    // which for a service launch is unrelated to the job), and relative
+    // paths in the slave setup would then resolve incorrectly. "wdir" is a
+    // standard-reserved info key for MPI_Comm_spawn. Only the root rank's
+    // info argument is significant, but constructing it everywhere is fine.
+    MPI_Info spawn_info;
+    MPI_Info_create(&spawn_info);
+    {
+        std::error_code ec;
+        const auto master_cwd = std::filesystem::current_path(ec);
+        if (!ec) {
+            const std::string master_cwd_str = master_cwd.string();
+            MPI_Info_set(spawn_info, "wdir", master_cwd_str.c_str());
+        }
+    }
+
     for (const auto& [slave_name, slave] : this->rescoup_.slaves()) {
         MPI_Comm master_slave_comm = MPI_COMM_NULL;
         const auto& data_file_name = slave.dataFilename();
@@ -491,10 +528,10 @@ spawnSlaveProcesses_()
         //    As far as I can tell, open MPI does not support redirecting the output
         //    to a file, so we might need to implement a custom solution for this
         int spawn_result = MPI_Comm_spawn(
-            flow_program_name,
+            program_name.data(),
             slave_argv.data(),
             /*maxprocs=*/num_procs,
-            /*info=*/MPI_INFO_NULL,
+            /*info=*/spawn_info,
             /*root=*/0,  // Rank 0 spawns the slave processes
             /*comm=*/this->comm_,
             /*intercomm=*/&master_slave_comm,
@@ -509,7 +546,11 @@ spawnSlaveProcesses_()
                     this->logger_.info(fmt::format("Error spawning process {}: {}", i, error_string));
                 }
             }
-            RCOUP_LOG_THROW(std::runtime_error, "Failed to spawn slave process");
+            MPI_Info_free(&spawn_info);
+            RCOUP_LOG_THROW(std::runtime_error,
+                            "Failed to spawn slave process. Note: spawning requires MPI "
+                            "dynamic process management, which e.g. MS-MPI on Windows "
+                            "does not implement.");
         }
         // NOTE: By installing a custom error handler for all slave-master communicators, which
         //   eventually will call MPI_Abort(), there is no need to check the return value of any
@@ -524,6 +565,7 @@ spawnSlaveProcesses_()
         this->master_.addSlaveCommunicator(master_slave_comm);
         this->master_.addSlaveName(slave_name);
     }
+    MPI_Info_free(&spawn_info);
 }
 
 // Explicit template instantiations
