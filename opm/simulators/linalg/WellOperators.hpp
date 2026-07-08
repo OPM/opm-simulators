@@ -359,6 +359,8 @@ public:
 
     const matrix_type& getmat() const override { return A_; }
 
+    const LinearOperatorExtra<X, Y>& getwellOper() const { return wellOper_; }
+
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
                                   const bool use_well_weights) const
