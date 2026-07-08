@@ -205,5 +205,82 @@ private:
 };
 
 
+/*!
+   \brief Adapter to combine a matrix and another linear operator into
+   a combined linear operator.
+
+   This is similar to WellModelMatrixAdapter, with the difference that
+   here we assume a parallel ordering of rows, where ghost rows are
+   located after interior rows.
+ */
+template<class M, class V, class C>
+class WellModelMixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
+{
+public:
+    using field_type = typename V::field_type;
+    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
+
+    //! constructor: just store a reference to a matrix
+    WellModelMixedGhostLastMatrixAdapter (const M& A,
+                                     const LinearOperatorExtra<V, V>& wellOper,
+                                     const C& comm
+                                    )
+        : A_( A ), wellOper_( wellOper ), comm_ ( comm )
+    {}
+
+    // y = A * x
+    virtual void apply( const V& x, V& y ) const override
+    {
+        A_.mv(x,y);
+        wellOper_.apply(x, y);
+        comm_.project(y);
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd (double alpha, const V& x, V& y) const override
+    {
+        A_.usmv(alpha,x,y);
+        wellOper_.applyscaleadd(alpha, x, y);
+        comm_.project(y);
+    }
+
+    const M& getmat() const override { return A_; }
+
+    void addWellPressureEquations(PressureMatrix& jacobian,
+                                  const V& weights,
+                                  const bool use_well_weights) const
+    {
+        OPM_TIMEBLOCK(addWellPressureEquations);
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
+    }
+
+    void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
+    {
+        OPM_TIMEBLOCK(addWellPressureEquationsStruct);
+        wellOper_.addWellPressureEquationsStruct(jacobian);
+    }
+
+    int getNumberOfExtraEquations() const
+    {
+        return wellOper_.getNumberOfExtraEquations();
+    }
+
+    Dune::SolverCategory::Category category() const override
+    {
+        return Dune::SolverCategory::overlapping;
+    }
+
+
+protected:
+
+    const M& A_ ;
+    const C& comm_ ;
+    const LinearOperatorExtra<V, V>& wellOper_;
+};
+
+
+
+
+
 } // namespace Opm
 #endif // OPM_MIXED_MATRIX_HEADER_INCLUDED
