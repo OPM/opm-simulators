@@ -369,7 +369,21 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         }
         else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelGhostLastMatrixAdapter<MatrixType, Vector, Vector, true>>)
         {
-            OPM_THROW(std::invalid_argument, "Opm::WellModelGhostLastMatrixAdapter\n");
+            //OPM_THROW(std::invalid_argument, "Opm::WellModelGhostLastMatrixAdapter\n");
+            using MixedOperatorType = Opm::WellModelMixedGhostLastMatrixAdapter<MixedMatrixType, Vector, Comm>;
+            using WellOperatorType  = Opm::LinearOperatorExtra<Vector,Vector>;
+            const WellOperatorType &wellOper = op->getwellOper();
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_, wellOper, comm);
+
+            if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
+            {
+                scalar_product_ = sp;
+            }
+            else
+            {
+                using OptimizedScalarProductType = GhostLastScalarProduct<Vector,Comm>;
+                scalar_product_ = std::make_shared<OptimizedScalarProductType>(comm,Dune::SolverCategory::overlapping);
+            }
         }
 
         //initialize bicgstab solver from Dune
