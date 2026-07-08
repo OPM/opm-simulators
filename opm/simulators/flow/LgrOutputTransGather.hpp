@@ -66,6 +66,8 @@ std::vector<std::pair<std::array<int,N>, double>>
 sortLgrTransRecords(const std::vector<int>& keys,
                     const std::vector<double>& values)
 {
+    assert(keys.size() == N * values.size());
+
     std::vector<std::pair<std::array<int,N>, double>> records;
     records.reserve(values.size());
     for (std::size_t i = 0; i < values.size(); ++i) {
