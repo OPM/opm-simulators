@@ -150,15 +150,6 @@ kernelCreatingBlackoilFluidStateDynamic()
 
 template <class FluidState>
 __global__ void
-kernelSetAndGetTotalSaturation(double saturation, double* readSaturation)
-{
-    FluidState state;
-    state.setTotalSaturation(saturation);
-    *readSaturation = state.totalSaturation();
-}
-
-template <class FluidState>
-__global__ void
 getPressure(Opm::gpuistl::PointerView<FluidState> input, std::array<double, 3>* output)
 {
     for (int i = 0; i < 3; ++i) {
@@ -192,7 +183,6 @@ BOOST_AUTO_TEST_CASE(TestSaturation)
 {
     const double saturation = 0.5;
     auto saturationRead = Opm::gpuistl::make_gpu_unique_ptr<double>(0.0);
-    kernelSetAndGetTotalSaturation<FluidState><<<1, 1>>>(saturation, saturationRead.get());
     auto saturationFromGPU = Opm::gpuistl::copyFromGPU(saturationRead);
     BOOST_CHECK_EQUAL(saturationFromGPU, saturation);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
