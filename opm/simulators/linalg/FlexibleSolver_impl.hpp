@@ -241,6 +241,8 @@ namespace Dune
           } else if (solver_type == "mixed-precision") {
               if constexpr (Opm::is_gpu_operator_v<Operator>) {
                 OPM_THROW(std::invalid_argument, "mixed-precision solver not supported for GPU operators");
+            } else if constexpr (Opm::detail::is_multi_type_block_vector_v<VectorType>) {
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for multi-type block vectors.");
             } else if constexpr (std::is_same_v<typename VectorType::field_type, float>){
                 OPM_THROW(std::invalid_argument, "mixed-precision solver not supported for single precision.");
             } else {
