@@ -144,6 +144,8 @@ public:
         FaceDir::DirEnum faceDir;
         double Vin;
         double Vex;
+        double zIn;
+        double zEx;
         ConditionalStorage<enableFullyImplicitThermal, double> inAlpha;
         ConditionalStorage<enableFullyImplicitThermal, double> outAlpha;
         ConditionalStorage<enableDiffusion, double> diffusivity;
@@ -352,6 +354,8 @@ public:
                                          faceDir,
                                          Vin,
                                          Vex,
+                                         zIn,
+                                         zEx,
                                          inAlpha,
                                          outAlpha,
                                          diffusivity,
@@ -389,6 +393,8 @@ public:
         const Scalar trans = nbInfo.trans;
         const Scalar faceArea = nbInfo.faceArea;
         FaceDir::DirEnum facedir = nbInfo.faceDir;
+        const Scalar zIn = nbInfo.zIn;
+        const Scalar zEx = nbInfo.zEx;
 
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
@@ -416,6 +422,8 @@ public:
                                                              Vex,
                                                              globalIndexIn,
                                                              globalIndexEx,
+                                                             zIn,
+                                                             zEx,
                                                              distZg,
                                                              thpresInToEx,
                                                              thpresExToIn,
@@ -516,6 +524,8 @@ public:
                 intQuantsEx,
                 globalIndexIn,
                 globalIndexEx,
+                zIn,
+                zEx,
                 nbInfo.dZg,
                 nbInfo.trans,
                 nbInfo.faceArea,

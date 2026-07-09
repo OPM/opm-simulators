@@ -162,6 +162,10 @@ public:
                     ? std::max(getValue(fs.saturation(oilPhaseIdx)),
                                elemCtx.problem().maxOilSaturation(globalDofIdx))
                     : 0.0;
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.setRegionIndex(pvtRegionIdx);
+            paramCache.setDepth(elemCtx.problem().dofCenterDepth(globalDofIdx));
+            paramCache.updateAll(fs);
 
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 const Scalar x_oG = getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
@@ -173,16 +177,16 @@ public:
 
                 const Scalar RsSat =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs,
+                                                                                         paramCache,
                                                                                          oilPhaseIdx,
-                                                                                         pvtRegionIdx,
                                                                                          SoMax);
                 const Scalar X_oG_sat = FluidSystem::convertRsToXoG(RsSat, pvtRegionIdx);
                 const Scalar x_oG_sat = FluidSystem::convertXoGToxoG(X_oG_sat, pvtRegionIdx);
 
                 const Scalar RvSat =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs,
+                                                                                         paramCache,
                                                                                          gasPhaseIdx,
-                                                                                         pvtRegionIdx,
                                                                                          SoMax);
                 const Scalar X_gO_sat = FluidSystem::convertRvToXgO(RvSat, pvtRegionIdx);
                 const Scalar x_gO_sat = FluidSystem::convertXgOToxgO(X_gO_sat, pvtRegionIdx);
@@ -194,11 +198,11 @@ public:
                 }
                 if (params_.oilSaturationPressureOutput_) {
                     oilSaturationPressure_[globalDofIdx] =
-                        FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
+                        FluidSystem::template saturationPressure<FluidState, Scalar>(fs, paramCache, oilPhaseIdx);
                 }
                 if (params_.gasSaturationPressureOutput_) {
                     gasSaturationPressure_[globalDofIdx] =
-                        FluidSystem::template saturationPressure<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
+                        FluidSystem::template saturationPressure<FluidState, Scalar>(fs, paramCache, gasPhaseIdx);
                 }
                 if (params_.saturatedOilGasDissolutionFactorOutput_) {
                     saturatedOilGasDissolutionFactor_[globalDofIdx] = RsSat;
@@ -224,15 +228,15 @@ public:
             }
             if (params_.oilFormationVolumeFactorOutput_) {
                 oilFormationVolumeFactor_[globalDofIdx] =
-                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, paramCache, oilPhaseIdx);
             }
             if (params_.gasFormationVolumeFactorOutput_) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, paramCache, gasPhaseIdx);
             }
             if (params_.waterFormationVolumeFactorOutput_) {
                 waterFormationVolumeFactor_[globalDofIdx] =
-                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, waterPhaseIdx, pvtRegionIdx);
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, paramCache, waterPhaseIdx);
             }
 
             if (params_.primaryVarsMeaningOutput_) {
