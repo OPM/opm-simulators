@@ -40,6 +40,7 @@ namespace Opm {
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
@@ -63,6 +64,7 @@ namespace Opm {
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <limits>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -101,6 +103,7 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+    using FSInfo = std::pair<Scalar, Scalar>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -112,6 +115,7 @@ public:
     using ModelParameters = typename Base::ModelParameters;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+    using SolventModule = BlackOilSolventModule<TypeTag, has_solvent>;
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
     static constexpr bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
@@ -127,21 +131,25 @@ public:
     static constexpr bool has_bioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp = Indices::enableMICP;
 
+    // For the conversion between the surface volume rate and reservoir voidage rate
+    template <typename ValueType>
+    using FluidState = BlackOilFluidState<ValueType,
+                                          FluidSystem,
+                                          energyModuleType != EnergyModules::NoTemperature,
+                                          energyModuleType == EnergyModules::FullyImplicitThermal,
+                                          Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
+                                          has_watVapor,
+                                          has_brine,
+                                          has_saltPrecip,
+                                          has_disgas_in_water,
+                                          has_solvent,
+                                          Indices::numPhases>;
+
     template<class ValueType>
-    using BlackOilFluidStateType = BlackOilFluidState<ValueType,
-                                                      FluidSystem,
-                                                      energyModuleType != EnergyModules::NoTemperature,
-                                                      energyModuleType == EnergyModules::FullyImplicitThermal,
-                                                      Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
-                                                      has_watVapor,
-                                                      has_brine,
-                                                      has_saltPrecip,
-                                                      has_disgas_in_water,
-                                                      has_solvent,
-                                                      Indices::numPhases>;
+    using BlackOilFluidStateType = FluidState<ValueType>;
 
     // fluid state for the reservoir fluid
-    using FluidState = BlackOilFluidStateType<Eval>;
+    using ReservoirFluidState = FluidState<Eval>;
 
     /// Constructor
     WellInterface(const Well& well,
@@ -476,7 +484,7 @@ protected:
                                                                 GLiftEclWells& ecl_well_map,
                                                                 DeferredLogger& deferred_logger);
 
-    Eval getPerfCellPressure(const FluidState& fs) const;
+    Eval getPerfCellPressure(const ReservoirFluidState& fs) const;
 
     // get the transmissibility multiplier for specific perforation
     template<class Value, class Callback>
@@ -501,12 +509,12 @@ protected:
                      Callback& extendEval,
                      [[maybe_unused]] DeferredLogger& deferred_logger) const;
 
-    void computeConnLevelProdInd(const FluidState& fs,
+    void computeConnLevelProdInd(const ReservoirFluidState& fs,
                                  const std::function<Scalar(const Scalar)>& connPICalc,
                                  const std::vector<Scalar>& mobility,
                                  Scalar* connPI) const;
 
-    void computeConnLevelInjInd(const FluidState& fs,
+    void computeConnLevelInjInd(const ReservoirFluidState& fs,
                                 const Phase preferred_phase,
                                 const std::function<Scalar(const Scalar)>& connIICalc,
                                 const std::vector<Scalar>& mobility,
@@ -516,6 +524,17 @@ protected:
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
                                     const SingleWellStateType& ws) const;
+
+   FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
+
+   // \Note: at the current stage, the function is only used for well calculation
+   //  it is possible to make it a function in FluidState
+   template <typename ValueType>
+   FluidState<ValueType>
+   createFluidState(const std::vector<ValueType>& fluid_composition,
+                    const ValueType& pressure,
+                    const ValueType& temperature,
+                    const Scalar saltConcentration = 0.0) const;
 };
 
 } // namespace Opm

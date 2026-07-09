@@ -1161,8 +1161,8 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
 
         auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        const Scalar firstPerfTemperature = info.first;
+        const Scalar firstPerfSaltConcentration = info.second;
 
         this->segments_.computeFluidProperties(firstPerfTemperature,
                                                firstPerfSaltConcentration,
@@ -2189,8 +2189,8 @@ namespace Opm
                             const FSInfo& info,
                             DeferredLogger& deferred_logger) const
     {
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
+        const Scalar firstPerfTemperature = info.first;
+        const Scalar firstPerfSaltConcentration = info.second;
 
         return this->segments_.getSurfaceVolume(firstPerfTemperature,
                                                 firstPerfSaltConcentration,
@@ -2446,33 +2446,6 @@ namespace Opm
                            DeferredLogger& deferred_logger) const
     {
         this->primary_variables_.scaledWellFractions(scaled_fractions, deferred_logger);
-    }
-
-    template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::FSInfo
-    MultisegmentWell<TypeTag>::
-    getFirstPerforationFluidStateInfo(const Simulator& simulator) const
-    {
-        Scalar fsTemperature = 0.0;
-        Scalar fsSaltConcentration = 0.0;
-
-        // If this process does not contain active perforations, this->well_cells_ is empty.
-        if (this->well_cells_.size() > 0) {
-            // We use the pvt region of first perforated cell, so we look for global index 0
-            // TODO: it should be a member of the WellInterface, initialized properly
-            const int cell_idx = this->well_cells_[0];
-            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-
-            fsTemperature = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
-            fsSaltConcentration = getValue(fs.saltConcentration());
-        }
-
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
-
-        // The following broadcast call is neccessary to ensure that processes that do *not* contain
-        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-        return this->parallel_well_info_.communication().size() == 1 ? info : this->parallel_well_info_.broadcastFirstPerforationValue(info);
     }
 
     template <typename TypeTag>

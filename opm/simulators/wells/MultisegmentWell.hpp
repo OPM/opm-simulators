@@ -88,7 +88,7 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
-        using FSInfo = std::tuple<Scalar, Scalar>;
+        using FSInfo = typename Base::FSInfo;
 
         using BMatrix = typename Base::BMatrix;
         using CMatrix = typename Base::CMatrix;
@@ -383,8 +383,6 @@ namespace Opm {
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger) const override;
-
-        FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 
         // this function can potentially be shared between multisegment wells and standard wells
         // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
