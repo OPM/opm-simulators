@@ -66,6 +66,11 @@ public:
 private:
     struct RatioLimitCheckReport {
         static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
+        //! \brief Ratio value used when the denominator phase rate is
+        //!        non-positive while the numerator is positive, i.e. the ratio
+        //!        is effectively infinite. Always violates the limit; messages
+        //!        must not present it as a physical value.
+        static constexpr Scalar INFINITE_RATIO = 1.0e30;
         bool ratio_limit_violated = false;
         int worst_offending_completion = INVALIDCOMPLETION;
         Scalar violation_extent = 0.0;

@@ -185,7 +185,7 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
         if (gas_rate <= 0.)
             return Scalar{0};
         else if (oil_rate <= 0.)
-            return Scalar{1e30}; // big value to mark it as violated
+            return RatioLimitCheckReport::INFINITE_RATIO;
         else
             return (gas_rate / oil_rate);
     };
@@ -227,7 +227,7 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
         if (water_rate <= 0.)
             return Scalar{0};
         else if (gas_rate <= 0.)
-            return Scalar{1e30}; // big value to mark it as violated
+            return RatioLimitCheckReport::INFINITE_RATIO;
         else
             return (water_rate / gas_rate);
     };
@@ -493,6 +493,12 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
             const std::string ratio_unit = unit_system.name(report.ratio_measure);
             const std::string unit_suffix = ratio_unit.empty() ? std::string{}
                                                                : " " + ratio_unit;
+            if (report.ratio_value >= RatioLimitCheckReport::INFINITE_RATIO) {
+                return fmt::format(
+                    "{} is infinite and exceeds the limit {:.4e}{}",
+                    report.ratio_name,
+                    unit_system.from_si(report.ratio_measure, report.ratio_limit), unit_suffix);
+            }
             return fmt::format(
                 "{} {:.4e}{} exceeds the limit {:.4e}{}",
                 report.ratio_name,
@@ -517,11 +523,13 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                 // +CON : shut the worst-offending connection/completion and all
                 //        connections below it in the wellbore.
                 //
-                // The workover is applied repeatedly at the same time instant:
-                // closing completions changes the well ratio, so it is
-                // re-evaluated from the rates of the remaining completions and
-                // the (new) worst offender is closed until the limit is honored
-                // or the well has no open completions left and is shut.
+                // During the regular timestep update the workover is applied
+                // repeatedly at the same time instant: closing completions
+                // changes the well ratio, so it is re-evaluated from the rates
+                // of the remaining completions and the (new) worst offender is
+                // closed until the limit is honored or the well has no open
+                // completions left and is shut. During a WTEST evaluation only
+                // one round is applied per call (see below).
                 const bool close_connections_below =
                     (workover == WellEconProductionLimits::EconWorkover::CONP);
                 std::unordered_set<int> closed_this_event;
@@ -539,9 +547,21 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                     if (well_shut) {
                         break;
                     }
+                    // During a WTEST re-opening evaluation (identified by
+                    // write_message_to_opmlog == false), the caller loop in
+                    // WellInterface::wellTesting() re-solves the well after
+                    // every closure and calls this function again, so each
+                    // closure decision is made from re-converged rates.
+                    // Repeating the workover here would instead re-evaluate the
+                    // remaining completions from the frozen pre-closure rates
+                    // and could shut a well that re-converged flow would keep
+                    // within the limit.
+                    if (!write_message_to_opmlog) {
+                        break;
+                    }
                     ratio_report = this->checkRatioEconLimits(econ_production_limits, ws,
                                                               closed_this_event, deferred_logger);
-                    if (write_message_to_opmlog && ratio_report.ratio_limit_violated) {
+                    if (ratio_report.ratio_limit_violated) {
                         reason = make_reason(ratio_report);
                     }
                 }
@@ -553,11 +573,17 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                         const std::string ratio_unit = unit_system.name(checked.measure);
                         const std::string unit_suffix = ratio_unit.empty() ? std::string{}
                                                                            : " " + ratio_unit;
+                        const std::string value =
+                            checked.value >= RatioLimitCheckReport::INFINITE_RATIO
+                                ? "infinite"
+                                : fmt::format("{:.4e}{}",
+                                              unit_system.from_si(checked.measure, checked.value),
+                                              unit_suffix);
                         ratios += fmt::format(
-                            "{}{} {:.4e}{} (limit {:.4e}{})",
+                            "{}{} {} (limit {:.4e}{})",
                             ratios.empty() ? "" : ", ",
                             checked.name,
-                            unit_system.from_si(checked.measure, checked.value), unit_suffix,
+                            value,
                             unit_system.from_si(checked.measure, checked.limit), unit_suffix);
                     }
                     deferred_logger.debug(
