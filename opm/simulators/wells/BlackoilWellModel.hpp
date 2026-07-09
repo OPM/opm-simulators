@@ -611,7 +611,7 @@ template<class Scalar> class WellContributions;
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
-                                   const WellState<Scalar, IndexTraits>& well_state_copy,
+                                   WellState<Scalar, IndexTraits>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type) override;
 

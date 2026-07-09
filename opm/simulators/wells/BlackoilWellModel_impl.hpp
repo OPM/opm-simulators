@@ -200,6 +200,7 @@ namespace Opm {
     {
         this->groupStateHelper().setReportStep(timeStepIdx);
         this->report_step_starts_ = true;
+        this->potential_well_state_.reset();
         this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
         this->rateConverter_ = std::make_unique<RateConverterType>
@@ -1890,7 +1891,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
-                                                  const WellState<Scalar, IndexTraits>& well_state_copy,
+                                                  WellState<Scalar, IndexTraits>& well_state_copy,
                                                   std::string& exc_msg,
                                                   ExceptionType::ExcEnum& exc_type)
     {
