@@ -32,8 +32,6 @@ class MixedMatrixWrapper
     //! @param nnz number of nonzero blocks
     MixedMatrixWrapper(int nrows, int nnz)
     {
-        if constexpr(block_size!=3) OPM_THROW(std::invalid_argument, "MixedMatrixWrapper only supports block size == 3! \n");
-
         nnz_=nnz;
         M_ = bsr_alloc();
         bsr_init(M_, nrows, nnz, block_size);
@@ -57,6 +55,7 @@ void MixedMatrixWrapper<Vector>::
 mv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv (y = M.x)
+    int const b = block_size;
     if      constexpr(b==1){printf("MixedMatrixWrapper::mv does not support block size == 1!\n");getchar();}
     else if constexpr(b==2) bsr_vmspmv2(M_, &x[0][0], &y[0][0]);
     else if constexpr(b==3) bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
@@ -98,6 +97,7 @@ void MixedMatrixWrapper<Vector>::
 umv(const Vector& x, Vector& y) const
 {
     // mixed-precision block spmv with update (y += M.x)
+    int const b = block_size;
     if      constexpr(b==1){printf("MixedMatrixWrapper::umv does not support block size == 1!\n");getchar();}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], 1.0);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
@@ -114,6 +114,7 @@ void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
     // scaled mixed-precision block spmv with update (y += alpha *  M.x)
+    int const b = block_size;
     if      constexpr(b==1){printf("MixedMatrixWrapper::usmv does not support block size == 1!\n");getchar();}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
