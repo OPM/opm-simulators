@@ -29,14 +29,12 @@
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
-#include <opm/common/utility/TimeService.hpp>
-
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <fmt/chrono.h>
 #include <fmt/format.h>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/EconomicLimitsMessage.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -45,17 +43,6 @@
 #include <ctime>
 #include <string>
 #include <unordered_set>
-
-namespace {
-
-//! \brief Calendar date (DD-Mon-YYYY) reached at start_time + sim_time seconds.
-std::string dateString(const std::time_t start_time, const double sim_time)
-{
-    const std::time_t cur_time = Opm::TimeService::advance(start_time, sim_time);
-    return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
-}
-
-} // anonymous namespace
 
 namespace Opm {
 
@@ -170,132 +157,27 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
 }
 
 template<typename Scalar, typename IndexTraits>
+template<class RatioFunc>
 void WellTest<Scalar, IndexTraits>::
-checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                 const SingleWellState<Scalar, IndexTraits>& ws,
-                 const std::unordered_set<int>& excluded_completions,
-                 RatioLimitCheckReport& report) const
+checkMaxRatioLimit(const SingleWellState<Scalar, IndexTraits>& ws,
+                   const Scalar max_ratio_limit,
+                   const RatioFunc& ratioFunc,
+                   const std::unordered_set<int>& excluded_completions,
+                   const std::string& ratio_name,
+                   const UnitSystem::measure ratio_measure,
+                   RatioLimitCheckReport& report) const
 {
-    // function to calculate gor based on rates
-    auto gor = [](const std::vector<Scalar>& rates,
-                  const PhaseUsageInfo<IndexTraits>& pu)
-    {
-        const Scalar oil_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
-        const Scalar gas_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
-        if (gas_rate <= 0.)
-            return Scalar{0};
-        else if (oil_rate <= 0.)
-            return RatioLimitCheckReport::INFINITE_RATIO;
-        else
-            return (gas_rate / oil_rate);
-    };
+    assert(max_ratio_limit > 0.);
 
-    const Scalar max_gor_limit = econ_production_limits.maxGasOilRatio();
-    assert(max_gor_limit > 0.);
+    Scalar well_ratio_value = 0.0;
+    const bool limit_violated =
+        this->checkMaxRatioLimitWell(ws, max_ratio_limit, ratioFunc,
+                                     excluded_completions, well_ratio_value);
 
-    Scalar well_gor = 0.0;
-    const bool gor_limit_violated =
-        this->checkMaxRatioLimitWell(ws, max_gor_limit, gor, excluded_completions, well_gor);
-
-    report.checked_ratios.push_back({"gas-oil ratio",
-                                     UnitSystem::measure::gas_oil_ratio,
-                                     well_gor, max_gor_limit});
-
-    if (gor_limit_violated) {
+    if (limit_violated) {
         report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_gor_limit, well_gor, gor,
-                                            excluded_completions,
-                                            "gas-oil ratio",
-                                            UnitSystem::measure::gas_oil_ratio,
-                                            report);
-    }
-}
-
-template<typename Scalar, typename IndexTraits>
-void WellTest<Scalar, IndexTraits>::
-checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                 const SingleWellState<Scalar, IndexTraits>& ws,
-                 const std::unordered_set<int>& excluded_completions,
-                 RatioLimitCheckReport& report) const
-{
-    // function to calculate wgr based on rates
-    auto wgr = [](const std::vector<Scalar>& rates,
-                  const PhaseUsageInfo<IndexTraits>& pu)
-    {
-        const Scalar water_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
-        const Scalar gas_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
-        if (water_rate <= 0.)
-            return Scalar{0};
-        else if (gas_rate <= 0.)
-            return RatioLimitCheckReport::INFINITE_RATIO;
-        else
-            return (water_rate / gas_rate);
-    };
-
-    const Scalar max_wgr_limit = econ_production_limits.maxWaterGasRatio();
-    assert(max_wgr_limit > 0.);
-
-    Scalar well_wgr = 0.0;
-    const bool wgr_limit_violated =
-        this->checkMaxRatioLimitWell(ws, max_wgr_limit, wgr, excluded_completions, well_wgr);
-
-    report.checked_ratios.push_back({"water-gas ratio",
-                                     UnitSystem::measure::water_gas_ratio,
-                                     well_wgr, max_wgr_limit});
-
-    if (wgr_limit_violated) {
-        report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_wgr_limit, well_wgr, wgr,
-                                            excluded_completions,
-                                            "water-gas ratio",
-                                            UnitSystem::measure::water_gas_ratio,
-                                            report);
-    }
-}
-
-template<typename Scalar, typename IndexTraits>
-void WellTest<Scalar, IndexTraits>::
-checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                      const SingleWellState<Scalar, IndexTraits>& ws,
-                      const std::unordered_set<int>& excluded_completions,
-                      RatioLimitCheckReport& report) const
-{
-    // function to calculate water cut based on rates
-    auto waterCut = [](const std::vector<Scalar>& rates,
-                       const PhaseUsageInfo<IndexTraits>& pu)
-    {
-        const Scalar oil_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
-        const Scalar water_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
-        const Scalar liquid_rate = oil_rate + water_rate;
-        if (liquid_rate <= 0.)
-            return Scalar{0};
-        else if (water_rate < 0)
-            return Scalar{0};
-        else if (oil_rate < 0)
-            return Scalar{1};
-        else
-            return (water_rate / liquid_rate);
-
-    };
-
-    const Scalar max_water_cut_limit = econ_production_limits.maxWaterCut();
-    assert(max_water_cut_limit > 0.);
-
-    Scalar well_water_cut = 0.0;
-    const bool watercut_limit_violated =
-        this->checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut,
-                                     excluded_completions, well_water_cut);
-
-    report.checked_ratios.push_back({"water cut",
-                                     UnitSystem::measure::water_cut,
-                                     well_water_cut, max_water_cut_limit});
-
-    if (watercut_limit_violated) {
-        report.ratio_limit_violated = true;
-        this->checkMaxRatioLimitCompletions(ws, max_water_cut_limit, well_water_cut, waterCut,
-                                            excluded_completions,
-                                            "water cut",
-                                            UnitSystem::measure::water_cut,
+        this->checkMaxRatioLimitCompletions(ws, max_ratio_limit, well_ratio_value, ratioFunc,
+                                            excluded_completions, ratio_name, ratio_measure,
                                             report);
     }
 }
@@ -362,15 +244,65 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     RatioLimitCheckReport report;
 
     if (econ_production_limits.onMaxWaterCut()) {
-        this->checkMaxWaterCutLimit(econ_production_limits, ws, excluded_completions, report);
+        // function to calculate water cut based on rates
+        auto waterCut = [](const std::vector<Scalar>& rates,
+                           const PhaseUsageInfo<IndexTraits>& pu)
+        {
+            const Scalar oil_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+            const Scalar water_rate =
+                -rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+            const Scalar liquid_rate = oil_rate + water_rate;
+            if (liquid_rate <= 0.)
+                return Scalar{0};
+            else if (water_rate < 0)
+                return Scalar{0};
+            else if (oil_rate < 0)
+                return Scalar{1};
+            else
+                return (water_rate / liquid_rate);
+        };
+        this->checkMaxRatioLimit(ws, econ_production_limits.maxWaterCut(), waterCut,
+                                 excluded_completions, "water cut",
+                                 UnitSystem::measure::water_cut, report);
     }
 
     if (econ_production_limits.onMaxGasOilRatio()) {
-        this->checkMaxGORLimit(econ_production_limits, ws, excluded_completions, report);
+        // function to calculate gor based on rates
+        auto gor = [](const std::vector<Scalar>& rates,
+                      const PhaseUsageInfo<IndexTraits>& pu)
+        {
+            const Scalar oil_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+            const Scalar gas_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
+            if (gas_rate <= 0.)
+                return Scalar{0};
+            else if (oil_rate <= 0.)
+                return RatioLimitCheckReport::INFINITE_RATIO;
+            else
+                return (gas_rate / oil_rate);
+        };
+        this->checkMaxRatioLimit(ws, econ_production_limits.maxGasOilRatio(), gor,
+                                 excluded_completions, "gas-oil ratio",
+                                 UnitSystem::measure::gas_oil_ratio, report);
     }
 
     if (econ_production_limits.onMaxWaterGasRatio()) {
-        this->checkMaxWGRLimit(econ_production_limits, ws, excluded_completions, report);
+        // function to calculate wgr based on rates
+        auto wgr = [](const std::vector<Scalar>& rates,
+                      const PhaseUsageInfo<IndexTraits>& pu)
+        {
+            const Scalar water_rate =
+                -rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+            const Scalar gas_rate = -rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
+            if (water_rate <= 0.)
+                return Scalar{0};
+            else if (gas_rate <= 0.)
+                return RatioLimitCheckReport::INFINITE_RATIO;
+            else
+                return (water_rate / gas_rate);
+        };
+        this->checkMaxRatioLimit(ws, econ_production_limits.maxWaterGasRatio(), wgr,
+                                 excluded_completions, "water-gas ratio",
+                                 UnitSystem::measure::water_gas_ratio, report);
     }
 
     if (econ_production_limits.onMaxGasLiquidRatio()) {
@@ -402,6 +334,7 @@ void WellTest<Scalar, IndexTraits>::
 updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                             const double simulation_time,
                             const bool write_message_to_opmlog,
+                            const bool during_well_test,
                             WellTestState& well_test_state,
                             const bool zero_group_target,
                             const UnitSystem& unit_system,
@@ -510,7 +443,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                 "at time {:.2f} {} (date = {})",
                 unit_system.from_si(UnitSystem::measure::time, simulation_time),
                 unit_system.name(UnitSystem::measure::time),
-                dateString(start_time, simulation_time));
+                economicLimitDateString(start_time, simulation_time));
 
             reason = make_reason(ratio_report);
         }
@@ -547,16 +480,14 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                     if (well_shut) {
                         break;
                     }
-                    // During a WTEST re-opening evaluation (identified by
-                    // write_message_to_opmlog == false), the caller loop in
-                    // WellInterface::wellTesting() re-solves the well after
-                    // every closure and calls this function again, so each
-                    // closure decision is made from re-converged rates.
-                    // Repeating the workover here would instead re-evaluate the
-                    // remaining completions from the frozen pre-closure rates
+                    // During well testing (WTEST re-open) the caller re-solves the
+                    // well after every closure, so each closure decision is made
+                    // from re-converged rates: stop after this one closure and let
+                    // the caller re-solve. Iterating here instead would re-evaluate
+                    // the remaining completions from the frozen pre-closure rates
                     // and could shut a well that re-converged flow would keep
                     // within the limit.
-                    if (!write_message_to_opmlog) {
+                    if (during_well_test) {
                         break;
                     }
                     ratio_report = this->checkRatioEconLimits(econ_production_limits, ws,
@@ -565,40 +496,15 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                         reason = make_reason(ratio_report);
                     }
                 }
-                if (write_message_to_opmlog && !well_shut) {
-                    // Debug output: the well-level ratios of the remaining
-                    // completions after the workover event has finished.
-                    std::string ratios;
-                    for (const auto& checked : ratio_report.checked_ratios) {
-                        const std::string ratio_unit = unit_system.name(checked.measure);
-                        const std::string unit_suffix = ratio_unit.empty() ? std::string{}
-                                                                           : " " + ratio_unit;
-                        const std::string value =
-                            checked.value >= RatioLimitCheckReport::INFINITE_RATIO
-                                ? "infinite"
-                                : fmt::format("{:.4e}{}",
-                                              unit_system.from_si(checked.measure, checked.value),
-                                              unit_suffix);
-                        ratios += fmt::format(
-                            "{}{} {} (limit {:.4e}{})",
-                            ratios.empty() ? "" : ", ",
-                            checked.name,
-                            value,
-                            unit_system.from_si(checked.measure, checked.limit), unit_suffix);
-                    }
-                    deferred_logger.debug(
-                        fmt::format("Well {}: CON/+CON workover closed {} completion(s) {}; "
-                                    "the well ratios of the remaining completions: {}",
-                                    well_.name(), closed_this_event.size(), when, ratios));
-                }
                 break;
             }
         case WellEconProductionLimits::EconWorkover::WELL:
             {
             well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
             if (write_message_to_opmlog) {
-                const std::string action = well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
-                const std::string sep = this->message_separator();
+                const std::string action =
+                    well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
+                const std::string& sep = economicLimitMessageSeparator();
                 deferred_logger.info(
                     fmt::format("{}\nWell {} will be {} {},\nBecause {}.\n{}",
                                 sep, well_.name(), action, when, reason, sep));
@@ -674,8 +580,9 @@ closeOffendingCompletion(const int offending_completion,
                           this->completionDescriptor(offending_completion), well_.name())
             : fmt::format("{} in Well {}",
                           this->completionDescriptor(offending_completion), well_.name());
-        const std::string sep = this->message_separator();
-        // WECON-driven: report "the well" ratio (CECON would say "its ...", will be addressed by CECON development).
+        const std::string& sep = economicLimitMessageSeparator();
+        // WECON-driven: report "the well" ratio (CECON would say "its ..."; that
+        // distinction will be addressed by the CECON development).
         deferred_logger.info(
             fmt::format("{}\n{} will be closed {},\nBecause the well {}.\n{}",
                         sep, subject, when, reason, sep));
@@ -693,7 +600,7 @@ closeOffendingCompletion(const int offending_completion,
         well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         // if all the completion/connections are closed, the well can only be SHUT
         if (write_message_to_opmlog) {
-            const std::string sep = this->message_separator();
+            const std::string& sep = economicLimitMessageSeparator();
             deferred_logger.info(
                 fmt::format("{}\nWell {} will be shut {},\n"
                             "Because all its completions are closed.\n{}",

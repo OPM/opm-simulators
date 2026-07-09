@@ -491,6 +491,7 @@ namespace Opm
             this->updateWellTestState(well_state_copy.well(this->indexOfWell()),
                                      simulation_time,
                                       /*writeMessageToOPMLog=*/ false,
+                                      /*during_well_test=*/ true,
                                       under_zero_target,
                                       welltest_state_temp,
                                       simulator.vanguard().eclState().getUnits(),

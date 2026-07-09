@@ -179,9 +179,14 @@ public:
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
+    //! \param during_well_test  true when called from WTEST re-open testing,
+    //!        which re-solves the well after every completion closure; false for
+    //!        the regular timestep update. See
+    //!        WellTest::updateWellTestStateEconomic().
     void updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
+                             const bool during_well_test,
                              const bool zero_group_target,
                              WellTestState& wellTestState,
                              const UnitSystem& unit_system,

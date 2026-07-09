@@ -49,9 +49,16 @@ public:
     //! \brief Constructor sets reference to well.
     explicit WellTest(const WellInterfaceGeneric<Scalar, IndexTraits>& well) : well_(well) {}
 
+    //! \param during_well_test  true when called from the WTEST re-open loop in
+    //!        WellInterface::wellTesting(), which re-solves the well after every
+    //!        completion closure; a CON/+CON workover then applies only one
+    //!        closure per call and defers further closures to the caller's
+    //!        re-converged rates. false for the regular timestep update, which is
+    //!        not re-solved between closures and applies the whole workover here.
     void updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
+                                     const bool during_well_test,
                                      WellTestState& well_test_state,
                                      bool zero_group_target,
                                      const UnitSystem& unit_system,
@@ -80,32 +87,20 @@ private:
         UnitSystem::measure ratio_measure = UnitSystem::measure::identity;
         Scalar ratio_value = 0.0;
         Scalar ratio_limit = 0.0;
-        //! \brief A well-level ratio evaluated during the check, recorded for
-        //!        every active ratio limit whether violated or not; used for
-        //!        debug output after a CON / +CON workover event.
-        struct CheckedRatio {
-            std::string name{};
-            UnitSystem::measure measure = UnitSystem::measure::identity;
-            Scalar value = 0.0;
-            Scalar limit = 0.0;
-        };
-        std::vector<CheckedRatio> checked_ratios{};
     };
 
-    void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState<Scalar, IndexTraits>& ws,
-                          const std::unordered_set<int>& excluded_completions,
-                          RatioLimitCheckReport& report) const;
-
-    void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState<Scalar, IndexTraits>& ws,
-                          const std::unordered_set<int>& excluded_completions,
-                          RatioLimitCheckReport& report) const;
-
-    void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const SingleWellState<Scalar, IndexTraits>& ws,
-                               const std::unordered_set<int>& excluded_completions,
-                               RatioLimitCheckReport& report) const;
+    //! \brief Check one active max-ratio limit (water cut, GOR or WGR): if the
+    //!        well-level ratio computed by \p ratioFunc exceeds \p max_ratio_limit,
+    //!        mark the report violated and record the worst-offending completion
+    //!        together with the ratio metadata (\p ratio_name, \p ratio_measure).
+    template<class RatioFunc>
+    void checkMaxRatioLimit(const SingleWellState<Scalar, IndexTraits>& ws,
+                            const Scalar max_ratio_limit,
+                            const RatioFunc& ratioFunc,
+                            const std::unordered_set<int>& excluded_completions,
+                            const std::string& ratio_name,
+                            const UnitSystem::measure ratio_measure,
+                            RatioLimitCheckReport& report) const;
 
     //! \brief Check whether the well-level ratio exceeds \p max_ratio_limit;
     //!        \p well_ratio_value returns the computed ratio (reported by WECON).
@@ -170,12 +165,6 @@ private:
                                   const std::string& reason,
                                   std::unordered_set<int>& closed_this_event,
                                   DeferredLogger& deferred_logger) const;
-
-    //! \brief A line of \p sep_length repetitions of \p sep_char used to frame
-    //!        economic-limit workover messages (mirrors GroupEconomicLimitsChecker).
-    std::string message_separator(const char sep_char = '*',
-                                  const std::size_t sep_length = 110) const
-    { return std::string(sep_length, sep_char); }
 
     const WellInterfaceGeneric<Scalar, IndexTraits>& well_; //!< Reference to well interface
 };
