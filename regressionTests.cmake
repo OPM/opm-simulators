@@ -1039,6 +1039,25 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    wecon_pluscon_complump
+  FILENAME
+    WECON_PLUSCON_COMPLUMP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wecon_wtest
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
     gconinje_resv_gas_01
   FILENAME
     GCONINJE_RESV_GAS-01
