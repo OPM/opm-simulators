@@ -54,6 +54,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -347,14 +348,17 @@ updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                     const std::time_t start_time,
                     DeferredLogger& deferred_logger) const
 {
+    const WellTest<Scalar, IndexTraits> well_test(*this);
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
-        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog,
-                                                    during_well_test, wellTestState,
-                                                    zero_group_target, unit_system, start_time, deferred_logger);
+        well_test.updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog,
+                                              during_well_test, wellTestState,
+                                              zero_group_target, unit_system, start_time, deferred_logger);
+        well_test.updateWellTestStateCECON(ws, simulationTime, writeMessageToOPMLog, wellTestState,
+                                           unit_system, start_time, deferred_logger);
     } else {
         // updating well test state based on physical (THP/BHP) limits.
-        WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+        well_test.updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
     }
 
     // TODO: well can be shut/closed due to other reasons

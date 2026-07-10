@@ -38,6 +38,7 @@ namespace Opm
 
 class DeferredLogger;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
+class UnitSystem;
 class WellEconProductionLimits;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 class WellTestState;
@@ -65,6 +66,14 @@ public:
                                      const UnitSystem& unit_system,
                                      const std::time_t start_time,
                                      DeferredLogger& deferred_logger) const;
+
+    void updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
+                                  const double simulation_time,
+                                  const bool write_message_to_opmlog,
+                                  WellTestState& well_test_state,
+                                  const UnitSystem& unit_system,
+                                  const std::time_t start_time,
+                                  DeferredLogger& deferred_logger) const;
 
     void updateWellTestStatePhysical(const double simulation_time,
                                      const bool write_message_to_opmlog,
@@ -161,6 +170,11 @@ private:
     //!        are the pre-formatted clauses of the logged closure message.
     //!        Returns true if this left the well with no open completions, i.e.
     //!        the well has been shut.
+    //!
+    //! \param ratio_subject  Owner of the violated ratio in the closing message,
+    //!                inserted as "Because \p ratio_subject \p reason". WECON
+    //!                reports a well-level ratio ("the well"); CECON reports the
+    //!                completion's own ratio ("its").
     bool closeOffendingCompletion(int offending_completion,
                                   bool close_connections_below,
                                   double simulation_time,
@@ -168,6 +182,7 @@ private:
                                   WellTestState& well_test_state,
                                   const std::string& when,
                                   const std::string& reason,
+                                  const std::string& ratio_subject,
                                   std::unordered_set<int>& closed_this_event,
                                   DeferredLogger& deferred_logger) const;
 

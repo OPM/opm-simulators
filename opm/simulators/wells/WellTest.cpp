@@ -39,6 +39,7 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <ctime>
@@ -490,6 +491,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                                        write_message_to_opmlog,
                                                        well_test_state,
                                                        when, reason,
+                                                       "the well", // WECON reports a well-level ratio
                                                        closed_this_event,
                                                        deferred_logger);
                     if (well_shut) {
@@ -548,6 +550,195 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
 }
 
 template<typename Scalar, typename IndexTraits>
+void WellTest<Scalar, IndexTraits>::
+updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
+                         const double simulation_time,
+                         const bool write_message_to_opmlog,
+                         WellTestState& well_test_state,
+                         const UnitSystem& unit_system,
+                         const std::time_t start_time,
+                         DeferredLogger& deferred_logger) const
+{
+    if (well_.isInjector())
+        return;
+
+    // The well may already have been closed by the WECON checks in
+    // updateWellTestStateEconomic().
+    if (well_test_state.well_is_closed(well_.name()))
+        return;
+
+    const auto& completions = well_.getCompletions(); // complnum -> [rank-local perf indices]
+    const int np = well_.numPhases();
+    const auto& perf_phase_rates = ws.perf_data.phase_rates;
+    const auto& pu = well_.phaseUsage();
+    const auto& comm = well_.parallelWellInfo().communication();
+
+    std::vector<Scalar> conn_rates(np);
+    for (const auto& connection : well_.wellEcl().getConnections()) {
+        if (!connection.hasEconLimits())
+            continue;
+
+        // The skip conditions below are based on deck data and the well test
+        // state, which are identical on all ranks sharing a distributed well,
+        // so every rank participates in the rate summation for the same
+        // sequence of completions.
+        if (connection.state() != Connection::State::OPEN)
+            continue;
+
+        const int complnum = connection.complnum();
+        if (well_test_state.completion_is_closed(well_.name(), complnum))
+            continue;
+
+        // Note: minimum oil/gas rate limits (CECON items 11 and 12) are not
+        // supported; their use is flagged at deck validation time.
+        const auto& limits = connection.econLimits();
+
+        // CECON item 10 (CHECK_STOPPED): only the NO option is currently
+        // supported (enforced at deck validation), meaning stopped wells are
+        // not checked. The flag is honoured per connection so that supporting
+        // the YES option later requires no change here.
+        if (well_.wellIsStopped() && !limits.check_stopped_wells)
+            continue;
+
+        // Sum rates over all perforations belonging to this completion. For a
+        // distributed well each rank contributes its local perforations and the
+        // result is summed over the well communicator, so that all ranks reach
+        // the same closing decisions below.
+        std::fill(conn_rates.begin(), conn_rates.end(), Scalar{0});
+        if (const auto it = completions.find(complnum); it != completions.end()) {
+            for (const int perf : it->second) {
+                for (int p = 0; p < np; ++p) {
+                    conn_rates[p] += perf_phase_rates[perf * np + p];
+                }
+            }
+        }
+        if (comm.size() > 1) {
+            comm.sum(conn_rates.data(), np);
+        }
+
+        // Production rates are stored as negative values; negate for the checks below.
+        const Scalar oil_rate = pu.phaseIsActive(IndexTraits::oilPhaseIdx)
+            ? -conn_rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)]
+            : Scalar{0};
+        const Scalar gas_rate = pu.phaseIsActive(IndexTraits::gasPhaseIdx)
+            ? -conn_rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)]
+            : Scalar{0};
+        const Scalar water_rate = pu.phaseIsActive(IndexTraits::waterPhaseIdx)
+            ? -conn_rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)]
+            : Scalar{0};
+
+        // Record which ratio limit was violated together with its actual value
+        // and limit, so the closing message can report the offending quantity.
+        bool violated = false;
+        const char* ratio_name = nullptr;
+        UnitSystem::measure ratio_measure = UnitSystem::measure::identity;
+        Scalar ratio_value = Scalar{0};
+        Scalar ratio_limit = Scalar{0};
+
+        if (!violated && limits.onMaxWaterCut()) {
+            const Scalar liquid = oil_rate + water_rate;
+            if (liquid > Scalar{0}) {
+                const Scalar wcut = (oil_rate >= Scalar{0})
+                    ? water_rate / liquid
+                    : Scalar{1};
+                if (wcut > limits.max_water_cut) {
+                    violated = true;
+                    ratio_name = "water cut";
+                    ratio_measure = UnitSystem::measure::water_cut;
+                    ratio_value = wcut;
+                    ratio_limit = limits.max_water_cut;
+                }
+            }
+        }
+
+        if (!violated && limits.onMaxGasOilRatio()) {
+            if (gas_rate > Scalar{0}) {
+                const bool no_oil = (oil_rate <= Scalar{0});
+                if (no_oil || (gas_rate / oil_rate > limits.max_gas_oil_ratio)) {
+                    violated = true;
+                    ratio_name = "gas-oil ratio";
+                    ratio_measure = UnitSystem::measure::gas_oil_ratio;
+                    ratio_value = no_oil ? std::numeric_limits<Scalar>::infinity()
+                                         : gas_rate / oil_rate;
+                    ratio_limit = limits.max_gas_oil_ratio;
+                }
+            }
+        }
+
+        if (!violated && limits.onMaxWaterGasRatio()) {
+            if (water_rate > Scalar{0}) {
+                const bool no_gas = (gas_rate <= Scalar{0});
+                if (no_gas || (water_rate / gas_rate > limits.max_water_gas_ratio)) {
+                    violated = true;
+                    ratio_name = "water-gas ratio";
+                    ratio_measure = UnitSystem::measure::water_gas_ratio;
+                    ratio_value = no_gas ? std::numeric_limits<Scalar>::infinity()
+                                         : water_rate / gas_rate;
+                    ratio_limit = limits.max_water_gas_ratio;
+                }
+            }
+        }
+
+        if (!violated)
+            continue;
+
+        // Build the "at time ... (date = ...)" and ratio-violation clauses that
+        // are shared by all CECON workover messages below.
+        const std::string when = fmt::format(
+            "at time {:.2f} {} (date = {})",
+            unit_system.from_si(UnitSystem::measure::time, simulation_time),
+            unit_system.name(UnitSystem::measure::time),
+            economicLimitDateString(start_time, simulation_time));
+
+        const std::string ratio_unit = unit_system.name(ratio_measure);
+        const std::string unit_suffix = ratio_unit.empty() ? std::string{}
+                                                           : " " + ratio_unit;
+        const std::string reason = fmt::format(
+            "{} {:.4e}{} exceeds the limit {:.4e}{}",
+            ratio_name,
+            unit_system.from_si(ratio_measure, ratio_value), unit_suffix,
+            unit_system.from_si(ratio_measure, ratio_limit), unit_suffix);
+
+        switch (limits.workover) {
+        case ConnectionEconLimits::EconWorkover::CON:
+        case ConnectionEconLimits::EconWorkover::CONP:
+            {
+                const bool close_below =
+                    (limits.workover == ConnectionEconLimits::EconWorkover::CONP);
+                // Unlike the WECON CON/+CON workover, the CECON workover is not
+                // repeated: the violation is a property of this single
+                // connection/completion, so it is applied once.
+                std::unordered_set<int> closed_this_event;
+                this->closeOffendingCompletion(complnum, close_below,
+                                               simulation_time, write_message_to_opmlog,
+                                               well_test_state, when, reason,
+                                               "its", // CECON reports the completion's own ratio
+                                               closed_this_event, deferred_logger);
+                if (well_test_state.well_is_closed(well_.name()))
+                    return;
+                break;
+            }
+        case ConnectionEconLimits::EconWorkover::WELL:
+            well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC,
+                                       simulation_time);
+            if (write_message_to_opmlog) {
+                const std::string action = well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
+                const std::string& sep = economicLimitMessageSeparator();
+                deferred_logger.info(
+                    fmt::format("{}\nWell {} will be {} {},\nBecause {} {}.\n{}",
+                                sep, well_.name(), action, when,
+                                this->completionDescriptor(complnum), reason, sep));
+            }
+            return;
+        case ConnectionEconLimits::EconWorkover::PLUG:
+            deferred_logger.warning("NOT_SUPPORTING_CECON_PLUG",
+                                    "CECON PLUG workover is not supported yet");
+            break;
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
 bool WellTest<Scalar, IndexTraits>::
 closeOffendingCompletion(const int offending_completion,
                          const bool close_connections_below,
@@ -556,6 +747,7 @@ closeOffendingCompletion(const int offending_completion,
                          WellTestState& well_test_state,
                          const std::string& when,
                          const std::string& reason,
+                         const std::string& ratio_subject,
                          std::unordered_set<int>& closed_this_event,
                          DeferredLogger& deferred_logger) const
 {
@@ -609,11 +801,11 @@ closeOffendingCompletion(const int offending_completion,
             : fmt::format("{} in Well {}",
                           this->completionDescriptor(offending_completion), well_.name());
         const std::string& sep = economicLimitMessageSeparator();
-        // WECON-driven: report "the well" ratio (CECON would say "its ..."; that
-        // distinction will be addressed by the CECON development).
+        // \p ratio_subject identifies the owner of the violated ratio: WECON
+        // reports a well-level ratio ("the well"), CECON the completion's ("its").
         deferred_logger.info(
-            fmt::format("{}\n{} will be closed {},\nBecause the well {}.\n{}",
-                        sep, subject, when, reason, sep));
+            fmt::format("{}\n{} will be closed {},\nBecause {} {}.\n{}",
+                        sep, subject, when, ratio_subject, reason, sep));
     }
 
     bool allCompletionsClosed = true;
