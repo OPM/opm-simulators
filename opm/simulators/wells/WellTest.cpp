@@ -40,6 +40,7 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <cassert>
+#include <cstddef>
 #include <ctime>
 #include <string>
 #include <unordered_set>
@@ -310,18 +311,31 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (report.ratio_limit_violated) {
+        // The "is kept open" warnings only make sense on the first evaluation
+        // (empty excluded_completions). During a CON / +CON workover event some
+        // completions have already been closed, so only the cascade is stopped;
+        // the resets below must still run unconditionally to terminate it.
+        //
         // No worst offending completion is found because all the completions are either injecting or
         // have trivial rates.
         if(report.worst_offending_completion == RatioLimitCheckReport::INVALIDCOMPLETION) {
-            std::string message = "The well ratio limit is violated but all the completion rates are trivial! " + well_.name() + " is kept open";
-            deferred_logger.warning("WECON_INVALIDCOMPLETION", message);
+            if (excluded_completions.empty()) {
+                const std::string message =
+                    "The well ratio limit is violated but all the completion rates "
+                    "are trivial! " + well_.name() + " is kept open";
+                deferred_logger.warning("WECON_INVALIDCOMPLETION", message);
+            }
             report.ratio_limit_violated = false;
         }
         // Due to numerical instability there may exist corner cases where the well breaks
         // the ratio limit but no completion does.
         else if(report.violation_extent <= 1.) {
-            std::string message = "The well ratio limit is violated but no completion ratio limit is violated! " + well_.name() + " is kept open";
-            deferred_logger.warning("WECON_INCONSISTANT_COMPLETION_WELL", message);
+            if (excluded_completions.empty()) {
+                const std::string message =
+                    "The well ratio limit is violated but no completion ratio "
+                    "limit is violated! " + well_.name() + " is kept open";
+                deferred_logger.warning("WECON_INCONSISTANT_COMPLETION_WELL", message);
+            }
             report.ratio_limit_violated = false;
         }
     }
@@ -468,6 +482,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                 std::unordered_set<int> closed_this_event;
                 bool well_shut = false;
                 while (ratio_report.ratio_limit_violated) {
+                    const std::size_t num_closed_before = closed_this_event.size();
                     well_shut =
                         this->closeOffendingCompletion(ratio_report.worst_offending_completion,
                                                        close_connections_below,
@@ -478,6 +493,16 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                                        closed_this_event,
                                                        deferred_logger);
                     if (well_shut) {
+                        break;
+                    }
+                    if (closed_this_event.size() == num_closed_before) {
+                        // No progress: the offending completion could not be
+                        // closed (e.g. an unexpected sentinel value). Stop the
+                        // workover event instead of looping forever on the
+                        // unchanged ratio report.
+                        deferred_logger.warning("WECON_WORKOVER_NO_PROGRESS",
+                            fmt::format("Well {}: CON/+CON workover made no progress; "
+                                        "stopping the workover event.", well_.name()));
                         break;
                     }
                     // During well testing (WTEST re-open) the caller re-solves the
@@ -534,8 +559,11 @@ closeOffendingCompletion(const int offending_completion,
                          std::unordered_set<int>& closed_this_event,
                          DeferredLogger& deferred_logger) const
 {
-    // complnum is always >= 1; a non-positive value would be a bug.
-    assert(offending_completion > 0);
+    // complnum is always >= 1, and the INVALIDCOMPLETION sentinel (INT_MAX,
+    // which would pass a plain > 0 check) is filtered by the caller; either
+    // reaching here would be a bug.
+    assert(offending_completion > 0 &&
+           offending_completion != RatioLimitCheckReport::INVALIDCOMPLETION);
 
     // Sentinel for "no offending completion"; normally filtered by the caller.
     if (offending_completion == RatioLimitCheckReport::INVALIDCOMPLETION) {
