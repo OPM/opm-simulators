@@ -109,6 +109,16 @@ private:
     //! from the well state. During a CON / +CON workover event the completions
     //! closed so far still carry their converged rates, so the well rates are
     //! instead re-accumulated from the remaining completions.
+    //!
+    //! Note that the two bases are not identical: ws.surface_rates is the
+    //! converged well-level rate, while the re-accumulated rates are sums of
+    //! the perforation rates of the remaining completions, and the two can
+    //! differ slightly (e.g. under cross-flow). Consequently, the ratio used to
+    //! trigger the workover event and the ratios steering the subsequent
+    //! cascade are on slightly different bases. This is considered acceptable
+    //! because the cascade rates are frozen (not re-converged) approximations
+    //! anyway; using the well-state rate for the trigger keeps the behavior of
+    //! a plain (non-cascading) WECON check unchanged.
     template<class RatioFunc>
     bool checkMaxRatioLimitWell(const SingleWellState<Scalar, IndexTraits>& ws,
                                 const Scalar max_ratio_limit,
