@@ -32,6 +32,7 @@
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
+#include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -103,7 +104,197 @@ namespace Opm
         this->changed_to_open_this_step_ = changed_to_open_this_step;
     }
 
+    template<typename TypeTag>
+    std::optional<std::pair<Well::ProducerCMode, typename WellInterface<TypeTag>::Scalar>>
+    WellInterface<TypeTag>::
+    estimateStrictestProductionLimitForBalancer(const WellStateType& well_state,
+                                                const SummaryState& summary_state,
+                                                DeferredLogger& deferred_logger) const
+    {
+        if (!this->isProducer()) {
+            return std::nullopt;
+        }
 
+        const auto& ws = well_state.well(this->index_of_well_);
+        const auto controls = this->wellEcl().productionControls(summary_state);
+
+        std::optional<Scalar> bhp_at_thp_limit;
+
+        // Can't trust ipr in the zero-rate case (the well is likely under zero-rate constraint), 
+        // so ignore pressure-constraints in this case.
+        const auto tot_rates = std::accumulate(ws.surface_rates.begin(), ws.surface_rates.end(), Scalar(0));
+        if (std::abs(tot_rates) > Scalar(0)) {
+            if (controls.hasControl(Well::ProducerCMode::BHP)) {
+                bhp_at_thp_limit = controls.bhp_limit;
+            }
+
+            WellBhpThpCalculator<Scalar, IndexTraits> calc(*this);
+            if (calc.wellHasTHPConstraints(summary_state)) {
+                const auto stable_bhp = calc.estimateStableBhp(well_state,
+                                                            this->wellEcl(),
+                                                            ws.surface_rates,
+                                                            this->getRefDensity(),
+                                                            summary_state);
+                if (!stable_bhp.has_value()) {
+                    return std::nullopt;
+                }
+                if (!bhp_at_thp_limit.has_value() || *stable_bhp > *bhp_at_thp_limit) {
+                    bhp_at_thp_limit = stable_bhp;
+                }
+            }
+        }
+
+        const auto [strictest_mode, strictest_scale] =
+            this->estimateStrictestProductionConstraint(ws,
+                                                        controls,
+                                                        /*check_group_constraints=*/false,
+                                                        deferred_logger,
+                                                        bhp_at_thp_limit);
+
+        if (strictest_mode == Well::ProducerCMode::CMODE_UNDEFINED ||
+            !std::isfinite(strictest_scale) ||
+            strictest_scale <= Scalar(0)) {
+            return std::nullopt;
+        }
+
+        Scalar strictest_limit = Scalar(0);
+        switch (strictest_mode) {
+            case Well::ProducerCMode::ORAT:
+                strictest_limit = controls.oil_rate;
+                break;
+            case Well::ProducerCMode::WRAT:
+                strictest_limit = controls.water_rate;
+                break;
+            case Well::ProducerCMode::GRAT:
+                strictest_limit = controls.gas_rate;
+                break;
+            case Well::ProducerCMode::LRAT:
+                strictest_limit = controls.liquid_rate;
+                break;
+            case Well::ProducerCMode::RESV:
+                strictest_limit = controls.resv_rate;
+                break;
+            case Well::ProducerCMode::BHP:
+            case Well::ProducerCMode::THP:
+            {
+                const auto current_mode_rate = std::accumulate(ws.surface_rates.begin(),
+                                                    ws.surface_rates.end(),
+                                                    Scalar(0),
+                                                    [](Scalar sum, Scalar r) { return sum + (-r); });
+                strictest_limit = strictest_scale * current_mode_rate;
+                break;
+            }
+            default:
+                return std::nullopt;
+        }
+
+        // const Scalar strictest_limit = strictest_scale * current_mode_rate;
+        return std::make_pair(strictest_mode, strictest_limit);
+    }
+
+    template<typename TypeTag>
+    std::optional<std::pair<Well::ProducerCMode, typename WellInterface<TypeTag>::Scalar>>
+    WellInterface<TypeTag>::
+    estimateStrictestProductionLimitFromPotentials(const WellStateType& well_state,
+                                                   const SummaryState& summary_state,
+                                                   DeferredLogger& deferred_logger) const
+    {
+        if (!this->isProducer()) {
+            return std::nullopt;
+        }
+
+        const auto& ws = well_state.well(this->index_of_well_);
+
+        // well_potentials holds the maximum surface production rates at the
+        // effective pressure constraint (BHP or THP operating point).
+        const auto& potentials = ws.well_potentials;
+        const Scalar total_potential = std::accumulate(
+            potentials.begin(), potentials.end(), Scalar(0));
+
+        if (total_potential <= Scalar(0)) {
+            // Well has no production capacity at current conditions.
+            return std::nullopt;
+        }
+
+        const auto controls = this->wellEcl().productionControls(summary_state);
+
+        // Convert surface_rates (negative = production) to positive values for constraint check.
+        const int np = static_cast<int>(ws.surface_rates.size());
+        std::vector<Scalar> pos_surface_rates(np, Scalar(0));
+        for (int p = 0; p < np; ++p) {
+            pos_surface_rates[p] = std::max(-ws.surface_rates[p], Scalar(0));
+        }
+
+        // Reservoir equivalents of current surface rates, needed if RESV constraint is active.
+        std::vector<Scalar> reservoir_surface_rates(np, Scalar(0));
+        if (controls.hasControl(Well::ProducerCMode::RESV)) {
+            this->rateConverter_.calcReservoirVoidageRates(
+                0, this->pvtRegionIdx(), pos_surface_rates, reservoir_surface_rates);
+        }
+
+        // Identify the tightest rate constraint mode from the current operating rates.
+        const auto [rate_mode, rate_scale] =
+            this->estimateStrictestProductionRateConstraintFromRates(
+                pos_surface_rates, reservoir_surface_rates, controls, deferred_logger);
+
+        if (rate_mode != Well::ProducerCMode::CMODE_UNDEFINED) {
+            // Compute the well potential and the rate target for the identified binding mode.
+            // BHP/THP is the stricter constraint when potential < rate_scale * surface_rate
+            // (= target from controls)
+            std::vector<Scalar> reservoir_potentials(np, Scalar(0));
+            if (rate_mode == Well::ProducerCMode::RESV) {
+                this->rateConverter_.calcReservoirVoidageRates(
+                    0, this->pvtRegionIdx(), potentials, reservoir_potentials);
+            }
+            const auto& pu = this->phaseUsage();
+            Scalar mode_potential = Scalar(0);
+            Scalar mode_target = Scalar(0);
+            switch (rate_mode) {
+            case Well::ProducerCMode::ORAT:
+                if (pu.phaseIsActive(IndexTraits::oilPhaseIdx))
+                    mode_potential = potentials[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+                mode_target = controls.oil_rate;
+                break;
+            case Well::ProducerCMode::WRAT:
+                if (pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+                    mode_potential = potentials[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+                mode_target = controls.water_rate;
+                break;
+            case Well::ProducerCMode::GRAT:
+                if (pu.phaseIsActive(IndexTraits::gasPhaseIdx))
+                    mode_potential = potentials[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
+                mode_target = controls.gas_rate;
+                break;
+            case Well::ProducerCMode::LRAT:
+                if (pu.phaseIsActive(IndexTraits::oilPhaseIdx))
+                    mode_potential += potentials[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+                if (pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+                    mode_potential += potentials[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+                mode_target = controls.liquid_rate;
+                break;
+            case Well::ProducerCMode::RESV:
+                mode_potential = std::accumulate(reservoir_potentials.begin(), reservoir_potentials.end(), Scalar(0));
+                mode_target = controls.resv_rate;
+                break;
+            default:
+                break;
+            }
+            // Rate constraint is binding if potential >= target.
+            if (mode_potential >= mode_target && mode_target > Scalar(0)) {
+                return std::make_pair(rate_mode, mode_target);
+            }
+        }
+
+        // BHP/THP is the effective limit: either no rate controls exist, or the potential
+        // for the tightest rate mode falls below its target (potential < scale * rate).
+        // Annoying thing: we don't know whether the potential effective limit is BHP or THP,
+        // so we need to make an educated guess:
+        if (ws.production_cmode == Well::ProducerCMode::BHP || !this->wellHasTHPConstraints(summary_state)) {
+            return std::make_pair(Well::ProducerCMode::BHP, total_potential);
+        } else {
+            return std::make_pair(Well::ProducerCMode::THP, total_potential);
+        }
+    }
 
 
     template<typename TypeTag>

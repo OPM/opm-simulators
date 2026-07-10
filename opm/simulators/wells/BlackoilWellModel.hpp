@@ -725,6 +725,28 @@ template<class Scalar> class WellContributions;
             /// @brief Refresh the network's cached `active_` flag.
             void updateNetworkActiveState_();
 
+            /// @brief Gather per-well balancer limits across all MPI ranks.
+            /// Each rank contributes limits for its locally-owned wells via a flat
+            /// buffer; comm.sum() gathers all contributions.  The returned map is
+            /// identical on every rank and maps well name → {ProducerCMode int, limit}.
+            std::unordered_map<std::string, std::pair<int, Scalar>>
+            gatherWellLimits_(const std::unordered_map<std::string, std::pair<int, Scalar>>& localLimits,
+                              const std::vector<std::string>& allWellNames) const;
+
+            /// @brief Prepare wells for the group-tree balancer using the current
+            ///   Newton iterate: reads production_cmode for individually-controlled
+            ///   wells and runs updateIPRImplicit for GRUP-controlled wells.
+            /// Returns the globally gathered limits map (same on every MPI rank).
+            std::unordered_map<std::string, std::pair<int, Scalar>>
+            prepareWellsForBalancing_(DeferredLogger& deferred_logger);
+
+            /// @brief Prepare wells for the group-tree balancer using well potentials
+            ///   as the pressure-based production capacity proxy.  Does not require a
+            ///   converged Newton iterate.
+            /// Returns the globally gathered limits map (same on every MPI rank).
+            std::unordered_map<std::string, std::pair<int, Scalar>>
+            prepareWellsForBalancingFromPotentials_(DeferredLogger& deferred_logger);
+
             BlackoilWellModelGasLift<TypeTag> gaslift_;
             BlackoilWellModelNetwork<TypeTag> network_;
 #ifdef RESERVOIR_COUPLING_ENABLED

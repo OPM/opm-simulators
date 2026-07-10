@@ -40,6 +40,7 @@ struct BlackoilWellModelGenericParameters
     Scalar nupcol_group_rate_tolerance_;
     int max_number_of_group_switches_;
     bool use_multisegment_well_;
+    bool enable_group_tree_balancer_;
 };
 
 } // namespace Opm

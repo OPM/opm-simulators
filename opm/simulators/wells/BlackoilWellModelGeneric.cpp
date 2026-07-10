@@ -1390,6 +1390,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                             efficiencyFactor,
                             resv_coeff,
                             cmode_orig);
+                        // Set flag directly to true if group_target->target_value <= 0 to avoid "zero_rate_target" issues
+                        if (group_target_fallback->target_value > 0.0 && group_target->target_value <= 0.0) { 
+                            ws.use_group_target_fallback = true;
+                        }
                     }
                 }
             } else {
@@ -1597,7 +1601,8 @@ updateWellPotentials(const int reportStepIdx,
                            (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
         const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
         const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
-        const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
+        const bool needPotentialsForBalancer = !onlyAfterEvent && param_.enable_group_tree_balancer_;
+        const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates || needPotentialsForBalancer;
         if (compute_potential)
         {
             this->computePotentials(widx, well_state_copy, exc_msg, exc_type);
