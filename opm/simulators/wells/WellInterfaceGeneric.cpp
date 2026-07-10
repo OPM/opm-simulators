@@ -340,14 +340,18 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::
 updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                     const double& simulationTime,
                     const bool& writeMessageToOPMLog,
+                    const bool during_well_test,
                     const bool zero_group_target,
                     WellTestState& wellTestState,
+                    const UnitSystem& unit_system,
+                    const std::time_t start_time,
                     DeferredLogger& deferred_logger) const
 {
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
-        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState,
-                                                    zero_group_target, deferred_logger);
+        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog,
+                                                    during_well_test, wellTestState,
+                                                    zero_group_target, unit_system, start_time, deferred_logger);
     } else {
         // updating well test state based on physical (THP/BHP) limits.
         WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
@@ -960,7 +964,7 @@ updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
                               DeferredLogger& deferred_logger) const
 {
     auto& ws = well_state.well(this->index_of_well_);
-    if (!wellUnderGroupControl(ws) || this->isInjector() || 
+    if (!wellUnderGroupControl(ws) || this->isInjector() ||
         !ws.group_target_fallback.has_value() || !ws.group_target.has_value())
     {
         ws.use_group_target_fallback = false;
@@ -977,7 +981,7 @@ updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
         ws.use_group_target_fallback = false;
         return;
     }
-    // Check whether guiderate ratio or well fraction of production_cmode is too small, 
+    // Check whether guiderate ratio or well fraction of production_cmode is too small,
     // if so, switch to fallback (original) control mode
     const Scalar fraction_tolerance = this->param_.group_control_fraction_tolerance_;
     if (ws.group_target->guiderate_ratio < fraction_tolerance) {
@@ -1017,7 +1021,7 @@ updateGroupTargetFallbackFlag(WellState<Scalar, IndexTraits>& well_state,
             cmode_frac += scaled_well_fractions[gas_pos];
         }
     }
-    ws.use_group_target_fallback = (cmode_frac < fraction_tolerance); 
+    ws.use_group_target_fallback = (cmode_frac < fraction_tolerance);
 }
 
 template class WellInterfaceGeneric<double, BlackOilDefaultFluidSystemIndices>;

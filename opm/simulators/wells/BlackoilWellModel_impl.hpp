@@ -1834,8 +1834,11 @@ namespace Opm {
             well->updateWellTestState(this->wellState().well(wname),
                                       simulationTime,
                                       /*writeMessageToOPMLog=*/ true,
+                                      /*during_well_test=*/ false,
                                       under_zero_target,
                                       wellTestState,
+                                      this->eclipseState().getUnits(),
+                                      this->schedule().getStartTime(),
                                       local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {

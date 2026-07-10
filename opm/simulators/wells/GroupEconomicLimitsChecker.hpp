@@ -23,6 +23,8 @@
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/simulators/wells/EconomicLimitsMessage.hpp>
+
 #include <array>
 #include <map>
 #include <optional>
@@ -76,9 +78,8 @@ public:
     int numProducersOpenInitially();
     int numProducersOpen();
     void activateEndRun();
-    std::string message_separator(const char sep_char = '*',
-                                  const size_t sep_length = 110) const
-    { return std::string(sep_length, sep_char); }
+    const std::string& message_separator() const
+    { return economicLimitMessageSeparator(); }
 
     static constexpr int NUM_PHASES = 3;
 
