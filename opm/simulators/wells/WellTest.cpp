@@ -517,7 +517,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                     }
                     ratio_report = this->checkRatioEconLimits(econ_production_limits, ws,
                                                               closed_this_event, deferred_logger);
-                    if (ratio_report.ratio_limit_violated) {
+                    if (write_message_to_opmlog && ratio_report.ratio_limit_violated) {
                         reason = make_reason(ratio_report);
                     }
                 }
@@ -559,13 +559,13 @@ closeOffendingCompletion(const int offending_completion,
                          std::unordered_set<int>& closed_this_event,
                          DeferredLogger& deferred_logger) const
 {
-    // complnum is always >= 1, and the INVALIDCOMPLETION sentinel (INT_MAX,
-    // which would pass a plain > 0 check) is filtered by the caller; either
-    // reaching here would be a bug.
-    assert(offending_completion > 0 &&
-           offending_completion != RatioLimitCheckReport::INVALIDCOMPLETION);
+    // A real completion number is always >= 1; a non-positive value is a bug.
+    assert(offending_completion > 0);
 
-    // Sentinel for "no offending completion"; normally filtered by the caller.
+    // The INVALIDCOMPLETION sentinel ("no offending completion") is cleared by
+    // checkRatioEconLimits before the workover loop runs, so it should not reach
+    // here. A defensive guard: closing nothing and returning "not shut" lets the
+    // loop's no-progress guard stop the workover event instead of looping.
     if (offending_completion == RatioLimitCheckReport::INVALIDCOMPLETION) {
         return false;
     }

@@ -51,10 +51,11 @@ public:
 
     //! \param during_well_test  true when called from the WTEST re-open loop in
     //!        WellInterface::wellTesting(), which re-solves the well after every
-    //!        completion closure; a CON/+CON workover then applies only one
-    //!        closure per call and defers further closures to the caller's
-    //!        re-converged rates. false for the regular timestep update, which is
-    //!        not re-solved between closures and applies the whole workover here.
+    //!        completion closure; a CON/+CON workover then applies one workover
+    //!        round per call (for +CON this can close multiple completions) and
+    //!        defers further rounds to the caller's re-converged rates. false for
+    //!        the regular timestep update, which is not re-solved between closures
+    //!        and applies the whole workover here.
     void updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
@@ -153,19 +154,13 @@ private:
     //!        several connections/blocks.
     std::string completionDescriptor(int complnum) const;
 
-    //! \brief Apply one round of the CON / +CON (close-connection) workover
-    //!        procedure.
-    //!
-    //! \param when    Human-readable "at time ... (date = ...)" clause shared
-    //!                with the triggering economic-limit message.
-    //! \param reason  Human-readable ratio-violation clause (e.g.
-    //!                "water-gas ratio 1.0353e-06 SM3/SM3 exceeds the limit ...").
-    //! \param[in,out] closed_this_event  Completions closed so far by the
-    //!                ongoing workover event; the completions closed in this
-    //!                round are added to it.
-    //!
-    //! \return Whether the closure left the well without open completions,
-    //!         in which case the well has been shut.
+    //! \brief Apply one round of the CON / +CON (close-connection) workover:
+    //!        close \p offending_completion (and, for +CON when
+    //!        \p close_connections_below is set, every completion below it in the
+    //!        wellbore), adding them to \p closed_this_event. \p when / \p reason
+    //!        are the pre-formatted clauses of the logged closure message.
+    //!        Returns true if this left the well with no open completions, i.e.
+    //!        the well has been shut.
     bool closeOffendingCompletion(int offending_completion,
                                   bool close_connections_below,
                                   double simulation_time,
