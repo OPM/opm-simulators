@@ -38,6 +38,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/output/eclipse/Inplace.hpp>
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh> // Properties::EnableMech, EnableSolvent
@@ -59,6 +60,8 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <cstddef>
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
@@ -238,6 +241,19 @@ public:
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().setupTime();
 
+        auto& regVars = this->outputModule_->regionVariables();
+
+        regVars.prepareValueAccumulation();
+
+        if (const auto conn_opt_ix = regVars
+            .variableIndex(this->outputModule_->regVarMapping(), "ConnOPT");
+            conn_opt_ix.has_value())
+        {
+            this->simulator_.problem()
+                .wellModel().reportIntervalConnectionOilProduction
+                (this->simulator_.timeStepSize(), *conn_opt_ix, regVars);
+        }
+
         const auto localWellData            = simulator_.problem().wellModel().wellData();
         const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
@@ -333,6 +349,11 @@ public:
         {
             OPM_TIMEBLOCK(evalSummary);
 
+            // Note: This statement sums one value per registered region
+            // variable per region per registered region set across all MPI
+            // ranks.
+            regVars.commitValues();
+
             const auto& blockData = this->collectOnIORank_.isParallel()
                 ? this->collectOnIORank_.globalBlockData()
                 : this->outputModule_->getBlockData();
@@ -355,6 +376,8 @@ public:
                               lgrBlockData,
                               miscSummaryData,
                               regionData,
+                              this->outputModule_->regVarMapping(),
+                              regVars,
                               inplace,
                               this->outputModule_->initialInplace(),
                               interRegFlows,
