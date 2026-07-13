@@ -107,6 +107,28 @@ foreach(NPROC 2 3 4)
   )
 endforeach()
 
+opm_add_executable(
+  TARGET
+    test_parallel_regionvariablevalues
+  SOURCES
+    tests/test_parallel_regionvariablevalues.cpp
+  LIBRARIES
+    opmcommon
+    opmsimulators
+    Boost::unit_test_framework
+)
+
+foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_regionvariablevalues_np${NPROC}
+    EXE_TARGET
+      test_parallel_regionvariablevalues
+    DRIVER_ARGS
+      -n ${NPROC}
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
+
 foreach(NPROC 2 3 4)
   opm_add_test(test_rftcontainer_np${NPROC}
     EXE_TARGET
