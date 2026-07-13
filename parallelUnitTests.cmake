@@ -85,6 +85,28 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
     2
 )
 
+opm_add_executable(
+  TARGET
+    test_parallel_regionsetvariabledescriptor
+  SOURCES
+    tests/test_parallel_regionsetvariabledescriptor.cpp
+  LIBRARIES
+    opmcommon
+    opmsimulators
+    Boost::unit_test_framework
+)
+
+foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_regionsetvariabledescriptor_np${NPROC}
+    EXE_TARGET
+      test_parallel_regionsetvariabledescriptor
+    DRIVER_ARGS
+      -n ${NPROC}
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
+
 foreach(NPROC 2 3 4)
   opm_add_test(test_rftcontainer_np${NPROC}
     EXE_TARGET
