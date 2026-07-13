@@ -187,6 +187,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
+  opm/simulators/utils/ParallelRegionsetVariableDescriptor.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/PressureAverage.cpp
@@ -1205,6 +1206,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelCommunication.hpp
+  opm/simulators/utils/ParallelRegionsetVariableDescriptor.hpp
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.hpp
