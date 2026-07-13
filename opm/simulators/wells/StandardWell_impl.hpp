@@ -1987,7 +1987,8 @@ namespace Opm
                                                     const BVector& weights,
                                                     const int pressureVarIndex,
                                                     const bool use_well_weights,
-                                                    const WellStateType& well_state) const
+                                                    const WellStateType& well_state,
+                                                    const int nrWells) const
     {
         this->linSys_.extractCPRPressureMatrix(jacobian,
                                                weights,
@@ -1995,7 +1996,8 @@ namespace Opm
                                                use_well_weights,
                                                *this,
                                                Bhp,
-                                               well_state);
+                                               well_state,
+                                               nrWells);
     }
 
 

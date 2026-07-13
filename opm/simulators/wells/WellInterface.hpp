@@ -284,7 +284,8 @@ public:
                                           const BVector& x,
                                           const int pressureVarIndex,
                                           const bool use_well_weights,
-                                          const WellStateType& well_state) const = 0;
+                                          const WellStateType& well_state,
+                                          const int nrWells) const = 0;
 
     void addCellRates(std::map<int, RateVector>& cellRates_) const;
 

@@ -1487,10 +1487,8 @@ namespace Opm {
                              const bool use_well_weights) const
     {
         int nw = this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
         for ( int i = 0; i < nw; i++ ) {
-            int wdof = rdofs + i;
-            jacobian[wdof][wdof] = 1.0;// better scaling ?
+            jacobian[i][i] = 1.0;// better scaling ?
         }
 
         for (const auto& well : well_container_) {
@@ -1498,7 +1496,8 @@ namespace Opm {
                                            weights,
                                            pressureVarIndex,
                                            use_well_weights,
-                                           this->wellState());
+                                           this->wellState(),
+                                           nw);
         }
     }
 
@@ -1537,15 +1536,13 @@ namespace Opm {
     addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
         int nw =  this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
         const auto wellconnections = this->getMaxWellConnections();
         for (int i = 0; i < nw; ++i) {
-            int wdof = rdofs + i;
-            jacobian.entry(wdof,wdof) = 0.0;
+            jacobian.entry(i,i) = 0.0;
             const auto& perfcells = wellconnections[i];
             for (int perfcell : perfcells) {
-                jacobian.entry(wdof, perfcell) = 0.0;
-                jacobian.entry(perfcell, wdof) = 0.0;
+                jacobian.entry(i, perfcell + nw) = 0.0;
+                jacobian.entry(perfcell + nw, i) = 0.0;
             }
         }
     }

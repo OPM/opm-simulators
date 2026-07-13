@@ -908,7 +908,8 @@ namespace Opm
                              const BVector& weights,
                              const int pressureVarIndex,
                              const bool use_well_weights,
-                             const WellStateType& well_state) const
+                             const WellStateType& well_state,
+                             const int nrWells) const
     {
         if (this->number_of_local_perforations_ == 0) {
             // If there are no open perforations on this process, there are no contributions the cpr pressure matrix.
@@ -921,7 +922,8 @@ namespace Opm
                                                use_well_weights,
                                                *this,
                                                this->SPres,
-                                               well_state);
+                                               well_state,
+                                               nrWells);
     }
 
 
