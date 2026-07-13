@@ -375,7 +375,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const bool /*use_well_weights*/,
                          const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                          const int seg_pressure_var_ind,
-                         const WellState<Scalar, IndexTraits>& well_state) const
+                         const WellState<Scalar, IndexTraits>& well_state,
+                         const int nrWells) const
 {
     using BlockType = PressureMatrix::block_type;
     static_assert(BlockType::rows == 1);
@@ -384,7 +385,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 
     // Add for coupling from well to reservoir
     const int number_cells = weights.size();
-    const int welldof_ind = number_cells + well.indexOfWell();
+    const int welldof_ind = well.indexOfWell();
     if (!well.isPressureControlled(well_state)) {
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
@@ -397,7 +398,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
                 }
-                jacobian[row_index][welldof_ind][0][0] += matel;
+                jacobian[row_index + nrWells][welldof_ind][0][0] += matel;
             }
         }
     }
@@ -433,7 +434,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i] *(*colB)[i][pressureVarIndex];
                 }
-                jacobian[welldof_ind][col_index][0][0] += matel;
+                jacobian[welldof_ind][col_index + nrWells][0][0] += matel;
                 diag_ell -= matel;
             }
         }
@@ -476,7 +477,8 @@ sumDistributed(Parallel::Communication comm)
                                  const bool,                                                   \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                               \
                                  const int,                                                    \
-                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&) const;
+                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&,        \
+                                 const int) const;
 
 #define INSTANTIATE_TYPE(T) \
     INSTANTIATE(T,2,1)      \
