@@ -674,6 +674,50 @@ report(const int*                            globalCellIdxMap,
 
 template<typename Scalar, typename IndexTraits>
 void WellState<Scalar, IndexTraits>::
+reportIntervalConnectionOilProduction(const double                                     dt,
+                                      const std::function<bool(const std::string&)>&   wasDynamicallyClosed,
+                                      const std::function<double(const std::string&)>& wellEffFac,
+                                      const std::function<void(int, double)>&          copt) const
+{
+    const auto& pu = this->phaseUsageInfo_;
+
+    if (! pu.phaseIsActive(oilPhaseIdx)) {
+        return;
+    }
+
+    const auto np   = static_cast<std::size_t>(this->numPhases());
+    const auto opos = pu.canonicalToActivePhaseIdx(oilPhaseIdx);
+
+    for (const auto& xw : this->wells_) {
+        if (! xw.producer ||
+            ! xw.parallel_info.get().hasLocalCells() ||
+            ((xw.status == Well::Status::SHUT) &&
+             ! wasDynamicallyClosed(xw.name)))
+        {
+            // Not a producing well, not connected to this rank, or the well
+            // is shut.  In other words, there is nothing to do for this
+            // well on this rank.
+            continue;
+        }
+
+        const auto effective_dt = dt * wellEffFac(xw.name);
+
+        if (! (effective_dt > 0.0)) {
+            continue;
+        }
+
+        const auto* qo = &xw.perf_data.phase_rates[0*np + opos];
+
+        for (const auto& cell : xw.perf_data.cell_index) {
+            // Note sign of *qo to convert from injection to production.
+            copt(cell, (- *qo) * effective_dt);
+            qo += np;
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellState<Scalar, IndexTraits>::
 reportConnections(std::vector<data::Connection>& connections,
                   const std::size_t well_index,
                   const int* globalCellIdxMap) const

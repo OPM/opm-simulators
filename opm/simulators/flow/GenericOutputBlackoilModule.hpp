@@ -29,8 +29,11 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
+#include <opm/output/data/RegionVariableMapping.hpp>
 #include <opm/output/data/Wells.hpp>
+
 #include <opm/output/eclipse/Inplace.hpp>
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
 
 #include <opm/simulators/flow/BioeffectsContainer.hpp>
 #include <opm/simulators/flow/CO2H2Container.hpp>
@@ -52,6 +55,7 @@
 #include <cstddef>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <unordered_map>
@@ -291,6 +295,16 @@ public:
     const RSTConv& getConv() const
     { return this->rst_conv_; }
 
+    const data::RegionVariableMapping& regVarMapping() const
+    {
+        return this->regVarMap_;
+    }
+
+    RegionVariableCollection& regionVariables()
+    {
+        return this->regionVars_;
+    }
+
     //! \brief Assign fields that are in global numbering to the solution.
     //! \detail This is used to add fields that for some reason cannot be collected
     //!         using the regular collect mechanism to the solution. In particular this
@@ -419,12 +433,26 @@ protected:
     bool forceDisableFipresvOutput_{false};
     bool computeFip_{false};
 
+    /// Current values of input data for region-level summary vectors.
+    ///
+    /// Acceleration structure for region-level summary vector calculations,
+    /// aimed at minimising MPI overhead for calculating these vectors.
+    /// Contents depend on runtime configuration in summaryConfig_.
+    ///
+    /// Populated by initialiseRegionVariableSupport().
+    RegionVariableCollection regionVars_;
+
     FIPContainer<FluidSystem> fipC_;
     std::unordered_map<std::string, std::vector<int>> regions_;
     std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
 
     std::vector<SummaryConfigNode> RPRNodes_;
     std::vector<SummaryConfigNode> RPRPNodes_;
+
+    /// Map region variable names and region set names to numeric indices.
+    ///
+    /// Populated by initialiseRegionVariableSupport().
+    data::RegionVariableMapping regVarMap_{};
 
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
@@ -510,6 +538,12 @@ protected:
     bool local_data_valid_{false};
 
     std::optional<RegionPhasePoreVolAverage> regionAvgDensity_;
+
+private:
+    /// Initialise acceleration structures for region-level summary vector calculations.
+    ///
+    /// Populates regionVars_ and regVarMap_.
+    void initialiseRegionVariableSupport();
 };
 
 } // namespace Opm

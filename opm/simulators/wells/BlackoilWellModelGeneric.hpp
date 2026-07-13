@@ -68,6 +68,7 @@ namespace Opm {
     template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
+    class RegionVariableCollection;
     class RestartValue;
     class Schedule;
     struct SimulatorUpdate;
@@ -214,6 +215,10 @@ public:
     void commitWGState();
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
+
+    void reportIntervalConnectionOilProduction(const double              dt,
+                                               const std::size_t         conn_opt_ix,
+                                               RegionVariableCollection& regVars) const;
 
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
