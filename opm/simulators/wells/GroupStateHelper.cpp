@@ -1026,8 +1026,7 @@ GroupStateHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group)
     }
 
     // use NONE as default control
-    const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-    for (Phase phase : all) {
+    for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
         if (!this->groupState().has_injection_control(group.name(), phase)) {
             this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::NONE);
         }
@@ -1039,7 +1038,7 @@ GroupStateHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group)
     const auto& events = this->schedule_[this->report_step_].wellgroup_events();
     if (group.isInjectionGroup() && events.hasEvent(group.name(), ScheduleEvents::GROUP_INJECTION_UPDATE)) {
 
-        for (Phase phase : all) {
+        for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             if (!group.hasInjectionControl(phase))
                 continue;
 
@@ -1056,7 +1055,7 @@ GroupStateHelper<Scalar, IndexTraits>::setCmodeGroup(const Group& group)
     if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
         this->groupState().production_control(group.name(), Group::ProductionCMode::RESV);
     }
-    for (Phase phase : all) {
+    for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
         if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
             this->groupState().injection_control(group.name(), phase, Group::InjectionCMode::RATE);
         } else if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
@@ -1560,8 +1559,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
     for (const std::string& group_name : group.groups()) {
         bool individual_control = false;
         if (is_injector) {
-            const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-            for (Phase phase : all) {
+            for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
                 const Group::InjectionCMode& current_group_control
                     = this->groupState().injection_control(group_name, phase);
                 individual_control = individual_control
@@ -2820,8 +2818,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
 
         // accumulate group contribution from sub group
         if (is_injector) {
-            const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-            for (Phase phase : all) {
+            for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
                 const auto phase_pos = this->phaseToActivePhaseIdx(phase);
                 // the phase is not present
                 if (phase_pos == -1)
