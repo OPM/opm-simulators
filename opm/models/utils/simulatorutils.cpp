@@ -33,8 +33,18 @@
 #include <iomanip>
 #include <sstream>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <vector>
+
+#if defined(_WIN32)
+#include <io.h>  // _access
+#else
+#include <unistd.h>
+#endif
+
+// MSVC's <sys/stat.h> defines _S_IFMT/_S_IFDIR but not the POSIX S_ISDIR macro.
+#if defined(_MSC_VER) && !defined(S_ISDIR)
+#  define S_ISDIR(mode) (((mode) & _S_IFMT) == _S_IFDIR)
+#endif
 
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
@@ -134,7 +144,12 @@ std::string simulatorOutputDir()
                                  "' exists but is not a directory");
     }
 
+#if defined(_WIN32)
+    // _access mode 2 checks for write permission, like access(..., W_OK).
+    if (_access(outputDir.c_str(), 2) != 0) {
+#else
     if (access(outputDir.c_str(), W_OK) != 0) {
+#endif
         throw std::runtime_error("Output directory '" + outputDir +
                                  "' exists but is not writeable");
     }

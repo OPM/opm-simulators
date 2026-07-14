@@ -22,6 +22,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -36,6 +37,30 @@ namespace Opm {
 } // namespace Opm
 
 namespace Opm {
+
+    namespace Detail {
+        /// Sample of consistency check violations at a single severity level.
+        ///
+        /// Defined at namespace scope rather than nested inside
+        /// SatfuncConsistencyChecks because MSVC fails to treat a nested class
+        /// as complete when it is used as the element type of a std::array data
+        /// member of the same enclosing class template (C2079).
+        template <typename Scalar>
+        struct SatfuncConsistencyViolationSample
+        {
+            /// Number of consistency check violations (size = number of checks).
+            std::vector<std::size_t> count{};
+
+            /// Sample of point IDs for violated consistency checks.
+            std::vector<std::size_t> pointID{};
+
+            /// Scalar values for each sampled point.
+            std::vector<Scalar> checkValues{};
+
+            /// Clear contents of all data members.
+            void clear();
+        };
+    } // namespace Detail
 
     /// Platform for running sets of consistency checks against collection
     /// of saturation function end-points
@@ -251,32 +276,9 @@ namespace Opm {
         using RandomBitGenerator = std::minstd_rand;
 
         /// Sample of consistency check violations at single severity level.
-        struct ViolationSample
-        {
-            /// Number of consistency check violations.
-            ///
-            /// Size equal to number of consistency checks.
-            std::vector<std::size_t> count{};
-
-            /// Sample of point IDs for violated consistency checks.
-            ///
-            /// \c numSamplePoints_ allocated for each consistency check.
-            /// Number of valid entries for check \c i is minimum of \c
-            /// numSamplePoints_ and \code count[i] \endcode.
-            std::vector<std::size_t> pointID{};
-
-            /// Scalar values for each sampled point.
-            ///
-            /// \c numSamplePoints_ allocated for each individual check, and
-            /// the number of values per check determined by \code
-            /// Check::numExportedCheckValues() \endcode.  Number of valid
-            /// entries for check \c i is minimum of \c numSamplePoints_ and
-            /// \code count[i] \endcode.
-            std::vector<Scalar> checkValues{};
-
-            /// Clear contents of all data members.
-            void clear();
-        };
+        /// (Defined at namespace scope as Detail::SatfuncConsistencyViolationSample
+        /// to work around an MSVC nested-type/std::array completeness bug.)
+        using ViolationSample = Detail::SatfuncConsistencyViolationSample<Scalar>;
 
         /// Collection of consistency check violations.
         ///

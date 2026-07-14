@@ -127,11 +127,13 @@ public:
         Scalar dRvMax = 0.0;
     };
 
-    // Output debug flags for which tolerances used
+    // Output debug flags for which tolerances used.
+    // NB: not named STRICT/RELAXED because <windows.h> (pulled in transitively
+    // on Windows) defines STRICT as a macro.
     enum class DebugFlags {
-        STRICT = 0,
-        RELAXED = 1,
-        TUNINGDP = 2
+        Strict = 0,
+        Relaxed = 1,
+        TuningDP = 2
     };
 
     // ---------  Public methods  ---------

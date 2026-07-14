@@ -62,9 +62,9 @@ namespace {
         using F = typename Opm::NonlinearSystemBlackOilReservoir<TypeTag>::DebugFlags;
 
         switch (f) {
-        case F::STRICT:   return "Strict";
-        case F::RELAXED:  return "Relaxed";
-        case F::TUNINGDP: return "TuningDP";
+        case F::Strict:   return "Strict";
+        case F::Relaxed:  return "Relaxed";
+        case F::TuningDP: return "TuningDP";
         }
 
         return "< ??? >";
@@ -928,14 +928,14 @@ getReservoirConvergence(const double reportTime,
         }
 
         const auto mb_flag = use_relaxed_mb
-            ? DebugFlags::RELAXED
-            : DebugFlags::STRICT;
+            ? DebugFlags::Relaxed
+            : DebugFlags::Strict;
 
         const auto cnv_flag = relax_dsol_cnv ?
-            DebugFlags::TUNINGDP
+            DebugFlags::TuningDP
             : (use_relaxed_cnv
-               ? DebugFlags::RELAXED
-               : DebugFlags::STRICT);
+               ? DebugFlags::Relaxed
+               : DebugFlags::Strict);
 
         ss << std::setw(9) << make_string<TypeTag>(mb_flag)
            << std::setw(9) << make_string<TypeTag>(cnv_flag);

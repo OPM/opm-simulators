@@ -184,7 +184,8 @@ namespace Amg
 #ifdef _OPENMP
 #pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
 #endif
-        for (const auto& chunk : element_chunks) {
+        for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
+            const auto& chunk = element_chunks[ci];
             const std::size_t thread_id = ThreadManager::threadId();
             ElementContext localElemCtx(elemCtx.simulator());
 
@@ -257,7 +258,8 @@ namespace Amg
 #ifdef _OPENMP
 #pragma omp parallel for private(bweights) if(enable_thread_parallel)
 #endif
-        for (const auto& chunk : element_chunks) {
+        for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
+            const auto& chunk = element_chunks[ci];
 
             // Each thread gets a unique copy of elemCtx
             ElementContext localElemCtx(elemCtx.simulator());

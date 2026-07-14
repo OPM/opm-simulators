@@ -28,6 +28,14 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+// The pressure computation uses a Dune parallel Communication, which requires
+// MPIHelper::instance() to have been called first when built with MPI. Use the
+// shared global fixture (a no-op in a serial build), which also installs an MPI
+// error handler that prints a diagnostic string on failure.
+#include "MpiFixture.hpp"
+
+BOOST_GLOBAL_FIXTURE(MPIFixture);
+
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
 #include <opm/input/eclipse/Parser/Parser.hpp>
