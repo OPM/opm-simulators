@@ -4,14 +4,20 @@
 namespace Dune
 {
 
+/// A parallel scalar product that takes advantage of the fact that all
+/// elements associated with ghost cells are located at the end of the
+/// vector. This allows us to ignore the block structure of the vector
+/// and eliminate the use of a mask to exclude ghost entries from being
+/// included in the scalar product
 template<class Vector, class Comm>
 class GhostLastScalarProduct : public ScalarProduct<Vector>
 {
     public:
 
+    ///Exctract block size from vector type
     static constexpr auto block_size = Vector::block_type::dimension;
 
-    /*!
+    /*! \brief constructor
     * \param com The communication object for syncing overlap and copy
     * data points.
     * \param cat parallel solver category (nonoverlapping or overlapping)
@@ -19,12 +25,12 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     GhostLastScalarProduct (std::shared_ptr<const Comm> com, SolverCategory::Category cat)
         : _communication(com), _category(cat)
     {
-        count_ = getLocalCount();
-        int verify = verifyLocalCount();
+        count_ = getLocalCount();        // number or local cells
+        int verify = verifyLocalCount(); // redundant check on numbef of local cells
         if (count_ != verify) OPM_THROW(std::runtime_error, "Inconsistent local node count!!\n");
     }
 
-    /*!
+    /*! \brief constructor
     * \param com The communication object for syncing overlap and copy
     * data points.
     * \param cat parallel solver category (nonoverlapping or overlapping)
@@ -35,8 +41,8 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     {}
 
     /*! \brief Dot product of two vectors.
-    It is assumed that the vectors are consistent on the interior+border
-    partition.
+    * \param vx first input vector
+    * \param vy second input vector
     */
     virtual double dot (const Vector& vx, const Vector& vy) const override
     {
@@ -58,7 +64,7 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
         for(int j=0;j<2;j++) agg[j]+=agg[j+2];
         for(int j=0;j<1;j++) agg[j]+=agg[j+1];
 
-        // trailing end
+        // loop-peeling of trailing end
         for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
 
         // Global summation
@@ -67,12 +73,12 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
         return result;
     }
 
-    /*! \brief Norm of a right-hand side vector.
-    The vector must be consistent on the interior+border partition
+    /*! \brief Vector L2-norm.
+    * \param vx input vector
     */
-    virtual double norm (const Vector& x) const override
+    virtual double norm (const Vector& vx) const override
     {
-        return sqrt(dot(x,x));
+        return sqrt(dot(vx,vx));
     }
 
     //! Category of the scalar product (see SolverCategory::Category)
@@ -86,6 +92,8 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     SolverCategory::Category _category;
     int count_;
 
+    /*! \brief Count number of local cells.
+    */
     int getLocalCount() const
     {
         int count = 0;
@@ -97,6 +105,8 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
         return count;
     }
 
+    /*! \brief Infer number of local cells from largest local index.
+    */
     int verifyLocalCount() const
     {
         auto indexSet = _communication->indexSet();
@@ -121,9 +131,8 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
 
 
 
-//! @brief Optimized sequential scalar product.
-//!
-//! @tparam Vector block-vector class with data stored as contiguous double array
+/// A sequential scalar product that ignores block structure of the vector
+/// to facilitate well-known optimization techniques
 template<class Vector>
 class SeqOptmizedProduct : public Dune::SeqScalarProduct<Vector>
 {
@@ -132,7 +141,10 @@ public:
     // extract block size
     static constexpr auto block_size = Vector::block_type::dimension;
 
-    // Compute the dot product <vx, vy>
+    /*! \brief Dot product of two vectors.
+    * \param vx first input vector
+    * \param vy second input vector
+    */
     virtual double dot(const Vector& vx, const Vector& vy) const override
     {
         // access underlying data
@@ -152,15 +164,17 @@ public:
         for(int j=0;j<2;j++) agg[j]+=agg[j+2];
         for(int j=0;j<1;j++) agg[j]+=agg[j+1];
 
-        // trailing end
+        // loop-peeling of trailing end
         for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
 
         return agg[0];
     }
 
-    // Compute the norm ||x||
-    virtual double norm(const Vector& x) const override {
-        return std::sqrt(this->dot(x, x));
+    /*! \brief Vector L2-norm.
+    * \param vx input vector
+    */
+    virtual double norm(const Vector& vx) const override {
+        return std::sqrt(this->dot(vx, vx));
     }
 };
 
