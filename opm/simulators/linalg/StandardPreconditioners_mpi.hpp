@@ -33,6 +33,8 @@
 #include <memory>
 #include <type_traits>
 
+#include <opm/simulators/linalg/mixed/PreconditionerWrapper.hpp>
+
 namespace Opm {
 
 
@@ -162,6 +164,24 @@ struct StandardPreconditioners
         F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             DUNE_UNUSED_PARAMETER(prm);
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
+        });
+        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            DUNE_UNUSED_PARAMETER(prm);
+            if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                OPM_THROW(std::logic_error, "mixed-ilu0 is not available for floats");
+                return nullptr;
+            } else {
+                return wrapBlockPreconditioner<MixedPreconditioner<M,V,V>>(comm, op.getmat());
+            }
+        });
+        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            DUNE_UNUSED_PARAMETER(prm);
+            if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                OPM_THROW(std::logic_error, "mixed-dilu is not available for floats");
+                return nullptr;
+            } else {
+                return wrapBlockPreconditioner<MixedPreconditioner<M,V,V>>(comm, op.getmat(), true);
+            }
         });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);

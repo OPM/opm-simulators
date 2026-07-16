@@ -35,6 +35,7 @@
 
 #if HAVE_AVX2_EXTENSION
 #include <opm/simulators/linalg/mixed/wrapper.hpp>
+#include <opm/simulators/linalg/mixed/SolverAdapter.hpp>
 #endif
 
 #include <dune/common/fmatrix.hh>
@@ -220,14 +221,14 @@ namespace Dune
 #if HAVE_AVX2_EXTENSION
           } else if (solver_type == "mixed-bicgstab") {
               if constexpr (Opm::is_gpu_operator_v<Operator>) {
-                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operatorsg");
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for GPU operators");
             } else if constexpr (Opm::detail::is_multi_type_block_vector_v<VectorType>) {
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for multi-type block vectors.");
             } else if constexpr (std::is_same_v<typename VectorType::field_type, float>){
                 OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for single precision.");
             } else {
                 const std::string prec_type = prm.get<std::string>("preconditioner.type", "error");
-                bool use_mixed_dilu= (prec_type=="mixed-dilu");
+                bool use_mixed_dilu= (prec_type=="legacy-mixed-dilu");
                 using MatrixType = decltype(linearoperator_for_solver_->getmat());
                 linsolver_ = std::make_shared<Dune::MixedSolver<VectorType,MatrixType>>(
                                                                             linearoperator_for_solver_->getmat(),
@@ -235,6 +236,23 @@ namespace Dune
                                                                             maxiter,
                                                                             use_mixed_dilu
                                                                         );
+            }
+            // MixedBiCGSTABSolver starts here
+          } else if (solver_type == "mixed-precision") {
+              if constexpr (Opm::is_gpu_operator_v<Operator>) {
+                OPM_THROW(std::invalid_argument, "mixed-precision solver not supported for GPU operators");
+            } else if constexpr (Opm::detail::is_multi_type_block_vector_v<VectorType>) {
+                OPM_THROW(std::invalid_argument, "mixed-bicgstab solver not supported for multi-type block vectors.");
+            } else if constexpr (std::is_same_v<typename VectorType::field_type, float>){
+                OPM_THROW(std::invalid_argument, "mixed-precision solver not supported for single precision.");
+            } else {
+                linsolver_ = std::make_shared<Dune::MixedBiCGSTABSolver<Comm,Operator,VectorType>>(linearoperator_for_solver_,
+                                                                            scalarproduct_,
+                                                                            preconditioner_,
+                                                                            tol, // desired residual reduction factor
+                                                                            maxiter, // maximum number of iterations
+                                                                            verbosity,
+                                                                            comm);
             }
 #endif
         } else if (solver_type == "loopsolver") {
