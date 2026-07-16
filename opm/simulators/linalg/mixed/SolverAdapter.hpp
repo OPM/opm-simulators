@@ -52,18 +52,19 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                  const int& verbosity,
                  const Comm &comm)
     {
-#if 1
         int halo;
         int nrows;
         int nnz=0;
 
         auto &A = op->getmat();
+        // trivially determine size of halo==0 for serial linear operators
         if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>)
         {
             halo = 0;
             nrows = A.N();
             nnz = A.nonzeroes();
         }
+        // Determine size of halo for parallel linear operators
         else
         {
             local_ = new int[A.N()];
@@ -76,15 +77,12 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
 
             // number of nonzeros for local cells
             int irow=0;
-            //for(auto row=A.begin(); row!=A.end(); row++)
             for(auto row=A.begin(); row.index() < nrows; row++)
             {
                 if(local_[irow++]==1) for(auto col = row->begin(); col != row->end(); col++) nnz++;
-                //else break; // This line is used to verify that all local nodes have indices lower than all ghost nodes. This appears to be true!
-                //irow++;
             }
         }
-
+/*
         printf("nnz           = %d\n",nnz);
         printf("A.nonzeroes() = %ld\n",A.nonzeroes());
 
@@ -92,13 +90,8 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         printf("halo  = %d\n",halo);
         printf("total = %ld\n",A.N());
         //getchar();
-#endif
+*/
         // Access matrix data from double precision operator
-#if 0
-        auto &A = op->getmat();
-        int nrows = A.N();
-        int nnz = A.nonzeroes();
-#endif
         double_data_ = &A[0][0][0][0];
 
         //allocate mixed matrix
@@ -121,42 +114,42 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             irow++;
         }
 
-        //initialize mixed operator and optimized scalar product
+        // initialize mixed operator and scalar product depending on the linear operator type provided to the constructor
         double_operator_ = op;
         using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(op->getmat())>>;
+
+        // serial runs with plain block-sparse matrices, i.e. Dune::MatrixAdapter
         if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Dune::MatrixAdapter<MatrixType, Vector, Vector>>)
         {
-            //OPM_THROW(std::invalid_argument, "Dune::MatrixAdapter\n");
             using MixedOperatorType = Dune::MatrixAdapter<MixedMatrixType, Vector, Vector>;
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_);
-            using OptimizedProductType = SeqOptmizedProduct<Vector>;
-            scalar_product_ = std::make_shared<OptimizedProductType>();
-        }
-        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::GhostLastMatrixAdapter<MatrixType, Vector, Vector, Comm>>)
-        {
-            //OPM_THROW(std::invalid_argument, "Opm::GhostLastMatrixAdapter\n");
-            //using MixedOperatorType = Dune::OverlappingSchwarzOperator<MixedMatrixType, Vector, Vector, Comm>;
-            using MixedOperatorType = Opm::MixedGhostLastMatrixAdapter<MixedMatrixType, Vector, Comm>;
-            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
 
-            using OptimizedScalarProductType = GhostLastScalarProduct<Vector,Comm>;
-            scalar_product_ = std::make_shared<OptimizedScalarProductType>(comm,Dune::SolverCategory::overlapping);
-            //scalar_product_ = sp;
+            using ScalarProductType = SeqOptmizedProduct<Vector>;
+            scalar_product_ = std::make_shared<ScalarProductType>();
         }
+        // serial runs with separate linear operator for wells, i.e. Opm::WellModelMatrixAdapter
         else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelMatrixAdapter<MatrixType, Vector, Vector>>)
         {
-            //OPM_THROW(std::invalid_argument, "Opm::WellModelMatrixAdapter\n");
             using MixedOperatorType = Opm::WellModelMatrixAdapter<MixedMatrixType, Vector, Vector>;
             using WellOperatorType  = Opm::LinearOperatorExtra<Vector,Vector>;
             const WellOperatorType &wellOper = op->getwellOper();
             mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_, wellOper);
-            using OptimizedProductType = SeqOptmizedProduct<Vector>;
-            scalar_product_ = std::make_shared<OptimizedProductType>();
-            //scalar_product_ = sp;
+
+            using ScalarProductType = SeqOptmizedProduct<Vector>;
+            scalar_product_ = std::make_shared<ScalarProductType>();
         }
+        // parallel runs with plain block-sparse matrices and all ghost cells sorted after local cells, i.e. Opm::GhostLastMatrixAdapter
+        else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::GhostLastMatrixAdapter<MatrixType, Vector, Vector, Comm>>)
+        {
+            using MixedOperatorType = Opm::MixedGhostLastMatrixAdapter<MixedMatrixType, Vector, Comm>;
+            mixed_operator_ = std::make_shared<MixedOperatorType>(*mixed_matrix_,comm);
+
+            using ScalarProductType = GhostLastScalarProduct<Vector,Comm>;
+            scalar_product_ = std::make_shared<ScalarProductType>(comm,Dune::SolverCategory::overlapping);
+        }
+        // parallel runs with separate linear operators for wells  and all ghost cells sorted after local cells, i.e. Opm::WellModelGhostLastMatrixAdapter
         else if constexpr (std::is_same_v<std::remove_pointer_t<Operator>, Opm::WellModelGhostLastMatrixAdapter<MatrixType, Vector, Vector, true>>)
         {
-            //OPM_THROW(std::invalid_argument, "Opm::WellModelGhostLastMatrixAdapter\n");
             using MixedOperatorType = Opm::WellModelMixedGhostLastMatrixAdapter<MixedMatrixType, Vector, Comm>;
             using WellOperatorType  = Opm::LinearOperatorExtra<Vector,Vector>;
             const WellOperatorType &wellOper = op->getwellOper();
@@ -168,10 +161,12 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             }
             else
             {
-                using OptimizedScalarProductType = GhostLastScalarProduct<Vector,Comm>;
-                scalar_product_ = std::make_shared<OptimizedScalarProductType>(comm,Dune::SolverCategory::overlapping);
+                using ScalarProductType = GhostLastScalarProduct<Vector,Comm>;
+                scalar_product_ = std::make_shared<ScalarProductType>(comm,Dune::SolverCategory::overlapping);
             }
         }
+        // throw an exception for all other linear operator types
+        else { OPM_THROW(std::invalid_argument, "MixedBiCGSTABSolver: Unsupported linear operator type!!\n");}
 
         //initialize bicgstab solver from Dune
         solver_ = std::make_shared<Dune::BiCGSTABSolver<Vector>>(
@@ -184,6 +179,14 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
 
     }
 
+    //! @brief destructor
+    ~MixedBiCGSTABSolver()
+    {
+        if constexpr (std::is_same_v<Comm, Dune::Amg::SequentialInformation>) return;
+        delete [] local_;
+    }
+
+    //! @brief Solver application
     virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
     {
         //transpose dense blocks and demote to single precision
@@ -193,6 +196,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         solver_->apply(x,b,res);
     }
 
+    //! @brief Unused variant of solver application
     virtual void apply(Vector &x, Vector &b, double reduction, InverseOperatorResult &res) override
     {
         x=0;
@@ -201,10 +205,14 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         OPM_THROW(std::invalid_argument, "MixedBiCGSTABSolver::apply(...) not implemented yet.");
     }
 
+    //! @brief Solver category
     virtual Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};
 
     private:
 
+    //! @brief Count number of ghost cells
+    //!
+    //! @param comm communicator object
     int getHaloCount(const Comm& comm) const
     {
         int count = 0;
@@ -213,16 +221,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx)
         {
             if (idx->local().attribute()!=1) count++; // count ghost indices
-/*
-            // This code snippet is used to check wheter or not all ghost indices occur last in the index set
-            // In general, that is NOT the case
-            if (idx->local().attribute()==1) count++; // count local indices
-            else
-            {
-                printf("debug: %d: %ld %d\n",count, idx->local().local(), idx->local().attribute());
-                break;
-            }
-*/
+
             int i=idx->local().local(); // tag local indices
             local_[i] = (idx->local().attribute()==1) ? 1 : 0;
         }
