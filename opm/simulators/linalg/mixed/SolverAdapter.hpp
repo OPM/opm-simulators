@@ -12,6 +12,7 @@
 #include <dune/istl/matrixindexset.hh>
 
 #include <opm/simulators/linalg/mixed/MatrixWrapper.hpp>
+#include <opm/simulators/linalg/mixed/Operators.hpp>
 #include <opm/simulators/linalg/ScalarProducts.hpp>
 
 
