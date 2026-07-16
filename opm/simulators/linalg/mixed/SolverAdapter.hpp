@@ -130,7 +130,6 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
 
         //allocate mixed matrix
         mixed_matrix_ = std::make_shared<MixedMatrixType>(nrows,nnz);
-        //auto &B = *mixed_matrix_;
 
         // copy sparsity pattern from double precision matrix
         int *rows = mixed_matrix_->rowptr();
