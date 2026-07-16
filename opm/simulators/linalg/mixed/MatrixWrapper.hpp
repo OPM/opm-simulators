@@ -13,7 +13,6 @@ namespace Opm
 //!       operations are performed in double-precision
 //!
 //! @tparam Vector the block-vector used by linear operator
-//! @tparam b block size
 template <class Vector>
 class MixedMatrixWrapper
 {
@@ -21,10 +20,6 @@ class MixedMatrixWrapper
 
     // extract block size
     static constexpr auto block_size = Vector::block_type::dimension;
-
-    virtual void mv(const Vector& x, Vector& y) const;
-    virtual void umv(const Vector& x, Vector& y) const;
-    virtual void usmv(double alpha, const Vector& x, Vector& y) const;
 
     //! @brief constructor
     //!
@@ -40,9 +35,39 @@ class MixedMatrixWrapper
     //! @brief destructor
     ~MixedMatrixWrapper() {bsr_free(M_);}
 
+    //! @brief update matrix entries
+    //!
+    //! @note downcasts from double precision and transposes
+    //! each non-zero block entry
+    //!
+    //! @param data pointer to double precision data
     void update(double const *data);
 
+    //! @brief block-sparse matrix-vector multiplication (y = M.x)
+    //!
+    //! @param x input vector
+    //! @param y output vector
+    virtual void mv(const Vector& x, Vector& y) const;
+
+    //! @brief block-sparse matrix-vector multiplication with
+    //! update (y += M.x)
+    //!
+    //! @param x input vector
+    //! @param y output vector
+    virtual void umv(const Vector& x, Vector& y) const;
+
+    //! @brief block-sparse matrix-vector multiplication with
+    //! scaled update (y += alpha * M.x)
+    //!
+    //! @param alpha scaling factor
+    //! @param x input vector
+    //! @param y output vector
+    virtual void usmv(double alpha, const Vector& x, Vector& y) const;
+
+    //! @brief access row offset pointer
     int *rowptr(){return M_->rowptr;}
+
+    //! @brief access column index pointer
     int *colidx(){return M_->colidx;}
 
     private:
@@ -50,13 +75,21 @@ class MixedMatrixWrapper
     bsr_matrix  *M_;
 };
 
+//! @brief mixed-precision block-sparse matrix-vector multiplication
+//! (y = M.x)
+//!
+//! @note hand-optimized versions are provided for block-sizes
+//! 2,3, and 4. A generic implementation is provided for block-
+//! sizes > 4
+//!
+//! @param x input vector
+//! @param y output vector
 template <class Vector>
 void MixedMatrixWrapper<Vector>::
 mv(const Vector& x, Vector& y) const
 {
-    // mixed-precision block spmv (y = M.x)
     int const b = block_size;
-    if      constexpr(b==1){printf("MixedMatrixWrapper::mv does not support block size == 1!\n");getchar();}
+    if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::mv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspmv2(M_, &x[0][0], &y[0][0]);
     else if constexpr(b==3) bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
     else if constexpr(b==4) bsr_vmspmv4(M_, &x[0][0], &y[0][0]);
@@ -92,30 +125,43 @@ mv(const Vector& x, Vector& y) const
     }
 }
 
+//! @brief mixed-precision block-sparse matrix-vector multiplication
+//! with update (y += M.x)
+//!
+//! @note hand-optimized versions are provided for block-sizes
+//! 2,3, and 4. A generic implementation for block-sizes > 4 is
+//! NOT provided
+//!
+//! @param x input vector
+//! @param y output vector
 template <class Vector>
 void MixedMatrixWrapper<Vector>::
 umv(const Vector& x, Vector& y) const
 {
-    // mixed-precision block spmv with update (y += M.x)
     int const b = block_size;
-    if      constexpr(b==1){printf("MixedMatrixWrapper::umv does not support block size == 1!\n");getchar();}
+    if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::umv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], 1.0);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
     else if constexpr(b==4) bsr_vmspumv4(M_, &x[0][0], &y[0][0], 1.0);
-    else
-    {
-        printf("MixedMatrixWrapper::umv only supports block sizes < 4!\n");
-        getchar();
-    }
+    else {OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::umv does not support block size == 1!\n");}
 }
 
+//! @brief mixed-precision block-sparse matrix-vector multiplication
+//! with scaled update (y += alpha * M.x)
+//!
+//! @note hand-optimized versions are provided for block-sizes
+//! 2,3, and 4. A generic implementation is provided for block-
+//! sizes > 4
+//!
+//! @param alpha scaling factor
+//! @param x input vector
+//! @param y output vector
 template <class Vector>
 void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
-    // scaled mixed-precision block spmv with update (y += alpha *  M.x)
     int const b = block_size;
-    if      constexpr(b==1){printf("MixedMatrixWrapper::usmv does not support block size == 1!\n");getchar();}
+    if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::usmv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==4) bsr_vmspumv4(M_, &x[0][0], &y[0][0], alpha);
@@ -152,6 +198,12 @@ usmv(double alpha, const Vector& x, Vector& y) const
     }
 }
 
+//! @brief update matrix entries
+//!
+//! @note downcasts from double precision and transposes
+//! each non-zero block entry
+//!
+//! @param data pointer to double precision data
 template <class Vector>
 void MixedMatrixWrapper<Vector>::
 update(double const *data)
@@ -165,12 +217,17 @@ update(double const *data)
         for(int i=0;i<b;i++) for(int j=0;j<b;j++) B[b*j+i] = data[bb*k + b*i + j];
         for(int i=0;i<bb;i++) M_->flt[bb*k + i] = B[i];
     }
-
-    // downcast to single precision
-    //bsr_downcast(M_);
 }
 
 
+//! @brief Adapter to take advantage of the fact that all matrix rows
+//! associated with ghost cells are located at the end of the matrix
+//!
+//! @note The underlying mixed-matrix already ignores ghost rows.
+//!
+//! @param M matrix class
+//! @param V vector class
+//! @param C communicator class
 template<class M, class V, class C>
 class MixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
 {
@@ -193,8 +250,10 @@ public:
         comm_.project(y);
     }
 
+    // accessor to matix object
     virtual const M& getmat() const override { return A_; }
 
+    // solver category
     Dune::SolverCategory::Category category() const override
     {
         return Dune::SolverCategory::overlapping;
@@ -205,15 +264,15 @@ private:
     const C& comm_;
 };
 
-
-/*!
-   \brief Adapter to combine a matrix and another linear operator into
-   a combined linear operator.
-
-   This is similar to WellModelMatrixAdapter, with the difference that
-   here we assume a parallel ordering of rows, where ghost rows are
-   located after interior rows.
- */
+//! @brief Adapter to combine a matrix with another linear operator while
+//! taking advantage of the fact that all matrix rows associated with ghost
+//! cells are located at the end of the matrix
+//!
+//! @note The underlying mixed-matrix already ignores ghost rows.
+//!
+//! @param M matrix class
+//! @param V vector class
+//! @param C communicator class
 template<class M, class V, class C>
 class WellModelMixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
 {
@@ -245,6 +304,7 @@ public:
         comm_.project(y);
     }
 
+    // accessor to matix object
     const M& getmat() const override { return A_; }
 
     void addWellPressureEquations(PressureMatrix& jacobian,
@@ -266,6 +326,7 @@ public:
         return wellOper_.getNumberOfExtraEquations();
     }
 
+    // solver category
     Dune::SolverCategory::Category category() const override
     {
         return Dune::SolverCategory::overlapping;
@@ -278,9 +339,6 @@ protected:
     const C& comm_ ;
     const LinearOperatorExtra<V, V>& wellOper_;
 };
-
-
-
 
 
 } // namespace Opm
