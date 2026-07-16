@@ -70,12 +70,26 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
         prec_free(prec_);
     }
 
+    //! @brief Update ilu0/dilu factorization
+    //!
+    //! Transposes double-precision blocks before factorization.
+    //! Demotes factors after factorization
     virtual void update() override;
+
+
+    //! @brief Mixed-precision ilu0/dilu application
+    //!
+    //! @param y input vector
+    //! @param x output vector
+    virtual void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override;
+
+    //! @brief Solver category
+    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+
     virtual bool hasPerfectUpdate() const override {return true;}
+
     virtual void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
     virtual void post ([[maybe_unused]] X& x) override {};
-    virtual void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override;
-    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 
     private:
     bool use_dilu_;
@@ -85,15 +99,63 @@ class MixedPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
     int nnz_;
 
 
+    //! @brief Dense mixed-precision matrix-vector multiplication
+    //! (y = A.x)
+    //!
+    //! @param y output vector
+    //! @param A column-major matrix
+    //! @param x input vector
     void matvec_mul(double *y,    float const *A, double const * x);
+
+    //! @brief Dense mixed-precision matrix-vector multiply-subtract
+    //! (y -= A.x)
+    //!
+    //! @param y output vector
+    //! @param A column-major matrix
+    //! @param x input vector
     void matvec_mulsub(double *y, float const *A, double const * x);
+
+    //! @brief Dense matrix copy (C = A)
+    //!
+    //! @param C output matrix
+    //! @param A input matrix
     void mat_copy(double *C, double const * A);
+
+    //! @brief Dense matrix inverse
+    //! (invA = A^{-1})
+    //!
+    //! @param invA output matrix
+    //! @param A input matrix
     void mat_inv(double *invA, const double *A);
+
+    //! @brief Dense matrix-matrix multiply-subtract (C -= A.B)
+    //!
+    //! @param C column-major output matrix
+    //! @param A left column-major input matrix
+    //! @param B right column-major input matrix
     void mat_mulsub(double *C, double const *A, double const * B);
+
+    //! @brief In-place matrix-matrix multiplication (C = C.A)
+    //!
+    //! @param C column-major input/output matrix
+    //! @param A left column-major input matrix
     void mat_rmul(double *C, double const *A);
+
+    //! @brief In-place matrix-matrix multiplication (C = A.C)
+    //!
+    //! @param C column-major input/output matrix
+    //! @param A right column-major input matrix
     void mat_lmul(double const *A, double *C);
 };
 
+//! @brief Update ilu0/dilu factorization
+//!
+//! Transposes double-precision blocks before factorization.
+//! Demotes factors after factorization
+//!
+//! @note hand-optimized versions are provided for block-sizes
+//! 2,3, and 4. A generic implementation is provided for block-
+//! sizes > 4
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 update ()
@@ -108,7 +170,7 @@ update ()
         for(int i=0;i<NN;i++) mixed_matrix_->dbl[NN*k + i] = B[i];
     }
 
-    if      constexpr(N==1){printf("MixedPreconditioner::update does not support block size == 1!\n");getchar();}
+    if      constexpr(N==1){OPM_THROW(std::invalid_argument, "MixedMatrixPreconditioner::update does not support block size == 1!\n");}
     else if constexpr(N==2) use_dilu_ ? prec_dilu_factorize2(prec_, mixed_matrix_) : prec_ilu0_factorize2(prec_, mixed_matrix_);
     else if constexpr(N==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
     else if constexpr(N==4) use_dilu_ ? prec_dilu_factorize4(prec_, mixed_matrix_) : prec_ilu0_factorize4(prec_, mixed_matrix_);
@@ -194,6 +256,14 @@ update ()
     prec_downcast(prec_);
 }
 
+//! @brief Mixed-precision ilu0/dilu application
+//!
+//! @param y input vector
+//! @param x output vector
+//!
+//! @note hand-optimized versions are provided for block-sizes
+//! 2,3, and 4. A generic implementation is provided for block-
+//! sizes > 4
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
@@ -201,7 +271,7 @@ apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
     x=y;
 
     int const b = block_size;
-    if      constexpr(b==1){printf("MixedPreconditioner::apply does not support block size == 1!\n");getchar();}
+    if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixPreconditioner::apply does not support block size == 1!\n");}
     else if constexpr(b==2) prec_mapply2c(prec_,&x[0][0]);
     else if constexpr(b==3) prec_mapply3c(prec_,&x[0][0]);
     else if constexpr(b==4) prec_mapply4c(prec_,&x[0][0]);
@@ -247,6 +317,12 @@ apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y)
     }
 }
 
+//! @brief Dense mixed-precision matrix-vector multiplication
+//! (y = A.x)
+//!
+//! @param y output vector
+//! @param A column-major matrix
+//! @param x input vector
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 matvec_mul(double *y, float const *A, double const * x)
@@ -262,6 +338,12 @@ matvec_mul(double *y, float const *A, double const * x)
     for(int i=0;i<N;i++) y[i] = z[i];
 }
 
+//! @brief Dense mixed-precision matrix-vector multiply-subtract
+//! (y -= A.x)
+//!
+//! @param y output vector
+//! @param A column-major matrix
+//! @param x input vector
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 matvec_mulsub(double *y, float const *A, double const * x)
@@ -277,6 +359,10 @@ matvec_mulsub(double *y, float const *A, double const * x)
     for(int i=0;i<N;i++) y[i] -= z[i];
 }
 
+//! @brief Dense matrix copy (C = A)
+//!
+//! @param C output matrix
+//! @param A input matrix
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 mat_copy(double *C, double const * A)
@@ -286,6 +372,13 @@ mat_copy(double *C, double const * A)
     for(int i=0;i<NN;i++) C[i] = A[i];
 }
 
+//! @brief Dense matrix inverse
+//! (invA = A^{-1})
+//!
+//! @param invA output matrix
+//! @param A input matrix
+//!
+//! @note There is no pivoting
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 mat_inv(double *invA, const double *A)
@@ -311,6 +404,11 @@ mat_inv(double *invA, const double *A)
     mat_copy(invA,T);
 }
 
+//! @brief Dense matrix-matrix multiply-subtract (C -= A.B)
+//!
+//! @param C column-major output matrix
+//! @param A left column-major input matrix
+//! @param B right column-major input matrix
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 mat_mulsub(double *C, double const *A, double const * B)
@@ -329,6 +427,10 @@ mat_mulsub(double *C, double const *A, double const * B)
     }
 }
 
+//! @brief In-place matrix-matrix multiplication (C = C.A)
+//!
+//! @param C column-major input/output matrix
+//! @param A left column-major input matrix
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 mat_rmul(double *C, double const *A)
@@ -348,6 +450,10 @@ mat_rmul(double *C, double const *A)
     mat_copy(C,T);
 }
 
+//! @brief In-place matrix-matrix multiplication (C = A.C)
+//!
+//! @param C column-major input/output matrix
+//! @param A right column-major input matrix
 template <class M, class X, class Y>
 void MixedPreconditioner<M,X,Y>::
 mat_lmul(double const *A, double *C)
