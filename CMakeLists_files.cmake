@@ -489,6 +489,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_OilSatfuncConsistencyChecks.cpp
   tests/test_outputdir.cpp
   tests/test_parametersystem.cpp
+  tests/test_grid_from_file.cpp
   tests/test_parallel_wbp_sourcevalues.cpp
   tests/test_parallelwellinfo.cpp
   tests/test_partitionCells.cpp
