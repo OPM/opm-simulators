@@ -255,6 +255,13 @@ namespace Dune
                                                                             comm);
             }
 #endif
+        } else if (solver_type == "cg") {
+            linsolver_ = std::make_shared<Dune::CGSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                      *scalarproduct_,
+                                                                      *preconditioner_,
+                                                                      tol, // desired residual reduction factor
+                                                                      maxiter, // maximum number of iterations
+                                                                      verbosity);
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
