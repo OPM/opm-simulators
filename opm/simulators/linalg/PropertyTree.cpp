@@ -27,6 +27,7 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,14 @@ PropertyTree::PropertyTree(const std::string& jsonFile)
     : tree_(std::make_unique<boost::property_tree::ptree>())
 {
     boost::property_tree::read_json(jsonFile, *tree_);
+}
+
+PropertyTree PropertyTree::fromJsonString(const std::string& json)
+{
+    auto tree = boost::property_tree::ptree{};
+    auto jsonStream = std::istringstream{json};
+    boost::property_tree::read_json(jsonStream, tree);
+    return PropertyTree(tree);
 }
 
 PropertyTree::PropertyTree(const boost::property_tree::ptree& tree)
