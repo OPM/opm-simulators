@@ -52,6 +52,9 @@ public:
     /// linearised into JSON format.
     explicit PropertyTree(const std::string& jsonFile);
 
+    /// Construct a property tree from a JSON string held in memory.
+    static PropertyTree fromJsonString(const std::string& json);
+
     /// Copy constructor.
     ///
     /// \param[in] tree Source object.
