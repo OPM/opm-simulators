@@ -222,9 +222,13 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             : std::vector<Well>{};
 
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
+                // Mechanics couples cells across zero-transmissibility faces,
+                // so the overlap layer must not be pruned by transmissibility
+                // in mechanical runs (same reasoning as for thermal runs).
                 const bool useTransToFilterOverlap =
                         !(eclState1.getSimulationConfig().isThermal() ||
-                            eclState1.getSimulationConfig().isTemp());
+                            eclState1.getSimulationConfig().isTemp() ||
+                            eclState1.runspec().mech());
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
             this->distributeGrid(edgeWeightsMethod, ownersFirst,
