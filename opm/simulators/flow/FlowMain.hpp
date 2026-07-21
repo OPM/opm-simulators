@@ -430,7 +430,8 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report,
+                             simulator_->model().simulator().problem().extraTrailerSummary());
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),

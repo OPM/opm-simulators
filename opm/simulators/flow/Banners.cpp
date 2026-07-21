@@ -116,7 +116,8 @@ void printFlowTrailer(int nprocs,
                       int nthreads,
                       const double total_setup_time,
                       const double deck_read_time,
-                      const SimulatorReport& report)
+                      const SimulatorReport& report,
+                      const std::string_view extra_summary)
 {
     std::ostringstream ss;
     ss << "\n\n================    End of simulation     ===============\n\n";
@@ -125,6 +126,15 @@ void printFlowTrailer(int nprocs,
     ss << fmt::format("Setup time:                 {:9.2f} s\n", total_setup_time);
     ss << fmt::format("  Deck input:               {:9.2f} s\n", deck_read_time);
     report.reportFullyImplicit(ss);
+    if (!extra_summary.empty()) {
+        if (extra_summary.front() != '\n') {
+            ss << '\n';
+        }
+        ss << extra_summary;
+        if (extra_summary.back() != '\n') {
+            ss << '\n';
+        }
+    }
     OpmLog::info(ss.str());
 }
 
