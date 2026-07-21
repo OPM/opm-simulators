@@ -844,8 +844,10 @@ public:
 
 private:
     // LocalContextGuard needs mutable access to save/restore the context
-    // during NLDD domain-local solves.
+    // during NLDD domain-local solves; SetupIterationContextGuard likewise
+    // for mid-step re-initialization passes.
     template<class P> friend class LocalContextGuard;
+    template<class P> friend class SetupIterationContextGuard;
 
     /*!
      * \brief Mutable access to the iteration context for LocalContextGuard.
