@@ -312,6 +312,7 @@ std::string getSolverString(const FlowLinearSolverParameters& p)
     else
     {
         return {"bicgstab"};
+        //return {"mixed-bicgstab"};
     }
 }
 
@@ -442,7 +443,7 @@ setupMixedILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverPa
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "mixed-precision"s);
+    prm.put("solver", "mixed-bicgstab"s);
     prm.put("preconditioner.type", "mixed-ilu0"s);
     return prm;
 }
@@ -455,7 +456,7 @@ setupMixedDILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverP
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "mixed-precision"s);
+    prm.put("solver", "mixed-bicgstab"s);
     prm.put("preconditioner.type", "mixed-dilu"s);
     return prm;
 }
@@ -469,7 +470,7 @@ setupLegacyMixedILU([[maybe_unused]] const std::string& conf, const FlowLinearSo
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "mixed-bicgstab"s);
+    prm.put("solver", "mixed-legacy"s);
     prm.put("preconditioner.type", "legacy-mixed-ilu0"s);
     return prm;
 }
@@ -482,7 +483,7 @@ setupLegacyMixedDILU([[maybe_unused]] const std::string& conf, const FlowLinearS
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "mixed-bicgstab"s);
+    prm.put("solver", "mixed-legacy"s);
     prm.put("preconditioner.type", "legacy-mixed-dilu"s);
     return prm;
 }

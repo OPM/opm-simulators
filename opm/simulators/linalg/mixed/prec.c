@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <immintrin.h>
 
+#include "matvec.h"
 
 prec_t *prec_alloc()
 {
@@ -194,6 +195,11 @@ void mat3_inv(double *invA, const double *A)
     for(int k=0;k<9;k++) invA[k]=M[k]/detA;
 }
 
+static inline void vec_copy4(double *y, double const *x)
+{
+    for(int i=0;i<4;i++) y[i]=x[i];
+}
+
 /**
  * @brief vector copy of 9-element vectors.
  *
@@ -203,6 +209,11 @@ void mat3_inv(double *invA, const double *A)
 static inline void vec_copy9(double *y, double const *x)
 {
     for(int i=0;i<9;i++) y[i]=x[i];
+}
+
+static inline void vec_copy16(double *y, double const *x)
+{
+    for(int i=0;i<16;i++) y[i]=x[i];
 }
 
 /**
@@ -314,6 +325,76 @@ void mat3_vfms(double *C, double const *A, double const *B)
     }
 }
 
+void prec_dilu_factorize2(prec_t *P, bsr_matrix *A)
+{
+    int nrows = A->nrows;
+    int b     = A->b;
+    int bb    = b*b;
+
+    bsr_matrix *L=P->L;
+    bsr_matrix *D=P->D;
+    bsr_matrix *U=P->U;
+
+    // Splitting values of A into L, D, and U, respectively
+    int kU=0;
+    for(int i=0;i<nrows;i++)
+    {
+        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+        {
+            int j=A->colidx[k];
+            if(j<i)       // struct-transpose of L
+            {
+                int kL = L->rowptr[j];
+                vec_copy4(L->dbl + bb*kL, A->dbl + bb*k);
+                L->rowptr[j]++;
+            }
+            else if(j==i) // struct-copy of D
+            {
+                vec_copy4(D->dbl + bb*i, A->dbl + bb*k);
+            }
+            else if(j>i) // struct-copy of U
+            {
+                vec_copy4(U->dbl + bb*kU, A->dbl + bb*k);
+                kU++;
+            }
+        }
+    }
+    // reset rowptr of L
+    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+    L->rowptr[0]=0;
+
+    // Factorizing
+    double scale[4]; //hard-coded to 2x2 blocks
+    for(int i=0;i<A->nrows;i++)
+    {
+        mat2_inv(scale,D->dbl+i*bb);
+        vec_copy4(D->dbl+bb*i, scale); //store inverse instead to simplify application
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale column i of L
+            mat2_rmul(L->dbl+k*bb,scale);
+
+            //update diagonal of U
+            int j=L->colidx[k];
+            mat2_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
+
+            //scale row i of U
+            mat2_lmul(scale,U->dbl+k*bb);
+
+            //NOT IMPLEMENTED!
+            for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
+            {
+                if(L->colidx[m]==j)
+                {
+                    printf("ILU OFF_DIAGONALS NOT IMPLEMENTED!\n");
+                    printf("(%d,%d)",m,j);
+                    getchar();
+                }
+            }
+        }
+    }
+}
+
 
 void prec_dilu_factorize(prec_t *P, bsr_matrix *A)
 {
@@ -382,6 +463,155 @@ void prec_dilu_factorize(prec_t *P, bsr_matrix *A)
                 }
             }
         }
+    }
+}
+
+void prec_dilu_factorize4(prec_t *P, bsr_matrix *A)
+{
+    int nrows = A->nrows;
+    int b     = A->b;
+    int bb    = b*b;
+
+    bsr_matrix *L=P->L;
+    bsr_matrix *D=P->D;
+    bsr_matrix *U=P->U;
+
+    // Splitting values of A into L, D, and U, respectively
+    int kU=0;
+    for(int i=0;i<nrows;i++)
+    {
+        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+        {
+            int j=A->colidx[k];
+            if(j<i)       // struct-transpose of L
+            {
+                int kL = L->rowptr[j];
+                vec_copy16(L->dbl + bb*kL, A->dbl + bb*k);
+                L->rowptr[j]++;
+            }
+            else if(j==i) // struct-copy of D
+            {
+                vec_copy16(D->dbl + bb*i, A->dbl + bb*k);
+            }
+            else if(j>i) // struct-copy of U
+            {
+                vec_copy16(U->dbl + bb*kU, A->dbl + bb*k);
+                kU++;
+            }
+        }
+    }
+    // reset rowptr of L
+    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+    L->rowptr[0]=0;
+
+    // Factorizing
+    double scale[16]; //hard-coded to 4x4 blocks
+    for(int i=0;i<A->nrows;i++)
+    {
+        mat4_vinv(scale,D->dbl+i*bb);
+        vec_copy16(D->dbl+bb*i, scale); //store inverse instead to simplify application
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale column i of L
+            mat4_rmul(L->dbl+k*bb,scale);
+
+            //update diagonal of U
+            int j=L->colidx[k];
+            mat4_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
+
+            //scale row i of U
+            mat4_lmul(scale,U->dbl+k*bb);
+
+            //NOT IMPLEMENTED!
+            for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
+            {
+                if(L->colidx[m]==j)
+                {
+                    printf("ILU OFF_DIAGONALS NOT IMPLEMENTED!\n");
+                    printf("(%d,%d)",m,j);
+                    getchar();
+                }
+            }
+        }
+    }
+}
+
+void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A)
+{
+    int nrows = A->nrows;
+    int b     = A->b;
+    int bb    = b*b;
+
+    bsr_matrix *L=P->L;
+    bsr_matrix *D=P->D;
+    bsr_matrix *U=P->U;
+
+    // Splitting values of A into L, D, and U, respectively
+    int kU=0;
+    for(int i=0;i<nrows;i++)
+    {
+        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+        {
+            int j=A->colidx[k];
+            if(j<i)       // struct-transpose of L
+            {
+                int kL = L->rowptr[j];
+                vec_copy4(L->dbl + bb*kL, A->dbl + bb*k);
+                L->rowptr[j]++;
+            }
+            else if(j==i) // struct-copy of D
+            {
+                vec_copy4(D->dbl + bb*i, A->dbl + bb*k);
+            }
+            else if(j>i) // struct-copy of U
+            {
+                vec_copy4(U->dbl + bb*kU, A->dbl + bb*k);
+                kU++;
+            }
+        }
+    }
+    // reset rowptr of L
+    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+    L->rowptr[0]=0;
+
+    // Factorizing
+    int idx=0;
+    int next = P->offsets[idx][0];
+    double scale[4]; //hard-coded to 2x2 blocks
+    for(int i=0;i<A->nrows;i++)
+    {
+        mat2_inv(scale,D->dbl+i*bb);
+        vec_copy4(D->dbl+bb*i, scale); //store inverse instead to simplify application
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale column i of L
+            mat2_rmul(L->dbl+k*bb,scale);
+
+            //update diagonal D
+            int j=L->colidx[k];
+            mat2_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
+        }
+
+        while(next<U->rowptr[i+1])
+        {
+            int ij = P->offsets[idx][0];
+            int ik = P->offsets[idx][1];
+            int jk = P->offsets[idx][2];
+
+            //update off-diagonals L and U
+            mat2_vfms(U->dbl+jk*bb,L->dbl+ij*bb,U->dbl+ik*bb);
+            mat2_vfms(L->dbl+jk*bb,L->dbl+ik*bb,U->dbl+ij*bb);
+
+            //update marker
+            next=P->offsets[++idx][0];
+        }
+
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale row i of U
+            mat2_lmul(scale,U->dbl+k*bb);
+        }
+
     }
 }
 
@@ -464,6 +694,84 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
     }
 }
 
+void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
+{
+
+    int nrows = A->nrows;
+    //int const b = 4;
+    int const bb =16;
+
+    bsr_matrix *L=P->L;
+    bsr_matrix *D=P->D;
+    bsr_matrix *U=P->U;
+
+    // Splitting values of A into L, D, and U, respectively
+    int kU=0;
+    for(int i=0;i<nrows;i++)
+    {
+        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
+        {
+            int j=A->colidx[k];
+            if(j<i)       // struct-transpose of L
+            {
+                int kL = L->rowptr[j];
+                vec_copy16(L->dbl + bb*kL, A->dbl + bb*k);
+                L->rowptr[j]++;
+            }
+            else if(j==i) // struct-copy of D
+            {
+                vec_copy16(D->dbl + bb*i, A->dbl + bb*k);
+            }
+            else if(j>i) // struct-copy of U
+            {
+                vec_copy16(U->dbl + bb*kU, A->dbl + bb*k);
+                kU++;
+            }
+        }
+    }
+    // reset rowptr of L
+    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
+    L->rowptr[0]=0;
+
+    // Factorizing
+    int idx=0;
+    int next = P->offsets[idx][0];
+    double scale[16] __attribute__((aligned(64))); //hard-coded to 4x4 blocks
+    for(int i=0;i<A->nrows;i++)
+    {
+        mat4_vinv(scale,D->dbl+i*bb);
+        vec_copy16(D->dbl+bb*i, scale); //store inverse instead to simplify application
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale column i of L
+            mat4_rmul(L->dbl+k*bb,scale);
+
+            //update diagonal D
+            int j=L->colidx[k];
+            mat4_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
+        }
+
+        while(next<U->rowptr[i+1])
+        {
+            int ij = P->offsets[idx][0];
+            int ik = P->offsets[idx][1];
+            int jk = P->offsets[idx][2];
+
+            //update off-diagonals L and U
+            mat4_vfms(U->dbl+jk*bb,L->dbl+ij*bb,U->dbl+ik*bb);
+            mat4_vfms(L->dbl+jk*bb,L->dbl+ik*bb,U->dbl+ij*bb);
+
+            //update marker
+            next=P->offsets[++idx][0];
+        }
+
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            //scale row i of U
+            mat4_lmul(scale,U->dbl+k*bb);
+        }
+    }
+}
 #if 0
 /**
  * @brief In-place matrix-vector multiplication for 3x3 matrices.
@@ -509,6 +817,63 @@ static inline void mat3_vecfms(double *y, const double *A, const double *x)
     for(int k=0;k<3;k++) y[k]-=z[k];
 }
 #endif
+void prec_mapply2c(prec_t *restrict P, double *x)
+{
+    bsr_matrix *L  = P->L;
+    bsr_matrix *D  = P->D;
+    bsr_matrix *U  = P->U;
+
+    int b=L->b;
+    int bb=b*b;
+
+    __m256d mm256_zero_pd =_mm256_setzero_pd();
+
+    // Lower triangular solve assuming ones on diagonal
+    for(int i=0;i<L->ncols;i++)
+    {
+        __m256d vA, vx;
+
+        double *xi = x+b*i;
+        __m256d vxi = _mm256_loadu_pd(xi);
+
+        vx = _mm256_permute4x64_pd(vxi,0x50); // 0b01010000
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            const float *A = L->flt+k*bb;
+            int j=U->colidx[k]; // should be L, but does not matter due to structural symmetry?
+            vA = _mm256_cvtps_pd(_mm_loadu_ps(A))*vx;
+
+            double *xj = x+b*j;
+            __m128d vxj = _mm_loadu_pd(xj) - (_mm256_extractf128_pd(vA,0) +_mm256_extractf128_pd(vA,1));
+            _mm_storeu_pd(xj,vxj);
+        }
+
+        // Muliply by (inverse) diagonal block
+        const float *A = D->flt+i*bb;
+        vA = _mm256_cvtps_pd(_mm_loadu_ps(A))*vx;
+        __m128d vz = _mm256_extractf128_pd(vA,0) +_mm256_extractf128_pd(vA,1);
+
+        _mm_storeu_pd(xi,vz);
+    }
+
+    // Upper triangular solve assuming nonzeros stored in original order
+    for(int i=U->ncols;i>0;i--)
+    {
+        __m256d vA;
+        vA=mm256_zero_pd;
+        for(int k=U->rowptr[i]-1;k>U->rowptr[i-1]-1;k--)
+        {
+            const float *A = U->flt+k*bb;
+            int j=U->colidx[k];
+            __m256d vxj = _mm256_loadu_pd(x+b*j);
+            vA += _mm256_cvtps_pd(_mm_loadu_ps(A))*_mm256_permute4x64_pd(vxj,0x50);
+        }
+
+        double *xi = x+b*(i-1);
+        __m128d vxi = _mm_loadu_pd(xi) - (_mm256_extractf128_pd(vA,0) +_mm256_extractf128_pd(vA,1));
+        _mm_storeu_pd(xi,vxi);
+    }
+}
 
 void prec_mapply3c(prec_t *restrict P, double *x)
 {
@@ -579,6 +944,78 @@ void prec_mapply3c(prec_t *restrict P, double *x)
         __m256d vxi = _mm256_loadu_pd(xi);
         __m256d vz = (vxi - vA[0]) - (vA[1] + vA[2]);
         vz =_mm256_blend_pd(vxi,vz,0x7);  // 4th element unchanged
+        _mm256_storeu_pd(xi,vz);
+    }
+}
+
+void prec_mapply4c(prec_t *restrict P, double *x)
+{
+    bsr_matrix *L  = P->L;
+    bsr_matrix *D  = P->D;
+    bsr_matrix *U  = P->U;
+
+    int const b=4;
+    int const bb=16;
+
+    __m256d mm256_zero_pd =_mm256_setzero_pd();
+
+    // Lower triangular solve assuming ones on diagonal
+    for(int i=0;i<L->ncols;i++)
+    {
+        __m256d vA[4], vx[4];
+
+        double *xi = x+b*i;
+        __m256d vxi = _mm256_loadu_pd(xi);
+
+        vx[0] = _mm256_permute4x64_pd(vxi,0x00); // 0b00000000
+        vx[1] = _mm256_permute4x64_pd(vxi,0x55); // 0b01010101
+        vx[2] = _mm256_permute4x64_pd(vxi,0xAA); // 0b10101010
+        vx[3] = _mm256_permute4x64_pd(vxi,0xFF); // 0b11111111
+        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
+        {
+            const float *A = L->flt+k*bb;
+            int j=U->colidx[k]; // should be L, but does not matter due to structural
+            vA[0] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*vx[0];
+            vA[1] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*vx[1];
+            vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*vx[2];
+            vA[3] = _mm256_cvtps_pd(_mm_loadu_ps(A+12))*vx[3];
+
+            double *xj = x+b*j;
+            __m256d vxj = _mm256_loadu_pd(xj);
+            __m256d vz = vxj - (vA[0]+vA[1]) - (vA[2]+vA[3]);
+            _mm256_storeu_pd(xj,vz);
+        }
+
+        // Muliply by (inverse) diagonal block
+        const float *A = D->flt+i*bb;
+        vA[0] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*vx[0]; //0b00000000
+        vA[1] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*vx[1]; //0b01010101
+        vA[2] = _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*vx[2]; //0b10101010
+        vA[3] = _mm256_cvtps_pd(_mm_loadu_ps(A+12))*vx[3]; //0b11111111
+
+        __m256d vz = vA[0] + vA[1] + vA[2] + vA[3];
+        _mm256_storeu_pd(xi,vz);
+    }
+
+    // Upper triangular solve assuming ones on diagonal`
+    for(int i=U->ncols;i>0;i--)
+    {
+        __m256d vA[4];
+        for(int k=0;k<4;k++) vA[k]=mm256_zero_pd;
+        for(int k=U->rowptr[i]-1;k>U->rowptr[i-1]-1;k--)
+        {
+            const float *A = U->flt+k*bb;
+            int j=U->colidx[k];
+            __m256d vxj = _mm256_loadu_pd(x+b*j);
+            vA[0] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 0))*_mm256_permute4x64_pd(vxj,0x00); // 0b00000000
+            vA[1] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 4))*_mm256_permute4x64_pd(vxj,0x55); // 0b01010101
+            vA[2] += _mm256_cvtps_pd(_mm_loadu_ps(A+ 8))*_mm256_permute4x64_pd(vxj,0xAA); // 0b10101010
+            vA[3] += _mm256_cvtps_pd(_mm_loadu_ps(A+12))*_mm256_permute4x64_pd(vxj,0xFF); // 0b11111111
+        }
+
+        double *xi = x+b*(i-1);
+        __m256d vxi = _mm256_loadu_pd(xi);
+        __m256d vz = vxi - (vA[0]+vA[1]) - (vA[2]+vA[3]);
         _mm256_storeu_pd(xi,vz);
     }
 }
@@ -669,3 +1106,73 @@ void prec_info(prec_t *P)
     bsr_info(P->D);
     bsr_info(P->U);
 }
+
+void prec_test()
+{
+//#if 0
+    // verify 2x2 inverse and matrix-matrix multiplications
+    double A[4] = {1,0.2,0.3,4};
+    double B[4] = {1,0.2,0.3,4};
+    double C[4] = {1,0.2,0.3,4};
+    double I[4] = {1,0,0,1};
+
+    mat_show(A,2,"A");
+
+    mat2_inv(A,A);
+    mat_show(A,2,"A");
+
+    mat2_vfms(I,A,B);
+    mat_show(I,2,"I");
+
+    mat2_rmul(B,A);
+    mat_show(B,2,"B");
+
+    mat2_lmul(A,C);
+    mat_show(C,2,"C");
+//#endif
+#if 0
+    // verify 4x4 inverse and matrix-matrix multiplications
+    double AA[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double BB[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double CC[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double II[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+    mat_show(AA,4,"AA");
+
+    mat4_inv2(AA,AA);
+    mat_show(AA,4,"AA");
+
+    mat4_vfms(II,AA,BB);
+    mat_show(II,4,"II");
+
+    mat4_rmul(BB,AA);
+    mat_show(BB,4,"BB");
+
+    mat4_lmul(AA,CC);
+    mat_show(CC,4,"CC");
+#endif
+#if 0
+    // verify 4x4 inverse and matrix-matrix multiplications
+    double A[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double B[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double C[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
+    double I[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+/*
+    mat_fshow(A,4,"A");
+    mat4_inv2(A);
+    mat_fshow(A,4,"A");
+*/
+    mat_show(A,4,"A");
+    mat4_vinv(A,A);
+    mat_show(A,4,"A");
+
+    mat4_vfms(I,A,B);
+    mat_show(I,4,"I");
+
+    mat4_rmul(B,A);
+    mat_show(B,4,"B");
+
+    mat4_lmul(A,C);
+    mat_show(C,4,"C");
+#endif
+}
+

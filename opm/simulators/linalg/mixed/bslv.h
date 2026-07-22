@@ -82,6 +82,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
  * @return Number of linear iterations.
  */
 int  bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
+int  bslv_pbicgstab4m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
 
 /**
  * @brief Preconditioned bicgstab in double-precision.
