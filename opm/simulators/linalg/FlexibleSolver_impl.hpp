@@ -204,8 +204,7 @@ namespace Dune
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
 
-
-        // make sure it is nullptr at the start (used for error checking in the end).
+        // make sure it is nullptr at the start (used for error checking in the end). 
         // while the linSolver_ is initalized as a nullptr, we want to make sure it is reset here,
         // simply because we will check if it is at the end of this function and need to keep this invariant
         // (that it is nullptr at the start of this function).
@@ -255,6 +254,17 @@ namespace Dune
                                                                             comm);
             }
 #endif
+        } else if (solver_type == "cg") {
+            if constexpr (Opm::is_gpu_operator_v<Operator>) {
+                OPM_THROW(std::invalid_argument, "cg solver not supported for GPU operators.");
+            } else {
+                this->linsolver_ = std::make_shared<Dune::CGSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                                *scalarproduct_,
+                                                                                *preconditioner_,
+                                                                                tol, // desired residual reduction factor
+                                                                                maxiter, // maximum number of iterations
+                                                                                verbosity);
+            }
         } else if (solver_type == "loopsolver") {
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
