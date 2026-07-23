@@ -106,6 +106,10 @@ struct UpdateEquationsScaling { static constexpr bool value = false; };
 struct UseUpdateStabilization { static constexpr bool value = true; };
 struct MatrixAddWellContributions { static constexpr bool value = false; };
 
+struct EnableGroupTreeBalancer { static constexpr bool value = false; };
+template<class Scalar>
+struct GroupTreeBalancerTolerance { static constexpr Scalar value = 1e-5; };
+
 struct UseMultisegmentWell { static constexpr bool value = true; };
 
 template<class Scalar>
@@ -412,6 +416,13 @@ public:
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated
     Scalar nupcol_group_rate_tolerance_;
+
+    /// Enable the production group-tree balancing predictor
+    bool enable_group_tree_balancer_;
+
+    /// Relative tolerance for the group-tree balancer convergence check
+    Scalar group_tree_balancer_tolerance_;
+
 
     /// Construct from user parameters or defaults.
     BlackoilModelParameters();

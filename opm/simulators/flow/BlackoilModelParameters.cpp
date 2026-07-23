@@ -126,6 +126,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
     well_group_constraints_max_iterations_ = Parameters::Get<Parameters::WellGroupConstraintsMaxIterations>();
     group_control_fraction_tolerance_ = Parameters::Get<Parameters::GroupControlFractionTolerance<Scalar>>();
+    enable_group_tree_balancer_ = Parameters::Get<Parameters::EnableGroupTreeBalancer>();
+    group_tree_balancer_tolerance_ = Parameters::Get<Parameters::GroupTreeBalancerTolerance<Scalar>>();
 }
 
 template<class Scalar>
@@ -325,6 +327,13 @@ void BlackoilModelParameters<Scalar>::registerParameters()
 
     Parameters::Register<Parameters::GroupControlFractionTolerance<Scalar>>
         ("Tolerance for minimal allowed fraction for controlled phase before employing a fallback control");
+
+    Parameters::Register<Parameters::EnableGroupTreeBalancer>
+        ("Enable the production group-tree balancing predictor (runs before the standard "
+         "well/group control update loop)");
+    Parameters::Register<Parameters::GroupTreeBalancerTolerance<Scalar>>
+        ("Relative convergence tolerance for the production group-tree balancer");
+
     // if openMP is available, use two threads per mpi rank by default
 #if _OPENMP
     Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);

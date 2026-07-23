@@ -31,6 +31,7 @@ BlackoilWellModelGenericParameters<Scalar>::BlackoilWellModelGenericParameters()
     : nupcol_group_rate_tolerance_(Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>())
     , max_number_of_group_switches_(Parameters::Get<Parameters::MaximumNumberOfGroupSwitches>())
     , use_multisegment_well_(Parameters::Get<Parameters::UseMultisegmentWell>())
+    , enable_group_tree_balancer_(Parameters::Get<Parameters::EnableGroupTreeBalancer>())
 {}
 
 template struct BlackoilWellModelGenericParameters<double>;

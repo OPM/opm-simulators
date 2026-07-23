@@ -176,6 +176,67 @@ checkIndividualConstraints(SingleWellState<Scalar, IndexTraits>& ws,
 }
 
 template<typename FluidSystem>
+std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
+WellInterfaceFluidSystem<FluidSystem>::
+estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                      const Well::ProductionControls& controls,
+                                      const bool check_group_constraints,
+                                      DeferredLogger& deferred_logger,
+                                      const std::optional<Scalar> bhp_at_thp_limit) const
+{
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            estimateStrictestProductionConstraint(ws, rRates, controls, check_group_constraints, deferred_logger, bhp_at_thp_limit);
+}
+template<typename FluidSystem>
+std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
+WellInterfaceFluidSystem<FluidSystem>::
+estimateStrictestProductionRateConstraintFromRates(
+    const std::vector<Scalar>& pos_surface_rates,
+    const std::vector<Scalar>& pos_reservoir_rates,
+    const Well::ProductionControls& controls,
+    DeferredLogger& deferred_logger) const
+{
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            estimateStrictestProductionRateConstraintFromRates(
+                pos_surface_rates, pos_reservoir_rates, rRates, controls, deferred_logger);
+}
+template<typename FluidSystem>
+std::pair<Well::ProducerCMode, typename FluidSystem::Scalar>
+WellInterfaceFluidSystem<FluidSystem>::
+estimateStrictestProductionRateConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
+                                          const Well::ProductionControls& controls,
+                                          const bool check_group_constraints,
+                                          DeferredLogger& deferred_logger) const
+{
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<Scalar>& surface_rates,
+                         std::vector<Scalar>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+    return WellConstraints(*this).
+            estimateStrictestProductionRateConstraint(ws, rRates, controls, check_group_constraints, deferred_logger);
+}
+
+template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkGroupConstraints(const GroupStateHelperType& groupStateHelper,

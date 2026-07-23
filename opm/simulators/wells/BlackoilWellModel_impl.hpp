@@ -45,6 +45,7 @@
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
+#include <opm/simulators/wells/ProdGroupTreeBalancer.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
@@ -62,6 +63,7 @@
 #include <cstddef>
 #include <iomanip>
 #include <optional>
+#include <unordered_map>
 #include <utility>
 
 #include <fmt/format.h>
@@ -497,6 +499,24 @@ namespace Opm {
         }
 
         this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
+
+        // --- Potential-based group-tree balance ---
+        // Run BEFORE the initial well-solve loop so that wells on GRUP control
+        // receive consistent group targets before their equations are solved.
+        // Potentials and guide rates have been computed above; group state
+        // (including GPMAINT targets) has been synced by the call above.
+        if (this->wellsActive() && (param_.enable_group_tree_balancer_)) {
+            const auto balancerLimits = prepareWellsForBalancingFromPotentials_(local_deferredLogger);
+            ProdGroupTreeBalancer::runGroupTreeBalancer(
+                *this,
+                this->summaryState(),
+                reportStepIdx,
+                param_.group_tree_balancer_tolerance_,
+                balancerLimits,
+                local_deferredLogger);
+            this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
+        }
+
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1312,6 +1332,23 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "updateWellControlsAndNetworkIteration() failed: ",
                                        this->terminal_output_, grid().comm());
+
+        if (param_.enable_group_tree_balancer_ && well_group_control_changed) {
+            const auto& iterCtx = simulator_.problem().iterationContext();
+            const int nupcol = this->schedule()[reportStepIdx].nupcol();
+            if (iterCtx.withinNupcol(nupcol)) {
+                const auto balancerLimits = prepareWellsForBalancing_(local_deferredLogger);
+                this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
+                ProdGroupTreeBalancer::runGroupTreeBalancer(
+                    *this,
+                    this->summaryState(),
+                    reportStepIdx,
+                    param_.group_tree_balancer_tolerance_,
+                    balancerLimits,
+                    local_deferredLogger);
+                this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
+            }
+        }
 
         // update guide rates
         if (alq_updated || BlackoilWellModelGuideRates(*this).
@@ -2161,6 +2198,195 @@ namespace Opm {
 
 
 
+
+    template<typename TypeTag>
+    auto BlackoilWellModel<TypeTag>::
+    gatherWellLimits_(const std::unordered_map<std::string, std::pair<int, Scalar>>& localLimits,
+                      const std::vector<std::string>& allWellNames) const
+        -> std::unordered_map<std::string, std::pair<int, Scalar>>
+    {
+        const int n_global = static_cast<int>(allWellNames.size());
+
+        // Build name → global-index map (same schedule order on all ranks).
+        std::unordered_map<std::string, int> globalIndex;
+        globalIndex.reserve(n_global);
+        for (int i = 0; i < n_global; ++i)
+            globalIndex.emplace(allWellNames[i], i);
+
+        // Encode into flat buffer: [mode+1, value] per well.
+        // Zero means "not set" (avoids ambiguity with CMODE_UNDEFINED which is -1).
+        constexpr int stride = 2;
+        std::vector<Scalar> buf(n_global * stride, Scalar(0));
+        for (const auto& [name, modeVal] : localLimits) {
+            if (const auto it = globalIndex.find(name); it != globalIndex.end()) {
+                buf[it->second * stride + 0] = static_cast<Scalar>(modeVal.first + 1);
+                buf[it->second * stride + 1] = modeVal.second;
+            }
+        }
+
+        simulator_.vanguard().grid().comm().sum(buf.data(), static_cast<int>(buf.size()));
+
+        // Decode into result map — identical on every rank after the reduction.
+        std::unordered_map<std::string, std::pair<int, Scalar>> result;
+        result.reserve(n_global);
+        for (int gi = 0; gi < n_global; ++gi) {
+            const Scalar encodedMode = buf[gi * stride + 0];
+            if (encodedMode > Scalar(0)) {
+                result[allWellNames[gi]] = {
+                    static_cast<int>(std::round(encodedMode)) - 1,
+                    buf[gi * stride + 1]
+                };
+            }
+        }
+        return result;
+    }
+
+    template<typename TypeTag>
+    auto BlackoilWellModel<TypeTag>::
+    prepareWellsForBalancingFromPotentials_([[maybe_unused]] DeferredLogger& deferred_logger)
+        -> std::unordered_map<std::string, std::pair<int, Scalar>>
+    {
+        OPM_TIMEFUNCTION();
+        const int reportStep = this->reportStepIndex();
+        const auto& allWellNames = this->schedule().wellNames(reportStep);
+        if (allWellNames.empty()) return {};  // globally empty — safe collective exit
+
+        std::unordered_map<std::string, std::pair<int, Scalar>> localLimits;
+        localLimits.reserve(well_container_.size());
+
+        for (auto& well : well_container_) {
+            const auto widx = well->indexOfWell();
+            auto& ws = this->wellState().well(widx);
+            if (!well->wellEcl().isProducer() || ws.status != WellStatus::OPEN)
+                continue;
+
+            // Use potentials as the pressure-constraint proxy — no IPR solve needed.
+            const auto result =
+                well->estimateStrictestProductionLimitFromPotentials(
+                    this->wellState(), this->summaryState(), deferred_logger);
+
+            if (!result.has_value()) {
+                // Well can't operate at the start of this step: don't include.
+                for (int p = 0; p < this->numPhases(); ++p)
+                    ws.surface_rates[p] = Scalar(0);
+                continue;
+            }
+
+            localLimits[well->name()] = {static_cast<int>(result->first), result->second};
+        }
+
+        // Gather local limits from all ranks; returns a globally consistent map.
+        return gatherWellLimits_(localLimits, allWellNames);
+    }
+
+    template<typename TypeTag>
+    auto BlackoilWellModel<TypeTag>::
+    prepareWellsForBalancing_(DeferredLogger& deferred_logger)
+        -> std::unordered_map<std::string, std::pair<int, Scalar>>
+    {
+        OPM_TIMEFUNCTION();
+        const int reportStep = this->reportStepIndex();
+        const auto& allWellNames = this->schedule().wellNames(reportStep);
+        if (allWellNames.empty()) return {};  // globally empty — safe collective exit
+
+        std::unordered_map<std::string, std::pair<int, Scalar>> localLimits;
+        localLimits.reserve(well_container_.size());
+
+        for (auto& well : well_container_) {
+            const auto widx = well->indexOfWell();
+            auto& ws = this->wellState().well(widx);
+            if (!well->wellEcl().isProducer() || ws.status != WellStatus::OPEN || well->wellIsStopped())
+                continue;
+            // If well has zero rates, but still open, we have a problematic well. One could
+            // include it using potentials as a proxy, but for now, we leave it out of the balancing.
+            const auto sumRates = std::accumulate(ws.surface_rates.begin(), ws.surface_rates.end(), Scalar(0));
+            if (sumRates == Scalar(0)) continue;
+            
+            // After a local Newton solve, production_cmode reflects the tightest
+            // binding constraint the solver converged to.  For individually-controlled
+            // rate/pressure modes we can skip the IPR computation:
+            //   Rate modes (ORAT/WRAT/GRAT/LRAT/RESV): read target directly from controls.
+            //   Pressure modes (BHP/THP): current surface_rates are the maximum feasible
+            //     production at that pressure — use their sum as the rate proxy.
+            // Only GRUP-controlled wells and CMODE_UNDEFINED still require the IPR path.
+            const auto cmode = ws.production_cmode;
+            if (cmode != Well::ProducerCMode::GRUP &&
+                cmode != Well::ProducerCMode::CMODE_UNDEFINED)
+            {
+                Scalar target = Scalar(-1);
+                switch (cmode) {
+                case Well::ProducerCMode::ORAT: {
+                    const auto controls = well->wellEcl().productionControls(this->summaryState());
+                    target = static_cast<Scalar>(controls.oil_rate);
+                    break;
+                }
+                case Well::ProducerCMode::WRAT: {
+                    const auto controls = well->wellEcl().productionControls(this->summaryState());
+                    target = static_cast<Scalar>(controls.water_rate);
+                    break;
+                }
+                case Well::ProducerCMode::GRAT: {
+                    const auto controls = well->wellEcl().productionControls(this->summaryState());
+                    target = static_cast<Scalar>(controls.gas_rate);
+                    break;
+                }
+                case Well::ProducerCMode::LRAT: {
+                    const auto controls = well->wellEcl().productionControls(this->summaryState());
+                    target = static_cast<Scalar>(controls.liquid_rate);
+                    break;
+                }
+                case Well::ProducerCMode::RESV: {
+                    const auto controls = well->wellEcl().productionControls(this->summaryState());
+                    target = static_cast<Scalar>(controls.resv_rate);
+                    break;
+                }
+                case Well::ProducerCMode::BHP:
+                case Well::ProducerCMode::THP:
+                    // Pressure-constrained: sum all phase rates (sign: surface_rates < 0 for producers).
+                    target = Scalar(0);
+                    for (const Scalar r : ws.surface_rates)
+                        target += -r;
+                    break;
+                default:
+                    break;  // NONE or unknown — fall through to IPR path
+                }
+                if (target >= Scalar(0)) {
+                    localLimits[well->name()] = {static_cast<int>(cmode), target};
+                    continue;
+                }
+            }
+
+            // IPR path: refresh coefficients, then compute strictest limit.
+            if (param_.use_implicit_ipr_) {
+                try {
+                    well->updateIPRImplicit(
+                        simulator_, this->groupStateHelper(), this->wellState());
+                } catch (const std::exception& e) {
+                    // Catch locally so all ranks still reach the subsequent comm.sum() inside gatherWellLimits_.
+                    deferred_logger.warning("IPR_UPDATE_FAILED",
+                        fmt::format("updateIPRImplicit failed for well {}: {}. "
+                                    "Skipping well in group-tree balancer.",
+                                    well->name(), e.what()));
+                    continue;
+                }
+            }
+
+            const auto result =
+                well->estimateStrictestProductionLimitForBalancer(
+                    this->wellState(), this->summaryState(), deferred_logger);
+
+            if (!result.has_value()) {
+                well->stopWell();
+                for (int p = 0; p < this->numPhases(); ++p)
+                    ws.surface_rates[p] = Scalar(0);
+                continue;
+            }
+
+            localLimits[well->name()] = {static_cast<int>(result->first), result->second};
+        }
+
+        return gatherWellLimits_(localLimits, allWellNames);
+    }
 
     template<typename TypeTag>
     void
