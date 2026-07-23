@@ -23,6 +23,7 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
@@ -77,7 +78,7 @@ namespace Opm
 
     namespace Details
     {
-        template<class Scalar> using PressureMatrixType = Dune::BCRSMatrix<MatrixBlock<Scalar, 1, 1>>;
+        template<class Scalar> using PressureMatrixType = BlockSparseMatrix<MatrixBlock<Scalar, 1, 1>>;
         template<class Scalar> using PressureVectorType = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
         template<class Scalar> using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType<Scalar>,
                                                                                  PressureVectorType<Scalar>,

@@ -31,8 +31,9 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
+
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 
 using namespace HypreTestHelpers;
@@ -42,7 +43,7 @@ BOOST_GLOBAL_FIXTURE(MPIFixture);
 BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_CpuInputCpuBackend, HypreTestFixture)
 {
     constexpr int N = 100; // 100x100 grid
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 
     // Create matrix

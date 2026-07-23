@@ -1,9 +1,9 @@
 #include <config.h>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/graph.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
 
 #define BOOST_TEST_MODULE GraphColoringTest
@@ -26,7 +26,7 @@ void checkAllIndices(const std::vector<std::size_t>& ordering)
 
 BOOST_AUTO_TEST_CASE(TestWelschPowell)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double,1,1>>;
     using Graph = Dune::Amg::MatrixGraph<Matrix>;
     int N = 10;
     Matrix matrix(N*N, N*N, 5, 0.4, Matrix::implicit);
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms3x3Matrix)
     const int nonZeroes = 5;
 
     // creating some shorthand typenames
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 
     Matrix testMatrix(N, N, nonZeroes, Matrix::row_wise);
     for (auto row = testMatrix.createbegin(); row != testMatrix.createend(); ++row) {
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Simple)
     const int nonZeroes = 11;
 
     // creating some shorthand typenames
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 
     Matrix testMatrix(N, N, nonZeroes, Matrix::row_wise);
     for (auto row = testMatrix.createbegin(); row != testMatrix.createend(); ++row) {
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Tridiagonal)
     const int nonZeroes = 13;
 
     // creating some shorthand typenames
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 
     Matrix testMatrix(N, N, nonZeroes, Matrix::row_wise);
     for (auto row = testMatrix.createbegin(); row != testMatrix.createend(); ++row) {
@@ -325,7 +325,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Complex)
     const int nonZeroes = 15;
 
     // creating some shorthand typenames
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 
     Matrix testMatrix(N, N, nonZeroes, Matrix::row_wise);
     for (auto row = testMatrix.createbegin(); row != testMatrix.createend(); ++row) {

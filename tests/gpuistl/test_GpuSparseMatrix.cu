@@ -26,10 +26,9 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <opm/common/utility/pointerArithmetic.hpp>
-
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <boost/mpl/range_c.hpp>
 #include <boost/test/data/monomorphic.hpp>
@@ -63,7 +62,7 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
     const int N = 5;
     const int nonZeroes = N * 3 - 2;
     using M = Dune::FieldMatrix<double, 1, 1>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -131,7 +130,7 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrs)
     const int N = 3;
     const int nonZeroes = 6;
     using M = Dune::FieldMatrix<double, 1, 1>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
 
     /*
     Fill in a matrix with this sparsity pattern:
@@ -218,7 +217,7 @@ BOOST_AUTO_TEST_CASE(TestGetDiagPtrsBlockedNonScalar)
     const int N = 3;
     const int nonZeroes = 6;
     using M = Dune::FieldMatrix<double, 2, 2>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
 
     /*
     Fill in a blockmatrix with this sparsity pattern:
@@ -319,7 +318,7 @@ void runRandomSparsityMatrixTest()
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     const std::size_t N = 300;
     using M = Dune::FieldMatrix<double, dim, dim>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
 
     std::vector<std::vector<std::size_t>> nonzerocols(N);

@@ -25,7 +25,6 @@
 
 #include <dune/common/fmatrix.hh>
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -300,7 +299,7 @@ template<class Scalar> class WellContributions;
 
             const WellInterface<TypeTag>& getWell(const std::string& well_name) const;
 
-            using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
+            using PressureMatrix = BlockSparseMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
             void addWellPressureEquations(PressureMatrix& jacobian,
                                           const BVector& weights,

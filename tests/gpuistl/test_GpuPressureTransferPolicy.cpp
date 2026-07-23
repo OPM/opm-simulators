@@ -25,10 +25,10 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/operators.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
@@ -51,7 +51,7 @@ struct TestFixture {
     static constexpr int N = 10;
 
     using BlockType = Dune::FieldMatrix<Scalar, blockSize, blockSize>;
-    using MatrixType = Dune::BCRSMatrix<BlockType>;
+    using MatrixType = Opm::BlockSparseMatrix<BlockType>;
     using VectorType = Dune::BlockVector<Dune::FieldVector<Scalar, blockSize>>;
     using CommInfo = Dune::Amg::SequentialInformation;
 
