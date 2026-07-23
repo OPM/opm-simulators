@@ -62,7 +62,7 @@ public:
     //! \brief Prepare the preconditioner.
     //!
     //! \copydoc Preconditioner::pre(X&,Y&)
-    virtual void pre(X& x, Y& b) override
+    void pre(X& x, Y& b) override
     {
         // TODO: [perf] Do we always need to copy, or only when we need the pre step?
         m_communication->copyOwnerToAll(x, x); // make Dirichlet values consistent
@@ -74,19 +74,19 @@ public:
     //! \brief Apply the preconditioner
     //!
     //! \copydoc Preconditioner::apply(X&,const Y&)
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         m_preconditioner->apply(v, d);
         m_communication->copyOwnerToAll(v, v);
     }
 
 
-    virtual void update() override
+    void update() override
     {
         m_preconditioner->update();
     }
 
-    virtual void post(X& x) override
+    void post(X& x) override
     {
         if constexpr (detail::shouldCallPreconditionerPost<P>()) {
             m_preconditioner->post(x);
@@ -94,7 +94,7 @@ public:
     }
 
     //! Category of the preconditioner (see SolverCategory::Category)
-    virtual Dune::SolverCategory::Category category() const override
+    Dune::SolverCategory::Category category() const override
     {
         return Dune::SolverCategory::overlapping;
     }
@@ -108,12 +108,12 @@ public:
         return detail::shouldCallPreconditionerPre<P>();
     }
 
-    virtual std::shared_ptr<Dune::PreconditionerWithUpdate<X, Y>> getUnderlyingPreconditioner() override
+    std::shared_ptr<Dune::PreconditionerWithUpdate<X, Y>> getUnderlyingPreconditioner() override
     {
         return m_preconditioner;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return true;
     }
 

@@ -91,7 +91,7 @@ public:
             "Using WellModelMatrixAdapter with SolverAdapter is not well-defined so it will not work well, or at all.");
     }
 
-    virtual void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
+    void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
     {
         // TODO: Can we do this without reimplementing the other function?
         // TODO: [perf] Do we need to update the matrix every time? Probably yes
@@ -112,7 +112,7 @@ public:
         m_inputBuffer->copyToHost(b);
         m_outputBuffer->copyToHost(x);
     }
-    virtual void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
+    void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
     {
         // TODO: [perf] Do we need to update the matrix every time? Probably yes
         m_matrix.updateNonzeroValues(m_opOnCPUWithMatrix.getmat(), true);

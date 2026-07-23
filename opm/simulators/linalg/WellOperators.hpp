@@ -429,7 +429,7 @@ public:
         interiorSize_ = setInteriorSize(comm_);
     }
 
-    virtual void apply( const X& x, Y& y ) const override
+    void apply( const X& x, Y& y ) const override
     {
         for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
         {
@@ -443,7 +443,7 @@ public:
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
+    void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
         {
@@ -455,7 +455,7 @@ public:
         ghostLastProject( y );
     }
 
-    virtual const matrix_type& getmat() const override { return *A_; }
+    const matrix_type& getmat() const override { return *A_; }
 
     size_t getInteriorSize() const { return interiorSize_;}
 

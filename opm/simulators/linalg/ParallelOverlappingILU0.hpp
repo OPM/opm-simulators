@@ -144,7 +144,7 @@ public:
     using block_type = typename matrix_type::block_type;
     using size_type = typename matrix_type::size_type;
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return true;
     }
 
