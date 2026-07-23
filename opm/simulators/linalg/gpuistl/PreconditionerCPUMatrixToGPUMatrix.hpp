@@ -110,7 +110,7 @@ public:
         return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
     }
 
-    virtual bool hasPerfectUpdate() const override
+    bool hasPerfectUpdate() const override
     {
         return m_underlyingPreconditioner.hasPerfectUpdate();
     }

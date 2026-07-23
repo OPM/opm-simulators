@@ -44,37 +44,37 @@ public:
     using X = typename OriginalPreconditioner::domain_type;
     using Y = typename OriginalPreconditioner::range_type;
 
-    virtual void pre(X& x, Y& b) override
+    void pre(X& x, Y& b) override
     {
         OPM_TIMEBLOCK(pre);
         block_precond_.pre(x, b);
     }
 
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         OPM_TIMEBLOCK(apply);
         block_precond_.apply(v, d);
     }
 
-    virtual void post(X& x) override
+    void post(X& x) override
     {
         OPM_TIMEBLOCK(post);
         block_precond_.post(x);
     }
 
-    virtual SolverCategory::Category category() const override
+    SolverCategory::Category category() const override
     {
         return block_precond_.category();
     }
 
     // The update() function does nothing for a wrapped preconditioner.
-    virtual void update() override
+    void update() override
     {
         OPM_TIMEBLOCK(update);
         orig_precond_.update();
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return orig_precond_.hasPerfectUpdate();
     }
 
