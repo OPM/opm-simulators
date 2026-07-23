@@ -165,10 +165,13 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                EclipseState&                            eclState1,
                FlowGenericVanguard::ParallelWellStruct& parallelWells,
                const int                                numJacobiBlocks,
-               const bool                               enableEclOutput)
+               const bool                               enableEclOutput,
+               const double                             coarsePartitionGraphThreshold,
+               const int                                coarsePartitionMaxNodeSize)
 {
     if (((partitionMethod == Dune::PartitionMethod::zoltan) ||
-         (partitionMethod == Dune::PartitionMethod::zoltanGoG)) &&
+         (partitionMethod == Dune::PartitionMethod::zoltanGoG ||
+          partitionMethod == Dune::PartitionMethod::zoltanCG)) &&
         !this->zoltanParams().empty())
     {
         this->grid_->setPartitioningParams
@@ -212,6 +215,23 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             }
         }
 
+        Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>> graph;
+        double coarseThreshold = -1;
+        int coarseMaxNodeSize = coarsePartitionMaxNodeSize;
+        if (partitionMethod == Dune::PartitionMethod::zoltanCG) {
+            if (this->grid_->comm().rank() == 0) {
+
+                //Construct transmissibility graph and calculate coarseThreshold 
+                coarseThreshold = this->constructTransGraph(gridView, graph, coarsePartitionGraphThreshold);
+
+                if (coarseMaxNodeSize == -1) {
+
+                    //Set max-node size to max( 1, 0.5 * numCells/numPart )
+                    coarseMaxNodeSize = std::max (1, (int) ( this->grid_->numCells() / ( 2.0 * this->grid_->comm().size() ) ) );
+                }
+            }
+        }
+
         // Skipping inactive wells in partitioning currently does not play nice with restart..
         const bool restart = eclState1.getInitConfig().restartRequested();
         const bool split_inactive = (!restart && allowSplittingInactiveWells);
@@ -234,7 +254,8 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                                                                  useTransToFilterOverlap,
                                  faceTrans, wells,
                                  possibleFutureConnections,
-                                 eclState1, parallelWells);
+                                 eclState1, parallelWells, graph,
+                                 coarseThreshold, coarseMaxNodeSize);
         }
 
         // Add inactive wells to all ranks with connections (not solved, so OK even without distributed wells)
@@ -359,6 +380,58 @@ extractFaceTrans(const GridView& gridView) const
 }
 
 template <class ElementMapper, class GridView, class Scalar>
+double
+GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+constructTransGraph(const GridView& gridView,
+                    Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>& graph,
+                    const double coarsePartitionGraphThreshold) const
+{
+    size_t numCells = this->grid_->numCells();
+
+    Dune::MatrixIndexSet op;
+    op.resize( numCells, numCells );
+
+    const auto elemMapper = ElementMapper { gridView, Dune::mcmgElementLayout() };
+
+    // Create adjecency for transmissibility graph
+    for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder)) {
+
+        auto d = elemMapper.index(elem);
+        op.add(d,d);
+        for (const auto& is : intersections(gridView, elem)) {
+            if (!is.neighbor()) {
+                continue;
+            }
+
+            const auto J = static_cast<unsigned int>(elemMapper.index(is.outside()));
+            op.add(d,J);
+        }
+    }
+
+    // Add transmissibilities to the graph
+    op.exportIdx(graph);
+    std::vector<double> transForSort;
+    for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder)) {
+        for (const auto& is : intersections(gridView, elem)) {
+            if (!is.neighbor()) {
+                continue;
+            }
+
+            const auto I = static_cast<unsigned int>(elemMapper.index(is.inside()));
+            const auto J = static_cast<unsigned int>(elemMapper.index(is.outside()));
+            double t = this->getTransmissibility(I, J);
+            graph[I][J] = t;
+            transForSort.push_back(t);
+        }
+    }
+
+    // Sort the transmissibilities so we can find the treshold value with coarsePartitionGraphThreshold
+    std::sort(transForSort.begin(), transForSort.end());
+
+    return transForSort[(int) (coarsePartitionGraphThreshold * transForSort.size())];
+}
+
+template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
@@ -375,7 +448,10 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                const std::vector<Well>&                              wells,
                const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
                EclipseState&                                         eclState1,
-               FlowGenericVanguard::ParallelWellStruct&              parallelWells)
+               FlowGenericVanguard::ParallelWellStruct&              parallelWells,
+               Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>&    graph,
+               double                                                coarseThreshold,
+               const int                                             coarsePartitionMaxNodeSize)
 {
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
@@ -386,7 +462,8 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                              imbalanceTol, loadBalancerSet,
                              useTransToFilterOverlap, faceTrans,
                              wells, possibleFutureConnections,
-                             eclState, parallelWells);
+                             eclState, parallelWells, graph,
+                             coarseThreshold, coarsePartitionMaxNodeSize);
     }
     else {
         const auto message = std::string {
@@ -419,7 +496,10 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                const std::vector<Well>&                              wells,
                const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
                ParallelEclipseState*                                 eclState,
-               FlowGenericVanguard::ParallelWellStruct&              parallelWells)
+               FlowGenericVanguard::ParallelWellStruct&              parallelWells,
+               Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>&    graph,
+               double                                                coarseThreshold,
+               const int                                             coarsePartitionMaxNodeSize)
 {
     OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
@@ -451,7 +531,8 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
                                       addCornerCells, overlapLayers,
                                       partitionMethod, imbalanceTol,
                                       enableDistributedWells,
-                                      useTransToFilterOverlap));
+                                      useTransToFilterOverlap, &graph,
+                                      coarseThreshold, coarsePartitionMaxNodeSize));
     }
 }
 
