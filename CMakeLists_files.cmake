@@ -1062,6 +1062,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/HybridNewtonConfig.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp
+  opm/simulators/flow/LgrOutputTransGather.hpp
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/MechContainer.hpp
