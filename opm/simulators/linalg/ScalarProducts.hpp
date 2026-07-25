@@ -1,6 +1,8 @@
 #ifndef OPM_SCALAR_PRODUCTS_HEADER_INCLUDED
 #define OPM_SCALAR_PRODUCTS_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/mixed/dot.h>
+
 namespace Dune
 {
 
@@ -53,7 +55,7 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
 
         // total array length
         int NN = block_size*count_;
-
+#if 0
         // unroll loop in multiples of 8
         int n=NN/8;
         int N=8*n;
@@ -71,6 +73,11 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
         auto cc = _communication->communicator();
         double result = cc.sum(agg[0]);
         return result;
+#else
+        auto cc = _communication->communicator();
+        return cc.sum(vec_dot(x,y,NN));
+#endif
+        //return cc.sum(vec_dot(x,y,NN));
     }
 
     /*! \brief Vector L2-norm.
@@ -153,7 +160,7 @@ public:
 
         // total array length
         int NN = block_size*vx.N();
-
+#if 1
         // unroll loop in multiples of 8
         int n=NN/8;
         int N=8*n;
@@ -168,6 +175,9 @@ public:
         for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
 
         return agg[0];
+#else
+        return vec_dot(x,y,NN);
+#endif
     }
 
     /*! \brief Vector L2-norm.
