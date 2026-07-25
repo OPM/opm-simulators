@@ -544,6 +544,10 @@ void FlowGenericVanguard::registerParameters_()
     // register here for the use in the tests without BlackoilModelParameters
     Parameters::Register<Parameters::UseMultisegmentWell>
         ("Use the well model for multi-segment wells instead of the one for single-segment wells");
+    Parameters::Register<Parameters::ConvertToMultisegmentWell>
+        ("Convert plain single-segment wells into multisegment wells so the "
+         "wellbore hydrostatic head is handled implicitly. 'none' (default) "
+         "or 'per-connection' (one linear tubing, a segment per connection)");
 }
 
 template void FlowGenericVanguard::registerParameters_<double>();
