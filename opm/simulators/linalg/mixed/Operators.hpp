@@ -17,6 +17,8 @@ template<class M, class V, class C>
 class MixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
 {
 public:
+    // extract block size
+    static constexpr auto block_size = V::block_type::dimension;
 
     //! constructor: just store a reference to matrix and communicator
     MixedGhostLastMatrixAdapter (const M& A, const C& comm) : A_( A ), comm_(comm) {}
@@ -25,14 +27,14 @@ public:
     virtual void apply( const V& x, V& y ) const override
     {
         A_.mv(x,y);
-        comm_.project(y);
+        ghostLast_project(y);
     }
 
     // y += \alpha * A * x
     virtual void applyscaleadd (double alpha, const V& x, V& y) const override
     {
         A_.usmv(alpha,x,y);
-        comm_.project(y);
+        ghostLast_project(y);
     }
 
     // accessor to matix object
@@ -45,6 +47,15 @@ public:
     }
 
 private:
+
+    void ghostLast_project( V& y ) const
+    {
+        double *yy = &y[0][0];
+        int n = block_size*A_.nrows();
+        int N = block_size*y.N();
+        for (int i=n;i<N;i++) yy[i] = 0;
+    }
+
     const M& A_;
     const C& comm_;
 };
@@ -66,6 +77,9 @@ public:
     using field_type = typename V::field_type;
     using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
 
+    // extract block size
+    static constexpr auto block_size = V::block_type::dimension;
+
     //! constructor: just store a reference to a matrix
     WellModelMixedGhostLastMatrixAdapter (const M& A,
                                      const LinearOperatorExtra<V, V>& wellOper,
@@ -79,7 +93,8 @@ public:
     {
         A_.mv(x,y);
         wellOper_.apply(x, y);
-        comm_.project(y);
+        //comm_.project(y);
+        ghostLast_project(y);
     }
 
     // y += \alpha * A * x
@@ -87,7 +102,8 @@ public:
     {
         A_.usmv(alpha,x,y);
         wellOper_.applyscaleadd(alpha, x, y);
-        comm_.project(y);
+        //comm_.project(y);
+        ghostLast_project(y);
     }
 
     // accessor to matix object
@@ -124,6 +140,17 @@ protected:
     const M& A_ ;
     const C& comm_ ;
     const LinearOperatorExtra<V, V>& wellOper_;
+
+private:
+
+    void ghostLast_project( V& y ) const
+    {
+        double *yy = &y[0][0];
+        int n = block_size*A_.nrows();
+        int N = block_size*y.N();
+        for (int i=n;i<N;i++) yy[i] = 0;
+    }
+
 };
 
 } // namespace Opm

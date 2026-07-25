@@ -70,6 +70,8 @@ class MixedMatrixWrapper
     //! @brief access column index pointer
     int *colidx(){return M_->colidx;}
 
+    int nrows() const {return M_->nrows;}
+
     private:
     int nnz_;
     bsr_matrix  *M_;
