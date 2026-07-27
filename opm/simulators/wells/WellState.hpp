@@ -182,6 +182,8 @@ public:
                            const int* globalCellIdxMap) const;
 
     /// init the MS well related.
+    /// \param wells_ecl Vector of ECL well definitions
+    /// \param prev_well_state Previous well state
     /// \param thermal  when false, segment temperature is kept uniform (no
     ///                 unused per-segment profile).
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,

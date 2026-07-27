@@ -49,6 +49,9 @@ public:
     //! \brief Constructor sets reference to well.
     explicit WellTest(const WellInterfaceGeneric<Scalar, IndexTraits>& well) : well_(well) {}
 
+    //! \param ws Well state
+    //! \param simulation_time Simulation time
+    //! \param write_message_to_opmlog True to write message to the OPM log
     //! \param during_well_test  true when called from the WTEST re-open loop in
     //!        WellInterface::wellTesting(), which re-solves the well after every
     //!        completion closure; a CON/+CON workover then applies one workover
@@ -56,6 +59,11 @@ public:
     //!        defers further rounds to the caller's re-converged rates. false for
     //!        the regular timestep update, which is not re-solved between closures
     //!        and applies the whole workover here.
+    //! \param well_test_state Well test state
+    //! \param zero_group_target True if the group has no target
+    //! \param unit_system Unit system to use
+    //! \param start_time Starting time
+    //! \param deferred_logger Deferred logging helper
     void updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
