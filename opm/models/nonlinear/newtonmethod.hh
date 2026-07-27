@@ -576,8 +576,13 @@ protected:
         // the solution's residual
         error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
-            // do not consider auxiliary DOFs for the error
-            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0) {
+            // Do not consider auxiliary DOFs for the error -- unless they carry the
+            // model's own equations, in which case they are cells as far as the model
+            // is concerned and their residual has to be measured like any other.
+            // A dormant auxiliary cell has no volume and is skipped by the second test.
+            if (!model().dofCarriesModelEquations(dofIdx) ||
+                model().dofTotalVolume(dofIdx) <= 0.0)
+            {
                 continue;
             }
 
@@ -705,8 +710,20 @@ protected:
         // update the DOFs of the auxiliary equations
         std::size_t numDof = model().numTotalDof();
         for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
-            nextSolution[dofIdx] = currentSolution[dofIdx];
-            nextSolution[dofIdx] -= solutionUpdate[dofIdx];
+            if (model().dofCarriesModelEquations(dofIdx)) {
+                // an auxiliary cell holds the model's own primary variables, so it needs
+                // the model's update -- without it the variable switching never runs and
+                // the cell cannot cross a phase-appearance boundary
+                asImp_().updatePrimaryVariables_(dofIdx,
+                                                 nextSolution[dofIdx],
+                                                 currentSolution[dofIdx],
+                                                 solutionUpdate[dofIdx],
+                                                 currentResidual[dofIdx]);
+            }
+            else {
+                nextSolution[dofIdx] = currentSolution[dofIdx];
+                nextSolution[dofIdx] -= solutionUpdate[dofIdx];
+            }
         }
     }
 
