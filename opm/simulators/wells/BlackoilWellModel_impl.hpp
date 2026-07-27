@@ -172,7 +172,10 @@ namespace Opm {
         // add the eWoms auxiliary module for the wells to the list
         simulator_.model().addAuxiliaryModule(this);
 
-        is_cell_perforated_.resize(local_num_cells_, false);
+        // Indexed by DOF index in computeTotalRatesForDof(), which the linearizer calls
+        // for every DOF of the model -- including those contributed by auxiliary
+        // modules -- so it has to span the whole DOF range, not just the grid cells.
+        is_cell_perforated_.resize(simulator_.model().numTotalDof(), false);
     }
 
 
