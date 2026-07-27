@@ -529,6 +529,18 @@ private:
         // connection entered on one side alone would let the auxiliary cell exchange
         // mass with a reservoir cell that never sees it in return: the Newton iteration
         // would still converge, on a system that does not conserve mass.
+        // The GPU assembly path copies neighborInfo_, the domain and the residual to the
+        // device and assembles there, while an auxiliary module's linearize() runs on
+        // the host after the copy back. Auxiliary degrees of freedom would therefore be
+        // assembled inconsistently rather than wrongly-but-visibly, so refuse the
+        // combination outright until the device path handles them.
+        if constexpr (runAssemblyOnGpu) {
+            if (model.numAuxiliaryDof() > 0) {
+                throw std::logic_error("Auxiliary degrees of freedom are not supported by the GPU "
+                                       "assembly path; run the assembly on the CPU instead");
+            }
+        }
+
         std::vector<std::vector<unsigned>> auxNeighbors(numCells);
         {
             std::vector<typename BaseAuxiliaryModule<TypeTag>::AuxiliaryConnection> auxConns;
