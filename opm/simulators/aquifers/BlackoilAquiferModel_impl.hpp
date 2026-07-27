@@ -272,7 +272,15 @@ void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
         }
     }
 
-    if (aquifer.hasNumericalAquifer()) {
+    // AquiferNumerical is a reporting shim over aquifer cells that live in the grid: it
+    // locates them through the grid and post-computes their pressure and influx from the
+    // neighbouring cells' fluxes.  None of that applies when the aquifer is represented
+    // outside the grid -- the cells it would look for are not there.
+    const bool numAquifersInGrid =
+        this->simulator_.vanguard().eclState().numericalAquiferMode() ==
+        NumericalAquiferMode::GridCells;
+
+    if (aquifer.hasNumericalAquifer() && numAquifersInGrid) {
         for (const auto& aquNum : aquifer.numericalAquifers().aquifers()) {
             auto aquNumPtr = std::make_unique<AquiferNumerical<TypeTag>>
                 (aquNum.second, this->simulator_);
