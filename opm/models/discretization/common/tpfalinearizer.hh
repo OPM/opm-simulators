@@ -794,7 +794,11 @@ public:
         if (!enableFlows && !enableFlores && blockFlows.empty()) {
             return;
         }
-        const unsigned int numCells = model_().numTotalDof();
+        // Flow reporting is a grid-cell concept: the rows of flowsInfo_/floresInfo_ are
+        // built per grid element, and the block-flow lookup below maps the DOF back to a
+        // cartesian index.  Auxiliary DOFs have neither, so they are not visited here;
+        // fluxes on auxiliary connections are reported through their own client.
+        const unsigned int numCells = model_().numGridDof();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
