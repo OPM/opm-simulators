@@ -456,6 +456,10 @@ public:
      */
     void finishInit()
     {
+        // Give the problem the chance to register auxiliary modules which introduce
+        // degrees of freedom, before anything below is sized from numTotalDof().
+        simulator_.problem().registerAuxiliaryCellModules();
+
         // initialize the volume of the finite volumes to zero
         //
         // Auxiliary modules may introduce degrees of freedom which are appended after

@@ -289,6 +289,25 @@ public:
     {}
 
     /*!
+     * \brief Called by the model before it sizes anything, so that the problem can
+     *        register auxiliary modules which introduce degrees of freedom.
+     *
+     * This exists because of the order in which the simulator brings things up: the
+     * model and the problem are constructed, then the model's finishInit() runs, then
+     * the problem's.  Every per-DOF container is sized during the model's finishInit()
+     * from numTotalDof(), so a module that adds degrees of freedom has to be registered
+     * before that -- which is earlier than the problem's own finishInit(), and hence
+     * needs a seam of its own.  The grid and the deck are already available at this
+     * point, which is what such a module needs in order to know how many degrees of
+     * freedom it has.
+     *
+     * Modules that declare no degrees of freedom (the well models) do not need this and
+     * may keep registering themselves whenever they like.
+     */
+    void registerAuxiliaryCellModules()
+    {}
+
+    /*!
      * \brief Allows to improve the performance by prefetching all data which is
      *        associated with a given element.
      */
