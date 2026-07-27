@@ -527,6 +527,10 @@ public:
         resizeAndResetIntensiveQuantitiesCache_();
 
         newtonMethod_.finishInit();
+
+        // from here on the per-DOF containers are sized, so a module which introduces
+        // degrees of freedom can no longer be registered (see addAuxiliaryModule())
+        finishInitCalled_ = true;
     }
 
     /*!
@@ -568,6 +572,18 @@ public:
                 simulator_.problem().initial(uCur[globalIdx], elemCtx, dofIdx, /*timeIdx=*/0);
                 asImp_().supplementInitialSolution_(uCur[globalIdx], elemCtx, dofIdx, /*timeIdx=*/0);
                 uCur[globalIdx].checkDefined();
+            }
+        }
+
+        // Let auxiliary modules which introduce degrees of freedom set their initial
+        // condition. Their applyInitial() already ran when they were registered, but
+        // that was before the solution vector was zeroed above, so whatever they wrote
+        // then has just been erased. This has to happen before the history copy below
+        // and before the checkDefined() sweep at the end, both of which span the whole
+        // solution vector.
+        for (unsigned auxModIdx = 0; auxModIdx < numAuxiliaryModules(); ++auxModIdx) {
+            if (auxiliaryModule(auxModIdx)->numDofs() > 0) {
+                auxiliaryModule(auxModIdx)->applyInitial();
             }
         }
 
@@ -1847,6 +1863,19 @@ public:
      */
     void addAuxiliaryModule(BaseAuxiliaryModule<TypeTag>* auxMod)
     {
+        // A module which introduces degrees of freedom changes numTotalDof(), and
+        // finishInit() sizes every per-DOF container from it. Registering such a module
+        // afterwards would leave all of them short -- silently, and in a way that only
+        // shows up much later as garbage in the intensive quantities or as an
+        // out-of-bounds write. Modules which declare no degrees of freedom (the well
+        // models, which assemble their own equations) are unaffected and may still be
+        // registered at any point, as they are today.
+        if (auxMod->numDofs() > 0 && finishInitCalled_) {
+            throw std::logic_error("An auxiliary module which introduces degrees of freedom must "
+                                   "be registered before the model's finishInit(), so that the "
+                                   "per-DOF containers are sized for its degrees of freedom");
+        }
+
         auxMod->setDofOffset(numTotalDof());
         auxEqModules_.push_back(auxMod);
 
@@ -2012,6 +2041,9 @@ protected:
 
     // a vector with all auxiliary equations to be considered
     std::vector<BaseAuxiliaryModule<TypeTag>*> auxEqModules_;
+
+    // guards the registration order of auxiliary modules with degrees of freedom
+    bool finishInitCalled_{false};
 
     NewtonMethod newtonMethod_;
 
