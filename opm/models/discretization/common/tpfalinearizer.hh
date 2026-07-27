@@ -63,6 +63,7 @@
 #include <numeric>
 #include <set>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -515,6 +516,75 @@ private:
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells); // Expect ~6 neighbors per cell
         std::vector<NeighborInfoCPU> loc_nbinfo;
+
+        // Collect the flux connections contributed by auxiliary modules whose degrees of
+        // freedom carry the model's own conservation equations.
+        //
+        // A connection is reported once by its module, but it has to appear in the
+        // neighbour list of *both* of its endpoints: linearize_cell() only ever writes
+        // the row of the degree of freedom it is iterating -- residual[globI], the
+        // diagonal block (globI,globI) and the off-diagonal block (globJ,globI) -- so
+        // the equal and opposite flux into the partner, and the partner's own diagonal
+        // contribution, are produced only when the loop reaches the partner's row. A
+        // connection entered on one side alone would let the auxiliary cell exchange
+        // mass with a reservoir cell that never sees it in return: the Newton iteration
+        // would still converge, on a system that does not conserve mass.
+        std::vector<std::vector<unsigned>> auxNeighbors(numCells);
+        {
+            std::vector<typename BaseAuxiliaryModule<TypeTag>::AuxiliaryConnection> auxConns;
+            const std::size_t numAuxModules = model.numAuxiliaryModules();
+            for (unsigned auxModIdx = 0; auxModIdx < numAuxModules; ++auxModIdx) {
+                model.auxiliaryModule(auxModIdx)->addConnections(auxConns);
+            }
+            for (const auto& conn : auxConns) {
+                if (conn.dof1 >= numCells || conn.dof2 >= numCells || conn.dof1 == conn.dof2) {
+                    throw std::logic_error("Auxiliary module reported an invalid connection ("
+                                           + std::to_string(conn.dof1) + ", "
+                                           + std::to_string(conn.dof2) + ") for a model with "
+                                           + std::to_string(numCells) + " degrees of freedom");
+                }
+                auxNeighbors[conn.dof1].push_back(conn.dof2);
+                auxNeighbors[conn.dof2].push_back(conn.dof1);
+                sparsityPattern[conn.dof1].insert(conn.dof2);
+                sparsityPattern[conn.dof2].insert(conn.dof1);
+            }
+            // every auxiliary degree of freedom needs a diagonal block, including one
+            // that currently has no connections at all
+            for (unsigned dofIdx = model.numGridDof(); dofIdx < numCells; ++dofIdx) {
+                sparsityPattern[dofIdx].insert(dofIdx);
+            }
+        }
+
+        // Build the neighbour info for a connection that has no geometric face. The
+        // transmissibility carries the whole of the geometry, so the face area is unity
+        // and there is no face direction.
+        const auto makeAuxNeighborInfo = [this, gravity](unsigned myIdx, unsigned neighborIdx) {
+            ResidualNBInfo nbinfo{problem_().transmissibility(myIdx, neighborIdx),
+                                  1.0,
+                                  problem_().thresholdPressure(myIdx, neighborIdx),
+                                  problem_().thresholdPressure(neighborIdx, myIdx),
+                                  (problem_().dofCenterDepth(myIdx) -
+                                   problem_().dofCenterDepth(neighborIdx)) * gravity,
+                                  FaceDir::DirEnum::Unknown,
+                                  problem_().model().dofTotalVolume(myIdx),
+                                  problem_().model().dofTotalVolume(neighborIdx),
+                                  {},
+                                  {},
+                                  {},
+                                  {}};
+            if constexpr (enableFullyImplicitThermal) {
+                nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
+                nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
+            }
+            if constexpr (enableDiffusion) {
+                nbinfo.diffusivity = problem_().diffusivity(myIdx, neighborIdx);
+            }
+            if constexpr (enableDispersion) {
+                nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
+            }
+            return NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
+        };
+
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -565,6 +635,10 @@ private:
                         loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
+                // this grid cell's side of any auxiliary connection attached to it
+                for (const unsigned auxNeighbor : auxNeighbors[myIdx]) {
+                    loc_nbinfo.push_back(makeAuxNeighborInfo(myIdx, auxNeighbor));
+                }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
                 if (problem_().nonTrivialBoundaryConditions()) {
                     for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
@@ -599,6 +673,29 @@ private:
         const std::size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
+        }
+
+        // Append one row per auxiliary degree of freedom. The rows of neighborInfo_ are
+        // addressed by degree-of-freedom index, and the grid loop above has produced
+        // exactly the first numGridDof() of them, so appending the auxiliary rows here
+        // puts each one at its own index.
+        for (unsigned auxDofIdx = model.numGridDof(); auxDofIdx < numCells; ++auxDofIdx) {
+            loc_nbinfo.clear();
+            for (const unsigned neighborIdx : auxNeighbors[auxDofIdx]) {
+                loc_nbinfo.push_back(makeAuxNeighborInfo(auxDofIdx, neighborIdx));
+            }
+            neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
+        }
+
+        // neighborInfo_ is indexed up to numTotalDof() by linearize_cell(),
+        // updateStoredTransmissibilities() and the loop below, so a short table is an
+        // out-of-bounds read rather than a missing contribution. SparseTable only
+        // guards this with an assert, so check it unconditionally.
+        if (static_cast<unsigned>(neighborInfo_.size()) != numCells) {
+            throw std::logic_error("The neighbor info table has " +
+                                   std::to_string(neighborInfo_.size()) +
+                                   " rows but the model has " + std::to_string(numCells) +
+                                   " degrees of freedom");
         }
 
         // allocate raw matrix

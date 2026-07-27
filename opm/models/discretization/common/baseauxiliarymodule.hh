@@ -63,6 +63,27 @@ protected:
     using NeighborSet = std::set<unsigned>;
 
 public:
+    /*!
+     * \brief A flux connection between an auxiliary degree of freedom and another
+     *        degree of freedom of the model.
+     *
+     * This is for auxiliary modules whose degrees of freedom carry the *model's own*
+     * conservation equations -- an auxiliary "cell" with an authored volume and an
+     * authored connection list, as opposed to a genuinely different unknown such as a
+     * well's bottom hole pressure. Such a module only has to declare which pairs of
+     * degrees of freedom exchange fluxes; the discretization then assembles them with
+     * the same local residual it uses for the grid, reading the transmissibility (and
+     * the thermal/diffusive counterparts) from the problem exactly as it does for a
+     * geometric face. Both endpoints are stored as plain degree-of-freedom indices, so
+     * a connection may join two auxiliary degrees of freedom or an auxiliary one and a
+     * grid cell.
+     */
+    struct AuxiliaryConnection
+    {
+        unsigned dof1{};
+        unsigned dof2{};
+    };
+
     virtual ~BaseAuxiliaryModule() = default;
 
     /*!
@@ -100,6 +121,20 @@ public:
      *        module.
      */
     virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const = 0;
+
+    /*!
+     * \brief Append this module's flux connections, if any.
+     *
+     * Modules whose degrees of freedom do not carry the model's conservation equations
+     * -- the well models, for instance, which assemble their own equations in
+     * linearize() -- leave this empty, which is the default.
+     *
+     * The discretization inserts each reported connection into the sparsity pattern in
+     * both directions and assembles it from both endpoints, so a connection must be
+     * reported exactly once, not once per endpoint.
+     */
+    virtual void addConnections(std::vector<AuxiliaryConnection>&) const
+    {}
 
     /*!
      * \brief Set the initial condition of the auxiliary module in the solution vector.
