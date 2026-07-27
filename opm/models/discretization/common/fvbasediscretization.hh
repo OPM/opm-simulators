@@ -521,10 +521,16 @@ public:
             isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
         }
 
-        // Auxiliary DOFs are not shared with peer processes via the grid's
-        // interior-border interface, so they are local by construction.  (Their volume
-        // is not known yet at this point, so the volume-based test above does not
-        // apply to them.)
+        // Auxiliary DOFs have no grid entity to take a volume from, so the modules state
+        // it themselves.  They are also not shared with peer processes via the grid's
+        // interior-border interface, hence local by construction.
+        for (const auto* auxMod : auxEqModules_) {
+            for (unsigned localIdx = 0; localIdx < auxMod->numDofs(); ++localIdx) {
+                const auto globalIdx = static_cast<std::size_t>(auxMod->localToGlobalDof(localIdx));
+                dofTotalVolume_[globalIdx] = auxMod->dofVolume(localIdx);
+            }
+        }
+
         for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
             isLocalDof_[dofIdx] = true;
         }

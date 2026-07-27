@@ -125,6 +125,16 @@ public:
     { return false; }
 
     /*!
+     * \brief The volume associated with one of this module's degrees of freedom.
+     *
+     * Zero unless the module's degrees of freedom are cells.  A grid degree of freedom
+     * takes this from the geometry of its entity; an auxiliary cell has no entity, so it
+     * has to state the volume itself.
+     */
+    virtual Scalar dofVolume(unsigned /*localDofIdx*/) const
+    { return 0.0; }
+
+    /*!
      * \brief Given a degree of freedom relative to the current auxiliary equation,
      *        return the corresponding index in the global system of equations.
      */

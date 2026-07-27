@@ -58,6 +58,7 @@
 #include <opm/simulators/flow/EquilInitializer.hpp>
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: maybe we can name it FlowProblemProperties.hpp
+#include <opm/simulators/flow/FlowAuxCellModule.hpp>
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
@@ -730,6 +731,12 @@ public:
      */
     Scalar dofCenterDepth(unsigned globalSpaceIdx) const
     {
+        // An auxiliary cell has no grid entity to take a depth from; it states its own,
+        // and that is what the gravity head between it and its neighbours is built from.
+        if (globalSpaceIdx >= this->model().numGridDof()) {
+            return this->auxCellDepth_(globalSpaceIdx);
+        }
+
         return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
     }
 
@@ -1504,7 +1511,10 @@ protected:
 
         std::size_t numDof = this->model().numGridDof();
 
-        this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
+        // Auxiliary cells have their own authored pore and bulk volume; sizing for them
+        // here keeps referencePorosity() answerable for every degree of freedom.
+        this->referencePorosity_[/*timeIdx=*/0].resize(this->model().numTotalDof());
+        this->authorAuxCellPorosity_();
 
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
@@ -1533,7 +1543,11 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         std::size_t numDof = this->model().numGridDof();
-        this->rockFraction_[/*timeIdx=*/0].resize(numDof);
+        this->rockFraction_[/*timeIdx=*/0].resize(this->model().numTotalDof(), 0.0);
+
+        // An auxiliary cell is a bookkeeping volume, not rock: it stores no heat of its
+        // own.  Leaving its rock fraction at zero is what expresses that, since the
+        // energy storage term is rockFraction times the rock's internal energy.
         // For the energy equation, we need the volume of the rock.
         // The volume of the rock is computed by rockFraction * geometric volume of the element.
         // The reference porosity is defined as porosity * ntg * pore-volume-multiplier.
@@ -1617,6 +1631,88 @@ protected:
     }
 
 protected:
+    /*!
+     * \brief Take ownership of an auxiliary cell module and register it with the model.
+     *
+     * Registration has to happen before the model sizes its per-DOF containers, which is
+     * why this is only ever called from registerAuxiliaryCellModules().  The module's
+     * connections are built afterwards, because they are expressed in global degree of
+     * freedom indices and the offset is only assigned on registration.
+     */
+    template <class Module>
+    Module& registerAuxCellModule_(std::unique_ptr<Module> module)
+    {
+        auto& ref = *module;
+        this->simulator().model().addAuxiliaryModule(&ref);
+        this->auxCellModules_.push_back(std::move(module));
+        ref.buildConnections();
+        return ref;
+    }
+
+    //! Depth of an auxiliary cell, by global degree of freedom index.
+    Scalar auxCellDepth_(unsigned globalSpaceIdx) const
+    {
+        for (const auto& module : this->auxCellModules_) {
+            const auto begin = static_cast<unsigned>(module->dofOffset());
+            if ((globalSpaceIdx >= begin) && (globalSpaceIdx < begin + module->numDofs())) {
+                return module->depth(globalSpaceIdx - begin);
+            }
+        }
+
+        return 0.0;
+    }
+
+    /*!
+     * \brief Fill in the reference porosity of the auxiliary cells.
+     *
+     * The model reads a porosity and multiplies it by the degree of freedom's total
+     * volume to recover a pore volume, so the two have to be authored consistently with
+     * the volume the module reports.
+     */
+    void authorAuxCellPorosity_()
+    {
+        for (const auto& module : this->auxCellModules_) {
+            for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                const auto globalIdx = static_cast<unsigned>(module->localToGlobalDof(localIdx));
+                const auto bulkVolume = module->bulkVolume(localIdx);
+
+                this->referencePorosity_[/*timeIdx=*/0][globalIdx] = (bulkVolume > 0.0)
+                    ? module->poreVolume(localIdx) / bulkVolume
+                    : 0.0;
+            }
+        }
+    }
+
+    /*!
+     * \brief Publish the auxiliary modules' connection transmissibilities.
+     *
+     * The transmissibility store is keyed on the degree of freedom pair and does not care
+     * whether a connection came from a face, so an authored connection simply goes in
+     * alongside the geometric ones and problem.transmissibility() answers for it.  Called
+     * once the grid's own transmissibilities are final; a module whose values change with
+     * the solution refreshes them the same way.
+     */
+    void applyAuxCellTransmissibilities_()
+    {
+        using ConnectionVector = std::vector<typename FlowAuxCellModule<TypeTag>::Connection>;
+
+        for (const auto& module : this->auxCellModules_) {
+            ConnectionVector conns;
+            module->connections(conns);
+
+            for (const auto& conn : conns) {
+                this->transmissibilities_.setTransmissibility(conn.dof1, conn.dof2, conn.trans);
+
+                if constexpr (enableFullyImplicitThermal) {
+                    this->transmissibilities_
+                        .setThermalHalfTrans(conn.dof1, conn.dof2, conn.thermalHalfTrans12);
+                    this->transmissibilities_
+                        .setThermalHalfTrans(conn.dof2, conn.dof1, conn.thermalHalfTrans21);
+                }
+            }
+        }
+    }
+
     struct PffDofData_
     {
         ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransIn;
@@ -1830,6 +1926,11 @@ protected:
     }
 
     typename Vanguard::TransmissibilityType transmissibilities_;
+
+    //! Auxiliary modules whose degrees of freedom are cells (numerical aquifers, and
+    //! later fracture flow cells).  Owned here because their authored data feeds the
+    //! problem's own per-DOF tables.
+    std::vector<std::unique_ptr<FlowAuxCellModule<TypeTag>>> auxCellModules_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
