@@ -455,7 +455,14 @@ public:
     void finishInit()
     {
         // initialize the volume of the finite volumes to zero
-        const std::size_t numDof = asImp_().numGridDof();
+        //
+        // Auxiliary modules may introduce degrees of freedom which are appended after
+        // the grid ones, so the per-DOF containers are sized for the total number of
+        // DOFs.  The entries beyond the grid DOFs are authored by the auxiliary modules
+        // themselves: they have no grid geometry to derive a volume from.  If no
+        // auxiliary DOFs exist (numTotalDof() == numGridDof()), this is unchanged.
+        const std::size_t numGridDof = asImp_().numGridDof();
+        const std::size_t numDof = numTotalDof();
         dofTotalVolume_.resize(numDof);
         std::ranges::fill(dofTotalVolume_, 0.0);
 
@@ -489,8 +496,16 @@ public:
         // local process grid partition: those which do not have a non-zero volume
         // before taking the peer processes into account...
         isLocalDof_.resize(numDof);
-        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
+        }
+
+        // Auxiliary DOFs are not shared with peer processes via the grid's
+        // interior-border interface, so they are local by construction.  (Their volume
+        // is not known yet at this point, so the volume-based test above does not
+        // apply to them.)
+        for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
+            isLocalDof_[dofIdx] = true;
         }
 
         // add the volumes of the DOFs on the process boundaries
@@ -1915,9 +1930,13 @@ public:
 protected:
     void resizeAndResetIntensiveQuantitiesCache_()
     {
+        // Auxiliary DOFs which carry the model's own equations need a storage cache and
+        // intensive quantities just like grid DOFs, so both caches are sized for the
+        // total number of DOFs.  Without auxiliary DOFs this is unchanged.
+
         // allocate the storage cache
         if (enableStorageCache()) {
-            const std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = numTotalDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
                 storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/0);
@@ -1926,7 +1945,7 @@ protected:
 
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
-            const std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = numTotalDof();
             cachedIntensiveQuantityHistorySize_ = simulator_.problem().intensiveQuantityHistorySize();
             const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
 
