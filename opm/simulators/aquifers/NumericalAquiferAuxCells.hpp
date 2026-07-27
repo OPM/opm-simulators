@@ -36,6 +36,8 @@
 #include <fmt/format.h>
 
 #include <cstddef>
+#include <map>
+#include <utility>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,13 +81,20 @@ public:
         const auto& eclState = simulator_.vanguard().eclState();
         const auto& aquifers = eclState.aquifer().numericalAquifers();
 
-        // Aquifer cells are enumerated in the order of allAquiferCells(), which is keyed
-        // on the cartesian index the AQUNUM record names.  That index identifies the
-        // aquifer cell in the deck and in the NNCs below; it is *not* a grid cell here,
-        // since in this mode the grid never took it over.
-        for (const auto& [globalIndex, cell] : aquifers.allAquiferCells()) {
-            this->cells_.push_back(cell);
-            this->cartesianToLocal_.emplace(globalIndex, this->cells_.size() - 1);
+        // Enumerate aquifer by aquifer and, within an aquifer, in the order its cells
+        // were declared.  Not allAquiferCells(), which is an unordered map: the degree of
+        // freedom numbering would then depend on the hash order, and the chain structure
+        // -- which cell of an aquifer carries the reservoir connections -- would be lost.
+        for (const auto& [id, aquifer] : aquifers.aquifers()) {
+            const auto first = this->cells_.size();
+
+            for (std::size_t i = 0; i < aquifer.numCells(); ++i) {
+                const auto* cell = aquifer.getCellPrt(i);
+                this->cells_.push_back(cell);
+                this->cartesianToLocal_.emplace(cell->global_index, this->cells_.size() - 1);
+            }
+
+            this->aquiferRange_.emplace(id, std::make_pair(first, this->cells_.size()));
         }
 
         // The cells these records name were deactivated when the grid was built, which
@@ -138,6 +147,7 @@ public:
 
         this->connections_.clear();
         this->initialisationPartner_.assign(this->cells_.size(), 0);
+        this->hasReservoirConnection_.assign(this->cells_.size(), false);
 
         // Aquifer cell to aquifer cell: the chain within one aquifer.  Both endpoints
         // are auxiliary cells.
@@ -171,17 +181,39 @@ public:
             this->connections_.push_back({dof1, dof2, static_cast<Scalar>(nnc.trans), 0.0, 0.0});
 
             const auto localIdx = this->localOf(aquiferCartesian);
-            if (this->initialisationPartner_[localIdx] == 0) {
+            if (!this->hasReservoirConnection_[localIdx]) {
                 this->initialisationPartner_[localIdx] = dof2;
+                this->hasReservoirConnection_[localIdx] = true;
             }
         }
 
-        // An aquifer cell in the middle of a chain has no reservoir connection of its
-        // own; initialise it from the same place as the cell that does.
-        unsigned fallback = 0;
-        for (auto& partner : this->initialisationPartner_) {
-            if (partner != 0) { fallback = partner; }
-            else              { partner = fallback; }
+        // Only the cell that carries the AQUCON connections has a reservoir neighbour of
+        // its own; the rest of the chain hangs off it.  Give them all that cell's
+        // neighbour to start from -- per aquifer, so that two aquifers cannot borrow each
+        // other's.  Note this is a fallback for initialisation only: it says where a cell
+        // takes its initial state from, not what it is connected to.
+        for (const auto& [id, range] : this->aquiferRange_) {
+            unsigned connected = 0;
+            bool found = false;
+            for (auto i = range.first; i < range.second; ++i) {
+                if (this->hasReservoirConnection_.at(i)) {
+                    connected = this->initialisationPartner_[i];
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Numerical aquifer {} has no connection to any "
+                                      "reservoir cell owned by this process", id));
+            }
+
+            for (auto i = range.first; i < range.second; ++i) {
+                if (!this->hasReservoirConnection_.at(i)) {
+                    this->initialisationPartner_[i] = connected;
+                }
+            }
         }
 
         if (skipped > 0) {
@@ -227,8 +259,10 @@ public:
                                : getValue(fs.pressure(phase)) + rho * gravity * dz);
             }
 
-            solution[globalIdx].assignNaive(fs);
+            // Order matters, as it does on the grid path: assignNaive() decides what the
+            // primary variables mean and needs the PVT region to do it.
             solution[globalIdx].setPvtRegionIndex(this->pvtRegionIndex(localIdx));
+            solution[globalIdx].assignNaive(fs);
         }
     }
 
@@ -311,6 +345,10 @@ private:
 
     std::vector<Connection> connections_{};
     std::vector<unsigned> initialisationPartner_{};
+    std::vector<bool> hasReservoirConnection_{};
+
+    //! aquifer id -> [first, last) range of its cells in the local numbering
+    std::map<std::size_t, std::pair<std::size_t, std::size_t>> aquiferRange_{};
 };
 
 } // namespace Opm
