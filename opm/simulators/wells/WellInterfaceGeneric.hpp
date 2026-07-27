@@ -185,10 +185,18 @@ public:
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
+    //! \param ws Well state
+    //! \param simulationTime Simulation time
+    //! \param writeMessageToOPMLog True to write message to the OPM log
     //! \param during_well_test  true when called from WTEST re-open testing,
     //!        which re-solves the well after every completion closure; false for
     //!        the regular timestep update. See
     //!        WellTest::updateWellTestStateEconomic().
+    //! \param zero_group_target True if the group has no target
+    //! \param wellTestState Well test state
+    //! \param unit_system Unit system to use
+    //! \param start_time Starting time
+    //! \param deferred_logger Deferred logging helper
     void updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,

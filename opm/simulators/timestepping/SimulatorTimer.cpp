@@ -53,7 +53,7 @@ namespace Opm
         return res;
     }
 
-    /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
+    // Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
     void SimulatorTimer::init(const Schedule& schedule, std::size_t report_step, int end_step)
     {
         total_time_ = schedule.seconds( schedule.size() - 1 );
