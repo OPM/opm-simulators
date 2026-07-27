@@ -144,7 +144,9 @@ NonlinearSystem(Simulator& simulator,
     , param_(param)
     , well_model_(wellModel)
     , current_relaxation_(1.0)
-    , dx_old_(simulator_.model().numGridDof())
+      // sized like the linear-system solution vector it is compared against in
+      // stabilizeNonlinearUpdate(), which spans the auxiliary DOFs as well
+    , dx_old_(simulator_.model().numTotalDof())
 {}
 
 template <class TypeTag>

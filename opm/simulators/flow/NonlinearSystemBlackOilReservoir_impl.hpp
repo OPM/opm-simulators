@@ -252,7 +252,10 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         perfTimer.start();
         report.total_newton_iterations = 1;
 
-        const unsigned nc = this->simulator_.model().numGridDof();
+        // The Jacobian and the residual are sized for the total number of DOFs, i.e.
+        // they include the rows contributed by auxiliary modules.  The solution vector
+        // handed to the linear solver has to match.
+        const unsigned nc = this->simulator_.model().numTotalDof();
         BVector x(nc);
 
         linear_solve_setup_time_ = 0.0;
