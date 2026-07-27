@@ -31,13 +31,22 @@
 #include <filesystem>
 #include <stdexcept>
 
+//! \brief True on HDF5 newer than 1.8, which is where H5Lexists and the
+//!        dataset filters became the supported path.
+//!
+//! Spelled out rather than testing H5_VERS_MINOR alone: the minor number
+//! restarts at 0 in HDF5 2.x, so a bare `H5_VERS_MINOR > 8` silently selects
+//! the pre-1.10 fallbacks there — which disabled dataset compression outright
+//! on every HDF5 2.x build.
+#define OPM_HDF5_AFTER_1_8 (H5_VERS_MAJOR > 1 || H5_VERS_MINOR > 8)
+
 namespace {
 
 bool groupExists(hid_t parent, const std::string& path)
 {
   // turn off errors to avoid cout spew
   H5E_BEGIN_TRY {
-#if H5_VERS_MINOR > 8
+#if OPM_HDF5_AFTER_1_8
       return H5Lexists(parent, path.c_str(), H5P_DEFAULT) == 1;
 #else
       return H5Gget_objinfo(static_cast<hid_t>(parent), path.c_str(), 0, nullptr) == 0;
@@ -266,8 +275,11 @@ void HDF5File::writeRootOnly(hid_t grp,
 hid_t HDF5File::getCompression([[maybe_unused]] hsize_t size) const
 {
     hid_t dcpl = H5P_DEFAULT;
-#if H5_VERS_MINOR > 8
-    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) != 0) {
+#if OPM_HDF5_AFTER_1_8
+    // A chunk dimension of zero is an error, so an empty dataset (a rank with
+    // no local data) has to stay contiguous. There is nothing to compress
+    // there anyway.
+    if (size > 0 && H5Zfilter_avail(H5Z_FILTER_DEFLATE) != 0) {
         dcpl = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_deflate(dcpl, 1);
         H5Pset_chunk(dcpl, 1, &size);
