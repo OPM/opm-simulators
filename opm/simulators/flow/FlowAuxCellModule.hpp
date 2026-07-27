@@ -87,6 +87,10 @@ public:
     bool carriesModelEquations() const override
     { return true; }
 
+    //! A cell's volume is its bulk volume.
+    Scalar dofVolume(unsigned localIdx) const override
+    { return this->bulkVolume(localIdx); }
+
     /*!
      * \brief The connections of this module, each reported exactly once.
      *
