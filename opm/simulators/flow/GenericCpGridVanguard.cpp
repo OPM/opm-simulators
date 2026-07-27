@@ -41,6 +41,8 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PropsDataHandle.hpp>
@@ -474,46 +476,107 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
         OpmLog::info("\nProcessing grid");
     }
 
+    const auto gridFileName = Parameters::Get<Parameters::UnstructuredGridFileName>();
+
     // --- Create grid ---
     OPM_TIMEBLOCK(createGrids);
 
+    std::vector<std::size_t> removed_cells;
+    if (gridFileName.empty()) {
 #if HAVE_MPI
-    this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
+        this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
 #else
-    this->grid_ = std::make_unique<Dune::CpGrid>();
+        this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
 
-    // Note: removed_cells is guaranteed to be empty on ranks other than 0.
-    auto removed_cells = this->grid_
-        ->processEclipseFormat(input_grid,
-                               &eclState,
-                               /* isPeriodic = */ false,
-                               /* flipNormals = */ false,
-                               /* clipZ = */ false,
-                               edge_conformal);
+        // Note: removed_cells is guaranteed to be empty on ranks other than 0.
+        removed_cells = this->grid_
+            ->processEclipseFormat(input_grid,
+                                   &eclState,
+                                   /* isPeriodic = */ false,
+                                   /* flipNormals = */ false,
+                                   /* clipZ = */ false,
+                                   edge_conformal);
 
-    if (isRoot) {
-        const auto& active_porv = eclState.fieldProps().porv(false);
-        const auto& unit_system = eclState.getUnits();
-        const auto& volume_unit = unit_system.name(UnitSystem::measure::volume);
-        double total_pore_volume = unit_system.from_si(UnitSystem::measure::volume,
-                                                       std::accumulate(active_porv.begin(), active_porv.end(), 0.0));
-        OpmLog::info(fmt::format("Total number of active cells: {} / total pore volume: {:0.0f} {}",
-                                 grid_->numCells(), total_pore_volume , volume_unit));
+        if (isRoot) {
+            const auto& active_porv = eclState.fieldProps().porv(false);
+            const auto& unit_system = eclState.getUnits();
+            const auto& volume_unit = unit_system.name(UnitSystem::measure::volume);
+            double total_pore_volume = unit_system.from_si(UnitSystem::measure::volume,
+                                                           std::accumulate(active_porv.begin(), active_porv.end(), 0.0));
+            OpmLog::info(fmt::format("Total number of active cells: {} / total pore volume: {:0.0f} {}",
+                                     grid_->numCells(), total_pore_volume , volume_unit));
 
-        double removed_pore_volume =
-            std::accumulate(removed_cells.begin(), removed_cells.end(), 0.0,
-                            [&active_porv, &eclState](const auto acc, const auto global_index)
-                            { return acc + active_porv[eclState.getInputGrid().activeIndex(global_index)]; });
+            double removed_pore_volume =
+                std::accumulate(removed_cells.begin(), removed_cells.end(), 0.0,
+                                [&active_porv, &eclState](const auto acc, const auto global_index)
+                                { return acc + active_porv[eclState.getInputGrid().activeIndex(global_index)]; });
 
-        if (removed_pore_volume > 0) {
-            removed_pore_volume = unit_system.from_si(UnitSystem::measure::volume, removed_pore_volume);
-            OpmLog::info(fmt::format("Removed {} cells with a pore volume of {:0.0f} "
-                                     "{} ({:5.3f} %) due to MINPV/MINPVV",
-                                     removed_cells.size(),
-                                     removed_pore_volume,
-                                     volume_unit,
-                                     100 * removed_pore_volume / total_pore_volume));
+            if (removed_pore_volume > 0) {
+                removed_pore_volume = unit_system.from_si(UnitSystem::measure::volume, removed_pore_volume);
+                OpmLog::info(fmt::format("Removed {} cells with a pore volume of {:0.0f} "
+                                         "{} ({:5.3f} %) due to MINPV/MINPVV",
+                                         removed_cells.size(),
+                                         removed_pore_volume,
+                                         volume_unit,
+                                         100 * removed_pore_volume / total_pore_volume));
+            }
+        }
+    }
+    else {
+#if HAVE_MPI
+        if (FlowGenericVanguard::comm().size() > 1) {
+            OpmLog::info(fmt::format("Using unstructured grid from file (MPI): {}", gridFileName));
+            this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
+            this->grid_->readUnstructuredGridFile(gridFileName);
+
+            if (isRoot) {
+                if (!input_grid->allActive()) {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Cannot use unstructured grid file '{}': the Eclipse input grid "
+                                          "contains inactive cells ({} active out of {} total). "
+                                          "Unstructured grid files require all cells to be active.",
+                                          gridFileName,
+                                          input_grid->getNumActive(),
+                                          input_grid->getCartesianSize()));
+                }
+
+                const int numCellsFile = this->grid_->numCells();
+                const int numCellsEcl  = static_cast<int>(input_grid->getNumActive());
+                if (numCellsFile != numCellsEcl) {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Cell count mismatch: unstructured grid file '{}' has {} cells, "
+                                          "but the Eclipse input grid has {} active cells.",
+                                          gridFileName, numCellsFile, numCellsEcl));
+                }
+            }
+        }
+        else
+#endif
+        {
+            OpmLog::info(fmt::format("Using unstructured grid from file: {}", gridFileName));
+            this->grid_ = std::make_unique<Dune::CpGrid>(gridFileName);
+
+            if (isRoot) {
+                if (!input_grid->allActive()) {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Cannot use unstructured grid file '{}': the Eclipse input grid "
+                                          "contains inactive cells ({} active out of {} total). "
+                                          "Unstructured grid files require all cells to be active.",
+                                          gridFileName,
+                                          input_grid->getNumActive(),
+                                          input_grid->getCartesianSize()));
+                }
+
+                const int numCellsFile = this->grid_->numCells();
+                const int numCellsEcl  = static_cast<int>(input_grid->getNumActive());
+                if (numCellsFile != numCellsEcl) {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Cell count mismatch: unstructured grid file '{}' has {} cells, "
+                                          "but the Eclipse input grid has {} active cells.",
+                                          gridFileName, numCellsFile, numCellsEcl));
+                }
+            }
         }
     }
 

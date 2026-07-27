@@ -231,7 +231,8 @@ public:
                               (energyModuleType == EnergyModules::FullyImplicitThermal ||
                                energyModuleType == EnergyModules::SequentialImplicitThermal),
                               enableDiffusion,
-                              enableDispersion)
+                              enableDispersion,
+                              simulator.vanguard().gridFromFile())
         , wellModel_(simulator, this->iterationContext())
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
