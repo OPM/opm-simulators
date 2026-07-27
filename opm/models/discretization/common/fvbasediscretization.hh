@@ -1917,7 +1917,13 @@ public:
             solution(timeIdx).resize(numDof);
         }
 
-        auxMod->applyInitial();
+        // A module which introduces degrees of freedom is initialised later, from
+        // applyInitialSolution(): at registration time the solution vector has not been
+        // written yet, and anything set here would be erased when it is zeroed there.
+        // Modules without degrees of freedom keep being initialised on the spot.
+        if (auxMod->numDofs() == 0) {
+            auxMod->applyInitial();
+        }
     }
 
     /*!

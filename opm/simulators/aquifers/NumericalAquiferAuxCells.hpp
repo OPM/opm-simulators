@@ -65,11 +65,15 @@ class NumericalAquiferAuxCells : public FlowAuxCellModule<TypeTag>
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+
+    enum { dimWorld = GridView::dimensionworld };
 
 public:
     using Connection = typename ParentType::Connection;
 
-    explicit NumericalAquiferAuxCells(const Simulator& simulator)
+    explicit NumericalAquiferAuxCells(Simulator& simulator)
         : simulator_(simulator)
     {
         const auto& eclState = simulator_.vanguard().eclState();
@@ -84,7 +88,9 @@ public:
             this->cartesianToLocal_.emplace(globalIndex, this->cells_.size() - 1);
         }
 
-        this->checkHostCellsAreInactive();
+        // The cells these records name were deactivated when the grid was built, which
+        // is what makes room for the aquifer to live outside it.
+        this->checkAquiferCellsAreNotInterior();
     }
 
     unsigned numDofs() const override
@@ -144,12 +150,18 @@ public:
         // Aquifer cell to reservoir cell.  The second endpoint is a real grid cell, so it
         // has to be translated into the local compressed numbering -- and skipped when
         // this rank does not own it.
+        // NNCdata normalises the order of its two cells, so which endpoint is the
+        // aquifer cell is not fixed; identify it by membership rather than by position.
         std::size_t skipped = 0;
         for (const auto& nnc : aquifers.aquiferConnectionNNCs(eclState.getInputGrid(),
                                                               eclState.fieldProps()))
         {
-            const auto dof1 = this->auxDofOf(nnc.cell1);
-            const int reservoirCell = vanguard.compressedIndexForInterior(nnc.cell2);
+            const bool firstIsAquifer = this->cartesianToLocal_.count(nnc.cell1) > 0;
+            const auto aquiferCartesian = firstIsAquifer ? nnc.cell1 : nnc.cell2;
+            const auto reservoirCartesian = firstIsAquifer ? nnc.cell2 : nnc.cell1;
+
+            const auto dof1 = this->auxDofOf(aquiferCartesian);
+            const int reservoirCell = vanguard.compressedIndexForInterior(reservoirCartesian);
             if (reservoirCell < 0) {
                 ++skipped;
                 continue;
@@ -158,7 +170,7 @@ public:
             const auto dof2 = static_cast<unsigned>(reservoirCell);
             this->connections_.push_back({dof1, dof2, static_cast<Scalar>(nnc.trans), 0.0, 0.0});
 
-            const auto localIdx = this->localOf(nnc.cell1);
+            const auto localIdx = this->localOf(aquiferCartesian);
             if (this->initialisationPartner_[localIdx] == 0) {
                 this->initialisationPartner_[localIdx] = dof2;
             }
@@ -178,10 +190,46 @@ public:
         }
     }
 
+    /*!
+     * \brief Set the initial state of the aquifer cells.
+     *
+     * They cannot be equilibrated the ordinary way -- that needs the cell's geometry --
+     * so each one starts from the state of the reservoir cell it is connected to, with
+     * the phase pressures carried to its own depth and the cell filled with water.  That
+     * is the same thing the grid-cell representation arranges for its aquifer cells, and
+     * an explicit initial pressure on the AQUNUM record overrides it either way.
+     */
     void applyInitial() override
     {
-        // Filled by the problem, which owns the initial fluid states; see
-        // FlowProblem::initialiseAuxiliaryCells_().
+        auto& solution = simulator_.model().solution(/*timeIdx=*/0);
+        const auto& problem = simulator_.problem();
+        const auto gravity = problem.gravity()[dimWorld - 1];
+
+        for (unsigned localIdx = 0; localIdx < this->numDofs(); ++localIdx) {
+            const auto globalIdx = static_cast<unsigned>(this->localToGlobalDof(localIdx));
+            const auto partner = this->initialisationPartner_.at(localIdx);
+
+            auto fs = problem.initialFluidState(partner);
+
+            const auto waterPos = FluidSystem::waterPhaseIdx;
+            const auto rho = getValue(fs.density(waterPos));
+            const auto dz = this->depth(localIdx) - problem.dofCenterDepth(partner);
+
+            const auto& cell = *this->cells_.at(localIdx);
+            for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                if (!FluidSystem::phaseIsActive(phase)) {
+                    continue;
+                }
+
+                fs.setSaturation(phase, (phase == waterPos) ? 1.0 : 0.0);
+                fs.setPressure(phase, cell.init_pressure.has_value()
+                               ? cell.init_pressure.value()
+                               : getValue(fs.pressure(phase)) + rho * gravity * dz);
+            }
+
+            solution[globalIdx].assignNaive(fs);
+            solution[globalIdx].setPvtRegionIndex(this->pvtRegionIndex(localIdx));
+        }
     }
 
     void linearize(SparseMatrixAdapter&, GlobalEqVector&) override
@@ -208,35 +256,52 @@ private:
     }
 
     /*!
-     * \brief Refuse an AQUNUM record placed on a cell the deck already uses.
+     * \brief Refuse an aquifer cell buried inside the model.
      *
-     * When aquifer cells take over grid cells, an AQUNUM record on an active cell
-     * repurposes it: its pore volume, depth and regions are overwritten and its
-     * permeability is zeroed, so the reservoir silently loses that cell.  Representing
-     * the aquifer separately has no faithful reading of that -- keeping the cell would
-     * add pore volume the other mode does not have -- so it is rejected rather than
-     * guessed at.  Decks which rely on it can still be run in the grid-cell mode.
+     * Deactivating the cell an AQUNUM record names is only sound where that cell is at
+     * the edge of the model.  With live rock both above and below it, removing it opens
+     * a hole in the middle of a column: the neighbours lose a connection they would
+     * otherwise have, and with PINCH active the grid processing may bridge across the
+     * gap and connect them to each other instead.  Neither is what the deck describes,
+     * and neither matches what the grid-cell representation does, so the two modes would
+     * quietly stop being comparable.
+     *
+     * Placing an aquifer cell there is questionable modelling to begin with -- a
+     * numerical aquifer is meant to hang off the model, not to sit inside it -- so this
+     * is refused rather than approximated.  The proper answer is for a numerical aquifer
+     * to be defined independently of the grid and then connected to it, which is the
+     * direction the auxiliary-cell representation is going; the restriction can be
+     * lifted once the aquifer no longer needs a cell to name at all.
      */
-    void checkHostCellsAreInactive() const
+    void checkAquiferCellsAreNotInterior() const
     {
-        const auto& vanguard = simulator_.vanguard();
+        const auto& grid = simulator_.vanguard().eclState().getInputGrid();
+        const auto nz = grid.getNZ();
 
-        for (const auto& [cartesianIndex, localIdx] : this->cartesianToLocal_) {
-            if (vanguard.compressedIndexForInterior(cartesianIndex) >= 0) {
-                const auto& cell = *this->cells_.at(localIdx);
+        for (const auto* cell : this->cells_) {
+            if ((cell->K == 0) || (cell->K + 1 >= nz)) {
+                continue; // at the top or the bottom of the model
+            }
+
+            const auto above = grid.getGlobalIndex(cell->I, cell->J, cell->K - 1);
+            const auto below = grid.getGlobalIndex(cell->I, cell->J, cell->K + 1);
+
+            if (grid.cellActive(above) && grid.cellActive(below)) {
                 OPM_THROW(std::runtime_error,
                           fmt::format("AQUNUM record for aquifer {} names cell "
-                                      "({},{},{}), which is an active grid cell. "
-                                      "Representing numerical aquifers outside the grid "
-                                      "is only supported for AQUNUM records placed on "
-                                      "inactive cells; run with the grid-cell "
-                                      "representation instead.",
-                                      cell.aquifer_id, cell.I + 1, cell.J + 1, cell.K + 1));
+                                      "({},{},{}), which has active cells both above and "
+                                      "below it. Representing numerical aquifers outside "
+                                      "the grid removes the cell they name, which would "
+                                      "open a hole inside the model; place the aquifer "
+                                      "cell at the edge of the model, or run with the "
+                                      "grid-cell representation.",
+                                      cell->aquifer_id,
+                                      cell->I + 1, cell->J + 1, cell->K + 1));
             }
         }
     }
 
-    const Simulator& simulator_;
+    Simulator& simulator_;
 
     //! Aquifer cells, in auxiliary-DOF order.
     std::vector<const NumericalAquiferCell*> cells_{};

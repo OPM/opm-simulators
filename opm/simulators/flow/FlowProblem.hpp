@@ -805,7 +805,10 @@ public:
 
             unsigned tableIdx = 0;
             if (!this->rockTableIdx_.empty()) {
-                tableIdx = this->rockTableIdx_[globalSpaceIdx];
+                // Auxiliary DOFs have no entry here; they take the first ROCK region.
+                if (globalSpaceIdx < this->rockTableIdx_.size()) {
+                    tableIdx = this->rockTableIdx_[globalSpaceIdx];
+                }
             }
             return this->rockParams_[tableIdx].referencePressure;
         }
@@ -824,12 +827,12 @@ public:
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
     {
-        return materialLawManager_->materialLawParams(globalDofIdx);
+        return materialLawManager_->materialLawParams(auxCellSaturationProxy_(globalDofIdx));
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx, FaceDir::DirEnum facedir) const
     {
-        return materialLawManager_->materialLawParams(globalDofIdx, facedir);
+        return materialLawManager_->materialLawParams(auxCellSaturationProxy_(globalDofIdx), facedir);
     }
 
     /*!
@@ -982,13 +985,13 @@ public:
     solidEnergyLawParams(unsigned globalSpaceIdx,
                          unsigned /*timeIdx*/) const
     {
-        return this->thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
+        return this->thermalLawManager_->solidEnergyLawParams(auxCellSaturationProxy_(globalSpaceIdx));
     }
     const ThermalConductionLawParams &
     thermalConductionLawParams(unsigned globalSpaceIdx,
                                unsigned /*timeIdx*/)const
     {
-        return this->thermalLawManager_->thermalConductionLawParams(globalSpaceIdx);
+        return this->thermalLawManager_->thermalConductionLawParams(auxCellSaturationProxy_(globalSpaceIdx));
     }
 
     /*!
@@ -1158,7 +1161,10 @@ public:
 
         unsigned tableIdx = 0;
         if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+            // Auxiliary DOFs have no entry here; they take the first ROCK region.
+            if (elementIdx < this->rockTableIdx_.size()) {
+                tableIdx = this->rockTableIdx_[elementIdx];
+            }
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
@@ -1480,6 +1486,12 @@ protected:
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
+        // NOTE: sized by the grid degrees of freedom on purpose.  Extending this over the
+        // auxiliary cells does not work: initParamsForElements walks the elements into the
+        // endpoint-scaling and hysteresis machinery, which is keyed on grid entities
+        // throughout, so raising the count merely pushes that machinery off the end of its
+        // own arrays.  Auxiliary cells are given saturation-function parameters by
+        // redirecting materialLawParams() instead.
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
                                                    this-> template fieldPropIntTypeOnLeafAssigner_<int>(),
                                                    this-> lookupIdxOnLevelZeroAssigner_());
@@ -1647,6 +1659,37 @@ protected:
         this->auxCellModules_.push_back(std::move(module));
         ref.buildConnections();
         return ref;
+    }
+
+    /*!
+     * \brief Map an auxiliary cell onto a grid cell for the per-element rock tables.
+     *
+     * The saturation-function machinery is built per grid element and stays that way:
+     * endpoint scaling and hysteresis are keyed on grid entities throughout, so the
+     * parameter tables cannot simply be extended over degrees of freedom that have no
+     * entity.  Instead an auxiliary cell borrows the parameters of a grid cell -- the one
+     * it is connected to and initialised from.
+     *
+     * That is exact when the two share a saturation region, which is the ordinary case
+     * (and the only one an aquifer is likely to present, being water-filled).  Where they
+     * differ, the borrowed curves are the wrong ones; giving auxiliary cells parameters of
+     * their own region is the follow-up, and needs the saturation-function tables to be
+     * addressable by region rather than by element.
+     */
+    unsigned auxCellSaturationProxy_(unsigned globalDofIdx) const
+    {
+        if (globalDofIdx < this->model().numGridDof()) {
+            return globalDofIdx;
+        }
+
+        for (const auto& module : this->auxCellModules_) {
+            const auto begin = static_cast<unsigned>(module->dofOffset());
+            if ((globalDofIdx >= begin) && (globalDofIdx < begin + module->numDofs())) {
+                return module->initialisationPartner(globalDofIdx - begin);
+            }
+        }
+
+        return 0;
     }
 
     //! Depth of an auxiliary cell, by global degree of freedom index.
@@ -1896,7 +1939,10 @@ protected:
 
         unsigned tableIdx = 0;
         if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+            // Auxiliary DOFs have no entry here; they take the first ROCK region.
+            if (elementIdx < this->rockTableIdx_.size()) {
+                tableIdx = this->rockTableIdx_[elementIdx];
+            }
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
