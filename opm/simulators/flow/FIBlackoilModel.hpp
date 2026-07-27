@@ -87,21 +87,22 @@ public:
         if constexpr (gridIsUnchanging) {
             if constexpr (avoidElementContext) {
                 updateCachedIntQuants(timeIdx);
-                return;
             }
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            else {
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (const auto& chunk : element_chunks_) {
-                ElementContext elemCtx(this->simulator_);
-                for (const auto& elem : chunk) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                for (const auto& chunk : element_chunks_) {
+                    ElementContext elemCtx(this->simulator_);
+                    for (const auto& elem : chunk) {
+                        elemCtx.updatePrimaryStencil(elem);
+                        elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    }
                 }
+                OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
+                                           this->simulator_.vanguard().grid().comm());
             }
-            OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
-                                       this->simulator_.vanguard().grid().comm());
         } else {
             // Grid is possibly refined or otherwise changed between calls.
             ElementContext elemCtx(this->simulator_);
@@ -109,6 +110,30 @@ public:
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
+        }
+
+        updateAuxiliaryIntQuants(timeIdx);
+    }
+
+    /*!
+     * \brief Update the intensive quantities of the degrees of freedom introduced by
+     *        auxiliary modules.
+     *
+     * These are not reachable through the grid, so none of the loops above visit them.
+     * The update itself needs no element context: it is driven entirely by the DOF
+     * index and the problem's index-based accessors, which is what allows an auxiliary
+     * cell to carry the model's own equations.
+     */
+    void updateAuxiliaryIntQuants(const unsigned timeIdx) const
+    {
+        if (!this->storeIntensiveQuantities()) {
+            return;
+        }
+
+        const unsigned numGridDof = this->numGridDof();
+        const unsigned numTotalDof = this->numTotalDof();
+        for (unsigned globalIdx = numGridDof; globalIdx < numTotalDof; ++globalIdx) {
+            this->updateSingleCachedIntQuantUnchecked(globalIdx, timeIdx);
         }
     }
 
