@@ -80,6 +80,25 @@ public:
     Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const;
 
     /*!
+     * \brief Set the transmissibility of a connection which is not a geometric face.
+     *
+     * This is for connections authored by something other than the grid -- an auxiliary
+     * cell's connection list, for instance -- where the transmissibility is computed by
+     * the author rather than from face geometry.  It may be called again to update the
+     * value of an existing connection, which is how a connection whose transmissibility
+     * depends on the solution (a fracture aperture, say) is refreshed between
+     * iterations without touching the sparsity pattern.
+     */
+    void setTransmissibility(unsigned elemIdx1, unsigned elemIdx2, Scalar value);
+
+    /*!
+     * \brief Set the thermal half transmissibility of a non-geometric connection.
+     *
+     * Directional: call it once for each ordering of the two degrees of freedom.
+     */
+    void setThermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx, Scalar value);
+
+    /*!
      * \brief Return the transmissibility for a given boundary segment.
      */
     Scalar transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const;
