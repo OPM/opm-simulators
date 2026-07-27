@@ -103,8 +103,26 @@ public:
      * \brief Return the offset in the global system of equations for the first degree of
      *        freedom of this auxiliary module.
      */
-    int dofOffset()
+    int dofOffset() const
     { return dofOffset_; }
+
+    /*!
+     * \brief Whether this module's degrees of freedom carry the model's own
+     *        conservation equations.
+     *
+     * False by default, which describes a module whose unknowns are of a different
+     * kind -- a well's bottom hole pressure, a mortar multiplier -- and which
+     * assembles and scales its own equations in linearize().  Such degrees of freedom
+     * are deliberately kept out of the model's error norm and primary-variable
+     * switching.
+     *
+     * A module which returns true is declaring the opposite: its degrees of freedom are
+     * cells as far as the model is concerned, with the model's own unknowns, and they
+     * take part in the Newton update, the convergence measures and the variable
+     * switching exactly like a grid cell.
+     */
+    virtual bool carriesModelEquations() const
+    { return false; }
 
     /*!
      * \brief Given a degree of freedom relative to the current auxiliary equation,

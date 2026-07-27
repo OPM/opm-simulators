@@ -1912,6 +1912,32 @@ public:
     { return auxEqModules_.size(); }
 
     /*!
+     * \brief Whether the given degree of freedom carries this model's own conservation
+     *        equations.
+     *
+     * True for every grid degree of freedom.  For an auxiliary one it is up to the
+     * module that owns it: a well's unknowns are of a different kind and scale
+     * themselves, while an auxiliary *cell* carries the model's unknowns and has to
+     * take part in the error norm, the primary-variable switching and the convergence
+     * measures exactly like a grid cell.
+     */
+    bool dofCarriesModelEquations(unsigned globalDofIdx) const
+    {
+        if (globalDofIdx < asImp_().numGridDof()) {
+            return true;
+        }
+
+        for (const auto* auxMod : auxEqModules_) {
+            const auto begin = static_cast<unsigned>(auxMod->dofOffset());
+            if (globalDofIdx >= begin && globalDofIdx < begin + auxMod->numDofs()) {
+                return auxMod->carriesModelEquations();
+            }
+        }
+
+        return false;
+    }
+
+    /*!
      * \brief Returns a given module for auxiliary equations
      */
     BaseAuxiliaryModule<TypeTag>* auxiliaryModule(unsigned auxEqModIdx)
