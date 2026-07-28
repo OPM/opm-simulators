@@ -90,8 +90,8 @@ void MixedPreconditioner<M,X,Y>::
 update ()
 {
     // transpose each dense block to make them column-major
-    int b = block_size;
-    int bb=b*b;
+    constexpr int b = block_size;
+    constexpr int bb=b*b;
     double B[bb];
     for(int k=0;k<nnz_;k++)
     {
