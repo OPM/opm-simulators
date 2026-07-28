@@ -460,6 +460,23 @@ public:
         // degrees of freedom, before anything below is sized from numTotalDof().
         simulator_.problem().registerAuxiliaryCellModules();
 
+        // An auxiliary module whose degrees of freedom carry the model's own equations
+        // needs a linearizer that assembles over degrees of freedom rather than over grid
+        // elements: an auxiliary DOF has no element, so an element-driven linearizer walks
+        // straight past it and leaves its row empty.  That failure is entirely silent --
+        // an all-zero row is a singular matrix at best and a spurious 0 = 0 equation at
+        // worst -- so refuse the combination here.
+        if constexpr (!Linearizer::assemblesAuxiliaryDofEquations) {
+            for (const auto* auxMod : auxEqModules_) {
+                if ((auxMod->numDofs() > 0) && auxMod->carriesModelEquations()) {
+                    throw std::logic_error("An auxiliary module introduces degrees of freedom "
+                                           "carrying the model's conservation equations, but "
+                                           "the linearizer in use assembles element by element "
+                                           "and cannot reach them. Use the TPFA linearizer.");
+                }
+            }
+        }
+
         // initialize the volume of the finite volumes to zero
         //
         // Auxiliary modules may introduce degrees of freedom which are appended after

@@ -179,6 +179,15 @@ class TpfaLinearizer
 //! \endcond
 
 public:
+    /*!
+     * \brief Whether the linearizer assembles the model's equations on auxiliary DOFs.
+     *
+     * It does: the cell loop runs over every degree of freedom, and an auxiliary DOF's
+     * connections are in neighborInfo_ alongside the geometric ones, so the storage and
+     * flux terms are computed for it exactly as for a grid cell.
+     */
+    static constexpr bool assemblesAuxiliaryDofEquations = true;
+
     TpfaLinearizer()
     {
         simulatorPtr_ = nullptr;
