@@ -284,7 +284,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupCPR(conf, p);
     }
 
-    if ((conf == "cpr") || (conf == "cprw")) {
+    if ((conf == "cpr") || (conf == "cprw") || (conf == "mixed-cprw")) {
         if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = cprDefaultMaxIter;
@@ -380,14 +380,16 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", getSolverString(p));
+    //prm.put("solver", getSolverString(p));
+    prm.put("solver", (p.linsolver_ == "mixed-cprw")?"mixed-bicgstab":getSolverString(p));
     prm.put("preconditioner.type", "cprw"s);
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
-    prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
+    //prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
+    prm.put("preconditioner.finesmoother.type", (p.linsolver_ == "mixed-cprw")?"mixed-ilu0":"paroverilu0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
