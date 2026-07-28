@@ -20,14 +20,24 @@ OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
     --linear-solver-max-iter=1024 \
     $@
 ```
-Currently, a JSON specification file is required to activate mixed-precision CPR+AMG, i.e.
-use the wrapper script below
+Similarly, a sample wrapper for running the simulator with mixed-precision CPR+AMG++BiCGSTAB
+is given by
+``` bash
+OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
+    --matrix-add-well-contributions=false \
+    --linear-solver=mixed-cprw \
+    --linear-solver-reduction=1e-3 \
+    --linear-solver-max-iter=1024 \
+    $@
+```
+Fine-tuning CPR+AMG can be done via a JSON specification file, e.g. by using the wrapper script
+below
 ```
 OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
     --linear-solver=../mixed-cprw.json \
     $@
 ```
-and modify the following `mixed-cprw.json` file to your liking
+and modifying the following `mixed-cprw.json` file to your liking
 ```
 {
     "maxiter": "1024",
