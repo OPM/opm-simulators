@@ -61,6 +61,78 @@ namespace Details
 
 namespace Amg
 {
+    /*!
+     * \brief The quasi-IMPES weight of one matrix row.
+     *
+     * Built from the row's diagonal block alone, so it asks nothing of the grid.
+     */
+    template <class VectorBlockType, class Matrix>
+    VectorBlockType quasiImpesWeightForRow(const Matrix& A,
+                                           const int rowIdx,
+                                           const int pressureVarIndex,
+                                           const bool transpose)
+    {
+        using MatrixBlockType = typename Matrix::block_type;
+
+        VectorBlockType rhs(0.0);
+        rhs[pressureVarIndex] = 1.0;
+
+        MatrixBlockType diag_block(0.0);
+        const auto row_it = A.begin() + rowIdx;
+        const auto endj = (*row_it).end();
+        for (auto j = (*row_it).begin(); j != endj; ++j) {
+            if (row_it.index() == j.index()) {
+                diag_block = (*j);
+                break;
+            }
+        }
+
+        VectorBlockType bweights;
+        if (transpose) {
+            diag_block.solve(bweights, rhs);
+        } else {
+            MatrixBlockType diag_block_transpose = Details::transposeDenseMatrix(diag_block);
+            diag_block_transpose.solve(bweights, rhs);
+        }
+
+        const double abs_max =
+            *std::ranges::max_element(bweights,
+                                      [](double a, double b)
+                                      { return std::fabs(a) < std::fabs(b); });
+        bweights /= std::fabs(abs_max);
+
+        return bweights;
+    }
+
+    /*!
+     * \brief Give the auxiliary degrees of freedom a CPR weight.
+     *
+     * The true-IMPES weights are built by walking the grid, so they leave the auxiliary
+     * degrees of freedom -- which have no element -- untouched.  That is not a small
+     * inaccuracy: the weight multiplies the whole row on its way into the coarse pressure
+     * system, so a zero weight deletes the row and makes that system singular.
+     *
+     * They get the quasi-IMPES weight instead, which needs only the assembled diagonal
+     * block.  Mixing the two is a compromise on scaling, not on correctness; an auxiliary
+     * cell's true-IMPES weight needs the storage term evaluated without an element
+     * context, which is the same thing the TPFA linearizer does and is the natural
+     * follow-up.
+     */
+    template <class Matrix, class Vector>
+    void getAuxiliaryDofWeights(const Matrix& matrix,
+                                const int firstAuxiliaryRow,
+                                const int pressureVarIndex,
+                                const bool transpose,
+                                Vector& weights)
+    {
+        using VectorBlockType = typename Vector::block_type;
+
+        for (int rowIdx = firstAuxiliaryRow; rowIdx < static_cast<int>(matrix.N()); ++rowIdx) {
+            weights[rowIdx] = quasiImpesWeightForRow<VectorBlockType>(matrix, rowIdx,
+                                                                     pressureVarIndex, transpose);
+        }
+    }
+
     template <class Matrix, class Vector>
     void getQuasiImpesWeights(const Matrix& matrix,
                               const int pressureVarIndex,
@@ -254,10 +326,14 @@ namespace Amg
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+
+        getAuxiliaryDofWeights(model.linearizer().jacobian().istlMatrix(),
+                               static_cast<int>(model.numGridDof()),
+                               pressureVarIndex, /*transpose=*/false, weights);
     }
 
     template <class Vector, class ElementContext, class Model, class ElementChunksType>
-    void getTrueImpesWeightsAnalytic(int /*pressureVarIndex*/,
+    void getTrueImpesWeightsAnalytic(int pressureVarIndex,
                                      Vector& weights,
                                      const ElementContext& elemCtx,
                                      const Model& model,
@@ -343,6 +419,10 @@ namespace Amg
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+
+        getAuxiliaryDofWeights(model.linearizer().jacobian().istlMatrix(),
+                               static_cast<int>(model.numGridDof()),
+                               pressureVarIndex, /*transpose=*/false, weights);
     }
 } // namespace Amg
 
