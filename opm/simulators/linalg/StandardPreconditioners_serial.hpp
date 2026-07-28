@@ -44,12 +44,12 @@ class TrivialPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 {
     public:
     TrivialPreconditioner(){};
-    virtual void update() override {};
-    virtual bool hasPerfectUpdate() const override {return true;}
-    virtual void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
-    virtual void post ([[maybe_unused]] X& x) override {};
-    virtual void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override {};
-    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+    void update() override {};
+    bool hasPerfectUpdate() const override {return true;}
+    void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
+    void post ([[maybe_unused]] X& x) override {};
+    void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override {};
+    Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 };
 
 

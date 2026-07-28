@@ -33,7 +33,7 @@ public:
     static constexpr auto block_size = Vector::block_type::dimension;
 
     // Compute the dot product <vx, vy>
-    virtual double dot(const Vector& vx, const Vector& vy) const override
+    double dot(const Vector& vx, const Vector& vy) const override
     {
         // access underlying data
         double const *x = &vx[0][0];
@@ -59,7 +59,7 @@ public:
     }
 
     // Compute the norm ||x||
-    virtual double norm(const Vector& x) const override {
+    double norm(const Vector& x) const override {
         return std::sqrt(this->dot(x, x));
     }
 };
@@ -185,7 +185,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                                                               verbosity);
     }
 
-    virtual void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
+    void apply(Vector &x, Vector &b, InverseOperatorResult &res) override
     {
         //transpose dense blocks and demote to single precision
         mixed_matrix_->update(double_data_);
@@ -194,7 +194,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         solver_->apply(x,b,res);
     }
 
-    virtual void apply(Vector &x, Vector &b, double reduction, InverseOperatorResult &res) override
+    void apply(Vector &x, Vector &b, double reduction, InverseOperatorResult &res) override
     {
         x=0;
         b=0;
@@ -202,7 +202,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
         OPM_THROW(std::invalid_argument, "MixedBiCGSTABSolver::apply(...) not implemented yet.");
     }
 
-    virtual Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};
+    Dune::SolverCategory::Category category() const override{return Dune::SolverCategory::overlapping;};
 
     private:
     using AbstractSolverType = Dune::InverseOperator<Vector,Vector>;

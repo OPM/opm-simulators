@@ -63,14 +63,14 @@ public:
                    const std::function<VectorType()>& weightsCalculator,
                    std::size_t pressureIndex);
 
-    virtual void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override;
+    void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override;
 
-    virtual void apply(VectorType& x, VectorType& rhs, double reduction, Dune::InverseOperatorResult& res) override;
+    void apply(VectorType& x, VectorType& rhs, double reduction, Dune::InverseOperatorResult& res) override;
 
     /// Access the contained preconditioner.
     AbstractPrecondType& preconditioner();
 
-    virtual Dune::SolverCategory::Category category() const override;
+    Dune::SolverCategory::Category category() const override;
 
 private:
     using AbstractScalarProductType = Dune::ScalarProduct<VectorType>;

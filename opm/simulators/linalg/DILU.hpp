@@ -157,12 +157,12 @@ public:
     }
 
     //! Category of the preconditioner (see SolverCategory::Category)
-    virtual SolverCategory::Category category() const override
+    SolverCategory::Category category() const override
     {
         return SolverCategory::sequential;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return true;
     }
 

@@ -82,20 +82,20 @@ public:
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
-    virtual void pre(X& x, Y& b) override;
+    void pre(X& x, Y& b) override;
 
     //! \brief Apply the preconditoner.
-    virtual void apply(X& v, const Y& d) override;
+    void apply(X& v, const Y& d) override;
 
     //! \brief Post processing
     //! \note Does nothing at the moment
-    virtual void post(X& x) override;
+    void post(X& x) override;
 
     //! Category of the preconditioner (see SolverCategory::Category)
-    virtual Dune::SolverCategory::Category category() const override;
+    Dune::SolverCategory::Category category() const override;
 
     //! \brief Updates the matrix data.
-    virtual void update() override;
+    void update() override;
 
 
     //! \returns false
@@ -110,7 +110,7 @@ public:
         return false;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return true;
     }
 

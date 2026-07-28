@@ -124,14 +124,14 @@ public:
     }
 
     //! \brief Not used at the moment
-    virtual void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
+    void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
     {
         static_assert(!detail::shouldCallPreconditionerPre<CudaPreconditionerType>(),
                       "We currently do not support Preconditioner::pre().");
     }
 
     //! \brief Apply the preconditoner.
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         OPM_ERROR_IF(!m_underlyingPreconditioner,
                      "You need to set the underlying preconditioner with setUnderlyingPreconditioner.");
@@ -159,19 +159,19 @@ public:
     }
 
     //! \brief Not used at the moment
-    virtual void post([[maybe_unused]] X& x) override
+    void post([[maybe_unused]] X& x) override
     {
         static_assert(!detail::shouldCallPreconditionerPost<CudaPreconditionerType>(),
                       "We currently do not support Preconditioner::post().");
     }
 
     //! Category of the preconditioner (see SolverCategory::Category)
-    virtual Dune::SolverCategory::Category category() const override
+    Dune::SolverCategory::Category category() const override
     {
         return m_underlyingPreconditioner->category();
     }
 
-    virtual void update() override
+    void update() override
     {
         OPM_ERROR_IF(!m_underlyingPreconditioner,
                      "You need to set the underlying preconditioner with setUnderlyingPreconditioner.");
@@ -189,7 +189,7 @@ public:
         m_underlyingPreconditioner = conditioner;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return m_underlyingPreconditioner->hasPerfectUpdate();
     }
 
