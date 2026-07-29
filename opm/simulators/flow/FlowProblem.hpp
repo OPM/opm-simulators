@@ -1470,6 +1470,7 @@ protected:
         this->updatePlmixnum_();
 
         OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
+        this->authorAuxCellRegions_();
         ////////////////////////////////
         // porosity
         updateReferencePorosity_();
@@ -1703,6 +1704,54 @@ protected:
         }
 
         return 0.0;
+    }
+
+    /*!
+     * \brief Give the auxiliary cells their region numbers.
+     *
+     * The region arrays are built from the field properties over the grid, which leaves
+     * them one entry short of every degree of freedom the moment an auxiliary module adds
+     * any.  They are read by degree-of-freedom index -- pvtRegionIndex() is asked for one
+     * on the way to the PVT tables -- so a short array is an out-of-bounds read that ends
+     * up indexing the tables with whatever was next in memory.  An empty array means "one
+     * region", which needs no extending.
+     */
+    void authorAuxCellRegions_()
+    {
+        const auto numTotalDof = this->model().numTotalDof();
+        if (numTotalDof == this->model().numGridDof()) {
+            return;
+        }
+
+        const auto extend = [numTotalDof](auto& numbers, auto&& regionOf) {
+            if (numbers.empty()) {
+                return;
+            }
+
+            numbers.resize(numTotalDof, 0);
+            regionOf(numbers);
+        };
+
+        extend(this->pvtnum_, [this](auto& numbers) {
+            for (const auto& module : this->auxCellModules_) {
+                for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                    numbers[module->localToGlobalDof(localIdx)] = module->pvtRegionIndex(localIdx);
+                }
+            }
+        });
+
+        extend(this->satnum_, [this](auto& numbers) {
+            for (const auto& module : this->auxCellModules_) {
+                for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                    numbers[module->localToGlobalDof(localIdx)] = module->satRegionIndex(localIdx);
+                }
+            }
+        });
+
+        // The solvent and polymer models have no auxiliary-cell story yet; region zero is
+        // the only defensible placeholder, and it is what an absent array would give.
+        extend(this->miscnum_, [](auto&) {});
+        extend(this->plmixnum_, [](auto&) {});
     }
 
     /*!
