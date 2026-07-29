@@ -31,3 +31,31 @@ add_test_compareSeparateECLFiles(
   MPI_PROCS
     1
 )
+
+
+###########################################################################
+# Numerical aquifers represented outside the grid
+#
+# Both representations solve the same discrete system -- same unknowns, pore volumes,
+# depths, regions and connection transmissibilities -- so these compare the two against
+# each other rather than against stored reference data, which is a sharper test than any
+# single-mode regression would be.  The driver pins the time steps and tightens the
+# convergence tolerances, so what is left to differ is arithmetic ordering.
+###########################################################################
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-numerical-aquifer-mode-comparison.sh "")
+
+foreach(case AQUNUM-01 AQUNUM-02 AQUNUM-03 AQUNUM-04)
+  string(TOLOWER ${case} test)
+  opm_add_test(compareNumericalAquiferModes_flow+${test}
+    EXE_TARGET
+      flow
+    DRIVER_ARGS
+      -i ${OPM_TESTS_ROOT}/aquifers
+      -f ${case}
+      -r ${BASE_RESULT_PATH}/flow+aquifer_modes_${test}
+      -a ${abs_tol}
+      -t ${rel_tol}
+      -c $<TARGET_FILE:compareECL>
+  )
+endforeach()
