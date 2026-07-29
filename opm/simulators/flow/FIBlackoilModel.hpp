@@ -123,17 +123,34 @@ public:
      * The update itself needs no element context: it is driven entirely by the DOF
      * index and the problem's index-based accessors, which is what allows an auxiliary
      * cell to carry the model's own equations.
+     *
+     * That update is the same one AvoidElementContext selects for the grid cells, and it
+     * is only implemented for the plain black-oil equations: solvent, extbo, polymer,
+     * foam, MICP, brine, diffusion and dispersion all static_assert against it.  So it is
+     * instantiated under exactly that property, and a configuration which has auxiliary
+     * DOFs but cannot update them says so rather than leaving them uninitialised.
      */
     void updateAuxiliaryIntQuants(const unsigned timeIdx) const
     {
-        if (!this->storeIntensiveQuantities()) {
+        if (this->numTotalDof() == this->numGridDof()) {
             return;
         }
 
-        const unsigned numGridDof = this->numGridDof();
-        const unsigned numTotalDof = this->numTotalDof();
-        for (unsigned globalIdx = numGridDof; globalIdx < numTotalDof; ++globalIdx) {
-            this->updateSingleCachedIntQuantUnchecked(globalIdx, timeIdx);
+        if constexpr (!avoidElementContext) {
+            throw std::logic_error("Auxiliary degrees of freedom need intensive quantities "
+                                   "updated without an element context, which this model "
+                                   "configuration does not support");
+        }
+        else {
+            if (!this->storeIntensiveQuantities()) {
+                return;
+            }
+
+            const unsigned numGridDof = this->numGridDof();
+            const unsigned numTotalDof = this->numTotalDof();
+            for (unsigned globalIdx = numGridDof; globalIdx < numTotalDof; ++globalIdx) {
+                this->updateSingleCachedIntQuantUnchecked(globalIdx, timeIdx);
+            }
         }
     }
 
