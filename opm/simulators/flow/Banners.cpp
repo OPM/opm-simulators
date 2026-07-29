@@ -60,7 +60,7 @@ void printPRTHeader(const std::size_t nprocs,
     unsigned num_cpu = std::thread::hardware_concurrency();
     struct utsname arch;
     const char* user = getlogin();
-    std::time_t now = std::time(0);
+    std::time_t now = std::time(nullptr);
     struct std::tm  tstruct;
     char      tmstr[80];
     tstruct = *std::localtime(&now);
