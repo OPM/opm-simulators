@@ -283,7 +283,7 @@ void Main::handleTestSplitCommunicatorCmdLine_()
     }
 }
 
-void Main::notifyMasterSlaveInitFailed_()
+void Main::notifyMasterSlaveInitFailed_() const
 {
 #if HAVE_MPI
     if (Parameters::Get<Parameters::Slave>()) {
