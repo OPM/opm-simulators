@@ -306,4 +306,123 @@ BOOST_AUTO_TEST_CASE(Vector)
     }
 }
 
+BOOST_AUTO_TEST_CASE(Matches_Json_String)
+{
+    // A tree loaded from a file and one built from the same text in memory
+    // must be indistinguishable -- this is the point of fromJsonString().
+    const auto json = std::string { R"({
+ "a" : 1234,
+ "b" : 123.4,
+ "c" : "hello",
+ "d" : { "e" : { "f" : 42 } },
+ "g" : [ 1, 2, 3 ]
+}
+)" };
+
+    auto f = TempFile{};
+    f.append(json);
+
+    const auto fromFile = Opm::PropertyTree { f.name() };
+    const auto fromString = Opm::PropertyTree::fromJsonString(json);
+
+    BOOST_CHECK_EQUAL(fromString.get<int>("a"), fromFile.get<int>("a"));
+    BOOST_CHECK_CLOSE(fromString.get<double>("b"), fromFile.get<double>("b"), 1.0e-8);
+    BOOST_CHECK_EQUAL(fromString.get<std::string>("c"), fromFile.get<std::string>("c"));
+    BOOST_CHECK_EQUAL(fromString.get<int>("d.e.f"), fromFile.get<int>("d.e.f"));
+
+    const auto gString = fromString.get_child_items_as_vector<int>("g");
+    const auto gFile = fromFile.get_child_items_as_vector<int>("g");
+    BOOST_REQUIRE_MESSAGE(gString.has_value(), R"(Node "g" must exist)");
+    BOOST_REQUIRE_MESSAGE(gFile.has_value(), R"(Node "g" must exist)");
+    BOOST_CHECK_EQUAL_COLLECTIONS(gString->begin(), gString->end(),
+                                  gFile  ->begin(), gFile  ->end());
+}
+
 BOOST_AUTO_TEST_SUITE_END() // Load_From_File
+
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_SUITE(From_Json_String)
+
+BOOST_AUTO_TEST_CASE(Top_Node_Only)
+{
+    const auto t = Opm::PropertyTree::fromJsonString(R"({
+ "a" : 1234,
+ "b" : 123.4,
+ "c" : "hello",
+ "d" : 12.34
+}
+)");
+
+    BOOST_CHECK_EQUAL(t.get<int>("a"), 1234);
+    BOOST_CHECK_EQUAL(t.get<int>("aa", 42), 42);
+
+    BOOST_CHECK_CLOSE(t.get<double>("b"), 123.4, 1.0e-8);
+    BOOST_CHECK_CLOSE(t.get("bb", 2.71828), 2.71828, 1.0e-8);
+
+    BOOST_CHECK_EQUAL(t.get<std::string>("c"), "hello");
+    BOOST_CHECK_EQUAL(t.get("cc", std::string { "world" }), "world");
+
+    BOOST_CHECK_CLOSE(t.get<float>("d"), 12.34f, 1.0e-6f);
+}
+
+BOOST_AUTO_TEST_CASE(Hierarchy)
+{
+    const auto t = Opm::PropertyTree::fromJsonString(R"({
+ "a" : { "b" : { "c" : 123 } }
+}
+)");
+
+    BOOST_CHECK_EQUAL(t.get<int>("a.b.c"), 123);
+
+    const auto a = t.get_child("a");
+    BOOST_CHECK_EQUAL(a.get<int>("b.c"), 123);
+
+    const auto d_e_f = t.get_child_optional("d.e.f");
+    BOOST_CHECK_MESSAGE(! d_e_f.has_value(), R"(Node "f" must not exist)");
+}
+
+BOOST_AUTO_TEST_CASE(Vector)
+{
+    const auto t = Opm::PropertyTree::fromJsonString(R"({
+ "a" : [ 1, 2, 3, 4 ],
+ "b" : [ 11.22, 33.44 ]
+})");
+
+    const auto a = t.get_child_items_as_vector<int>("a");
+    BOOST_REQUIRE_MESSAGE(a.has_value(), R"(Node "a" must exist)");
+
+    const auto expect = std::vector { 1, 2, 3, 4, };
+    BOOST_CHECK_EQUAL_COLLECTIONS(a     ->begin(), a     ->end(),
+                                  expect.begin(), expect.end());
+
+    const auto aa = t.get_child_items_as_vector<int>("aa");
+    BOOST_CHECK_MESSAGE(! aa.has_value(), R"(Node "aa" must NOT exist)");
+}
+
+BOOST_AUTO_TEST_CASE(Solver_Config)
+{
+    // The motivating use: a linear-solver configuration held inline rather
+    // than in a file on disk, as opm-flowgeomechanics builds them.
+    const auto t = Opm::PropertyTree::fromJsonString(R"({
+ "tol" : 0.01,
+ "maxiter" : 200,
+ "solver" : "cg",
+ "preconditioner" : { "type" : "ParOverILU0", "relaxation" : 0.9 }
+})");
+
+    BOOST_CHECK_CLOSE(t.get<double>("tol"), 0.01, 1.0e-8);
+    BOOST_CHECK_EQUAL(t.get<int>("maxiter"), 200);
+    BOOST_CHECK_EQUAL(t.get<std::string>("solver"), "cg");
+    BOOST_CHECK_EQUAL(t.get<std::string>("preconditioner.type"), "ParOverILU0");
+    BOOST_CHECK_CLOSE(t.get<double>("preconditioner.relaxation"), 0.9, 1.0e-8);
+}
+
+BOOST_AUTO_TEST_CASE(Malformed_Json_Throws)
+{
+    // Parse errors must surface, not yield a silently empty tree.
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromJsonString(R"({ "a" : )"),
+                      std::exception);
+}
+
+BOOST_AUTO_TEST_SUITE_END() // From_Json_String
