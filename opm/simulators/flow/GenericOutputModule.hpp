@@ -380,7 +380,18 @@ protected:
                         const bool isRestart,
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
-                        std::map<std::string, int> rstKeywords = {});
+                        std::map<std::string, int> rstKeywords = {},
+                        unsigned auxDofCount = 0);
+
+    /*!
+     * \brief Extend the reporting regions over the auxiliary degrees of freedom.
+     *
+     * The region arrays come from the field properties over the grid.  An auxiliary cell
+     * belongs to a region all the same -- a numerical aquifer takes the regions of the
+     * cell its AQUNUM record names -- and it has to, or its contribution to the field and
+     * region totals has nowhere to go.
+     */
+    void extendRegionsForAuxiliaryDofs(const std::vector<int>& hostCartesianIndex);
 
     /// Allocate the buffers a derived module owns.  Called while the restart
     /// keywords are being handled, so that a keyword consumed here is marked

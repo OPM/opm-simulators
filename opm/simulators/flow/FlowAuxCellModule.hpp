@@ -126,6 +126,18 @@ public:
     virtual unsigned satRegionIndex(unsigned localIdx) const = 0;
 
     /*!
+     * \brief The cell of the input grid whose field properties describe this one.
+     *
+     * A numerical aquifer names a cell, and takes that cell's region numbers wherever the
+     * AQUNUM record does not override them -- so the reporting regions it belongs to are
+     * that cell's, whether or not the cell is part of the simulation grid.  Auxiliary
+     * cells with no such cell to name return -1 and fall back to their initialisation
+     * partner's regions.
+     */
+    virtual int hostCartesianIndex(unsigned /*localIdx*/) const
+    { return -1; }
+
+    /*!
      * \brief A grid cell whose initial state this auxiliary cell is derived from.
      *
      * Auxiliary cells cannot be equilibrated by the ordinary machinery, which needs the

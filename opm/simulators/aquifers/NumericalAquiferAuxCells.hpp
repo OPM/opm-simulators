@@ -121,6 +121,9 @@ public:
     unsigned satRegionIndex(unsigned localIdx) const override
     { return static_cast<unsigned>(this->cells_.at(localIdx)->sattable) - 1; }
 
+    int hostCartesianIndex(unsigned localIdx) const override
+    { return static_cast<int>(this->cells_.at(localIdx)->global_index); }
+
     /*!
      * \brief The reservoir cell this aquifer cell hangs off.
      *
