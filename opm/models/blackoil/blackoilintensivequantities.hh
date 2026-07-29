@@ -783,6 +783,16 @@ public:
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
 
+        // The element-context update does this from updateCommonPart(); here it has to be
+        // called separately because that overload is shared with configurations built
+        // against a problem that has no energy at all.  Without it the fluid enthalpies,
+        // the rock internal energy and the thermal conductivity are never computed, so
+        // nothing in the cell depends on its temperature and its diagonal block comes out
+        // with an entirely zero temperature column.
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+            asImp_().updateEnergyQuantities_(problem, globalSpaceIdx, timeIdx);
+        }
+
         // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
     }
 
