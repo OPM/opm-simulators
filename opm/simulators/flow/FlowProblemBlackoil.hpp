@@ -428,7 +428,9 @@ public:
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+            // By total degree of freedom count: maxOilSaturation() is asked by
+            // degree-of-freedom index, and an auxiliary cell asks the same way.
+            this->maxOilSaturation_.resize(this->model().numTotalDof(), 0.0);
         }
 
         this->readRockParameters_(simulator.vanguard().cellCenterDepths(),
@@ -491,7 +493,8 @@ public:
         this->computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
-            this->drift_.resize(this->model().numGridDof());
+            // Sized like the residual it compensates, which spans the auxiliary DOFs.
+            this->drift_.resize(this->model().numTotalDof());
             this->drift_ = 0.0;
         }
 
@@ -525,7 +528,10 @@ public:
         // TODO: move to the end for later refactoring of the function finishInit()
         //
         // deal with DRSDT
-        this->mixControls_.init(this->model().numGridDof(),
+        // Sized over every degree of freedom, auxiliary ones included: the intensive
+        // quantities ask for the dissolution limits by degree-of-freedom index, and an
+        // auxiliary cell reaches this the same way a grid cell does.
+        this->mixControls_.init(this->model().numTotalDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
 
@@ -1213,7 +1219,7 @@ public:
 
         if (fip_init) {
             this->updateReferencePorosity_();
-            this->mixControls_.init(this->model().numGridDof(),
+            this->mixControls_.init(this->model().numTotalDof(),
                                     this->episodeIndex(),
                                     eclState.runspec().tabdims().getNumPVTTables());
         }
