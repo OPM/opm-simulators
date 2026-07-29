@@ -78,6 +78,12 @@ public:
     const Equations& linSys() const
     { return linSys_; }
 
+    //! \brief Read access to the primary variables, needed by the adjoint
+    //!        module to build dJ/dx_w (segment-0 BHP / surface-rate
+    //!        derivatives), mirroring the StandardWellEval hook.
+    const PrimaryVariables& primaryVariables() const
+    { return primary_variables_; }
+
     static constexpr int numResDofs = Indices::numEq;
     static constexpr int numWellDofs = PrimaryVariables::numWellEq;// numResDofs + 1; // NB will fail for for thermal for now
     using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
