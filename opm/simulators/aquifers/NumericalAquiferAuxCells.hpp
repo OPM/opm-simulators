@@ -35,6 +35,7 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <utility>
@@ -271,6 +272,89 @@ public:
         // Nothing to add: the aquifer cells are assembled by the model's own local
         // residual, like grid cells, and they are always active so there are no dormant
         // rows to condition.
+    }
+
+    //! The aquifer identifiers this module represents, in declaration order.
+    std::vector<int> aquiferIds() const
+    {
+        std::vector<int> ids;
+        ids.reserve(this->aquiferRange_.size());
+        for (const auto& [id, range] : this->aquiferRange_) {
+            static_cast<void>(range);
+            ids.push_back(static_cast<int>(id));
+        }
+
+        return ids;
+    }
+
+    //! The global degrees of freedom carrying one aquifer, in declaration order.
+    std::vector<unsigned> aquiferDofs(const int aquiferId) const
+    {
+        std::vector<unsigned> dofs;
+
+        auto pos = this->aquiferRange_.find(static_cast<std::size_t>(aquiferId));
+        if (pos == this->aquiferRange_.end()) {
+            return dofs;
+        }
+
+        dofs.reserve(pos->second.second - pos->second.first);
+        for (auto localIdx = pos->second.first; localIdx < pos->second.second; ++localIdx) {
+            dofs.push_back(static_cast<unsigned>(this->localToGlobalDof(localIdx)));
+        }
+
+        return dofs;
+    }
+
+    /*!
+     * \brief The connections of one aquifer that reach into the grid.
+     *
+     * The intra-aquifer chain is left out: what an aquifer reports as its influx is what
+     * crosses into the reservoir, not what moves inside itself.  Each entry is
+     * (aquifer degree of freedom, reservoir degree of freedom).
+     */
+    std::vector<std::pair<unsigned, unsigned>> reservoirConnections(const int aquiferId) const
+    {
+        std::vector<std::pair<unsigned, unsigned>> conns;
+
+        const auto dofs = this->aquiferDofs(aquiferId);
+        const auto isMine = [&dofs](const unsigned dof) {
+            return std::find(dofs.begin(), dofs.end(), dof) != dofs.end();
+        };
+        const auto isGridDof = [this](const unsigned dof) {
+            return dof < this->simulator_.model().numGridDof();
+        };
+
+        for (const auto& conn : this->connections_) {
+            if (isMine(conn.dof1) && isGridDof(conn.dof2)) {
+                conns.emplace_back(conn.dof1, conn.dof2);
+            }
+            else if (isMine(conn.dof2) && isGridDof(conn.dof1)) {
+                conns.emplace_back(conn.dof2, conn.dof1);
+            }
+        }
+
+        return conns;
+    }
+
+    //! Initial pressure of one aquifer's cells, for the restart record.
+    std::vector<Scalar> initialPressure(const int aquiferId) const
+    {
+        std::vector<Scalar> pressures;
+
+        auto pos = this->aquiferRange_.find(static_cast<std::size_t>(aquiferId));
+        if (pos == this->aquiferRange_.end()) {
+            return pressures;
+        }
+
+        pressures.reserve(pos->second.second - pos->second.first);
+        for (auto localIdx = pos->second.first; localIdx < pos->second.second; ++localIdx) {
+            const auto& cell = *this->cells_.at(localIdx);
+            pressures.push_back(cell.init_pressure.has_value()
+                                ? static_cast<Scalar>(cell.init_pressure.value())
+                                : Scalar{0});
+        }
+
+        return pressures;
     }
 
 private:

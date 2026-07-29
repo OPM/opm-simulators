@@ -99,6 +99,7 @@ private:
     void createDynamicAquifers(const int episode_index);
 
     void initializeStaticAquifers();
+    void createAuxiliaryCellAquifers();
     void initializeRestartDynamicAquifers();
 
     bool needRestartDynamicAquifers() const;
