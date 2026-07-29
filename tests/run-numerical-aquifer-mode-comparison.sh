@@ -25,11 +25,17 @@ then
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\tOptional options:"
+  echo -e "\t\t -x            Compare only the summary vectors both runs produce.  Needed"
+  echo -e "\t\t               for a deck that asks for block data at an aquifer cell: that"
+  echo -e "\t\t               cell is a grid cell in one representation and not in the"
+  echo -e "\t\t               other, so the vector exists in one run only."
   exit 1
 fi
 
+IGNORE_ONE_SIDED=""
 OPTIND=1
-while getopts "i:f:r:a:t:c:e:" OPT
+while getopts "i:f:r:a:t:c:e:x" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -39,6 +45,7 @@ do
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    x) IGNORE_ONE_SIDED="-y" ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -61,7 +68,11 @@ do
 done
 
 echo "=== Comparing the summary of the two numerical-aquifer representations ==="
-${COMPARE_ECL_COMMAND} -t SMRY -a ${RESULT_PATH}/grid/${FILENAME} \
+if test -n "${IGNORE_ONE_SIDED}"
+then
+  echo "    (comparing only the vectors both runs produce -- see -x)"
+fi
+${COMPARE_ECL_COMMAND} -t SMRY ${IGNORE_ONE_SIDED} -a ${RESULT_PATH}/grid/${FILENAME} \
                                   ${RESULT_PATH}/aux/${FILENAME} \
                                   ${ABS_TOL} ${REL_TOL}
 exit $?
