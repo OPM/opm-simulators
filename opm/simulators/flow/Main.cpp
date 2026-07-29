@@ -55,6 +55,34 @@
 
 #include <iostream>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+
+namespace {
+// Exempt this process from Windows power throttling ("EcoQoS"). Windows runs
+// background processes at reduced clock speed on modern laptops: a serial
+// Norne run launched from a background shell measured 1.6x slower than the
+// same binary launched from a foreground GUI. Foreground processes get the
+// exemption implicitly; MPI ranks (spawned by the smpd service) and console
+// runs do not, so request it explicitly. Priority is left untouched.
+void exemptFromPowerThrottling()
+{
+    PROCESS_POWER_THROTTLING_STATE state{};
+    state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    state.ControlMask = PROCESS_POWER_THROTTLING_EXECUTION_SPEED;
+    state.StateMask = 0;   // 0 = always run at normal speed
+    SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling,
+                          &state, sizeof(state));
+}
+} // anonymous namespace
+#endif // _WIN32
+
 namespace Opm {
 
 Main::Main(int argc, char** argv, bool ownMPI)
@@ -211,6 +239,9 @@ void Main::setArgvArgc_(const std::string& filename)
 
 void Main::initMPI()
 {
+#ifdef _WIN32
+    exemptFromPowerThrottling();
+#endif
 #if HAVE_DUNE_FEM
     // The instance() method already checks if MPI has been initialized so we may
     // not need to check mpi_init_ here.
