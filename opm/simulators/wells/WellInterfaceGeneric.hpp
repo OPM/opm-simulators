@@ -153,6 +153,12 @@ public:
 
     const std::vector<Scalar>& wellIndex() const { return well_index_; }
 
+    //! \brief Mutable per-perforation well indices (connection transmissibility
+    //!        factors). Adjoint hook: the dJ/dperm well-coupling gradient
+    //!        perturbs the CTF here and re-linearizes. Not used in the forward
+    //!        path.
+    std::vector<Scalar>& wellIndex() { return well_index_; }
+
     const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
     Scalar getTHPConstraint(const SummaryState& summaryState) const;
