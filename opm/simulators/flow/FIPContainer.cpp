@@ -39,6 +39,7 @@ template<class FluidSystem>
 bool
 FIPContainer<FluidSystem>::
 allocate(const std::size_t bufferSize,
+         const std::size_t gridSize,
          const SummaryConfig& summaryConfig,
          const bool forceAlloc,
          std::map<std::string, int>& rstKeywords)
@@ -64,6 +65,7 @@ allocate(const std::size_t bufferSize,
 
     bool computeFip = false;
     bufferSize_ = bufferSize;
+    gridSize_ = gridSize;
     for (const auto& phase : Inplace::phases()) {
         if (forceAlloc || summaryConfig.require3DField(Inplace::EclString(phase))) {
             this->add(phase);
@@ -506,9 +508,21 @@ outputRestart(data::Solution& sol)
             });
     }
 
+    // The restart file is written per grid cell.  Where auxiliary degrees of freedom
+    // extend these buffers past the grid they contribute to the region sums, which is
+    // what they are for, but they have no cell to be written against.
+    const auto perCell = [this](const Inplace::Phase phase) {
+        auto& v = this->fip_[phase];
+        if (v.size() <= this->gridSize_) {
+            return std::move(v);
+        }
+
+        return std::vector<Scalar>(v.begin(), v.begin() + this->gridSize_);
+    };
+
     for (const auto& [mnemonic, unit, phase] : fipArrays) {
         if (! this->fip_[phase].empty()) {
-            sol.insert(mnemonic, unit, std::move(this->fip_[phase]),
+            sol.insert(mnemonic, unit, perCell(phase),
                        data::TargetType::RESTART_SOLUTION);
         }
     }
@@ -517,7 +531,7 @@ outputRestart(data::Solution& sol)
         if (! this->fip_[phase].empty()) {
             sol.insert(Inplace::EclString(phase),
                        UnitSystem::measure::volume,
-                       std::move(this->fip_[phase]),
+                       perCell(phase),
                        data::TargetType::SUMMARY);
         }
     }

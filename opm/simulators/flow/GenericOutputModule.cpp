@@ -640,8 +640,14 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     forceRestartFieldAllocation,
                const EclHysteresisConfig* hysteresisConfig,
                const unsigned numOutputNnc,
-               std::map<std::string, int> rstKeywords)
+               std::map<std::string, int> rstKeywords,
+               const unsigned auxDofCount)
 {
+    // The fluid-in-place buffers span the auxiliary degrees of freedom as well, so that
+    // what lives outside the grid still counts towards the field and region totals; every
+    // other buffer here is written per grid cell and stays that size.
+    const unsigned fipBufferSize = bufferSize + auxDofCount;
+
     if (rstKeywords.empty()) {
         rstKeywords = schedule_.rst_keywords(reportStepNum);
     }
@@ -667,7 +673,8 @@ doAllocBuffers(const unsigned bufferSize,
     rstKeywords["PRES"] = 0;
 
     // Fluid in place
-    this->computeFip_ = this->fipC_.allocate(bufferSize,
+    this->computeFip_ = this->fipC_.allocate(fipBufferSize,
+                                             bufferSize,
                                              summaryConfig_,
                                              !substep,
                                              rstKeywords);
@@ -686,15 +693,15 @@ doAllocBuffers(const unsigned bufferSize,
     if (needPoreVolume) {
         this->fipC_.add(Inplace::Phase::PoreVolume);
         this->fipC_.add(Inplace::Phase::DynamicPoreVolume);
-        this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
+        this->hydrocarbonPoreVolume_.resize(fipBufferSize, 0.0);
     }
     else {
         this->hydrocarbonPoreVolume_.clear();
     }
 
     if (needAvgPress) {
-        this->pressureTimesPoreVolume_.resize(bufferSize, 0.0);
-        this->pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
+        this->pressureTimesPoreVolume_.resize(fipBufferSize, 0.0);
+        this->pressureTimesHydrocarbonVolume_.resize(fipBufferSize, 0.0);
     }
     else {
         this->pressureTimesPoreVolume_.clear();
@@ -1045,6 +1052,36 @@ update(Inplace& inplace,
         sum += rval;
     }
     inplace.add(phase, sum);
+}
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
+extendRegionsForAuxiliaryDofs(const std::vector<int>& hostCartesianIndex)
+{
+    if (hostCartesianIndex.empty()) {
+        return;
+    }
+
+    const auto& fp = this->eclState_.fieldProps();
+
+    for (auto& [name, region] : this->regions_) {
+        if (region.empty()) {
+            continue;
+        }
+
+        // The global array still describes the cell an AQUNUM record names even when that
+        // cell has been left out of the simulation grid to make room for the aquifer.
+        const auto& global = fp.get_global_int(name);
+
+        const auto firstAux = region.size();
+        region.resize(firstAux + hostCartesianIndex.size(), 0);
+        for (std::size_t i = 0; i < hostCartesianIndex.size(); ++i) {
+            const auto host = hostCartesianIndex[i];
+            region[firstAux + i] = (host < 0)
+                ? 0                        // no cell to take a region from: no region
+                : global[static_cast<std::size_t>(host)];
+        }
+    }
 }
 
 template<class FluidSystem>
