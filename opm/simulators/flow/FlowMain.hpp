@@ -210,6 +210,15 @@ namespace Opm {
             return simtimer_.get();
         }
 
+        /// The report-step driver, for callers that step the simulation
+        /// themselves via executeStep() and need to configure it -- e.g. to
+        /// install a SimulatorFullyImplicit::setRestoreStateHook. Null until
+        /// executeInitStep() has run.
+        Simulator* getStepDriverPtr()
+        {
+            return simulator_.get();
+        }
+
         /// Get the size of the previous report step
         double getPreviousReportStepSize()
         {

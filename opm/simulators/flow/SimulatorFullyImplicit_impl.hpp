@@ -331,6 +331,14 @@ runStep(SimulatorTimer& timer)
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
 
+    // Same position as the OPMRST restore above -- after the episode has been
+    // set up and before the solve -- for callers that keep their own state
+    // store. Used by the adjoint's checkpoint/recompute driver, which restores
+    // from its own archive rather than from an .OPMRST file. Off unless set.
+    if (restoreStateHook_) {
+        restoreStateHook_(timer.currentStepNum());
+    }
+
     this->solver_->model().beginReportStep();
 
     const bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
