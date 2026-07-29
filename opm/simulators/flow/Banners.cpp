@@ -29,6 +29,7 @@
 
 #include <fmt/format.h>
 
+#include <array>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -62,10 +63,10 @@ void printPRTHeader(const std::size_t nprocs,
     const char* user = getlogin();
     std::time_t now = std::time(nullptr);
     struct std::tm  tstruct;
-    char      tmstr[80];
+    std::array<char,80>  tmstr;
     tstruct = *std::localtime(&now);
-    std::strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
-    const double mem_size = getTotalSystemMemory() / megabyte;
+    std::strftime(tmstr.data(), tmstr.size(), "%d-%m-%Y at %X", &tstruct);
+    const double mem_size = static_cast<double>(getTotalSystemMemory()) / megabyte;
     std::ostringstream ss;
     ss << "\n\n\n";
     ss << " ########  #          ######   #           #\n";
@@ -86,7 +87,7 @@ void printPRTHeader(const std::size_t nprocs,
     if (user != nullptr) {
        ss << "User             =  " << user << std::endl;
     }
-    ss << "Simulation started on " << tmstr << " hrs\n";
+    ss << "Simulation started on " << tmstr.data() << " hrs\n";
     ss << "Using "<< nprocs << " MPI processes with "<< nthreads <<" OMP threads on each \n";
     ss << "Parameters used by Flow:\n" << parameters;
 
