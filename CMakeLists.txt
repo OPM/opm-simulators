@@ -224,7 +224,11 @@ macro(opm-simulators_prereqs_hook)
   if(USE_HYPRE AND USE_MPI)
     find_package(HYPRE)
     if(HYPRE_FOUND)
-      target_link_libraries(opmsimulators PRIVATE HYPRE::HYPRE)
+      # PUBLIC: HYPRE::HYPRE carries HAVE_HYPRE=1 as an INTERFACE compile
+      # definition (see opm-common's FindHYPRE.cmake).  Downstream targets such
+      # as flow_blackoil instantiate the preconditioner factory themselves and
+      # must therefore see it too, so the dependency has to be re-exported.
+      target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
     else()
       message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
     endif()
