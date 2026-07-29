@@ -127,8 +127,20 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->solver_ = std::move(sol);
         } else {
             using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
+            // The rows this rank owns are the interior grid cells and, behind the ghost
+            // rows, the degrees of freedom that have no grid cell at all.  Passed as
+            // bands rather than as a single count, because the second group sits after
+            // the ghosts and would otherwise be projected out of the Krylov operator --
+            // silently, as a 0 = 0 equation.
+            auto ownedRowBands = std::vector<std::pair<std::size_t, std::size_t>>
+                {{0, interiorCellNum_}};
+            if (numAuxiliaryDof_ > 0) {
+                ownedRowBands.emplace_back(matrix.N() - numAuxiliaryDof_, matrix.N());
+            }
+
             auto pop = std::make_unique<ParOperatorType>(matrix, *wellOperator_,
-                                                         interiorCellNum_);
+                                                         std::move(ownedRowBands),
+                                                         matrix.N());
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
             auto sol = std::make_unique<FlexibleSolverType>(*pop, *comm, prm,
                                                             weightsCalculator,
