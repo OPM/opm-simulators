@@ -124,11 +124,14 @@ public:
      * index and the problem's index-based accessors, which is what allows an auxiliary
      * cell to carry the model's own equations.
      *
-     * That update is the same one AvoidElementContext selects for the grid cells, and it
-     * is only implemented for the plain black-oil equations: solvent, extbo, polymer,
-     * foam, MICP, brine, diffusion and dispersion all static_assert against it.  So it is
-     * instantiated under exactly that property, and a configuration which has auxiliary
-     * DOFs but cannot update them says so rather than leaving them uninitialised.
+     * The index-based update does not cover every module -- solvent, extbo, polymer,
+     * foam, MICP, brine, diffusion and dispersion still need an element -- so it is
+     * instantiated only where the intensive quantities say it is available.  Note that
+     * this is a weaker condition than AvoidElementContext, which is about how the *grid*
+     * cells are updated: a configuration may well drive the grid through element contexts
+     * and still be able to update an auxiliary DOF without one.  A configuration that has
+     * auxiliary DOFs and genuinely cannot update them says so rather than leaving them
+     * uninitialised.
      */
     void updateAuxiliaryIntQuants(const unsigned timeIdx) const
     {
@@ -136,7 +139,7 @@ public:
             return;
         }
 
-        if constexpr (!avoidElementContext) {
+        if constexpr (!IntensiveQuantities::supportsElementContextFreeUpdate) {
             throw std::logic_error("Auxiliary degrees of freedom need intensive quantities "
                                    "updated without an element context, which this model "
                                    "configuration does not support");
