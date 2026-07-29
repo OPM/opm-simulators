@@ -1304,6 +1304,15 @@ public:
         return drift_;
     }
 
+    /*!
+     * \brief The auxiliary cell modules this problem owns.
+     *
+     * Exposed so that the parts of the simulator which have to know what lives outside
+     * the grid -- reporting, chiefly -- can find them without a second registry.
+     */
+    const std::vector<std::unique_ptr<FlowAuxCellModule<TypeTag>>>& auxCellModules() const
+    { return auxCellModules_; }
+
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }

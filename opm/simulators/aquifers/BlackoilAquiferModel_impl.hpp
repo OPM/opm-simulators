@@ -27,6 +27,7 @@
 #endif
 
 #include <opm/simulators/aquifers/AquiferConstantFlux.hpp>
+#include <opm/simulators/aquifers/AquiferNumericalAux.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -55,6 +56,7 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
 {
+    this->createAuxiliaryCellAquifers();
     this->computeConnectionAreaFraction();
 
     for (auto& aquifer : this->aquifers) {
@@ -212,6 +214,7 @@ serializeOp(Serializer& serializer)
         auto* ct = dynamic_cast<AquiferCarterTracy<TypeTag>*>(aiPtr.get());
         auto* fetp = dynamic_cast<AquiferFetkovich<TypeTag>*>(aiPtr.get());
         auto* num = dynamic_cast<AquiferNumerical<TypeTag>*>(aiPtr.get());
+        auto* numAux = dynamic_cast<AquiferNumericalAux<TypeTag>*>(aiPtr.get());
         auto* flux = dynamic_cast<AquiferConstantFlux<TypeTag>*>(aiPtr.get());
         if (ct) {
             serializer(*ct);
@@ -219,6 +222,9 @@ serializeOp(Serializer& serializer)
             serializer(*fetp);
         } else if (num) {
             serializer(*num);
+        } else if (numAux) {
+            // Nothing to serialize: restart is refused while auxiliary cells are live,
+            // and the reported values are recomputed from the solution at every step.
         } else if (flux) {
             serializer(*flux);
         } else {
@@ -234,6 +240,42 @@ void BlackoilAquiferModel<TypeTag>::initializeRestartDynamicAquifers()
         .getInitConfig().getRestartStep() - 1;
 
     this->createDynamicAquifers(rstStep);
+}
+
+/*!
+ * \brief Attach reporting to the numerical aquifers that live outside the grid.
+ *
+ * Deferred until the initial solution is in place: the aquifers proper are created from
+ * the problem's constructor, at which point neither the problem nor the auxiliary modules
+ * it owns exist yet, and the reported quantities are read off the degrees of freedom.
+ */
+template <typename TypeTag>
+void BlackoilAquiferModel<TypeTag>::createAuxiliaryCellAquifers()
+{
+    const auto& aquifer = this->simulator_.vanguard().eclState().aquifer();
+    if (! aquifer.hasNumericalAquifer()) {
+        return;
+    }
+
+    if (this->simulator_.vanguard().eclState().numericalAquiferMode() !=
+        NumericalAquiferMode::AuxiliaryCells)
+    {
+        return;
+    }
+
+    for (const auto& module : this->simulator_.problem().auxCellModules()) {
+        const auto* auxAquifers =
+            dynamic_cast<const NumericalAquiferAuxCells<TypeTag>*>(module.get());
+        if (auxAquifers == nullptr) {
+            continue;
+        }
+
+        for (const auto id : auxAquifers->aquiferIds()) {
+            this->aquifers.push_back
+                (std::make_unique<AquiferNumericalAux<TypeTag>>
+                 (id, *auxAquifers, this->simulator_));
+        }
+    }
 }
 
 template <typename TypeTag>
@@ -288,6 +330,10 @@ void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
             this->aquifers.push_back(std::move(aquNumPtr));
         }
     }
+    // The auxiliary-cell counterpart cannot be built here: this runs from the problem's
+    // own constructor, so neither the problem nor the auxiliary modules exist yet.  See
+    // createAuxiliaryCellAquifers().
+
 }
 
 template <typename TypeTag>
