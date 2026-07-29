@@ -103,7 +103,7 @@ void RSTConv::prepareConv()
 
 void RSTConv::updateNewton(const std::vector<int>& convNewt)
 {
-    const std::size_t numGloCells = conv_new_.size();
+    const auto numGloCells = conv_new_.size();
 
     if (comm_.size() == 1) {
         for (std::size_t n = 0; n < numGloCells; ++n) {
@@ -113,13 +113,13 @@ void RSTConv::updateNewton(const std::vector<int>& convNewt)
     }
 
     std::vector<int> values(numGloCells, 0);
-    const std::size_t numLocCells = convNewt.size();
+    const auto numLocCells = convNewt.size();
 
     for (std::size_t i = 0; i < numLocCells; ++i) {
-        values[globalCell_(i)] = convNewt[i];
+        values[globalCell_(static_cast<int>(i))] = convNewt[i];
     }
 
-    comm_.sum(values.data(), numGloCells);
+    comm_.sum(values.data(), static_cast<int>(numGloCells));
 
     for (std::size_t n = 0; n < numGloCells; ++n) {
         conv_new_[n] += values[n];

@@ -79,7 +79,9 @@ write(const std::vector<StepReport>& reports)
         return;
     }
 
-    const auto begin = reports.begin() + this->alreadyReportedSteps_;
+    using dtype = std::vector<StepReport>::difference_type;
+    const auto begin = std::next(reports.begin(),
+                                 static_cast<dtype>(this->alreadyReportedSteps_));
     const auto end = reports.end();
 
     auto requests = std::vector<ConvergenceReportQueue::OutputRequest>{};

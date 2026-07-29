@@ -50,7 +50,8 @@ unsigned long long getTotalSystemMemory()
 
 namespace Opm {
 
-void printPRTHeader(const int nprocs, const int nthreads,
+void printPRTHeader(const std::size_t nprocs,
+                    const std::size_t nthreads,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -97,8 +98,10 @@ void printFlowBanner(int nprocs, int nthreads, std::string_view moduleVersionNam
     const int lineLen = 70;
     std::string banner = "This is flow ";
     banner += moduleVersionName;
-    const int bannerPreLen = (lineLen - 2 - banner.size())/2;
-    const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
+    const int available = lineLen - 2 - static_cast<int>(banner.size());
+    const int pad = std::max(available, 0);
+    const std::size_t bannerPreLen = pad / 2;
+    const std::size_t bannerPostLen = pad - bannerPreLen;
     std::cout << "**********************************************************************\n";
     std::cout << "*                                                                    *\n";
     std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";

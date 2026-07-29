@@ -1221,7 +1221,7 @@ setupExtraBlockData(const std::size_t        reportStepNum,
     for (const auto& wname : sched.well_order()) {
         const auto& well = sched.wells.get(wname);
         for (const auto& connection : well.getConnections()) {
-            if (isCartIdxOnThisRank(connection.global_index())) {
+            if (isCartIdxOnThisRank(static_cast<int>(connection.global_index()))) {
                 this->extraBlockData_.emplace(std::piecewise_construct,
                                               std::forward_as_tuple("BPR",
                                                                     connection.global_index() + 1),

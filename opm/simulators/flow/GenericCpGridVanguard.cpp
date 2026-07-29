@@ -580,7 +580,7 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
             removed_cells.resize(size);
         }
 
-        this->grid_->comm().broadcast(removed_cells.data(), size, 0);
+        this->grid_->comm().broadcast(removed_cells.data(), static_cast<int>(size), 0);
     }
 
     // Inform the aquifer object that we might have removed/deactivated

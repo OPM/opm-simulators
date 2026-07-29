@@ -239,7 +239,9 @@ void SimulatorSerializer::checkSerializedCmdLine(const std::string& current,
                 } else {
                     only_stored.push_back(difference[i]);
                 }
-                difference.erase(difference.begin() + i);
+                using dtype = std::vector<std::string>::difference_type;
+                difference.erase(std::next(difference.begin(),
+                                           static_cast<dtype>(i)));
             }
         }
         std::stringstream str;
