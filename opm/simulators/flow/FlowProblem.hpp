@@ -1527,7 +1527,9 @@ protected:
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+            // By total degree of freedom count: maxOilSaturation() is asked by
+            // degree-of-freedom index, and an auxiliary cell asks the same way.
+            this->maxOilSaturation_.resize(this->model().numTotalDof(), 0.0);
         }
 
         this->readRockParameters_(
