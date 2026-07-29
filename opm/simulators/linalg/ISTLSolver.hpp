@@ -118,6 +118,9 @@ struct FlexibleSolverInfo
     std::unique_ptr<LinearOperatorExtra<Vector,Vector>> wellOperator_;
     AbstractPreconditionerType* pre_ = nullptr;
     std::size_t interiorCellNum_ = 0;
+    //! Degrees of freedom appended after the grid rows; owned by this rank by
+    //! construction, but not part of the interior prefix.
+    std::size_t numAuxiliaryDof_ = 0;
 };
 
 
@@ -532,6 +535,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                         flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
                     }
                 }
+                // Only known once the model has been built, which is after this solver is
+                // constructed -- hence here rather than in initialize().
+                flexibleSolver_[activeSolverNum_].numAuxiliaryDof_ =
+                    simulator_.model().numTotalDof() - simulator_.model().numGridDof();
+
                 std::function<Vector()> weightCalculator
                     = this->getWeightsCalculator(prm_[activeSolverNum_], pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
