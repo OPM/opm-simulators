@@ -317,21 +317,14 @@ void FlowGenericVanguard::init()
 
         // compute the base name of the input file name
         const char directorySeparator = '/';
-        long int i;
-        for (i = fileName_.size(); i >= 0; -- i)
-            if (fileName_[i] == directorySeparator)
-                break;
-        std::string baseName = fileName_.substr(i + 1, fileName_.size());
+        const auto sepPos = fileName_.find_last_of(directorySeparator);
+        const auto baseName = sepPos != std::string::npos
+            ? fileName_.substr(sepPos + 1, fileName_.size())
+            : fileName_;
 
         // remove the extension from the input file
-        for (i = baseName.size(); i >= 0; -- i)
-            if (baseName[i] == '.')
-                break;
-        std::string rawCaseName;
-        if (i < 0)
-            rawCaseName = baseName;
-        else
-            rawCaseName = baseName.substr(0, i);
+        const auto dotPos = baseName.find_last_of('.');
+        const auto rawCaseName = dotPos == std::string::npos ? baseName : baseName.substr(0, dotPos);
 
         // transform the result to ALL_UPPERCASE
         caseName_ = rawCaseName;
