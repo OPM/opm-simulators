@@ -743,27 +743,27 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&pSalt_,                             "", enableSaltPrecipitation_},
        Entry{&permFact_,                          "", enableSaltPrecipitation_ || enableBioeffects_},
        Entry{&soMax_,                             "", oilvap.getType() == OilVapP::VAPPARS},
-       Entry{&soMax_,                             "", effectiveHysteresisConfig &&
+       Entry{&soMax_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enableNonWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&sgmax_,                             "", effectiveHysteresisConfig &&
+       Entry{&sgmax_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enableNonWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},
-       Entry{&swMax_,                             "", effectiveHysteresisConfig &&
+       Entry{&swMax_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enableWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&shmax_,                             "", effectiveHysteresisConfig &&
+       Entry{&shmax_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enableWettingHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},
-       Entry{&swmin_,                             "", effectiveHysteresisConfig &&
+       Entry{&swmin_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enablePCHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx)},
-       Entry{&somin_,                             "", effectiveHysteresisConfig &&
+       Entry{&somin_,                             "", effectiveHysteresisConfig != nullptr &&
                                                       effectiveHysteresisConfig->enablePCHysteresis() &&
                                                       FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx)},

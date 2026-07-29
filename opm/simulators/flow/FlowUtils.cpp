@@ -136,13 +136,13 @@ void checkAllMPIProcesses()
                         OpmLog::error(fmt::format("Error: Could not test for MPI message (error code : {})", error));
                         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                     }
-                    if (flag)
+                    if (flag != 0)
                     {
                         --msgs;
                     }
                 }
             }
-            if (msgs) {
+            if (msgs != 0) {
                 // seems like some processes are stuck. Abort just to be save
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }
@@ -166,7 +166,7 @@ void checkAllMPIProcesses()
                     OpmLog::error(fmt::format("Error: Could not test for MPI message (error code : {})", error));
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 }
-                if (flag)
+                if (flag != 0)
                 {
                     completed = true;
                 }

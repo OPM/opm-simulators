@@ -82,7 +82,7 @@ void printPRTHeader(const int nprocs, const int nthreads,
        ss << ", " << arch.version << " )\n";
        ss << "Build time       =  " << compileTimestamp << "\n";
     }
-    if (user) {
+    if (user != nullptr) {
        ss << "User             =  " << user << std::endl;
     }
     ss << "Simulation started on " << tmstr << " hrs\n";

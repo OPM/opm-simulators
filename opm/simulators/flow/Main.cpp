@@ -234,7 +234,7 @@ void Main::initMPI()
     maybeRedirectReservoirCouplingSlaveOutput_();
     if (test_split_comm_ && FlowGenericVanguard::comm().size() > 1) {
         int world_rank = FlowGenericVanguard::comm().rank();
-        int color = (world_rank == 0);
+        const int color = world_rank == 0 ? 1 : 0;
         MPI_Comm new_comm;
         MPI_Comm_split(FlowGenericVanguard::comm(), color, world_rank, &new_comm);
         isSimulationRank_ = (world_rank > 0);

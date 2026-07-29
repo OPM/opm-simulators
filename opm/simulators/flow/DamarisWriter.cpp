@@ -117,7 +117,7 @@ void
 handleError(const int dam_err, Parallel::Communication comm, const std::string& message)
 {
     // Find if some rank has encountered an error.
-    const int isOk = (dam_err == DAMARIS_OK);
+    const int isOk = dam_err == DAMARIS_OK ? 1 : 0;
     const bool error = (comm.sum(isOk) != comm.size());
 
     if (error) {

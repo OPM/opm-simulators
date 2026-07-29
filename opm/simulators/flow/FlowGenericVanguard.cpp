@@ -370,7 +370,7 @@ void FlowGenericVanguard::init()
     // Check whether allowing distribute wells makes sense
     if (enableDistributedWells() )
     {
-        int hasMsWell = false;
+        int hasMsWell = 0;
         const auto& comm = FlowGenericVanguard::comm();
 
         if (useMultisegmentWell_)
@@ -380,13 +380,13 @@ void FlowGenericVanguard::init()
                 const auto& wells = this->schedule().getWellsatEnd();
                 hasMsWell = std::ranges::any_of(wells,
                                                 [](const auto& well)
-                                                { return well.isMultiSegment(); });
+                                                { return well.isMultiSegment(); }) ? 1 : 0;
             }
         }
 
         hasMsWell = comm.max(hasMsWell);
 
-        if (hasMsWell)
+        if (hasMsWell != 0)
         {
             if (comm.rank() == 0)
             {
