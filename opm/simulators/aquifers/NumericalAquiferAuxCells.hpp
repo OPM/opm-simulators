@@ -150,12 +150,24 @@ public:
         this->initialisationPartner_.assign(this->cells_.size(), 0);
         this->hasReservoirConnection_.assign(this->cells_.size(), false);
 
+        // The grid-cell representation puts these connections into the input NNC list,
+        // where the region-based multipliers are applied to them alongside the deck's own
+        // NNCs (Transmissibility::applyMultRegTToInputNncTrans_).  A MULTREGT record can
+        // reduce an aquifer's connection to the reservoir by orders of magnitude, or shut
+        // it off entirely, so the same multiplier has to be applied here -- otherwise the
+        // aquifer is connected on one path and not on the other.
+        const auto& transMult = eclState.getTransMult();
+        const auto multiplier = [&transMult](const std::size_t cell1, const std::size_t cell2) {
+            return static_cast<Scalar>(transMult.getRegionMultiplierNNC(cell1, cell2));
+        };
+
         // Aquifer cell to aquifer cell: the chain within one aquifer.  Both endpoints
         // are auxiliary cells.
         for (const auto& nnc : aquifers.aquiferCellNNCs()) {
             const auto dof1 = this->auxDofOf(nnc.cell1);
             const auto dof2 = this->auxDofOf(nnc.cell2);
-            this->connections_.push_back({dof1, dof2, static_cast<Scalar>(nnc.trans), 0.0, 0.0});
+            const auto trans = static_cast<Scalar>(nnc.trans) * multiplier(nnc.cell1, nnc.cell2);
+            this->connections_.push_back({dof1, dof2, trans, 0.0, 0.0});
         }
 
         // Aquifer cell to reservoir cell.  The second endpoint is a real grid cell, so it
@@ -179,7 +191,9 @@ public:
             }
 
             const auto dof2 = static_cast<unsigned>(reservoirCell);
-            this->connections_.push_back({dof1, dof2, static_cast<Scalar>(nnc.trans), 0.0, 0.0});
+            const auto trans = static_cast<Scalar>(nnc.trans)
+                * multiplier(aquiferCartesian, reservoirCartesian);
+            this->connections_.push_back({dof1, dof2, trans, 0.0, 0.0});
 
             const auto localIdx = this->localOf(aquiferCartesian);
             if (!this->hasReservoirConnection_[localIdx]) {
