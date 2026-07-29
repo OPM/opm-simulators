@@ -1664,6 +1664,20 @@ protected:
     template <class Module>
     Module& registerAuxCellModule_(std::unique_ptr<Module> module)
     {
+        // Which rank owns a degree of freedom that has no geometry is a choice, and one
+        // that has to be made where the partition is made: every rank holding a cell the
+        // auxiliary cell connects to needs it at least as a copy, with its intensive
+        // quantities refreshed, and the owner has to be the only one contributing its
+        // accumulation.  None of that is in place yet -- the auxiliary degrees of freedom
+        // are not in the communication index set -- so refuse the combination rather than
+        // let each rank solve its own version of the aquifer.
+        if (this->simulator().gridView().comm().size() > 1) {
+            OPM_THROW(std::runtime_error,
+                      "Degrees of freedom outside the grid (numerical aquifers "
+                      "represented as auxiliary cells) are not supported in parallel "
+                      "yet. Run on one process, or use --numerical-aquifer-mode=grid.");
+        }
+
         auto& ref = *module;
         this->simulator().model().addAuxiliaryModule(&ref);
         this->auxCellModules_.push_back(std::move(module));
