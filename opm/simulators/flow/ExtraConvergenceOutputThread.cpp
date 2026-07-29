@@ -388,8 +388,8 @@ ConvergenceOutputThread(std::string_view               outputDir,
                         ConvergenceReportQueue&        queue)
     : pImpl_ { std::make_unique<Impl>(outputDir,
                                       baseName,
-                                      getPhaseName,
-                                      convertTime,
+                                      std::move(getPhaseName),
+                                      std::move(convertTime),
                                       config,
                                       queue) }
 {}
