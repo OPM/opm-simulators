@@ -173,6 +173,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/linalg/system/SystemPreconditioner.cpp
   opm/simulators/linalg/system/SystemPreconditionerFactory.cpp
+  opm/simulators/linalg/system/WellMatrixMerger.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
