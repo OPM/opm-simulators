@@ -28,9 +28,7 @@
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
-
-namespace Opm
-{
+namespace Opm {
 
 // Reservoir operator/comm types used as template arguments.
 template<typename Scalar>
