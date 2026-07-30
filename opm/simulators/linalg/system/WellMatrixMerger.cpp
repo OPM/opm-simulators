@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <numeric>
 
 namespace {
 
@@ -84,11 +85,9 @@ void initializeEmptyMatrix(Matrix& matrix, std::size_t rows, std::size_t cols)
 template<class MatrixVectorT, class DimensionFn>
 std::size_t sumMatrixDimension(const MatrixVectorT& matrices, DimensionFn&& dimension)
 {
-    std::size_t total = 0;
-    for (const auto& matrix : matrices) {
-        total += dimension(matrix);
-    }
-    return total;
+    return std::accumulate(matrices.begin(), matrices.end(), std::size_t{0},
+                           [&dimension](const auto acc, const auto& matrix)
+                           { return acc + dimension(matrix); });
 }
 
 template<class Row, class Matrix, class ColumnMapper>
