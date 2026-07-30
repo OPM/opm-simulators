@@ -35,6 +35,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
+#include <opm/input/eclipse/Schedule/MSW/makeMSWellFromStandardWell.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
@@ -314,6 +315,26 @@ getLocalWells(const int timeStepIdx) const
                            [&st = this->schedule()[timeStepIdx]]
                            (const std::string& wname)
                            { return st.wells(wname); });
+
+    // Optionally turn plain single-segment wells into multisegment wells so the
+    // wellbore hydrostatic head is solved implicitly. No-op for wells that are
+    // already multisegment.
+    const auto& convert = this->param_.convert_to_multisegment_well_;
+    if (convert == "per-connection") {
+        // One linear tubing with a segment per connection: a pressure unknown
+        // per perforation, so the head between perforations is solved for.
+        constexpr double tubing_diameter = 0.1524; // 6"
+        const auto& units = this->schedule().getUnits();
+        for (auto& well : w) {
+            well = makeMultiSegmentWellPerConnection(well, units, tubing_diameter);
+        }
+    }
+    else if (convert != "none") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Unknown value '{}' for ConvertToMultisegmentWell. "
+                              "Valid values are 'none' and 'per-connection'.",
+                              convert));
+    }
 
     return w;
 }
