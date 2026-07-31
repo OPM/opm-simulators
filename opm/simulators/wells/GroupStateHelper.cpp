@@ -36,6 +36,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <sstream>
 #include <stack>
 #include <set>
 #include <unordered_set>
@@ -1978,15 +1979,34 @@ getInjectionGroupTargetForMode_(
     const Group::InjectionCMode cmode) const
 {
     const int pos = this->phaseToActivePhaseIdx(injection_phase);
-    Group::InjectionControls ctrl = group.injectionControls(injection_phase, this->summary_state_);
     bool use_gpmaint = group.has_gpmaint_control(injection_phase, cmode)
                                 && this->groupState().has_gpmaint_target(group.name());
+
+    // A group whose injection is controlled by GPMAINT alone has no GCONINJE
+    // record for the phase, and hence no injection controls to read.  Fetch
+    // them only in the branches that actually use them.
+    auto injectionControls = [this, &group, &injection_phase]()
+    {
+        if (! group.hasInjectionControl(injection_phase)) {
+            auto phase = std::ostringstream{};
+            phase << injection_phase;
+
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Group {} has no injection control "
+                                         "for phase {}", group.name(),
+                                         phase.str()),
+                             this->deferredLogger());
+        }
+
+        return group.injectionControls(injection_phase, this->summary_state_);
+    };
+
     switch (cmode) {
     case Group::InjectionCMode::RATE:
         if (use_gpmaint) {
             return this->groupState().gpmaint_target(group.name());
         }
-        return ctrl.surface_max_rate;
+        return injectionControls().surface_max_rate;
     case Group::InjectionCMode::RESV: {
         // GPMAINT targets (WINJ/GINJ/OINJ) are already per-phase RESV rates,
         // so no other-phase subtraction is needed.
@@ -1998,13 +2018,16 @@ getInjectionGroupTargetForMode_(
         const std::vector<Scalar>& group_injection_reservoir_rates =
             this->groupState().injection_reservoir_rates(group.name());
         return this->subtractOtherPhaseResvInjection_(
-            injection_phase, ctrl.resv_max_rate, group_injection_reservoir_rates) / resv_coeff[pos];
+            injection_phase, injectionControls().resv_max_rate,
+            group_injection_reservoir_rates) / resv_coeff[pos];
     }
     case Group::InjectionCMode::REIN: {
+        const auto ctrl = injectionControls();
         Scalar production_rate = this->groupState().injection_rein_rates(ctrl.reinj_group)[pos];
         return ctrl.target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
+        const auto ctrl = injectionControls();
         const std::vector<Scalar>& group_injection_reservoir_rates =
             this->groupState().injection_reservoir_rates(group.name());
         Scalar voidage_rate = this->groupState().injection_vrep_rate(ctrl.voidage_group)
