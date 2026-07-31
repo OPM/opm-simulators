@@ -344,8 +344,17 @@ updatePressures(const int reportStepIdx,
 
         const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
         if (it != this->nodePressures(*domain).end()) {
-            // The well belongs to a group with a network pressure constraint,
-            // set the dynamic THP constraint of the well accordingly.
+            // The well belongs to a group with a network pressure constraint.
+            // For injectors, only set the dynamic THP if the well has its own
+            // VFP table (vfp_table_number > 0). Without a well-level VFP table
+            // the operability check (computeBhpAtThpLimitInj) cannot use the
+            // constraint and will mark the well inoperable.
+            const bool can_use_thp = well->isProducer()
+                || (well->isInjector() && well->wellEcl().vfp_table_number() > 0);
+            if (!can_use_thp) {
+                continue;
+            }
+            // Set the dynamic THP constraint of the well accordingly.
             const Scalar new_limit = it->second;
             well->setDynamicThpLimit(new_limit);
             SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
@@ -448,9 +457,16 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
     if (domain.has_value() && !this->nodePressures(*domain).empty()) {
         const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
         if (it != this->nodePressures(*domain).end()) {
-            // The well belongs to a group which has a network nodal pressure,
-            // set the dynamic THP constraint based on the network nodal pressure
-            well.setDynamicThpLimit(it->second);
+            // The well belongs to a group which has a network nodal pressure.
+            // For injectors, only set the dynamic THP if the well has its own
+            // VFP table (vfp_table_number > 0). Without a well-level VFP table
+            // the operability check (computeBhpAtThpLimitInj) cannot use the
+            // constraint and will mark the well inoperable.
+            const bool can_use_thp = well.isProducer()
+                || (well.isInjector() && well.wellEcl().vfp_table_number() > 0);
+            if (can_use_thp) {
+                well.setDynamicThpLimit(it->second);
+            }
         }
     }
 }
