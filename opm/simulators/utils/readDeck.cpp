@@ -162,8 +162,9 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness,  /*slaveMode=*/false,
-                 keepKeywords, outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness,
+                 /* slaveMode = */ false, keepKeywords,
+                 outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -196,9 +197,11 @@ namespace {
     {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
-                (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode, keepKeywords);
+                (deck, eclipseState, parseContext, errorGuard,
+                 std::move(python), lowActionParsingStrictness,
+                 slaveMode, keepKeywords);
         }
+
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
 
@@ -592,6 +595,32 @@ void Opm::prepareResultOutputDirectory(const std::string&           baseName,
         R"(\.(F?(INIT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|PRT|DBG|INFO(STEP|ITER)|OPMRST|ESMRY))"
     };
 
+    // Outputs from geo-mechanical runs with or without fracturing.
+    //
+    // We match filenames of the form
+    //
+    //     s000n-baseName-0000n.pvtu
+    //     s000n-p000n-baseName-0000n.vtu
+    //     baseName.pvd
+    //     baseName-0000n.pvd
+    //     baseNameFracture_on_<well>_perf_<n>_nr.pvd
+    //     baseNameFracture_on_<well>_perf_<n>_nr-0000n.vtu
+    //
+    // some of which are specific to parallel runs while others are specific
+    // to sequential runs.  Note that we remove both parallel and sequential
+    // output files here, irrespective of the current run being parallel.
+    const auto geomechPrefix = std::string {
+        R"((s\d{4}-(p\d{4}-)?)?)"
+    };
+
+    const auto geomechSuffix = std::string {
+        R"((-\d{5}\.p?vtu)|(Fracture_on_[A-Z0-9]{1,8}_perf_\d+_nr(-\d{5})?\.(pvd|vtu))|(\.pvd))"
+    };
+
+    const auto geomechRegEx = std::regex {
+        '(' + geomechPrefix + ")(" + baseName + ")(" + geomechSuffix + ')'
+    };
+
     // We collect a list of files to remove in order that the directory
     // traversal not be disturbed by remove() calls.  The downside to this
     // approach is that it opens up the common race window between the "time
@@ -600,7 +629,7 @@ void Opm::prepareResultOutputDirectory(const std::string&           baseName,
 
     std::for_each(fs::directory_iterator { outputDir },
                   fs::directory_iterator {}, // End iterator
-                  [&baseName, &extensionRegEx, &fileRemovalList]
+                  [&baseName, &extensionRegEx, &geomechRegEx, &fileRemovalList]
                   (const fs::directory_entry& dirEntry)
     {
         if (! dirEntry.is_regular_file()) {
@@ -611,8 +640,9 @@ void Opm::prepareResultOutputDirectory(const std::string&           baseName,
 
         // Note: Normal string matching for the stem() since 'baseName'
         // might contain regular expression metacharacters like '+' or '-'.
-        if ((file.stem() == baseName) &&
-            std::regex_match(file.extension().string(), extensionRegEx))
+        if (((file.stem() == baseName) &&
+             std::regex_match(file.extension().string(), extensionRegEx)) ||
+            std::regex_match(file.filename().string(), geomechRegEx))
         {
             fileRemovalList.push_back(file);
         }
