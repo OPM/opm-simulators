@@ -148,10 +148,7 @@ activeInjectionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
             return Well::InjectorCMode::RESV;
     }
 
-    // Note: we are not working on injecting network yet, so it is possible we need to change the following line
-    // to be as follows to incorporate the injecting network nodal pressure
-    // if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::InjectorCMode::THP)
-    if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
+    if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::InjectorCMode::THP)
     {
         const auto& thp = well_.getTHPConstraint(summaryState);
         Scalar current_thp = ws.thp;
