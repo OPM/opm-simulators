@@ -299,14 +299,26 @@ public:
                              this->numJacobiBlocks(), this->enableEclOutput());
 #endif
 
-        this->updateGridView_();
-        this->updateCartesianToCompressedMapping_();
-        this->updateCellDepths_();
-        this->updateCellThickness_();
+        this->updateDerivedGridState_();
 
 #if HAVE_MPI
         this->distributeFieldProps_(this->eclState());
 #endif
+    }
+
+    /*!
+     * \brief Recompute everything the vanguard derives from the grid.
+     *
+     * Needed after every change to the leaf grid -- load balancing and local
+     * refinement both renumber the leaf cells.  Kept in one method so a
+     * future grid-changing step cannot miss one of the updates.
+     */
+    void updateDerivedGridState_()
+    {
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
     }
 
     /*!
@@ -320,9 +332,12 @@ public:
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
 
-            this->updateGridView_();
-            this->updateCellDepths_();
-            this->updateCellThickness_();
+            // Refinement changed the leaf cell count and ordering, so the
+            // state derived at load-balance time -- in particular the
+            // (level-zero-only) Cartesian->compressed map used to resolve
+            // coarse well connections -- is stale and must be rebuilt before
+            // well connections are resolved.
+            this->updateDerivedGridState_();
 
             if (this->grid_->comm().size()>1) {
                 // Add LGRs and update the leaf grid view in the global (undistributed) simulation grid.
