@@ -229,6 +229,8 @@ struct MockWellModel
         struct MockGroupState
         {
             bool has_production_rates(const std::string) const { return true; }
+            bool has_network_leaf_node_injection_rates(const std::string) const { return true; }
+            bool has_network_leaf_node_production_rates(const std::string) const { return true; }
             std::vector<double> network_leaf_node_injection_rates(const std::string) const
             {
                 // Phase order water, oil, gas.
