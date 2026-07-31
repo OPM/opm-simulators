@@ -217,9 +217,7 @@ size_t set_interiorSize(size_t N, size_t interiorSize, const Dune::OwnerOverlapC
     // tracked as separate work. Workarounds: --linear-solver=ilu0 (no CPR/AMG),
     // a larger coarsenTarget so the first coarse level is redistributed, or fewer
     // MPI processes.
-    if (comm.communicator().size() > 1
-        && comm.communicator().max(static_cast<int>(N == 0)) != 0)
-    {
+    if (comm.communicator().size() > 1 && comm.communicator().min(N) == 0) {
         OPM_THROW(std::runtime_error,
                   "Empty partition: too unbalanced partition for dune-amg? "
                   "A process has zero rows on a parallel AMG coarse level that "
