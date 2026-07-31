@@ -326,25 +326,31 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
         return;
     }
 
-    if (! this->haveOutputIterHeader_) {
-        std::tie(this->firstColSize_, this->colSize_) =
-            writeConvergenceHeader(this->infoIter_.value(),
-                                   this->getPhaseName_,
-                                   requests.front());
-        this->haveOutputIterHeader_ = true;
-    }
-
     for (const auto& request : requests) {
+        if (request.reports.empty()) {
+            // Empty request signals end of production.  Must be detected
+            // before the header is written, since forming the header needs a
+            // convergence report to name the metric columns.  A run that
+            // fails before completing a single non-linear iteration - e.g.,
+            // one that chops its way to the minimum time step - sends this
+            // sentinel as its very first request.
+            this->finalRequestWritten_ = true;
+            break;
+        }
+
+        if (! this->haveOutputIterHeader_) {
+            std::tie(this->firstColSize_, this->colSize_) =
+                writeConvergenceHeader(this->infoIter_.value(),
+                                       this->getPhaseName_,
+                                       request);
+            this->haveOutputIterHeader_ = true;
+        }
+
         writeConvergenceRequest(this->infoIter_.value(),
                                 this->convertTime_,
                                 this->firstColSize_,
                                 this->colSize_,
                                 request);
-
-        if (request.reports.empty()) {
-            this->finalRequestWritten_ = true;
-            break;
-        }
     }
 
     this->infoIter_.value().flush();
