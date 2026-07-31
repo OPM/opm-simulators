@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 
+#include <algorithm>
 #include <cassert>
 
 namespace Opm {
@@ -52,23 +53,38 @@ namespace details {
     }
 
     /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
-    std::vector<std::reference_wrapper<const Network::ExtNetwork>>
+    std::vector<ActiveNetworkDescriptor>
     activeNetworks(const Schedule& schedule, const int timeStepIdx)
     {
-        std::vector<std::reference_wrapper<const Network::ExtNetwork>> active_networks;
+        std::vector<ActiveNetworkDescriptor> active_networks;
         const auto& sstate = schedule[timeStepIdx];
         if (sstate.network().active()) {
-            active_networks.push_back(std::cref(sstate.network()));
+            active_networks.push_back({NetworkDomain::Production, std::cref(sstate.network())});
         }
         if (sstate.injectionNetwork.get_ptr(Phase::GAS) != nullptr
             && sstate.injectionNetwork.get_ptr(Phase::GAS)->active()) {
-            active_networks.push_back(std::cref(*sstate.injectionNetwork.get_ptr(Phase::GAS)));
+            active_networks.push_back({NetworkDomain::InjectionGas, std::cref(*sstate.injectionNetwork.get_ptr(Phase::GAS))});
         }
         if (sstate.injectionNetwork.get_ptr(Phase::WATER) != nullptr
             && sstate.injectionNetwork.get_ptr(Phase::WATER)->active()) {
-            active_networks.push_back(std::cref(*sstate.injectionNetwork.get_ptr(Phase::WATER)));
+            active_networks.push_back({NetworkDomain::InjectionWater, std::cref(*sstate.injectionNetwork.get_ptr(Phase::WATER))});
         }
         return active_networks;
+    }
+
+    std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain)
+    {
+        switch (domain) {
+        case NetworkDomain::InjectionGas:
+            return Phase::GAS;
+        case NetworkDomain::InjectionWater:
+            return Phase::WATER;
+        case NetworkDomain::Production:
+        case NetworkDomain::Count:
+            return std::nullopt;
+        }
+
+        return std::nullopt;
     }
 } // namespace details
 
@@ -93,6 +109,7 @@ setFromRestart(const std::optional<std::map<std::string, double>>& node_pressure
                 this->node_pressures_[it.first] = it.second;
             }
         }
+        this->syncProductionDomainState_();
     }
 }
 
@@ -102,7 +119,7 @@ updateActiveState(const int report_step)
 {
     this->active_ = false;
     for (const auto& network : details::activeNetworks(well_model_.schedule(), report_step)) {
-        updateActiveStateImpl(network);
+        updateActiveStateImpl(network.network.get());
     }
     this->active_ = well_model_.comm().max(active_);
 }
@@ -159,10 +176,15 @@ template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 needPreStepRebalance(const int report_step) const
 {
-    const auto& network = well_model_.schedule()[report_step].network();
+    const auto active_networks = details::activeNetworks(well_model_.schedule(), report_step);
     bool network_rebalance_necessary = false;
     for (const auto& well : well_model_.genericWells()) {
-        const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        const bool is_partof_network = std::any_of(active_networks.begin(),
+                                                   active_networks.end(),
+                                                   [&](const auto& network)
+                                                   {
+                                                       return network.network.get().has_node(well->wellEcl().groupName());
+                                                   });
         // TODO: we might find more relevant events to be included here (including network change events?)
         const auto& events = well_model_.wellState().well(well->indexOfWell()).events;
         if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
@@ -179,8 +201,7 @@ bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 shouldBalance(const int reportStepIdx) const
 {
     // if network is not active, we do not need to balance the network
-    const auto& network = well_model_.schedule()[reportStepIdx].network();
-    if (!network.active()) {
+    if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
         return false;
     }
 
@@ -205,11 +226,11 @@ bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 willBalanceOnNextIteration(const int reportStepIdx) const
 {
     // if network is not active, we do not need to balance the network
-    const auto& schedule_state = well_model_.schedule()[reportStepIdx];
-    if (!schedule_state.network().active()) {
+    if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
         return false;
     }
 
+    const auto& schedule_state = well_model_.schedule()[reportStepIdx];
     if (schedule_state.network_balance().mode() == Network::Balance::CalcMode::NUPCOL) {
         const int nupcol = schedule_state.nupcol();
         return well_model_.iterationContext().withinNupcol(nupcol - 1); // Note the -1 here!
@@ -228,19 +249,35 @@ updatePressures(const int reportStepIdx,
                 const Scalar upper_update_bound)
 {
     OPM_TIMEFUNCTION();
-    // Get the network and return if inactive (no wells in network at this time)
-    const auto& network = well_model_.schedule()[reportStepIdx].network();
-    if (!network.active()) {
+    if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
         return 0.0;
     }
 
-    const auto previous_node_pressures = node_pressures_;
+    this->syncProductionDomainState_();
+    const auto previous_node_pressures = this->domain_node_pressures_;
 
-    std::tie(node_pressures_, branch_data_) = this->computePressures(network,
-                                             *well_model_.getVFPProperties().getProd(),
-                                             well_model_.schedule().getUnits(),
-                                             reportStepIdx,
-                                             well_model_.comm());
+    for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
+        if (network.domain == details::NetworkDomain::Production) {
+            std::tie(this->nodePressures(network.domain), this->branchData(network.domain)) =
+                this->computePressures(network.network.get(),
+                                       *well_model_.getVFPProperties().getProd(),
+                                       well_model_.schedule().getUnits(),
+                                       reportStepIdx,
+                                       well_model_.comm());
+            continue;
+        }
+
+        const auto injection_phase = details::injectionPhaseForDomain(network.domain);
+        assert(injection_phase.has_value());
+        std::tie(this->nodePressures(network.domain), this->branchData(network.domain)) =
+            this->computePressures(network.network.get(),
+                                   *well_model_.getVFPProperties().getInj(),
+                                   well_model_.schedule().getUnits(),
+                                   reportStepIdx,
+                                   well_model_.comm(),
+                                   *injection_phase);
+    }
+    this->syncLegacyProductionState_();
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     Scalar network_imbalance = 0.;
@@ -248,52 +285,76 @@ updatePressures(const int reportStepIdx,
         return network_imbalance;
     }
 
-    if (!previous_node_pressures.empty()) {
-        for (const auto& [name, new_pressure]: node_pressures_) {
-            if (previous_node_pressures.count(name) <= 0) {
-                if (std::abs(new_pressure) > network_imbalance) {
-                    network_imbalance = std::abs(new_pressure);
+    for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
+        auto& domain_pressures = this->nodePressures(network.domain);
+        const auto& previous_domain_pressures = previous_node_pressures[details::domainIndex(network.domain)];
+
+        if (!previous_domain_pressures.empty()) {
+            for (const auto& [name, new_pressure]: domain_pressures) {
+                if (previous_domain_pressures.count(name) <= 0) {
+                    if (std::abs(new_pressure) > network_imbalance) {
+                        network_imbalance = std::abs(new_pressure);
+                    }
+                    continue;
                 }
-                continue;
+
+                const auto pressure = previous_domain_pressures.at(name);
+                const Scalar change = (new_pressure - pressure);
+                if (std::abs(change) > network_imbalance) {
+                    network_imbalance = std::abs(change);
+                }
+                // We dampen the nodal pressure change during one iteration since our nodal pressure calculation
+                // is somewhat explicit. There is a relative dampening factor applied to the update value, and also
+                // the maximum update is limited (to 5 bar by default, can be changed with --network-max-pressure-update-in-bars).
+                const Scalar damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);
+                const Scalar sign = change > 0 ? 1. : -1.;
+                domain_pressures[name] = pressure + sign * damped_change;
             }
-            const auto pressure = previous_node_pressures.at(name);
-            const Scalar change = (new_pressure - pressure);
-            if (std::abs(change) > network_imbalance) {
-                network_imbalance = std::abs(change);
-            }
-            // We dampen the nodal pressure change during one iteration since our nodal pressure calculation
-            // is somewhat explicit. There is a relative dampening factor applied to the update value, and also
-            // the maximum update is limited (to 5 bar by default, can be changed with --network-max-pressure-update-in-bars).
-            const Scalar damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);
-            const Scalar sign = change > 0 ? 1. : -1.;
-            node_pressures_[name] = pressure + sign * damped_change;
+            continue;
         }
-    } else {
-        for (const auto& [name, pressure]: node_pressures_) {
+
+        for (const auto& [name, pressure]: domain_pressures) {
             if (std::abs(pressure) > network_imbalance) {
                 network_imbalance = std::abs(pressure);
             }
         }
     }
+    this->syncLegacyProductionState_();
 
     for (auto& well : well_model_.genericWells()) {
 
-        // Producers only, since we so far only support the
-        // "extended" network model (properties defined by
-        // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer() && well->wellEcl().predictionMode()) {
-            const auto it = node_pressures_.find(well->wellEcl().groupName());
-            if (it != node_pressures_.end()) {
-                // The well belongs to a group with has a network pressure constraint,
-                // set the dynamic THP constraint of the well accordingly.
-                const Scalar new_limit = it->second;
-                well->setDynamicThpLimit(new_limit);
-                SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
-                const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                // TODO: not sure why the thp is NOT updated properly elsewhere
-                if (thp_is_limit) {
-                    ws.thp = well->getTHPConstraint(well_model_.summaryState());
-                }
+        if (!well->wellEcl().predictionMode()) {
+            continue;
+        }
+
+        std::optional<details::NetworkDomain> domain;
+        if (well->isProducer()) {
+            domain = details::NetworkDomain::Production;
+        } else if (well->isInjector()) {
+            if (well->wellEcl().injectorType() == InjectorType::GAS) {
+                domain = details::NetworkDomain::InjectionGas;
+            } else if (well->wellEcl().injectorType() == InjectorType::WATER) {
+                domain = details::NetworkDomain::InjectionWater;
+            }
+        }
+
+        if (!domain.has_value()) {
+            continue;
+        }
+
+        const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
+        if (it != this->nodePressures(*domain).end()) {
+            // The well belongs to a group with a network pressure constraint,
+            // set the dynamic THP constraint of the well accordingly.
+            const Scalar new_limit = it->second;
+            well->setDynamicThpLimit(new_limit);
+            SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
+            const bool thp_is_limit = well->isProducer()
+                ? ws.production_cmode == Well::ProducerCMode::THP
+                : ws.injection_cmode == Well::InjectorCMode::THP;
+            // TODO: not sure why the thp is NOT updated properly elsewhere
+            if (thp_is_limit) {
+                ws.thp = well->getTHPConstraint(well_model_.summaryState());
             }
         }
     }
@@ -361,8 +422,8 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initialize(const int report_step)
 {
-    const auto& network = well_model_.schedule()[report_step].network();
-    if (network.active() && !node_pressures_.empty()) {
+    if (details::anyNetworkActive(well_model_.schedule(), report_step)) {
+        this->syncProductionDomainState_();
         for (auto& well : well_model_.genericWells()) {
             initializeWell(*well);
         }
@@ -373,12 +434,20 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 {
-    // Producers only, since we so far only support the
-    // "extended" network model (properties defined by
-    // BRANPROP and NODEPROP) which only applies to producers.
-    if (well.isProducer() && !node_pressures_.empty()) {
-        const auto it = this->node_pressures_.find(well.wellEcl().groupName());
-        if (it != this->node_pressures_.end()) {
+    std::optional<details::NetworkDomain> domain;
+    if (well.isProducer()) {
+        domain = details::NetworkDomain::Production;
+    } else if (well.isInjector()) {
+        if (well.wellEcl().injectorType() == InjectorType::GAS) {
+            domain = details::NetworkDomain::InjectionGas;
+        } else if (well.wellEcl().injectorType() == InjectorType::WATER) {
+            domain = details::NetworkDomain::InjectionWater;
+        }
+    }
+
+    if (domain.has_value() && !this->nodePressures(*domain).empty()) {
+        const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
+        if (it != this->nodePressures(*domain).end()) {
             // The well belongs to a group which has a network nodal pressure,
             // set the dynamic THP constraint based on the network nodal pressure
             well.setDynamicThpLimit(it->second);
@@ -408,6 +477,29 @@ computePressures(const Network::ExtNetwork& network,
     return network_pressure_computation.run();
 }
 
+template <typename Scalar, typename IndexTraits>
+std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+computePressures(const Network::ExtNetwork& network,
+                 const VFPInjProperties<Scalar>& vfp_inj_props,
+                 const UnitSystem& unit_system,
+                 const int reportStepIdx,
+                 const Parallel::Communication& comm,
+                 const Phase injectionPhase) const
+{
+    OPM_TIMEFUNCTION();
+    if (!network.active()) {
+        return {};
+    }
+
+    NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
+                               VFPInjProperties<Scalar>>
+        network_pressure_computation(
+            well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm, injectionPhase);
+
+    return network_pressure_computation.run();
+}
+
 template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
@@ -417,7 +509,11 @@ operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
         && this->node_pressures_ == rhs.node_pressures_
         && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
         && this->branch_data_ == rhs.branch_data_
-        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_;
+    && this->last_valid_branch_data_ == rhs.last_valid_branch_data_
+    && this->domain_node_pressures_ == rhs.domain_node_pressures_
+    && this->last_valid_domain_node_pressures_ == rhs.last_valid_domain_node_pressures_
+    && this->domain_branch_data_ == rhs.domain_branch_data_
+    && this->last_valid_domain_branch_data_ == rhs.last_valid_domain_branch_data_;
 }
 
 template class BlackoilWellModelNetworkGeneric<double, BlackOilDefaultFluidSystemIndices>;

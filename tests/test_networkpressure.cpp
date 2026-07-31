@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     BOOST_CHECK_CLOSE(s.vfp_inj_props.bhp(3, 0.0, 0.0, gasrate, thp), expected_bhp, 1e-7);
     using Comm = Dune::Communication<int>;
 
-    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // NetworkPressureComputation stores const references to comm and unit system, hence
     // we need to make sure that their lifetime is longer than the constructor lasts
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
 
     // Test using mock setup.
     using Comm = Dune::Communication<int>;
-    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // NetworkPressureComputation stores const references to comm and unit system, hence
     // we need to make sure that their lifetime is longer than the constructor lasts
     auto comm = Comm{};
     auto unit_system = UnitSystem {};

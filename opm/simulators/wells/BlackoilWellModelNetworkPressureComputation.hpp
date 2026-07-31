@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
+#include <optional>
 #include <ranges>
 #include <set>
 #include <stack>
@@ -60,7 +61,9 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
 
     template <class GroupState>
     static const std::vector<Scalar>
-    leafNodeRate(const GroupState& group_state, const std::string& node)
+    leafNodeRate(const GroupState& group_state,
+                 const std::string& node,
+                 const std::optional<Phase>&)
     {
         return group_state.network_leaf_node_production_rates(node);
     }
@@ -102,7 +105,9 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 
     template <class GroupState>
     static const std::vector<Scalar>
-    leafNodeRate(const GroupState& group_state, const std::string& node)
+    leafNodeRate(const GroupState& group_state,
+                 const std::string& node,
+                 const std::optional<Phase>&)
     {
         return group_state.network_leaf_node_injection_rates(node);
     }
@@ -135,13 +140,15 @@ public:
                                const VfpProperties& vfp_props,
                                const UnitSystem& unit_system,
                                const int report_step_idx,
-                               const Communication& comm)
+                               const Communication& comm,
+                               const std::optional<Phase>& injection_phase = std::nullopt)
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
         , unit_system_(unit_system)
         , report_step_idx_(report_step_idx)
         , comm_(comm)
+        , injection_phase_(injection_phase)
     {
     }
 
@@ -215,7 +222,9 @@ private:
             }
 
             using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
-            node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(), node);
+            node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(),
+                                                    node,
+                                                    injection_phase_);
             if (network_.node(node).add_gas_lift_gas()) {
                 addGasLiftGas(node, node_inflows[node]);
             }
@@ -248,7 +257,7 @@ private:
         }
         // Sum ALQ across all processes to get total ALQ for the node.
         // Note that communication is required here since each
-        // process has different wells, and the loop above therefore 
+        // process has different wells, and the loop above therefore
         // only considers local wells.
         // However, all processes have all groups and their rates available,
         // so we do not need to communicate those.
@@ -359,6 +368,7 @@ private:
     const UnitSystem& unit_system_;
     const int report_step_idx_;
     const Communication& comm_;
+    const std::optional<Phase> injection_phase_;
     std::map<std::string, Scalar> node_pressures_;
     std::map<std::string, data::BranchData> branch_data_;
 };

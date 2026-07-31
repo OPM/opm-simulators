@@ -41,6 +41,8 @@
 
 #include <fmt/format.h>
 
+#include <optional>
+
 namespace Opm {
 
 template<typename TypeTag>
@@ -139,12 +141,27 @@ update(const bool mandatory_network_balance,
             }
 
             for (const auto& well : well_model_) {
-                if (well->isInjector() || !well->wellEcl().predictionMode()) {
+                if (!well->wellEcl().predictionMode()) {
                      continue;
                 }
 
-                const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                if (it != this->node_pressures_.end()) {
+                std::optional<details::NetworkDomain> domain;
+                if (well->isProducer()) {
+                    domain = details::NetworkDomain::Production;
+                } else if (well->isInjector()) {
+                    if (well->wellEcl().injectorType() == InjectorType::GAS) {
+                        domain = details::NetworkDomain::InjectionGas;
+                    } else if (well->wellEcl().injectorType() == InjectorType::WATER) {
+                        domain = details::NetworkDomain::InjectionWater;
+                    }
+                }
+
+                if (!domain.has_value()) {
+                    continue;
+                }
+
+                const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
+                if (it != this->nodePressures(*domain).end()) {
                     well->prepareWellBeforeAssembling(well_model_.simulator(),
                                                       dt,
                                                       well_model_.groupStateHelper(),
