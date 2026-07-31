@@ -60,6 +60,12 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
     }
 
     template <class GroupState>
+    static bool hasLeafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.has_network_leaf_node_production_rates(node);
+    }
+
+    template <class GroupState>
     static const std::vector<Scalar>
     leafNodeRate(const GroupState& group_state,
                  const std::string& node,
@@ -101,6 +107,12 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 {
     static void prepareRates(std::vector<Scalar>&)
     {
+    }
+
+    template <class GroupState>
+    static bool hasLeafNodeRate(const GroupState& group_state, const std::string& node)
+    {
+        return group_state.has_network_leaf_node_injection_rates(node);
     }
 
     template <class GroupState>
@@ -215,13 +227,16 @@ private:
         const std::vector<Scalar> zero_rates(3, 0.0);
 
         for (const auto& node : leaf_nodes) {
-            // Guard against empty leaf nodes (may not be present in GRUPTREE)
-            if (!well_model_.groupStateHelper().groupState().has_production_rates(node)) {
+            // Guard against empty leaf nodes (may not be present in GRUPTREE).
+            // Use the domain-correct check so injection networks query the injection
+            // rate map rather than the production rate map (which is always empty for
+            // pure injection groups, causing zero-rate pressure calculations).
+            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
+            if (!Calc::hasLeafNodeRate(well_model_.groupStateHelper().groupState(), node)) {
                 node_inflows[node] = zero_rates;
                 continue;
             }
 
-            using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
             node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(),
                                                     node,
                                                     injection_phase_);
