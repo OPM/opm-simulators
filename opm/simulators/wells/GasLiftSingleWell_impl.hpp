@@ -211,8 +211,15 @@ setupPhaseVariables_()
     }
     assert(num_phases_ok);
     this->oil_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
-    this->gas_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
     this->water_pos_ = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
+
+    // In the two-phase oil-water case there is no active gas phase to ask for
+    // an index.  Point gas_pos_ at the first slot of the potentials vector -
+    // which is always sized NUM_PHASES - that computeWellRatesWithBhp() does
+    // not fill, so the gas rate reads as zero, as intended above.
+    this->gas_pos_ = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+        ? static_cast<int>(FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx))
+        : static_cast<int>(FluidSystem::numActivePhases());
 }
 
 template<typename TypeTag>
