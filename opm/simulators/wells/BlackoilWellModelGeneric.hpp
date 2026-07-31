@@ -396,6 +396,27 @@ protected:
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
     createLocalParallelWellInfo(const std::vector<Well>& wells);
 
+    /// \brief Look up a well's parallel well information
+    /// \param wname Well name
+    /// \return Pointer to the well's information, or nullptr if the well is
+    ///         not known to the parallel well bookkeeping.
+    ParallelWellInfo<Scalar>* findParallelWellInfo(const std::string& wname) const;
+
+    /// \brief Add parallel well information for wells that entered the model
+    ///        after start-up
+    ///
+    /// The parallel well bookkeeping is built once, from the wells known at
+    /// the end of the schedule.  Wells introduced by WELSPECS inside an
+    /// ACTIONX block are not among those, so they need an entry of their own
+    /// before they can be used.
+    ///
+    /// Collective.  The schedule is replicated on all ranks, so every rank
+    /// visits the same new wells in the same order, which is what the
+    /// communicator split in ParallelWellInfo's constructor requires.
+    ///
+    /// \param reportStepIdx Report step whose well set to register
+    void registerNewParallelWells(int reportStepIdx);
+
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
 
@@ -547,7 +568,10 @@ protected:
 
     std::vector<int> local_shut_wells_{};
 
-    std::vector<ParallelWellInfo<Scalar>> parallel_well_info_;
+    // Sorted on well name.  Held by pointer so that entries added for wells
+    // that appear mid-run (ACTIONX) do not invalidate references handed out
+    // earlier, e.g. those held by the well container and the well state.
+    std::vector<std::unique_ptr<ParallelWellInfo<Scalar>>> parallel_well_info_;
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator<Scalar>> prod_index_calc_;
@@ -618,13 +642,9 @@ private:
     template <typename Predicate>
     bool parallelWellSatisfies(const std::string& wname, Predicate&& p) const
     {
-        const auto pwInfoPos =
-            std::ranges::find_if(this->parallel_well_info_,
-                                 [&wname](const auto& pwInfo)
-                                 { return pwInfo.name() == wname; });
+        const auto* pwInfo = this->findParallelWellInfo(wname);
 
-        return (pwInfoPos != this->parallel_well_info_.end())
-            && p(*pwInfoPos);
+        return (pwInfo != nullptr) && p(*pwInfo);
     }
 
     /// Run caller-defined code for each well owned by current rank
