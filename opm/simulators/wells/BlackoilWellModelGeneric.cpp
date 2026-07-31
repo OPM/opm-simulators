@@ -131,13 +131,9 @@ BlackoilWellModelGeneric(Schedule& schedule,
         }
 
         // Recall: false indicates NOT active!
-        const auto value = std::make_pair(well, true);
-        auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
-                                          this->parallel_well_info_.end(),
-                                          value);
+        const auto* pwInfo = this->findParallelWellInfo(well);
 
-        return (candidate == this->parallel_well_info_.end())
-            || (*candidate != value);
+        return (pwInfo == nullptr) || !pwInfo->hasLocalCells();
     };
 }
 
@@ -221,6 +217,7 @@ initFromRestartFile(const RestartValue& restartValues,
     const auto& config = this->schedule()[report_step].guide_rate();
 
     // wells_ecl_ should only contain wells on this processor.
+    this->registerNewParallelWells(report_step);
     wells_ecl_ = getLocalWells(report_step);
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
@@ -267,6 +264,7 @@ void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 prepareDeserialize(int report_step, const std::size_t numCells, bool enable_distributed_wells)
 {
     // wells_ecl_ should only contain wells on this processor.
+    this->registerNewParallelWells(report_step);
     wells_ecl_ = getLocalWells(report_step);
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
@@ -327,15 +325,71 @@ createLocalParallelWellInfo(const std::vector<Well>& wells)
     local_parallel_well_info.reserve(wells.size());
     for (const auto& well : wells)
     {
-        auto wellPair = std::make_pair(well.name(), true);
-        auto pwell = std::lower_bound(parallel_well_info_.begin(),
-                                      parallel_well_info_.end(),
-                                      wellPair);
-        assert(pwell != parallel_well_info_.end() &&
-               *pwell == wellPair);
+        auto* pwell = this->findParallelWellInfo(well.name());
+        if (pwell == nullptr) {
+            OPM_THROW(std::logic_error,
+                      fmt::format("No parallel well information registered "
+                                  "for well {}", well.name()));
+        }
         local_parallel_well_info.push_back(std::ref(*pwell));
     }
     return local_parallel_well_info;
+}
+
+template<typename Scalar, typename IndexTraits>
+ParallelWellInfo<Scalar>*
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+findParallelWellInfo(const std::string& wname) const
+{
+    auto pwell = std::lower_bound(this->parallel_well_info_.begin(),
+                                  this->parallel_well_info_.end(), wname,
+                                  [](const auto& pwInfo, const std::string& name)
+                                  { return pwInfo->name() < name; });
+
+    return ((pwell == this->parallel_well_info_.end()) ||
+            ((*pwell)->name() != wname))
+        ? nullptr
+        : pwell->get();
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+registerNewParallelWells(const int reportStepIdx)
+{
+    auto added = false;
+
+    for (const auto& wname : this->schedule().wellNames(reportStepIdx)) {
+        if (this->findParallelWellInfo(wname) != nullptr) {
+            continue;
+        }
+
+        const auto& well = this->schedule()[reportStepIdx].wells(wname);
+
+        // A well drilled by an action is not part of the grid partitioning,
+        // so we have to work out here whether it perforates cells on this
+        // rank.
+        const auto hasLocalCells = std::ranges::
+            any_of(well.getConnections(), [this, &well](const Connection& conn)
+            {
+                const auto active_index = well.is_lgr_well()
+                    ? this->compressedIndexForInteriorLGR
+                        (well.get_lgr_well_tag().value(), conn)
+                    : this->compressedIndexForInterior(conn.global_index());
+
+                return active_index >= 0;
+            });
+
+        this->parallel_well_info_.push_back
+            (std::make_unique<ParallelWellInfo<Scalar>>
+             (std::make_pair(wname, hasLocalCells), this->comm_));
+
+        added = true;
+    }
+
+    if (added) {
+        std::ranges::sort(this->parallel_well_info_, {},
+                          [](const auto& pwInfo) { return pwInfo->name(); });
+    }
 }
 
 template<typename Scalar, typename IndexTraits>
