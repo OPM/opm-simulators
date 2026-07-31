@@ -400,7 +400,17 @@ protected:
     /// \param wname Well name
     /// \return Pointer to the well's information, or nullptr if the well is
     ///         not known to the parallel well bookkeeping.
-    ParallelWellInfo<Scalar>* findParallelWellInfo(const std::string& wname) const;
+    const ParallelWellInfo<Scalar>* findParallelWellInfo(const std::string& wname) const;
+
+    /// \brief Look up a well's parallel well information for modification
+    ///
+    /// A non-const handle is genuinely needed: initializeWellPerfData() calls
+    /// beginReset(), pushBackEclIndex() and endReset() on the entries that
+    /// createLocalParallelWellInfo() hands it.
+    /// \param wname Well name
+    /// \return Pointer to the well's information, or nullptr if the well is
+    ///         not known to the parallel well bookkeeping.
+    ParallelWellInfo<Scalar>* findParallelWellInfo(const std::string& wname);
 
     /// \brief Add parallel well information for wells that entered the model
     ///        after start-up

@@ -358,10 +358,29 @@ createLocalParallelWellInfo(const std::vector<Well>& wells)
 }
 
 template<typename Scalar, typename IndexTraits>
-ParallelWellInfo<Scalar>*
+const ParallelWellInfo<Scalar>*
 BlackoilWellModelGeneric<Scalar, IndexTraits>::
 findParallelWellInfo(const std::string& wname) const
 {
+    auto pwell = std::lower_bound(this->parallel_well_info_.begin(),
+                                  this->parallel_well_info_.end(), wname,
+                                  [](const auto& pwInfo, const std::string& name)
+                                  { return pwInfo->name() < name; });
+
+    return ((pwell == this->parallel_well_info_.end()) ||
+            ((*pwell)->name() != wname))
+        ? nullptr
+        : pwell->get();
+}
+
+template<typename Scalar, typename IndexTraits>
+ParallelWellInfo<Scalar>*
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+findParallelWellInfo(const std::string& wname)
+{
+    // No const_cast needed to share the const overload's lookup: the elements
+    // are unique_ptrs, and constness of the pointer does not carry to the
+    // pointee, so get() already yields a mutable ParallelWellInfo.
     auto pwell = std::lower_bound(this->parallel_well_info_.begin(),
                                   this->parallel_well_info_.end(), wname,
                                   [](const auto& pwInfo, const std::string& name)
