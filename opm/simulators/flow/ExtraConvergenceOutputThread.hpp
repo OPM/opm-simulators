@@ -71,6 +71,13 @@ public:
         /// Convergence metrics for each non-linear ieration in the \c
         /// currentStep.
         std::vector<ConvergenceReport> reports{};
+
+        /// Whether this request is the end-of-stream sentinel enqueued by
+        /// signalLastOutputRequest().  Only the sentinel may terminate the
+        /// output thread.  An ordinary request whose \c reports happens to
+        /// be empty (e.g., a step that aborted before any convergence
+        /// check) must not be mistaken for the sentinel.
+        bool isFinal{false};
     };
 
     /// Push sequence of output requests, typically all substeps whether
