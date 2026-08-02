@@ -323,24 +323,37 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
         return;
     }
 
+    if (! this->haveOutputIterHeader_) {
+        // The header layout needs an actual convergence report to derive
+        // the metric columns.  A request may legitimately carry none --
+        // the end-of-stream sentinel does not, and neither does a step
+        // that aborted before its first convergence check -- so search
+        // for the first request that has one instead of blindly using
+        // requests.front(), which dereferenced the empty sentinel when a
+        // run failed before completing any report step.
+        auto headerReq = std::find_if(requests.begin(), requests.end(),
+                                      [](const auto& request)
+                                      { return ! request.reports.empty(); });
+        if (headerReq != requests.end()) {
+            std::tie(this->firstColSize_, this->colSize_) =
+                writeConvergenceHeader(this->infoIter_.value(),
+                                       this->getPhaseName_,
+                                       *headerReq);
+            this->haveOutputIterHeader_ = true;
+        }
+    }
+
     for (const auto& request : requests) {
-        if (request.reports.empty()) {
-            // Empty request signals end of production.  Must be detected
-            // before the header is written, since forming the header needs a
-            // convergence report to name the metric columns.  A run that
-            // fails before completing a single non-linear iteration - e.g.,
-            // one that chops its way to the minimum time step - sends this
-            // sentinel as its very first request.
+        if (request.isFinal) {
+            // End-of-stream sentinel from signalLastOutputRequest().  An
+            // ordinary request with an empty 'reports' vector must NOT
+            // stop the thread -- it merely has nothing to write.
             this->finalRequestWritten_ = true;
             break;
         }
 
-        if (! this->haveOutputIterHeader_) {
-            std::tie(this->firstColSize_, this->colSize_) =
-                writeConvergenceHeader(this->infoIter_.value(),
-                                       this->getPhaseName_,
-                                       request);
-            this->haveOutputIterHeader_ = true;
+        if (request.reports.empty() || ! this->haveOutputIterHeader_) {
+            continue;
         }
 
         writeConvergenceRequest(this->infoIter_.value(),
@@ -379,8 +392,10 @@ void Opm::ConvergenceReportQueue::enqueue(std::vector<OutputRequest>&& requests)
 
 void Opm::ConvergenceReportQueue::signalLastOutputRequest()
 {
-    // Empty request signals end of production.
-    this->enqueue(std::vector<OutputRequest>(1));
+    // Explicitly flagged sentinel request signals end of production.
+    auto sentinel = std::vector<OutputRequest>(1);
+    sentinel.front().isFinal = true;
+    this->enqueue(std::move(sentinel));
 }
 
 // ---------------------------------------------------------------------------
