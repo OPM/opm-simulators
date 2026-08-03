@@ -136,6 +136,10 @@ namespace {
 
         // Note: Newline character intentionally placed in separate output
         // request to not influence right-justification of column header.
+        // "Gate" precedes "WellStatus" because well failures append
+        // variable-length text after the WellStatus token, which must
+        // therefore remain the last column.
+        os << std::right << std::setw(headerSize) << "Gate";
         os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
 
         return { minColSize, headerSize };
@@ -224,6 +228,21 @@ namespace {
         }
     }
 
+    void writeConvergenceGate(std::ostream&                 os,
+                              const std::string::size_type  colSize,
+                              const Opm::ConvergenceReport& report)
+    {
+        // Which secondary gate, if any, kept this iteration from counting as
+        // converged.  These gates fire when the residual metrics themselves
+        // are already satisfied, so they identify iterations spent purely on
+        // well/group control changes or network balancing.
+        const auto gate = report.wellGroupTargetsViolated()
+            ? (report.networkNeedsMoreBalancing() ? "GROUP+NETWORK" : "GROUP")
+            : (report.networkNeedsMoreBalancing() ? "NETWORK" : "NONE");
+
+        os << std::right << std::setw(colSize) << gate;
+    }
+
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
                                  const int                                               firstColSize,
@@ -243,6 +262,7 @@ namespace {
             writePenaltyCount(os, firstColSize, report);
 
             writeReservoirConvergence(os, colSize, report);
+            writeConvergenceGate(os, colSize, report);
             writeWellConvergence(os, colSize, report);
 
             os << '\n';

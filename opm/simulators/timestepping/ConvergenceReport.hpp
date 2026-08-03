@@ -358,6 +358,21 @@ namespace Opm
                 && !network_needs_more_balancing_force_another_newton_iteration_;
         }
 
+        //! \brief Whether well/group control targets were violated (a control
+        //! or target changed this iteration), forcing another Newton iteration
+        //! even when all residual metrics are converged.
+        bool wellGroupTargetsViolated() const
+        {
+            return wellGroupTargetsViolated_;
+        }
+
+        //! \brief Whether the network balance forced another Newton iteration
+        //! even when all residual metrics are converged.
+        bool networkNeedsMoreBalancing() const
+        {
+            return network_needs_more_balancing_force_another_newton_iteration_;
+        }
+
         bool reservoirFailed() const
         {
             return status_ & ReservoirFailed;
