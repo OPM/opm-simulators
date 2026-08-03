@@ -58,6 +58,16 @@ using WellVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 template<typename Scalar>
 using SystemVector = Dune::MultiTypeBlockVector<ResVector<Scalar>, WellVector<Scalar>>;
 
+// Reservoir operator/comm types used as template arguments.
+template<typename Scalar>
+using SeqResOperator = Dune::MatrixAdapter<RRMatrix<Scalar>, ResVector<Scalar>, ResVector<Scalar>>;
+
+#if HAVE_MPI
+using ParResComm = Dune::OwnerOverlapCopyCommunication<int, int>;
+template<typename Scalar>
+using ParResOperator = Dune::OverlappingSchwarzOperator<RRMatrix<Scalar>, ResVector<Scalar>, ResVector<Scalar>, ParResComm>;
+#endif
+
 // --------------------------------------------------------------------------
 // SystemMatrix: a lightweight read-only view over a 2×2 block-matrix
 // structure.  All four sub-blocks are stored as const pointers; the actual
