@@ -136,3 +136,47 @@ BOOST_AUTO_TEST_CASE(CreateTimer)
     BOOST_CHECK_EQUAL( Opm::unit::convert::to(testCurrentTime2, Opm::unit::minute),
                        Opm::unit::convert::to(simtimer.totalTime(), Opm::unit::minute) );
 }
+
+BOOST_AUTO_TEST_CASE(EndStepStopsEarly)
+{
+    const std::string filename1 = "TESTTIMER.DATA";
+    const auto parserDeck = Opm::Parser{}.parseFile( filename1);
+
+    Opm::EclipseGrid grid(10,10,10);
+
+    const Opm::FieldPropsManager fp {
+        parserDeck,
+        Opm::Phases{true, true, true},
+        grid,
+        Opm::TableManager{}
+    };
+
+    const Opm::Runspec runspec { parserDeck };
+    const Opm::Schedule schedule {
+        parserDeck, grid, fp,
+        Opm::NumericalAquifers{},
+        runspec, std::make_shared<Opm::Python>()
+    };
+
+    // Negative end step: run the whole schedule, as before.
+    Opm::SimulatorTimer full;
+    full.init(schedule, 0, -1);
+    BOOST_CHECK_EQUAL( 125, full.numSteps() );
+    int nfull = 0;
+    while (!full.done()) { ++full; ++nfull; }
+    BOOST_CHECK_EQUAL( 125, nfull );
+
+    // Stop after report step 10.  numSteps() still describes the schedule.
+    Opm::SimulatorTimer capped;
+    capped.init(schedule, 0, 10);
+    BOOST_CHECK_EQUAL( 125, capped.numSteps() );
+    int ncapped = 0;
+    while (!capped.done()) { ++capped; ++ncapped; }
+    BOOST_CHECK_EQUAL( 10, ncapped );
+    BOOST_CHECK_EQUAL( 10, capped.currentStepNum() );
+
+    // An end step at or before the restart step stops immediately.
+    Opm::SimulatorTimer none;
+    none.init(schedule, 0, 0);
+    BOOST_CHECK_EQUAL( true, none.done() );
+}
