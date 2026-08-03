@@ -10,4 +10,8 @@ Label: 2026.10-pre
 Maintainer: atgeirr@sintef.no
 MaintainerName: Atgeirr F. Rasmussen
 Url: http://opm-project.org
-Depends: dune-istl (>= 2.9) opm-common opm-grid
+# We need the full list of dependencies below, because we need to set
+# *_DIR for each of them when doing a sibling build (done using
+# CMakeLists.txt and cmake/Module/OpmSiblingSearch.cmake).
+Depends: dune-istl (>= 2.9) opm-common dune-grid (>= 2.9) dune-geometry (>= 2.9) opm-grid
+Suggests: dune-uggrid (>= 2.9) dune-fem (>= 2.9) dune-alugrid (>= 2.9) dune-localfunctions (>= 2.9)
