@@ -515,6 +515,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
+  tests/test_SystemCprwPressureStage.cpp
   tests/test_WellMatrixMerger.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
@@ -690,6 +691,10 @@ list (APPEND TEST_DATA_FILES
   tests/options_system_cpr_missing_smoother.json
   tests/options_system_cpr_missing_well.json
   tests/options_system_cpr_res_precond_not_cpr.json
+  tests/options_system_cprw_approx_wells.json
+  tests/options_system_cprw_approx_wells_bad_outer.json
+  tests/options_system_cprw_complete.json
+  tests/options_system_cprw_missing_coarsesolver.json
   tests/GCONSUMP.DATA
   tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
@@ -1122,6 +1127,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
   opm/simulators/linalg/Preconditioner2InverseOperator.hpp
   opm/simulators/linalg/system/MultiComm.hpp
+  opm/simulators/linalg/system/SystemCprwPressureStage.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
   opm/simulators/linalg/system/SystemPreconditionerFactory.hpp
   opm/simulators/linalg/system/SystemTypes.hpp
