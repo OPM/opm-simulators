@@ -60,6 +60,9 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
     use_multisegment_well_ = Parameters::Get<Parameters::UseMultisegmentWell>();
     tolerance_pressure_ms_wells_ = Parameters::Get<Parameters::TolerancePressureMsWells<Scalar>>();
+    tolerance_well_bhp_eq_ = Parameters::Get<Parameters::ToleranceWellBhpEq<Scalar>>();
+    tolerance_well_thp_eq_ = Parameters::Get<Parameters::ToleranceWellThpEq<Scalar>>();
+    tolerance_well_grup_eq_ = Parameters::Get<Parameters::ToleranceWellGrupEq<Scalar>>();
     relaxed_tolerance_flow_well_ = Parameters::Get<Parameters::RelaxedWellFlowTol<Scalar>>();
     relaxed_tolerance_pressure_ms_well_ = Parameters::Get<Parameters::RelaxedPressureTolMsw<Scalar>>();
     max_pressure_change_ms_wells_ = Parameters::Get<Parameters::MaxPressureChangeMsWells<Scalar>>();
@@ -198,6 +201,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "or 'per-connection' (one linear tubing, a segment per connection)");
     Parameters::Register<Parameters::TolerancePressureMsWells<Scalar>>
         ("Tolerance for the pressure equations for multi-segment wells");
+    Parameters::Register<Parameters::ToleranceWellBhpEq<Scalar>>
+        ("Tolerance for the BHP control equation residual of standard wells [Pa]");
+    Parameters::Register<Parameters::ToleranceWellThpEq<Scalar>>
+        ("Tolerance for the THP control equation residual of standard wells [Pa]");
+    Parameters::Register<Parameters::ToleranceWellGrupEq<Scalar>>
+        ("Tolerance for the group-control equation residual of standard wells [m3/s]");
     Parameters::Register<Parameters::RelaxedWellFlowTol<Scalar>>
         ("Relaxed tolerance for the well flow residual");
     Parameters::Register<Parameters::RelaxedPressureTolMsw<Scalar>>

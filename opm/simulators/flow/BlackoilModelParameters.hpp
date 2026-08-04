@@ -116,6 +116,14 @@ struct ConvertToMultisegmentWell { static constexpr auto value = "none"; };
 
 template<class Scalar>
 struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
+/// Control-equation tolerances for standard wells. Defaults reproduce the values that
+/// used to be hardcoded at the call site; MSW has had these as parameters all along.
+template<class Scalar>
+struct ToleranceWellBhpEq { static constexpr Scalar value = 1.0e3; };
+template<class Scalar>
+struct ToleranceWellThpEq { static constexpr Scalar value = 1.0e4; };
+template<class Scalar>
+struct ToleranceWellGrupEq { static constexpr Scalar value = 1.0e-6; };
 
 template<class Scalar>
 struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
@@ -252,6 +260,10 @@ public:
     Scalar tolerance_well_control_;
     /// Tolerance for the pressure equations for multisegment wells
     Scalar tolerance_pressure_ms_wells_;
+    /// standard-well control-equation tolerances (BHP/THP in Pa, GRUP in m3/s)
+    Scalar tolerance_well_bhp_eq_;
+    Scalar tolerance_well_thp_eq_;
+    Scalar tolerance_well_grup_eq_;
     /// Relaxed tolerance for for the well flow residual
     Scalar relaxed_tolerance_flow_well_;
 
