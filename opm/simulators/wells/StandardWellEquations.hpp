@@ -113,6 +113,7 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool use_well_weights,
+                                  const bool contract_d_diagonal,
                                   const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int bhp_var_index,
                                   const WellState<Scalar, IndexTraits>& well_state) const;

@@ -60,7 +60,8 @@ public:
     using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
     virtual void addWellPressureEquations(PressureMatrix& jacobian,
                                           const X& weights,
-                                          const bool use_well_weights) const = 0;
+                                          const bool use_well_weights,
+                                          const bool contract_d_diagonal) const = 0;
     virtual void addWellPressureEquationsStruct(PressureMatrix& jacobian) const = 0;
     virtual int getNumberOfExtraEquations() const = 0;
 };
@@ -120,10 +121,11 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
-                                  const bool use_well_weights) const override
+                                  const bool use_well_weights,
+                                  const bool contract_d_diagonal) const override
     {
         OPM_TIMEBLOCK(addWellPressureEquations);
-        wellMod_.addWellPressureEquations(jacobian, weights, use_well_weights);
+        wellMod_.addWellPressureEquations(jacobian, weights, use_well_weights, contract_d_diagonal);
     }
 
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const override
@@ -197,12 +199,14 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
-                                  const bool use_well_weights) const override
+                                  const bool use_well_weights,
+                                  const bool contract_d_diagonal) const override
     {
         OPM_TIMEBLOCK(addWellPressureEquations);
         this->wellMod_.addWellPressureEquationsDomain(jacobian,
                                                       weights,
                                                       use_well_weights,
+                                                      contract_d_diagonal,
                                                       domainIndex_);
     }
 
@@ -264,10 +268,11 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
-                                  const bool use_well_weights) const
+                                  const bool use_well_weights,
+                                  const bool contract_d_diagonal) const
     {
         OPM_TIMEBLOCK(addWellPressureEquations);
-        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights, contract_d_diagonal);
     }
 
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
@@ -359,10 +364,11 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
-                                  const bool use_well_weights) const
+                                  const bool use_well_weights,
+                                  const bool contract_d_diagonal) const
     {
         OPM_TIMEBLOCK(addWellPressureEquations);
-        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights, contract_d_diagonal);
     }
 
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const

@@ -329,6 +329,10 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "cprw"s);
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
+    // "auto" keeps the historical coarse well diagonal: contract D for standard
+    // wells, minus the row sum for multisegment wells. "contract_d" contracts D
+    // for both, which keeps the segment-to-segment coupling.
+    prm.put("preconditioner.well_coarse_diagonal", "auto"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.pre_smooth", 0);
     prm.put("preconditioner.post_smooth", 1);
