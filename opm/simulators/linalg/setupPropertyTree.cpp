@@ -546,7 +546,7 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     //   classic         - neither, i.e. the classic cprw formulation, so that
     //                     the only remaining difference is numerics
     // Only read when add_wells.
-    prm.put("preconditioner.well_transfer", "full"s);
+    prm.put("preconditioner.well_transfer", "no_prolongation"s);
 
     // --- Reservoir smoother ---
     prm.put("preconditioner.reservoir_smoother.maxiter", 1);

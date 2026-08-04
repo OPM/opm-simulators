@@ -230,7 +230,11 @@ std::vector<std::vector<Scalar>> referenceCoarseMatrix(const Fixture& f)
                 R[numCells + j][wellOff(wb, i)] = f.weights[Dune::Indices::_1][wb][i];
             }
         }
-        P[wellOff(f.layout.firstBlock(j), wellPressureIndex)][numCells + j] = 1.0;
+        // The prolongation spreads a well's coarse value over all of its
+        // segment pressures by a constant.
+        for (std::size_t wb = f.layout.firstBlock(j); wb < f.layout.endBlock(j); ++wb) {
+            P[wellOff(wb, wellPressureIndex)][numCells + j] = 1.0;
+        }
     }
 
     std::vector<std::vector<Scalar>> coarse(coarseDim, std::vector<Scalar>(coarseDim, 0.0));
