@@ -5,7 +5,7 @@
     "solver": "bicgstab",
     "preconditioner": {
         "type": "system_cpr",
-        "well_weight_type": "quasiimpes",
+        "well_weight_type": "cellavg",
         "reservoir_smoother": {
             "maxiter": "1",
             "tol": "0.005",
