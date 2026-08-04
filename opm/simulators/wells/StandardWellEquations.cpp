@@ -287,6 +287,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool use_well_weights,
+                         const bool /*contract_d_diagonal*/, // a standard well always contracts D
                          const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                          const int bhp_var_index,
                          const WellState<Scalar, IndexTraits>& well_state) const
@@ -425,6 +426,7 @@ sumDistributed(Parallel::Communication comm)
         extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
                                  const typename StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::BVector&, \
                                  const int,                                           \
+                                 const bool,                                          \
                                  const bool,                                          \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                      \
                                  const int,                                           \
