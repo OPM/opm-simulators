@@ -135,6 +135,10 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using Toolbox = MathToolbox<Evaluation>;
 
 public:
+    //! computeStorage() has an overload taking a degree of freedom's intensive
+    //! quantities directly, so its accumulation term can be formed without an element.
+    static constexpr bool formsStorageFromIntensiveQuantities = true;
+
     struct ResidualNBInfo {
         double trans;
         double faceArea;
