@@ -434,6 +434,16 @@ private:
                     (*coarseMatrix_)[wdof][numRes + *k] += el;
                 }
             }
+
+            // A well whose contraction cancels exactly would leave a zero on
+            // the coarse diagonal and make the pressure system singular. That
+            // can happen for a well with no local perforations, or when the
+            // weights annihilate the pressure column. Regularise to a unit row
+            // rather than handing a singular system to AMG.
+            auto& diag = (*coarseMatrix_)[wdof][wdof][0][0];
+            if (!(std::abs(diag) > 0.0)) {
+                diag = 1.0;
+            }
         }
     }
 

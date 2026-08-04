@@ -470,6 +470,32 @@ BOOST_AUTO_TEST_CASE(WellTransferFromStringRejectsUnknownValues)
     BOOST_CHECK_THROW(Opm::wellTransferFromString("nonsense"), std::invalid_argument);
 }
 
+// A well whose weights annihilate its pressure column would leave a zero on
+// the coarse diagonal and hand AMG a singular system. It must be regularised
+// to a unit diagonal instead.
+BOOST_AUTO_TEST_CASE(ZeroCoarseWellDiagonalIsRegularised)
+{
+    Fixture f;
+    // Zero weights on every well block: the whole well row, including the
+    // diagonal, contracts to zero.
+    for (std::size_t wb = 0; wb < numWellBlocks; ++wb) {
+        f.weights[Dune::Indices::_1][wb] = 0.0;
+    }
+
+    Stage stage(f.S, Opm::PropertyTree(), pressureIndex);
+    stage.buildCoarseSystem(f.weights);
+
+    for (std::size_t j = 0; j < f.layout.numWells(); ++j) {
+        const std::size_t wdof = numCells + j;
+        BOOST_CHECK_EQUAL(coarseEntry(stage, wdof, wdof), 1.0);
+        // The off-diagonal well row really is zero -- it is only the diagonal
+        // that gets regularised.
+        for (std::size_t c = 0; c < numCells; ++c) {
+            BOOST_CHECK_EQUAL(coarseEntry(stage, wdof, c), 0.0);
+        }
+    }
+}
+
 // A layout with no wells must reproduce a reservoir-only coarse system.
 BOOST_AUTO_TEST_CASE(NoWellsGivesReservoirOnlyCoarseSystem)
 {
