@@ -90,6 +90,24 @@ struct WellDofLayout
     // generalising later is a change in the outer layer only.
     int pressureDofIndex = numWellDofs - 1;
 
+    // Per well: is it currently on pressure (bhp/thp) control?  Filled in the
+    // outer layer, which is the only place that can ask.  When
+    // identityOnPressureControl is set, such a well gets a trivial coarse
+    // equation instead of a contracted one -- what the classic CPRW does in
+    // StandardWellEquations::extractCPRPressureMatrix, where a
+    // pressure-controlled well is given a unit diagonal and its B and C
+    // contributions are skipped.  Empty means "nothing is pressure
+    // controlled", so the flag is safe to leave unset.
+    std::vector<char> pressureControlled;
+    bool identityOnPressureControl = false;
+
+    bool isPressureControlled(const std::size_t j) const
+    {
+        return identityOnPressureControl
+            && j < pressureControlled.size()
+            && pressureControlled[j] != 0;
+    }
+
     std::size_t numWells() const
     {
         return wellBlockOffsets.empty() ? 0 : wellBlockOffsets.size() - 1;

@@ -385,7 +385,7 @@ private:
             const auto& bw = w0[c];
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
                 const auto j = wellOfBlock(col.index());
-                if (!j.has_value()) {
+                if (!j.has_value() || layout.isPressureControlled(*j)) {
                     continue;
                 }
                 Scalar el = 0.0;
@@ -399,6 +399,13 @@ private:
         // Well rows.
         for (std::size_t j = 0; j < layout.numWells(); ++j) {
             const std::size_t wdof = numRes + j;
+            if (layout.isPressureControlled(j)) {
+                // A pressure-controlled well has a trivial coarse equation:
+                // its bhp is prescribed, so the coarse system carries dp = 0
+                // rather than a contracted well equation.
+                (*coarseMatrix_)[wdof][wdof] = 1.0;
+                continue;
+            }
             for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
                 const auto& lw = w1[wb];
 
