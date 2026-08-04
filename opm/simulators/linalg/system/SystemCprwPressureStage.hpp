@@ -314,7 +314,7 @@ private:
             }
         }
 
-        // Well column: the cells whose C row references this well's top block.
+        // Well column: every cell whose C row references any block of the well.
         for (std::size_t c = 0; c < numRes; ++c) {
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
                 const auto j = wellOfBlock(col.index());
@@ -370,14 +370,22 @@ private:
             }
         }
 
-        // Reservoir rows, well columns:  sum_i w0[c][i] * C[c][b(j)][i][q].
-        // Only the top block of each well carries a coarse unknown, because
-        // that is the only place the prolongation writes.
+        // Reservoir rows, well columns:  sum over every block row of well j of
+        //   sum_i w0[c][i] * C[c][wb][i][q].
+        //
+        // Summing over all of a well's blocks is the Galerkin column for a
+        // prolongation that spreads a well's coarse unknown over all of its
+        // segment pressures, which is what MultisegmentWellEquations::
+        // extractCPRPressureMatrix does (it accumulates over every segment
+        // row).  Taking the top block alone instead loses every segment but
+        // the first: on Norne with one segment per connection that is most of
+        // the well, and it is what made the coarse system far weaker than the
+        // classic cprw one for multisegment wells.
         for (std::size_t c = 0; c < numRes; ++c) {
             const auto& bw = w0[c];
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
                 const auto j = wellOfBlock(col.index());
-                if (!j.has_value() || layout.firstBlock(*j) != col.index()) {
+                if (!j.has_value()) {
                     continue;
                 }
                 Scalar el = 0.0;
@@ -405,10 +413,15 @@ private:
                 }
 
                 // Well row, well columns:
-                //   sum_{wb in j} sum_i w1[wb][i] * D[wb][b(k)][i][q]
+                //   sum_{wb in j} sum_{wb' in k} sum_i w1[wb][i] * D[wb][wb'][i][q]
+                // Summed over all of well k's blocks, to match the column
+                // convention above.  Because the merged D is block diagonal by
+                // well this only ever contributes to k == j, but it now picks
+                // up the full segment-to-segment coupling rather than just the
+                // top segment's column.
                 for (auto col = D[wb].begin(), colEnd = D[wb].end(); col != colEnd; ++col) {
                     const auto k = wellOfBlock(col.index());
-                    if (!k.has_value() || layout.firstBlock(*k) != col.index()) {
+                    if (!k.has_value()) {
                         continue;
                     }
                     Scalar el = 0.0;
@@ -497,8 +510,14 @@ private:
             // classic policy.  A following well solve corrects the wells.
             return;
         }
+        // Spread the well's coarse value over all of its segment pressures by
+        // a constant.  This is the P the coarse matrix is assembled for; only
+        // the segment pressures are set, the other well unknowns (rates,
+        // compositions) are left to the well solve that follows.
         for (std::size_t j = 0; j < layout.numWells(); ++j) {
-            vWell[layout.firstBlock(j)][q] = in[numRes + j][0];
+            for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
+                vWell[wb][q] = in[numRes + j][0];
+            }
         }
     }
 
