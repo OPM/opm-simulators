@@ -207,6 +207,7 @@ public:
     {
         OPM_TIMEBLOCK(systemCprwUpdate);
         assembleCoarseMatrix(weights);
+        dumpCoarseMatrix();
         coarseSolver_->preconditioner().update();
     }
 

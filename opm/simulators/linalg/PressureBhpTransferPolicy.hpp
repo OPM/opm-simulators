@@ -23,6 +23,12 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
+
+#include <dune/istl/matrixmarket.hh>
+
+#include <fstream>
+#include <string>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
@@ -206,6 +212,21 @@ namespace Opm
             assert(rowCoarse == coarseLevelMatrix_->end());
 #endif
 
+        }
+        dumpCoarseMatrix();
+    }
+
+    // verbosity above 10 writes the coarse system out, so that it can be
+    // compared entry by entry against another CPRW implementation.
+    void dumpCoarseMatrix() const
+    {
+        if (prm_.get<int>("verbosity", 0) <= 10) {
+            return;
+        }
+        static int counter = 0;
+        std::ofstream out("cprw_coarse_" + std::to_string(counter++) + ".mm");
+        if (out) {
+            Dune::writeMatrixMarket(*coarseLevelMatrix_, out);
         }
     }
 
