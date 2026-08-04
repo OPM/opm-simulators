@@ -1887,6 +1887,23 @@ public:
     bool storeIntensiveQuantities() const
     { return enableIntensiveQuantityCache_ || enableThermodynamicHints_; }
 
+    /*!
+     * \brief Whether the intensive quantities of a degree of freedom can be had by
+     *        index, without an element to reach it through.
+     *
+     * Code that wants to walk the degrees of freedom rather than the elements has to
+     * know whether it may: the indexed lookup is valid only when the cache is on.
+     * Distinct from storeIntensiveQuantities(), which is also true when only the
+     * thermodynamic hints are kept and no cached quantity is guaranteed to be there.
+     */
+    bool intensiveQuantityCacheEnabled() const
+    { return enableIntensiveQuantityCache_; }
+
+    //! Whether this model's residual can form a degree of freedom's accumulation term
+    //! from its intensive quantities alone.  See FvBaseLocalResidual.
+    static constexpr bool formsStorageFromIntensiveQuantities =
+        LocalResidual::formsStorageFromIntensiveQuantities;
+
     const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
