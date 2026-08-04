@@ -532,7 +532,14 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "system_cpr"s);
     // How the well equations are contracted to the one coarse unknown each
     // well carries in the CPRW pressure system. Only read when add_wells.
-    prm.put("preconditioner.well_weight_type", "quasiimpes"s);
+    //   cellavg    - average of the reservoir weights over the well's
+    //                perforated cells, on the conservation equations only.
+    //                This is what cprw does (use_well_weights = false) and,
+    //                together with the trueimpes reservoir weights below,
+    //                makes the pressure stage match the standard solver.
+    //   quasiimpes - inv(D)^T e_bhp, normalised.
+    //   unit       - the pressure row as-is; a debugging baseline.
+    prm.put("preconditioner.well_weight_type", "cellavg"s);
     // How the well unknowns take part in the pressure-stage transfer:
     //   full            - restrict the well residual, prolong the bhp correction
     //   no_prolongation - restrict, but discard the bhp correction
