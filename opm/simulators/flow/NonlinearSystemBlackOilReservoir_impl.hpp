@@ -422,7 +422,7 @@ solveJacobianSystem(BVector& x)
             linSolver.setResidual(residual);
             perfTimer.start();
             linSolver.solve(x_trial[solver]);
-            times[solver] = perfTimer.stop();
+            times[solver] = setupTimes[solver] + perfTimer.stop();
             perfTimer.reset();
             if (this->terminal_output_) {
                 OpmLog::debug(fmt::format(fmt::runtime("Solver time {}: {}"), solver, times[solver]));
