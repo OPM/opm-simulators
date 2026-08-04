@@ -98,6 +98,7 @@ public:
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const BVector& weights,
                                   const bool use_well_weights,
+                                  const bool contract_d_diagonal,
                                   const int domainIndex) const;
 
     // prototype for assemble function for ASPIN solveLocal()

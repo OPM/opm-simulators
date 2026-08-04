@@ -1500,7 +1500,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     addWellPressureEquations(PressureMatrix& jacobian,
                              const BVector& weights,
-                             const bool use_well_weights) const
+                             const bool use_well_weights,
+                             const bool contract_d_diagonal) const
     {
         int nw = this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
@@ -1514,6 +1515,7 @@ namespace Opm {
                                            weights,
                                            pressureVarIndex,
                                            use_well_weights,
+                                           contract_d_diagonal,
                                            this->wellState());
         }
     }
