@@ -106,6 +106,15 @@ public:
         OPM_TIMEBLOCK(istlSolverSolve);
         ++this->solveCount_;
 
+        // Same fine-system dump as ISTLSolver::solve(), which this overrides,
+        // so the reservoir matrix and rhs can be diffed against the classic path.
+        if (this->prm_[this->activeSolverNum_].get("verbosity", 0) > 10) {
+            Helper::writeSystem(this->simulator_,
+                                this->getMatrix(),
+                                *Parent::rhs_,
+                                this->comm_.get());
+        }
+
         const std::size_t numRes = Parent::matrix_->N();
         const std::size_t numWell = cachedWellStructure_.totalWellBlocks;
 
