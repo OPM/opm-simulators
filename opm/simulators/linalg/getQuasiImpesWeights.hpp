@@ -180,48 +180,106 @@ namespace Amg
         MatrixBlockType block_transpose;
         Dune::FieldVector<Evaluation, numEq> storage;
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        // Turn one degree of freedom's accumulation term into its weight.  Only the
+        // storage derivatives and the volume the storage is scaled by enter it.
+        const auto weightFromStorage = [pressureVarIndex, &rhs, &block_transpose]
+            (const Dune::FieldVector<Evaluation, numEq>& stor,
+             const double storage_scale,
+             VectorBlockType& bw)
+        {
+            const double pressure_scale = 50e5;
+
+            // Build the transposed matrix directly to avoid separate transpose step
+            for (int ii = 0; ii < numEq; ++ii) {
+                for (int jj = 0; jj < numEq; ++jj) {
+                    block_transpose[jj][ii] = stor[ii].derivative(jj)/storage_scale;
+                    if (jj == pressureVarIndex) {
+                        block_transpose[jj][ii] *= pressure_scale;
+                    }
+                }
+            }
+            block_transpose.solve(bw, rhs);
+
+            const double abs_max =
+                *std::ranges::max_element(bw,
+                                          [](double a, double b)
+                                          { return std::fabs(a) < std::fabs(b); });
+            // probably a scaling which could give approximately total compressibility would be better
+            bw /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+        };
+
+        const auto walkElements = [&]()
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
 #endif
-        for (const auto& chunk : element_chunks) {
-            const std::size_t thread_id = ThreadManager::threadId();
-            ElementContext localElemCtx(elemCtx.simulator());
+            for (const auto& chunk : element_chunks) {
+                const std::size_t thread_id = ThreadManager::threadId();
+                ElementContext localElemCtx(elemCtx.simulator());
 
-            for (const auto& elem : chunk) {
-                localElemCtx.updatePrimaryStencil(elem);
-                localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                for (const auto& elem : chunk) {
+                    localElemCtx.updatePrimaryStencil(elem);
+                    localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                model.localLinearizer(thread_id).localResidual().computeStorage(storage, localElemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
+                    model.localLinearizer(thread_id).localResidual().computeStorage(storage, localElemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
 
-                auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-                auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
+                    auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+                    auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
 
-                // Build the transposed matrix directly to avoid separate transpose step
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
-                        }
-                    }
+                    weightFromStorage(storage,
+                                      scvVolume / localElemCtx.simulator().timeStepSize(),
+                                      bweights);
+
+                    const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    weights[index] = bweights;
                 }
-                block_transpose.solve(bweights, rhs);
+            }
+            OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        };
 
-                const double abs_max =
-                    *std::ranges::max_element(bweights,
-                                              [](double a, double b)
-                                              { return std::fabs(a) < std::fabs(b); });
-                // probably a scaling which could give approximately total compressibility would be better
-                bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+        // As for the analytic weights: the accumulation term of a degree of freedom is a
+        // function of its own intensive quantities and its own volume, so no element is
+        // needed to form it.  Here it takes one thing more than those quantities by
+        // index -- a storage term computed from them alone, which the blackoil TPFA
+        // residual has and the element-by-element one does not.  Walk the elements when
+        // either is missing.
+        if constexpr (Model::formsStorageFromIntensiveQuantities) {
+            if (model.intensiveQuantityCacheEnabled()) {
+                const int numDof = static_cast<int>(model.numTotalDof());
+                const double dt = elemCtx.simulator().timeStepSize();
 
-                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                weights[index] = bweights;
+                // computeStorage() in this form is a static member; any instance of the
+                // residual serves to name it.
+                const auto& localResidual =
+                    model.localLinearizer(ThreadManager::threadId()).localResidual();
+
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights, block_transpose, storage) if(enable_thread_parallel)
+#endif
+                for (int dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                    const auto& intQuants =
+                        model.intensiveQuantities(static_cast<unsigned>(dofIdx), /*timeIdx=*/0);
+
+                    localResidual.template computeStorage<Evaluation>(storage, intQuants);
+
+                    const double scvVolume =
+                        model.dofTotalVolume(dofIdx) * intQuants.extrusionFactor();
+
+                    weightFromStorage(storage, scvVolume / dt, bweights);
+                    weights[dofIdx] = bweights;
+                }
+                OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ",
+                                           elemCtx.simulator().vanguard().grid().comm());
+            }
+            else {
+                walkElements();
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        else {
+            walkElements();
+        }
     }
 
     template <class Vector, class ElementContext, class Model, class ElementChunksType>
