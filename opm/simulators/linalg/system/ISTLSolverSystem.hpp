@@ -259,7 +259,7 @@ private:
     // than inside the preconditioner so that the linear-solver core never sees
     // anything well-specific, and so that this can later be replaced by a
     // value obtained from the well model without touching the core.
-    WellVector<Scalar> computeWellWeights() const
+    WellVector<Scalar> computeWellWeights(const ResVector<Scalar>& resWeights) const
     {
         const std::size_t numBlocks = mergedD_.N();
         const int q = wellLayout_.pressureDofIndex;
@@ -272,6 +272,34 @@ private:
             if (wellWeightType_ == "unit") {
                 // Pick the pressure row of the well equations as-is.
                 lambda[q] = 1.0;
+                continue;
+            }
+
+            if (wellWeightType_ == "cellavg") {
+                // The classic CPRW default (use_well_weights = false): average
+                // the reservoir weights over the cells this block row
+                // perforates, and use them on the conservation equations only.
+                // The control equation gets weight zero.
+                int nperf = 0;
+                for (auto col = mergedB_[wb].begin(), end = mergedB_[wb].end(); col != end; ++col) {
+                    const auto& cw = resWeights[col.index()];
+                    for (int i = 0; i < numResDofs; ++i) {
+                        lambda[i] += cw[i];
+                    }
+                    ++nperf;
+                }
+                if (nperf > 0) {
+                    for (int i = 0; i < numResDofs; ++i) {
+                        lambda[i] /= nperf;
+                    }
+                } else {
+                    // No perforations of this well on this rank; regularise
+                    // rather than leaving an empty row.
+                    for (int i = 0; i < numResDofs; ++i) {
+                        lambda[i] = 1.0;
+                    }
+                }
+                lambda[q] = 0.0;
                 continue;
             }
 
@@ -350,7 +378,7 @@ private:
             sysWeightCalc = [this, resWeightCalc]() {
                 SystemVector<Scalar> w;
                 w[_0] = resWeightCalc();
-                w[_1] = this->computeWellWeights();
+                w[_1] = this->computeWellWeights(w[_0]);
                 return w;
             };
         }
