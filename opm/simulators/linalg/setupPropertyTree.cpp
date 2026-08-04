@@ -532,21 +532,31 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "system_cpr"s);
     // How the well equations are contracted to the one coarse unknown each
     // well carries in the CPRW pressure system. Only read when add_wells.
-    //   cellavg    - average of the reservoir weights over the well's
-    //                perforated cells, on the conservation equations only.
-    //                This is what cprw does (use_well_weights = false) and,
-    //                together with the trueimpes reservoir weights below,
-    //                makes the pressure stage match the standard solver.
-    //   quasiimpes - inv(D)^T e_bhp, normalised.
-    //   unit       - the pressure row as-is; a debugging baseline.
+    //   cellavg      - average of the reservoir weights over the well's
+    //                  perforated cells, on the conservation equations only.
+    //                  This is what cprw does (use_well_weights = false).
+    //   cellblockavg - the same average taken per block row instead of per
+    //                  well. Identical to cellavg for a standard well, and
+    //                  worse for multisegment wells (Norne per-connection:
+    //                  2604 against 2569).
+    //   quasiimpes   - inv(D)^T e_bhp, normalised. Catastrophic for
+    //                  multisegment wells; do not make it the default again
+    //                  without re-checking them.
+    //   unit         - the pressure row as-is; a debugging baseline.
     prm.put("preconditioner.well_weight_type", "cellavg"s);
     // How the well unknowns take part in the pressure-stage transfer:
     //   full            - restrict the well residual, prolong the bhp correction
     //   no_prolongation - restrict, but discard the bhp correction
     //   classic         - neither, i.e. the classic cprw formulation, so that
     //                     the only remaining difference is numerics
+    // classic is the default: on full Norne with one segment per connection it
+    // measures best (2558, against 2569 for no_prolongation and 2576 for full),
+    // and on standard wells the three are within one iteration of each other.
+    // The margin is thin. It is also taken with an exact well solve, which
+    // nearly annihilates the well residual; restricting it may well pay once
+    // the well solve is inexact.
     // Only read when add_wells.
-    prm.put("preconditioner.well_transfer", "no_prolongation"s);
+    prm.put("preconditioner.well_transfer", "classic"s);
     // Give a pressure-controlled well a trivial coarse equation, matching
     // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
     prm.put("preconditioner.well_identity_on_pressure_control", "true"s);
@@ -555,6 +565,9 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     //                multisegment ones, i.e. what classic cprw does
     //   contract_d - always contract D
     //   row_sum    - always minus the row sum
+    // contract_d is the default. On full Norne with one segment per connection
+    // it is worth ~0.4% over row_sum (2569 against 2580), and it is what makes
+    // the classic cprw path 2646 rather than 2716 on the same case.
     prm.put("preconditioner.well_coarse_diagonal", "contract_d"s);
 
     // --- Reservoir smoother ---
