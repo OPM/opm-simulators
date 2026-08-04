@@ -388,7 +388,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 initPrepare(M,b);
 
                 prepareFlexibleSolver();
-            } OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. Check for errors related to missing nodes.");
+            }
+            catch (const Dune::MatrixBlockError&) {
+                // A singular matrix block found while building the
+                // preconditioner is recoverable: rethrow it unchanged so that
+                // the adaptive time stepping can chop the time step instead of
+                // aborting the run.
+                throw;
+            }
+            OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. Check for errors related to missing nodes.");
         }
 
 

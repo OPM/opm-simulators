@@ -63,5 +63,39 @@ BOOST_AUTO_TEST_CASE(Invert4x4)
 
     // check singular matrix
     BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix_sing, inverse),
-                      Opm::NumericalProblem);
+                      Dune::MatrixBlockError);
+}
+
+BOOST_AUTO_TEST_CASE(Invert4x4WithUnderflowingDeterminant)
+{
+    using BaseType = Dune::FieldMatrix<double, 4, 4>;
+
+    // A well conditioned matrix (condition number about 9.5) scaled such that its
+    // determinant, which is homogeneous of degree one in every row, falls below the
+    // 1e-40 threshold used to decide whether the cofactor determinant can be divided
+    // by. Scaling leaves the matrix just as invertible as it was, so this must be
+    // inverted through the pivoted fallback rather than reported as singular.
+    BaseType matrix;
+    const double base[4][4] = {{2, 1, 0, 0},
+                               {1, 2, 1, 0},
+                               {0, 1, 2, 1},
+                               {0, 0, 1, 2}};
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            matrix[i][j] = base[i][j] * 1e-11;
+        }
+    }
+
+    BaseType inverse;
+    double det = 0.0;
+    BOOST_CHECK_NO_THROW(det = Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix, inverse));
+    BOOST_CHECK_LT(std::abs(det), 1e-40);
+
+    // the inverse is still accurate even though the determinant underflowed
+    const BaseType product = matrix.rightmultiply(inverse);
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            BOOST_CHECK_SMALL(product[i][j] - (i == j ? 1.0 : 0.0), 1e-12);
+        }
+    }
 }
