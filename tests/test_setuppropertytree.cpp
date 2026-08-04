@@ -137,6 +137,20 @@ BOOST_AUTO_TEST_CASE(SystemCPRWEnablesAddWells)
     const std::string coarse
         = "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type";
     BOOST_CHECK_EQUAL(cpr.get<std::string>(coarse), cprw.get<std::string>(coarse));
+
+    // The pressure stage must default to the same weighting the standard cprw
+    // solver uses: trueimpes on the reservoir equations and the perforated-cell
+    // average on the well equations (cprw's use_well_weights = false).
+    BOOST_CHECK_EQUAL(
+        cprw.get<std::string>("preconditioner.reservoir_solver.preconditioner.weight_type"),
+        "trueimpes");
+    BOOST_CHECK_EQUAL(cprw.get<std::string>("preconditioner.well_weight_type"), "cellavg");
+
+    const auto classic = Opm::setupCPRW("cprw", p);
+    BOOST_CHECK_EQUAL(classic.get<std::string>("preconditioner.weight_type"),
+                      cprw.get<std::string>(
+                          "preconditioner.reservoir_solver.preconditioner.weight_type"));
+    BOOST_CHECK_EQUAL(classic.get<bool>("preconditioner.use_well_weights"), false);
 }
 
 BOOST_AUTO_TEST_SUITE_END() // SystemCPR
