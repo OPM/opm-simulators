@@ -550,6 +550,12 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // Give a pressure-controlled well a trivial coarse equation, matching
     // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
     prm.put("preconditioner.well_identity_on_pressure_control", "true"s);
+    // How a well's coarse diagonal is formed:
+    //   auto       - contract D for single-block wells, minus the row sum for
+    //                multisegment ones, i.e. what classic cprw does
+    //   contract_d - always contract D
+    //   row_sum    - always minus the row sum
+    prm.put("preconditioner.well_coarse_diagonal", "contract_d"s);
 
     // --- Reservoir smoother ---
     prm.put("preconditioner.reservoir_smoother.maxiter", 1);
