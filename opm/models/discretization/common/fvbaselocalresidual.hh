@@ -86,6 +86,9 @@ private:
     using EvalVector = Dune::FieldVector<Evaluation, numEq>;
 
 public:
+    //! computeStorage() needs an element context here; the TPFA residual does not.
+    static constexpr bool formsStorageFromIntensiveQuantities = false;
+
     using LocalEvalBlockVector = Dune::BlockVector<EvalVector, aligned_allocator<EvalVector, alignof(EvalVector)>>;
 
     FvBaseLocalResidual() = default;
