@@ -175,6 +175,7 @@ namespace Opm {
                                       const BVector& x,
                                       const int pressureVarIndex,
                                       const bool use_well_weights,
+                                      const bool contract_d_diagonal,
                                       const WellStateType& well_state) const override;
 
         std::vector<Scalar>

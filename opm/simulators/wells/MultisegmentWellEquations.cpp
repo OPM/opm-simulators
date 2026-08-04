@@ -373,6 +373,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool /*use_well_weights*/,
+                         const bool contract_d_diagonal,
                          const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                          const int seg_pressure_var_ind,
                          const WellState<Scalar, IndexTraits>& well_state) const
@@ -438,6 +439,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             }
         }
 
+        // Standard wells have always contracted D for the coarse diagonal;
+        // only this path was left on the row sum.
+        if (contract_d_diagonal) {
+            diag_ell = mswellhelpers::contractCprWellDiagonal(duneD_,
+                                                              well_weight,
+                                                              seg_pressure_var_ind);
+        }
+
 #define EXTRA_DEBUG_MSW 0
 #if EXTRA_DEBUG_MSW
         if (diag_ell <= 0.0) {
@@ -473,6 +482,7 @@ sumDistributed(Parallel::Communication comm)
         extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,                        \
                                  const MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::BVector&, \
                                  const int,                                                    \
+                                 const bool,                                                   \
                                  const bool,                                                   \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                               \
                                  const int,                                                    \
