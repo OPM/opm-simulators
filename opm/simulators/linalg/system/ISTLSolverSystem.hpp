@@ -208,7 +208,11 @@ private:
         const bool needStructureRefresh = !sysInitialized_ || globalStructureChanged;
 
         const auto& prm = this->prm_[this->activeSolverNum_];
-        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"quasiimpes"});
+        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"cellavg"});
+        // Give a pressure-controlled well a trivial coarse equation, as the
+        // classic CPRW does.  Off keeps the contracted equation for every well.
+        wellLayout_.identityOnPressureControl
+            = prm.get("preconditioner.well_identity_on_pressure_control", false);
 
         if (needStructureRefresh) {
             OPM_TIMEBLOCK(flexibleSolverCreate);
@@ -252,6 +256,20 @@ private:
         for (const auto& d : wellDMatrices_) {
             total += d.N();
             offsets.push_back(total);
+        }
+
+        // Which wells are on pressure control.  Asking this is the outer
+        // layer's job; below here it is just a flag per well.  The order
+        // matches addBCDMatrix, which walks the same well container.
+        wellLayout_.pressureControlled.clear();
+        if (wellLayout_.identityOnPressureControl) {
+            const auto& wellModel = this->simulator_.problem().wellModel();
+            const auto& wellState = wellModel.wellState();
+            wellLayout_.pressureControlled.reserve(wellDMatrices_.size());
+            for (const auto& well : wellModel) {
+                wellLayout_.pressureControlled.push_back(
+                    well->isPressureControlled(wellState) ? 1 : 0);
+            }
         }
     }
 
