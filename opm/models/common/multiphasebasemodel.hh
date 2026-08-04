@@ -36,7 +36,6 @@
 #include <opm/material/thermal/NullSolidEnergyLaw.hpp>
 #include <opm/material/thermal/NullThermalConductionLaw.hpp>
 
-#include <opm/models/common/flux.hh>
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/multiphasebaseproblem.hh>
@@ -101,11 +100,6 @@ struct NumComponents<TypeTag, TTag::MultiPhaseBaseModel>
 template<class TypeTag>
 struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel>
 { using type = MultiPhaseBaseProblem<TypeTag>; };
-
-//! By default, use the Darcy relation to determine the phase velocity
-template<class TypeTag>
-struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel>
-{ using type = DarcyFluxModule<TypeTag>; };
 
 /*!
  * \brief Set the material law to the null law by default.

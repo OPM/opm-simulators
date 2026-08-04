@@ -29,28 +29,41 @@
 #ifndef EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
 #define EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
 
-#include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
+
 #include "problems/lensproblem.hh"
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct LensProblemEcfvAd { using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+
+struct LensProblemEcfvAd
+{ using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+
 } // end namespace TTag
 
 // use the element centered finite volume spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::LensProblemEcfvAd> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::LensProblemEcfvAd>
+{ using type = TTag::EcfvDiscretization; };
 
 // use automatic differentiation for this simulator
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::LensProblemEcfvAd> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::LensProblemEcfvAd>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 // this problem works fine if the linear solver uses single precision scalars
 template<class TypeTag>
-struct LinearSolverScalar<TypeTag, TTag::LensProblemEcfvAd> { using type = float; };
+struct LinearSolverScalar<TypeTag, TTag::LensProblemEcfvAd>
+{ using type = float; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::LensProblemEcfvAd>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

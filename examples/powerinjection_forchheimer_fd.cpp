@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/common/forchheimerfluxmodule.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/utils/start.hh>
@@ -46,7 +47,7 @@ struct PowerInjectionForchheimerFdProblem
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem>
-{ using type = Opm::ForchheimerFluxModule<TypeTag>; };
+{ using type = ForchheimerFluxModule<TypeTag>; };
 
 template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionForchheimerFdProblem>

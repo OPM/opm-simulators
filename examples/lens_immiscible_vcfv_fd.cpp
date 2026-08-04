@@ -28,6 +28,7 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/utils/start.hh>
@@ -55,6 +56,11 @@ struct LocalLinearizerSplice<TypeTag, TTag::LensProblemVcfvFd>
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::LensProblemVcfvFd>
 { using type = TTag::VcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::LensProblemVcfvFd>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 // use linear finite element gradients if dune-localfunctions is available
 #if HAVE_DUNE_LOCALFUNCTIONS

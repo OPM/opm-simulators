@@ -27,9 +27,11 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/richardslensproblem.hh"
@@ -47,6 +49,11 @@ struct RichardsLensVcfvProblem
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensVcfvProblem>
 { using type = TTag::VcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::RichardsLensVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

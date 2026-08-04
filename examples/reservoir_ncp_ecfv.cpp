@@ -27,10 +27,12 @@
  */
 #include "config.h"
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
-#include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/io/dgfvanguard.hh>
+#include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/reservoirproblem.hh"
@@ -54,6 +56,10 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpEcfvProblem>
 template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::ReservoirNcpEcfvProblem>
 { using type = TTag::AutoDiffLocalLinearizer; };
+
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::ReservoirNcpEcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

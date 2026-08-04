@@ -28,6 +28,7 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
@@ -50,6 +51,11 @@ struct ObstacleProblem
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::ObstacleProblem>
 { using type = TTag::VcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::ObstacleProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

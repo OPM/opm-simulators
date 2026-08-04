@@ -131,6 +131,10 @@ struct TracerModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     using type = EmptyModel<TypeTag>;
 };
 
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag, int NumComp, bool EnableWater>
+struct FluxModule<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 template <class TypeTag, int NumComp, bool EnableWater>
 struct FlashSolver<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
