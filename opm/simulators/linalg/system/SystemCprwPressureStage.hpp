@@ -200,42 +200,10 @@ public:
     // transfer policy, the well residual really is carried to the coarse
     // level rather than dropped.
     void moveToCoarseLevel(const ResVector<Scalar>& dRes,
-                  const WellVector<Scalar>& dWell,
-                  const SystemVector<Scalar>& weights)
+                           const WellVector<Scalar>& dWell,
+                           const SystemVector<Scalar>& weights)
     {
-        using namespace Dune::Indices;
-        const auto& layout = wellLayout();
-        const auto& w0 = weights[_0];
-        const auto& w1 = weights[_1];
-        const std::size_t numRes = dRes.size();
-
-        coarseRhs_ = 0.0;
-
-        for (std::size_t c = 0; c < numRes; ++c) {
-            const auto& bw = w0[c];
-            Scalar el = 0.0;
-            for (std::size_t i = 0; i < bw.size(); ++i) {
-                el += dRes[c][i] * bw[i];
-            }
-            coarseRhs_[c] = el;
-        }
-
-        if (wellTransfer_ == WellTransfer::Classic) {
-            // The classic policy leaves the well rows of the coarse right-hand
-            // side at zero; keep them zero so that the two formulations agree.
-            return;
-        }
-
-        for (std::size_t j = 0; j < layout.numWells(); ++j) {
-            Scalar el = 0.0;
-            for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
-                const auto& lw = w1[wb];
-                for (std::size_t i = 0; i < lw.size(); ++i) {
-                    el += lw[i] * dWell[wb][i];
-                }
-            }
-            coarseRhs_[numRes + j] = el;
-        }
+        restrictInto(dRes, dWell, weights, coarseRhs_);
     }
 
     // Prolongation:  (vRes, vWell) = P * coarseSol.  The coarse well
@@ -243,30 +211,46 @@ public:
     // the classic CPRW throws it away instead.
     void moveToFineLevel(ResVector<Scalar>& vRes, WellVector<Scalar>& vWell) const
     {
-        const auto& layout = wellLayout();
-        const std::size_t numRes = vRes.size();
-        const int q = layout.pressureDofIndex;
-
-        vRes = 0.0;
-        for (std::size_t c = 0; c < numRes; ++c) {
-            vRes[c][pressureIndex_] = coarseSol_[c][0];
-        }
-
-        vWell = 0.0;
-        if (!prolongatesWellPressure()) {
-            // The coarse bhp correction is computed but discarded; it acts only
-            // through its influence on the reservoir pressure, as in the
-            // classic policy.  Stages 2 and 3 correct the well unknowns.
-            return;
-        }
-        for (std::size_t j = 0; j < layout.numWells(); ++j) {
-            vWell[layout.firstBlock(j)][q] = coarseSol_[numRes + j][0];
-        }
+        prolongFrom(coarseSol_, vRes, vWell);
     }
 
     const CoarseMatrix& coarseMatrix() const
     {
         return *coarseMatrix_;
+    }
+
+    // Handles needed when the coarse level is driven from outside, e.g. by
+    // SystemPressureBhpTransferPolicy.
+    const std::shared_ptr<CoarseMatrix>& coarseMatrixPtr() const
+    {
+        return coarseMatrix_;
+    }
+
+    const Comm& coarseCommunication() const
+    {
+        return *coarseComm_;
+    }
+
+    void assembleCoarseEntries(const SystemVector<Scalar>& weights)
+    {
+        assembleCoarseMatrix(weights);
+    }
+
+    // Transfer forms writing into a caller-supplied coarse vector, so that a
+    // transfer policy can use its own storage without an extra copy.
+    void moveToCoarseLevel(const ResVector<Scalar>& dRes,
+                           const WellVector<Scalar>& dWell,
+                           const SystemVector<Scalar>& weights,
+                           CoarseVector& out) const
+    {
+        restrictInto(dRes, dWell, weights, out);
+    }
+
+    void moveToFineLevel(const CoarseVector& in,
+                         ResVector<Scalar>& vRes,
+                         WellVector<Scalar>& vWell) const
+    {
+        prolongFrom(in, vRes, vWell);
     }
 
     const CoarseVector& coarseRhs() const
@@ -444,6 +428,77 @@ private:
             if (!(std::abs(diag) > 0.0)) {
                 diag = 1.0;
             }
+        }
+    }
+
+    // Restriction:  out = R * (dRes, dWell).  Unlike the classic CPRW transfer
+    // policy the well residual really is carried to the coarse level, unless
+    // the classic transfer was asked for.
+    void restrictInto(const ResVector<Scalar>& dRes,
+                      const WellVector<Scalar>& dWell,
+                      const SystemVector<Scalar>& weights,
+                      CoarseVector& out) const
+    {
+        using namespace Dune::Indices;
+        const auto& layout = wellLayout();
+        const auto& w0 = weights[_0];
+        const auto& w1 = weights[_1];
+        const std::size_t numRes = dRes.size();
+
+        out = 0.0;
+
+        for (std::size_t c = 0; c < numRes; ++c) {
+            const auto& bw = w0[c];
+            Scalar el = 0.0;
+            for (std::size_t i = 0; i < bw.size(); ++i) {
+                el += dRes[c][i] * bw[i];
+            }
+            out[c] = el;
+        }
+
+        if (wellTransfer_ == WellTransfer::Classic) {
+            // The classic policy leaves the well rows of the coarse right-hand
+            // side at zero; keep them zero so that the two formulations agree.
+            return;
+        }
+
+        for (std::size_t j = 0; j < layout.numWells(); ++j) {
+            Scalar el = 0.0;
+            for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
+                const auto& lw = w1[wb];
+                for (std::size_t i = 0; i < lw.size(); ++i) {
+                    el += lw[i] * dWell[wb][i];
+                }
+            }
+            out[numRes + j] = el;
+        }
+    }
+
+    // Prolongation:  (vRes, vWell) = P * in.  The coarse well correction lands
+    // on the pressure unknown of each well's top block; the classic policy
+    // throws it away instead.
+    void prolongFrom(const CoarseVector& in,
+                     ResVector<Scalar>& vRes,
+                     WellVector<Scalar>& vWell) const
+    {
+        const auto& layout = wellLayout();
+        const std::size_t numRes = vRes.size();
+        const int q = layout.pressureDofIndex;
+
+        vRes = 0.0;
+        for (std::size_t c = 0; c < numRes; ++c) {
+            vRes[c][pressureIndex_] = in[c][0];
+        }
+
+        vWell = 0.0;
+        if (!prolongatesWellPressure()) {
+            // The coarse bhp correction is computed but discarded; it acts only
+            // through its influence on the reservoir pressure, as in the
+            // classic policy.  A following well solve corrects the wells.
+            return;
+        }
+        for (std::size_t j = 0; j < layout.numWells(); ++j) {
+            vWell[layout.firstBlock(j)][q] = in[numRes + j][0];
         }
     }
 

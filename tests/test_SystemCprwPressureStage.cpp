@@ -21,6 +21,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/linalg/system/SystemCprwPressureStage.hpp>
+#include <opm/simulators/linalg/system/SystemPreconditionerFactory.hpp>
+#include <opm/simulators/linalg/system/SystemPreconditionerParts.hpp>
+#include <opm/simulators/linalg/system/SystemPressureBhpTransferPolicy.hpp>
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
 
 #include <cstddef>
@@ -493,6 +496,45 @@ BOOST_AUTO_TEST_CASE(ZeroCoarseWellDiagonalIsRegularised)
         for (std::size_t c = 0; c < numCells; ++c) {
             BOOST_CHECK_EQUAL(coarseEntry(stage, wdof, c), 0.0);
         }
+    }
+}
+
+// The transfer policy is the same coarse system presented to Dune's two-level
+// machinery, so its restriction must agree with the stage's own.
+BOOST_AUTO_TEST_CASE(TransferPolicyAgreesWithStage)
+{
+    using SeqOp = Opm::SystemSeqOp<Scalar>;
+    using Policy = Opm::SystemPressureBhpTransferPolicy<SeqOp, Dune::Amg::SequentialInformation, Scalar>;
+
+    const Fixture f;
+    Policy policy(f.S, f.weights, Opm::PropertyTree(), pressureIndex);
+
+    SeqOp op(f.S);
+    policy.createCoarseLevelSystem(op);
+
+    Stage stage(f.S, Opm::PropertyTree(), pressureIndex);
+    stage.buildCoarseSystem(f.weights);
+
+    Opm::SystemVector<Scalar> d;
+    d[Dune::Indices::_0].resize(numCells);
+    d[Dune::Indices::_1].resize(numWellBlocks);
+    for (std::size_t c = 0; c < numCells; ++c) {
+        for (int i = 0; i < numRes; ++i) {
+            d[Dune::Indices::_0][c][i] = 1.0 + c + i;
+        }
+    }
+    for (std::size_t wb = 0; wb < numWellBlocks; ++wb) {
+        for (int i = 0; i < numWell; ++i) {
+            d[Dune::Indices::_1][wb][i] = 2.0 + wb - i;
+        }
+    }
+
+    policy.moveToCoarseLevel(d);
+    stage.moveToCoarseLevel(d[Dune::Indices::_0], d[Dune::Indices::_1], f.weights);
+
+    const std::size_t coarseDim = numCells + f.layout.numWells();
+    for (std::size_t i = 0; i < coarseDim; ++i) {
+        BOOST_CHECK_CLOSE(policy.getCoarseLevelRhs()[i][0], stage.coarseRhs()[i][0], 1e-10);
     }
 }
 
