@@ -42,6 +42,7 @@
 #include <cstddef>
 #include <functional>
 #include <numbers>
+#include <tuple>
 
 #include <fmt/format.h>
 
@@ -63,6 +64,7 @@ namespace Opm
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_conservation_quantities, num_phases, index_of_well, perf_data)
     , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices>&>(*this))
     , regularize_(false)
+    , fluids_initial_(num_conservation_quantities)
     {
         assert(this->num_conservation_quantities_ == numWellConservationEq);
     }
@@ -376,7 +378,6 @@ namespace Opm
 
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
-        const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
@@ -396,8 +397,10 @@ namespace Opm
             std::vector<EvalWell> cq_s(this->num_conservation_quantities_, 0.0);
             EvalWell water_flux_s{0.0};
             EvalWell cq_s_zfrac_effective{0.0};
+            EvalWell cq_s_energy{0.0};
             calculateSinglePerf(simulator, perf, well_state, connectionRates,
-                                cq_s, water_flux_s, cq_s_zfrac_effective, deferred_logger);
+                                cq_s, water_flux_s, cq_s_zfrac_effective,
+                                cq_s_energy, deferred_logger);
 
             // Equation assembly for this perforation.
             if constexpr (has_polymer && Base::has_polymermw) {
@@ -414,6 +417,7 @@ namespace Opm
 
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assemblePerforationEq(cq_s_effective,
+                                          componentIdx,
                                           componentIdx,
                                           perf,
                                           this->primary_variables_.numWellEq(),
@@ -434,6 +438,20 @@ namespace Opm
                                     perf,
                                     this->primary_variables_.numWellEq(),
                                     this->linSys_);
+            }
+
+            // assembling the well-side energy equation contribution of the perforation.
+            // It is scaled onto the mass-balance scale (energy_scaling_factor_), while
+            // the reservoir energy source term (connectionRates_) is kept raw since the
+            // reservoir scales it centrally in computeSource().
+            if constexpr (has_energy) {
+                StandardWellAssemble<FluidSystem,Indices>(*this).
+                    assemblePerforationEq(energy_scaling_factor_ * cq_s_energy,
+                                          Temperature,
+                                          Indices::contiEnergyEqIdx,
+                                          perf,
+                                          this->primary_variables_.numWellEq(),
+                                          this->linSys_);
             }
         }
         // Update the connection
@@ -456,13 +474,39 @@ namespace Opm
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) -
-                                this->F0_[componentIdx]) * volume / dt;
+                const auto wellbore_surface_volume = wellbore_volume / wellbore_volume_ratio_;
+                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
+                                this->fluids_initial_[componentIdx]) * regularization_factor / dt;
             }
             resWell_loc -= this->primary_variables_.getQs(componentIdx) * this->well_efficiency_factor_;
             StandardWellAssemble<FluidSystem,Indices>(*this).
                 assembleSourceEq(resWell_loc,
                                  componentIdx,
+                                 this->primary_variables_.numWellEq(),
+                                 this->linSys_);
+        }
+
+        // the energy equation: accumulation of energy in the wellbore and the energy
+        // carried by the well surface rates
+        if constexpr (has_energy) {
+            const EvalWell wellbore_energy = computeWellboreEnergy<EvalWell>();
+            // scaled to the same magnitude as the mass-balance equations, see energy_scaling_factor_
+            EvalWell resWell_energy =
+                energy_scaling_factor_ * regularization_factor * (wellbore_energy - wellbore_initial_energy_) / dt;
+
+            if (this->isInjector()) {
+                updateWellHeadCondition(simulator, deferred_logger);
+            }
+            // the energy flowing out of (or into, for injectors) the wellbore with the
+            // well surface rates, using the upwind fluid state: the wellhead state for
+            // injectors, the wellbore state for producers.
+            const auto& upwind_fs = this->isInjector() ? wellhead_fluid_state_
+                                                       : well_fluid_state_;
+            resWell_energy -= wellOutflowEnergyRate(upwind_fs, deferred_logger);
+
+            StandardWellAssemble<FluidSystem,Indices>(*this).
+                assembleSourceEq(resWell_energy,
+                                 Temperature,
                                  this->primary_variables_.numWellEq(),
                                  this->linSys_);
         }
@@ -512,6 +556,7 @@ namespace Opm
                         std::vector<EvalWell>& cq_s,
                         EvalWell& water_flux_s,
                         EvalWell& cq_s_zfrac_effective,
+                        EvalWell& cq_s_energy,
                         DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(simulator);
@@ -557,9 +602,9 @@ namespace Opm
         }
 
         if constexpr (has_energy) {
-            connectionRates[perf][Indices::contiEnergyEqIdx] =
-                connectionRateEnergy(cq_s, intQuants, deferred_logger);
-            ws.energy_rate += getValue(connectionRates[perf][Indices::contiEnergyEqIdx]);
+            cq_s_energy = connectionRateEnergy(cq_s, intQuants, deferred_logger);
+            connectionRates[perf][Indices::contiEnergyEqIdx] = Base::restrictEval(cq_s_energy);
+            ws.energy_rate += getValue(cq_s_energy);
         }
 
         if constexpr (has_polymer) {
@@ -779,6 +824,7 @@ namespace Opm
         const bool isThermal = simulator.vanguard().eclState().getSimulationConfig().isThermal();
         const bool co2store = simulator.vanguard().eclState().runspec().co2Storage();
         Base::calculateReservoirRates( (isThermal || co2store), well_state.well(this->index_of_well_));
+        updateWellFluidState();
     }
 
 
@@ -1444,9 +1490,13 @@ namespace Opm
     calculateExplicitQuantities(const Simulator& simulator,
                                 const GroupStateHelperType& groupStateHelper)
     {
+        // the temperature and salt concentration of the first perforated cell are
+        // treated explicitly, so they are only updated at the beginning of the time step
+        first_perf_fs_info_ = this->getFirstPerforationFluidStateInfo(simulator);
+        // updatePrimaryVariables() also updates the wellbore fluid state
         updatePrimaryVariables(groupStateHelper);
         computeWellConnectionPressures(simulator, groupStateHelper);
-        this->computeAccumWell();
+        this->computeInitialFluids();
     }
 
 
@@ -1603,7 +1653,7 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(groupStateHelper_copy);
-        well_copy.computeAccumWell();
+        well_copy.computeInitialFluids();
 
         const double dt = simulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(
@@ -1890,6 +1940,9 @@ namespace Opm
         }
 
         this->primary_variables_.checkFinite(deferred_logger, "updating from well state");
+
+        // the wellbore fluid state needs to be consistent with the primary variables
+        updateWellFluidState();
     }
 
 
@@ -2663,84 +2716,203 @@ namespace Opm
 
 
     template <typename TypeTag>
-    typename StandardWell<TypeTag>::Eval
+    typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
     connectionRateEnergy(const std::vector<EvalWell>& cq_s,
                          const IntensiveQuantities& intQuants,
                          DeferredLogger& deferred_logger) const
     {
-        auto fs = intQuants.fluidState();
-        Eval result = 0;
+        const auto& fs = intQuants.fluidState();
+
+        EvalWell energy_flux{0.};
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
 
-            // convert to reservoir conditions
-            EvalWell cq_r_thermal{0.};
             const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-            const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-            if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
-                cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-            } else {
-                // remove dissolved gas and vapporized oil
-                const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
-                const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
-                // q_os = q_or * b_o + rv * q_gr * b_g
-                // q_gs = q_gr * g_g + rs * q_or * b_o
-                // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                // d = 1.0 - rs * rv
-                const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
-                if (d <= 0.0) {
-                    deferred_logger.debug(
-                        fmt::format("Problematic d value {} obtained for well {}"
-                                    " during calculateSinglePerf with rs {}"
-                                    ", rv {}. Continue as if no dissolution (rs = 0) and"
-                                    " vaporization (rv = 0) for this connection.",
-                                    d, this->name(), fs.Rs(), fs.Rv()));
-                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                } else {
-                    if (FluidSystem::gasPhaseIdx == phaseIdx) {
-                        cq_r_thermal = (cq_s[gasCompIdx] -
-                                        this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) /
-                                        (d * this->extendEval(fs.invB(phaseIdx)) );
-                    } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
-                        // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                        cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) *
-                                        cq_s[gasCompIdx]) /
-                                       (d * this->extendEval(fs.invB(phaseIdx)) );
-                    }
-                }
-            }
+            // whether the connection is injecting (fluid flows from wellbore into reservoir)
+            const bool injecting = cq_s[activeCompIdx] > 0.0;
 
-            // change temperature for injecting fluids
-            if (this->isInjector() && !this->wellIsStopped() && cq_r_thermal > 0.0){
-                // only handles single phase injection now
-                assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
-                fs.setTemperature(this->well_ecl_.inj_temperature());
-                typedef typename std::decay<decltype(fs)>::type::ValueType FsValueType;
-                typename FluidSystem::template ParameterCache<FsValueType> paramCache;
-                const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
-                paramCache.setRegionIndex(pvtRegionIdx);
-                paramCache.updatePhase(fs, phaseIdx);
-
-                const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
-                fs.setDensity(phaseIdx, rho);
-                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-                fs.setEnthalpy(phaseIdx, h);
-                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                result += getValue(cq_r_thermal);
-            } else if (cq_r_thermal > 0.0) {
-                cq_r_thermal *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx));
-                result += Base::restrictEval(cq_r_thermal);
+            EvalWell cq_r_thermal{0.};
+            if (injecting) {
+                // use the wellbore fluid properties for the upwind state
+                cq_r_thermal = surfaceToReservoirRate(phaseIdx, well_fluid_state_, cq_s,
+                                                      "energy assembly (injecting)",
+                                                      deferred_logger);
+                // \Note: cq_s calculation uses rs, rv and b from the connection cells, while
+                // the enthalpy and density is based on the wellbore condition in the wellbore,
+                // some inconsistency can exist here and remain to be investigated and refined.
+                energy_flux += cq_r_thermal * well_fluid_state_.enthalpy(phaseIdx)
+                                            * well_fluid_state_.density(phaseIdx);
             } else {
-                // compute the thermal flux
-                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                result += Base::restrictEval(cq_r_thermal);
+                // producing connection: use reservoir cell fluid properties
+                cq_r_thermal = surfaceToReservoirRate(phaseIdx, fs, cq_s,
+                                                      "energy assembly (producing)",
+                                                      deferred_logger);
+                energy_flux += cq_r_thermal * this->extendEval(fs.enthalpy(phaseIdx))
+                                            * this->extendEval(fs.density(phaseIdx));
             }
         }
 
-        return result * this->well_efficiency_factor_;
+        return energy_flux * this->well_efficiency_factor_;
+    }
+
+    template <typename TypeTag>
+    template <typename FluidStateT>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    surfaceToReservoirRate(const unsigned phaseIdx,
+                           const FluidStateT& fs,
+                           const std::vector<EvalWell>& surface_rates,
+                           const std::string_view context,
+                           DeferredLogger& deferred_logger) const
+    {
+        // The wellbore fluid state already stores EvalWell properties; a reservoir-cell
+        // fluid state stores reservoir Eval and must be extended to the well derivative space.
+        auto asEvalWell = [this](const auto& v) -> EvalWell {
+            if constexpr (std::is_same_v<std::decay_t<decltype(v)>, EvalWell>) {
+                return v;
+            } else {
+                return this->extendEval(v);
+            }
+        };
+
+        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+        const EvalWell invB = asEvalWell(fs.invB(phaseIdx));
+        const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                               && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
+            return surface_rates[activeCompIdx] / invB;
+        }
+
+        // remove dissolved gas and vaporized oil
+        const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+        const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+        // q_os = q_or * b_o + rv * q_gr * b_g
+        // q_gs = q_gr * b_g + rs * q_or * b_o
+        // d = 1.0 - rs * rv
+        const EvalWell rs = asEvalWell(fs.Rs());
+        const EvalWell rv = asEvalWell(fs.Rv());
+        const EvalWell d = 1. - rs * rv;
+        if (d <= 0.0) {
+            deferred_logger.debug(
+                fmt::format("Problematic d value {} obtained for well {}"
+                            " during {} with rs {}, rv {}. Continue as if no dissolution"
+                            " (rs = 0) and vaporization (rv = 0) for this connection.",
+                            d, this->name(), context, rs, rv));
+            return surface_rates[activeCompIdx] / invB;
+        }
+
+        if (FluidSystem::gasPhaseIdx == phaseIdx) {
+            return (surface_rates[gasCompIdx] - rs * surface_rates[oilCompIdx]) / (d * invB);
+        }
+        if (FluidSystem::oilPhaseIdx == phaseIdx) {
+            return (surface_rates[oilCompIdx] - rv * surface_rates[gasCompIdx]) / (d * invB);
+        }
+        return EvalWell{0.0};
+    }
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    wellOutflowEnergyRate(const FluidState<EvalWell>& fs,
+                          DeferredLogger& deferred_logger) const
+    {
+        // surface volumetric rates per component, scaled by the well efficiency factor
+        std::vector<EvalWell> surface_rates(this->numConservationQuantities(), 0.0);
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            surface_rates[comp_idx] = this->primary_variables_.getQs(comp_idx) * this->well_efficiency_factor_;
+        }
+
+        EvalWell energy_rate{0.};
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const EvalWell reservoir_rate =
+                surfaceToReservoirRate(phaseIdx, fs, surface_rates,
+                                       "energy outflow assembly", deferred_logger);
+            energy_rate += reservoir_rate * fs.enthalpy(phaseIdx) * fs.density(phaseIdx);
+        }
+        // scaled to the same magnitude as the mass-balance equations, see energy_scaling_factor_
+        return energy_scaling_factor_ * energy_rate;
+    }
+
+    template <typename TypeTag>
+    template <typename ValueType>
+    ValueType
+    StandardWell<TypeTag>::
+    computeWellboreEnergy() const
+    {
+        auto obtain = [](const auto& val) {
+            if constexpr (std::is_same_v<ValueType, Scalar>) {
+                return getValue(val);
+            } else {
+                return val;
+            }
+        };
+
+        ValueType result{0.};
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const auto u = obtain(well_fluid_state_.internalEnergy(phaseIdx));
+            const auto s = obtain(well_fluid_state_.saturation(phaseIdx));
+            const auto rho = obtain(well_fluid_state_.density(phaseIdx));
+            result += wellbore_volume * u * s * rho;
+        }
+        return result;
+    }
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWellHeadCondition(const Simulator& simulator,
+                            DeferredLogger& deferred_logger)
+    {
+        if (!this->well_ecl_.isInjector()) return;
+
+        std::vector<EvalWell> fluid_composition(this->numConservationQuantities(), 0.0);
+
+        // temperature should be the injecting temperature
+        // pressure should be the BHP
+        const EvalWell& bhp = this->primary_variables_.eval(Bhp);
+        // Use WINJTEMP when set, otherwise the reservoir temperature at the first
+        // perforation (as in WellState::initSingleInjector). Calling inj_temperature()
+        // unconditionally would warn every assembly iteration, and throw with no default.
+        const EvalWell inj_temperature = this->well_ecl_.hasInjTemperature()
+            ? EvalWell{this->well_ecl_.inj_temperature()}
+            : EvalWell{first_perf_fs_info_.first};
+
+        const auto controls = this->well_ecl_.injectionControls(simulator.vanguard().summaryState());
+        switch (controls.injector_type) {
+            case InjectorType::OIL: {
+                const unsigned oilActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+                fluid_composition[oilActiveCompIdx] = 1.0;
+                break;
+            }
+            case InjectorType::GAS: {
+                const unsigned gasActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                fluid_composition[gasActiveCompIdx] = 1.0;
+                break;
+            }
+            case InjectorType::WATER: {
+                const unsigned waterActiveCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+                fluid_composition[waterActiveCompIdx] = 1.0;
+                break;
+            }
+            default: {
+                OPM_DEFLOG_THROW(std::logic_error,
+                                 "Unsupported injection type " + std::to_string(static_cast<int>(controls.injector_type)),
+                                 deferred_logger);
+            }
+        }
+
+        // No injection-salinity keyword yet; reuse the first-perf salt (as for temperature).
+        std::tie(wellhead_fluid_state_, std::ignore) =
+            Base::createFluidState(fluid_composition, bhp, inj_temperature, first_perf_fs_info_.second);
     }
 
     template <typename TypeTag>
@@ -2761,6 +2933,46 @@ namespace Opm
         }
         return max_pressure;
     }
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeInitialFluids()
+    {
+        const Scalar wellbore_surface_volume = wellbore_volume / getValue(wellbore_volume_ratio_);
+        for (int eq_idx = 0; eq_idx < this->numConservationQuantities(); ++eq_idx) {
+            fluids_initial_[eq_idx] = wellbore_surface_volume * getValue(this->primary_variables_.surfaceVolumeFraction(eq_idx));
+        }
+
+        if constexpr (has_energy) {
+            wellbore_initial_energy_ = computeWellboreEnergy<Scalar>();
+        }
+    }
+
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::updateWellFluidState()
+    {
+        const EvalWell& pressure = this->primary_variables_.eval(Bhp);
+
+        EvalWell temperature;
+        if constexpr (has_energy) {
+            // the wellbore temperature is a primary variable
+            temperature = this->primary_variables_.eval(Temperature);
+        } else {
+            temperature = EvalWell{first_perf_fs_info_.first};
+        }
+
+        std::vector<EvalWell> fluid_fractions(this->numConservationQuantities(), 0.0);
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            fluid_fractions[comp_idx] = this->primary_variables_.surfaceVolumeFraction(comp_idx);
+        }
+
+        std::tie(well_fluid_state_, wellbore_volume_ratio_) =
+            Base::createFluidState(fluid_fractions, pressure, temperature, first_perf_fs_info_.second);
+    }
+
 
 } // namespace Opm
 
