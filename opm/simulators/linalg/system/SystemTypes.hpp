@@ -26,6 +26,9 @@
 #include <dune/istl/multitypeblockmatrix.hh>
 #include <dune/istl/multitypeblockvector.hh>
 
+#include <cstddef>
+#include <vector>
+
 namespace Opm
 {
 
@@ -59,6 +62,58 @@ template<typename Scalar>
 using SystemVector = Dune::MultiTypeBlockVector<ResVector<Scalar>, WellVector<Scalar>>;
 
 // --------------------------------------------------------------------------
+// WellDofLayout: which block rows of the merged well matrices belong to which
+// well, plus the position of the pressure-like unknown inside a well block.
+//
+// The merged D matrix is block diagonal by well (WellMatrixMerger simply
+// concatenates the per-well blocks), with one block row per standard well and
+// one per segment of a multisegment well.  Everything the preconditioner needs
+// in order to aggregate well DOFs back to wells is therefore a prefix sum over
+// the per-well D dimensions, which the outer layer already has.
+//
+// This is deliberately plain data: it is filled by ISTLSolverSystem from the
+// matrices it already extracted, so that nothing below that point has to know
+// anything about the well model.
+// --------------------------------------------------------------------------
+struct WellDofLayout
+{
+    // Size numWells()+1, prefix sum of the per-well D_j.N().
+    std::vector<std::size_t> wellBlockOffsets;
+
+    // Index of the pressure-like unknown (bhp for a standard well, segment
+    // pressure for a multisegment well) inside a well block.  numWellDofs-1 is
+    // correct for the only configuration ISTLSolverSystem supports
+    // (Indices::numEq == 3, no energy): StandardWellPrimaryVariables::Bhp is
+    // numStaticWellEq - numWellControlEq == 3 and
+    // MultisegmentWellPrimaryVariables::SPres is
+    // has_wfrac + has_gfrac + 1 + enable_energy == 3.  Carried as data so that
+    // generalising later is a change in the outer layer only.
+    int pressureDofIndex = numWellDofs - 1;
+
+    std::size_t numWells() const
+    {
+        return wellBlockOffsets.empty() ? 0 : wellBlockOffsets.size() - 1;
+    }
+
+    // First (top) block row of well j.  For a multisegment well this is the
+    // top segment, whose pressure plays the role of the bhp.
+    std::size_t firstBlock(const std::size_t j) const
+    {
+        return wellBlockOffsets[j];
+    }
+
+    std::size_t endBlock(const std::size_t j) const
+    {
+        return wellBlockOffsets[j + 1];
+    }
+
+    std::size_t totalWellBlocks() const
+    {
+        return wellBlockOffsets.empty() ? 0 : wellBlockOffsets.back();
+    }
+};
+
+// --------------------------------------------------------------------------
 // SystemMatrix: a lightweight read-only view over a 2×2 block-matrix
 // structure.  All four sub-blocks are stored as const pointers; the actual
 // data lives elsewhere (the reservoir block in ISTLSolver::matrix_, the
@@ -87,6 +142,10 @@ public:
     const RWMatrix<Scalar>* C = nullptr;  // (0,1) reservoir–well coupling
     const WRMatrix<Scalar>* B = nullptr;  // (1,0) well–reservoir coupling
     const WWMatrix<Scalar>* D = nullptr;  // (1,1) well
+
+    // Aggregation of the well block rows into wells.  Only needed by the CPRW
+    // pressure stage; null when the well DOFs are not aggregated.
+    const WellDofLayout* wellLayout = nullptr;
 
     // Sub-block access: S[_0][_0], S[_0][_1], S[_1][_0], S[_1][_1]
     inline SystemMatrixRow0<Scalar> operator[](Dune::index_constant<0>) const;

@@ -27,10 +27,12 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
 #include <stdexcept>
+#include <string>
 
 BOOST_AUTO_TEST_SUITE(SystemCPR)
 
@@ -85,6 +87,56 @@ BOOST_AUTO_TEST_CASE(MatrixAddWellContributionsIncompatible)
 {
     BOOST_CHECK_THROW(Opm::checkSystemCPRMatrixAddWell(true),  std::invalid_argument);
     BOOST_CHECK_NO_THROW(Opm::checkSystemCPRMatrixAddWell(false));
+}
+
+// With add_wells the pressure stage is assembled and solved by the system
+// preconditioner itself, taking its solver settings from the coarsesolver
+// sub-tree. Without that sub-tree there is nothing to solve the CPRW pressure
+// system with, so it must be rejected at setup time rather than falling over
+// inside SystemCprwPressureStage::buildStructure.
+BOOST_AUTO_TEST_CASE(JSONAddWellsRequiresCoarseSolver)
+{
+    Opm::PropertyTree prm("options_system_cprw_missing_coarsesolver.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+
+    Opm::PropertyTree complete("options_system_cprw_complete.json");
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(complete));
+}
+
+// An approximate (Krylov) well solver stops on a tolerance and therefore does
+// a different number of inner iterations per right-hand side, so the system
+// preconditioner is no longer a fixed operator. Only a flexible outer solver
+// may be combined with it; bicgstab must be rejected.
+BOOST_AUTO_TEST_CASE(ApproximateWellSolverRequiresFlexibleOuterSolver)
+{
+    Opm::PropertyTree ok("options_system_cprw_approx_wells.json");
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(ok));
+
+    Opm::PropertyTree bad("options_system_cprw_approx_wells_bad_outer.json");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(bad), std::invalid_argument);
+
+    // The stationary well solvers stay valid with the default outer solver.
+    Opm::PropertyTree exact("options_system_cprw_complete.json");
+    BOOST_CHECK_EQUAL(exact.get<std::string>("preconditioner.well_solver.solver"), "umfpack");
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(exact));
+}
+
+// system_cprw must produce the same tree as system_cpr apart from add_wells.
+BOOST_AUTO_TEST_CASE(SystemCPRWEnablesAddWells)
+{
+    const Opm::FlowLinearSolverParameters p;
+    const auto cpr = Opm::setupSystemCPR("system_cpr", p);
+    const auto cprw = Opm::setupSystemCPR("system_cprw", p);
+
+    const std::string key = "preconditioner.reservoir_solver.preconditioner.add_wells";
+    BOOST_CHECK_EQUAL(cpr.get<bool>(key), false);
+    BOOST_CHECK_EQUAL(cprw.get<bool>(key), true);
+
+    // Same coarse solver in both, since that is what solves the pressure
+    // system in either case.
+    const std::string coarse
+        = "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type";
+    BOOST_CHECK_EQUAL(cpr.get<std::string>(coarse), cprw.get<std::string>(coarse));
 }
 
 BOOST_AUTO_TEST_SUITE_END() // SystemCPR
