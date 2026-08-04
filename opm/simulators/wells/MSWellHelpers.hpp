@@ -25,6 +25,9 @@
 
 #include <dune/istl/matrix.hh>
 
+#include <cmath>
+#include <cstddef>
+
 namespace Dune {
 template<class Matrix> class UMFPack;
 }
@@ -75,6 +78,39 @@ namespace mswellhelpers
     VectorType
     applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
                  VectorType x);
+
+    /// Coarse CPRW diagonal for a multisegment well: lambda' D(:,p), summed
+    /// over every segment row and every column of D.
+    ///
+    /// This is the Galerkin diagonal for a prolongation that spreads the well's
+    /// single coarse unknown over all of its segment pressures, which is the
+    /// prolongation the coarse column already assumes. Unlike the row-sum
+    /// convention it keeps the segment-to-segment coupling D carries, which is
+    /// most of a well once there is one segment per connection.
+    ///
+    /// \param D                  the well's diagonal block, segment rows by segment columns
+    /// \param lambda             well weights, one per conservation equation
+    /// \param pressureColumn     the segment-pressure column of a D block
+    ///
+    /// Returns 1 if the contraction cancels exactly, since a zero would make
+    /// the coarse pressure system singular.
+    template <class DiagMatWell, class WellWeight>
+    typename DiagMatWell::field_type
+    contractCprWellDiagonal(const DiagMatWell& D,
+                            const WellWeight& lambda,
+                            const int pressureColumn)
+    {
+        using Scalar = typename DiagMatWell::field_type;
+        Scalar diag = 0.0;
+        for (std::size_t row = 0; row < D.N(); ++row) {
+            for (auto col = D[row].begin(), end = D[row].end(); col != end; ++col) {
+                for (std::size_t i = 0; i < lambda.size(); ++i) {
+                    diag += lambda[i] * (*col)[i][pressureColumn];
+                }
+            }
+        }
+        return (std::abs(diag) > 0.0) ? diag : Scalar{1.0};
+    }
 
 
 
