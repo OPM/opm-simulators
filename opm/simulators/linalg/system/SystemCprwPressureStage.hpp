@@ -376,6 +376,7 @@ private:
     {
         using namespace Dune::Indices;
         OPM_TIMEBLOCK(systemCprwAssemble);
+        dumpWeights(weights);
 
         const auto& A = *S_.A;
         const auto& B = *S_.B;
@@ -588,6 +589,18 @@ private:
         std::ofstream out("system_cprw_coarse_" + std::to_string(counter++) + ".mm");
         if (out) {
             Dune::writeMatrixMarket(*coarseMatrix_, out);
+        }
+    }
+
+    void dumpWeights(const SystemVector<Scalar>& weights) const
+    {
+        if (verbosity_ <= 10) {
+            return;
+        }
+        static int counter = 0;
+        std::ofstream out("system_cprw_weights_" + std::to_string(counter++) + ".mm");
+        if (out) {
+            Dune::writeMatrixMarket(weights[Dune::Indices::_0], out);
         }
     }
 

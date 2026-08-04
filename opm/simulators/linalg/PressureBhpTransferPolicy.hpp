@@ -224,9 +224,14 @@ namespace Opm
             return;
         }
         static int counter = 0;
-        std::ofstream out("cprw_coarse_" + std::to_string(counter++) + ".mm");
+        const int id = counter++;
+        std::ofstream out("cprw_coarse_" + std::to_string(id) + ".mm");
         if (out) {
             Dune::writeMatrixMarket(*coarseLevelMatrix_, out);
+        }
+        std::ofstream wout("cprw_weights_" + std::to_string(id) + ".mm");
+        if (wout) {
+            Dune::writeMatrixMarket(weights_, wout);
         }
     }
 
