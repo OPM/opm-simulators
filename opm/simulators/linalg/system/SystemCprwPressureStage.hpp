@@ -30,7 +30,12 @@
 
 #include <dune/istl/paamg/pinfo.hh>
 
+#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
+
+#include <dune/istl/matrixmarket.hh>
+
 #include <algorithm>
+#include <fstream>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -84,6 +89,27 @@ enum class WellTransfer
     Classic,        // neither -- as in PressureBhpTransferPolicy
 };
 
+// How the coarse diagonal of a well equation is formed.  Classic CPRW uses
+// two different conventions: StandardWellEquations contracts D, while
+// MultisegmentWellEquations sets the diagonal to minus the sum of the well
+// row's reservoir entries and never reads D at all.
+enum class WellCoarseDiagonal
+{
+    Auto,      // contract D for single-block wells, row sum for multi-block: as classic
+    ContractD, // always contract D
+    RowSum,    // always minus the row sum
+};
+
+inline WellCoarseDiagonal wellCoarseDiagonalFromString(const std::string& name)
+{
+    if (name == "auto") { return WellCoarseDiagonal::Auto; }
+    if (name == "contract_d") { return WellCoarseDiagonal::ContractD; }
+    if (name == "row_sum") { return WellCoarseDiagonal::RowSum; }
+    OPM_THROW(std::invalid_argument,
+              "Unknown well_coarse_diagonal '" + name
+                  + "'. Valid values are 'auto', 'contract_d' and 'row_sum'.");
+}
+
 inline WellTransfer wellTransferFromString(const std::string& name)
 {
     if (name == "full") {
@@ -116,12 +142,16 @@ public:
                             const PropertyTree& coarseSolverPrm,
                             const int pressureIndex,
                             const WellTransfer wellTransfer = WellTransfer::Full,
-                            const Comm* comm = nullptr)
+                            const Comm* comm = nullptr,
+                            const WellCoarseDiagonal diagonal = WellCoarseDiagonal::ContractD,
+                            const int verbosity = 0)
         : S_(S)
         , prm_(coarseSolverPrm)
         , pressureIndex_(pressureIndex)
         , wellTransfer_(wellTransfer)
         , comm_(comm)
+        , diagonal_(diagonal)
+        , verbosity_(verbosity)
     {
     }
 
@@ -148,6 +178,7 @@ public:
 
         coarseRhs_.resize(coarseMatrix_->N());
         coarseSol_.resize(coarseMatrix_->M());
+        dumpCoarseMatrix();
     }
 
     // (Re)create the coarse system and the solver acting on it.  Must be
@@ -189,6 +220,7 @@ public:
         OPM_TIMEBLOCK(systemCprwApply);
         moveToCoarseLevel(dRes, dWell, weights);
 
+        dumpCoarseRhs();
         coarseSol_ = 0.0;
         Dune::InverseOperatorResult result;
         coarseSolver_->apply(coarseSol_, coarseRhs_, result);
@@ -406,6 +438,12 @@ private:
                 (*coarseMatrix_)[wdof][wdof] = 1.0;
                 continue;
             }
+            const bool rowSumDiag
+                = (diagonal_ == WellCoarseDiagonal::RowSum)
+                || (diagonal_ == WellCoarseDiagonal::Auto
+                    && layout.endBlock(j) - layout.firstBlock(j) > 1);
+            Scalar rowSum = 0.0;
+
             for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
                 const auto& lw = w1[wb];
 
@@ -417,6 +455,13 @@ private:
                         el += lw[i] * (*col)[i][p];
                     }
                     (*coarseMatrix_)[wdof][col.index()] += el;
+                    rowSum += el;
+                }
+
+                if (rowSumDiag) {
+                    // The classic multisegment convention takes the diagonal
+                    // from the row sum and never reads D.
+                    continue;
                 }
 
                 // Well row, well columns:
@@ -444,6 +489,9 @@ private:
             // can happen for a well with no local perforations, or when the
             // weights annihilate the pressure column. Regularise to a unit row
             // rather than handing a singular system to AMG.
+            if (rowSumDiag) {
+                (*coarseMatrix_)[wdof][wdof] = -rowSum;
+            }
             auto& diag = (*coarseMatrix_)[wdof][wdof][0][0];
             if (!(std::abs(diag) > 0.0)) {
                 diag = 1.0;
@@ -528,6 +576,32 @@ private:
         }
     }
 
+    // Same convention as the classic path: verbosity above 10 writes the
+    // coarse system out so the two can be compared entry by entry.
+    void dumpCoarseMatrix() const
+    {
+        if (verbosity_ <= 10) {
+            return;
+        }
+        static int counter = 0;
+        std::ofstream out("system_cprw_coarse_" + std::to_string(counter++) + ".mm");
+        if (out) {
+            Dune::writeMatrixMarket(*coarseMatrix_, out);
+        }
+    }
+
+    void dumpCoarseRhs() const
+    {
+        if (verbosity_ <= 10) {
+            return;
+        }
+        static int counter = 0;
+        std::ofstream out("system_cprw_rhs_" + std::to_string(counter++) + ".mm");
+        if (out) {
+            Dune::writeMatrixMarket(coarseRhs_, out);
+        }
+    }
+
     // Merged well block row -> well index.  Linear scan is fine: the offsets
     // are sorted and this is only used while walking sparse rows of the well
     // blocks, which are short.
@@ -546,6 +620,8 @@ private:
     int pressureIndex_ = 0;
     WellTransfer wellTransfer_ = WellTransfer::Full;
     const Comm* comm_ = nullptr;
+    WellCoarseDiagonal diagonal_ = WellCoarseDiagonal::ContractD;
+    int verbosity_ = 0;
 
     std::shared_ptr<Comm> coarseComm_;
     std::shared_ptr<CoarseMatrix> coarseMatrix_;

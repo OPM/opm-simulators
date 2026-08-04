@@ -326,8 +326,11 @@ private:
                 : PropertyTree();
             const auto wellTransfer = wellTransferFromString(
                 prm.get("well_transfer", std::string{"full"}));
+            const auto diagonal = wellCoarseDiagonalFromString(
+                prm.get("well_coarse_diagonal", std::string{"contract_d"}));
             cprwStage_ = std::make_unique<CprwStage>(S_, coarseprm, pressureIndex_,
-                                                     wellTransfer, resComm_);
+                                                     wellTransfer, resComm_, diagonal,
+                                                     prm.get("verbosity", 0));
             cprwStage_->buildStructure(weights_);
         } else {
             if constexpr (isParallel) {
