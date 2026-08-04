@@ -28,10 +28,13 @@
  */
 #include "config.h"
 
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
-#include <opm/models/immiscible/immisciblemodel.hh>
+
 #include "problems/obstacleproblem.hh"
 
 namespace Opm::Properties {
@@ -42,6 +45,11 @@ struct ObstacleProblem
 { using InheritsFrom = std::tuple<ObstacleBaseProblem, ImmiscibleModel>; };
 
 } // end namespace TTag
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ObstacleProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

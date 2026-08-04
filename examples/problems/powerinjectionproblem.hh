@@ -28,9 +28,6 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
-#include <opm/models/immiscible/immisciblemodel.hh>
-#include <opm/models/io/cubegridvanguard.hh>
-
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
@@ -39,6 +36,10 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
+
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/io/cubegridvanguard.hh>
 
 #include <dune/grid/yaspgrid.hh>
 
@@ -64,15 +65,18 @@ struct PowerInjectionBaseProblem {};
 
 // Set the grid implementation to be used
 template<class TypeTag>
-struct Grid<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Dune::YaspGrid</*dim=*/1>; };
+struct Grid<TypeTag, TTag::PowerInjectionBaseProblem>
+{ using type = Dune::YaspGrid</*dim=*/1>; };
 
 // set the Vanguard property
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::CubeGridVanguard<TypeTag>; };
+struct Vanguard<TypeTag, TTag::PowerInjectionBaseProblem>
+{ using type = Opm::CubeGridVanguard<TypeTag>; };
 
 // Set the problem property
 template<class TypeTag>
-struct Problem<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::PowerInjectionProblem<TypeTag>; };
+struct Problem<TypeTag, TTag::PowerInjectionBaseProblem>
+{ using type = Opm::PowerInjectionProblem<TypeTag>; };
 
 // Set the wetting phase
 template<class TypeTag>

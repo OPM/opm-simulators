@@ -27,8 +27,10 @@
  */
 #include "config.h"
 
-#include <opm/models/utils/start.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/diffusionproblem.hh"
@@ -37,8 +39,16 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct DiffusionProblem { using InheritsFrom = std::tuple<DiffusionBaseProblem, NcpModel>; };
+
+struct DiffusionProblem
+{ using InheritsFrom = std::tuple<DiffusionBaseProblem, NcpModel>; };
+
 } // end namespace TTag
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::DiffusionProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

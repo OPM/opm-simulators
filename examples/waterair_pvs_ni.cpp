@@ -27,9 +27,11 @@
  */
 #include "config.h"
 
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include "problems/waterairproblem.hh"
 
 namespace Opm::Properties {
@@ -43,6 +45,11 @@ struct WaterAirProblem
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::WaterAirProblem>
 { static constexpr bool value = true; };
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::WaterAirProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

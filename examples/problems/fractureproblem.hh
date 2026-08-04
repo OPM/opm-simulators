@@ -37,9 +37,6 @@
 #error "dune-alugrid not found!"
 #endif
 
-#include <opm/models/discretefracture/discretefracturemodel.hh>
-#include <opm/models/io/dgfvanguard.hh>
-
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -50,6 +47,10 @@
 #include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
+
+#include <opm/models/discretefracture/discretefracturemodel.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/io/dgfvanguard.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
@@ -69,7 +70,10 @@ namespace Opm::Properties {
 // Create a type tag for the problem
 // Create new type tags
 namespace TTag {
-struct FractureProblem { using InheritsFrom = std::tuple<DiscreteFractureModel>; };
+
+struct FractureProblem
+{ using InheritsFrom = std::tuple<DiscreteFractureModel>; };
+
 } // end namespace TTag
 
 // Set the grid type
@@ -79,11 +83,13 @@ struct Grid<TypeTag, TTag::FractureProblem>
 
 // Set the Vanguard property
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::FractureProblem> { using type = Opm::DgfVanguard<TypeTag>; };
+struct Vanguard<TypeTag, TTag::FractureProblem>
+{ using type = Opm::DgfVanguard<TypeTag>; };
 
 // Set the problem property
 template<class TypeTag>
-struct Problem<TypeTag, TTag::FractureProblem> { using type = Opm::FractureProblem<TypeTag>; };
+struct Problem<TypeTag, TTag::FractureProblem>
+{ using type = Opm::FractureProblem<TypeTag>; };
 
 // Set the wetting phase
 template<class TypeTag>
@@ -132,7 +138,8 @@ public:
 
 // Enable the energy equation
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
+struct EnableEnergy<TypeTag, TTag::FractureProblem>
+{ static constexpr bool value = true; };
 
 // Set the thermal conduction law
 template<class TypeTag>
@@ -154,7 +161,13 @@ struct SolidEnergyLaw<TypeTag, TTag::FractureProblem>
 
 // For this problem, we use constraints to specify the left boundary
 template<class TypeTag>
-struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
+struct EnableConstraints<TypeTag, TTag::FractureProblem>
+{ static constexpr bool value = true; };
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::FractureProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 
@@ -658,6 +671,7 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
+
 } // namespace Opm
 
 #endif // EWOMS_FRACTURE_PROBLEM_HH

@@ -27,9 +27,12 @@
  */
 #include "config.h"
 
-#include <opm/models/utils/start.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/powerinjectionproblem.hh"
 
 namespace Opm::Properties {
@@ -42,9 +45,17 @@ struct PowerInjectionForchheimerFdProblem
 } // namespace TTag
 
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem>
+{ using type = Opm::ForchheimerFluxModule<TypeTag>; };
+
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = TTag::FiniteDifferenceLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionForchheimerFdProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::PowerInjectionForchheimerFdProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 
