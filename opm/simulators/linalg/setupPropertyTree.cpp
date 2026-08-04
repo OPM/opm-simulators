@@ -547,6 +547,9 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     //                     the only remaining difference is numerics
     // Only read when add_wells.
     prm.put("preconditioner.well_transfer", "no_prolongation"s);
+    // Give a pressure-controlled well a trivial coarse equation, matching
+    // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
+    prm.put("preconditioner.well_identity_on_pressure_control", "true"s);
 
     // --- Reservoir smoother ---
     prm.put("preconditioner.reservoir_smoother.maxiter", 1);
