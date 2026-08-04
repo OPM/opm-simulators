@@ -56,7 +56,9 @@
 
 #include <any>
 #include <cstddef>
+#include <fstream>
 #include <functional>
+#include <iomanip>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -373,6 +375,37 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             std::ranges::transform(type, type.begin(), ::tolower);
             if (isParallel() && type != "paroverilu0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
+            }
+
+            dumpPrimaryVariables();
+        }
+
+        // Diagnostic (verbosity > 10): the primary variables and their meanings at
+        // every linearization, so two solver variants can be compared cell by cell.
+        void dumpPrimaryVariables() const
+        {
+            if (prm_[activeSolverNum_].template get<int>("verbosity", 0) <= 10) {
+                return;
+            }
+            static int counter = 0;
+            std::ofstream out("primvars_" + std::to_string(counter++) + ".txt");
+            if (!out) {
+                return;
+            }
+            const auto& sol = simulator_.model().solution(/*timeIdx=*/0);
+            out << std::setprecision(16);
+            for (std::size_t i = 0; i < sol.size(); ++i) {
+                const auto& pv = sol[i];
+                out << i;
+                for (unsigned j = 0; j < std::decay_t<decltype(pv)>::dimension; ++j) {
+                    out << ' ' << pv[j];
+                }
+                if constexpr (requires { pv.primaryVarsMeaningGas(); }) {
+                    out << " gas=" << static_cast<int>(pv.primaryVarsMeaningGas())
+                        << " wat=" << static_cast<int>(pv.primaryVarsMeaningWater())
+                        << " pre=" << static_cast<int>(pv.primaryVarsMeaningPressure());
+                }
+                out << '\n';
             }
         }
 
