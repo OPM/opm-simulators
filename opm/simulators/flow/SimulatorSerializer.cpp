@@ -85,7 +85,7 @@ SimulatorSerializer::SimulatorSerializer([[maybe_unused]] SerializableSim& simul
         if (loadStep_ != -1 && !std::filesystem::exists(loadFile_)) {
             std::filesystem::path path(ioconfig.getInputDir() + "/");
             path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
-            loadFile_ = path;
+            loadFile_ = path.string();
             if (!std::filesystem::exists(loadFile_)) {
                 OPM_THROW(std::runtime_error, "Error locating serialized restart file " + loadFile_);
             }
