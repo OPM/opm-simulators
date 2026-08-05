@@ -77,6 +77,19 @@ template<class TypeTag>
 SimulatorFullyImplicit<TypeTag>::
 ~SimulatorFullyImplicit()
 {
+    // Flush any convergence reports that were never written because the
+    // run terminated before completing its report step -- exactly the
+    // failed runs whose convergence history is most valuable.  write() is
+    // idempotent for already-reported steps and a no-op when convergence
+    // output is not active.
+    if (this->solver_ != nullptr) {
+        try {
+            this->convergence_output_.write(this->solver_->model().stepReports());
+        } catch (...) {
+            // Never let diagnostics output escape a destructor.
+        }
+    }
+
     // Safe to call on all ranks, not just the I/O rank.
     convergence_output_.endThread();
 }
