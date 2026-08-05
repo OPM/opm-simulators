@@ -555,13 +555,15 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                          const std::time_t start_time,
                          DeferredLogger& deferred_logger) const
 {
-    if (well_.isInjector())
+    if (well_.isInjector()) {
         return;
+    }
 
     // The well may already have been closed by the WECON checks in
     // updateWellTestStateEconomic().
-    if (well_test_state.well_is_closed(well_.name()))
+    if (well_test_state.well_is_closed(well_.name())) {
         return;
+    }
 
     const auto& completions = well_.getCompletions(); // complnum -> [rank-local perf indices]
     const int np = well_.numPhases();
@@ -571,19 +573,22 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
 
     std::vector<Scalar> conn_rates(np);
     for (const auto& connection : well_.wellEcl().getConnections()) {
-        if (!connection.hasEconLimits())
+        if (!connection.hasEconLimits()) {
             continue;
+        }
 
         // The skip conditions below are based on deck data and the well test
         // state, which are identical on all ranks sharing a distributed well,
         // so every rank participates in the rate summation for the same
         // sequence of completions.
-        if (connection.state() != Connection::State::OPEN)
+        if (connection.state() != Connection::State::OPEN) {
             continue;
+        }
 
         const int complnum = connection.complnum();
-        if (well_test_state.completion_is_closed(well_.name(), complnum))
+        if (well_test_state.completion_is_closed(well_.name(), complnum)) {
             continue;
+        }
 
         // Note: minimum oil/gas rate limits (CECON items 11 and 12) are not
         // supported; their use is flagged at deck validation time.
@@ -593,14 +598,15 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
         // supported (enforced at deck validation), meaning stopped wells are
         // not checked. The flag is honoured per connection so that supporting
         // the YES option later requires no change here.
-        if (well_.wellIsStopped() && !limits.check_stopped_wells)
+        if (well_.wellIsStopped() && !limits.check_stopped_wells) {
             continue;
+        }
 
         // Sum rates over all perforations belonging to this completion. For a
         // distributed well each rank contributes its local perforations and the
         // result is summed over the well communicator, so that all ranks reach
         // the same closing decisions below.
-        std::fill(conn_rates.begin(), conn_rates.end(), Scalar{0});
+        std::ranges::fill(conn_rates, Scalar{0});
         if (const auto it = completions.find(complnum); it != completions.end()) {
             for (const int perf : it->second) {
                 for (int p = 0; p < np; ++p) {
@@ -675,8 +681,9 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
             }
         }
 
-        if (!violated)
+        if (!violated) {
             continue;
+        }
 
         // Build the "at time ... (date = ...)" and ratio-violation clauses that
         // are shared by all CECON workover messages below.
@@ -704,8 +711,9 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                                                well_test_state, when, reason,
                                                "its", // CECON reports the completion's own ratio
                                                closed_this_event, deferred_logger);
-                if (well_test_state.well_is_closed(well_.name()))
+                if (well_test_state.well_is_closed(well_.name())) {
                     return;
+                }
                 break;
             }
         case ConnectionEconLimits::EconWorkover::WELL:
@@ -853,20 +861,15 @@ std::string WellTest<Scalar, IndexTraits>::
 completionDescriptor(const int complnum) const
 {
     const auto& connections = well_.wellEcl().getConnections();
-    const Connection* first = nullptr;
-    int num_connections = 0;
-    for (const auto& connection : connections) {
-        if (connection.complnum() == complnum) {
-            if (first == nullptr) {
-                first = &connection;
-            }
-            ++num_connections;
-        }
-    }
+    const auto in_completion = [complnum](const Connection& connection)
+    {
+        return connection.complnum() == complnum;
+    };
 
     // A completion that spans several connections/blocks is identified by its
     // number only; a single-connection completion also reports its block.
-    if (num_connections == 1 && first != nullptr) {
+    if (std::ranges::count_if(connections, in_completion) == 1) {
+        const auto first = std::ranges::find_if(connections, in_completion);
         return fmt::format("Completion {} - block ({}, {}, {})", complnum,
                            first->getI() + 1,
                            first->getJ() + 1,
