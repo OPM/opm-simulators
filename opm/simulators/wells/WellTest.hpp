@@ -30,6 +30,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -85,9 +86,9 @@ private:
         static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
         //! \brief Ratio value used when the denominator phase rate is
         //!        non-positive while the numerator is positive, i.e. the ratio
-        //!        is effectively infinite. Always violates the limit; messages
-        //!        must not present it as a physical value.
-        static constexpr Scalar INFINITE_RATIO = 1.0e30;
+        //!        is genuinely infinite. Always violates the limit; messages
+        //!        must report it as "infinite" rather than as a number.
+        static constexpr Scalar INFINITE_RATIO = std::numeric_limits<Scalar>::infinity();
         bool ratio_limit_violated = false;
         int worst_offending_completion = INVALIDCOMPLETION;
         Scalar violation_extent = 0.0;
@@ -98,6 +99,19 @@ private:
         Scalar ratio_value = 0.0;
         Scalar ratio_limit = 0.0;
     };
+
+    //! \brief Format the "<ratio> ... exceeds the limit ..." clause shared by the
+    //!        WECON and CECON workover messages.
+    //!
+    //! An infinite ratio (\c RatioLimitCheckReport::INFINITE_RATIO, e.g. gas produced
+    //! with no oil for the GOR limit) is reported as "is infinite" instead of being
+    //! passed through UnitSystem::from_si(), which would print a bare "inf" carrying
+    //! a unit suffix.
+    static std::string ratioViolationReason(const UnitSystem& unit_system,
+                                            std::string_view ratio_name,
+                                            const UnitSystem::measure ratio_measure,
+                                            const Scalar ratio_value,
+                                            const Scalar ratio_limit);
 
     //! \brief Check one active max-ratio limit (water cut, GOR or WGR): if the
     //!        well-level ratio computed by \p ratioFunc exceeds \p max_ratio_limit,

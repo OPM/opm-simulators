@@ -41,9 +41,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <ctime>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 namespace Opm {
@@ -137,6 +139,12 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
 
     const Scalar local_max_ratio_completion = max_ratio_completion;
     max_ratio_completion = well_.parallelWellInfo().communication().max(max_ratio_completion);
+    // An infinite completion ratio (INFINITE_RATIO) gives an infinite extent, so it
+    // always outranks any finite violation. Should two different ratio limits both
+    // be infinitely violated -- by different completions, since the infinite GOR and
+    // WGR conditions are mutually exclusive within one set of rates -- the strict
+    // comparison keeps the first one checked; "more infinite" is not a meaningful
+    // ordering, so the tie is broken by check order rather than by magnitude.
     const Scalar violation_extent = max_ratio_completion / max_ratio_limit;
 
     if (violation_extent > report.violation_extent) {
@@ -438,20 +446,8 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
         std::string reason;
         auto make_reason = [&unit_system](const RatioLimitCheckReport& report)
         {
-            const std::string ratio_unit = unit_system.name(report.ratio_measure);
-            const std::string unit_suffix = ratio_unit.empty() ? std::string{}
-                                                               : " " + ratio_unit;
-            if (report.ratio_value >= RatioLimitCheckReport::INFINITE_RATIO) {
-                return fmt::format(
-                    "{} is infinite and exceeds the limit {:.4e}{}",
-                    report.ratio_name,
-                    unit_system.from_si(report.ratio_measure, report.ratio_limit), unit_suffix);
-            }
-            return fmt::format(
-                "{} {:.4e}{} exceeds the limit {:.4e}{}",
-                report.ratio_name,
-                unit_system.from_si(report.ratio_measure, report.ratio_value), unit_suffix,
-                unit_system.from_si(report.ratio_measure, report.ratio_limit), unit_suffix);
+            return ratioViolationReason(unit_system, report.ratio_name, report.ratio_measure,
+                                        report.ratio_value, report.ratio_limit);
         };
         if (write_message_to_opmlog) {
             when = fmt::format(
@@ -658,7 +654,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                     violated = true;
                     ratio_name = "gas-oil ratio";
                     ratio_measure = UnitSystem::measure::gas_oil_ratio;
-                    ratio_value = no_oil ? std::numeric_limits<Scalar>::infinity()
+                    ratio_value = no_oil ? RatioLimitCheckReport::INFINITE_RATIO
                                          : gas_rate / oil_rate;
                     ratio_limit = limits.max_gas_oil_ratio;
                 }
@@ -672,7 +668,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                     violated = true;
                     ratio_name = "water-gas ratio";
                     ratio_measure = UnitSystem::measure::water_gas_ratio;
-                    ratio_value = no_gas ? std::numeric_limits<Scalar>::infinity()
+                    ratio_value = no_gas ? RatioLimitCheckReport::INFINITE_RATIO
                                          : water_rate / gas_rate;
                     ratio_limit = limits.max_water_gas_ratio;
                 }
@@ -690,14 +686,8 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
             unit_system.name(UnitSystem::measure::time),
             economicLimitDateString(start_time, simulation_time));
 
-        const std::string ratio_unit = unit_system.name(ratio_measure);
-        const std::string unit_suffix = ratio_unit.empty() ? std::string{}
-                                                           : " " + ratio_unit;
-        const std::string reason = fmt::format(
-            "{} {:.4e}{} exceeds the limit {:.4e}{}",
-            ratio_name,
-            unit_system.from_si(ratio_measure, ratio_value), unit_suffix,
-            unit_system.from_si(ratio_measure, ratio_limit), unit_suffix);
+        const std::string reason = ratioViolationReason(unit_system, ratio_name, ratio_measure,
+                                                        ratio_value, ratio_limit);
 
         switch (limits.workover) {
         case ConnectionEconLimits::EconWorkover::CON:
@@ -725,7 +715,10 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                 const std::string action = well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
                 const std::string& sep = economicLimitMessageSeparator();
                 deferred_logger.info(
-                    fmt::format("{}\nWell {} will be {} {},\nBecause {} {}.\n{}",
+                    // Possessive descriptor: the same sentence the CON / +CON
+                    // workover logs as "Because its <ratio> ...", with "its"
+                    // spelled out as the completion it refers to.
+                    fmt::format("{}\nWell {} will be {} {},\nBecause {}'s {}.\n{}",
                                 sep, well_.name(), action, when,
                                 this->completionDescriptor(complnum), reason, sep));
             }
@@ -829,6 +822,30 @@ closeOffendingCompletion(const int offending_completion,
     }
 
     return allCompletionsClosed;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::string WellTest<Scalar, IndexTraits>::
+ratioViolationReason(const UnitSystem& unit_system,
+                     const std::string_view ratio_name,
+                     const UnitSystem::measure ratio_measure,
+                     const Scalar ratio_value,
+                     const Scalar ratio_limit)
+{
+    const std::string ratio_unit = unit_system.name(ratio_measure);
+    const std::string unit_suffix = ratio_unit.empty() ? std::string{}
+                                                       : " " + ratio_unit;
+    if (std::isinf(ratio_value)) {
+        return fmt::format(
+            "{} is infinite and exceeds the limit {:.4e}{}",
+            ratio_name,
+            unit_system.from_si(ratio_measure, ratio_limit), unit_suffix);
+    }
+    return fmt::format(
+        "{} {:.4e}{} exceeds the limit {:.4e}{}",
+        ratio_name,
+        unit_system.from_si(ratio_measure, ratio_value), unit_suffix,
+        unit_system.from_si(ratio_measure, ratio_limit), unit_suffix);
 }
 
 template<typename Scalar, typename IndexTraits>
