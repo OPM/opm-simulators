@@ -2112,7 +2112,10 @@ getProductionGroupTargetForMode_(const Group& group,
     }
     default:
         OPM_DEFLOG_THROW(std::logic_error,
-                         "Invalid Group::ProductionCMode in getProductionGroupTargetForMode_",
+                         fmt::format("Invalid Group::ProductionCMode in "
+                                     "getProductionGroupTargetForMode_ for {} cmode: {}",
+                                     group.name(),
+                                     Group::ProductionCMode2String(cmode)),
                          this->deferredLogger());
         return 0.0;
     }
