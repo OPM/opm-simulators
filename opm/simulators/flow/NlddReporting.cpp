@@ -28,6 +28,7 @@
 
 #include <fmt/format.h>
 
+#include <filesystem>
 #include <sstream>
 #include <vector>
 
@@ -67,7 +68,7 @@ void printDistributionSummary(const DomainInfo& info)
     OpmLog::info(ss.str());
 }
 
-void writeNlddFile(const std::string& fname,
+void writeNlddFile(const std::filesystem::path& fname,
                    std::string_view header,
                    const std::vector<int>& data)
 {

@@ -31,6 +31,7 @@
 #include <random>
 #include <algorithm>
 #include <iterator>
+#include <numeric>
 
 #define BOOST_TEST_MODULE ParallelWellInfo
 #include <boost/test/unit_test.hpp>
