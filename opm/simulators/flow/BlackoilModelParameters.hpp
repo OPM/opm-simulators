@@ -91,9 +91,6 @@ template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
 
 template<class Scalar>
-struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
-
-template<class Scalar>
 struct ToleranceWellsStoppedFactor { static constexpr Scalar value = 1e-4; };
 
 template<class Scalar>
@@ -263,9 +260,6 @@ public:
     Scalar tolerance_max_drv_;
     /// Well convergence tolerance.
     Scalar tolerance_wells_;
-    /// Tolerance for the well control equations
-    //  TODO: it might need to distinguish between rate control and pressure control later
-    Scalar tolerance_well_control_;
     /// Multipliers applied to tolerance_wells_ for stopped/zero-rate wells and for
     /// wells on a dynamic THP limit (the latter to help network convergence).
     Scalar tolerance_wells_stopped_factor_;

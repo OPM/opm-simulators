@@ -56,7 +56,6 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     tolerance_max_drs_ = Parameters::Get<Parameters::ToleranceMaxDrs<Scalar>>();
     tolerance_max_drv_ = Parameters::Get<Parameters::ToleranceMaxDrv<Scalar>>();
     tolerance_wells_ = Parameters::Get<Parameters::ToleranceWells<Scalar>>();
-    tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
     tolerance_wells_stopped_factor_ = Parameters::Get<Parameters::ToleranceWellsStoppedFactor<Scalar>>();
     tolerance_wells_dynamic_thp_factor_ = Parameters::Get<Parameters::ToleranceWellsDynamicThpFactor<Scalar>>();
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
@@ -192,8 +191,6 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "of residual tolerances. Use with care!");
     Parameters::Register<Parameters::ToleranceWells<Scalar>>
         ("Well convergence tolerance");
-    Parameters::Register<Parameters::ToleranceWellControl<Scalar>>
-        ("Tolerance for the well control equations");
     Parameters::Register<Parameters::ToleranceWellsStoppedFactor<Scalar>>
         ("Multiplier applied to the well convergence tolerance for stopped wells "
          "and wells under a zero rate target");
@@ -255,7 +252,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "arithmetic can be used solving for the linear systems of equations");
     Parameters::Register<Parameters::MinStrictCnvIter>
         ("Minimum number of Newton iterations before relaxed tolerances "
-         "can be used for the CNV convergence criterion");
+         "can be used for the CNV convergence criterion. "
+         "Default -1 means that the relaxed tolerance is used when maximum "
+         "number of Newton iterations are reached.");
     Parameters::Register<Parameters::MinStrictMbIter>
         ("Minimum number of Newton iterations before relaxed tolerances "
          "can be used for the MB convergence criterion. "
