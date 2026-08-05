@@ -22,6 +22,7 @@
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
 #include <opm/models/ptflash/flashmodel.hh>
