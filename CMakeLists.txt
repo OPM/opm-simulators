@@ -906,10 +906,6 @@ macro(opm-simulators_targets_hook)
   opm_add_executable(
     TARGET
       flow_comp
-    ONLY_COMPILE
-    ALWAYS_ENABLE
-    DEPENDS
-      opmsimulators
     LIBRARIES
       opmsimulators
     SOURCES
