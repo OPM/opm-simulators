@@ -57,6 +57,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     tolerance_max_drv_ = Parameters::Get<Parameters::ToleranceMaxDrv<Scalar>>();
     tolerance_wells_ = Parameters::Get<Parameters::ToleranceWells<Scalar>>();
     tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
+    tolerance_wells_stopped_factor_ = Parameters::Get<Parameters::ToleranceWellsStoppedFactor<Scalar>>();
+    tolerance_wells_dynamic_thp_factor_ = Parameters::Get<Parameters::ToleranceWellsDynamicThpFactor<Scalar>>();
     max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
     use_multisegment_well_ = Parameters::Get<Parameters::UseMultisegmentWell>();
     tolerance_pressure_ms_wells_ = Parameters::Get<Parameters::TolerancePressureMsWells<Scalar>>();
@@ -73,6 +75,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_niter_inner_well_iter_ = Parameters::Get<Parameters::MaxNewtonIterationsWithInnerWellIterations>();
     shut_unsolvable_wells_ = Parameters::Get<Parameters::ShutUnsolvableWells>();
     max_inner_iter_wells_ = Parameters::Get<Parameters::MaxInnerIterWells>();
+    min_iter_after_switch_wells_ = Parameters::Get<Parameters::MinIterAfterSwitchWells>();
+    min_iter_after_switch_ms_wells_ = Parameters::Get<Parameters::MinIterAfterSwitchMsWells>();
     max_well_status_switch_inner_iter_ = Parameters::Get<Parameters::MaxWellStatusSwitchInInnerIterWells>();
     max_well_status_switch_ = Parameters::Get<Parameters::MaxWellStatusSwitchForWells>();
     maxSinglePrecisionTimeStep_ = Parameters::Get<Parameters::MaxSinglePrecisionDays<Scalar>>() * 24 * 60 * 60;
@@ -190,6 +194,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Well convergence tolerance");
     Parameters::Register<Parameters::ToleranceWellControl<Scalar>>
         ("Tolerance for the well control equations");
+    Parameters::Register<Parameters::ToleranceWellsStoppedFactor<Scalar>>
+        ("Multiplier applied to the well convergence tolerance for stopped wells "
+         "and wells under a zero rate target");
+    Parameters::Register<Parameters::ToleranceWellsDynamicThpFactor<Scalar>>
+        ("Multiplier applied to the well convergence tolerance for wells on a "
+         "dynamic THP limit, to help network convergence");
     Parameters::Register<Parameters::MaxWelleqIter>
         ("Maximum number of iterations to determine solution the well equations");
     Parameters::Register<Parameters::UseMultisegmentWell>
@@ -226,6 +236,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Shut unsolvable wells");
     Parameters::Register<Parameters::MaxInnerIterWells>
         ("Maximum number of inner iterations for standard wells");
+    Parameters::Register<Parameters::MinIterAfterSwitchWells>
+        ("Inner iterations forced between two control switches of a standard well. "
+         "Values <= 1 let the inner solve cycle between controls.");
+    Parameters::Register<Parameters::MinIterAfterSwitchMsWells>
+        ("Inner iterations forced between two control switches of a multi-segment well. "
+         "Values <= 1 let the inner solve cycle between controls.");
     Parameters::Register<Parameters::MaxWellStatusSwitchInInnerIterWells>
         ("Maximum number of status switching (stop<->open) for a well during inner iterations.");
     Parameters::Register<Parameters::MaxWellStatusSwitchForWells>
