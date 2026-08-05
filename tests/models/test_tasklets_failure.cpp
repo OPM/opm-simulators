@@ -33,9 +33,17 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <cassert>
+
+#if defined(_WIN32)
+#include <cstdlib>
+#include <cstring>
+#include <process.h>
+#include <string>
+#else
 #include <sys/wait.h>
 #include <unistd.h>
-#include <cassert>
+#endif
 
 #include "config.h"
 #include <opm/models/parallel/tasklets.hpp>
@@ -127,6 +135,38 @@ void execute () {
     runner->barrier();
 }
 
+#if defined(_WIN32)
+int main(int argc, char** argv)
+{
+    // Windows has no fork(); re-run this executable as a child process so the
+    // parent can verify the child exits with EXIT_FAILURE when a tasklet fails.
+    if (argc > 1 && std::strcmp(argv[1], "--child") == 0) {
+        execute();
+        // execute() is expected to exit(EXIT_FAILURE) before reaching here;
+        // returning success makes the parent's check fail if it does not
+        // (mirrors the _exit(0) "should never reach here" of the POSIX branch).
+        return EXIT_SUCCESS;
+    }
+    std::cout << "Checking failure of child process with parent process" << std::endl;
+    // _spawnl concatenates its arguments into a single command line that the
+    // child's CRT re-parses, so an argv[0] containing spaces (e.g. a build
+    // tree under "C:\Users\First Last\...") must be quoted or it gets split
+    // into several arguments. The preceding path parameter is used directly
+    // to locate the executable and must remain unquoted.
+    const std::string quoted_self = '"' + std::string(argv[0]) + '"';
+    const intptr_t status = _spawnl(_P_WAIT, argv[0], quoted_self.c_str(), "--child",
+                                    static_cast<const char*>(nullptr));
+    // status is the child's exit code, or -1 if it could not be spawned.
+    // Check explicitly rather than with assert() so the test still fails
+    // in NDEBUG (Release) builds when the tasklet failure mechanism breaks.
+    if (status != EXIT_FAILURE) {
+        std::cerr << "Child process did not exit with EXIT_FAILURE (status: "
+                  << status << ")" << std::endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+#else
 int main()
 {
     pid_t pid = fork(); // Create a new process, such that this child process can call exit(EXIT_FAILURE)
@@ -145,3 +185,4 @@ int main()
         assert(WEXITSTATUS(status) == EXIT_FAILURE);  // Check if the exit status is EXIT_FAILURE
     }
 }
+#endif

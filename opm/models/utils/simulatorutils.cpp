@@ -29,12 +29,18 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <system_error>
 #include <vector>
+
+#if defined(_WIN32)
+#include <io.h>  // _access
+#else
+#include <unistd.h>
+#endif
 
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
@@ -124,17 +130,25 @@ std::string simulatorOutputDir()
         outputDir = ".";
     }
 
-    // TODO: replace this by std::filesystem once we require c++-2017
-    struct stat st;
-    if (::stat(outputDir.c_str(), &st) != 0)
+    std::error_code ec;
+    const auto status = std::filesystem::status(outputDir, ec);
+    if (ec) {
         throw std::runtime_error("Could not access output directory '" + outputDir + "':" +
-                                 strerror(errno));
-    if (!S_ISDIR(st.st_mode)) {
+                                 ec.message());
+    }
+    if (!std::filesystem::is_directory(status)) {
         throw std::runtime_error("Path to output directory '" +outputDir +
                                  "' exists but is not a directory");
     }
 
+#if defined(_WIN32)
+    // _access mode 2 is the closest analogue of access(..., W_OK). Note that on
+    // Windows it only reports the read-only attribute for a directory, so this
+    // check is weaker there than on POSIX.
+    if (_access(outputDir.c_str(), 2) != 0) {
+#else
     if (access(outputDir.c_str(), W_OK) != 0) {
+#endif
         throw std::runtime_error("Output directory '" + outputDir +
                                  "' exists but is not writeable");
     }

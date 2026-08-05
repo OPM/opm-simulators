@@ -27,6 +27,10 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(_MSC_VER)
+#include <malloc.h>  // _aligned_malloc / _aligned_free
+#endif
+
 namespace Opm {
 
 namespace detail {
@@ -80,16 +84,26 @@ inline void* aligned_alloc(std::size_t alignment,
         alignment = sizeof(void*);
     }
     void* p;
+#if defined(_MSC_VER)
+    // MSVC has no posix_memalign; _aligned_malloc takes (size, alignment).
+    p = _aligned_malloc(size, alignment);
+#else
     if (::posix_memalign(&p, alignment, size) != 0) {
         p = 0;
     }
+#endif
     return p;
 }
 
 inline void aligned_free(void* ptr)
     noexcept
 {
+#if defined(_MSC_VER)
+    // Memory from _aligned_malloc must be released with _aligned_free.
+    _aligned_free(ptr);
+#else
     ::free(ptr);
+#endif
 }
 
 template<class T, std::size_t Alignment>
