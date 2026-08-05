@@ -61,7 +61,16 @@ auto getParamName()
         return Parameter::name;
     } else {
         std::string paramName = Dune::className<Parameter>();
-        paramName.replace(0, std::strlen("Opm::Parameters::"), "");
+        // Strip the enclosing namespace. Do NOT assume the string starts with
+        // "Opm::Parameters::": MSVC's Dune::className prefixes the type with
+        // "struct "/"class " (e.g. "struct Opm::Parameters::EclDeckFileName"),
+        // so find the qualifier instead of erasing a fixed number of leading
+        // characters (which previously produced names like "-eters::...").
+        constexpr std::string_view nsQualifier = "Opm::Parameters::";
+        const auto nsPos = paramName.find(nsQualifier);
+        if (nsPos != std::string::npos) {
+            paramName.erase(0, nsPos + nsQualifier.size());
+        }
         const auto pos = paramName.find_first_of('<');
         if (pos != std::string::npos) {
             paramName.erase(pos);

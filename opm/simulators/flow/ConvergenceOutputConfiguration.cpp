@@ -36,9 +36,12 @@ namespace {
     std::vector<std::string> tokenizeOptionValues(std::string_view options)
     {
         const auto split = std::regex { R"(\s*,\s*)" };
+        // data()/data()+size() rather than begin()/end(): cregex_token_iterator
+        // takes const char*, and MSVC's string_view::begin() is a checked
+        // iterator class that does not convert to one.
         return {
             std::cregex_token_iterator {
-                options.begin(), options.end(), split, -1
+                options.data(), options.data() + options.size(), split, -1
             },
             std::cregex_token_iterator {}
         };
