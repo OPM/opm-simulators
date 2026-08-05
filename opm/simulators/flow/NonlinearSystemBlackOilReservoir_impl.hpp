@@ -77,7 +77,7 @@ template <class TypeTag>
 NonlinearSystemBlackOilReservoir<TypeTag>::
 NonlinearSystemBlackOilReservoir(Simulator& simulator,
               const ModelParameters& param,
-              BlackoilWellModel<TypeTag>& well_model,
+              typename ParentType::WellModel& well_model,
               const bool terminal_output)
     : ParentType(simulator, param, well_model, terminal_output)
     , conv_monitor_(param.monitor_params_)
