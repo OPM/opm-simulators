@@ -114,6 +114,36 @@ std::vector<std::string> PropertyTree::get_child_keys() const
     return keys;
 }
 
+void PropertyTree::put_child_list(const std::string& key,
+                                  const std::vector<PropertyTree>& items)
+{
+    // An array is a node whose children all have an empty key.
+    boost::property_tree::ptree array;
+    for (const auto& item : items) {
+        array.push_back(std::make_pair(std::string{}, *item.tree_));
+    }
+    tree_->put_child(key, array);
+}
+
+std::optional<std::vector<PropertyTree>>
+PropertyTree::get_child_list(const std::string& child) const
+{
+    auto subTree = this->tree_->get_child_optional(child);
+    if (! subTree) {
+        return std::nullopt;
+    }
+
+    // A JSON array parses to a node whose children all have an empty key, so
+    // they cannot be reached by name; walk them in order instead.
+    std::vector<PropertyTree> items;
+    items.reserve(subTree->size());
+    for (const auto& item : *subTree) {
+        items.emplace_back(PropertyTree(item.second));
+    }
+
+    return items;
+}
+
 template <typename T>
 std::optional<std::vector<T>>
 PropertyTree::get_child_items_as_vector(const std::string& child) const
