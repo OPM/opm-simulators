@@ -27,10 +27,13 @@
  */
 #include "config.h"
 
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/infiltrationproblem.hh"
 
 namespace Opm::Properties {
@@ -40,6 +43,11 @@ namespace TTag {
 struct InfiltrationProblem
 { using InheritsFrom = std::tuple<InfiltrationBaseProblem, PvsModel>; };
 } // end namespace TTag
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::InfiltrationProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

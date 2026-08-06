@@ -28,8 +28,10 @@
  */
 #include "config.h"
 
-#include <opm/models/utils/start.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/lensproblem.hh"
@@ -38,17 +40,27 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct LensProblemVcfvFd { using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+
+struct LensProblemVcfvFd
+{ using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+
 } // end namespace TTag
 
 // use the finite difference methodfor this simulator
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::LensProblemVcfvFd> { using type = TTag::FiniteDifferenceLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::LensProblemVcfvFd>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::LensProblemVcfvFd>
+{ using type = TTag::VcfvDiscretization; };
 
 // use linear finite element gradients if dune-localfunctions is available
 #if HAVE_DUNE_LOCALFUNCTIONS
 template<class TypeTag>
-struct UseP1FiniteElementGradients<TypeTag, TTag::LensProblemVcfvFd> { static constexpr bool value = true; };
+struct UseP1FiniteElementGradients<TypeTag, TTag::LensProblemVcfvFd>
+{ static constexpr bool value = true; };
 #endif
 
 } // namespace Opm::Properties

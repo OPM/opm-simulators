@@ -37,12 +37,11 @@
 #include <opm/material/thermal/NullThermalConductionLaw.hpp>
 
 #include <opm/models/common/flux.hh>
-#include <opm/models/common/multiphasebaseparameters.hh>
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/common/multiphasebaseproblem.hh>
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
-
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
+#include <opm/models/common/multiphasebaseproblem.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/parallel/threadedentityiterator.hh>
 
 #include <opm/models/io/vtkmultiphasemodule.hpp>
 #include <opm/models/io/vtktemperaturemodule.hpp>
@@ -75,13 +74,6 @@ struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
                                               TTag::MultiPhaseBaseModel,
                                               Properties::SpatialDiscretizationSplice>>;
 };
-
-//! Set the default spatial discretization
-//!
-//! We use a vertex centered finite volume method by default
-template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::MultiPhaseBaseModel>
-{ using type = TTag::VcfvDiscretization; };
 
 //! set the number of equations to the number of phases
 template<class TypeTag>
