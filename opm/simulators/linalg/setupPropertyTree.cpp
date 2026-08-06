@@ -243,6 +243,18 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
             }
             return setupSystemCPR(conf, p);
         }
+
+        // The same algorithm composed from named parts rather than a fixed
+        // three-stage sequence; identical results with these settings.
+        if ((conf == "general_system_cpr") || (conf == "general_system_cprw")) {
+            if (!linearSolverMaxIterSet) {
+                p.linear_solver_maxiter_ = 20;
+            }
+            if (!linearSolverReductionSet) {
+                p.linear_solver_reduction_ = 0.005;
+            }
+            return setupGeneralSystemCPR(conf, p);
+        }
     }
 
     if (conf == "amg") {
@@ -299,7 +311,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     else {
         OPM_THROW(std::invalid_argument,
                 conf + " is not a valid setting for --linear-solver-configuration."
-                " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
+                " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic,"
+                " system_cpr, system_cprw, general_system_cpr or general_system_cprw");
     }
 
 
@@ -515,21 +528,79 @@ setupUMFPack([[maybe_unused]] const std::string& conf, const FlowLinearSolverPar
 }
 
 
-PropertyTree
-setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
+namespace {
+
+// The sub-solvers of the system preconditioner, each written at a caller
+// chosen key.  Both the fixed three-stage layout and the general one use
+// these, so the trees they produce are identical and the two preconditioners
+// can be compared setting for setting.
+void setupSystemReservoirSmoother(PropertyTree& prm,
+                                  const std::string& at,
+                                  const FlowLinearSolverParameters& p)
 {
     using namespace std::string_literals;
-    const bool add_wells = (conf == "system_cprw");
-    PropertyTree prm;
+    prm.put(at + ".maxiter", 1);
+    prm.put(at + ".tol", p.linear_solver_reduction_);
+    prm.put(at + ".verbosity", 0);
+    // Apply the configured smoother once without loopsolver's extra defect
+    // updates and convergence bookkeeping.
+    prm.put(at + ".solver", "preconditioner2inverseoperator"s);
+    prm.put(at + ".preconditioner.type", "paroverilu0"s);
+    prm.put(at + ".preconditioner.relaxation", 1.0);
+}
 
-    // Outer solver
-    prm.put("maxiter", p.linear_solver_maxiter_);
-    prm.put("tol", p.linear_solver_reduction_);
-    prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", getSolverString(p));
+void setupSystemReservoirSolver(PropertyTree& prm,
+                                const std::string& at,
+                                const FlowLinearSolverParameters& p,
+                                const bool add_wells)
+{
+    using namespace std::string_literals;
+    prm.put(at + ".maxiter", 1);
+    prm.put(at + ".tol", p.linear_solver_reduction_);
+    prm.put(at + ".verbosity", 0);
+    // Apply the configured reservoir preconditioner once without loopsolver's
+    // extra defect updates and convergence bookkeeping.
+    prm.put(at + ".solver", "preconditioner2inverseoperator"s);
+    prm.put(at + ".preconditioner.type", "cpr"s);
+    prm.put(at + ".preconditioner.relaxation", 1.0);
+    prm.put(at + ".preconditioner.use_well_weights", "false"s);
+    // add_wells promotes the pressure stage from reservoir-only CPR to CPRW
+    // over the full (reservoir, well) system.
+    prm.put(at + ".preconditioner.add_wells", add_wells ? "true"s : "false"s);
+    prm.put(at + ".preconditioner.weight_type", "trueimpes"s);
+    prm.put(at + ".preconditioner.pre_smooth", 0);
+    prm.put(at + ".preconditioner.post_smooth", 0);
+    // Set unused finesmoother to jac to avoid spending time setuping an ILU smoother that won't be used.
+    prm.put(at + ".preconditioner.finesmoother.type", "jac"s);
+    prm.put(at + ".preconditioner.finesmoother.relaxation", 1.0);
+    prm.put(at + ".preconditioner.verbosity", 0);
+    prm.put(at + ".preconditioner.coarsesolver.maxiter", 1);
+    prm.put(at + ".preconditioner.coarsesolver.tol", 1e-1);
+    prm.put(at + ".preconditioner.coarsesolver.solver", "loopsolver"s);
+    prm.put(at + ".preconditioner.coarsesolver.verbosity", 0);
+    prm.put(at + ".preconditioner.coarsesolver.preconditioner.type", "amg"s);
+    setupDuneAMG(prm, at + ".preconditioner.coarsesolver.preconditioner.");
+}
 
-    // Top-level preconditioner: system_cpr
-    prm.put("preconditioner.type", "system_cpr"s);
+void setupSystemWellSolver(PropertyTree& prm,
+                           const std::string& at,
+                           const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    prm.put(at + ".maxiter", 1);
+    prm.put(at + ".tol", p.linear_solver_reduction_);
+    prm.put(at + ".verbosity", 0);
+    prm.put(at + ".solver", "umfpack"s);
+}
+
+} // anonymous namespace
+
+namespace {
+
+// The knobs the CPRW pressure stage reads, shared by both layouts.
+void setupSystemCPRWellOptions(PropertyTree& prm)
+{
+    using namespace std::string_literals;
     // How the well equations are contracted to the one coarse unknown each
     // well carries in the CPRW pressure system. Only read when add_wells.
     //   cellavg      - average of the reservoir weights over the well's
@@ -570,56 +641,98 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // the classic cprw path 2646 rather than 2716 on the same case.
     prm.put("preconditioner.well_coarse_diagonal", "contract_d"s);
 
-    // --- Reservoir smoother ---
-    prm.put("preconditioner.reservoir_smoother.maxiter", 1);
-    prm.put("preconditioner.reservoir_smoother.tol", p.linear_solver_reduction_);
-    prm.put("preconditioner.reservoir_smoother.verbosity", 0);
-    // Apply the configured smoother once without loopsolver's extra defect
-    // updates and convergence bookkeeping.
-    prm.put("preconditioner.reservoir_smoother.solver", "preconditioner2inverseoperator"s);
-    prm.put("preconditioner.reservoir_smoother.preconditioner.type", "paroverilu0"s);
-    prm.put("preconditioner.reservoir_smoother.preconditioner.relaxation", 1.0);
+}
 
-    // --- Reservoir solver (CPR with AMG coarse solver) ---
-    prm.put("preconditioner.reservoir_solver.maxiter", 1);
-    prm.put("preconditioner.reservoir_solver.tol", p.linear_solver_reduction_);
-    prm.put("preconditioner.reservoir_solver.verbosity", 0);
-    // Apply the configured reservoir preconditioner once without loopsolver's
-    // extra defect updates and convergence bookkeeping.
-    prm.put("preconditioner.reservoir_solver.solver", "preconditioner2inverseoperator"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.type", "cpr"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.use_well_weights", "false"s);
-    // add_wells promotes the pressure stage from reservoir-only CPR to CPRW
-    // over the full (reservoir, well) system.
-    prm.put("preconditioner.reservoir_solver.preconditioner.add_wells",
-            add_wells ? "true"s : "false"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.weight_type", "trueimpes"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.pre_smooth", 0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.post_smooth", 0);
-    // Set unused finesmoother to jac to avoid spending time setuping an ILU smoother that won't be used.
-    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.type", "jac"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.finesmoother.relaxation", 1.0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.verbosity", 0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.maxiter", 1);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.tol", 1e-1);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.solver", "loopsolver"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.verbosity", 0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type", "amg"s);
-    setupDuneAMG(prm, "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+} // anonymous namespace
 
-    // --- Well solver ---
-    prm.put("preconditioner.well_solver.maxiter", 1);
-    prm.put("preconditioner.well_solver.tol", p.linear_solver_reduction_);
-    prm.put("preconditioner.well_solver.verbosity", 0);
-    prm.put("preconditioner.well_solver.solver", "umfpack"s);
+PropertyTree
+setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    const bool add_wells = (conf == "system_cprw");
+    PropertyTree prm;
+
+    // Outer solver
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", getSolverString(p));
+
+    // Top-level preconditioner: system_cpr
+    prm.put("preconditioner.type", "system_cpr"s);
+    setupSystemCPRWellOptions(prm);
+
+    setupSystemReservoirSmoother(prm, "preconditioner.reservoir_smoother"s, p);
+    setupSystemReservoirSolver(prm, "preconditioner.reservoir_solver"s, p, add_wells);
+    setupSystemWellSolver(prm, "preconditioner.well_solver"s, p);
+    return prm;
+}
+
+// The same algorithm as setupSystemCPR, expressed as the parts the general
+// preconditioner composes:
+//
+//   coarse_solver { reservoir_solver, well_solver }
+//   smoother      { reservoir_smoother, well_solver }
+//
+// applied in that order.  The sub-trees are byte for byte the ones
+// setupSystemCPR writes, and with this layout the general preconditioner
+// reproduces the fixed three-stage one exactly.  It exists so that the parts
+// can be left out or repeated, which the fixed sequence cannot express.
+PropertyTree
+setupGeneralSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    const bool add_wells = (conf == "general_system_cprw");
+    PropertyTree prm;
+
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", getSolverString(p));
+
+    prm.put("preconditioner.type", "general_system_cpr"s);
+    setupSystemCPRWellOptions(prm);
+
+    // Each stage gets the well solver the fixed layout shares between its
+    // stages, so the sequence is coarse -> well -> smoother -> well.
+    setupSystemReservoirSolver(prm, "preconditioner.coarse_solver.reservoir_solver"s, p, add_wells);
+    setupSystemWellSolver(prm, "preconditioner.coarse_solver.well_solver"s, p);
+    setupSystemReservoirSmoother(prm, "preconditioner.smoother.reservoir_smoother"s, p);
+    setupSystemWellSolver(prm, "preconditioner.smoother.well_solver"s, p);
     return prm;
 }
 
 
+void validateGeneralSystemCPRTree(const PropertyTree& prm)
+{
+    // Only the composition is checked here: which parts exist is the point of
+    // this layout, so nearly everything is optional. The parts themselves are
+    // validated by whatever builds them.
+    if (!prm.get_child_optional("preconditioner.coarse_solver").has_value()
+        && !prm.get_child_optional("preconditioner.smoother").has_value()) {
+        OPM_THROW(std::invalid_argument,
+                  "general_system_cpr JSON configuration needs at least one of the "
+                  "'preconditioner.coarse_solver' and 'preconditioner.smoother' sub-trees.");
+    }
+    const auto coarse = prm.get_child_optional("preconditioner.coarse_solver.reservoir_solver");
+    if (coarse && coarse->get("preconditioner.add_wells", false)
+        && !coarse->get_child_optional("preconditioner.coarsesolver").has_value()) {
+        OPM_THROW(std::invalid_argument,
+                  "In general_system_cpr configuration with "
+                  "preconditioner.coarse_solver.reservoir_solver.preconditioner.add_wells = true, "
+                  "the '...reservoir_solver.preconditioner.coarsesolver' sub-tree is required: "
+                  "it configures the solver for the CPRW pressure system.");
+    }
+}
+
 void validateSystemCPRTree(const PropertyTree& prm)
 {
-    if (prm.get("preconditioner.type", std::string{}) != "system_cpr") {
+    const auto type = prm.get("preconditioner.type", std::string{});
+    if (type == "general_system_cpr") {
+        validateGeneralSystemCPRTree(prm);
+        return;
+    }
+    if (type != "system_cpr") {
         return;
     }
     for (const char* sub : {"reservoir_solver", "reservoir_smoother", "well_solver"}) {
