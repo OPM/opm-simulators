@@ -166,6 +166,25 @@ update(const bool mandatory_network_balance,
                                                       dt,
                                                       well_model_.groupStateHelper(),
                                                       well_model_.wellState());
+                    // Option B: after re-solving at the current network THP, update
+                    // ws.well_potentials for injection wells.  The rate_less_than_potential
+                    // check in WellConstraints::activeInjectionConstraint compares current
+                    // injection rates against ws.well_potentials to decide whether switching
+                    // to THP mode would increase or decrease injection.  The potentials are
+                    // normally computed once per timestep at the static WCONINJE THP and are
+                    // stale during network iterations.  Refreshing them here (from the rate
+                    // the well just solved to under the current network THP) makes the check
+                    // accurate for subsequent outer iterations.
+                    if (well->isInjector()) {
+                        auto& ws = well_model_.wellState().well(well->indexOfWell());
+                        if (ws.injection_cmode == Well::InjectorCMode::THP) {
+                            const int np = well_model_.numPhases();
+                            for (int p = 0; p < np; ++p) {
+                                ws.well_potentials[p] =
+                                    std::max(Scalar{0.0}, ws.surface_rates[p]);
+                            }
+                        }
+                    }
                 }
             }
             well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
