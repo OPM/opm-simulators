@@ -33,6 +33,7 @@
 #include <opm/common/OpmLog/StreamLog.hpp>
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/utils/start.hh>
 
 #include "problems/co2ptflashproblem.hh"

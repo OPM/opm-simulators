@@ -32,6 +32,7 @@
 #include <opm/material/common/quad.hpp>
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/flash/flashmodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
@@ -78,6 +79,11 @@ template<class TypeTag>
 struct Scalar<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
 { using type = quad; };
 #endif
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

@@ -36,7 +36,6 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct FvBaseNewtonMethod;
-struct FiniteDifferenceLocalLinearizer;
 struct ParallelBiCGStabLinearSolver;
 }
 
@@ -269,11 +268,6 @@ struct Splices<TypeTag, TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization>
 { using type = TTag::ParallelBiCGStabLinearSolver; };
-
-//! by default, use finite differences to linearize the system of PDEs
-template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization>
-{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

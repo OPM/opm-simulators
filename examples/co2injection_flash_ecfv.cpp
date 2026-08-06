@@ -33,6 +33,7 @@
 #endif
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/flash/flashmodel.hh>
 #include <opm/models/io/dgfvanguard.hh>

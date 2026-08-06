@@ -29,6 +29,7 @@
 
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
@@ -57,6 +58,10 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem>
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::ReservoirBlackOilVcfvProblem>
 { using type = BlackOilDarcyFluxModule<TypeTag>; };
+
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

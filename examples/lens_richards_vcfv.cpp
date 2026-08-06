@@ -55,6 +55,11 @@ template<class TypeTag>
 struct FluxModule<TypeTag, TTag::RichardsLensVcfvProblem>
 { using type = DarcyFluxModule<TypeTag>; };
 
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::RichardsLensVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
+
 } // namespace Opm::Properties
 
 int main(int argc, char **argv)
