@@ -37,6 +37,7 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/cubegridvanguard.hh>

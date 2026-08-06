@@ -28,10 +28,12 @@
  */
 #include "config.h"
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
-#include <opm/models/pvs/pvsmodel.hh>
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/io/dgfvanguard.hh>
+#include <opm/models/pvs/pvsmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include "problems/co2injectionproblem.hh"
 
 namespace Opm::Properties {
@@ -51,6 +53,11 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem>
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem>
 { static constexpr bool value = true; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

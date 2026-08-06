@@ -28,10 +28,11 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/immiscible/immisciblemodel.hh>
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 
 #include "problems/co2injectionproblem.hh"
 
@@ -47,6 +48,11 @@ struct Co2InjectionImmiscibleVcfvProblem
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleVcfvProblem>
 { using type = TTag::VcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionImmiscibleVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

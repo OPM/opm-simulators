@@ -28,11 +28,13 @@
  */
 #include "config.h"
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/io/dgfvanguard.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/reservoirproblem.hh"
@@ -56,6 +58,12 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem>
 template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem>
 { using type = TTag::AutoDiffLocalLinearizer; };
+
+//! Use the the velocity module which is aware of the black-oil specific model extensions
+//! (i.e., the polymer and solvent extensions)
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::ReservoirBlackOilEcfvProblem>
+{ using type = BlackOilDarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

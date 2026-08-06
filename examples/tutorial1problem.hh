@@ -29,6 +29,7 @@
 #define EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian2}@*/
 
 // The numerical model
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 
 // The spatial discretization (VCFV == Vertex-Centered Finite Volumes)
@@ -69,6 +70,10 @@ struct Tutorial1Problem { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseMode
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Tutorial1Problem>
 { using type = TTag::VcfvDiscretization; }; /*@\label{tutorial1:set-spatial-discretization}@*/
+
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Tutorial1Problem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 // Set the "Problem" property
 template<class TypeTag>

@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/utils/start.hh>
@@ -46,7 +47,7 @@ struct PowerInjectionDarcyAdProblem
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionDarcyAdProblem>
-{ using type = Opm::DarcyFluxModule<TypeTag>; };
+{ using type = DarcyFluxModule<TypeTag>; };
 
 template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionDarcyAdProblem>

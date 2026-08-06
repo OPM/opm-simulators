@@ -43,8 +43,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <set>
-#include <string>
 #include <vector>
 
 namespace Opm {
