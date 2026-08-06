@@ -200,18 +200,21 @@ private:
         // populate wellLayout_.pressureControlled: reading it afterwards
         // would leave that flag one call stale.
         const auto& prm = this->prm_[this->activeSolverNum_];
-        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"cellavg"});
+        // The keys describing the coarse space live beside the coarse solver
+        // for general_system_cpr and at the top for system_cpr.
+        const auto wellOpts = coarseSpaceTree(prm);
+        wellWeightType_ = wellOpts.get("well_weight_type", std::string{"cellavg"});
         if (wellWeightType_ != "unit" && wellWeightType_ != "cellavg"
             && wellWeightType_ != "cellblockavg" && wellWeightType_ != "quasiimpes") {
             OPM_THROW(std::invalid_argument,
-                      "Unknown preconditioner.well_weight_type '" + wellWeightType_
+                      "Unknown well_weight_type '" + wellWeightType_
                           + "'. Valid values are 'unit', 'cellavg', "
                             "'cellblockavg' and 'quasiimpes'.");
         }
         // Give a pressure-controlled well a trivial coarse equation, as the
         // classic CPRW does.  Off keeps the contracted equation for every well.
         wellLayout_.identityOnPressureControl
-            = prm.get("preconditioner.well_identity_on_pressure_control", false);
+            = wellOpts.get("well_identity_on_pressure_control", false);
 
         wellBMatrices_.clear();
         wellCMatrices_.clear();
@@ -453,23 +456,35 @@ private:
         }
     }
 
-    // Where the reservoir sub-solver sits depends on the preconditioner: the
-    // fixed three-stage one keeps it at the top, the general one nests it under
-    // the coarse solver.  Only the weights are read from it here.
-    Opm::PropertyTree reservoirSolverTree(const Opm::PropertyTree& prm) const
+    // The keys describing the coarse space and its weighting.  general_system_cpr
+    // keeps them beside the coarse solver; system_cpr keeps them at the top of
+    // the preconditioner and its weighting inside the reservoir solver.
+    Opm::PropertyTree coarseSpaceTree(const Opm::PropertyTree& prm) const
     {
-        if (auto general = prm.get_child_optional("preconditioner.coarse_solver.reservoir_solver")) {
+        if (auto general = prm.get_child_optional("preconditioner.coarsesolver")) {
             return *general;
         }
-        return prm.get_child("preconditioner.reservoir_solver");
+        return prm.get_child("preconditioner");
     }
 
     void createSystemSolver(const Opm::PropertyTree& prm)
     {
-        // Derive weights from the reservoir sub-block config (which uses CPR internally)
-        auto resSolverPrm = reservoirSolverTree(prm);
-        std::function<ResVector<Scalar>()> resWeightCalc
-            = this->getWeightsCalculator(resSolverPrm, pressureIndex);
+        std::function<ResVector<Scalar>()> resWeightCalc;
+        if (prm.get("preconditioner.type", std::string{}) == "general_system_cpr") {
+            // The general layout names the weighting directly at the top of the
+            // preconditioner rather than through a nested CPR sub-tree, so hand
+            // the base class the two keys it reads instead of teaching it a
+            // second entry point.
+            Opm::PropertyTree cprPrm;
+            cprPrm.put("preconditioner.type", std::string{"cpr"});
+            cprPrm.put("preconditioner.weight_type",
+                       prm.get("preconditioner.weight_type", std::string{"trueimpes"}));
+            resWeightCalc = this->getWeightsCalculator(cprPrm, pressureIndex);
+        } else {
+            // Derive weights from the reservoir sub-block config (which uses CPR internally)
+            resWeightCalc = this->getWeightsCalculator(
+                prm.get_child("preconditioner.reservoir_solver"), pressureIndex);
+        }
 
         // The well part of the weights is filled here too: the CPRW pressure
         // stage restricts the well rows with it, and re-reads it on every
