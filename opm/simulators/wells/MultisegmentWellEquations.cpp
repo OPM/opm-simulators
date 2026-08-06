@@ -35,6 +35,9 @@
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
@@ -445,6 +448,12 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             diag_ell = mswellhelpers::contractCprWellDiagonal(duneD_,
                                                               well_weight,
                                                               seg_pressure_var_ind);
+        } else {
+            // The row-sum diagonal estimates the physical bhp derivative,
+            // while the well column uses the scaled segment pressure.
+            static const Scalar bhp_scale =
+                Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
+            diag_ell *= bhp_scale;
         }
 
 #define EXTRA_DEBUG_MSW 0
