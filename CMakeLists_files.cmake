@@ -515,6 +515,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
+  tests/test_GeneralSystemPreconditioner.cpp
   tests/test_MswCprWellDiagonal.cpp
   tests/test_SystemCprwPressureStage.cpp
   tests/test_WellMatrixMerger.cpp
@@ -1129,6 +1130,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/Preconditioner2InverseOperator.hpp
   opm/simulators/linalg/system/MultiComm.hpp
   opm/simulators/linalg/system/SystemCprwPressureStage.hpp
+  opm/simulators/linalg/system/GeneralSystemPreconditioner.hpp
   opm/simulators/linalg/system/SystemPreconditionerParts.hpp
   opm/simulators/linalg/system/SystemPressureBhpTransferPolicy.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
