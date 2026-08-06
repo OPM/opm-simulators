@@ -35,6 +35,8 @@
 #include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 
+#include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
+
 #include <algorithm>
 #include <cassert>
 
@@ -345,8 +347,8 @@ updatePressures(const int reportStepIdx,
         const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
         if (it != this->nodePressures(*domain).end()) {
             if (well->isProducer()) {
-                // For producers, the leaf-node pressure represents the group
-                // wellhead pressure (THP), so it is correct to use as a dynamic THP limit.
+                // For producers the leaf-node pressure is the group wellhead THP;
+                // apply it directly as a dynamic THP constraint.
                 const Scalar new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
                 SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
@@ -355,12 +357,31 @@ updatePressures(const int reportStepIdx,
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(well_model_.summaryState());
                 }
+            } else if (well->isInjector() && well->wellEcl().vfp_table_number() > 0) {
+                // For injectors, apply the network leaf-node pressure as a dynamic THP only
+                // if it falls within the individual well's VFPINJ table THP range.
+                // If P_leaf is outside the range, computeBhpAtThpLimitInj would extrapolate
+                // to invalid values and mark the well inoperable, causing a rate collapse.
+                const auto& inj_vfp = *well_model_.getVFPProperties().getInj();
+                const int table_id = well->wellEcl().injectionControls(
+                    well_model_.summaryState()).vfp_table_number;
+                if (inj_vfp.hasTable(table_id)) {
+                    const auto& thp_axis = inj_vfp.getTable(table_id).getTHPAxis();
+                    const Scalar min_thp = static_cast<Scalar>(thp_axis.front());
+                    const Scalar max_thp = static_cast<Scalar>(thp_axis.back());
+                    const Scalar new_limit = it->second;
+                    if (new_limit >= min_thp && new_limit <= max_thp) {
+                        well->setDynamicThpLimit(new_limit);
+                        SingleWellState<Scalar, IndexTraits>& ws =
+                            well_model_.wellState()[well->indexOfWell()];
+                        const bool thp_is_limit =
+                            ws.injection_cmode == Well::InjectorCMode::THP;
+                        if (thp_is_limit) {
+                            ws.thp = well->getTHPConstraint(well_model_.summaryState());
+                        }
+                    }
+                }
             }
-            // Note: injection network leaf-node pressure is not applied as a well-level
-            // dynamic THP here.  The well_potentials are computed once per timestep before
-            // network iterations, so a dynamic THP set from the network is always compared
-            // against stale potentials, causing the constraint to fire incorrectly.
-            // TODO: re-enable when potentials are recomputed after each network balance.
         }
     }
     return network_imbalance;
@@ -453,18 +474,15 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
     if (domain.has_value() && !this->nodePressures(*domain).empty()) {
         const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
         if (it != this->nodePressures(*domain).end()) {
-            // For producers, carry forward the network THP into the new timestep so
-            // prepareTimeStep() and the first Newton solve start with the right constraint.
-            // For injectors, deliberately do NOT initialize the dynamic THP here.
-            // At the start of step N+1, domain_node_pressures_ holds step N's converged
-            // injection network pressure. Applying it via setDynamicThpLimit() before
-            // prepareTimeStep() causes solveWellEquation() to switch injectors to THP
-            // control mode; that mode then persists into updateWellControls() where the
-            // operability check at the (possibly out-of-range) THP fails.
-            // Step 1 is safe because domain_node_pressures_ is empty on first entry and
-            // initializeWell() is a no-op for injectors there.  The same deferred behavior
-            // is the correct default for all subsequent steps: the injection network THP
-            // is applied naturally by the first updatePressures() inside the Newton loop.
+            // For producers, carry forward the previous step's converged network pressure
+            // so that prepareTimeStep() starts with the correct THP constraint.
+            // For injectors, do NOT set dynamic_thp_limit_ here.  Setting it before
+            // prepareTimeStep() causes solveWellEquation() to switch the injector to THP
+            // mode; the resulting rate change propagates through the Newton loop and
+            // produces large network imbalances that fail to converge in the allowed
+            // iterations.  The injection network THP is applied for the first time during
+            // the Newton loop via updatePressures(), where the stale-potential bypass in
+            // WellConstraints::activeInjectionConstraint ensures correct switching.
             if (well.isProducer()) {
                 well.setDynamicThpLimit(it->second);
             }

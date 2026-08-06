@@ -190,6 +190,17 @@ public:
             // Going the other way (from roots to leafs), calculate the pressure
             // at each node using VFP tables and rates.
             computeNodePressures(root_to_child_nodes, node_inflows);
+
+            OpmLog::debug("Network pressure computation completed for root " + root.get().name() + ". Node pressures:");
+            for (const auto& [node, pressure] : node_pressures_) {
+                OpmLog::debug("Network node " + node + " pressure: " + std::to_string(pressure/1e5) + " bar");
+            }
+            OpmLog::debug("Node inflows:");
+            for (const auto& [node, inflows] : node_inflows) {
+                OpmLog::debug("Network node " + node + " inflows: "
+                    + std::to_string(inflows[0]*86400) + ", " + std::to_string(inflows[1]*86400) + ", " + std::to_string(inflows[2]*86400));
+            }
+
         }
 
         return {node_pressures_, branch_data_};
