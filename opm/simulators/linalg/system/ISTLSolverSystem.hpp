@@ -248,9 +248,18 @@ private:
             sysMatrix_.C = &mergedC_;
             sysMatrix_.D = &mergedD_;
             sysMatrix_.wellLayout = &wellLayout_;
-            cachedWellStructure_ = merger.buildStructure();
 
-            refreshSystemSolverForChangedWellStructure(prm);
+            const auto newStructure = merger.buildStructure();
+            // A connection opening or closing inside an existing well keeps
+            // every dimension; a well or segment appearing or vanishing does
+            // not, and only the latter introduces unknowns the initial build
+            // never saw.
+            const auto change = (sysInitialized_ && newStructure.hasSameDimensions(cachedWellStructure_))
+                ? WellStructureChange::Pattern
+                : WellStructureChange::Dimension;
+            cachedWellStructure_ = newStructure;
+
+            refreshSystemSolverForChangedWellStructure(prm, change);
             sysInitialized_ = true;
         } else {
             OPM_TIMEBLOCK(flexibleSolverUpdate);
@@ -412,7 +421,8 @@ private:
         return lambda;
     }
 
-    void refreshSystemSolverForChangedWellStructure(const Opm::PropertyTree& prm)
+    void refreshSystemSolverForChangedWellStructure(const Opm::PropertyTree& prm,
+                                                   const WellStructureChange change)
     {
         if (!sysInitialized_ || !sysPrecond_) {
             createSystemSolver(prm);
@@ -424,7 +434,7 @@ private:
             if (auto* precond = dynamic_cast<ParSysPrecondType*>(sysPrecond_)) {
                 precond->updateForChangedWellStructure();
             } else if (auto* general = dynamic_cast<ParGeneralSysPrecondType*>(sysPrecond_)) {
-                general->updateForChangedWellStructure();
+                general->updateForChangedWellStructure(change);
             } else
             { // Rebuild the parallel solver if the parallel preconditioner cannot be updated in-place.
                 createSystemSolver(prm);
@@ -436,7 +446,7 @@ private:
         if (auto* precond = dynamic_cast<SeqSysPrecondType*>(sysPrecond_)) {
             precond->updateForChangedWellStructure();
         } else if (auto* general = dynamic_cast<SeqGeneralSysPrecondType*>(sysPrecond_)) {
-            general->updateForChangedWellStructure();
+            general->updateForChangedWellStructure(change);
         } else
         { // Rebuild the solver if the sequential preconditioner cannot be updated in-place
             createSystemSolver(prm);
