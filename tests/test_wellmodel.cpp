@@ -52,6 +52,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
@@ -217,4 +218,65 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK(StandardWell::Indices::numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
     }
+}
+
+BOOST_AUTO_TEST_CASE(TestPrimaryVariableScaling) {
+    // The scaling must appear in the derivative only: the stored value and the
+    // Evaluation's value stay physical. Set the parameters before the first
+    // varScale() call - the scales are cached statically.
+    // 2^16 rather than the recommended 2^23: SetDefault round-trips the value
+    // through text at 6 significant digits, so it must be exactly representable
+    // there (8388608 would arrive as 8388610). Command-line parsing is exact.
+    Opm::Parameters::SetDefault<Opm::Parameters::WellBhpScaling<double>>(65536.0); // 2^16
+    Opm::Parameters::SetDefault<Opm::Parameters::WellRateScaling<double>>(0.25);   // 2^-2
+
+    const SetupTest setup_test;
+    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
+    const Opm::BlackoilModelParameters<double> param;
+
+    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+    // Just enough initialisation for phase-usage queries to work
+    // (same device as test_rftcontainer.cpp).
+    FluidSystem::initBegin(/*numPvtRegions=*/1);
+    using RateConverterType = Opm::RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    RateConverterType rateConverter(std::vector<int>(10, 0));
+
+    const auto& well_ecl = wells_ecl[0]; // PROD1
+    Opm::PerforationData<double> dummy;
+    std::vector<Opm::PerforationData<double>> pdata(well_ecl.getConnections().size(), dummy);
+    for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
+        pdata[c].ecl_index = c;
+    }
+    Opm::ParallelWellInfo<double> pinfo{well_ecl.name()};
+    const StandardWell well(well_ecl, pinfo, setup_test.current_timestep,
+                            param, rateConverter, 0, 3, 3, 0, pdata);
+
+    using PV = std::decay_t<decltype(well.primaryVariables())>;
+    PV pv(well);
+    pv.resize(well.numStaticWellEq);
+
+    // Zero Newton update through the public interface triggers
+    // setEvaluationsFromValues(); the bhp lands on its lower limit.
+    typename PV::BVectorWell dwells(1);
+    dwells[0].resize(well.numStaticWellEq);
+    dwells[0] = 0.0;
+    Opm::DeferredLogger logger;
+    pv.updateNewton(dwells, /*stop_or_zero_rate_target=*/false,
+                    /*dFLimit=*/0.2, /*dBHPLimit=*/0.1, logger);
+
+    constexpr int numEq = StandardWell::Indices::numEq;
+
+    // Values are physical, with and without scaling.
+    BOOST_CHECK_EQUAL(pv.eval(PV::Bhp).value(), pv.value(PV::Bhp));
+    BOOST_CHECK_EQUAL(pv.eval(PV::WQTotal).value(), pv.value(PV::WQTotal));
+
+    // The derivatives carry the scale: d(x)/d(x/s) = s. These fail without the
+    // scaling support (both were hard-coded 1.0).
+    BOOST_CHECK_EQUAL(pv.eval(PV::Bhp).derivative(numEq + PV::Bhp), 65536.0);
+    BOOST_CHECK_EQUAL(pv.eval(PV::WQTotal).derivative(numEq + PV::WQTotal), 0.25);
+
+    // The dimensionless fractions stay unscaled.
+    BOOST_CHECK_EQUAL(pv.eval(PV::WFrac).derivative(numEq + PV::WFrac), 1.0);
+    BOOST_CHECK_EQUAL(pv.eval(PV::GFrac).derivative(numEq + PV::GFrac), 1.0);
 }

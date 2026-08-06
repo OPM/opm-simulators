@@ -93,6 +93,19 @@ struct ToleranceWells { static constexpr Scalar value = 1e-4; };
 template<class Scalar>
 struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
 
+//! \brief Scaling of the well bhp primary variable.
+//! \details The bhp column of the well D block sits ~1e-7 below the rate column
+//!          because bhp is in Pascals; 8388608 (2^23, ~84 bar) equilibrates it and
+//!          removes 5-7 orders of magnitude of condition number. Powers of two keep
+//!          x/s then *s exact. 1.0 disables the scaling.
+template<class Scalar>
+struct WellBhpScaling { static constexpr Scalar value = 1.0; };
+
+//! \brief Scaling of the well total-rate primary variable.
+//! \details Measures as already O(1), so 1.0 is the right default.
+template<class Scalar>
+struct WellRateScaling { static constexpr Scalar value = 1.0; };
+
 struct MaxWelleqIter { static constexpr int value = 30; };
 
 template<class Scalar>
