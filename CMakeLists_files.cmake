@@ -1129,6 +1129,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/Preconditioner2InverseOperator.hpp
   opm/simulators/linalg/system/MultiComm.hpp
   opm/simulators/linalg/system/SystemCprwPressureStage.hpp
+  opm/simulators/linalg/system/SystemPreconditionerParts.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
   opm/simulators/linalg/system/SystemPreconditionerFactory.hpp
   opm/simulators/linalg/system/SystemTypes.hpp
