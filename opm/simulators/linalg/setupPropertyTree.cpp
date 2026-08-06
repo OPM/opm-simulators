@@ -692,6 +692,16 @@ setupGeneralSystemCPR(const std::string& conf, const FlowLinearSolverParameters&
 
     prm.put("preconditioner.type", "general_system_cpr"s);
     setupSystemCPRWellOptions(prm);
+    // What to do when a well change introduces something the initial build of
+    // the structure did not have:
+    //   rebuild - build every part again from this tree
+    //   refresh - build only the parts the wells size (the well solves and the
+    //             coarse system) and refresh the rest in place, which is what
+    //             the fixed three-stage system_cpr does
+    // These are different preconditioners, not two routes to the same one: a
+    // CPR reservoir solve keeps its hierarchy when refreshed and re-aggregates
+    // it when rebuilt.
+    prm.put("preconditioner.well_structure_update", "rebuild"s);
 
     // Each stage gets the well solver the fixed layout shares between its
     // stages, so the sequence is coarse -> well -> smoother -> well.
