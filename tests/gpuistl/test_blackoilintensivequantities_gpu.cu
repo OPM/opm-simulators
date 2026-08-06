@@ -1056,26 +1056,12 @@ BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)
 
 BOOST_AUTO_TEST_CASE(TestPerformanceGpuVsCpuLargeGrid)
 {
-    // 100^3 = 1'000'000 cells. Build a CO2STORE WATER+GAS deck with a uniform
-    // unit-cube grid and EQUIL initialization, then time the per-cell IQ
-    // update on both GPU and CPU. Correctness is checked at every 1000th
-    // cell (1000 sample points) so the test stays reasonably fast.
     // 64^3 = 262'144 cells. Build a CO2STORE WATER+GAS deck with a uniform
     // unit-cube grid and EQUIL initialization, then time the per-cell IQ
     // update on both GPU and CPU. Correctness is checked at every 256th cell
     // (~1024 sample points) so the test stays reasonably fast.
-    //
-    // NOTE: the upper grid size here is bounded by the per-region device
-    // allocation pattern in GpuEclMaterialLawManager (one cudaMalloc per
-    // piecewise-linear sample array per SATNUM region, i.e. ~12 allocations
-    // per region).
-    // With ROCm's typical 4 KiB allocation granularity, ~16 GiB of VRAM
-    // limits us to a few hundred thousand cells; a 1M-cell deck would
-    // require consolidating per-cell sample buffers (left as a future
-    // optimisation, since for a homogeneous deck all cells share the same
-    // SGWFN table).
     constexpr int dim = 64;
-    constexpr std::size_t expected =
+    constexpr std::size_t expectedNumCells =
         static_cast<std::size_t>(dim) * dim * dim;
     const TemporaryFile tempFile("test_blackoilintensivequantities_gpu_1M.DATA");
     {
@@ -1083,7 +1069,7 @@ BOOST_AUTO_TEST_CASE(TestPerformanceGpuVsCpuLargeGrid)
         f << makeDeckString(dim, dim, dim);
     }
     runIntensiveQuantitiesTestForDeck(tempFile.path.string(),
-                                      /*expectedNumCells=*/expected,
+                                      expectedNumCells,
                                       /*sampleStride=*/256u,
                                       /*measureTiming=*/true);
 }

@@ -218,23 +218,20 @@ public:
      * \brief Field-by-field overlay of the BlackOil intensive-quantity values from
      *        another \c BlackOilIntensiveQuantities instantiation onto this one.
      *
-     * Used by the experimental GPU intensive-quantities dispatcher to write the
-     * GPU-computed result onto a CPU-side \c IntensiveQuantities even when the
-     * two TypeTags are not value-compatible (e.g. when the CPU TypeTag enables
-     * dispersion or other modules that the GPU TypeTag does not). Only stored
-     * fields that the dispatcher actually computes are copied; the
-     * \c mobility_ field is left untouched (the GPU relperm path is currently
-     * known to return zero, see \c GpuBlackoilIntensiveQuantitiesDispatcher).
+    * Used by the experimental GPU intensive-quantities dispatcher to write
+    * the GPU-owned fields onto a CPU-side \c IntensiveQuantities even when
+    * the two TypeTags are not value-compatible. The fluid state and the
+    * supported thermal fields are copied; \c mobility_, diffusion,
+    * dispersion, and other CPU-owned module fields are deliberately left
+    * untouched. The caller must therefore run the CPU update first.
      */
     template<class OtherTypeTag>
     OPM_HOST_DEVICE void overlayBlackOilFieldsFrom(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other)
     {
-        // Full fluid-state copy (handles every stored field, including
-        // Rs/Rv/Rsw/Rvw, salt concentration, solvent fields, ...). This
-        // is intentionally chosen over a hand-picked field list so that
-        // the GPU dispatcher can be used as the *only* fill of the IQ
-        // cache (no CPU pre-pass required).
+        // Copy the stored fluid-state fields. This is intentionally kept
+        // separate from mobility and the optional module bases below: those
+        // fields belong to the CPU update contract and are not GPU-owned.
         fluidState_.assign(other.fluidState_);
 
         if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {

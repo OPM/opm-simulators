@@ -54,6 +54,7 @@
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
@@ -132,36 +133,72 @@ using DispatcherGpuFlowProblemBuf =
 using DispatcherGpuFlowProblemView =
     decltype(Opm::gpuistl::make_view(std::declval<DispatcherGpuFlowProblemBuf&>()));
 
+// The GPU view intentionally does not implement these modules
+static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDiffusion>());
+static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDispersion>());
+
+template <class ProblemT, class PrimaryVariablesT, class IntensiveQuantitiesT>
+void validateDispatcherInputs(const ProblemT& problem,
+                              const PrimaryVariablesT* const* primaryVariables,
+                              IntensiveQuantitiesT* const* intensiveQuantities,
+                              std::size_t numDof)
+{
+    if (primaryVariables == nullptr || intensiveQuantities == nullptr) {
+        OPM_THROW(std::invalid_argument,
+                  "GPU intensive-quantities dispatcher received a null pointer array");
+    }
+
+    if (numDof != static_cast<std::size_t>(problem.model().numGridDof())) {
+        OPM_THROW(std::invalid_argument,
+                  "GPU intensive-quantities dispatcher requires one entry per grid DoF");
+    }
+
+    for (std::size_t i = 0; i < numDof; ++i) {
+        if (primaryVariables[i] == nullptr || intensiveQuantities[i] == nullptr) {
+            OPM_THROW(std::invalid_argument,
+                      "GPU intensive-quantities dispatcher received a null DoF entry");
+        }
+    }
+}
+
 template <class ProblemT>
 void validateGpuPropertyInputs(const ProblemT& problem)
 {
-    const auto& materialLawManager = *problem.materialLawManager();
-    if (materialLawManager.twoPhaseApproach() != Opm::EclTwoPhaseApproach::GasWater) {
+    const auto materialLawManager = problem.materialLawManager();
+    if (materialLawManager == nullptr) {
+        OPM_THROW(std::invalid_argument,
+                  "GPU property evaluation requires a material-law manager");
+    }
+    if (materialLawManager->twoPhaseApproach() != Opm::EclTwoPhaseApproach::GasWater) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires the gas-water two-phase approach");
     }
-    if (materialLawManager.hasOil() || !materialLawManager.hasGas()
-        || !materialLawManager.hasWater()) {
+    if (materialLawManager->hasOil() || !materialLawManager->hasGas()
+        || !materialLawManager->hasWater()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires water and gas without an active oil phase");
     }
-    if (!materialLawManager.satCurveIsAllPiecewiseLinear()) {
+    if (!materialLawManager->satCurveIsAllPiecewiseLinear()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires piecewise-linear saturation tables");
     }
-    if (materialLawManager.enableHysteresis()
-        || materialLawManager.enableEndPointScaling()
-        || materialLawManager.hasDirectionalRelperms()
-        || materialLawManager.hasDirectionalImbnum()) {
+    if (materialLawManager->enableHysteresis()
+        || materialLawManager->enableEndPointScaling()
+        || materialLawManager->hasDirectionalRelperms()
+        || materialLawManager->hasDirectionalImbnum()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation does not support hysteresis, endpoint scaling, "
                   "or directional saturation functions");
     }
 
-    const auto& thermalLawManager = *problem.thermalLawManager();
-    if (thermalLawManager.solidEnergyApproach()
+    const auto thermalLawManager = problem.thermalLawManager();
+    if (thermalLawManager == nullptr) {
+        OPM_THROW(std::invalid_argument,
+                  "GPU property evaluation requires a thermal-law manager");
+    }
+    if (thermalLawManager->solidEnergyApproach()
             != Opm::EclSolidEnergyApproach::Specrock
-        || thermalLawManager.thermalConductionApproach()
+        || thermalLawManager->thermalConductionApproach()
             != Opm::EclThermalConductionApproach::Thconr) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires SPECROCK solid energy and THCONR "
@@ -197,22 +234,16 @@ struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
         = std::remove_reference_t<decltype(DispatcherCpuFluidSystem::getNonStaticInstance())>;
     using FluidSystemBuffer
         = decltype(Opm::gpuistl::copy_to_gpu(std::declval<DynamicCpuFluidSystem&>()));
+    using ManagedFluidSystemView
+        = std::unique_ptr<DispatcherFluidSystemView,
+                          Opm::gpuistl::GpuManagedDeleter<DispatcherFluidSystemView>>;
 
     bool initialized = false;
     std::unique_ptr<DispatcherGpuFlowProblemBuf> problemBuf;
     DispatcherGpuFlowProblemView problemView{};
     std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer;
-    DispatcherFluidSystemView* managedFluidSystemView = nullptr;
+    ManagedFluidSystemView managedFluidSystemView;
     std::optional<DispatcherGpuIntensiveQuantities> prototype;
-
-    ~Impl()
-    {
-        if (managedFluidSystemView != nullptr) {
-            managedFluidSystemView->~DispatcherFluidSystemView();
-            (void)cudaFree(managedFluidSystemView);
-            managedFluidSystemView = nullptr;
-        }
-    }
 };
 
 template <class CpuTypeTag>
@@ -236,6 +267,7 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
         return;
     }
 
+    validateDispatcherInputs(cpuProblem, cpuPriVars, outIQ, numDof);
     validateGpuPropertyInputs(cpuProblem);
 
     if (!impl_->initialized) {
@@ -253,10 +285,8 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
                 Opm::gpuistl::copy_to_gpu(dynamicCpuFluidSystem));
         auto fsView = Opm::gpuistl::make_view(*impl_->fluidSystemBuffer);
 
-        DispatcherFluidSystemView* managed = nullptr;
-        OPM_GPU_SAFE_CALL(cudaMallocManaged(&managed, sizeof(DispatcherFluidSystemView)));
-        new (managed) DispatcherFluidSystemView(fsView);
-        impl_->managedFluidSystemView = managed;
+        impl_->managedFluidSystemView
+            = Opm::gpuistl::make_gpu_managed_unique_ptr<DispatcherFluidSystemView>(fsView);
 
         // Build a default IntensiveQuantities prototype for the GPU side.
         Opm::BlackOilIntensiveQuantities<DispatcherCpuTag> cpuPrototype;
@@ -302,6 +332,7 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
         Opm::gpuistl::GpuView<DispatcherGpuIntensiveQuantities>(
             intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
         numDof);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
 
     // -------------------------------------------------------------------
     // 4. Read the GPU IntensiveQuantities back to host memory.

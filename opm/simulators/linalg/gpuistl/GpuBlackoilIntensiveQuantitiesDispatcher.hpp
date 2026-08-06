@@ -61,8 +61,8 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
     static constexpr bool value = true;
 };
 
-/// Runs the BlackOil intensive-quantities update on the GPU for a given set
-/// of degrees of freedom. Each dispatcher instance owns its GPU-side state
+/// Runs the supported BlackOil intensive-quantities update on the GPU for all
+/// grid degrees of freedom. Each dispatcher instance owns its GPU-side state
 /// and lazily constructs the \c GpuFlowProblem from the supplied CPU problem
 /// on the first call.
 ///
@@ -70,7 +70,11 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 /// the device, the per-cell update kernel from
 /// \c test_blackoilintensivequantities_gpu.cu is launched (one thread per
 /// DoF), and the resulting intensive quantities are read back to host
-/// memory, as the design plan in \c PLAN.md requires.
+/// memory, as the design plan in \c PLAN.md requires. The GPU view computes
+/// fluid-state and supported thermal/property fields only. Mobility,
+/// diffusion, dispersion, and other unsupported module fields remain
+/// CPU-owned and must already have been computed by the caller; the overlay
+/// does not replace them.
 ///
 /// The class is a template on the CPU \c TypeTag and is explicitly
 /// instantiated in the \c .cu translation unit.
@@ -89,13 +93,16 @@ public:
     GpuBlackoilIntensiveQuantitiesDispatcher&
     operator=(const GpuBlackoilIntensiveQuantitiesDispatcher&) = delete;
 
-    /// Run the per-cell intensive-quantities update kernel on \p numDof
-    /// DoFs. \p cpuPriVars[i] points at the CPU primary variables for DoF
-    /// \c i. The GPU-computed BlackOil intensive quantities are written
-    /// onto \p outIQ[i] field-by-field via
+    /// Run the per-cell intensive-quantities update kernel on all
+    /// \p numDof DoFs. \p numDof must equal the CPU problem's number of grid
+    /// DoFs because the GPU problem data is indexed from zero. Each
+    /// \p cpuPriVars[i] points at the CPU primary variables for DoF \c i.
+    /// The GPU-owned BlackOil intensive-quantity fields are written onto
+    /// \p outIQ[i] field-by-field via
     /// \c BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom (so the
-    /// caller is expected to have run the CPU update first to fill in any
-    /// fields the dispatcher does not overwrite, e.g. \c mobility_).
+    /// caller is expected to have run the CPU update first to fill in the
+    /// CPU-owned fields that the dispatcher does not overwrite, including
+    /// \c mobility_, diffusion, and dispersion state).
     void update(const Problem& cpuProblem,
                 const PrimaryVariables* const* cpuPriVars,
                 IntensiveQuantities* const* outIQ,
