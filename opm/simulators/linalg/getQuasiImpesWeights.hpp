@@ -197,14 +197,31 @@ namespace Amg
                 auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
                 auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
                 auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
 
                 // Build the transposed matrix directly to avoid separate transpose step
                 for (int ii = 0; ii < numEq; ++ii) {
                     for (int jj = 0; jj < numEq; ++jj) {
                         block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
+                    }
+                }
+
+                // Equilibrate the rows before the dense solve. The rhs is a unit
+                // vector, so scaling row jj by s gives (S*B)w = e_p => w = B^-1 e_p / s,
+                // which the abs_max normalisation below divides straight out again:
+                // the weights are unchanged in exact arithmetic and only the
+                // conditioning of this small dense solve improves. That is all the
+                // old hard-coded pressure_scale = 50e5 ever did, since the pressure
+                // row of a storage derivative is tiny relative to the others.
+                // Powers of two so the scaling introduces no rounding of its own.
+                for (int jj = 0; jj < numEq; ++jj) {
+                    double rowmax = 0.0;
+                    for (int ii = 0; ii < numEq; ++ii) {
+                        rowmax = std::max(rowmax, std::fabs(block_transpose[jj][ii]));
+                    }
+                    if (rowmax > 0.0) {
+                        const double s = std::exp2(-std::round(std::log2(rowmax)));
+                        for (int ii = 0; ii < numEq; ++ii) {
+                            block_transpose[jj][ii] *= s;
                         }
                     }
                 }
