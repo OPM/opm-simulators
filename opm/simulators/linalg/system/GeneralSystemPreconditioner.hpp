@@ -191,9 +191,7 @@ public:
         if (coarseResPrm_ && change != WellStructureChange::Values) {
             weights_ = weightsCalculator_();
             buildCoarse();
-            twoLevel_ = std::make_unique<TwoLevel>(*fineOp_, sweep_, *transfer_,
-                                                   *coarsePolicy_,
-                                                   /*preSteps=*/0, /*postSteps=*/1);
+            makeTwoLevel();
         }
     }
 
@@ -234,6 +232,8 @@ private:
     // Kept so the coarse level can be built again when the well count changes.
     std::optional<PropertyTree> coarseResPrm_;
     WellStructureUpdate update_ = WellStructureUpdate::Rebuild;
+    std::size_t preSteps_ = 0;
+    std::size_t postSteps_ = 1;
 
     void build()
     {
@@ -255,80 +255,91 @@ private:
             resWeightCalc = [calc]() { return calc()[_0]; };
         }
 
-        const auto coarse = prm_.get_child_optional("coarse_solver");
-        const auto smoother = prm_.get_child_optional("smoother");
+        // Same shape as cpr: an optional coarsesolver, and a finesmoother.
+        // Unlike cpr the smoother is a list, since a sweep over a coupled
+        // system has more than one block to visit and the order matters.
+        const auto coarse = prm_.get_child_optional("coarsesolver");
+        const auto smoother = prm_.get_child_optional("finesmoother");
         if (!coarse && !smoother) {
             OPM_THROW(std::invalid_argument,
                       "general_system_cpr needs at least one of the sub-trees "
-                      "'coarse_solver' and 'smoother'.");
+                      "'coarsesolver' and 'finesmoother'.");
+        }
+
+        if (coarse) {
+            const auto type = coarse->get("type", std::string{"cprw_pressure"});
+            if (type != "cprw_pressure") {
+                OPM_THROW(std::invalid_argument,
+                          "Unknown coarsesolver type '" + type +
+                          "'. The only coarse space on the coupled system is "
+                          "'cprw_pressure'; leave coarsesolver out for none.");
+            }
+            coarseResPrm_ = *coarse;
+            buildCoarse();
         }
 
         std::vector<std::unique_ptr<SystemSweepStep<Scalar>>> steps;
-        const auto addReservoir = [&](const PropertyTree& p) {
-            steps.push_back(std::make_unique<ReservoirStep>(
-                S_, p, resWeightCalc, pressureIndex_, resComm_));
-        };
-        const auto addWell = [&](const PropertyTree& p) {
-            steps.push_back(std::make_unique<WellStep>(S_, p));
-        };
-
-        bool twoLevelCoarse = false;
-        if (coarse) {
-            if (const auto res = coarse->get_child_optional("reservoir_solver")) {
-                // add_wells is the same switch the classic CPR/CPRW pair uses:
-                // it promotes the pressure stage from reservoir-only CPR to
-                // CPRW over the full (reservoir, well) system, and only then
-                // is there a coarse space for the whole system.
-                if (res->get("preconditioner.add_wells", false)) {
-                    coarseResPrm_ = *res;
-                    buildCoarse();
-                    twoLevelCoarse = true;
+        if (smoother) {
+            const auto list = smoother->get_child_list("steps");
+            if (!list || list->empty()) {
+                OPM_THROW(std::invalid_argument,
+                          "general_system_cpr's finesmoother needs a non-empty 'steps' array.");
+            }
+            for (const auto& step : *list) {
+                const auto block = step.get("block", std::string{});
+                if (block == "reservoir") {
+                    steps.push_back(std::make_unique<ReservoirStep>(
+                        S_, step, resWeightCalc, pressureIndex_, resComm_));
+                } else if (block == "well") {
+                    steps.push_back(std::make_unique<WellStep>(S_, step));
                 } else {
-                    addReservoir(*res);
+                    OPM_THROW(std::invalid_argument,
+                              "A finesmoother step needs \"block\" set to 'reservoir' or 'well', got '"
+                              + block + "'.");
                 }
             }
-            if (const auto well = coarse->get_child_optional("well_solver")) {
-                addWell(*well);
-            }
-        }
-        if (smoother) {
-            if (const auto res = smoother->get_child_optional("reservoir_smoother")) {
-                addReservoir(*res);
-            }
-            if (const auto well = smoother->get_child_optional("well_solver")) {
-                addWell(*well);
-            }
         }
 
-        if (steps.empty() && !twoLevelCoarse) {
+        if (steps.empty() && !coarseResPrm_) {
             OPM_THROW(std::invalid_argument,
                       "general_system_cpr was configured with no parts at all.");
         }
 
         sweep_ = std::make_shared<Sweep>(std::move(steps), isParallel);
 
-        if (twoLevelCoarse) {
-            twoLevel_ = std::make_unique<TwoLevel>(*fineOp_, sweep_, *transfer_,
-                                                   *coarsePolicy_,
-                                                   /*preSteps=*/0, /*postSteps=*/1);
+        // How many sweeps run before and after the coarse correction. The
+        // default 0/1 is the composition the fixed three-stage preconditioner
+        // uses: coarse first, then one sweep. A pre-sweep sees the original
+        // defect and feeds a coarse correction built from what it leaves.
+        preSteps_ = prm_.get("pre_smooth", 0);
+        postSteps_ = prm_.get("post_smooth", 1);
+
+        if (coarseResPrm_) {
+            makeTwoLevel();
         }
+    }
+
+    void makeTwoLevel()
+    {
+        twoLevel_ = std::make_unique<TwoLevel>(*fineOp_, sweep_, *transfer_, *coarsePolicy_,
+                                               preSteps_, postSteps_);
     }
 
     void buildCoarse()
     {
-        const auto& resPrm = *coarseResPrm_;
-        const auto coarsePrm = resPrm.get_child_optional("preconditioner.coarsesolver")
-            ? resPrm.get_child("preconditioner.coarsesolver")
-            : PropertyTree();
+        // The coarsesolver node is itself the solver spec for the coarse
+        // pressure system, exactly as it is for cpr; the extra keys beside it
+        // describe the coarse space and are ignored by FlexibleSolver.
+        const auto& coarsePrm = *coarseResPrm_;
         const auto wellTransfer = wellTransferFromString(
-            prm_.get("well_transfer", std::string{"full"}));
+            coarsePrm.get("well_transfer", std::string{"full"}));
         const auto diagonal = wellCoarseDiagonalFromString(
-            prm_.get("well_coarse_diagonal", std::string{"contract_d"}));
+            coarsePrm.get("well_coarse_diagonal", std::string{"contract_d"}));
 
         if (!weightsCalculator_) {
             OPM_THROW(std::invalid_argument,
-                      "The CPRW pressure stage (add_wells) needs a weights calculator, but "
-                      "none was configured. Set the reservoir solver's weight_type.");
+                      "The CPRW pressure stage needs a weights calculator, but none was "
+                      "configured. Set coarsesolver.weight_type.");
         }
         weights_ = weightsCalculator_();
 
