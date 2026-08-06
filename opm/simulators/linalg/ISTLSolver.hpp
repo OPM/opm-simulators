@@ -596,18 +596,30 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                      const Matrix& matrix,
                                                      std::size_t pressIndex) const
         {
-            std::function<Vector()> weightsCalculator;
-
             using namespace std::string_literals;
 
             auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
             // We use lower case as the internal canonical representation of solver names
             std::ranges::transform(preconditionerType, preconditionerType.begin(), ::tolower);
-            if (preconditionerType == "cpr" || preconditionerType == "cprt"
-                || preconditionerType == "cprw" || preconditionerType == "cprwt") {
-                const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+            if (preconditionerType != "cpr" && preconditionerType != "cprt"
+                && preconditionerType != "cprw" && preconditionerType != "cprwt") {
+                return {};
+            }
+            const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+            return makeWeightsCalculator(prm.get("preconditioner.weight_type"s, "quasiimpes"s),
+                                         matrix, pressIndex, transpose);
+        }
+
+        // The same, for a caller that knows the weighting directly rather than
+        // through a CPR preconditioner sub-tree.
+        std::function<Vector()> makeWeightsCalculator(const std::string& weightsType,
+                                                      const Matrix& matrix,
+                                                      std::size_t pressIndex,
+                                                      const bool transpose = false) const
+        {
+            std::function<Vector()> weightsCalculator;
+            {
                 const bool enableThreadParallel = this->parameters_[0].cpr_weights_thread_parallel_;
-                const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {
                     // weights will be created as default in the solver
                     // assignment p = pressureIndex prevent compiler warning about
