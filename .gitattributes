@@ -1,0 +1,55 @@
+# Copyright 2026 SINTEF Digital, Mathematics & Cybernetics.
+#
+# Eclipse input decks and formatted (ASCII) Eclipse I/O files use '\n' line
+# endings by specification, and OPM reads/writes them in binary mode (no
+# newline translation, also on Windows; see EclFile.cpp / EclOutput.cpp in
+# opm-common). Force LF at checkout so that a clone with core.autocrlf=true on
+# Windows does not corrupt them, and mark unformatted Eclipse files as binary
+# so git never attempts any conversion on them.
+
+# Input decks and include files. NB: these patterns are matched
+# case-sensitively, so every case variant occurring in the tree needs its own
+# line - '*.inc' does not cover 'tests/include/PVT-WET-GAS.INC', which three
+# reservoir-coupling master decks INCLUDE.
+*.DATA    text eol=lf
+*.data    text eol=lf
+*.inc     text eol=lf
+*.INC     text eol=lf
+*.include text eol=lf
+*.INCLUDE text eol=lf
+*.ecl     text eol=lf
+*.ECL     text eol=lf
+*.grdecl  text eol=lf
+*.GRDECL  text eol=lf
+
+# Test decks whose names carry no extension
+tests/VFPPROD1 text eol=lf
+tests/VFPPROD2 text eol=lf
+
+# Dune grid format files (parsed test input)
+*.dgf text eol=lf
+*.DGF text eol=lf
+
+# Formatted (ASCII) Eclipse I/O files
+*.FINIT   text eol=lf
+*.FEGRID  text eol=lf
+*.FGRID   text eol=lf
+*.FUNRST  text eol=lf
+*.FUNSMRY text eol=lf
+*.FSMSPEC text eol=lf
+*.FRSSPEC text eol=lf
+*.F[0-9][0-9][0-9][0-9] text eol=lf
+*.A[0-9][0-9][0-9][0-9] text eol=lf
+
+# Unformatted (binary) Eclipse I/O files: never convert these.
+*.EGRID  binary
+*.GRID   binary
+*.INIT   binary
+*.UNRST  binary
+*.UNSMRY binary
+*.SMSPEC binary
+*.RSSPEC binary
+*.RFT    binary
+*.ESMRY  binary
+*.X[0-9][0-9][0-9][0-9] binary
+*.S[0-9][0-9][0-9][0-9] binary
