@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
@@ -54,6 +55,11 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::GroundWaterProblem>
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::GroundWaterProblem>
 { using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::GroundWaterProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

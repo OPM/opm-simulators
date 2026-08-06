@@ -45,6 +45,7 @@
 #include <opm/models/common/transfluxmodule.hh>
 
 #include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/models/immiscible/immiscibleproperties.hh>

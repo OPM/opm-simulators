@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/utils/start.hh>
@@ -54,6 +55,11 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemEcfv>
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FingerProblemEcfv>
 { using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FingerProblemEcfv>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

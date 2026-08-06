@@ -37,6 +37,8 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 

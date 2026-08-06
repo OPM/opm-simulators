@@ -35,6 +35,9 @@
 // The spatial discretization (VCFV == Vertex-Centered Finite Volumes)
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>  /*@\label{tutorial1:include-discretization}@*/
 
+// The linearizer (Finite differences)
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+
 // The chemical species that are used
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Lnapl.hpp>
@@ -70,6 +73,11 @@ struct Tutorial1Problem { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseMode
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Tutorial1Problem>
 { using type = TTag::VcfvDiscretization; }; /*@\label{tutorial1:set-spatial-discretization}@*/
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Tutorial1Problem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::Tutorial1Problem>

@@ -29,6 +29,7 @@
 #include "config.h"
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/ncp/ncpmodel.hh>
@@ -54,6 +55,11 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpEcfvProblem>
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::Co2InjectionNcpEcfvProblem>
 { using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionNcpEcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

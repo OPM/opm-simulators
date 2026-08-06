@@ -38,13 +38,11 @@
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
-#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/discretization/common/fvbaseboundarycontext.hh>
 #include <opm/models/discretization/common/fvbaseconstraints.hh>
 #include <opm/models/discretization/common/fvbaseconstraintscontext.hh>
 #include <opm/models/discretization/common/fvbaseelementcontext.hh>
 #include <opm/models/discretization/common/fvbaseextensivequantities.hh>
-#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/common/fvbasegradientcalculator.hh>
 #include <opm/models/discretization/common/fvbaseintensivequantities.hh>
 #include <opm/models/discretization/common/fvbaselinearizer.hh>

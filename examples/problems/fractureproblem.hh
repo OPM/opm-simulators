@@ -49,6 +49,7 @@
 #include <opm/material/components/Dnapl.hpp>
 
 #include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretefracture/discretefracturemodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
@@ -174,6 +175,11 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::FractureProblem>
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FractureProblem>
 { using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FractureProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 
