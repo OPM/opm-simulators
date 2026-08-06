@@ -34,6 +34,7 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -61,6 +62,43 @@ namespace Opm
 // block Gauss-Seidel sweep, not a block Jacobi one.
 // --------------------------------------------------------------------------
 
+// What a well change did to the structure the solver was built against.  The
+// distinction is between a change that stays inside what the initial build
+// anticipated and one that does not: only the latter forces anything sized by
+// the wells to be created again.
+enum class WellStructureChange
+{
+    // Same wells, same patterns, new numbers.
+    Values,
+    // Same dimensions, different sparsity -- a connection opened or closed
+    // inside a well that was already there.
+    Pattern,
+    // A well or a segment appeared or vanished, so D and the coarse system
+    // change size. Nothing sized by the wells survives this.
+    Dimension,
+};
+
+// What to do about it.
+enum class WellStructureUpdate
+{
+    // Build every part again from the property tree. Blunt, and the default:
+    // it cannot be wrong, only wasteful.
+    Rebuild,
+    // Create only the parts the wells size -- the well solves and the coarse
+    // system -- and refresh the rest in place. This is what the fixed
+    // three-stage SystemPreconditioner does, so it reproduces it exactly.
+    Refresh,
+};
+
+inline WellStructureUpdate wellStructureUpdateFromString(const std::string& name)
+{
+    if (name == "rebuild") { return WellStructureUpdate::Rebuild; }
+    if (name == "refresh") { return WellStructureUpdate::Refresh; }
+    OPM_THROW(std::invalid_argument,
+              "Unknown well_structure_update '" + name
+                  + "'. Valid values are 'rebuild' and 'refresh'.");
+}
+
 template <class Scalar>
 struct SystemSweepState
 {
@@ -78,6 +116,17 @@ public:
 
     virtual void apply(SystemSweepState<Scalar>& state) = 0;
 
+    // Which halves of the residual a later step still reads.  A step only
+    // subtracts its correction from those: updating a half nothing reads again
+    // cannot change any result, and the matvec that does it is not free -- for
+    // a reservoir step it is a full A*corr over every cell.  The hand-written
+    // three-stage preconditioner leaves the same updates out by hand.
+    void setResidualNeeded(const bool res0, const bool res1)
+    {
+        needRes0_ = res0;
+        needRes1_ = res1;
+    }
+
     // Refresh against changed matrix values, pattern unchanged.
     virtual void update() = 0;
 
@@ -89,6 +138,14 @@ public:
     {
         update();
     }
+
+    // Which block a step corrects, so a sweep can work out what its residual
+    // updates are still good for.
+    virtual bool correctsReservoir() const = 0;
+
+protected:
+    bool needRes0_ = true;
+    bool needRes1_ = true;
 };
 
 // --------------------------------------------------------------------------
@@ -140,8 +197,17 @@ public:
         solver_->apply(corr_, rhs_, result);
 
         v[_1] += corr_;
-        S_.C->mmv(corr_, res[_0]);
-        S_.D->mmv(corr_, res[_1]);
+        if (this->needRes0_) {
+            S_.C->mmv(corr_, res[_0]);
+        }
+        if (this->needRes1_) {
+            S_.D->mmv(corr_, res[_1]);
+        }
+    }
+
+    bool correctsReservoir() const override
+    {
+        return false;
     }
 
 private:
@@ -222,8 +288,17 @@ public:
         solver_->apply(corr_, rhs_, result);
 
         v[_0] += corr_;
-        S_.A->mmv(corr_, res[_0]);
-        S_.B->mmv(corr_, res[_1]);
+        if (this->needRes0_) {
+            S_.A->mmv(corr_, res[_0]);
+        }
+        if (this->needRes1_) {
+            S_.B->mmv(corr_, res[_1]);
+        }
+    }
+
+    bool correctsReservoir() const override
+    {
+        return true;
     }
 
 private:
@@ -312,14 +387,27 @@ public:
         stage_->apply(rhs_, res[_1], weights_, corrRes_, corrWell_);
 
         v[_0] += corrRes_;
-        S_.A->mmv(corrRes_, res[_0]);
-        S_.B->mmv(corrRes_, res[_1]);
+        if (this->needRes0_) {
+            S_.A->mmv(corrRes_, res[_0]);
+        }
+        if (this->needRes1_) {
+            S_.B->mmv(corrRes_, res[_1]);
+        }
 
         if (stage_->prolongatesWellPressure()) {
             v[_1] += corrWell_;
-            S_.C->mmv(corrWell_, res[_0]);
-            S_.D->mmv(corrWell_, res[_1]);
+            if (this->needRes0_) {
+                S_.C->mmv(corrWell_, res[_0]);
+            }
+            if (this->needRes1_) {
+                S_.D->mmv(corrWell_, res[_1]);
+            }
         }
+    }
+
+    bool correctsReservoir() const override
+    {
+        return true;
     }
 
 private:
@@ -356,6 +444,19 @@ public:
         : steps_(std::move(steps))
         , parallel_(parallel)
     {
+        // Walking backwards, a step needs to update the half of the residual
+        // that some later step reads: reservoir steps read the reservoir half,
+        // well steps the well half. Nothing reads either after the last step.
+        bool laterReservoir = false;
+        bool laterWell = false;
+        for (auto step = steps_.rbegin(); step != steps_.rend(); ++step) {
+            (*step)->setResidualNeeded(laterReservoir, laterWell);
+            if ((*step)->correctsReservoir()) {
+                laterReservoir = true;
+            } else {
+                laterWell = true;
+            }
+        }
     }
 
     void pre(SystemVector<Scalar>&, SystemVector<Scalar>&) override {}
