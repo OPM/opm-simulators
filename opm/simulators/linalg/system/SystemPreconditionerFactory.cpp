@@ -19,6 +19,7 @@
 #include <config.h>
 #include <opm/simulators/linalg/system/SystemPreconditionerFactory.hpp>
 
+#include <opm/simulators/linalg/system/GeneralSystemPreconditioner.hpp>
 #include <opm/simulators/linalg/system/SystemPreconditioner.hpp>
 
 #include <functional>
@@ -39,6 +40,14 @@ void addSystemCprSeq()
                      const std::function<V()>& sysWeightCalc,
                      std::size_t pressureIndex) {
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
+                          op.getmat(), sysWeightCalc, pressureIndex, prm);
+                  });
+
+    F::addCreator("general_system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      return std::make_shared<Opm::GeneralSystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
                           op.getmat(), sysWeightCalc, pressureIndex, prm);
                   });
 }
@@ -64,6 +73,14 @@ void addSystemCprParSeq()
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
                           op.getmat(), sysWeightCalc, pressureIndex, prm);
                   });
+
+    F::addCreator("general_system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex) {
+                      return std::make_shared<Opm::GeneralSystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
+                          op.getmat(), sysWeightCalc, pressureIndex, prm);
+                  });
 }
 
 template<typename Scalar>
@@ -81,6 +98,16 @@ void addSystemCprPar()
                      const Opm::SystemComm& comm) {
                       const auto& resComm = comm[Dune::Indices::_0];
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::ParResOperator<Scalar>, Opm::ParResComm>>(
+                          op.getmat(), sysWeightCalc, pressureIndex, prm, resComm);
+                  });
+
+    F::addCreator("general_system_cpr",
+                  [](const O& op, const P& prm,
+                     const std::function<V()>& sysWeightCalc,
+                     std::size_t pressureIndex,
+                     const Opm::SystemComm& comm) {
+                      const auto& resComm = comm[Dune::Indices::_0];
+                      return std::make_shared<Opm::GeneralSystemPreconditioner<Scalar, Opm::ParResOperator<Scalar>, Opm::ParResComm>>(
                           op.getmat(), sysWeightCalc, pressureIndex, prm, resComm);
                   });
 }
