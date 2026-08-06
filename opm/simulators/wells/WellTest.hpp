@@ -30,6 +30,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -38,6 +39,7 @@ namespace Opm
 
 class DeferredLogger;
 template<typename Scalar, typename IndexTraits> class SingleWellState;
+class UnitSystem;
 class WellEconProductionLimits;
 template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
 class WellTestState;
@@ -66,6 +68,14 @@ public:
                                      const std::time_t start_time,
                                      DeferredLogger& deferred_logger) const;
 
+    void updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
+                                  const double simulation_time,
+                                  const bool write_message_to_opmlog,
+                                  WellTestState& well_test_state,
+                                  const UnitSystem& unit_system,
+                                  const std::time_t start_time,
+                                  DeferredLogger& deferred_logger) const;
+
     void updateWellTestStatePhysical(const double simulation_time,
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
@@ -76,9 +86,9 @@ private:
         static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
         //! \brief Ratio value used when the denominator phase rate is
         //!        non-positive while the numerator is positive, i.e. the ratio
-        //!        is effectively infinite. Always violates the limit; messages
-        //!        must not present it as a physical value.
-        static constexpr Scalar INFINITE_RATIO = 1.0e30;
+        //!        is genuinely infinite. Always violates the limit; messages
+        //!        must report it as "infinite" rather than as a number.
+        static constexpr Scalar INFINITE_RATIO = std::numeric_limits<Scalar>::infinity();
         bool ratio_limit_violated = false;
         int worst_offending_completion = INVALIDCOMPLETION;
         Scalar violation_extent = 0.0;
@@ -89,6 +99,19 @@ private:
         Scalar ratio_value = 0.0;
         Scalar ratio_limit = 0.0;
     };
+
+    //! \brief Format the "<ratio> ... exceeds the limit ..." clause shared by the
+    //!        WECON and CECON workover messages.
+    //!
+    //! An infinite ratio (\c RatioLimitCheckReport::INFINITE_RATIO, e.g. gas produced
+    //! with no oil for the GOR limit) is reported as "is infinite" instead of being
+    //! passed through UnitSystem::from_si(), which would print a bare "inf" carrying
+    //! a unit suffix.
+    static std::string ratioViolationReason(const UnitSystem& unit_system,
+                                            std::string_view ratio_name,
+                                            const UnitSystem::measure ratio_measure,
+                                            const Scalar ratio_value,
+                                            const Scalar ratio_limit);
 
     //! \brief Check one active max-ratio limit (water cut, GOR or WGR): if the
     //!        well-level ratio computed by \p ratioFunc exceeds \p max_ratio_limit,
@@ -161,6 +184,11 @@ private:
     //!        are the pre-formatted clauses of the logged closure message.
     //!        Returns true if this left the well with no open completions, i.e.
     //!        the well has been shut.
+    //!
+    //! \param ratio_subject  Owner of the violated ratio in the closing message,
+    //!                inserted as "Because \p ratio_subject \p reason". WECON
+    //!                reports a well-level ratio ("the well"); CECON reports the
+    //!                completion's own ratio ("its").
     bool closeOffendingCompletion(int offending_completion,
                                   bool close_connections_below,
                                   double simulation_time,
@@ -168,6 +196,7 @@ private:
                                   WellTestState& well_test_state,
                                   const std::string& when,
                                   const std::string& reason,
+                                  std::string_view ratio_subject,
                                   std::unordered_set<int>& closed_this_event,
                                   DeferredLogger& deferred_logger) const;
 
