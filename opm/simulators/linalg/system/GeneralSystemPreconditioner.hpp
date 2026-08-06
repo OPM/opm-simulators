@@ -165,16 +165,36 @@ public:
         }
     }
 
-    void updateForChangedWellStructure()
+    // A well change that the initial structure did not anticipate.  What to do
+    // about it is preconditioner.well_structure_update; see WellStructureUpdate.
+    //
+    // This is not a cosmetic choice. Refreshing a CPR reservoir solve keeps its
+    // existing hierarchy while rebuilding re-aggregates it, and the two are
+    // different preconditioners: on Norne it moves general_system_cpr between
+    // 4303 iterations (refresh, which is what the fixed three-stage version
+    // does) and 4253 (rebuild).
+    void updateForChangedWellStructure(const WellStructureChange change
+                                       = WellStructureChange::Dimension)
     {
-        // A changed well structure changes D's dimension and the dimension of
-        // the coarse system, so everything is built again from the property
-        // tree. That is deliberately blunt: refreshing the reservoir solves in
-        // place instead would keep a CPR hierarchy rather than re-aggregate it,
-        // and the two are different preconditioners -- on Norne that choice
-        // alone moves general_system_cpr between 4303 and 4253 linear
-        // iterations. Rebuilding is the safe default until it is measured.
-        build();
+        if (update_ == WellStructureUpdate::Rebuild) {
+            build();
+            return;
+        }
+
+        // Refresh: the well solves are created again because D changed size,
+        // the reservoir solves only refreshed.
+        sweep_->rebuildForChangedWellStructure();
+
+        // The coarse system carries one unknown per well and one row per cell,
+        // so both a changed dimension and a changed sparsity invalidate it --
+        // only Values leaves it alone, and that never reaches this function.
+        if (coarseResPrm_ && change != WellStructureChange::Values) {
+            weights_ = weightsCalculator_();
+            buildCoarse();
+            twoLevel_ = std::make_unique<TwoLevel>(*fineOp_, sweep_, *transfer_,
+                                                   *coarsePolicy_,
+                                                   /*preSteps=*/0, /*postSteps=*/1);
+        }
     }
 
     void apply(SystemVector<Scalar>& v, const SystemVector<Scalar>& d) override
@@ -213,6 +233,7 @@ private:
     std::unique_ptr<TwoLevel> twoLevel_;
     // Kept so the coarse level can be built again when the well count changes.
     std::optional<PropertyTree> coarseResPrm_;
+    WellStructureUpdate update_ = WellStructureUpdate::Rebuild;
 
     void build()
     {
@@ -222,6 +243,9 @@ private:
         fineOp_.reset();
         sweep_.reset();
         coarseResPrm_.reset();
+
+        update_ = wellStructureUpdateFromString(
+            prm_.get("well_structure_update", std::string{"rebuild"}));
 
         // The weights arrive from the outer layer for the whole system; the
         // reservoir-only sub-solvers want just their own part of them.
