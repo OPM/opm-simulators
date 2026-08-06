@@ -20,6 +20,9 @@
 #ifndef OPM_RUNTIME_PERFORATION_HPP_INCLUDED
 #define OPM_RUNTIME_PERFORATION_HPP_INCLUDED
 
+#include <optional>
+#include <utility>
+
 namespace Opm {
 
 /// Simple model of a well connection created at runtime, possibly as a
@@ -35,6 +38,19 @@ struct RuntimePerforation
 
     /// Depth at which the new connection is created.
     double depth{};
+
+    /// Connection pressure at the most recent solve that produced this
+    /// perforation.  Consumers that update a runtime connection across time
+    /// steps use it to detect when the connection pressure has changed.
+    double pressure{};
+
+    /// Well segment number (1-based) for multi-segment wells; used to attach
+    /// a dynamically created connection to the correct segment.
+    int segment{};
+
+    /// Measured-depth [start, end] along the branch for the created
+    /// connection, when known.
+    std::optional<std::pair<double, double>> perf_range{};
 };
 
 } // namespace Opm
