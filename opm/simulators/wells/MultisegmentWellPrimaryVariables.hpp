@@ -160,6 +160,10 @@ public:
                              DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Scaling of well primary variable \p eqIdx, 1.0 unless configured.
+    //! \details Only the Jacobian column is scaled; value_ stays physical.
+    static Scalar varScale(const int eqIdx);
+
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
 
