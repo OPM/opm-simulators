@@ -252,8 +252,8 @@ public:
         return *coarseMatrix_;
     }
 
-    // Handles needed when the coarse level is driven from outside, e.g. by
-    // SystemPressureBhpTransferPolicy.
+    // Handles needed when the coarse level is driven from outside, e.g. by a
+    // Dune two-level transfer policy.
     const std::shared_ptr<CoarseMatrix>& coarseMatrixPtr() const
     {
         return coarseMatrix_;
