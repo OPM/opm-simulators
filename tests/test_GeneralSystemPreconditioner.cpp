@@ -172,35 +172,40 @@ struct Fixture
 
 // One "apply once" sub-solve: run the configured preconditioner a single time
 // without a Krylov method around it.
+std::string at_(const std::string& at, const std::string& leaf)
+{
+    return at.empty() ? leaf : at + "." + leaf;
+}
+
 void putOnceSolver(Opm::PropertyTree& prm, const std::string& at, const std::string& type)
 {
-    prm.put(at + ".maxiter", 1);
-    prm.put(at + ".tol", 1e-2);
-    prm.put(at + ".verbosity", 0);
-    prm.put(at + ".solver", std::string{"preconditioner2inverseoperator"});
-    prm.put(at + ".preconditioner.type", type);
-    prm.put(at + ".preconditioner.relaxation", 1.0);
+    prm.put(at_(at, "maxiter"), 1);
+    prm.put(at_(at, "tol"), 1e-2);
+    prm.put(at_(at, "verbosity"), 0);
+    prm.put(at_(at, "solver"), std::string{"preconditioner2inverseoperator"});
+    prm.put(at_(at, "preconditioner.type"), type);
+    prm.put(at_(at, "preconditioner.relaxation"), 1.0);
 }
 
 void putReservoirSolver(Opm::PropertyTree& prm, const std::string& at, const bool addWells)
 {
     putOnceSolver(prm, at, "cpr");
-    prm.put(at + ".preconditioner.use_well_weights", std::string{"false"});
-    prm.put(at + ".preconditioner.add_wells", addWells ? std::string{"true"} : std::string{"false"});
-    prm.put(at + ".preconditioner.weight_type", std::string{"trueimpes"});
-    prm.put(at + ".preconditioner.pre_smooth", 0);
-    prm.put(at + ".preconditioner.post_smooth", 0);
-    prm.put(at + ".preconditioner.finesmoother.type", std::string{"jac"});
-    prm.put(at + ".preconditioner.finesmoother.relaxation", 1.0);
-    prm.put(at + ".preconditioner.verbosity", 0);
+    prm.put(at_(at, "preconditioner.use_well_weights"), std::string{"false"});
+    prm.put(at_(at, "preconditioner.add_wells"), addWells ? std::string{"true"} : std::string{"false"});
+    prm.put(at_(at, "preconditioner.weight_type"), std::string{"trueimpes"});
+    prm.put(at_(at, "preconditioner.pre_smooth"), 0);
+    prm.put(at_(at, "preconditioner.post_smooth"), 0);
+    prm.put(at_(at, "preconditioner.finesmoother.type"), std::string{"jac"});
+    prm.put(at_(at, "preconditioner.finesmoother.relaxation"), 1.0);
+    prm.put(at_(at, "preconditioner.verbosity"), 0);
     // The coarse pressure system is tiny here, so a single ILU0 apply is both
     // adequate and free of any optional dependency.
-    prm.put(at + ".preconditioner.coarsesolver.maxiter", 1);
-    prm.put(at + ".preconditioner.coarsesolver.tol", 1e-1);
-    prm.put(at + ".preconditioner.coarsesolver.solver", std::string{"preconditioner2inverseoperator"});
-    prm.put(at + ".preconditioner.coarsesolver.verbosity", 0);
-    prm.put(at + ".preconditioner.coarsesolver.preconditioner.type", std::string{"ilu0"});
-    prm.put(at + ".preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
+    prm.put(at_(at, "preconditioner.coarsesolver.maxiter"), 1);
+    prm.put(at_(at, "preconditioner.coarsesolver.tol"), 1e-1);
+    prm.put(at_(at, "preconditioner.coarsesolver.solver"), std::string{"preconditioner2inverseoperator"});
+    prm.put(at_(at, "preconditioner.coarsesolver.verbosity"), 0);
+    prm.put(at_(at, "preconditioner.coarsesolver.preconditioner.type"), std::string{"ilu0"});
+    prm.put(at_(at, "preconditioner.coarsesolver.preconditioner.relaxation"), 1.0);
 }
 
 void putWellOptions(Opm::PropertyTree& prm, const std::string& transfer)
@@ -210,6 +215,8 @@ void putWellOptions(Opm::PropertyTree& prm, const std::string& transfer)
     prm.put("well_identity_on_pressure_control", std::string{"false"});
     prm.put("verbosity", 0);
 }
+
+// putOnceSolver at the root of its own tree, for a steps entry.
 
 Opm::PropertyTree fixedTree(const bool addWells, const std::string& transfer)
 {
@@ -222,21 +229,52 @@ Opm::PropertyTree fixedTree(const bool addWells, const std::string& transfer)
     return prm;
 }
 
+// One entry of finesmoother.steps: a solver spec plus the block it corrects.
+Opm::PropertyTree step(const std::string& block, const std::string& type)
+{
+    Opm::PropertyTree s;
+    putOnceSolver(s, "", type);
+    s.put("block", block);
+    return s;
+}
+
 Opm::PropertyTree generalTree(const bool addWells, const std::string& transfer,
                               const bool coarseWellSolve = true,
                               const bool smootherWellSolve = true)
 {
     Opm::PropertyTree prm;
     prm.put("type", std::string{"general_system_cpr"});
-    putWellOptions(prm, transfer);
-    putReservoirSolver(prm, "coarse_solver.reservoir_solver", addWells);
+    prm.put("verbosity", 0);
+
+    std::vector<Opm::PropertyTree> steps;
+    if (addWells) {
+        // The coarse space and its solver, with the transfer knobs beside it.
+        prm.put("coarsesolver.type", std::string{"cprw_pressure"});
+        prm.put("coarsesolver.weight_type", std::string{"trueimpes"});
+        prm.put("coarsesolver.well_transfer", transfer);
+        prm.put("coarsesolver.well_coarse_diagonal", std::string{"contract_d"});
+        prm.put("coarsesolver.well_identity_on_pressure_control", std::string{"false"});
+        prm.put("coarsesolver.maxiter", 1);
+        prm.put("coarsesolver.tol", 1e-1);
+        prm.put("coarsesolver.solver", std::string{"preconditioner2inverseoperator"});
+        prm.put("coarsesolver.verbosity", 0);
+        prm.put("coarsesolver.preconditioner.type", std::string{"ilu0"});
+        prm.put("coarsesolver.preconditioner.relaxation", 1.0);
+    } else {
+        // No coarse space: the reservoir CPR solve leads the sweep instead.
+        auto res = step("reservoir", "cpr");
+        putReservoirSolver(res, "", false);
+        res.put("block", std::string{"reservoir"});
+        steps.push_back(res);
+    }
     if (coarseWellSolve) {
-        putOnceSolver(prm, "coarse_solver.well_solver", "ilu0");
+        steps.push_back(step("well", "ilu0"));
     }
-    putOnceSolver(prm, "smoother.reservoir_smoother", "ilu0");
+    steps.push_back(step("reservoir", "ilu0"));
     if (smootherWellSolve) {
-        putOnceSolver(prm, "smoother.well_solver", "ilu0");
+        steps.push_back(step("well", "ilu0"));
     }
+    prm.put_child_list("finesmoother.steps", steps);
     return prm;
 }
 
