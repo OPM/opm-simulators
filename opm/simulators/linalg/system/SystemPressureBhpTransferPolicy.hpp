@@ -62,18 +62,21 @@ public:
 
     SystemPressureBhpTransferPolicy(const SystemMatrix<Scalar>& S,
                                     const SystemVector<Scalar>& weights,
-                                    const PropertyTree& prm,
+                                    const PropertyTree& coarseSolverPrm,
                                     const int pressureIndex,
-                                    const WellTransfer wellTransfer = WellTransfer::Full,
+                                    const WellTransfer wellTransfer,
+                                    const WellCoarseDiagonal diagonal,
+                                    const int verbosity,
                                     const Comm* comm = nullptr)
-        : weights_(weights)
-        , stage_(std::make_shared<Stage>(S, prm, pressureIndex, wellTransfer, comm))
+        : weights_(&weights)
+        , stage_(std::make_shared<Stage>(S, coarseSolverPrm, pressureIndex,
+                                         wellTransfer, comm, diagonal, verbosity))
     {
     }
 
     void createCoarseLevelSystem(const FineOperator&) override
     {
-        stage_->buildCoarseSystem(weights_);
+        stage_->buildCoarseSystem(*weights_);
         const auto& coarse = stage_->coarseMatrixPtr();
         this->lhs_.resize(coarse->M());
         this->rhs_.resize(coarse->N());
@@ -84,17 +87,21 @@ public:
 
     void calculateCoarseEntries(const FineOperator&) override
     {
-        stage_->assembleCoarseEntries(weights_);
+        stage_->assembleCoarseEntries(*weights_);
     }
 
     void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
-        stage_->moveToCoarseLevel(fine[_0], fine[_1], weights_, this->rhs_);
+        stage_->moveToCoarseLevel(fine[_0], fine[_1], *weights_, this->rhs_);
         this->lhs_ = 0;
     }
 
     void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
+        // The well half comes back zero when the stage does not prolong to it,
+        // so the two-level defect update subtracts C*0 and D*0 -- wasted
+        // arithmetic, but exactly no change, which is what lets this reproduce
+        // the hand-written sequence bit for bit.
         stage_->moveToFineLevel(this->lhs_, fine[_0], fine[_1]);
     }
 
@@ -108,8 +115,15 @@ public:
         return stage_->coarseCommunication();
     }
 
+    Stage& stage()
+    {
+        return *stage_;
+    }
+
 private:
-    const SystemVector<Scalar>& weights_;
+    // Points at the weights the owning preconditioner refreshes, so an update
+    // is seen here without copying.
+    const SystemVector<Scalar>* weights_;
     // Shared so that clone() is a shallow copy, as it is for
     // PressureBhpTransferPolicy.
     std::shared_ptr<Stage> stage_;

@@ -20,6 +20,7 @@
 #define OPM_ISTLSOLVERSYSTEM_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
+#include <opm/simulators/linalg/system/GeneralSystemPreconditioner.hpp>
 #include <opm/simulators/linalg/system/SystemPreconditioner.hpp>
 #include <opm/simulators/linalg/system/SystemPreconditionerFactory.hpp>
 #include <opm/simulators/linalg/system/WellMatrixMerger.hpp>
@@ -179,8 +180,10 @@ private:
     using SysSolverType = Dune::InverseOperator<SystemVector<Scalar>, SystemVector<Scalar>>;
     using SysPrecondType = Dune::PreconditionerWithUpdate<SystemVector<Scalar>, SystemVector<Scalar>>;
     using SeqSysPrecondType = SystemPreconditioner<Scalar, SeqResOperator<Scalar>>;
+    using SeqGeneralSysPrecondType = GeneralSystemPreconditioner<Scalar, SeqResOperator<Scalar>>;
 #if HAVE_MPI
     using ParSysPrecondType = SystemPreconditioner<Scalar, ParResOperator<Scalar>, ParResComm>;
+    using ParGeneralSysPrecondType = GeneralSystemPreconditioner<Scalar, ParResOperator<Scalar>, ParResComm>;
 #endif
     SysSolverType* sysSolver_ = nullptr;
     SysPrecondType* sysPrecond_ = nullptr;
@@ -395,6 +398,8 @@ private:
         if (this->comm_->communicator().size() > 1) {
             if (auto* precond = dynamic_cast<ParSysPrecondType*>(sysPrecond_)) {
                 precond->updateForChangedWellStructure();
+            } else if (auto* general = dynamic_cast<ParGeneralSysPrecondType*>(sysPrecond_)) {
+                general->updateForChangedWellStructure();
             } else
             { // Rebuild the parallel solver if the parallel preconditioner cannot be updated in-place.
                 createSystemSolver(prm);
@@ -405,16 +410,29 @@ private:
 
         if (auto* precond = dynamic_cast<SeqSysPrecondType*>(sysPrecond_)) {
             precond->updateForChangedWellStructure();
+        } else if (auto* general = dynamic_cast<SeqGeneralSysPrecondType*>(sysPrecond_)) {
+            general->updateForChangedWellStructure();
         } else
         { // Rebuild the solver if the sequential preconditioner cannot be updated in-place
             createSystemSolver(prm);
         }
     }
 
+    // Where the reservoir sub-solver sits depends on the preconditioner: the
+    // fixed three-stage one keeps it at the top, the general one nests it under
+    // the coarse solver.  Only the weights are read from it here.
+    Opm::PropertyTree reservoirSolverTree(const Opm::PropertyTree& prm) const
+    {
+        if (auto general = prm.get_child_optional("preconditioner.coarse_solver.reservoir_solver")) {
+            return *general;
+        }
+        return prm.get_child("preconditioner.reservoir_solver");
+    }
+
     void createSystemSolver(const Opm::PropertyTree& prm)
     {
         // Derive weights from the reservoir sub-block config (which uses CPR internally)
-        auto resSolverPrm = prm.get_child("preconditioner.reservoir_solver");
+        auto resSolverPrm = reservoirSolverTree(prm);
         std::function<ResVector<Scalar>()> resWeightCalc
             = this->getWeightsCalculator(resSolverPrm, this->getMatrix(), pressureIndex);
 
