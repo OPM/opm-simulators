@@ -196,7 +196,7 @@ private:
                                   WellTestState& well_test_state,
                                   const std::string& when,
                                   const std::string& reason,
-                                  const std::string& ratio_subject,
+                                  std::string_view ratio_subject,
                                   std::unordered_set<int>& closed_this_event,
                                   DeferredLogger& deferred_logger) const;
 

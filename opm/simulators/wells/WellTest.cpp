@@ -637,7 +637,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
         Scalar ratio_value = Scalar{0};
         Scalar ratio_limit = Scalar{0};
 
-        if (!violated && limits.onMaxWaterCut()) {
+        if (limits.onMaxWaterCut()) {
             const Scalar liquid = oil_rate + water_rate;
             if (liquid > Scalar{0}) {
                 const Scalar wcut = (oil_rate >= Scalar{0})
@@ -748,7 +748,7 @@ closeOffendingCompletion(const int offending_completion,
                          WellTestState& well_test_state,
                          const std::string& when,
                          const std::string& reason,
-                         const std::string& ratio_subject,
+                         const std::string_view ratio_subject,
                          std::unordered_set<int>& closed_this_event,
                          DeferredLogger& deferred_logger) const
 {
