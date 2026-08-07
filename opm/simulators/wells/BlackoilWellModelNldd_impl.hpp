@@ -122,6 +122,7 @@ BlackoilWellModelNldd<TypeTag>::
 addWellPressureEquations(PressureMatrix& /*jacobian*/,
                          const BVector& /*weights*/,
                          const bool /*use_well_weights*/,
+                         const bool /*contract_d_diagonal*/,
                          const int /*domainIndex*/) const
 {
     throw std::logic_error("CPRW is not yet implemented for NLDD subdomains");

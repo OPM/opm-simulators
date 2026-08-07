@@ -304,11 +304,13 @@ template<class Scalar> class WellContributions;
 
             void addWellPressureEquations(PressureMatrix& jacobian,
                                           const BVector& weights,
-                                          const bool use_well_weights) const;
+                                          const bool use_well_weights,
+                                          const bool contract_d_diagonal) const;
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
             void addWellPressureEquationsDomain(PressureMatrix& jacobian,
                                                 const BVector& weights,
                                                 const bool use_well_weights,
+                                                const bool contract_d_diagonal,
                                                 const int domainIndex) const
             {
                 if (!nldd_) {
@@ -317,6 +319,7 @@ template<class Scalar> class WellContributions;
                 return nldd_->addWellPressureEquations(jacobian,
                                                        weights,
                                                        use_well_weights,
+                                                       contract_d_diagonal,
                                                        domainIndex);
             }
 
