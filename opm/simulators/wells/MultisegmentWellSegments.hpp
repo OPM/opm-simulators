@@ -24,7 +24,9 @@
 
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -48,17 +50,21 @@ class MultisegmentWellSegments
     using EvalWell = typename PrimaryVariables::EvalWell;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
 
-    static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
-
 public:
     MultisegmentWellSegments(const int numSegments,
                              const ParallelWellInfo<Scalar>& parallel_well_info,
                              WellInterfaceGeneric<Scalar, IndexTraits>& well);
 
-    void computeFluidProperties(const Scalar firstPerfTemperature,
-                                const Scalar firstPerfSaltConcentration,
-                                const PrimaryVariables& primary_variables,
-                                DeferredLogger& deferred_logger);
+    //! \brief Compute per-segment fluid properties from the pre-computed segment fluid states.
+    //!
+    //! A BlackOilFluidState is maintained for each segment (see MultisegmentWell::
+    //! updateSegmentFluidState) for all cases, thermal or not. It already holds the inverse
+    //! formation volume factors, dissolution/vaporization ratios, phase densities and
+    //! saturations, so only the phase viscosities require a fresh PVT evaluation here. This is
+    //! the single source of truth for the segment fluid properties.
+    template<class FluidState>
+    void computeFluidProperties(const std::vector<FluidState>& segment_fluid_states,
+                                const PrimaryVariables& primary_variables);
 
     //! \brief Update upwinding segments.
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
@@ -69,12 +75,6 @@ public:
     //! Pressure difference between segment and perforation.
     Scalar getPressureDiffSegLocalPerf(const int seg,
                                        const int local_perf_index) const;
-
-    EvalWell getSurfaceVolume(const Scalar firstPerfTemperature,
-                              const Scalar firstPerfSaltConcentration,
-                              const PrimaryVariables& primary_variables,
-                              const int seg_idx,
-                              DeferredLogger& deferred_logger) const;
 
     EvalWell getFrictionPressureLoss(const int seg,
                                      const bool extra_reverse_flow_derivatives = false) const;
@@ -128,6 +128,20 @@ public:
         return densities_[seg];
     }
 
+    //! \brief Segment volume ratio (reservoir volume per unit surface volume).
+    //!
+    //! Populated from the segment fluid state via setVolumeRatio() so that
+    //! getSegmentSurfaceVolume() can reuse it instead of recomputing the PVT quantities.
+    const EvalWell& volumeRatio(const int seg) const
+    {
+        return volume_ratios_[seg];
+    }
+
+    void setVolumeRatio(const int seg, const EvalWell& volume_ratio)
+    {
+        volume_ratios_[seg] = volume_ratio;
+    }
+
     Scalar local_perforation_depth_diff(const int local_perf_index) const
     {
         return local_perforation_depth_diffs_[local_perf_index];
@@ -166,6 +180,10 @@ private:
     // we should not have this member variable
     std::vector<EvalWell> densities_;
 
+    // the segment volume ratio (reservoir volume per unit surface volume); taken from the
+    // segment fluid state (see setVolumeRatio)
+    std::vector<EvalWell> volume_ratios_;
+
     // the mass rate of the segments
     std::vector<EvalWell> mass_rates_;
 
@@ -188,35 +206,60 @@ private:
     Scalar mixtureDensity(const int seg) const;
     Scalar mixtureDensityWithExponents(const int seg) const;
     Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
-
-    // this class is used to store the result of phase property calculation
-    struct PhaseCalcResult {
-        explicit PhaseCalcResult(const std::size_t num_quantities)
-            : b(num_quantities, 0.0)
-            , mix(num_quantities, 0.0)
-            , mix_s(num_quantities, 0.0)
-            , phase_viscosities(num_quantities, 0.0)
-            , phase_densities(num_quantities, 0.0)
-        {}
-
-        void clear();
-
-        std::vector<EvalWell> b;
-        std::vector<EvalWell> mix;
-        std::vector<EvalWell> mix_s;
-        std::vector<EvalWell> phase_viscosities;
-        std::vector<EvalWell> phase_densities;
-        EvalWell vol_ratio{0.};
-    };
-
-    void calculatePhaseProperties(PhaseCalcResult& result,
-                                  const EvalWell& temperature,
-                                  const EvalWell& saltConcentration,
-                                  const PrimaryVariables& primary_variables,
-                                  int seg,
-                                  bool update_visc_and_den,
-                                  DeferredLogger& deferred_logger) const;
 };
+
+template<typename FluidSystem, typename Indices>
+template<class FluidState>
+void MultisegmentWellSegments<FluidSystem,Indices>::
+computeFluidProperties(const std::vector<FluidState>& segment_fluid_states,
+                       const PrimaryVariables& primary_variables)
+{
+    const int num_quantities = well_.numConservationQuantities();
+
+    typename FluidSystem::template ParameterCache<EvalWell> param_cache;
+    param_cache.setRegionIndex(well_.pvtRegionIdx());
+
+    for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
+        const auto& fs = segment_fluid_states[seg];
+
+        std::ranges::fill(phase_densities_[seg], 0.0);
+        std::ranges::fill(phase_fractions_[seg], 0.0);
+        std::ranges::fill(phase_viscosities_[seg], 0.0);
+
+        // The phase densities and saturations were already established when the
+        // segment fluid state was created; only the viscosities still require a
+        // PVT evaluation here.
+        EvalWell density(0.0);
+        viscosities_[seg] = 0.;
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const unsigned comp_idx =
+                FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+            const EvalWell rho = fs.density(phaseIdx);
+            const EvalWell saturation = fs.saturation(phaseIdx);
+
+            phase_densities_[seg][comp_idx] = rho;
+            phase_fractions_[seg][comp_idx] = saturation;
+            phase_viscosities_[seg][comp_idx] = FluidSystem::viscosity(fs, param_cache, phaseIdx);
+
+            density += rho * saturation;
+            viscosities_[seg] += phase_viscosities_[seg][comp_idx] * saturation;
+        }
+        densities_[seg] = density;
+
+        // calculate the mass rates (identical to the from-scratch path)
+        mass_rates_[seg] = 0.;
+        for (int comp_idx = 0; comp_idx < num_quantities; ++comp_idx) {
+            const int upwind_seg = upwinding_segments_[seg];
+            const EvalWell rate = primary_variables.getSegmentRateUpwinding(seg,
+                                                                            upwind_seg,
+                                                                            comp_idx);
+            mass_rates_[seg] += rate * surface_densities_[comp_idx];
+        }
+    }
+}
 
 } // namespace Opm
 
