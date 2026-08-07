@@ -1400,7 +1400,15 @@ runSubStep_()
             (const std::string& failure_reason, const std::exception& e, bool log_exception = true)
     {
         substep_report = solver_().failureReport();
+        // Keep the exception text: it carries the actual reason (e.g. which
+        // equation had a too-large residual), which otherwise only surfaces
+        // at debug verbosity while the PRT shows just the generic category.
         this->cause_of_failure_ = failure_reason;
+        if (const std::string what = e.what();
+            !what.empty() && what != failure_reason)
+        {
+            this->cause_of_failure_ += " (" + what + ")";
+        }
         if (log_exception && solverVerbose_()) {
             OpmLog::debug(std::string("Caught Exception: ") + e.what());
         }
