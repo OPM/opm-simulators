@@ -895,7 +895,17 @@ namespace Opm {
                     // a timestep without the well in question, after it caused
                     // repeated timestep cuts. It should therefore not be opened,
                     // even if it was new or received new targets this report step.
-                    const bool closed_this_step = (this->wellTestState().lastTestTime(well_name) == simulator_.time());
+                    //
+                    // The time stamp alone cannot establish that, since a shut-in
+                    // decided at the *end* of the previous step carries that
+                    // step's end time, which coincides with the current step's
+                    // start time. Such shut-ins are the ones a new WCON keyword
+                    // may undo, and are exactly what wasDynamicallyShutThisTimeStep()
+                    // reports; mid-step ones from forceShutWellByName() are not
+                    // registered there, so they still block the re-open.
+                    const bool closed_this_step =
+                        (this->wellTestState().lastTestTime(well_name) == simulator_.time()) &&
+                        !this->wasDynamicallyShutThisTimeStep(well_name);
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
