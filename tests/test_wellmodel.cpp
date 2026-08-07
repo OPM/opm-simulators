@@ -49,6 +49,8 @@
 #include <opm/simulators/flow/NonlinearSystemBlackOilReservoir.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
+#include <opm/simulators/utils/DeferredLogger.hpp>
+
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
@@ -217,4 +219,95 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK(StandardWell::Indices::numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
     }
+}
+
+BOOST_AUTO_TEST_CASE(TestWINJMULT_UDA_FracturePressure)
+{
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 3 3 3 /
+WELLDIMS
+ 1 1 1 1 /
+START
+ 21 'MAY' 2007 /
+OIL
+GAS
+WATER
+METRIC
+UDQDIMS
+ 10 10 0 10 10 0 0
+ 10 0 10 /
+UDADIMS
+ 10 1* 10 /
+GRID
+DX
+ 27*100 /
+DY
+ 27*100 /
+DZ
+ 27*20 /
+TOPS
+ 9*2000 9*2020 9*2040 /
+PORO
+ 27*0.2 /
+PERMX
+ 27*100 /
+PERMY
+ 27*100 /
+PERMZ
+ 27*10 /
+INIT
+REGIONS
+SOLUTION
+SCHEDULE
+WELSPECS
+ 'INJ01' 'FIELD' 1 1 2 'WATER' 0 'STD' 'SHUT' 'YES' 0 'SEG' /
+/
+COMPDAT
+ 'INJ01' 1 1 2 2 'OPEN' 0 1* 0.241 1* 2.5 0 'Z' /
+/
+WCONINJE
+ 'INJ01' 'WATER' 'SHUT' 'GRUP' 10000 1* 400 /
+/
+UDQ
+ DEFINE 'WUFRAC1' 350.0 /
+ UNITS 'WUFRAC1' BARSA /
+/
+WINJMULT
+ 'INJ01' 'WUFRAC1' 0.001 'WREV' /
+/
+END
+)" );
+
+    const auto eclipse_state = std::make_unique<const Opm::EclipseState>(deck);
+    const auto schedule = std::make_unique<const Opm::Schedule>
+        (deck, *eclipse_state, std::make_shared<Opm::Python>());
+    auto summary_state = Opm::SummaryState
+        (Opm::TimeService::from_time_t(schedule->getStartTime()),
+         eclipse_state->runspec().udqParams().undefinedValue());
+    summary_state.update_well_var("INJ01", "WUFRAC1", 350.0);
+
+    const auto& well = schedule->getWell("INJ01", 0);
+    const Opm::BlackoilModelParameters<double> param;
+
+    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+    using RateConverterType = Opm::RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    auto rateConverter = std::make_unique<RateConverterType>(std::vector<int>(10, 0));
+
+    Opm::PerforationData<double> dummy;
+    std::vector<Opm::PerforationData<double>> pdata(well.getConnections().size(), dummy);
+    for (std::size_t c = 0; c < pdata.size(); ++c) {
+        pdata[c].ecl_index = c;
+    }
+
+    Opm::ParallelWellInfo<double> pinfo{well.name()};
+    StandardWell standard_well(well, pinfo, 0, param, *rateConverter, 0, 3, 3, 0, pdata);
+    standard_well.initInjMult(std::vector<double>(pdata.size(), 1.0));
+
+    Opm::DeferredLogger deferred_logger;
+    const double bhp = 360.0e5;
+    const double multiplier = standard_well.getInjMult(0, bhp, bhp, summary_state, deferred_logger);
+
+    BOOST_CHECK_CLOSE(multiplier, 1.01, 1e-10);
 }
