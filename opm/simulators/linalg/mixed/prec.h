@@ -63,7 +63,9 @@ int  prec_analyze(bsr_matrix *M, int (*offsets)[3]);
  * @param P Pointer preconditioner object.
  * @param A Pointer to bsr matrix.
  */
+void prec_dilu_factorize2(prec_t *P, bsr_matrix *A);
 void prec_dilu_factorize(prec_t *P, bsr_matrix *A);
+void prec_dilu_factorize4(prec_t *P, bsr_matrix *A);
 
 /**
  * @brief ILU0 factorization.
@@ -71,7 +73,9 @@ void prec_dilu_factorize(prec_t *P, bsr_matrix *A);
  * @param P Pointer preconditioner object.
  * @param A Pointer to bsr matrix.
  */
+void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A);
 void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
+void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A);
 
 /**
  * @brief Preconditioner application in mixed-precision.
@@ -81,7 +85,9 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
  * @param P Pointer to preconditioner object.
  * @apram x Pointer to input/output vector
  */
+void prec_mapply2c(prec_t *P, double *x);
 void prec_mapply3c(prec_t *P, double *x);
+void prec_mapply4c(prec_t *P, double *x);
 
 /**
  * @brief Preconditioner applicationin double-precision.
@@ -107,6 +113,8 @@ void prec_downcast(prec_t *P);
  */
 void prec_info(prec_t *P);
 
+
+void prec_test();
 #ifdef __cplusplus
 }
 #endif
