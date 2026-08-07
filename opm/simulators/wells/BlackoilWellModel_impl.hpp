@@ -695,11 +695,17 @@ namespace Opm {
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
-        updateWellTestState(simulationTime, this->wellTestState());
+        // simulationTime is the start of the step that has just been completed,
+        // but a well shut by the economic or physical limit checks below keeps
+        // flowing until its end. Record that instant as the closure time, so
+        // the WTEST re-test countdown starts when the well actually stops.
+        const double closure_time = simulationTime + dt;
+
+        updateWellTestState(closure_time, this->wellTestState());
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = this->schedule_.getGroup("FIELD", reportStepIdx);
-        this->checkGEconLimits(fieldGroup, simulationTime,
+        this->checkGEconLimits(fieldGroup, closure_time,
                                simulator_.episodeIndex(), local_deferredLogger);
         this->checkGconsaleLimits(fieldGroup, this->wellState(),
                                   simulator_.episodeIndex(), local_deferredLogger);
