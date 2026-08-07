@@ -294,6 +294,7 @@ private:
         double maxGrowth_() const;
         double minTimeStepBeforeClosingWells_() const;
         double minTimeStep_() const;
+        void checkTimeStepCanAdvance_(double new_time_step) const;
         double restartFactor_() const;
         SimulatorReportSingle runSubStep_();
         int solverRestartMax_() const;
