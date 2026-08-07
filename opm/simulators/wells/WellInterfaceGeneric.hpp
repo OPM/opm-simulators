@@ -197,6 +197,9 @@ public:
     //! \param unit_system Unit system to use
     //! \param start_time Starting time
     //! \param deferred_logger Deferred logging helper
+    //! \param closure_reason  when non-null, receives the reason a limit closed
+    //!        the well instead of it being logged here. Used by the WTEST re-open
+    //!        testing, where no shut-in actually happens.
     void updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
@@ -205,7 +208,8 @@ public:
                              WellTestState& wellTestState,
                              const UnitSystem& unit_system,
                              const std::time_t start_time,
-                             DeferredLogger& deferred_logger) const;
+                             DeferredLogger& deferred_logger,
+                             std::string* closure_reason = nullptr) const;
 
     bool isPressureControlled(const WellStateType& well_state) const;
 
@@ -232,10 +236,9 @@ public:
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
 
-    //! \brief The total reservoir voidage rate corresponding to the given
-    //!        vector of surface phase rates (or potentials), converted with
-    //!        the region average PVT properties also used for the voidage
-    //!        rates in the well state.
+    //! \brief The total reservoir voidage rate for the given surface phase rates
+    //!        (or potentials), using the region average PVT properties that also
+    //!        produce the voidage rates in the well state.
     virtual Scalar totalReservoirVoidageRate(const std::vector<Scalar>& surface_rates) const = 0;
 
     void addPerforations(const std::vector<RuntimePerforation>& perfs);

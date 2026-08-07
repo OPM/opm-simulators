@@ -45,8 +45,7 @@ inline std::string economicLimitDateString(const std::time_t start_time, const d
 }
 
 //! \brief The "at time ... (date = ...)" clause shared by the well (WECON) and
-//!        connection (CECON) economic-limit closing messages, so that all of
-//!        them time-stamp the closure the same way.
+//!        connection (CECON) economic-limit messages.
 inline std::string economicLimitWhenString(const UnitSystem& unit_system,
                                            const std::time_t start_time,
                                            const double sim_time)
