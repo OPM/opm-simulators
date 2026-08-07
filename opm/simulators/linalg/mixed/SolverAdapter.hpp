@@ -109,9 +109,9 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
     //! @param op the linear operator (assumed double precision)
     //! @param sp the scalar product
     //! @param prec the preconditioner to use
-    //! @param reduction the reduction factor passed to the iterative solver
-    //! @param maxit maximum number of iterations for the linear solver
-    //! @param verbose verbosity level
+    //! @param tol the reduction factor passed to the iterative solver
+    //! @param maxiter maximum number of iterations for the linear solver
+    //! @param verbosity verbosity level
     //! @param comm the communication object.
     MixedBiCGSTABSolver(Operator *op,
                  std::shared_ptr<AbstractScalarProductType> sp,

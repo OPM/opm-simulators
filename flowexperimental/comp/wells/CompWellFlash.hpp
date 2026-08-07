@@ -41,6 +41,7 @@ namespace Opm {
 ///                      for the explicit quantities, or an
 ///                      Evaluation for the AD path. The dispatch between the
 ///                      scalar and the AD flash solver is done on this type.
+/// \param fluid_state Fluid system state
 /// \param flash_tolerance  convergence tolerance handed to the flash solver. The
 ///                      default reproduces the value used in production; the unit
 ///                      test tightens it so the finite-difference comparison is
