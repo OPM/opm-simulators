@@ -323,7 +323,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             element_chunks_ = std::make_unique<ElementChunksType>(simulator_.vanguard().gridView(), Dune::Partitions::all, ThreadManager::maxThreads());
         }
 
-        // nothing to clean here
+        // Drop the cached matrix pointer so initPrepare() sees the next matrix
+        // as a new object.  Callers that rebuild the linear system mid-run rely
+        // on this - opm-flowgeomechanics does it from FlowProblemMech when
+        // fracture connections change.
         void eraseMatrix() override
         {
             matrix_ = nullptr;
