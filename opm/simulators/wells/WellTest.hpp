@@ -108,6 +108,32 @@ private:
         Scalar ratio_limit = 0.0;
     };
 
+    //! \brief Records which minimum rate limit closed the well, together with the
+    //!        offending quantity and the limit it fell below, so that the closing
+    //!        message can name them. Filled in by checkRateEconLimits(), which
+    //!        reports whether a limit was violated through its return value.
+    struct RateLimitCheckReport {
+        //! \brief Name of the produced quantity ("oil", "gas", "liquid" or
+        //!        "reservoir fluid"). Always a string literal.
+        std::string_view quantity_name{};
+        UnitSystem::measure rate_measure = UnitSystem::measure::identity;
+        //! \brief Magnitude of the produced quantity, i.e. the value compared
+        //!        against \c rate_limit. Taken from the well potentials rather
+        //!        than the rates when WECON item 10 is POTN.
+        Scalar rate_value = 0.0;
+        Scalar rate_limit = 0.0;
+    };
+
+    //! \brief Format the "<quantity> production rate ... is below the limit ..."
+    //!        clause of the WECON rate-limit closing message.
+    //!
+    //! \param on_potentials  true when the limits are checked against the well
+    //!        potentials (WECON item 10 is POTN), which the message spells out
+    //!        as a "production potential" instead of a "production rate".
+    static std::string rateViolationReason(const UnitSystem& unit_system,
+                                           const RateLimitCheckReport& report,
+                                           const bool on_potentials);
+
     //! \brief Format the "<ratio> ... exceeds the limit ..." clause shared by the
     //!        WECON and CECON workover messages.
     //!
@@ -174,8 +200,12 @@ private:
     //!        potentials. Item 16 applies to the reservoir voidage rate these
     //!        surface rates correspond to. Limits on a phase that is not active
     //!        in the run are ignored.
+    //!
+    //! \param report  describes the first violated limit found; left untouched
+    //!        when no limit is violated.
     bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                             const std::vector<Scalar>& rates_or_potentials) const;
+                             const std::vector<Scalar>& rates_or_potentials,
+                             RateLimitCheckReport& report) const;
 
     //! \brief Check all active ratio limits, ignoring \p excluded_completions
     //!        (completions already closed by the ongoing workover event).

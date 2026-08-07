@@ -50,6 +50,19 @@
 
 namespace Opm {
 
+namespace {
+
+//! \brief The unit of \p measure as a message suffix, i.e. preceded by a space,
+//!        or an empty string for the dimensionless quantities (e.g. water cut).
+std::string unitSuffix(const UnitSystem& unit_system,
+                       const UnitSystem::measure measure)
+{
+    const std::string_view unit = unit_system.name(measure);
+    return unit.empty() ? std::string{} : fmt::format(" {}", unit);
+}
+
+} // Anonymous namespace
+
 template<typename Scalar, typename IndexTraits>
 template<class RatioFunc>
 bool WellTest<Scalar, IndexTraits>::
@@ -195,7 +208,8 @@ checkMaxRatioLimit(const SingleWellState<Scalar, IndexTraits>& ws,
 template<typename Scalar, typename IndexTraits>
 bool WellTest<Scalar, IndexTraits>::
 checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                    const std::vector<Scalar>& rates_or_potentials) const
+                    const std::vector<Scalar>& rates_or_potentials,
+                    RateLimitCheckReport& report) const
 {
     const auto& pu = well_.phaseUsage();
 
@@ -207,21 +221,37 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     const bool gas_active = pu.phaseIsActive(IndexTraits::gasPhaseIdx);
     const bool water_active = pu.phaseIsActive(IndexTraits::waterPhaseIdx);
 
+    // Record the violated limit for the closing message. The rates are stored
+    // with production negative, so the magnitude is what the limit applies to.
+    auto violates = [&report](const std::string_view quantity_name,
+                              const UnitSystem::measure rate_measure,
+                              const Scalar rate_value,
+                              const Scalar rate_limit)
+    {
+        report.quantity_name = quantity_name;
+        report.rate_measure = rate_measure;
+        report.rate_value = rate_value;
+        report.rate_limit = rate_limit;
+        return true;
+    };
+
     if (econ_production_limits.onMinOilRate() && oil_active) {
         const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-        const Scalar oil_rate = rates_or_potentials[oil_pos];
+        const Scalar oil_rate = std::abs(rates_or_potentials[oil_pos]);
         const Scalar min_oil_rate = econ_production_limits.minOilRate();
-        if (std::abs(oil_rate) < min_oil_rate) {
-            return true;
+        if (oil_rate < min_oil_rate) {
+            return violates("oil", UnitSystem::measure::liquid_surface_rate,
+                            oil_rate, min_oil_rate);
         }
     }
 
     if (econ_production_limits.onMinGasRate() && gas_active) {
         const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-        const Scalar gas_rate = rates_or_potentials[gas_pos];
+        const Scalar gas_rate = std::abs(rates_or_potentials[gas_pos]);
         const Scalar min_gas_rate = econ_production_limits.minGasRate();
-        if (std::abs(gas_rate) < min_gas_rate) {
-            return true;
+        if (gas_rate < min_gas_rate) {
+            return violates("gas", UnitSystem::measure::gas_surface_rate,
+                            gas_rate, min_gas_rate);
         }
     }
 
@@ -234,9 +264,11 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                 liquid_rate += rates_or_potentials[pu.canonicalToActivePhaseIdx(phase)];
             }
         }
+        liquid_rate = std::abs(liquid_rate);
         const Scalar min_liquid_rate = econ_production_limits.minLiquidRate();
-        if (std::abs(liquid_rate) < min_liquid_rate) {
-            return true;
+        if (liquid_rate < min_liquid_rate) {
+            return violates("liquid", UnitSystem::measure::liquid_surface_rate,
+                            liquid_rate, min_liquid_rate);
         }
     }
 
@@ -246,8 +278,10 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
         // PVT properties as the voidage rates in the well state.
         const Scalar voidage_rate =
             std::abs(well_.totalReservoirVoidageRate(rates_or_potentials));
-        if (voidage_rate < econ_production_limits.minReservoirFluidRate()) {
-            return true;
+        const Scalar min_voidage_rate = econ_production_limits.minReservoirFluidRate();
+        if (voidage_rate < min_voidage_rate) {
+            return violates("reservoir fluid", UnitSystem::measure::rate,
+                            voidage_rate, min_voidage_rate);
         }
     }
 
@@ -399,24 +433,35 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
 
     // flag to check if the min oil/gas/liquid/reservoir-fluid rate limit is violated
     bool rate_limit_violated = false;
+    // The violated limit, reported in the closing message below. Only meaningful
+    // when rate_limit_violated is true.
+    RateLimitCheckReport rate_report;
 
-    const auto& quantity_limit = econ_production_limits.quantityLimit();
+    const bool limits_on_potentials =
+        (econ_production_limits.quantityLimit() == WellEconProductionLimits::QuantityLimit::POTN);
     if (econ_production_limits.onAnyRateLimit()) {
-        if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
+        if (limits_on_potentials) {
             rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
-                                                            ws.well_potentials);
+                                                            ws.well_potentials,
+                                                            rate_report);
             // Due to instability of the bhpFromThpLimit code the potentials are sometimes wrong
             // this can lead to premature shutting of wells due to rate limits of the potentials.
             // Since rates are supposed to be less or equal to the potentials, we double-check
             // that also the rate limit is violated before shutting the well.
-            if (rate_limit_violated)
+            // The message reports the potentials, which are the quantity the
+            // limits are applied to, so the double-check uses its own report.
+            if (rate_limit_violated) {
+                RateLimitCheckReport rate_check;
                 rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
-                                                                ws.surface_rates);
+                                                                ws.surface_rates,
+                                                                rate_check);
+            }
         }
         else {
             if (!zero_group_target) {
                 rate_limit_violated
-                    = this->checkRateEconLimits(econ_production_limits, ws.surface_rates);
+                    = this->checkRateEconLimits(econ_production_limits, ws.surface_rates,
+                                                rate_report);
             }
         }
     }
@@ -432,18 +477,17 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
 
         well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         if (write_message_to_opmlog) {
-            // State when the well stops flowing, as the ratio-limit and CECON
-            // messages below already do. That instant is the end of the time
-            // step the limit was detected on, not its start.
+            // Same layout as the ratio-limit workover messages below: the well,
+            // the action taken, when it happens and which limit caused it.
             const std::string_view action =
                 well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
+            const std::string& sep = economicLimitMessageSeparator();
             deferred_logger.info(
-                fmt::format("well {} will be {} due to rate economic limit "
-                            "at time {:.2f} {} (date = {})",
-                            well_.name(), action,
-                            unit_system.from_si(UnitSystem::measure::time, simulation_time),
-                            unit_system.name(UnitSystem::measure::time),
-                            economicLimitDateString(start_time, simulation_time)));
+                fmt::format("{}\nWell {} will be {} {},\nBecause {}.\n{}",
+                            sep, well_.name(), action,
+                            economicLimitWhenString(unit_system, start_time, simulation_time),
+                            rateViolationReason(unit_system, rate_report, limits_on_potentials),
+                            sep));
         }
         // the well is closed, not need to check other limits
         return;
@@ -471,12 +515,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                         report.ratio_value, report.ratio_limit);
         };
         if (write_message_to_opmlog) {
-            when = fmt::format(
-                "at time {:.2f} {} (date = {})",
-                unit_system.from_si(UnitSystem::measure::time, simulation_time),
-                unit_system.name(UnitSystem::measure::time),
-                economicLimitDateString(start_time, simulation_time));
-
+            when = economicLimitWhenString(unit_system, start_time, simulation_time);
             reason = make_reason(ratio_report);
         }
 
@@ -708,11 +747,8 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
 
         // Build the "at time ... (date = ...)" and ratio-violation clauses that
         // are shared by all CECON workover messages below.
-        const std::string when = fmt::format(
-            "at time {:.2f} {} (date = {})",
-            unit_system.from_si(UnitSystem::measure::time, simulation_time),
-            unit_system.name(UnitSystem::measure::time),
-            economicLimitDateString(start_time, simulation_time));
+        const std::string when =
+            economicLimitWhenString(unit_system, start_time, simulation_time);
 
         const std::string reason = ratioViolationReason(unit_system, ratio_name, ratio_measure,
                                                         ratio_value, ratio_limit);
@@ -855,15 +891,28 @@ closeOffendingCompletion(const int offending_completion,
 
 template<typename Scalar, typename IndexTraits>
 std::string WellTest<Scalar, IndexTraits>::
+rateViolationReason(const UnitSystem& unit_system,
+                    const RateLimitCheckReport& report,
+                    const bool on_potentials)
+{
+    const std::string unit_suffix = unitSuffix(unit_system, report.rate_measure);
+    return fmt::format(
+        "the {} production {} {:.4e}{} is below the limit {:.4e}{}",
+        report.quantity_name,
+        on_potentials ? "potential" : "rate",
+        unit_system.from_si(report.rate_measure, report.rate_value), unit_suffix,
+        unit_system.from_si(report.rate_measure, report.rate_limit), unit_suffix);
+}
+
+template<typename Scalar, typename IndexTraits>
+std::string WellTest<Scalar, IndexTraits>::
 ratioViolationReason(const UnitSystem& unit_system,
                      const std::string_view ratio_name,
                      const UnitSystem::measure ratio_measure,
                      const Scalar ratio_value,
                      const Scalar ratio_limit)
 {
-    const std::string ratio_unit = unit_system.name(ratio_measure);
-    const std::string unit_suffix = ratio_unit.empty() ? std::string{}
-                                                       : " " + ratio_unit;
+    const std::string unit_suffix = unitSuffix(unit_system, ratio_measure);
     if (std::isinf(ratio_value)) {
         return fmt::format(
             "{} is infinite and exceeds the limit {:.4e}{}",
