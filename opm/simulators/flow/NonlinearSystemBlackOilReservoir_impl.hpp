@@ -115,6 +115,7 @@ prepareStep(const SimulatorTimerInterface& timer)
     unsigned numDof = this->simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+    this->simulator_.model().newtonMethod().resetPrimaryVariableSwitches();
 
     if (this->param_.update_equations_scaling_) {
         OpmLog::error("Equation scaling not supported");
