@@ -351,15 +351,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void initPrepare(const Matrix& M, Vector& b)
         {
-            const bool firstcall = (matrix_ == nullptr);
+            // matrix_ starts out null, so this also covers the first call.
             const bool matrix_changed = &M != matrix_;
 
             if (matrix_changed) {
+                // The matrix object is no longer the one the solver was built
+                // for, so the solver has to be rebuilt rather than updated.
                 force_recreate_ = true;
-            }
 
-            // update matrix entries for solvers.
-            if (firstcall || matrix_changed) {
                 // model will not change the matrix object. Hence simply store a pointer
                 // to the original one with a deleter that does nothing.
                 // Outch! We need to be able to scale the linear system! Hence const_cast
@@ -367,12 +366,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
                 useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-            } else {
-                // Pointers should not change
-                if ( &M != matrix_ ) {
-                        OPM_THROW(std::logic_error,
-                                  "Matrix objects are expected to be reused when reassembling!");
-                }
             }
             rhs_ = &b;
 
