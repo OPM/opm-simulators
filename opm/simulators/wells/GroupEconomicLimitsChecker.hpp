@@ -122,7 +122,7 @@ private:
     GroupEconProductionLimits::GEconGroupProp gecon_props_;
     bool debug_ = true;
     std::array<Scalar,NUM_PHASES> production_rates_;
-    std::map<int, unsigned> phase_idx_map_ = {
+    std::map<std::size_t, unsigned> phase_idx_map_ = {
         {0, IndexTraits::oilPhaseIdx},
         {1, IndexTraits::gasPhaseIdx},
         {2, IndexTraits::waterPhaseIdx}
