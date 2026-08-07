@@ -33,6 +33,7 @@
 
 namespace Opm
 {
+    // add wells to the communicator. Wells are first, before the interior and overlap cells.
     template <class Communication>
     void extendCommunicatorWithWells(const Communication& comm,
                                      std::shared_ptr<Communication>& commRW,
@@ -50,22 +51,21 @@ namespace Opm
         std::size_t loc_max = 0;
         indset_rw.beginResize();
         for (auto ind = indset.begin(), indend = indset.end(); ind != indend; ++ind) {
-            indset_rw.add(ind->global(), LocalIndex(ind->local(), ind->local().attribute(), true));
+            // comm does not have wells, indices start from nw
             const int glo = ind->global();
             const std::size_t loc = ind->local().local();
+            indset_rw.add(glo, LocalIndex(loc+nw, ind->local().attribute(), true));
             glo_max = std::max(glo_max, glo);
             loc_max = std::max(loc_max, loc);
         }
         const int global_max = comm.communicator().max(glo_max);
-        // used append the welldofs at the end
+        // put the welldofs to the beginning
         assert(loc_max + 1 == indset.size());
-        std::size_t local_ind = loc_max + 1;
         for (int i = 0; i < nw; ++i) {
-            // need to set unique global number
+            // need to set unique global number, distributed wells are not matched across ranks
+            // and make one smaller well per rank and each rank owns its part
             const std::size_t v = global_max + max_nw * rank + i + 1;
-            // set to true to not have problems with higher levels if growing of domains is used
-            indset_rw.add(v, LocalIndex(local_ind, Dune::OwnerOverlapCopyAttributeSet::owner, true));
-            ++local_ind;
+            indset_rw.add(v, LocalIndex(i, Dune::OwnerOverlapCopyAttributeSet::owner, false));
         }
         indset_rw.endResize();
         assert(indset_rw.size() == indset.size() + nw);
@@ -120,24 +120,25 @@ namespace Opm
             OPM_TIMEBLOCK(createCoarseLevelSystem);
             using CoarseMatrix = typename CoarseOperator::matrix_type;
             const auto& fineLevelMatrix = fineOperator.getmat();
-            const auto& nw = fineOperator.getNumberOfExtraEquations();
+            nrWells_ = fineOperator.getNumberOfExtraEquations();
             if (prm_.get<bool>("add_wells")) {
                 const std::size_t average_elements_per_row
                     = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
                 const double overflow_fraction = 1.2;
-                coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nw,
-                                                          fineLevelMatrix.M() + nw,
+                coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nrWells_,
+                                                          fineLevelMatrix.M() + nrWells_,
                                                           average_elements_per_row,
                                                           overflow_fraction,
                                                           CoarseMatrix::implicit));
                 int rownum = 0;
                 for (const auto& row : fineLevelMatrix) {
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
-                        coarseLevelMatrix_->entry(rownum, col.index()) = 0.0;
+                        coarseLevelMatrix_->entry(rownum+nrWells_, col.index()+nrWells_) = 0.0;
                     }
                     ++rownum;
                 }
             } else {
+                // TODO! not adding wells might make the matrix incopatible with other changed parts of the code
                 coarseLevelMatrix_.reset(
                     new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), fineLevelMatrix.nonzeroes(), CoarseMatrix::row_wise));
                 auto createIter = coarseLevelMatrix_->createbegin();
@@ -158,7 +159,7 @@ namespace Opm
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
             coarseLevelMatrix_->compress(); // all elemenst should be set
             if constexpr (!std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
-                extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, nw);
+                extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, nrWells_);
             }
         }
         calculateCoarseEntries(fineOperator);
@@ -176,11 +177,16 @@ namespace Opm
         const auto& fineMatrix = fineOperator.getmat();
         *coarseLevelMatrix_ = 0;
         auto rowCoarse = coarseLevelMatrix_->begin();
+        std::advance(rowCoarse, nrWells_);
         for (auto row = fineMatrix.begin(), rowEnd = fineMatrix.end(); row != rowEnd; ++row, ++rowCoarse) {
-            assert(row.index() == rowCoarse.index());
+            assert(row.index() + nrWells_ == rowCoarse.index());
             auto entryCoarse = rowCoarse->begin();
+            // skip columns with wells
+            while (entryCoarse.index() < nrWells_)
+                ++entryCoarse;
+
             for (auto entry = row->begin(), entryEnd = row->end(); entry != entryEnd; ++entry, ++entryCoarse) {
-                assert(entry.index() == entryCoarse.index());
+                assert(entry.index() + nrWells_ == entryCoarse.index());
                 Scalar matrix_el = 0;
                 if (transpose) {
                     const auto& bw = weights_[entry.index()];
@@ -202,7 +208,6 @@ namespace Opm
             bool use_well_weights = prm_.get<bool>("use_well_weights");
             fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_, use_well_weights);
 #ifndef NDEBUG
-            std::advance(rowCoarse, fineOperator.getNumberOfExtraEquations());
             assert(rowCoarse == coarseLevelMatrix_->end());
 #endif
 
@@ -212,7 +217,9 @@ namespace Opm
     void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
         OPM_TIMEBLOCK(moveToCoarseLevel);
-        //NB we iterate over fine assumming welldofs is at the end
+        //NB we iterate over fine assumming welldofs is at the beginning
+        assert(nrWells_ >= 0);
+        assert(fine.size() + nrWells_ == this->rhs_.size());
         // Set coarse vector to zero
         this->rhs_ = 0;
 
@@ -228,7 +235,8 @@ namespace Opm
                     rhs_el += (*block)[i] * bw[i];
                 }
             }
-            this->rhs_[block - begin] = rhs_el;
+            // rhs of well equations remains empty
+            this->rhs_[block - begin + nrWells_] = rhs_el;
         }
 
         this->lhs_ = 0;
@@ -237,17 +245,19 @@ namespace Opm
     void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
         OPM_TIMEBLOCK(moveToFineLevel);
-        //NB we iterate over fine assumming welldofs is at the end
+        //NB we iterate over fine assumming welldofs is at the beginning
+        assert(nrWells_ >= 0);
+        assert(fine.size() + nrWells_ == this->lhs_.size());
         auto end = fine.end(), begin = fine.begin();
 
         for (auto block = begin; block != end; ++block) {
             if (transpose) {
                 const auto& bw = weights_[block.index()];
                 for (std::size_t i = 0; i < block->size(); ++i) {
-                    (*block)[i] = this->lhs_[block - begin][0] * bw[i];
+                    (*block)[i] = this->lhs_[block - begin + nrWells_][0] * bw[i];
                 }
             } else {
-                (*block)[pressure_var_index_] = this->lhs_[block - begin][0];
+                (*block)[pressure_var_index_] = this->lhs_[block - begin + nrWells_][0];
             }
         }
     }
@@ -269,6 +279,7 @@ private:
     const int pressure_var_index_;
     std::shared_ptr<Communication> coarseLevelCommunication_;
     std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
+    int nrWells_{-1};
 };
 
 } // namespace Opm
