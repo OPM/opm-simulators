@@ -176,6 +176,36 @@ private:
     NewtonIterationContext saved_;
 };
 
+/// RAII guard for re-running once-per-timestep setup mid-step, e.g. after
+/// the well structure changed during the outer nonlinear loop.  Saves the
+/// current context, resets it so the next nonlinear iteration performs its
+/// timestep initialization at iteration 0, and restores the original
+/// context on destruction (the outer iteration count is unaffected).
+template<class Problem>
+class SetupIterationContextGuard {
+public:
+    SetupIterationContextGuard(Problem& problem)
+        : problem_(problem)
+        , saved_(problem.iterationContext())
+    {
+        problem_.mutableIterationContext().resetForNewTimestep();
+    }
+
+    ~SetupIterationContextGuard()
+    {
+        problem_.mutableIterationContext() = saved_;
+    }
+
+    SetupIterationContextGuard(const SetupIterationContextGuard&) = delete;
+    SetupIterationContextGuard& operator=(const SetupIterationContextGuard&) = delete;
+    SetupIterationContextGuard(SetupIterationContextGuard&&) = delete;
+    SetupIterationContextGuard& operator=(SetupIterationContextGuard&&) = delete;
+
+private:
+    Problem& problem_;
+    NewtonIterationContext saved_;
+};
+
 } // namespace Opm
 
 #endif // OPM_NEWTON_ITERATION_CONTEXT_HPP
