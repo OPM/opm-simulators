@@ -346,7 +346,7 @@ public:
     {}
 
     void computePotentials(const std::size_t,
-                           const WellState<double, IndexTraits>&,
+                           WellState<double, IndexTraits>&,
                            std::string&,
                            ExceptionType::ExcEnum&) override
     {}
