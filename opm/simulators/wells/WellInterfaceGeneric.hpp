@@ -232,6 +232,12 @@ public:
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
 
+    //! \brief The total reservoir voidage rate corresponding to the given
+    //!        vector of surface phase rates (or potentials), converted with
+    //!        the region average PVT properties also used for the voidage
+    //!        rates in the well state.
+    virtual Scalar totalReservoirVoidageRate(const std::vector<Scalar>& surface_rates) const = 0;
+
     void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
 protected:

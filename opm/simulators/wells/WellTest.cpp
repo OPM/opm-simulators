@@ -195,8 +195,7 @@ checkMaxRatioLimit(const SingleWellState<Scalar, IndexTraits>& ws,
 template<typename Scalar, typename IndexTraits>
 bool WellTest<Scalar, IndexTraits>::
 checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                    const std::vector<Scalar>& rates_or_potentials,
-                    DeferredLogger& deferred_logger) const
+                    const std::vector<Scalar>& rates_or_potentials) const
 {
     const auto& pu = well_.phaseUsage();
 
@@ -242,7 +241,14 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (econ_production_limits.onMinReservoirFluidRate()) {
-        deferred_logger.warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
+        // The net reservoir fluid (voidage) production rate corresponding to the
+        // surface rates or potentials, converted with the same region average
+        // PVT properties as the voidage rates in the well state.
+        const Scalar voidage_rate =
+            std::abs(well_.totalReservoirVoidageRate(rates_or_potentials));
+        if (voidage_rate < econ_production_limits.minReservoirFluidRate()) {
+            return true;
+        }
     }
 
     return false;
@@ -391,28 +397,26 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
         return;
     }
 
-    // flag to check if the min oil/gas/liquid rate limit is violated
+    // flag to check if the min oil/gas/liquid/reservoir-fluid rate limit is violated
     bool rate_limit_violated = false;
 
     const auto& quantity_limit = econ_production_limits.quantityLimit();
     if (econ_production_limits.onAnyRateLimit()) {
         if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
             rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
-                                                            ws.well_potentials,
-                                                            deferred_logger);
+                                                            ws.well_potentials);
             // Due to instability of the bhpFromThpLimit code the potentials are sometimes wrong
             // this can lead to premature shutting of wells due to rate limits of the potentials.
             // Since rates are supposed to be less or equal to the potentials, we double-check
             // that also the rate limit is violated before shutting the well.
             if (rate_limit_violated)
                 rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
-                                                                ws.surface_rates,
-                                                                deferred_logger);
+                                                                ws.surface_rates);
         }
         else {
             if (!zero_group_target) {
                 rate_limit_violated
-                    = this->checkRateEconLimits(econ_production_limits, ws.surface_rates, deferred_logger);
+                    = this->checkRateEconLimits(econ_production_limits, ws.surface_rates);
             }
         }
     }

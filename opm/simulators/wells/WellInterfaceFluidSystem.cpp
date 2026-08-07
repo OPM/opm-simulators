@@ -40,6 +40,8 @@
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <numeric>
+
 namespace Opm
 {
 
@@ -149,6 +151,21 @@ calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Sca
             std::accumulate(voidage_rates_perf.begin(),
                             voidage_rates_perf.end(), 0.0);
     }
+}
+
+template<typename FluidSystem>
+typename FluidSystem::Scalar
+WellInterfaceFluidSystem<FluidSystem>::
+totalReservoirVoidageRate(const std::vector<Scalar>& surface_rates) const
+{
+    std::vector<Scalar> voidage_rates(surface_rates.size(), 0.0);
+    this->rateConverter_
+        .calcReservoirVoidageRates(/*fipreg*/ 0,
+                                   this->pvtRegionIdx_,
+                                   surface_rates,
+                                   voidage_rates);
+
+    return std::accumulate(voidage_rates.begin(), voidage_rates.end(), Scalar{0.0});
 }
 
 template<typename FluidSystem>
