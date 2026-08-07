@@ -45,7 +45,10 @@
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/output/data/RegionVariableMapping.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 
@@ -1028,6 +1031,8 @@ evalSummary(const int                                            reportStepNum,
             const std::map<std::tuple<std::string, int, int>, double>& lgrBlockData,
             const std::map<std::string, double>&                 miscSummaryData,
             const std::map<std::string, std::vector<double>>&    regionData,
+            const data::RegionVariableMapping&                   regVarMap,
+            const RegionVariableCollection&                      regVars,
             const Inplace&                                       inplace,
             const Inplace*                                       initialInPlace,
             const InterRegFlowMap&                               interRegFlows,
@@ -1036,8 +1041,6 @@ evalSummary(const int                                            reportStepNum,
             const data::ReservoirCouplingGroupRates*             rcGroupRates)
 {
     if (collectOnIORank_.isIORank()) {
-        const auto& summary = eclIO_->summary();
-
         const auto& wellData = this->collectOnIORank_.isParallel()
             ? this->collectOnIORank_.globalWellData()
             : localWellData;
@@ -1057,23 +1060,26 @@ evalSummary(const int                                            reportStepNum,
         const auto interreg_flows = getInterRegFlowsAsMap(interRegFlows);
 
         const auto values = out::Summary::DynamicSimulatorState {
-            /* well_solution           = */ &wellData,
-            /* wbp                     = */ &wbpData,
-            /* group_and_nwrk_solution = */ &groupAndNetworkData,
-            /* single_values           = */ &miscSummaryData,
-            /* region_values           = */ &regionData,
-            /* block_values            = */ &blockData,
-            /* aquifer_values          = */ &aquiferData,
-            /* interreg_flows          = */ &interreg_flows,
-            /* rc_group_rates          = */ rcGroupRates,
-            /* inplace                 = */ {
-                /* current = */ &inplace,
-                /* initial = */ initialInPlace
+            .well_solution           = &wellData,
+            .wbp                     = &wbpData,
+            .group_and_nwrk_solution = &groupAndNetworkData,
+            .single_values           = &miscSummaryData,
+            .region_values           = &regionData,
+            .reg_var_map             = &regVarMap,
+            .reg_var_coll            = &regVars,
+            .block_values            = &blockData,
+            .aquifer_values          = &aquiferData,
+            .interreg_flows          = &interreg_flows,
+            .rc_group_rates          = rcGroupRates,
+            .inplace                 = {
+                .current = &inplace,
+                .initial = initialInPlace
             },
-            /* lgr_block_values        = */ &lgrBlockData
+            .lgr_block_values        = &lgrBlockData
         };
 
-        summary.eval(reportStepNum, curTime, values, summaryState);
+        this->eclIO_->summary()
+            .eval(reportStepNum, curTime, values, summaryState);
 
         // Off-by-one-fun: The reportStepNum argument corresponds to the
         // report step these results will be written to, whereas the

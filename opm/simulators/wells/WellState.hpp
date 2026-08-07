@@ -179,6 +179,10 @@ public:
            const std::function<bool(const std::size_t)>& wasDynamicallyClosed,
            const RsConstInfo&                    rsConst = RsConstInfo{}) const;
 
+    void reportIntervalConnectionOilProduction(const double                                     dt,
+                                               const std::function<bool(const std::string&)>&   wasDynamicallyClosed,
+                                               const std::function<double(const std::string&)>& wellEffFac,
+                                               const std::function<void(int, double)>&          copt) const;
 
     /// init the MS well related.
     /// \param thermal  when false, segment temperature is kept uniform (no
