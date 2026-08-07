@@ -240,6 +240,17 @@ namespace Opm
             std::string well_name_ {};
         };
 
+        /// Which condition, if any, granted the relaxed CNV tolerance this iteration.
+        /// Ordered by precedence in the code so a single value can be reported even
+        /// though several conditions may hold at once.
+        enum struct CnvRelaxSource {
+            None,        //!< strict tolerance applied
+            PvFraction,  //!< non-strict pore volume below relaxed_max_pv_fraction
+            SolChange,   //!< TUNINGDP-style solution-change targets met (disables CNV)
+            FinalIter,   //!< min_strict_cnv_iter < 0 and iteration == NewtonMaxIterations
+            IterCount,   //!< min_strict_cnv_iter >= 0 and iteration >= it
+        };
+
         // ----------- Mutating member functions -----------
 
         ConvergenceReport()
@@ -305,6 +316,14 @@ namespace Opm
             this->eligiblePoreVolume_ = eligiblePoreVolume;
         }
 
+        //! \brief Record which condition granted the relaxed CNV tolerance and the
+        //! tolerance actually applied, so an accepted step's quality is visible.
+        void setCnvRelaxation(const CnvRelaxSource source, const double toleranceApplied)
+        {
+            this->cnvRelaxSource_ = source;
+            this->cnvToleranceApplied_ = toleranceApplied;
+        }
+
         ConvergenceReport& operator+=(const ConvergenceReport& other)
         {
             reportTime_ = std::max(reportTime_, other.reportTime_);
@@ -331,6 +350,13 @@ namespace Opm
                 this->eligiblePoreVolume_ = other.eligiblePoreVolume_;
             }
 
+            // Same reasoning as the pore-volume split: only the reservoir report sets
+            // these, so take 'other's values whenever it carries them.
+            if (other.cnvToleranceApplied_ > 0.0) {
+                this->cnvRelaxSource_ = other.cnvRelaxSource_;
+                this->cnvToleranceApplied_ = other.cnvToleranceApplied_;
+            }
+
             return *this;
         }
 
@@ -349,6 +375,18 @@ namespace Opm
         const CnvPvSplit& cnvPvSplit() const
         {
             return this->cnvPvSplit_;
+        }
+
+        //! \brief Which condition granted the relaxed CNV tolerance this iteration.
+        CnvRelaxSource cnvRelaxSource() const
+        {
+            return this->cnvRelaxSource_;
+        }
+
+        //! \brief The CNV tolerance actually applied (0 if not recorded).
+        double cnvToleranceApplied() const
+        {
+            return this->cnvToleranceApplied_;
         }
 
         bool converged() const
@@ -452,6 +490,8 @@ namespace Opm
             serializer(this->network_needs_more_balancing_force_another_newton_iteration_);
             serializer(this->cnvPvSplit_);
             serializer(this->eligiblePoreVolume_);
+            serializer(this->cnvRelaxSource_);
+            serializer(this->cnvToleranceApplied_);
             serializer(this->penaltyCard_);
         }
 
@@ -469,6 +509,8 @@ namespace Opm
         bool network_needs_more_balancing_force_another_newton_iteration_;
         CnvPvSplit cnvPvSplit_{};
         double eligiblePoreVolume_{};
+        CnvRelaxSource cnvRelaxSource_{CnvRelaxSource::None};
+        double cnvToleranceApplied_{};
         PenaltyCard penaltyCard_;
     };
 
@@ -488,6 +530,8 @@ namespace Opm
     std::string to_string(const ConvergenceReport::WellFailure& wf);
 
     std::string to_string(const ConvergenceReport::PenaltyCard& pc);
+
+    std::string to_string(const ConvergenceReport::CnvRelaxSource s);
 
 
 

@@ -51,6 +51,8 @@ namespace Opm
         unsigned int total_linear_iterations = 0;
         unsigned int min_linear_iterations = std::numeric_limits<unsigned int>::max();
         unsigned int max_linear_iterations = 0;
+        // Accepted substeps whose CNV criterion was met only under a relaxed tolerance.
+        unsigned int relaxed_cnv_acceptances = 0;
 
         bool converged = false;
         bool time_step_rejected = false;
@@ -101,6 +103,7 @@ namespace Opm
             serializer(total_linear_iterations);
             serializer(min_linear_iterations);
             serializer(max_linear_iterations);
+            serializer(relaxed_cnv_acceptances);
             serializer(converged);
             serializer(time_step_rejected);
             serializer(well_group_control_changed);

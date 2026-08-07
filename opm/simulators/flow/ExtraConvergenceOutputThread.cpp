@@ -139,6 +139,8 @@ namespace {
         // "Gate" precedes "WellStatus" because well failures append
         // variable-length text after the WellStatus token, which must
         // therefore remain the last column.
+        os << std::right << std::setw(headerSize) << "CnvRelax";
+        os << std::right << std::setw(headerSize) << "CnvTolUsed";
         os << std::right << std::setw(headerSize) << "Gate";
         os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
 
@@ -228,6 +230,24 @@ namespace {
         }
     }
 
+    void writeCnvRelaxation(std::ostream&                 os,
+                            const std::string::size_type  colSize,
+                            const Opm::ConvergenceReport& report)
+    {
+        // Which condition granted the relaxed CNV tolerance, and the tolerance actually
+        // applied.  Without this the accepted state's quality is invisible: the same run
+        // may accept some steps at tolerance-cnv and others at its relaxed twin.
+        os << std::right << std::setw(colSize) << to_string(report.cnvRelaxSource());
+
+        const auto tol = report.cnvToleranceApplied();
+        if (tol > 0.0) {
+            os << std::right << std::setw(colSize) << tol;
+        }
+        else {
+            os << std::right << std::setw(colSize) << '-';
+        }
+    }
+
     void writeConvergenceGate(std::ostream&                 os,
                               const std::string::size_type  colSize,
                               const Opm::ConvergenceReport& report)
@@ -262,6 +282,7 @@ namespace {
             writePenaltyCount(os, firstColSize, report);
 
             writeReservoirConvergence(os, colSize, report);
+            writeCnvRelaxation(os, colSize, report);
             writeConvergenceGate(os, colSize, report);
             writeWellConvergence(os, colSize, report);
 

@@ -107,4 +107,17 @@ namespace Opm
                            pc.nonConverged, pc.distanceDecay, pc.largeWellResiduals, pc.total());
     }
 
+    std::string to_string(const ConvergenceReport::CnvRelaxSource s)
+    {
+        using S = ConvergenceReport::CnvRelaxSource;
+        switch (s) {
+        case S::None:       return "NONE";
+        case S::PvFraction: return "PVFRAC";
+        case S::SolChange:  return "DSOL";
+        case S::FinalIter:  return "FINALIT";
+        case S::IterCount:  return "ITER";
+        }
+        return "?";
+    }
+
 } // namespace Opm
