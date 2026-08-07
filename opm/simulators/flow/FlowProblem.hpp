@@ -170,6 +170,11 @@ protected:
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
 public:
+
+    /// Extra module-specific lines appended to the final simulation trailer
+    /// (e.g. geomechanics timing). Derived problems may shadow this.
+    std::string extraTrailerSummary() const
+    { return {}; }
     using BaseType::briefDescription;
     using BaseType::helpPreamble;
     using BaseType::shouldWriteOutput;
