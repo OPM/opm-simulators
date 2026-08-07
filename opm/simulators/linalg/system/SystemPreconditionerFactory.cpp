@@ -38,14 +38,8 @@ void addSystemCprSeq()
                   [](const O& op, const P& prm,
                      const std::function<V()>& sysWeightCalc,
                      std::size_t pressureIndex) {
-                      std::function<Opm::ResVector<Scalar>()> resWeightCalc;
-                      if (sysWeightCalc) {
-                          resWeightCalc = [sysWeightCalc]() {
-                              return sysWeightCalc()[Dune::Indices::_0];
-                          };
-                      }
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
-                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                          op.getmat(), sysWeightCalc, pressureIndex, prm);
                   });
 }
 
@@ -67,14 +61,8 @@ void addSystemCprParSeq()
                   [](const O& op, const P& prm,
                      const std::function<V()>& sysWeightCalc,
                      std::size_t pressureIndex) {
-                      std::function<Opm::ResVector<Scalar>()> resWeightCalc;
-                      if (sysWeightCalc) {
-                          resWeightCalc = [sysWeightCalc]() {
-                              return sysWeightCalc()[Dune::Indices::_0];
-                          };
-                      }
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::SeqResOperator<Scalar>>>(
-                          op.getmat(), resWeightCalc, pressureIndex, prm);
+                          op.getmat(), sysWeightCalc, pressureIndex, prm);
                   });
 }
 
@@ -91,15 +79,9 @@ void addSystemCprPar()
                      const std::function<V()>& sysWeightCalc,
                      std::size_t pressureIndex,
                      const Opm::SystemComm& comm) {
-                      std::function<Opm::ResVector<Scalar>()> resWeightCalc;
-                      if (sysWeightCalc) {
-                          resWeightCalc = [sysWeightCalc]() {
-                              return sysWeightCalc()[Dune::Indices::_0];
-                          };
-                      }
                       const auto& resComm = comm[Dune::Indices::_0];
                       return std::make_shared<Opm::SystemPreconditioner<Scalar, Opm::ParResOperator<Scalar>, Opm::ParResComm>>(
-                          op.getmat(), resWeightCalc, pressureIndex, prm, resComm);
+                          op.getmat(), sysWeightCalc, pressureIndex, prm, resComm);
                   });
 }
 #endif
