@@ -199,7 +199,16 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                     DeferredLogger& deferred_logger) const
 {
     const auto& pu = well_.phaseUsage();
-    if (econ_production_limits.onMinOilRate()) {
+
+    // A limit on a phase that the run does not have is ignored: there is no rate
+    // to compare it against, and asking for the index of an inactive phase
+    // throws. Guarding here also keeps the liquid limit below from reading the
+    // entry of a phase that is not present.
+    const bool oil_active = pu.phaseIsActive(IndexTraits::oilPhaseIdx);
+    const bool gas_active = pu.phaseIsActive(IndexTraits::gasPhaseIdx);
+    const bool water_active = pu.phaseIsActive(IndexTraits::waterPhaseIdx);
+
+    if (econ_production_limits.onMinOilRate() && oil_active) {
         const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
         const Scalar oil_rate = rates_or_potentials[oil_pos];
         const Scalar min_oil_rate = econ_production_limits.minOilRate();
@@ -208,7 +217,7 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
         }
     }
 
-    if (econ_production_limits.onMinGasRate() ) {
+    if (econ_production_limits.onMinGasRate() && gas_active) {
         const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
         const Scalar gas_rate = rates_or_potentials[gas_pos];
         const Scalar min_gas_rate = econ_production_limits.minGasRate();
@@ -217,12 +226,15 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
         }
     }
 
-    if (econ_production_limits.onMinLiquidRate() ) {
-        const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-        const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-        const Scalar oil_rate = rates_or_potentials[oil_pos];
-        const Scalar water_rate = rates_or_potentials[water_pos];
-        const Scalar liquid_rate = oil_rate + water_rate;
+    if (econ_production_limits.onMinLiquidRate() && (oil_active || water_active)) {
+        // The liquid rate is the sum of the oil and water rates; either phase
+        // may be absent from the run (e.g. an oil-gas case).
+        Scalar liquid_rate = 0.0;
+        for (const auto phase : {IndexTraits::oilPhaseIdx, IndexTraits::waterPhaseIdx}) {
+            if (pu.phaseIsActive(phase)) {
+                liquid_rate += rates_or_potentials[pu.canonicalToActivePhaseIdx(phase)];
+            }
+        }
         const Scalar min_liquid_rate = econ_production_limits.minLiquidRate();
         if (std::abs(liquid_rate) < min_liquid_rate) {
             return true;
@@ -379,7 +391,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
         return;
     }
 
-    // flag to check if the mim oil/gas rate limit is violated
+    // flag to check if the min oil/gas/liquid rate limit is violated
     bool rate_limit_violated = false;
 
     const auto& quantity_limit = econ_production_limits.quantityLimit();

@@ -168,6 +168,10 @@ private:
                                        const UnitSystem::measure ratio_measure,
                                        RatioLimitCheckReport& report) const;
 
+    //! \brief Check the minimum surface rate limits (WECON items 2, 3 and 14)
+    //!        against \p rates_or_potentials, which holds the well's surface
+    //!        rates or, when WECON item 10 is POTN, its surface potentials.
+    //!        Limits on a phase that is not active in the run are ignored.
     bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                              const std::vector<Scalar>& rates_or_potentials,
                              DeferredLogger& deferred_logger) const;

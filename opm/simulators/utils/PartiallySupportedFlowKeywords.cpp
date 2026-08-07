@@ -673,7 +673,6 @@ partiallySupported()
             {
                {11,{true, allow_values<double> {}, "WECON(WCUT2): Feature not supported and should be defaulted"}}, // WELOPEN
                {13,{true, allow_values<double> {}, "WECON(GLR): Feature not supported and should be defaulted"}}, // GLR
-               {14,{true, allow_values<double> {}, "WECON(LRAT): Feature not supported and should be defaulted"}}, // LRAT
                {15,{true, allow_values<double> {}, "WECON(TEMP): Feature not supported and should be defaulted"}}, // TEMP
                {16,{true, allow_values<double> {}, "WECON(RESV): Feature not supported and should be defaulted"}}, // RESV
             },
