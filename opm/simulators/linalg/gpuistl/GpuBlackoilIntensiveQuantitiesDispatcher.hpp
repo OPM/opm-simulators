@@ -67,14 +67,10 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 /// on the first call.
 ///
 /// On every call, primary variables for the requested DoFs are uploaded to
-/// the device, the per-cell update kernel from
-/// \c test_blackoilintensivequantities_gpu.cu is launched (one thread per
-/// DoF), and the resulting intensive quantities are read back to host
-/// memory, as the design plan in \c PLAN.md requires. The GPU view computes
-/// fluid-state and supported thermal/property fields only. Mobility,
-/// diffusion, dispersion, and other unsupported module fields remain
-/// CPU-owned and must already have been computed by the caller; the overlay
-/// does not replace them.
+/// the device, the per-cell update kernel is launched (one thread per DoF),
+/// and the resulting intensive quantities are read back to host memory.
+/// The supported gas-water thermal configuration computes the complete
+/// intensive-quantity state needed by this dispatcher, including mobility.
 ///
 /// The class is a template on the CPU \c TypeTag and is explicitly
 /// instantiated in the \c .cu translation unit.
@@ -99,10 +95,7 @@ public:
     /// \p cpuPriVars[i] points at the CPU primary variables for DoF \c i.
     /// The GPU-owned BlackOil intensive-quantity fields are written onto
     /// \p outIQ[i] field-by-field via
-    /// \c BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom (so the
-    /// caller is expected to have run the CPU update first to fill in the
-    /// CPU-owned fields that the dispatcher does not overwrite, including
-    /// \c mobility_, diffusion, and dispersion state).
+    /// \c BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom.
     void update(const Problem& cpuProblem,
                 const PrimaryVariables* const* cpuPriVars,
                 IntensiveQuantities* const* outIQ,

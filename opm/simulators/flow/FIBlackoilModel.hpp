@@ -102,6 +102,25 @@ public:
                 updateCachedIntQuants(timeIdx);
                 return;
             }
+#if HAVE_CUDA
+            if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
+            {
+                if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()
+                    || getPropValue<TypeTag, Properties::EnableDispersion>()) {
+                    OPM_THROW(std::logic_error,
+                              "GPU intensive quantities dispatcher does not support diffusion or dispersion");
+                }
+
+                if (useGpuIntensiveQuantitiesDispatcher_) {
+                    runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+                    const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+                    for (std::size_t i = 0; i < numCells; ++i) {
+                        this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+                    }
+                    return;
+                }
+            }
+#endif
             OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -113,22 +132,6 @@ public:
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
-
-#if HAVE_CUDA
-            // After all cells are CPU-updated and written into the cache,
-            // overlay the GPU-computed BlackOil fields in one batched call.
-            if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
-            {
-                if (useGpuIntensiveQuantitiesDispatcher_) {
-                    runGpuIntensiveQuantitiesDispatcher_(timeIdx);
-
-                    const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
-                    for (std::size_t i = 0; i < numCells; ++i) {
-                        this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
-                    }
-                }
-            }
-#endif
             OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
                                        this->simulator_.vanguard().grid().comm());
         } else {
@@ -291,21 +294,6 @@ protected:
                 this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
             }
         }
-
-#if HAVE_CUDA
-        // After the CPU per-cell update has populated all fields, optionally
-        // overlay the BlackOil intensive-quantities fields with their GPU
-        // counterparts via the experimental dispatcher. The dispatcher only
-        // overwrites the subset of fields covered by
-        // BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom; everything
-        // else (mobility, energy, ...) keeps the CPU-computed value.
-        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
-        {
-            if (useGpuIntensiveQuantitiesDispatcher_) {
-                runGpuIntensiveQuantitiesDispatcher_(timeIdx);
-            }
-        }
-#endif
     }
 
     template <class ...Args>

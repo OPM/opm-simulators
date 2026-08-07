@@ -343,10 +343,9 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
                                  cudaMemcpyDeviceToHost));
 
     // -------------------------------------------------------------------
-    // 5. Field-by-field overlay onto the caller's CPU IntensiveQuantities.
-    //    The caller is expected to have run the CPU update first to
-    //    populate any fields the dispatcher does not overwrite (e.g.
-    //    \c mobility_, which the GPU relperm path currently leaves at 0).
+    // 5. Field-by-field materialization onto the caller's CPU
+    //    IntensiveQuantities. The supported GPU TypeTag has no diffusion or
+    //    dispersion state, so the overlay covers the complete supported IQ.
     // -------------------------------------------------------------------
     for (std::size_t i = 0; i < numDof; ++i) {
         outIQ[i]->overlayBlackOilFieldsFrom(hostIQ[i]);

@@ -218,20 +218,14 @@ public:
      * \brief Field-by-field overlay of the BlackOil intensive-quantity values from
      *        another \c BlackOilIntensiveQuantities instantiation onto this one.
      *
-    * Used by the experimental GPU intensive-quantities dispatcher to write
-    * the GPU-owned fields onto a CPU-side \c IntensiveQuantities even when
-    * the two TypeTags are not value-compatible. The fluid state and the
-    * supported thermal fields are copied; \c mobility_, diffusion,
-    * dispersion, and other CPU-owned module fields are deliberately left
-    * untouched. The caller must therefore run the CPU update first.
+        * Used by the experimental GPU intensive-quantities dispatcher to write
+        * the GPU-computed fields onto a CPU-side \c IntensiveQuantities even
+        * when the two TypeTags are not value-compatible.
      */
     template<class OtherTypeTag>
-    OPM_HOST_DEVICE void overlayBlackOilFieldsFrom(
+    void overlayBlackOilFieldsFrom(
         const BlackOilIntensiveQuantities<OtherTypeTag>& other)
     {
-        // Copy the stored fluid-state fields. This is intentionally kept
-        // separate from mobility and the optional module bases below: those
-        // fields belong to the CPU update contract and are not GPU-owned.
         fluidState_.assign(other.fluidState_);
 
         if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
@@ -242,6 +236,8 @@ public:
         porosity_ = other.porosity_;
         referencePorosity_ = other.referencePorosity_;
         rockCompTransMultiplier_ = other.rockCompTransMultiplier_;
+        mobility_ = other.mobility_;
+        this->extrusionFactor_ = other.extrusionFactor();
     }
 
     OPM_HOST_DEVICE void updateTempSalt(const Problem& problem,
