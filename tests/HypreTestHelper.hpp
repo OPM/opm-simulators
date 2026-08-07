@@ -24,12 +24,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/HyprePreconditioner.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreDataStructures.hpp>
@@ -412,7 +412,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     HypreInterface::initialize(use_gpu_backend);
 
     // Create test matrix - start with CPU matrix
-    using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using CpuMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     CpuMatrix cpu_matrix;
     cpu_matrix.setBuildMode(CpuMatrix::row_wise);
     cpu_matrix.setSize(3, 3, 3);
@@ -429,7 +429,7 @@ void testMatrixTransfer(bool use_gpu_backend)
 
     // Convert to target matrix type
     MatrixType matrix = [&]() {
-        if constexpr (std::is_same_v<MatrixType, Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>>) {
+        if constexpr (std::is_same_v<MatrixType, Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>>) {
             return std::move(cpu_matrix);
         }
 #if HAVE_CUDA || HAVE_HIP
@@ -444,7 +444,7 @@ void testMatrixTransfer(bool use_gpu_backend)
     std::vector<HYPRE_BigInt> rows;
     std::vector<HYPRE_BigInt> cols;
 
-    if constexpr (std::is_same_v<MatrixType, Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>>) {
+    if constexpr (std::is_same_v<MatrixType, Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>>) {
         setupMatrixHelperArrays(matrix, ncols, rows, cols);
     }
 #if HAVE_CUDA || HAVE_HIP

@@ -30,10 +30,10 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
 
@@ -57,7 +57,7 @@ BOOST_FIXTURE_TEST_CASE(TestVectorTransfer_CpuInputGpuBackend, HypreTestFixture)
 
 BOOST_FIXTURE_TEST_CASE(TestMatrixTransfer_CpuInputGpuBackend, HypreTestFixture)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     testMatrixTransfer<Matrix>(true);
 }
 
