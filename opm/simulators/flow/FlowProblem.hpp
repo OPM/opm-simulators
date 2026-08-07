@@ -1291,24 +1291,31 @@ private:
     { return *static_cast<const Implementation *>(this); }
 
 protected:
+    //! \brief Snapshot the explicit quantities before the timestep runs.
+    //!
+    //! updateExplicitQuantities_() advances all of these from the current
+    //! solution at the start of every timestep.  They are running extrema, so
+    //! a step that later fails would otherwise leave the maxima raised (and the
+    //! minima lowered) by a solution that is being thrown away.
     virtual void captureBeginTimeStepState_()
     {
-        prev_timestep_first_step_ = first_step_;
-        prev_timestep_max_polymer_adsorption_ = this->polymer_.maxAdsorption;
-        prev_timestep_max_oil_saturation_ = this->maxOilSaturation_;
-        prev_timestep_max_water_saturation_ = this->maxWaterSaturation_;
-        prev_timestep_min_ref_pressure_ = this->minRefPressure_;
-        prev_timestep_rock_comp_trans_mult_val_ = this->rockCompTransMultVal_;
+        prev_timestep_.first_step = first_step_;
+        prev_timestep_.max_polymer_adsorption = this->polymer_.maxAdsorption;
+        prev_timestep_.max_oil_saturation = this->maxOilSaturation_;
+        prev_timestep_.max_water_saturation = this->maxWaterSaturation_;
+        prev_timestep_.min_ref_pressure = this->minRefPressure_;
+        prev_timestep_.rock_comp_trans_mult_val = this->rockCompTransMultVal_;
     }
 
+    //! \brief Put the explicit quantities back as they were before the step.
     virtual void restoreBeginTimeStepState_()
     {
-        first_step_ = prev_timestep_first_step_;
-        this->polymer_.maxAdsorption = prev_timestep_max_polymer_adsorption_;
-        this->maxOilSaturation_ = prev_timestep_max_oil_saturation_;
-        this->maxWaterSaturation_ = prev_timestep_max_water_saturation_;
-        this->minRefPressure_ = prev_timestep_min_ref_pressure_;
-        this->rockCompTransMultVal_ = prev_timestep_rock_comp_trans_mult_val_;
+        first_step_ = prev_timestep_.first_step;
+        this->polymer_.maxAdsorption = prev_timestep_.max_polymer_adsorption;
+        this->maxOilSaturation_ = prev_timestep_.max_oil_saturation;
+        this->maxWaterSaturation_ = prev_timestep_.max_water_saturation;
+        this->minRefPressure_ = prev_timestep_.min_ref_pressure;
+        this->rockCompTransMultVal_ = prev_timestep_.rock_comp_trans_mult_val;
     }
 
     template<class UpdateFunc>
@@ -1897,13 +1904,24 @@ protected:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool first_step_ = true;
-    bool prev_timestep_first_step_ = true;
 
-    std::vector<Scalar> prev_timestep_max_polymer_adsorption_;
-    std::vector<Scalar> prev_timestep_max_oil_saturation_;
-    std::vector<Scalar> prev_timestep_max_water_saturation_;
-    std::vector<Scalar> prev_timestep_min_ref_pressure_;
-    std::vector<Scalar> prev_timestep_rock_comp_trans_mult_val_;
+    //! \brief Explicit quantities as they stood at the start of the current
+    //!        timestep, restored if that timestep fails.
+    //!
+    //! Only written by captureBeginTimeStepState_() and only read by
+    //! restoreBeginTimeStepState_(), both of which run inside a single
+    //! timestep, so this never has to survive a restart.
+    struct PrevTimestepState
+    {
+        bool first_step = true;                            //!< first step of the episode
+        std::vector<Scalar> max_polymer_adsorption;        //!< POLYMER
+        std::vector<Scalar> max_oil_saturation;            //!< VAPPARS / DRSDT saturation history
+        std::vector<Scalar> max_water_saturation;          //!< ROCKCOMP water-induced compaction
+        std::vector<Scalar> min_ref_pressure;              //!< ROCKCOMP irreversible compaction
+        std::vector<Scalar> rock_comp_trans_mult_val;      //!< ROCKCOMP transmissibility multiplier
+    };
+
+    PrevTimestepState prev_timestep_;
 
     /// Whether or not the current episode will end at the end of the
     /// current time step.
