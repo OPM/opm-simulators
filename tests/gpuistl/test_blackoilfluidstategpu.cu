@@ -43,8 +43,16 @@ struct DummyFluidSystem {
     {
         return ScalarT {0.0};
     }
-    template <class T>
-    static auto viscosity(const T&, int, int)
+    template <class EvalT>
+    struct ParameterCache {
+        void setRegionIndex(unsigned) {}
+        void setDepth(EvalT) {}
+        template <class FluidState>
+        void updateAll(const FluidState&) {}
+    };
+
+    template <class T, class Cache>
+    static auto viscosity(const T&, const Cache&, int)
     {
         return ScalarT {0.0};
     }
@@ -62,8 +70,8 @@ struct DummyFluidSystem {
         return ScalarT {0.0};
     }
 
-    template <class T>
-    static auto fugacityCoefficient(const T&, int, int, int)
+    template <class T, class Cache>
+    static auto fugacityCoefficient(const T&, const Cache&, int, int)
     {
         return ScalarT {0.0};
     }
@@ -94,8 +102,16 @@ struct DummyFluidSystemDynamic {
     {
         return ScalarT {0.0};
     }
-    template <class T>
-    OPM_HOST_DEVICE auto viscosity(const T&, int, int) const
+    template <class EvalT>
+    struct ParameterCache {
+        OPM_HOST_DEVICE void setRegionIndex(unsigned) {}
+        OPM_HOST_DEVICE void setDepth(EvalT) {}
+        template <class FluidState>
+        OPM_HOST_DEVICE void updateAll(const FluidState&) {}
+    };
+
+    template <class T, class Cache>
+    OPM_HOST_DEVICE auto viscosity(const T&, const Cache&, int) const
     {
         return ScalarT {someVariable};
     }
@@ -113,8 +129,8 @@ struct DummyFluidSystemDynamic {
         return ScalarT {0.0};
     }
 
-    template <class T>
-    OPM_HOST_DEVICE auto fugacityCoefficient(const T&, int, int, int) const
+    template <class T, class Cache>
+    OPM_HOST_DEVICE auto fugacityCoefficient(const T&, const Cache&, int, int) const
     {
         return ScalarT {0.0};
     }

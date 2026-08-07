@@ -411,6 +411,11 @@ public:
                         problem.maxOilSaturation(globalSpaceIdx));
         }
 
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+        paramCache.setRegionIndex(pvtRegionIdx);
+        paramCache.setDepth(problem.dofCenterDepth(globalSpaceIdx));
+        paramCache.updateAll(fluidState_);
+
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
 
@@ -426,8 +431,8 @@ public:
                         RsSat = asImp_().rs();
                     } else {
                         RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            paramCache,
                                                                             oilPhaseIdx,
-                                                                            pvtRegionIdx,
                                                                             SoMax);
                     }
                     fluidState_.setRs(min(RsMax, RsSat));
@@ -448,8 +453,8 @@ public:
                         RvSat = asImp_().rv();
                     } else {
                         RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                            paramCache,
                                                                             gasPhaseIdx,
-                                                                            pvtRegionIdx,
                                                                             SoMax);
                     }
                     fluidState_.setRv(min(RvMax, RvSat));
@@ -459,7 +464,6 @@ public:
                 }
             }
         }
-
         if constexpr (enableVapwat) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
                 const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
@@ -468,8 +472,8 @@ public:
             else {
                 if (getFluidSystem().enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
                     const Evaluation& RvwSat = getFluidSystem().saturatedVaporizationFactor(fluidState_,
-                                                                                        gasPhaseIdx,
-                                                                                        pvtRegionIdx);
+                                                                                        paramCache,
+                                                                                        gasPhaseIdx);
                     fluidState_.setRvw(RvwSat);
                 }
             }
@@ -483,15 +487,16 @@ public:
             else {
                 if (getFluidSystem().enableDissolvedGasInWater()) {
                     const Evaluation& RswSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                                       waterPhaseIdx,
-                                                                                       pvtRegionIdx);
+                                                                                       paramCache,
+                                                                                       waterPhaseIdx);
                     fluidState_.setRsw(min(RswMax, RswSat));
                 }
             }
         }
     }
 
-    OPM_HOST_DEVICE void updateMobilityAndInvB()
+    OPM_HOST_DEVICE void updateMobilityAndInvB(const Problem& problem,
+                                                const unsigned globalSpaceIdx)
     {
         OPM_TIMEBLOCK_LOCAL(updateMobilityAndInvB, Subsystem::PvtProps);
         const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
@@ -510,7 +515,11 @@ public:
             if (!getFluidSystem().phaseIsActive(phaseIdx)) {
                 continue;
             }
-            const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, phaseIdx, pvtRegionIdx);
+            typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+            paramCache.setRegionIndex(pvtRegionIdx);
+            paramCache.setDepth(problem.dofCenterDepth(globalSpaceIdx));
+            paramCache.updateAll(fluidState_);
+            const auto [b, mu] = getFluidSystem().inverseFormationVolumeFactorAndViscosity(fluidState_, paramCache, phaseIdx);
             fluidState_.setInvB(phaseIdx, b);
             for (int i = 0; i < nmobilities; ++i) {
                 if constexpr (enableExtbo) {
@@ -735,7 +744,7 @@ public:
             if (!problem.simulator().vanguard().eclState().getIOConfig().initOnly()) {
                 if (problem.simulator().vanguard().eclState().runspec().co2Storage()) {
                     if (problem.drsdtconIsActive(globalSpaceIdx, problem.simulator().episodeIndex())) {
-                        asImp_().updateSaturatedDissolutionFactor_();
+                        asImp_().updateSaturatedDissolutionFactor_(problem.dofCenterDepth(globalSpaceIdx));
                     }
                 }
             }
@@ -805,7 +814,7 @@ public:
         }
 
         updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
-        updateMobilityAndInvB();
+        updateMobilityAndInvB(problem, globalSpaceIdx);
         updatePhaseDensities();
 
         rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);

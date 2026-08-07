@@ -303,18 +303,19 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar Xhi,
                        const Scalar Psi,
                        const Scalar omegainn,
-                       const int pvtRegionIndex)
+                       const int pvtRegionIndex,
+                       const Scalar depth)
 {
     const Scalar rssat = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt) :
+        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt, depth) :
         FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p);
     const Scalar saturatedInvB = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        FluidSystem::waterPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p, salt) :
+        FluidSystem::waterPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p, salt, depth) :
         FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p);
     const Scalar rsZero = 0.0;
     const Scalar sg_max = 1.0;
     const Scalar pureDensity = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        (FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero, salt)
+        (FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero, salt, depth)
         * FluidSystem::waterPvt().waterReferenceDensity(pvtRegionIndex)) :
          (FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero)
         * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIndex));
@@ -325,7 +326,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
         + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex)));
     Scalar deltaDensity = saturatedDensity - pureDensity;
     const Scalar visc = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        FluidSystem::waterPvt().viscosity(pvtRegionIndex, t, p, rs, salt) :
+        FluidSystem::waterPvt().viscosity(pvtRegionIndex, t, p, rs, salt, depth) :
         FluidSystem::oilPvt().viscosity(pvtRegionIndex, t, p, rs);
 
     // Note that for sLiquid = 0 this gives no limits (inf) for the dissolution rate

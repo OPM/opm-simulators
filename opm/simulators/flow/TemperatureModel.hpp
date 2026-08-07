@@ -114,12 +114,16 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     {
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
         // and the thermal conductivity coefficients
+        typename FluidSystem::template ParameterCache<EvaluationTemp> paramCache;
+        paramCache.setRegionIndex(problem.pvtRegionIndex(globalSpaceIdx));
+        paramCache.setDepth(problem.dofCenterDepth(globalSpaceIdx));
+        paramCache.updateAll(fluidState_);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
 
-            const auto& h = FluidSystem::enthalpy(fluidState_, phaseIdx, problem.pvtRegionIndex(globalSpaceIdx));
+            const auto& h = FluidSystem::enthalpy(fluidState_, paramCache, phaseIdx);
             fluidState_.setEnthalpy(phaseIdx, h);
         }
 
@@ -704,9 +708,13 @@ protected:
                 Evaluation rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
                 if (rate > 0 && eclWell.isInjector()) {
                     fs.setTemperature(eclWell.inj_temperature());
-                    const auto& rho = FluidSystem::density(fs, phaseIdx, fs.pvtRegionIndex());
+                    typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+                    paramCache.setRegionIndex(fs.pvtRegionIndex());
+                    paramCache.setDepth(simulator_.problem().dofCenterDepth(globI));
+                    paramCache.updateAll(fs);
+                    const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
                     fs.setDensity(phaseIdx, rho);
-                    const auto& h = FluidSystem::enthalpy(fs, phaseIdx, fs.pvtRegionIndex());
+                    const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
                     fs.setEnthalpy(phaseIdx, h);
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 } else {

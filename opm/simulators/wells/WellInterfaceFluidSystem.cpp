@@ -107,6 +107,7 @@ calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Sca
     Scalar rvMax = 0.0;
     Scalar rswMax = 0.0;
     Scalar rvwMax = 0.0;
+    const Scalar depth = this->refDepth();
     this->rateConverter_
         .calcReservoirVoidageRates(this->pvtRegionIdx_,
                                     ws.bhp,
@@ -116,6 +117,7 @@ calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Sca
                                     rvwMax,
                                     ws.temperature,
                                     saltConc,
+                                    depth,
                                     ws.surface_rates,
                                     ws.reservoir_rates);
 
@@ -132,6 +134,13 @@ calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Sca
         const auto pressure = perf_data.pressure[i];
         // Calculate other per-phase dynamic quantities.
         const auto temperature = ws.temperature; // Assume same  temperature in the well
+        Scalar perf_depth = this->refDepth();
+        if (i < perf_data.ecl_index.size()) {
+            const auto ecl_perf_idx = perf_data.ecl_index[i];
+            if (ecl_perf_idx < this->perfDepth().size()) {
+                perf_depth = this->perfDepth()[ecl_perf_idx];
+            }
+        }
         std::vector<Scalar> voidage_rates_perf(np, 0.0);
         this->rateConverter_
             .calcReservoirVoidageRates(this->pvtRegionIdx_,
@@ -142,6 +151,7 @@ calculateReservoirRates(const bool use_well_bhp_temperature, SingleWellState<Sca
                                        rvwMax, // Rvw
                                        temperature,
                                        saltConc,
+                                       perf_depth,
                                        surface_rates_perf,
                                        voidage_rates_perf);
 
