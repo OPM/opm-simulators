@@ -22,7 +22,13 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/setupPropertyTree.hpp>
+
+#include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 #include <dune/istl/umfpack.hh>
+#include <dune/istl/solver.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -52,9 +58,26 @@ namespace Opm {
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar, IndexTraits>& well, const ParallelWellInfo<Scalar>& parallel_well_info)
-    : well_(well)
+    : local_solver_reuse_preconditioner_(well.modelParameters().local_well_eq_reuse_preconditioner_)
+    , use_legacy_global_operator_(well.modelParameters().local_well_eq_use_legacy_global_operator_)
+    , well_(well)
     , parallelB_(duneB_, parallel_well_info)
 {
+    setupLocalSolverConfig();
+}
+
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::setupLocalSolverConfig()
+{
+    FlowLinearSolverParameters linear_params;
+    linear_params.reset();
+    linear_params.linsolver_ = well_.modelParameters().local_well_eq_linear_solver_;
+    local_solver_prm_ = setupPropertyTree(linear_params,
+                                          /*linearSolverMaxIterSet=*/false,
+                                          /*linearSolverReductionSet=*/false,
+                                          /*tpsaSetup=*/false);
+    local_solver_prm_.put("solver", local_solver_prm_.get<std::string>("solver", "umfpack"));
+    local_solver_prm_.put("verbosity", local_solver_prm_.get<int>("verbosity", 0));
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
@@ -135,6 +158,7 @@ init(const int numPerfs,
 
     // Store the global index of well perforated cells
     cells_ = cells;
+    matrix_structure_changed_ = true;
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
@@ -146,7 +170,58 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::clear()
     resWell_ = 0.0;
     if constexpr (std::is_same_v<Scalar,double>) {
         duneDSolver_.reset();
+        flexibleDsolver_.reset();
+        duneDOperator_.reset();
     }
+}
+
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+typename MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::BVectorWell
+MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solveLocalDSystem(const BVectorWell& rhs) const
+{
+    if (!flexibleDsolver_) {
+        OPM_THROW(std::logic_error,
+                  "MultisegmentWell local linear solver was used before createSolver() initialized it");
+    }
+
+    BVectorWell x(rhs.size());
+    x = Scalar{0.0};
+    auto rhs_copy = rhs;
+    Dune::InverseOperatorResult result;
+    flexibleDsolver_->apply(x, rhs_copy, result);
+    if (!result.converged) {
+        OPM_THROW(std::runtime_error,
+                  "MultisegmentWell local linear solver failed to converge for well equation system");
+    }
+    return x;
+}
+
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+typename MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::BVectorWell
+MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solveLegacyGlobalDSystem(const BVectorWell& rhs) const
+{
+#if HAVE_SUITESPARSE_UMFPACK
+    if (!duneDSolver_) {
+        OPM_THROW(std::logic_error,
+                  "MultisegmentWell legacy UMFPACK solver was used before createSolver() initialized it");
+    }
+    return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
+#else
+    OPM_THROW(std::runtime_error,
+              "MultisegmentWell legacy global-operator support requires SuiteSparse/UMFPACK. "
+              "Disable LocalWellEqUseLegacyGlobalOperator to use the flexible solver path instead.");
+#endif
+}
+
+template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
+typename MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::BVectorWell
+MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solveGlobalOperatorDSystem(const BVectorWell& rhs) const
+{
+    if (use_legacy_global_operator_) {
+        return solveLegacyGlobalDSystem(rhs);
+    }
+
+    return solveLocalDSystem(rhs);
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
@@ -162,7 +237,7 @@ apply(const BVector& x, BVector& Ax) const
     // the single process to complete the computation.
     // invDBx = duneD^-1 * Bx_
     if constexpr (std::is_same_v<Scalar,double>) {
-        const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
+        const BVectorWell invDBx = solveGlobalOperatorDSystem(Bx);
         // Ax.size() == 0 indicates that there are no active perforations on this process.
         // Then, Ax does not need to be updated by the following calculation.
         if (Ax.size() > 0) {
@@ -184,7 +259,7 @@ apply(BVector& r) const
             // because the other processes would remain idle while waiting for
             // the single process to complete the computation.
             // invDrw_ = duneD^-1 * resWell_
-            const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+            const BVectorWell invDrw = solveGlobalOperatorDSystem(resWell_);
             // r = r - duneC_^T * invDrw
             duneC_.mmtv(invDrw, r);
         }
@@ -194,20 +269,40 @@ apply(BVector& r) const
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::createSolver()
 {
-#if HAVE_SUITESPARSE_UMFPACK
     if constexpr (std::is_same_v<Scalar,float>) {
-        OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK, "
-                                      "and UMFPACK does not support float");
+        OPM_THROW(std::runtime_error, "MultisegmentWell local well equations are only supported for double precision");
     } else {
-        if (duneDSolver_) {
-            return;
+        const bool can_reuse = local_solver_reuse_preconditioner_
+            && !matrix_structure_changed_
+            && static_cast<bool>(flexibleDsolver_);
+
+        if (can_reuse) {
+            flexibleDsolver_->preconditioner().update();
+        } else {
+            duneDOperator_ = std::make_shared<DiagOperator>(duneD_);
+            flexibleDsolver_ = std::make_shared<Dune::FlexibleSolver<DiagOperator>>(
+                *duneDOperator_,
+                local_solver_prm_,
+                std::function<BVectorWell()>(),
+                0);
         }
-        duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
-    }
+
+        if (use_legacy_global_operator_) {
+#if HAVE_SUITESPARSE_UMFPACK
+            if (!duneDSolver_) {
+                duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
+            }
 #else
-    OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK. "
-              "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
+            OPM_THROW(std::runtime_error,
+                      "MultisegmentWell legacy global-operator support requires SuiteSparse/UMFPACK. "
+                      "Disable LocalWellEqUseLegacyGlobalOperator to use the flexible solver path instead.");
 #endif
+        } else {
+            duneDSolver_.reset();
+        }
+
+        matrix_structure_changed_ = false;
+    }
 }
 
 template<class Scalar, typename IndexTraits, int numWellEq, int numEq>
@@ -218,7 +313,7 @@ MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solve() const
         // It is ok to do this on each process instead of only on one,
         // because the other processes would remain idle while waiting for
         // the single process to complete the computation.
-        return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+        return solveLocalDSystem(resWell_);
     }
     else {
        return {};
@@ -233,7 +328,7 @@ MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::solve(const BV
         // It is ok to do this on each process instead of only on one,
         // because the other processes would remain idle while waiting for
         // the single process to complete the computation.
-        return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
+        return solveLocalDSystem(rhs);
     }
     else {
         return {};
@@ -253,7 +348,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
         // It is ok to do this on each process instead of only on one,
         // because the other processes would remain idle while waiting for
         // the single process to complete the computation.
-        xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
+        xw = solveGlobalOperatorDSystem(resWell);
     }
 }
 
@@ -333,10 +428,8 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
     if constexpr (std::is_same_v<Scalar,double>) {
-        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
-                                                                            numWellEq,
-                                                                            *duneDSolver_);
-
+        const auto addExtractContribution = [&](const auto& invDuneD)
+        {
         // We need to change matrix A as follows
         // A -= C^T D^-1 B
         // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
@@ -347,12 +440,12 @@ extract(SparseMatrixAdapter& jacobian) const
         // i.e. the columns of B/C have no more than one nonzero.
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
-                      endC = duneC_[rowC].end(); colC != endC; ++colC) {
+                        endC = duneC_[rowC].end(); colC != endC; ++colC) {
                 // map the well perforated cell index to global cell index
                 const auto row_index = cells_[colC.index()];
                 for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
                     for (auto colB = duneB_[rowB].begin(),
-                              endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                                endB = duneB_[rowB].end(); colB != endB; ++colB) {
                         const auto col_index = cells_[colB.index()];
                         OffDiagMatrixBlockWellType tmp1;
                         detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
@@ -362,6 +455,39 @@ extract(SparseMatrixAdapter& jacobian) const
                     }
                 }
             }
+        }
+        };
+
+        if (use_legacy_global_operator_) {
+#if HAVE_SUITESPARSE_UMFPACK
+            const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
+                                                                                numWellEq,
+                                                                                *duneDSolver_);
+            addExtractContribution(invDuneD);
+#else
+            OPM_THROW(std::runtime_error,
+                      "MultisegmentWell legacy global-operator support requires SuiteSparse/UMFPACK. "
+                      "Disable LocalWellEqUseLegacyGlobalOperator to use the flexible solver path instead.");
+#endif
+        } else {
+            std::vector<std::vector<DiagMatrixBlockWellType>> invDuneD(
+                duneD_.N(), std::vector<DiagMatrixBlockWellType>(duneD_.N(), DiagMatrixBlockWellType(0.0)));
+            const int nrows = static_cast<int>(duneD_.N());
+            for (int row = 0; row < nrows; ++row) {
+                BVectorWell e(nrows);
+                e = Scalar{0.0};
+                for (int localEq = 0; localEq < numWellEq; ++localEq) {
+                    e[row][localEq] = 1.0;
+                    const auto col = solveLocalDSystem(e);
+                    for (int col_idx = 0; col_idx < nrows; ++col_idx) {
+                        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                            invDuneD[col_idx][row][eq_idx][localEq] = col[col_idx][eq_idx];
+                        }
+                    }
+                    e[row][localEq] = 0.0;
+                }
+            }
+            addExtractContribution(invDuneD);
         }
     }
 }
