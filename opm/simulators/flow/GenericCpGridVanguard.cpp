@@ -255,7 +255,9 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                         break;
                     }
                 }
-                if (!well_on_rank[well_idx]) parallelWells.emplace_back(well_name, false);
+                if (well_on_rank[well_idx] == 0) {
+                    parallelWells.emplace_back(well_name, false);
+                }
                 ++well_idx;
             }
 
@@ -269,8 +271,10 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                 well_idx = 0;
                 for (const auto& well_name : inactive_well_names) {
                     std::string msg = fmt::format("Well {} is inactive, with perforations on ranks: ", well_name);
-                    for (int i=0; i<nranks; ++i) {
-                        if (well_on_rank_global[i*num_wells + well_idx]) msg += fmt::format("{} ", i);
+                    for (int i = 0; i < nranks; ++i) {
+                        if (well_on_rank_global[i*num_wells + well_idx] != 0) {
+                            msg += fmt::format("{} ", i);
+                        }
                     }
                     OpmLog::info(msg);
                     ++well_idx;
@@ -576,7 +580,7 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
             removed_cells.resize(size);
         }
 
-        this->grid_->comm().broadcast(removed_cells.data(), size, 0);
+        this->grid_->comm().broadcast(removed_cells.data(), static_cast<int>(size), 0);
     }
 
     // Inform the aquifer object that we might have removed/deactivated

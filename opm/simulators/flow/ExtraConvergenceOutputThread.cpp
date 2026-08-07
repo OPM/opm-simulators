@@ -72,19 +72,16 @@ namespace {
     }
 
     template <typename HeaderSequence>
-    auto maxHeaderSize(const HeaderSequence& headers)
+    int maxHeaderSize(const HeaderSequence& headers)
     {
-        using sz_t = std::remove_cv_t<std::remove_reference_t<
-            decltype(std::declval<HeaderSequence>().front().size())>>;
-
         if (headers.empty()) {
-            return sz_t{0};
+            return 0;
         }
 
-        return std::accumulate(headers.begin(), headers.end(), sz_t{1},
+        return std::accumulate(headers.begin(), headers.end(), 0,
                                [](const auto m, const auto& header)
                                {
-                                   return std::max(m, header.size() + 1);
+                                   return std::max(m, static_cast<int>(header.size() + 1));
                                });
     }
 
@@ -98,20 +95,20 @@ namespace {
         return os.str();
     }
 
-    std::string::size_type
-    maxColHeaderSize(const std::string::size_type                                           minColSize,
+    int
+    maxColHeaderSize(const int                                                              minColSize,
                      const Opm::ConvergenceOutputThread::ComponentToPhaseName&              getPhaseName,
                      const std::vector<Opm::ConvergenceReport::ReservoirConvergenceMetric>& cols)
     {
         return std::accumulate(cols.begin(), cols.end(), minColSize,
-            [&getPhaseName](const std::string::size_type                              maxChar,
+            [&getPhaseName](const int                                                 maxChar,
                             const Opm::ConvergenceReport::ReservoirConvergenceMetric& metric)
         {
-            return std::max(maxChar, formatMetricColumn(getPhaseName, metric).size() + 1);
+            return std::max(maxChar, static_cast<int>(formatMetricColumn(getPhaseName, metric).size() + 1));
         });
     }
 
-    std::pair<std::string::size_type, std::string::size_type>
+    std::pair<int, int>
     writeConvergenceHeader(std::ostream&                                             os,
                            const Opm::ConvergenceOutputThread::ComponentToPhaseName& getPhaseName,
                            const Opm::ConvergenceReportQueue::OutputRequest&         firstRequest)
@@ -146,7 +143,7 @@ namespace {
 
     void writeTimeColumns(std::ostream&                                           os,
                           const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
-                          const std::string::size_type                            firstColSize,
+                          const int                                               firstColSize,
                           const int                                               iter,
                           const Opm::ConvergenceReport&                           report,
                           const Opm::ConvergenceReportQueue::OutputRequest&       request)
@@ -160,7 +157,7 @@ namespace {
 
     void writeCnvPvSplit(std::ostream&                        os,
                          const std::vector<double>::size_type expectedNumValues,
-                         const std::string::size_type         firstColSize,
+                         const int                            firstColSize,
                          const Opm::ConvergenceReport&        report)
     {
         const auto& [splitPv, cellCnt] = report.cnvPvSplit();
@@ -194,7 +191,7 @@ namespace {
     }
 
     void writePenaltyCount(std::ostream&                 os,
-                           const std::string::size_type  firstColSize,
+                           const int                     firstColSize,
                            const Opm::ConvergenceReport& report)
     {
         const auto& penaltyCard = report.getPenaltyCard();
@@ -205,7 +202,7 @@ namespace {
     }
 
     void writeReservoirConvergence(std::ostream&                 os,
-                                   const std::string::size_type  colSize,
+                                   const int                     colSize,
                                    const Opm::ConvergenceReport& report)
     {
         for (const auto& metric : report.reservoirConvergence()) {
@@ -214,7 +211,7 @@ namespace {
     }
 
     void writeWellConvergence(std::ostream&                 os,
-                              const std::string::size_type  colSize,
+                              const int                     colSize,
                               const Opm::ConvergenceReport& report)
     {
         os << std::right << std::setw(colSize)
@@ -229,8 +226,8 @@ namespace {
 
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
-                                 const std::string::size_type                            firstColSize,
-                                 const std::string::size_type                            colSize,
+                                 const int                                               firstColSize,
+                                 const int                                               colSize,
                                  const Opm::ConvergenceReportQueue::OutputRequest&       request)
     {
         os.setf(std::ios_base::scientific);
@@ -283,8 +280,8 @@ private:
     ComponentToPhaseName getPhaseName_{};
     ConvertToTimeUnits convertTime_{};
     std::optional<std::ofstream> infoIter_{};
-    std::string::size_type firstColSize_{0};
-    std::string::size_type colSize_{0};
+    int firstColSize_{0};
+    int colSize_{0};
     bool haveOutputIterHeader_{false};
     bool finalRequestWritten_{false};
 
@@ -397,8 +394,8 @@ ConvergenceOutputThread(std::string_view               outputDir,
                         ConvergenceReportQueue&        queue)
     : pImpl_ { std::make_unique<Impl>(outputDir,
                                       baseName,
-                                      getPhaseName,
-                                      convertTime,
+                                      std::move(getPhaseName),
+                                      std::move(convertTime),
                                       config,
                                       queue) }
 {}

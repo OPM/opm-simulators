@@ -233,7 +233,7 @@ namespace Opm {
         /// \param[in] phase Phase index for which to compute array offset.
         ///
         /// \return Value array offset for region-level averages of \p phase.
-        Ix rsetStartIx(std::size_t rset, int region, unsigned int phase) const;
+        Ix rsetStartIx(std::size_t rset, std::size_t region, unsigned int phase) const;
 
         /// Compute linearised value array offset for average function
         /// values of a single phase.

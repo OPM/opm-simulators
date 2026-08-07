@@ -87,25 +87,33 @@ int setupWritingPars(Parallel::Communication comm,
     n_elements_global_max += elements_rank_sizes[comm.size() - 1]; // add the last ranks size to the already accumulated offset values
 
     if (comm.rank() == 0) {
-        OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}",
+        OpmLog::debug(fmt::format("In setupWritingPars(): n_elements_global_max = {}",
                                   n_elements_global_max));
     }
 
-    // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
+    // Set the parameter so that the Damaris servers can allocate the correct amount of memory for the variable.
     // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
     // ToDo: Do we need to check that local ranks are 0 based ?
-    int dam_err = setParameter("n_elements_local", elements_rank_sizes[comm.rank()]);
+    const auto localSize = elements_rank_sizes[comm.rank()];
+    if (localSize > static_cast<unsigned long long>(std::numeric_limits<int>::max())) {
+        OPM_THROW(std::runtime_error,
+                  "setupWritingPars() n_elements_local > std::numeric_limits<int>::max() ");
+    }
+
+    int dam_err = setParameter("n_elements_local",
+                               static_cast<int>(elements_rank_sizes[comm.rank()]));
     // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
     // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
-    if ( n_elements_global_max <= std::numeric_limits<int>::max() ) {
-        setParameter("n_elements_total", n_elements_global_max);
-    } else {
+    if (n_elements_global_max <= static_cast<unsigned long long>(std::numeric_limits<int>::max())) {
+        dam_err = setParameter("n_elements_total", static_cast<int>(n_elements_global_max));
+    }
+    else {
         if (comm.rank() == 0) {
             OpmLog::error(fmt::format("The size of the global array ({}) is"
                                       "greater than what a Damaris paramater type supports ({}).  ",
                                       n_elements_global_max, std::numeric_limits<int>::max() ));
         }
-        OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max "
+        OPM_THROW(std::runtime_error, "setupWritingPars() n_elements_global_max "
                                       "> std::numeric_limits<int>::max() " + std::to_string(dam_err));
     }
 
@@ -117,7 +125,7 @@ void
 handleError(const int dam_err, Parallel::Communication comm, const std::string& message)
 {
     // Find if some rank has encountered an error.
-    const int isOk = (dam_err == DAMARIS_OK);
+    const int isOk = dam_err == DAMARIS_OK ? 1 : 0;
     const bool error = (comm.sum(isOk) != comm.size());
 
     if (error) {

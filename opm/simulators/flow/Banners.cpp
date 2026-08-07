@@ -29,6 +29,7 @@
 
 #include <fmt/format.h>
 
+#include <array>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -50,7 +51,8 @@ unsigned long long getTotalSystemMemory()
 
 namespace Opm {
 
-void printPRTHeader(const int nprocs, const int nthreads,
+void printPRTHeader(const std::size_t nprocs,
+                    const std::size_t nthreads,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -59,12 +61,12 @@ void printPRTHeader(const int nprocs, const int nthreads,
     unsigned num_cpu = std::thread::hardware_concurrency();
     struct utsname arch;
     const char* user = getlogin();
-    std::time_t now = std::time(0);
+    std::time_t now = std::time(nullptr);
     struct std::tm  tstruct;
-    char      tmstr[80];
+    std::array<char,80>  tmstr;
     tstruct = *std::localtime(&now);
-    std::strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
-    const double mem_size = getTotalSystemMemory() / megabyte;
+    std::strftime(tmstr.data(), tmstr.size(), "%d-%m-%Y at %X", &tstruct);
+    const double mem_size = static_cast<double>(getTotalSystemMemory()) / megabyte;
     std::ostringstream ss;
     ss << "\n\n\n";
     ss << " ########  #          ######   #           #\n";
@@ -82,10 +84,10 @@ void printPRTHeader(const int nprocs, const int nthreads,
        ss << ", " << arch.version << " )\n";
        ss << "Build time       =  " << compileTimestamp << "\n";
     }
-    if (user) {
+    if (user != nullptr) {
        ss << "User             =  " << user << std::endl;
     }
-    ss << "Simulation started on " << tmstr << " hrs\n";
+    ss << "Simulation started on " << tmstr.data() << " hrs\n";
     ss << "Using "<< nprocs << " MPI processes with "<< nthreads <<" OMP threads on each \n";
     ss << "Parameters used by Flow:\n" << parameters;
 
@@ -97,8 +99,10 @@ void printFlowBanner(int nprocs, int nthreads, std::string_view moduleVersionNam
     const int lineLen = 70;
     std::string banner = "This is flow ";
     banner += moduleVersionName;
-    const int bannerPreLen = (lineLen - 2 - banner.size())/2;
-    const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
+    const int available = lineLen - 2 - static_cast<int>(banner.size());
+    const int pad = std::max(available, 0);
+    const std::size_t bannerPreLen = pad / 2;
+    const std::size_t bannerPostLen = pad - bannerPreLen;
     std::cout << "**********************************************************************\n";
     std::cout << "*                                                                    *\n";
     std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
