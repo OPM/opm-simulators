@@ -37,6 +37,7 @@
 #include <fmt/format.h>
 
 #include <filesystem>
+#include <limits>
 #include <sstream>
 
 namespace Opm {
@@ -357,16 +358,26 @@ runStep(SimulatorTimer& timer)
             auto& schedule = this->simulator_.vanguard().schedule();
             auto& events = this->schedule()[reportStep].events();
 
-            bool result = false;
+            // The problem may cap the next time step (e.g. a geomechanical
+            // fracture model limiting steps while the fracture grows); seed
+            // the updater with that limit.
+            auto max_next_tstep = this->simulator_.problem().maxNextTimeStepSize();
+            bool result = max_next_tstep < std::numeric_limits<double>::max();
+            if (result) {
+                this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+            }
             if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                 // Unset the event to not trigger it again on the next sub step
                 schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
                 const auto& sched_state = schedule[reportStep];
-                const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                const auto& tuning_max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                if (tuning_max_next_tstep > 0) {
+                    max_next_tstep = std::max(max_next_tstep, tuning_max_next_tstep);
+                }
                 const auto& tuning = sched_state.tuning();
 
                 if (enableTUNING) {
-                    adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
+                    adaptiveTimeStepping_->updateTUNING(tuning_max_next_tstep, tuning);
                     // \Note: Assumes TUNING is only used with adaptive time-stepping
                     // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
                     solver_->model().updateTUNING(tuning);
@@ -374,9 +385,11 @@ runStep(SimulatorTimer& timer)
                     substep_length = this->adaptiveTimeStepping_->suggestedNextStep();
                 } else {
                     substep_length = max_next_tstep;
-                    this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                    if (max_next_tstep < std::numeric_limits<double>::max()) {
+                        this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                    }
                 }
-                result = max_next_tstep > 0;
+                result = max_next_tstep < std::numeric_limits<double>::max();
             }
 
             if (events.hasEvent(ScheduleEvents::TUNINGDP_CHANGE)) {
