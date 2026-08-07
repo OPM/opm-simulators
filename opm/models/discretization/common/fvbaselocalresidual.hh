@@ -86,6 +86,16 @@ private:
     using EvalVector = Dune::FieldVector<Evaluation, numEq>;
 
 public:
+    /*!
+     * \brief Whether computeStorage() can be called with a degree of freedom's intensive
+     *        quantities alone, without an element context to reach them through.
+     *
+     * False here: this residual is evaluated element by element.  A residual that offers
+     * the context-free form overrides this, and code that wants to walk the degrees of
+     * freedom rather than the elements asks for it.
+     */
+    static constexpr bool formsStorageFromIntensiveQuantities = false;
+
     using LocalEvalBlockVector = Dune::BlockVector<EvalVector, aligned_allocator<EvalVector, alignof(EvalVector)>>;
 
     FvBaseLocalResidual() = default;
