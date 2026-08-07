@@ -154,14 +154,19 @@ namespace Dune
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
         auto child = prm.get_child_optional("preconditioner");
         if (solver_type == "umfpack") {
+            // Deliberately not wrapped in TimedPreconditioner: apply() locates
+            // this type with a dynamic_cast to trigger a refactorisation, and
+            // that cast does not see through the decorator.
             preconditioner_ = std::make_shared<Dune::DirectSolverUpdatePreconditioner<VectorType, VectorType>>(
                 linearoperator_for_solver_->category());
         } else {
-            preconditioner_ = Opm::PreconditionerFactory<Operator, Comm>::create(op,
-                                                                                 child ? *child : Opm::PropertyTree(),
-                                                                                 weightsCalculator,
-                                                                                 comm,
-                                                                                 pressureIndex);
+            // wrap the preconditioner in a timing decorator for the performance summary
+            preconditioner_ = std::make_shared<TimedPreconditioner<VectorType, VectorType>>(
+                Opm::PreconditionerFactory<Operator, Comm>::create(op,
+                                                                   child ? *child : Opm::PropertyTree(),
+                                                                   weightsCalculator,
+                                                                   comm,
+                                                                   pressureIndex));
         }
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, op.category());
     }
@@ -180,13 +185,18 @@ namespace Dune
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
         auto child = prm.get_child_optional("preconditioner");
         if (solver_type == "umfpack") {
+            // Deliberately not wrapped in TimedPreconditioner: apply() locates
+            // this type with a dynamic_cast to trigger a refactorisation, and
+            // that cast does not see through the decorator.
             preconditioner_ = std::make_shared<Dune::DirectSolverUpdatePreconditioner<VectorType, VectorType>>(
                 linearoperator_for_solver_->category());
         } else {
-            preconditioner_ = Opm::PreconditionerFactory<Operator, Dune::Amg::SequentialInformation>::create(op,
-                                                                                                              child ? *child : Opm::PropertyTree(),
-                                                                                                              weightsCalculator,
-                                                                                                              pressureIndex);
+            // wrap the preconditioner in a timing decorator for the performance summary
+            preconditioner_ = std::make_shared<TimedPreconditioner<VectorType, VectorType>>(
+                Opm::PreconditionerFactory<Operator, Dune::Amg::SequentialInformation>::create(op,
+                                                                   child ? *child : Opm::PropertyTree(),
+                                                                   weightsCalculator,
+                                                                   pressureIndex));
         }
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }

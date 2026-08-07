@@ -116,7 +116,8 @@ void printFlowTrailer(int nprocs,
                       int nthreads,
                       const double total_setup_time,
                       const double deck_read_time,
-                      const SimulatorReport& report)
+                      const SimulatorReport& report,
+                      const bool performance_details)
 {
     std::ostringstream ss;
     ss << "\n\n================    End of simulation     ===============\n\n";
@@ -124,7 +125,7 @@ void printFlowTrailer(int nprocs,
     ss << fmt::format("Threads per MPI process: {:9}\n", nthreads);
     ss << fmt::format("Setup time:                 {:9.2f} s\n", total_setup_time);
     ss << fmt::format("  Deck input:               {:9.2f} s\n", deck_read_time);
-    report.reportFullyImplicit(ss);
+    report.reportFullyImplicit(ss, performance_details);
     OpmLog::info(ss.str());
 }
 

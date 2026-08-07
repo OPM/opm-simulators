@@ -36,7 +36,10 @@ namespace Opm
                                      7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
                                      13, 14, 15, 16, 17, 18,
                                      true, false, false, 19, 20.0, 21.0,
-                                     22, 23, 24, 25, 26, 27, 28, 29};
+                                     22, 23, 24, 25, 26, 27, 28, 29,
+                                     30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0,
+                                     38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0,
+                                     46.0, 47.0, 48.0, 49, 50};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -72,7 +75,28 @@ namespace Opm
                this->converged_domains == rhs.converged_domains &&
                this->unconverged_domains == rhs.unconverged_domains &&
                this->accepted_unconverged_domains == rhs.accepted_unconverged_domains &&
-               this->skipped_domains == rhs.skipped_domains;
+               this->skipped_domains == rhs.skipped_domains &&
+               this->props_time == rhs.props_time &&
+               this->convergence_check_time == rhs.convergence_check_time &&
+               this->output_eval_time == rhs.output_eval_time &&
+               this->tracer_solve_time == rhs.tracer_solve_time &&
+               this->temperature_solve_time == rhs.temperature_solve_time &&
+               this->output_disk_write_time == rhs.output_disk_write_time &&
+               this->linear_solve_apply_time == rhs.linear_solve_apply_time &&
+               this->precond_setup_time == rhs.precond_setup_time &&
+               this->precond_apply_time == rhs.precond_apply_time &&
+               this->well_solve_time == rhs.well_solve_time &&
+               this->well_potential_solve_time == rhs.well_potential_solve_time &&
+               this->well_solve_assemble_time == rhs.well_solve_assemble_time &&
+               this->well_solve_linear_solve_time == rhs.well_solve_linear_solve_time &&
+               this->well_control_network_time == rhs.well_control_network_time &&
+               this->gaslift_time == rhs.gaslift_time &&
+               this->well_facility_time == rhs.well_facility_time &&
+               this->group_control_time == rhs.group_control_time &&
+               this->network_balance_time == rhs.network_balance_time &&
+               this->control_well_solve_time == rhs.control_well_solve_time &&
+               this->total_well_potential_iterations == rhs.total_well_potential_iterations &&
+               this->total_network_iterations == rhs.total_network_iterations;
     }
 
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
@@ -87,9 +111,30 @@ namespace Opm
         pre_post_time += sr.pre_post_time;
         assemble_time_well += sr.assemble_time_well;
         update_time += sr.update_time;
+        props_time += sr.props_time;
+        convergence_check_time += sr.convergence_check_time;
+        output_eval_time += sr.output_eval_time;
+        tracer_solve_time += sr.tracer_solve_time;
+        temperature_solve_time += sr.temperature_solve_time;
+        output_disk_write_time += sr.output_disk_write_time;
+        linear_solve_apply_time += sr.linear_solve_apply_time;
+        precond_setup_time += sr.precond_setup_time;
+        precond_apply_time += sr.precond_apply_time;
+        well_solve_time += sr.well_solve_time;
+        well_potential_solve_time += sr.well_potential_solve_time;
+        well_solve_assemble_time += sr.well_solve_assemble_time;
+        well_solve_linear_solve_time += sr.well_solve_linear_solve_time;
+        well_control_network_time += sr.well_control_network_time;
+        gaslift_time += sr.gaslift_time;
+        well_facility_time += sr.well_facility_time;
+        group_control_time += sr.group_control_time;
+        network_balance_time += sr.network_balance_time;
+        control_well_solve_time += sr.control_well_solve_time;
         output_write_time += sr.output_write_time;
         total_time += sr.total_time;
         total_well_iterations += sr.total_well_iterations;
+        total_well_potential_iterations += sr.total_well_potential_iterations;
+        total_network_iterations += sr.total_network_iterations;
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
@@ -130,7 +175,9 @@ namespace Opm
         return val;
     };
 
-    void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
+    void SimulatorReportSingle::reportFullyImplicit(std::ostream& os,
+                                                    const SimulatorReportSingle* failureReport,
+                                                    bool performance_details) const
     {
         // Disabling this output as it is redundant with the solver_time, now
         // output as "Simulation time". Usually very small difference between them.
@@ -160,6 +207,22 @@ namespace Opm
             }
             os << std::endl;
 
+            // part of the well assembly used for the facility calculations
+            // (further details in the Facility calculations section below)
+            t = well_facility_time + (failureReport ? failureReport->well_facility_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("      Facility calculations:  {:7.2f} s", t);
+                os << std::endl;
+
+                t = well_control_network_time + (failureReport ? failureReport->well_control_network_time : 0.0);
+                os << fmt::format("        Control/network:      {:7.2f} s", t);
+                os << std::endl;
+
+                t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
+                os << fmt::format("        Well solves:          {:7.2f} s", t);
+                os << std::endl;
+            }
+
             t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
             os << fmt::format("  Linear solve time:        {:9.2f} s", t);
             if (failureReport) {
@@ -177,6 +240,29 @@ namespace Opm
                                 100*failureReport->linear_solve_setup_time/noZero(t));
             }
             os << std::endl;
+
+            t = precond_setup_time + (failureReport ? failureReport->precond_setup_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("      Precond setup:          {:7.2f} s", t);
+                os << std::endl;
+            }
+
+            if (performance_details) {
+                t = linear_solve_apply_time + (failureReport ? failureReport->linear_solve_apply_time : 0.0);
+                os << fmt::format("    Linear apply:             {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->linear_solve_apply_time,
+                                    100*failureReport->linear_solve_apply_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
+            t = precond_apply_time + (failureReport ? failureReport->precond_apply_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("      Precond apply:          {:7.2f} s", t);
+                os << std::endl;
+            }
 
             if (local_solve_time > 0.0) {
                 t = local_solve_time + (failureReport ? failureReport->local_solve_time : 0.0);
@@ -197,6 +283,29 @@ namespace Opm
                                 100*failureReport->update_time/noZero(t));
             }
             os << std::endl;
+
+            if (performance_details) {
+                t = props_time + (failureReport ? failureReport->props_time : 0.0);
+                os << fmt::format("    Properties evaluation:    {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->props_time,
+                                    100*failureReport->props_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
+            if (performance_details) {
+                t = convergence_check_time + (failureReport ? failureReport->convergence_check_time : 0.0);
+                os << fmt::format("    Convergence checks:       {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->convergence_check_time,
+                                    100*failureReport->convergence_check_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
             t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
             os << fmt::format("  Pre/post step:              {:7.2f} s", t);
             if (failureReport) {
@@ -206,8 +315,109 @@ namespace Opm
             }
             os << std::endl;
 
+            if (performance_details) {
+                t = output_eval_time + (failureReport ? failureReport->output_eval_time : 0.0);
+                os << fmt::format("    Output evaluation:        {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->output_eval_time,
+                                    100*failureReport->output_eval_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
+            t = tracer_solve_time + (failureReport ? failureReport->tracer_solve_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("    Tracer solve:             {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->tracer_solve_time,
+                                    100*failureReport->tracer_solve_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
+            t = temperature_solve_time + (failureReport ? failureReport->temperature_solve_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("    Temperature solve:        {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->temperature_solve_time,
+                                    100*failureReport->temperature_solve_time/noZero(t));
+                }
+                os << std::endl;
+            }
+
             os << fmt::format("  Output write time:          {:7.2f} s",
                               output_write_time + (failureReport ? failureReport->output_write_time : 0.0));
+            os << std::endl;
+
+            t = output_disk_write_time + (failureReport ? failureReport->output_disk_write_time : 0.0);
+            if (performance_details && t > 0.0) {
+                os << fmt::format("    Actual disk write:        {:7.2f} s", t);
+                os << std::endl;
+            }
+
+        }
+
+        // Summary of all time used in the wells/facility. This cuts across
+        // the simulation phases above: the control/network updates and the
+        // normal well solves happen during the assembly, while the well
+        // potential solves are part of the pre/post step (output
+        // evaluation). The indented items are parts of their parent, but do
+        // not necessarily add up to it.
+        const double total_facility_time =
+            well_facility_time + well_potential_solve_time +
+            (failureReport ? failureReport->well_facility_time +
+                             failureReport->well_potential_solve_time : 0.0);
+        if (performance_details && total_facility_time > 0.0) {
+            os << fmt::format("Facility calculations:      {:9.2f} s", total_facility_time);
+            if (failureReport) {
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                failureReport->well_facility_time + failureReport->well_potential_solve_time,
+                                100*(failureReport->well_facility_time + failureReport->well_potential_solve_time)
+                                   /noZero(total_facility_time));
+            }
+            os << std::endl;
+
+            double t = well_control_network_time + (failureReport ? failureReport->well_control_network_time : 0.0);
+            os << fmt::format("  Control/network:            {:7.2f} s", t);
+            os << std::endl;
+
+            t = group_control_time + (failureReport ? failureReport->group_control_time : 0.0);
+            os << fmt::format("    Group/control updates:    {:7.2f} s", t);
+            os << std::endl;
+
+            t = network_balance_time + (failureReport ? failureReport->network_balance_time : 0.0);
+            if (t > 0.0) {
+                os << fmt::format("    Network balance:          {:7.2f} s", t);
+                os << std::endl;
+            }
+
+            t = gaslift_time + (failureReport ? failureReport->gaslift_time : 0.0);
+            if (t > 0.0) {
+                os << fmt::format("    Gas lift optimize:        {:7.2f} s", t);
+                os << std::endl;
+            }
+
+            t = control_well_solve_time + (failureReport ? failureReport->control_well_solve_time : 0.0);
+            os << fmt::format("    Well solves (control):    {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_solve_time + (failureReport ? failureReport->well_solve_time : 0.0);
+            os << fmt::format("  Well solves:                {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_solve_assemble_time + (failureReport ? failureReport->well_solve_assemble_time : 0.0);
+            os << fmt::format("    Assembly:                 {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_solve_linear_solve_time + (failureReport ? failureReport->well_solve_linear_solve_time : 0.0);
+            os << fmt::format("    Linear solve:             {:7.2f} s", t);
+            os << std::endl;
+
+            t = well_potential_solve_time + (failureReport ? failureReport->well_potential_solve_time : 0.0);
+            os << fmt::format("  Potential solves:           {:7.2f} s", t);
             os << std::endl;
         }
 
@@ -237,6 +447,39 @@ namespace Opm
                             100.0*failureReport->total_linear_iterations/noZero(n));
         }
         os << std::endl;
+
+        n = total_well_iterations + (failureReport ? failureReport->total_well_iterations : 0);
+        unsigned int np = total_well_potential_iterations +
+            (failureReport ? failureReport->total_well_potential_iterations : 0);
+        if (performance_details && (n > 0 || np > 0)) {
+            os << fmt::format("Overall Well Iterations:   {:7}", n);
+            if (failureReport) {
+              os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
+                                failureReport->total_well_iterations,
+                                100.0*failureReport->total_well_iterations/noZero(n));
+            }
+            os << std::endl;
+
+            os << fmt::format("Well Potential Iterations: {:7}", np);
+            if (failureReport) {
+              os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
+                                failureReport->total_well_potential_iterations,
+                                100.0*failureReport->total_well_potential_iterations/noZero(np));
+            }
+            os << std::endl;
+        }
+
+        unsigned int nn = total_network_iterations +
+            (failureReport ? failureReport->total_network_iterations : 0);
+        if (performance_details && nn > 0) {
+            os << fmt::format("Network Balance Iterations:{:7}", nn);
+            if (failureReport) {
+              os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
+                                failureReport->total_network_iterations,
+                                100.0*failureReport->total_network_iterations/noZero(nn));
+            }
+            os << std::endl;
+        }
     }
 
 
@@ -379,10 +622,10 @@ namespace Opm
         stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
     }
 
-    void SimulatorReport::reportFullyImplicit(std::ostream& os) const
+    void SimulatorReport::reportFullyImplicit(std::ostream& os, bool performance_details) const
     {
         os << fmt::format("Number of timesteps:     {:9}\n", stepreports.size());
-        success.reportFullyImplicit(os, &failure);
+        success.reportFullyImplicit(os, &failure, performance_details);
     }
 
     void SimulatorReport::reportNLDD(std::ostream& os) const
