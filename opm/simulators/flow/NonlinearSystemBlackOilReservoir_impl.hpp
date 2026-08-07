@@ -295,8 +295,21 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
             if (isOscillate) {
                 this->current_relaxation_ -= nonlinear_solver.relaxIncrement();
                 this->current_relaxation_ = std::max(this->current_relaxation_, nonlinear_solver.relaxMax());
+                // The detector reads reservoir residual history and the response damps the
+                // reservoir update, but the oscillation may originate in the well/group
+                // control layer.  Record what was unsatisfied here so the two can be told
+                // apart.
+                auto source = ConvergenceReport::OscillationSource::NotDetected;
+                if (!this->convergence_reports_.empty() &&
+                    !this->convergence_reports_.back().report.empty())
+                {
+                    auto& convrep = this->convergence_reports_.back().report.back();
+                    source = classifyOscillationSource(convrep);
+                    convrep.setOscillationSource(source);
+                }
                 if (this->terminalOutputEnabled()) {
-                    OpmLog::info("    Oscillating behavior detected: Relaxation set to "
+                    OpmLog::info("    Oscillating behavior detected (" + to_string(source)
+                                 + "): Relaxation set to "
                                  + std::to_string(this->current_relaxation_));
                 }
             }

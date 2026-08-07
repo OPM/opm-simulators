@@ -141,6 +141,7 @@ namespace {
         // therefore remain the last column.
         os << std::right << std::setw(headerSize) << "CnvRelax";
         os << std::right << std::setw(headerSize) << "CnvTolUsed";
+        os << std::right << std::setw(headerSize) << "OscSource";
         os << std::right << std::setw(headerSize) << "Gate";
         os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
 
@@ -248,6 +249,13 @@ namespace {
         }
     }
 
+    void writeOscillationSource(std::ostream&                 os,
+                                const std::string::size_type  colSize,
+                                const Opm::ConvergenceReport& report)
+    {
+        os << std::right << std::setw(colSize) << to_string(report.oscillationSource());
+    }
+
     void writeConvergenceGate(std::ostream&                 os,
                               const std::string::size_type  colSize,
                               const Opm::ConvergenceReport& report)
@@ -283,6 +291,7 @@ namespace {
 
             writeReservoirConvergence(os, colSize, report);
             writeCnvRelaxation(os, colSize, report);
+            writeOscillationSource(os, colSize, report);
             writeConvergenceGate(os, colSize, report);
             writeWellConvergence(os, colSize, report);
 

@@ -251,6 +251,18 @@ namespace Opm
             IterCount,   //!< min_strict_cnv_iter >= 0 and iteration >= it
         };
 
+        /// What was unsatisfied at the iteration where the Newton solver detected an
+        /// oscillation.  An association, not a proof of cause.  Note the base rate when
+        /// reading this: a non-final iteration almost always has unsatisfied reservoir
+        /// residuals, so Reservoir is the common label and the discriminating signal is
+        /// how often the control layer *also* participates (Mixed + WellControl).
+        enum struct OscillationSource {
+            NotDetected,
+            Reservoir,    //!< reservoir residuals only
+            WellControl,  //!< well control equations or a group/network gate only
+            Mixed,        //!< both
+        };
+
         // ----------- Mutating member functions -----------
 
         ConvergenceReport()
@@ -316,6 +328,13 @@ namespace Opm
             this->eligiblePoreVolume_ = eligiblePoreVolume;
         }
 
+        //! \brief Record that the Newton solver damped this iteration for oscillation,
+        //! together with what was unsatisfied at that point.
+        void setOscillationSource(const OscillationSource source)
+        {
+            this->oscillationSource_ = source;
+        }
+
         //! \brief Record which condition granted the relaxed CNV tolerance and the
         //! tolerance actually applied, so an accepted step's quality is visible.
         void setCnvRelaxation(const CnvRelaxSource source, const double toleranceApplied)
@@ -375,6 +394,12 @@ namespace Opm
         const CnvPvSplit& cnvPvSplit() const
         {
             return this->cnvPvSplit_;
+        }
+
+        //! \brief What was unsatisfied when oscillation damping was triggered, if it was.
+        OscillationSource oscillationSource() const
+        {
+            return this->oscillationSource_;
         }
 
         //! \brief Which condition granted the relaxed CNV tolerance this iteration.
@@ -492,6 +517,7 @@ namespace Opm
             serializer(this->eligiblePoreVolume_);
             serializer(this->cnvRelaxSource_);
             serializer(this->cnvToleranceApplied_);
+            serializer(this->oscillationSource_);
             serializer(this->penaltyCard_);
         }
 
@@ -511,6 +537,7 @@ namespace Opm
         double eligiblePoreVolume_{};
         CnvRelaxSource cnvRelaxSource_{CnvRelaxSource::None};
         double cnvToleranceApplied_{};
+        OscillationSource oscillationSource_{OscillationSource::NotDetected};
         PenaltyCard penaltyCard_;
     };
 
@@ -532,6 +559,11 @@ namespace Opm
     std::string to_string(const ConvergenceReport::PenaltyCard& pc);
 
     std::string to_string(const ConvergenceReport::CnvRelaxSource s);
+
+    std::string to_string(const ConvergenceReport::OscillationSource s);
+
+    /// Classify what was unsatisfied in a report, for oscillation-source reporting.
+    ConvergenceReport::OscillationSource classifyOscillationSource(const ConvergenceReport& report);
 
 
 
