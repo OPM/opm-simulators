@@ -416,13 +416,18 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
 
         well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         if (write_message_to_opmlog) {
-            if (well_.wellEcl().getAutomaticShutIn()) {
-                const std::string msg = std::string("well ") + well_.name() + std::string(" will be shut due to rate economic limit");
-                deferred_logger.info(msg);
-            } else {
-                const std::string msg = std::string("well ") + well_.name() + std::string(" will be stopped due to rate economic limit");
-                deferred_logger.info(msg);
-            }
+            // State when the well stops flowing, as the ratio-limit and CECON
+            // messages below already do. That instant is the end of the time
+            // step the limit was detected on, not its start.
+            const std::string_view action =
+                well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
+            deferred_logger.info(
+                fmt::format("well {} will be {} due to rate economic limit "
+                            "at time {:.2f} {} (date = {})",
+                            well_.name(), action,
+                            unit_system.from_si(UnitSystem::measure::time, simulation_time),
+                            unit_system.name(UnitSystem::measure::time),
+                            economicLimitDateString(start_time, simulation_time)));
         }
         // the well is closed, not need to check other limits
         return;
