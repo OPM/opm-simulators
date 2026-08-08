@@ -211,7 +211,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
-    this->restoreMasterGroupControlsFromSchedule_();
     // Reset effective-GCW entries from the previous sync step to GCW=1 before
     // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
     // Phase 2 cap) repopulate the 0-entries for this step.
