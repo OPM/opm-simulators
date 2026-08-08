@@ -33,6 +33,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
@@ -667,13 +668,42 @@ isPressureControlled(const WellState<Scalar, IndexTraits>& well_state) const
 }
 
 template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+applyWeldrawRateLimit(const SingleWellState<Scalar, IndexTraits>& ws,
+                      Well::ProductionControls& controls) const
+{
+    if (!ws.weldraw_max_rate.has_value()) {
+        return;
+    }
+
+    const Scalar max_rate = *ws.weldraw_max_rate;
+    if (this->well_ecl_.getWELDRAW().targetPhase() == WELDRAW::TargetPhase::GAS) {
+        if (!controls.hasControl(Well::ProducerCMode::GRAT) ||
+            max_rate < controls.gas_rate)
+        {
+            controls.gas_rate = max_rate;
+            controls.addControl(Well::ProducerCMode::GRAT);
+        }
+    } else {
+        if (!controls.hasControl(Well::ProducerCMode::LRAT) ||
+            max_rate < controls.liquid_rate)
+        {
+            controls.liquid_rate = max_rate;
+            controls.addControl(Well::ProducerCMode::LRAT);
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
 bool WellInterfaceGeneric<Scalar, IndexTraits>::
 wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
                                   const WellState<Scalar, IndexTraits>& well_state) const
 {
     if (this->isProducer()) { // producers
-        const auto prod_controls = this->well_ecl_.productionControls(summary_state);
-        const auto prod_mode = well_state.well(this->indexOfWell()).production_cmode;
+        const auto& ws = well_state.well(this->indexOfWell());
+        auto prod_controls = this->well_ecl_.productionControls(summary_state);
+        this->applyWeldrawRateLimit(ws, prod_controls);
+        const auto prod_mode = ws.production_cmode;
         return wellhelpers::rateControlWithZeroProdTarget(prod_controls, prod_mode);
     } else { // injectors
         const auto inj_controls = this->well_ecl_.injectionControls(summary_state);

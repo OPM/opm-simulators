@@ -191,7 +191,12 @@ activeProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
                            const std::optional<Well::ProductionControls>& prod_controls) const
 {
     const auto& pu = well_.phaseUsage();
-    const auto controls = prod_controls.has_value() ? prod_controls.value() : well_.wellEcl().productionControls(summaryState);
+    auto controls = prod_controls.has_value() ? prod_controls.value() : well_.wellEcl().productionControls(summaryState);
+    if (!prod_controls.has_value()) {
+        // Controls passed in by the caller already have the WELDRAW
+        // limit applied (or deliberately removed).
+        well_.applyWeldrawRateLimit(ws, controls);
+    }
     const auto currentControl = ws.production_cmode;
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {

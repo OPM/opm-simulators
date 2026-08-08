@@ -32,6 +32,7 @@
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
+#include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -280,6 +281,59 @@ namespace Opm
         }
 
         return changed;
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWeldrawMaxRate(const Simulator& simulator,
+                         WellStateType& well_state,
+                         DeferredLogger& deferred_logger) const
+    {
+        if (!this->isProducer()) {
+            return;
+        }
+
+        auto& ws = well_state.well(this->index_of_well_);
+        const auto& weldraw = this->well_ecl_.getWELDRAW();
+        if (!weldraw.active()) {
+            ws.weldraw_max_rate.reset();
+            return;
+        }
+
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const Scalar max_draw = this->well_ecl_.weldrawMaxDrawdown(summary_state);
+        if (!(max_draw > 0.0)) {
+            ws.weldraw_max_rate.reset();
+            return;
+        }
+
+        // The IPR b-coefficients are the surface-rate coefficients with
+        // respect to the drawdown, sum_j Tw_j * mob_j / B_j, summed over the
+        // well's connections (crossflowing connections excluded).
+        this->updateIPR(simulator, deferred_logger);
+
+        auto phase_coeff = [this](const unsigned phase_idx) -> Scalar {
+            const unsigned comp_idx = FluidSystem::canonicalToActiveCompIdx(
+                FluidSystem::solventComponentIndex(phase_idx));
+            return this->ipr_b_[comp_idx];
+        };
+
+        Scalar coeff = 0.0;
+        if (weldraw.targetPhase() == WELDRAW::TargetPhase::GAS) {
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                coeff += phase_coeff(FluidSystem::gasPhaseIdx);
+            }
+        } else {
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                coeff += phase_coeff(FluidSystem::oilPhaseIdx);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                coeff += phase_coeff(FluidSystem::waterPhaseIdx);
+            }
+        }
+
+        ws.weldraw_max_rate = max_draw * coeff;
     }
 
     template<typename TypeTag>
@@ -571,8 +625,9 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         const auto& ws = well_state.well(this->indexOfWell());
+        this->applyWeldrawRateLimit(ws, prod_controls);
         const auto pmode_orig = ws.production_cmode;
         const auto imode_orig = ws.injection_cmode;
         bool converged = false;
@@ -1021,7 +1076,8 @@ namespace Opm
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        this->applyWeldrawRateLimit(well_state.well(this->index_of_well_), prod_controls);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state, solving_with_zero_rate);
@@ -1525,7 +1581,8 @@ namespace Opm
         else
         {
             const auto current = ws.production_cmode;
-            const auto& controls = well.productionControls(summaryState);
+            auto controls = well.productionControls(summaryState);
+            this->applyWeldrawRateLimit(ws, controls);
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {

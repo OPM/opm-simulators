@@ -91,6 +91,7 @@ public:
         serializer(group_target_fallback);
         serializer(use_group_target_fallback);
         serializer(was_shut_before_action_applied);
+        serializer(weldraw_max_rate);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -130,8 +131,8 @@ public:
         Scalar guiderate_ratio{1.0}; // well to group guide rate ratio for diagnostics
 
         bool operator==(const GroupTarget& other) const {
-            return (group_name == other.group_name 
-                 && target_value == other.target_value 
+            return (group_name == other.group_name
+                 && target_value == other.target_value
                  && production_cmode == other.production_cmode
                  && injection_cmode == other.injection_cmode
                  && guiderate_ratio == other.guiderate_ratio);
@@ -170,6 +171,10 @@ public:
     // if it was SHUT, even the action set the well to OPEN, the data in the well state
     // is not well-defined. We do not use it to overwrite the current well state.
     bool was_shut_before_action_applied {false};
+    // Maximum production rate of the WELDRAW target phase derived from the
+    // well's drawdown limit; updated during the first NUPCOL iterations of
+    // each timestep and unset when no drawdown limit is active.
+    std::optional<Scalar> weldraw_max_rate{};
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.
