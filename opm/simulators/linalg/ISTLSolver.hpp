@@ -518,6 +518,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                          weightCalculator,
                                                          forceSerial_,
                                                          comm_.get());
+                numWellEquations_ = this->numWellEquations();
             }
             else
             {
@@ -526,6 +527,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
         }
 
+
+        /// Number of extra equations the well operator contributes.
+        int numWellEquations() const
+        {
+            return useWellConn_
+                ? 0
+                : simulator_.problem().wellModel().numLocalWellsEnd();
+        }
 
         /// Return true if we should (re)create the whole solver,
         /// instead of just calling update() on the preconditioner.
@@ -537,6 +546,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 return true;
             }
             if (!flexibleSolver_[activeSolverNum_].solver_) {
+                return true;
+            }
+
+            // The CPRW coarse system reserves a row per well, so its size is
+            // fixed when the solver is built.  A well drilled by an ACTIONX
+            // block changes the well count mid-run; updating in place would
+            // then write past the end of the coarse matrix.
+            if (this->numWellEquations() != numWellEquations_) {
                 return true;
             }
 
@@ -676,6 +693,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         std::vector<int> interiorRows_;
 
         int domainIndex_ = -1;
+
+        // Number of well equations the current solver was built for, or -1 if
+        // no solver has been built yet.  See shouldCreateSolver().
+        int numWellEquations_ = -1;
 
         bool useWellConn_;
 

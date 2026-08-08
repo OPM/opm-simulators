@@ -102,7 +102,9 @@ namespace Opm {
 
             this->parallel_well_info_.reserve(parallel_wells.size());
             for( const auto& name_bool : parallel_wells) {
-                this->parallel_well_info_.emplace_back(name_bool, grid().comm());
+                this->parallel_well_info_.push_back
+                    (std::make_unique<ParallelWellInfo<Scalar>>
+                     (name_bool, grid().comm()));
             }
         }
 
@@ -252,6 +254,11 @@ namespace Opm {
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
 
         const auto& comm = this->simulator_.vanguard().grid().comm();
+
+        // Wells drilled by an action are not part of the well set the
+        // parallel well bookkeeping was built from.  Register them before
+        // anything looks them up.  Collective, hence outside the try/catch.
+        this->registerNewParallelWells(reportStepIdx);
 
         // Wells_ecl_ holds this rank's wells, both open and stopped/shut.
         this->wells_ecl_ = this->getLocalWells(reportStepIdx);
