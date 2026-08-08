@@ -257,6 +257,16 @@ public:
                            const GroupStateHelperType& groupStateHelper,
                            WellStateType& well_state) /* const */;
 
+    /// Convert the well's WELDRAW maximum drawdown into a maximum
+    /// production rate for the target phase,
+    ///    Qmax = Dmax * sum_j (Tw_j * M_j),
+    /// and store it in the well state.  Should only be called during the
+    /// first NUPCOL iterations of a timestep; afterwards the stored value
+    /// is kept frozen (like the rate targets of wells under group control).
+    void updateWeldrawMaxRate(const Simulator& simulator,
+                              WellStateType& well_state,
+                              DeferredLogger& deferred_logger) const;
+
     bool updateWellControlAndStatusLocalIteration(const Simulator& simulator,
                                                   const GroupStateHelperType& groupStateHelper,
                                                   const Well::InjectionControls& inj_controls,
