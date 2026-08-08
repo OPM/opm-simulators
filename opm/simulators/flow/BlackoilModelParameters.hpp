@@ -50,6 +50,9 @@ template<class Scalar>
 struct RelaxedMaxPvFraction { static constexpr Scalar value = 0.03; };
 
 template<class Scalar>
+struct CnvPoreVolumeFloorFraction { static constexpr Scalar value = 0.0; };
+
+template<class Scalar>
 struct ToleranceMb { static constexpr Scalar value = 1e-7; };
 
 template<class Scalar>
@@ -221,6 +224,11 @@ public:
     //// Max allowed pore volume faction where CNV is violated. Below the
     //// relaxed tolerance tolerance_cnv_relaxed_ is used.
     Scalar relaxed_max_pv_fraction_;
+
+    /// Floor (fraction of average cell PV) for the per-cell PV in the CNV
+    /// normalisation; 0 disables. Vanishing-PV cells otherwise make CNV
+    /// divergently strict.
+    Scalar cnv_pv_floor_fraction_;
     /// Relative mass balance tolerance (total mass balance error).
     Scalar tolerance_mb_;
     /// Relaxed mass balance tolerance (can be used when iter >= min_strict_mb_iter_).

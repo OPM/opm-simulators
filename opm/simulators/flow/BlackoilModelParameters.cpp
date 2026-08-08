@@ -43,6 +43,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     inj_mult_min_damp_factor_ = Parameters::Get<Parameters::InjMultMinDampFactor<Scalar>>();
     max_residual_allowed_ = Parameters::Get<Parameters::MaxResidualAllowed<Scalar>>();
     relaxed_max_pv_fraction_ = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
+    cnv_pv_floor_fraction_ = Parameters::Get<Parameters::CnvPoreVolumeFloorFraction<Scalar>>();
     tolerance_mb_ = Parameters::Get<Parameters::ToleranceMb<Scalar>>();
     tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::Get<Parameters::ToleranceMbRelaxed<Scalar>>());
     tolerance_energy_balance_ = Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
@@ -143,6 +144,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Minimum injection multiplier dampening factor (maximum dampening level)");
     Parameters::Register<Parameters::MaxResidualAllowed<Scalar>>
         ("Absolute maximum tolerated for residuals without cutting the time step size");
+    Parameters::Register<Parameters::CnvPoreVolumeFloorFraction<Scalar>>
+        ("Floor the per-cell pore volume used in the CNV normalisation at this fraction "
+         "of the average cell pore volume. The CNV criterion divides the residual by the "
+         "cell pore volume, so cells with vanishing PV (inner radial cells, salt-clogged "
+         "cells, degenerate geometry) are held to a divergently strict standard; the "
+         "floor bounds the criterion for such cells. 0 (default) disables.");
     Parameters::Register<Parameters::RelaxedMaxPvFraction<Scalar>>
         ("The fraction of the pore volume of the reservoir "
          "where the volumetric error (CNV) may be violated "
