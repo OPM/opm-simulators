@@ -170,6 +170,9 @@ protected:
     ComponentName compNames_{};
     std::vector<std::vector<Scalar>> residual_norms_history_;
     Scalar current_relaxation_;
+    //! Consecutive iterations with contracting residuals, used to let
+    //! current_relaxation_ recover after an oscillation has passed.
+    int contracting_iterations_{0};
     GlobalEqVector dx_old_;
 };
 
