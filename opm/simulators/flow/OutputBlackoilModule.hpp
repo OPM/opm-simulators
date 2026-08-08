@@ -30,6 +30,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/LookUpData.hh>
 
 #include <opm/simulators/utils/moduleVersion.hpp>
 
@@ -175,7 +176,7 @@ public:
         , collectOnIORank_(collectOnIORank)
     {
         for (auto& region_pair : this->regions_) {
-            this->createLocalRegion_(region_pair.second);
+            this->createLocalRegion_(region_pair.first, region_pair.second);
         }
 
         auto isCartIdxOnThisRank = [&collectOnIORank](const int idx) {
@@ -226,15 +227,26 @@ public:
             auto rset = this->eclState_.fieldProps().fip_regions();
             rset.push_back("PVTNUM");
 
-            // Note: We explicitly use decltype(auto) here because the
-            // default scheme (-> auto) will deduce an undesirable type.  We
-            // need the "reference to vector" semantics in this instance.
+            // The region arrays (PVTNUM, FIP regions) are given on the input
+            // grid, but RegionPhasePoreVolAverage indexes them by leaf cell.
+            // With LGRs the leaf has more cells, so map each onto the leaf (a
+            // refined cell inherits its parent cell's region; identity without
+            // LGRs) and let the lambda serve those. The map is captured by value
+            // so it outlives in the stored callable; decltype(auto) keeps the
+            // required "reference to vector" return semantics.
+            const LookUpData<Grid, GridView> lookUpData(this->simulator_.gridView());
+            std::map<std::string, std::vector<int>> leafRegions;
+            for (const auto& rsetName : rset) {
+                leafRegions[rsetName] = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+                    this->eclState_.fieldProps(), rsetName, /*needsTranslation=*/false);
+            }
+
             this->regionAvgDensity_
                 .emplace(this->simulator_.gridView().comm(),
                          FluidSystem::numPhases, rset,
-                         [fp = std::cref(this->eclState_.fieldProps())]
+                         [regions = std::move(leafRegions)]
                          (const std::string& rsetName) -> decltype(auto)
-                         { return fp.get().get_int(rsetName); });
+                         { return regions.at(rsetName); });
         }
     }
 
@@ -790,13 +802,23 @@ private:
         }
     }
 
-    void createLocalRegion_(std::vector<int>& region)
+    void createLocalRegion_(const std::string& name, std::vector<int>& region)
     {
-        // For CpGrid with LGRs, where level zero grid has been distributed,
-        // resize region is needed, since in this case the total amount of
-        // element - per process - in level zero grid and leaf grid do not
-        // coincide, in general.
-        region.resize(simulator_.gridView().size(0));
+        // FIP region arrays (FIPNUM, ...) are given on the (unrefined) input grid,
+        // but the FIP/field sums run over the leaf grid. With LGRs the leaf has
+        // more cells than the input grid, so the array must be MAPPED onto the
+        // leaf - a refined cell inherits its parent cell's region. Previously this
+        // only resize()d the global array to the leaf size, which zero-padded the
+        // appended refined cells: every refined cell landed in region 0 and was
+        // dropped from the FIP/field sums, giving a wrong field pressure (FPR) and
+        // region FIP whenever an LGR was present. LookUpData performs the parent
+        // inheritance and is the identity without LGRs, so non-LGR runs are
+        // unchanged.
+        const LookUpData<Grid, GridView> lookUpData(simulator_.gridView());
+        region = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+            this->eclState_.fieldProps(), name, /*needsTranslation=*/false);
+
+        // Exclude non-interior (overlap/ghost) cells from the region sums.
         std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
             if (elem.partitionType() != Dune::InteriorEntity) {

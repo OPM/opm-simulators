@@ -544,6 +544,22 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enableBioeffects,
                                          bool enableMICP)
 {
+    // LGR (local grid refinement / CARFIN) is supported for black-oil only. The
+    // solvent/polymer/biofilm/MICP initial conditions below are read straight
+    // from the input-grid field properties and indexed by leaf cell; they are
+    // NOT mapped onto refined cells (see the black-oil EQLNUM/FIPNUM handling via
+    // LookUpData), so refined cells would get wrong/out-of-range values. Fail
+    // early with a clear message rather than producing silently wrong results.
+    if ((enableSolvent || enablePolymer || enablePolymerMolarWeight ||
+         enableBioeffects || enableMICP) &&
+        (eclState_.getLgrs().size() > 0))
+    {
+        throw std::runtime_error(
+            "Local grid refinement (LGR/CARFIN) is only supported for black-oil "
+            "runs. It is not supported together with the solvent, polymer, "
+            "biofilm or MICP extensions.");
+    }
+
     auto getArray = [](const std::vector<double>& input)
     {
         if constexpr (std::is_same_v<Scalar,double>) {
