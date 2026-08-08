@@ -524,12 +524,7 @@ public:
         // also updated.
         this->eclWriter().mutableOutputModule().invalidateLocalData();
 
-        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
-        const auto& grid = this->simulator().vanguard().gridView().grid();
-
-        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
-        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        if (!isCpGrid || (grid.maxLevel() == 0)) {
+        if (this->eclOutputEvalSupported_()) {
             this->eclWriter_->evalSummaryState(!this->episodeWillBeOver());
         }
 
@@ -641,16 +636,10 @@ public:
         // the initial solution.
         this->thresholdPressures_.finishInit();
 
-        // For CpGrid with LGRs, ecl-output is not supported yet.
-        const auto& grid = this->simulator().vanguard().gridView().grid();
-
-        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
-        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        // Skip - for now -  calculate the initial fip values for CpGrid with LGRs.
-        if (!isCpGrid || (grid.maxLevel() == 0)) {
-            if (this->simulator().episodeIndex() == 0) {
-                eclWriter_->writeInitialFIPReport();
-            }
+        if (this->eclOutputEvalSupported_() &&
+            (this->simulator().episodeIndex() == 0))
+        {
+            eclWriter_->writeInitialFIPReport();
         }
     }
 
@@ -1776,6 +1765,26 @@ protected:
     HybridNewton hybridNewton_;
 
 private:
+    /// Whether ECL summary/FIP evaluation is wired up for this grid
+    /// configuration.
+    ///
+    /// The only unsupported case is a *distributed* CpGrid with LGRs:
+    /// CollectDataOnIORank does not build its index maps for a distributed
+    /// refined grid yet.  In serial the index maps are the identity and the
+    /// leaf-grid well/cell data is written directly, so refined serial runs
+    /// are fine.  Kept in one place so no call site can miss a condition.
+    bool eclOutputEvalSupported_() const
+    {
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+
+        return !isCpGrid
+            || (grid.maxLevel() == 0)
+            || (grid.comm().size() == 1);
+    }
+
     /// Whether or not the current epsiode will end at the end of the
     /// current time step.
     ///
