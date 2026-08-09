@@ -237,6 +237,18 @@ update(const WellState<Scalar, IndexTraits>& well_state,
 
     // BHP
     value_[Bhp] = ws.bhp;
+
+    // if thermal is active, we set the temperature
+    if constexpr (enable_energy) {
+        // prefer the stored primary variable to keep the converged wellbore
+        // temperature across time steps (ws.temperature is overwritten for
+        // reporting purposes in BlackoilWellModel::computeWellTemperature())
+        if (ws.primaryvar.size() > static_cast<std::size_t>(Temperature)) {
+            value_[Temperature] = ws.primaryvar[Temperature];
+        } else {
+            value_[Temperature] = ws.temperature;
+        }
+    }
     setEvaluationsFromValues();
 }
 
@@ -317,6 +329,15 @@ updateNewton(const BVectorWell& dwells,
     // so that bhp constaint can be an active control when needed.
     constexpr Scalar bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, bhp_lower_limit);
+
+    if constexpr (enable_energy) {
+        // TODO: how to regularize the temperature update remains to be investigated
+        const int sign = dwells[0][Temperature] > 0. ? 1 : -1;
+        // currently we limit the temperature change to be 5 C/K in each iteration
+        constexpr Scalar max_temperature_change = 5.0;
+        const Scalar dx_limited = sign * std::min(std::abs(dwells[0][Temperature]), max_temperature_change);
+        value_[Temperature] = std::max(value_[Temperature] - dx_limited, Scalar{0.0});
+    }
     setEvaluationsFromValues();
 }
 
@@ -411,6 +432,11 @@ copyToWellState(WellState<Scalar, IndexTraits>& well_state,
     auto& ws = well_state.well(well_.indexOfWell());
     ws.primaryvar = value_;
     ws.bhp = value_[Bhp];
+
+    // update the wellbore temperature if thermal is active
+    if constexpr (enable_energy) {
+        ws.temperature = value_[Temperature];
+    }
 
     // calculate the phase rates based on the primary variables
     // for producers, this is not a problem, while not sure for injectors here
