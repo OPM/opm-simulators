@@ -64,6 +64,13 @@ public:
     void assignOilFractions(const unsigned globalDofIdx,
                             const AssignFunction& fractions);
 
+    void assignPhasePressures(const unsigned globalDofIdx,
+                              const Scalar oilPressure,
+                              const Scalar gasPressure);
+
+    void assignVaporFraction(const unsigned globalDofIdx,
+                             const Scalar vmf);
+
     void outputRestart(data::Solution& sol,
                        ScalarBuffer& oil_saturation);
 
@@ -76,6 +83,11 @@ private:
     std::array<ScalarBuffer, numComponents> moleFractions_;
     // mole fractions for each component in each phase
     std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
+    // phase pressures (POIL, PGAS)
+    ScalarBuffer oilPressure_;
+    ScalarBuffer gasPressure_;
+    // vapour mole fraction of the total mixture (VMF)
+    ScalarBuffer vaporFraction_;
 };
 
 } // namespace Opm
