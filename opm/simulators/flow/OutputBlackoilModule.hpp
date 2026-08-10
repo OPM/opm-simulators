@@ -282,6 +282,25 @@ public:
     }
 
     /*!
+     * \brief Move all buffers to data::Solution.
+     */
+    void assignToSolution(data::Solution& sol)
+    {
+        BaseType::assignToSolution(sol);
+
+        // The phase densities and viscosities are named by the emitting
+        // module: these are the black-oil array names.
+        this->assignPhaseProperties(sol, typename BaseType::PhasePropertyNames {
+            .oilDensity     = "OIL_DEN",
+            .gasDensity     = "GAS_DEN",
+            .waterDensity   = "WAT_DEN",
+            .oilViscosity   = "OIL_VISC",
+            .gasViscosity   = "GAS_VISC",
+            .waterViscosity = "WAT_VISC",
+        });
+    }
+
+    /*!
      * \brief Modify the internal buffers according to the intensive
      *        quanties relevant for an element
      */

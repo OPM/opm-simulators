@@ -313,6 +313,38 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
+assignPhaseProperties(data::Solution& sol,
+                      const PhasePropertyNames& names)
+{
+    auto assign = [&sol](const std::string_view name,
+                         const UnitSystem::measure measure,
+                         std::vector<Scalar>& buffer,
+                         const int phaseIdx)
+    {
+        // An inactive phase has a negative index, and a buffer that was never
+        // allocated has nothing to report.
+        if ((phaseIdx < 0) || buffer.empty()) {
+            return;
+        }
+
+        sol.insert(std::string { name }, measure, std::move(buffer),
+                   data::TargetType::RESTART_SOLUTION);
+    };
+
+    assign(names.oilDensity,   UnitSystem::measure::density,   density_[oilPhaseIdx],   oilPhaseIdx);
+    assign(names.gasDensity,   UnitSystem::measure::density,   density_[gasPhaseIdx],   gasPhaseIdx);
+    assign(names.oilViscosity, UnitSystem::measure::viscosity, viscosity_[oilPhaseIdx], oilPhaseIdx);
+    assign(names.gasViscosity, UnitSystem::measure::viscosity, viscosity_[gasPhaseIdx], gasPhaseIdx);
+
+    // avoid output with generic fluid system and disabled water phase
+    if constexpr (numPhases > 2) {
+        assign(names.waterDensity,   UnitSystem::measure::density,   density_[waterPhaseIdx],   waterPhaseIdx);
+        assign(names.waterViscosity, UnitSystem::measure::viscosity, viscosity_[waterPhaseIdx], waterPhaseIdx);
+    }
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =
@@ -353,11 +385,7 @@ assignToSolution(data::Solution& sol)
     }
     addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
     addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
-    addEntry(baseSolutionVector, "GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx],                                           gasPhaseIdx);
-    addEntry(baseSolutionVector, "GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx],                                         gasPhaseIdx);
     addEntry(baseSolutionVector, "OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx],                              oilPhaseIdx);
-    addEntry(baseSolutionVector, "OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx],                                           oilPhaseIdx);
-    addEntry(baseSolutionVector, "OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx],                                         oilPhaseIdx);
     addEntry(baseSolutionVector, "PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_);
     addEntry(baseSolutionVector, "PCGW",     UnitSystem::measure::pressure,                              pcgw_);
     addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
@@ -384,8 +412,6 @@ assignToSolution(data::Solution& sol)
     // avoid output with generic fluid system and disabled water phase
     if constexpr (numPhases > 2) {
         addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                          relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
-        addEntry(baseSolutionVector, "WAT_DEN",  UnitSystem::measure::density,                           density_[waterPhaseIdx],                                         waterPhaseIdx);
-        addEntry(baseSolutionVector, "WAT_VISC", UnitSystem::measure::viscosity,                         viscosity_[waterPhaseIdx],                                       waterPhaseIdx);
     }
 
     auto extendedSolutionArrays = std::array {

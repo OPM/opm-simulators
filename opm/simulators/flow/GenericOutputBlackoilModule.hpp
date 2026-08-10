@@ -54,6 +54,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -163,6 +164,23 @@ public:
      * \brief Move all buffers to data::Solution.
      */
     void assignToSolution(data::Solution& sol);
+
+    /// Names under which the phase densities and viscosities are reported.
+    /// The black-oil and the compositional formulations use different array
+    /// names for these same quantities, so the emitting module supplies them.
+    struct PhasePropertyNames
+    {
+        std::string_view oilDensity{};
+        std::string_view gasDensity{};
+        std::string_view waterDensity{};
+        std::string_view oilViscosity{};
+        std::string_view gasViscosity{};
+        std::string_view waterViscosity{};
+    };
+
+    /// Move the phase density and viscosity buffers to \p sol under \p names.
+    void assignPhaseProperties(data::Solution& sol,
+                               const PhasePropertyNames& names);
 
     void setRestart(const data::Solution& sol,
                     unsigned elemIdx,
@@ -415,7 +433,7 @@ protected:
     bool enableExtbo_{false};
     bool enableBioeffects_{false};
     bool enableGeochemistry_{false};
-    
+
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
     bool computeFip_{false};
