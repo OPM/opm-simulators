@@ -1339,6 +1339,47 @@ protected:
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
     }
 
+    // Runs the per-dof explicit-quantity updates that a time step needs in a
+    // single sweep over the cached intensive quantities, instead of one sweep
+    // per quantity. Each update is independent (they read the intensive
+    // quantities and write disjoint state), so this is equivalent to calling
+    // them in turn; only the number of passes over the grid changes.
+    // Returns whether any of them ran, i.e. whether the intensive quantities
+    // may need to be invalidated -- same meaning as the individual functions.
+    bool updateExplicitQuantitiesFused_()
+    {
+        OPM_TIMEBLOCK(updateExplicitQuantitiesFused);
+        const bool doMaxWaterSat = !this->maxWaterSaturation_.empty();
+        const bool doMinPressure = !this->minRefPressure_.empty();
+        const bool doHysteresis = materialLawManager_->enableHysteresis();
+        const bool doMaxOilSat = this->vapparsActive(this->episodeIndex());
+
+        if (!doMaxWaterSat && !doMinPressure && !doHysteresis && !doMaxOilSat) {
+            return false;
+        }
+        if (doMaxWaterSat) {
+            this->maxWaterSaturation_[/*timeIdx=*/1] = this->maxWaterSaturation_[/*timeIdx=*/0];
+        }
+
+        this->updateProperty_("FlowProblem::updateExplicitQuantitiesFused_() failed:",
+                              [&](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  if (doMaxWaterSat) {
+                                      this->updateMaxWaterSaturation_(compressedDofIdx, iq);
+                                  }
+                                  if (doMinPressure) {
+                                      this->updateMinPressure_(compressedDofIdx, iq);
+                                  }
+                                  if (doHysteresis) {
+                                      materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
+                                  }
+                                  if (doMaxOilSat) {
+                                      this->updateMaxOilSaturation_(compressedDofIdx, iq);
+                                  }
+                              });
+        return true;
+    }
+
     bool updateMaxOilSaturation_()
     {
         OPM_TIMEBLOCK(updateMaxOilSaturation);
