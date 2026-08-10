@@ -313,6 +313,36 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
+assignBuffer(data::Solution& sol,
+             const std::string_view name,
+             const UnitSystem::measure measure,
+             std::vector<Scalar>& buffer)
+{
+    if (buffer.empty()) {
+        return;
+    }
+
+    sol.insert(std::string { name }, measure, std::move(buffer),
+               data::TargetType::RESTART_SOLUTION);
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
+assignBuffer(data::Solution& sol,
+             const std::string_view name,
+             const UnitSystem::measure measure,
+             std::vector<Scalar>& buffer,
+             const int index)
+{
+    if (index < 0) {
+        return;
+    }
+
+    this->assignBuffer(sol, name, measure, buffer);
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
 assignPhaseProperties(data::Solution& sol,
                       const PhasePropertyNames& names)
 {
@@ -375,30 +405,20 @@ assignToSolution(data::Solution& sol)
     };
 
     std::vector<DataEntry> baseSolutionVector;
-    addEntry(baseSolutionVector, "1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx],                                              gasPhaseIdx);
-    addEntry(baseSolutionVector, "1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx],                                              oilPhaseIdx);
 
     // avoid output with generic fluid system and disabled water phase
     if constexpr (numPhases > 2) {
-        addEntry(baseSolutionVector,
-                                 "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
     }
     addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
-    addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
-    addEntry(baseSolutionVector, "OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx],                              oilPhaseIdx);
-    addEntry(baseSolutionVector, "PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_);
     addEntry(baseSolutionVector, "PCGW",     UnitSystem::measure::pressure,                              pcgw_);
     addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
     addEntry(baseSolutionVector, "PCOW",     UnitSystem::measure::pressure,                              pcow_);
-    addEntry(baseSolutionVector, "PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_);
     addEntry(baseSolutionVector, "POLYMER",  UnitSystem::measure::concentration,                         cPolymer_);
     addEntry(baseSolutionVector, "PPCW",     UnitSystem::measure::pressure,                              ppcw_);
     addEntry(baseSolutionVector, "PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_);
     addEntry(baseSolutionVector, "PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_);
     addEntry(baseSolutionVector, "RPORV",    UnitSystem::measure::volume,                                rPorV_);
-    addEntry(baseSolutionVector, "RS",       UnitSystem::measure::gas_oil_ratio,                         rs_);
     addEntry(baseSolutionVector, "RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_);
-    addEntry(baseSolutionVector, "RV",       UnitSystem::measure::oil_gas_ratio,                         rv_);
     addEntry(baseSolutionVector, "RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_);
     addEntry(baseSolutionVector, "SALT",     UnitSystem::measure::concentration,                         cSalt_);
     addEntry(baseSolutionVector, "SGMAX",    UnitSystem::measure::identity,                              sgmax_);
@@ -411,7 +431,6 @@ assignToSolution(data::Solution& sol)
 
     // avoid output with generic fluid system and disabled water phase
     if constexpr (numPhases > 2) {
-        addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                          relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
     }
 
     auto extendedSolutionArrays = std::array {

@@ -288,6 +288,29 @@ public:
     {
         BaseType::assignToSolution(sol);
 
+        // Quantities that only the black-oil formulation reports.
+        using M = UnitSystem::measure;
+        this->assignBuffer(sol, "1OVERBO", M::oil_inverse_formation_volume_factor,
+                           this->invB_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "1OVERBG", M::gas_inverse_formation_volume_factor,
+                           this->invB_[gasPhaseIdx], gasPhaseIdx);
+        this->assignBuffer(sol, "OILKR", M::identity,
+                           this->relativePermeability_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "GASKR", M::identity,
+                           this->relativePermeability_[gasPhaseIdx], gasPhaseIdx);
+        this->assignBuffer(sol, "PBUB", M::pressure, this->bubblePointPressure_);
+        this->assignBuffer(sol, "PDEW", M::pressure, this->dewPointPressure_);
+        this->assignBuffer(sol, "RS",   M::gas_oil_ratio, this->rs_);
+        this->assignBuffer(sol, "RV",   M::oil_gas_ratio, this->rv_);
+
+        // avoid output with generic fluid system and disabled water phase
+        if constexpr (numPhases > 2) {
+            this->assignBuffer(sol, "1OVERBW", M::water_inverse_formation_volume_factor,
+                               this->invB_[waterPhaseIdx], waterPhaseIdx);
+            this->assignBuffer(sol, "WATKR", M::identity,
+                               this->relativePermeability_[waterPhaseIdx], waterPhaseIdx);
+        }
+
         // The phase densities and viscosities are named by the emitting
         // module: these are the black-oil array names.
         this->assignPhaseProperties(sol, typename BaseType::PhasePropertyNames {
