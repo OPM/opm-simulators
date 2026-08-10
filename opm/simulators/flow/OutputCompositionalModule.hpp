@@ -48,7 +48,7 @@
 
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputModule.hpp>
 #include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
@@ -76,7 +76,7 @@ class EcfvDiscretization;
  *        ECL binary format.
  */
 template <class TypeTag>
-class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>>
+class OutputCompositionalModule : public GenericOutputModule<GetPropType<TypeTag, Properties::FluidSystem>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -84,7 +84,7 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using BaseType = GenericOutputModule<FluidSystem>;
     using Extractor = detail::Extractor<TypeTag>;
 
     enum { numPhases = FluidSystem::numPhases };

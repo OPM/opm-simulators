@@ -21,7 +21,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputModule.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/Visitor.hpp>
@@ -118,8 +118,8 @@ namespace {
 namespace Opm {
 
 template<class FluidSystem>
-GenericOutputBlackoilModule<FluidSystem>::
-GenericOutputBlackoilModule(const EclipseState& eclState,
+GenericOutputModule<FluidSystem>::
+GenericOutputModule(const EclipseState& eclState,
                             const Schedule& schedule,
                             const SummaryConfig& summaryConfig,
                             const SummaryState& summaryState,
@@ -186,11 +186,11 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
 }
 
 template<class FluidSystem>
-GenericOutputBlackoilModule<FluidSystem>::
-~GenericOutputBlackoilModule() = default;
+GenericOutputModule<FluidSystem>::
+~GenericOutputModule() = default;
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 registerParameters()
 {
     Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
@@ -202,7 +202,7 @@ registerParameters()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputTimeStamp(const std::string& lbl,
                 const double elapsed,
                 const int rstep,
@@ -212,7 +212,7 @@ outputTimeStamp(const std::string& lbl,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 prepareDensityAccumulation()
 {
     if (this->regionAvgDensity_.has_value()) {
@@ -221,7 +221,7 @@ prepareDensityAccumulation()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 accumulateDensityParallel()
 {
     if (this->regionAvgDensity_.has_value()) {
@@ -230,7 +230,7 @@ accumulateDensityParallel()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputCumLog(std::size_t reportStepNum,
              const bool connData)
 {
@@ -238,7 +238,7 @@ outputCumLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputProdLog(std::size_t reportStepNum,
               const bool connData)
 {
@@ -249,7 +249,7 @@ outputProdLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputInjLog(std::size_t reportStepNum,
              const bool connData)
 {
@@ -260,14 +260,14 @@ outputInjLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputMSWLog(std::size_t reportStepNum)
 {
     this->logOutput_.msw(reportStepNum);
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 calc_initial_inplace(const Parallel::Communication& comm)
 {
     if (!this->initialInplace_.has_value()) {
@@ -276,7 +276,7 @@ calc_initial_inplace(const Parallel::Communication& comm)
 }
 
 template<class FluidSystem>
-Inplace GenericOutputBlackoilModule<FluidSystem>::
+Inplace GenericOutputModule<FluidSystem>::
 calc_inplace(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
              const Parallel::Communication& comm)
@@ -295,7 +295,7 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputWellspecReport(const std::vector<std::string>& changedWells,
                      const bool                      changedWellLists,
                      const std::size_t               reportStepNum,
@@ -312,7 +312,7 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
 }
 
 template<class FluidSystem>
-bool GenericOutputBlackoilModule<FluidSystem>::
+bool GenericOutputModule<FluidSystem>::
 allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
                        const unsigned bufferSize,
                        std::vector<Scalar>& buffer,
@@ -331,7 +331,7 @@ allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignBuffer(data::Solution& sol,
              const std::string_view name,
              const UnitSystem::measure measure,
@@ -346,7 +346,7 @@ assignBuffer(data::Solution& sol,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignBuffer(data::Solution& sol,
              const std::string_view name,
              const UnitSystem::measure measure,
@@ -361,7 +361,7 @@ assignBuffer(data::Solution& sol,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignPhaseProperties(data::Solution& sol,
                       const PhasePropertyNames& names)
 {
@@ -393,7 +393,7 @@ assignPhaseProperties(data::Solution& sol,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =
@@ -544,7 +544,7 @@ assignToSolution(data::Solution& sol)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setRestart(const data::Solution& sol,
            unsigned elemIdx,
            unsigned globalDofIndex)
@@ -618,8 +618,8 @@ setRestart(const data::Solution& sol,
 }
 
 template<class FluidSystem>
-typename GenericOutputBlackoilModule<FluidSystem>::ScalarBuffer
-GenericOutputBlackoilModule<FluidSystem>::
+typename GenericOutputModule<FluidSystem>::ScalarBuffer
+GenericOutputModule<FluidSystem>::
 regionSum(const ScalarBuffer& property,
           const std::vector<int>& regionId,
           std::size_t maxNumberOfRegions,
@@ -654,7 +654,7 @@ regionSum(const ScalarBuffer& property,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 doAllocBuffers(const unsigned bufferSize,
                const unsigned reportStepNum,
                const bool     substep,
@@ -1021,7 +1021,7 @@ doAllocBuffers(const unsigned bufferSize,
 }
 
 template<class FluidSystem>
-bool GenericOutputBlackoilModule<FluidSystem>::
+bool GenericOutputModule<FluidSystem>::
 isOutputCreationDirective_(const std::string& keyword)
 {
     return (keyword == "BASIC") || (keyword == "FREQ")
@@ -1030,7 +1030,7 @@ isOutputCreationDirective_(const std::string& keyword)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputErrorLog(const Parallel::Communication& comm) const
 {
     const auto root = 0;
@@ -1048,7 +1048,7 @@ outputErrorLog(const Parallel::Communication& comm) const
 }
 
 template<class FluidSystem>
-int GenericOutputBlackoilModule<FluidSystem>::
+int GenericOutputModule<FluidSystem>::
 regionMax(const std::vector<int>& region,
           const Parallel::Communication& comm)
 {
@@ -1057,7 +1057,7 @@ regionMax(const std::vector<int>& region,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 update(Inplace& inplace,
        const std::string& region_name,
        const Inplace::Phase phase,
@@ -1074,7 +1074,7 @@ update(Inplace& inplace,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 makeRegionSum(Inplace& inplace,
               const std::string& region_name,
               const Parallel::Communication& comm) const
@@ -1106,10 +1106,10 @@ makeRegionSum(Inplace& inplace,
 }
 
 template<class FluidSystem>
-Inplace GenericOutputBlackoilModule<FluidSystem>::
+Inplace GenericOutputModule<FluidSystem>::
 accumulateRegionSums(const Parallel::Communication& comm)
 {
-    OPM_TIMEBLOCK(GenericOutputBlackoilModule_accumulateRegionSums);
+    OPM_TIMEBLOCK(GenericOutputModule_accumulateRegionSums);
     Inplace inplace;
 
     for (const auto& region : this->regions_) {
@@ -1120,20 +1120,20 @@ accumulateRegionSums(const Parallel::Communication& comm)
 }
 
 template<class FluidSystem>
-typename GenericOutputBlackoilModule<FluidSystem>::Scalar
-GenericOutputBlackoilModule<FluidSystem>::
+typename GenericOutputModule<FluidSystem>::Scalar
+GenericOutputModule<FluidSystem>::
 sum(const ScalarBuffer& v)
 {
     return std::accumulate(v.begin(), v.end(), Scalar{0});
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 updateSummaryRegionValues(const Inplace& inplace,
                           std::map<std::string, double>& miscSummaryData,
                           std::map<std::string, std::vector<double>>& regionData) const
 {
-    OPM_TIMEBLOCK(GenericOutputBlackoilModule_updateSummaryRegionValues);
+    OPM_TIMEBLOCK(GenericOutputModule_updateSummaryRegionValues);
     // The field summary vectors should only use the FIPNUM based region sum.
     {
         for (const auto& phase : Inplace::phases()) {
@@ -1212,7 +1212,7 @@ updateSummaryRegionValues(const Inplace& inplace,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 {
     for (const auto& node : summaryConfig_) {
@@ -1228,7 +1228,7 @@ setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
                   const std::function<bool(int, int)>& isLgrCellOnThisRank)
 {
@@ -1273,7 +1273,7 @@ setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupExtraBlockData(const std::size_t        reportStepNum,
                     std::function<bool(int)> isCartIdxOnThisRank)
 {
@@ -1293,7 +1293,7 @@ setupExtraBlockData(const std::size_t        reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignGlobalFieldsToSolution(data::Solution& sol)
 {
     this->rst_conv_.outputRestart(sol);
@@ -1302,7 +1302,7 @@ assignGlobalFieldsToSolution(data::Solution& sol)
 template<class T> using FS = BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE_TYPE(T) \
-    template class GenericOutputBlackoilModule<FS<T>>;
+    template class GenericOutputModule<FS<T>>;
 
 INSTANTIATE_TYPE(double)
 
@@ -1312,11 +1312,11 @@ INSTANTIATE_TYPE(float)
 
 #define INSTANTIATE_COMP_THREEPHASE(NUM) \
     template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM, true>; \
-    template class GenericOutputBlackoilModule<FS##NUM<double>>;
+    template class GenericOutputModule<FS##NUM<double>>;
 
 #define INSTANTIATE_COMP_TWOPHASE(NUM) \
     template<class T> using GFS##NUM = GenericOilGasWaterFluidSystem<T, NUM, false>; \
-    template class GenericOutputBlackoilModule<GFS##NUM<double>>;
+    template class GenericOutputModule<GFS##NUM<double>>;
 
 #define INSTANTIATE_COMP(NUM) \
     INSTANTIATE_COMP_THREEPHASE(NUM) \
