@@ -407,26 +407,65 @@ public:
 
     /*! \name Direct accessors for serialization to the GPU. */
     //!\{
-    const EclMaterialLawManager& materialLawManager() const { return materialLawManager_; }
-    EclMaterialLawManager& materialLawManager() { return materialLawManager_; }
-    const Storage<Scalar>& porosityStorage() const { return porosity_; }
-    Storage<Scalar>& porosityStorage() { return porosity_; }
-    const Storage<Scalar>& rockCompressibilityStorage() const { return rockCompressibility_; }
-    Storage<Scalar>& rockCompressibilityStorage() { return rockCompressibility_; }
-    const Storage<Scalar>& rockReferencePressureStorage() const { return rockReferencePressure_; }
-    Storage<Scalar>& rockReferencePressureStorage() { return rockReferencePressure_; }
-    const Storage<Scalar>& maxOilSaturationStorage() const { return maxOilSaturation_; }
-    Storage<Scalar>& maxOilSaturationStorage() { return maxOilSaturation_; }
-    const Storage<Scalar>& maxOilVaporizationFactorStorage() const { return maxOilVaporizationFactor_; }
-    Storage<Scalar>& maxOilVaporizationFactorStorage() { return maxOilVaporizationFactor_; }
-    const Storage<Scalar>& maxGasDissolutionFactorStorage() const { return maxGasDissolutionFactor_; }
-    Storage<Scalar>& maxGasDissolutionFactorStorage() { return maxGasDissolutionFactor_; }
-    const EclThermalLawManager& thermalLawManager() const { return thermalLawManager_; }
-    EclThermalLawManager& thermalLawManager() { return thermalLawManager_; }
-    const Storage<Scalar>& rockFractionStorage() const { return rockFraction_; }
-    Storage<Scalar>& rockFractionStorage() { return rockFraction_; }
-    const Storage<int>& pvtRegionIndexStorage() const { return pvtRegionIndex_; }
-    Storage<int>& pvtRegionIndexStorage() { return pvtRegionIndex_; }
+    const EclMaterialLawManager& materialLawManager() const
+    { return materialLawManager_; }
+
+    EclMaterialLawManager& materialLawManager()
+    { return materialLawManager_; }
+
+    const Storage<Scalar>& porosityStorage() const
+    { return porosity_; }
+
+    Storage<Scalar>& porosityStorage()
+    { return porosity_; }
+
+    const Storage<Scalar>& rockCompressibilityStorage() const
+    { return rockCompressibility_; }
+
+    Storage<Scalar>& rockCompressibilityStorage()
+    { return rockCompressibility_; }
+
+    const Storage<Scalar>& rockReferencePressureStorage() const
+    { return rockReferencePressure_; }
+
+    Storage<Scalar>& rockReferencePressureStorage()
+    { return rockReferencePressure_; }
+
+    const Storage<Scalar>& maxOilSaturationStorage() const
+    { return maxOilSaturation_; }
+
+    Storage<Scalar>& maxOilSaturationStorage()
+    { return maxOilSaturation_; }
+
+    const Storage<Scalar>& maxOilVaporizationFactorStorage() const
+    { return maxOilVaporizationFactor_; }
+
+    Storage<Scalar>& maxOilVaporizationFactorStorage()
+    { return maxOilVaporizationFactor_; }
+
+    const Storage<Scalar>& maxGasDissolutionFactorStorage() const
+    { return maxGasDissolutionFactor_; }
+
+    Storage<Scalar>& maxGasDissolutionFactorStorage()
+    { return maxGasDissolutionFactor_; }
+
+    const EclThermalLawManager& thermalLawManager() const
+    { return thermalLawManager_; }
+
+    EclThermalLawManager& thermalLawManager()
+    { return thermalLawManager_; }
+
+    const Storage<Scalar>& rockFractionStorage() const
+    { return rockFraction_; }
+
+    Storage<Scalar>& rockFractionStorage()
+    { return rockFraction_; }
+
+    const Storage<int>& pvtRegionIndexStorage() const
+    { return pvtRegionIndex_; }
+
+    Storage<int>& pvtRegionIndexStorage()
+    { return pvtRegionIndex_; }
     //!\}
 
 private:

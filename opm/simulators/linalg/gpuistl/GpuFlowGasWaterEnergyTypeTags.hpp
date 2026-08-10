@@ -1,7 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 // vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright TODO ADD YEAR AND NAME OF AUTHOR
+  Copyright Copyright 2026 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 

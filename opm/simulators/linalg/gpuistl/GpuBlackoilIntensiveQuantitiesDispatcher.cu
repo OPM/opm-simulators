@@ -133,10 +133,6 @@ using DispatcherGpuFlowProblemBuf =
 using DispatcherGpuFlowProblemView =
     decltype(Opm::gpuistl::make_view(std::declval<DispatcherGpuFlowProblemBuf&>()));
 
-// The GPU view intentionally does not implement these modules
-static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDiffusion>());
-static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDispersion>());
-
 template <class ProblemT, class PrimaryVariablesT, class IntensiveQuantitiesT>
 void validateDispatcherInputs(const ProblemT& problem,
                               const PrimaryVariablesT* const* primaryVariables,
@@ -164,6 +160,10 @@ void validateDispatcherInputs(const ProblemT& problem,
 template <class ProblemT>
 void validateGpuPropertyInputs(const ProblemT& problem)
 {
+    // The GPU view intentionally does not implement these modules
+    static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDiffusion>());
+    static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDispersion>());
+
     const auto materialLawManager = problem.materialLawManager();
     if (materialLawManager == nullptr) {
         OPM_THROW(std::invalid_argument,
@@ -206,6 +206,7 @@ void validateGpuPropertyInputs(const ProblemT& problem)
     }
 }
 
+// The GPU kernel that runs the IQ update for each cell
 template <class GpuProblem, class PrimaryVariablesT, class IntensiveQuantitiesT>
 __global__ void
 dispatcherUpdateAllCellsKernel(GpuProblem problem,

@@ -220,7 +220,7 @@ public:
      *
         * Used by the experimental GPU intensive-quantities dispatcher to write
         * the GPU-computed fields onto a CPU-side \c IntensiveQuantities even
-        * when the two TypeTags are not value-compatible.
+        * when the two TypeTags are not value-compatible. DirMob currently not supported.
      */
     template<class OtherTypeTag>
     void overlayBlackOilFieldsFrom(

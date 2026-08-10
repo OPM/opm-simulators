@@ -1,5 +1,5 @@
 /*
-  Copyright TODO ADD YEAR AND NAME OF AUTHOR
+  Copyright Copyright 2026 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
