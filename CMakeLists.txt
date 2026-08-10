@@ -368,6 +368,7 @@ macro(opm-simulators_sources_hook)
     set_source_files_properties(
       opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
+      tests/gpuistl/test_blackoilintensivequantities_gpu.cu
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
