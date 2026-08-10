@@ -26,6 +26,7 @@
 #include <dune/istl/matrix.hh>
 
 #include <cmath>
+#include <cassert>
 #include <cstddef>
 
 namespace Dune {
@@ -94,6 +95,10 @@ namespace mswellhelpers
     ///
     /// Returns 1 if the contraction cancels exactly, since a zero would make
     /// the coarse pressure system singular.
+    ///
+    /// Keep in sync with the inline D-loop in
+    /// SystemCprwPressureStage::assembleCoarseMatrix: same contraction, over
+    /// merged blocks rather than a Dune BCRSMatrix.
     template <class DiagMatWell, class WellWeight>
     typename DiagMatWell::field_type
     contractCprWellDiagonal(const DiagMatWell& D,
@@ -101,6 +106,13 @@ namespace mswellhelpers
                             const int pressureColumn)
     {
         using Scalar = typename DiagMatWell::field_type;
+        using Block = typename DiagMatWell::block_type;
+
+        // lambda indexes the conservation-equation rows of a D block, so the
+        // weights must not outrun them.  Catches a future reordering of the
+        // well primary variables that puts something else in the first rows.
+        assert(lambda.size() <= static_cast<std::size_t>(Block::rows));
+
         Scalar diag = 0.0;
         for (std::size_t row = 0; row < D.N(); ++row) {
             for (auto col = D[row].begin(), end = D[row].end(); col != end; ++col) {
