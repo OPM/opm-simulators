@@ -261,7 +261,11 @@ public:
                              log,
                              isRestart,
                              &problem.materialLawManager()->hysteresisConfig(),
-                             problem.eclWriter().getOutputNnc().front().size());
+                             problem.eclWriter().getOutputNnc().front().size(),
+                             {},
+                             [this](std::map<std::string, int>& rstKeywords,
+                                    const unsigned size)
+                             { this->allocBlackoilBuffers(rstKeywords, size); });
     }
 
     //! \brief Setup list of active element-level data extractors
@@ -770,7 +774,68 @@ public:
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
+    //! \brief Restore the buffers this module owns from a restart file.
+    void setRestart(const data::Solution& sol,
+                    const unsigned elemIdx,
+                    const unsigned globalDofIndex)
+    {
+        BaseType::setRestart(sol, elemIdx, globalDofIndex);
+
+        auto assign = [&sol, elemIdx, globalDofIndex](const std::string& name,
+                                                      ScalarBuffer& data)
+        {
+            if (!data.empty() && sol.has(name)) {
+                data[elemIdx] = sol.data<double>(name)[globalDofIndex];
+            }
+        };
+
+        assign("RS", rs_);
+        assign("RV", rv_);
+    }
+
+    //! \brief Allocate the buffers of the quantities only the black-oil
+    //!        formulation produces, keyed on their restart mnemonics.
+    void allocBlackoilBuffers(std::map<std::string, int>& rstKeywords,
+                              const unsigned bufferSize)
+    {
+        // RS and RV are allocated whenever the fluid system supports them,
+        // not only when the restart keyword asks for them.
+        BaseType::allocBufferIfRequested(rstKeywords, bufferSize, rs_, "RS",
+                                         FluidSystem::enableDissolvedGas(), true);
+        BaseType::allocBufferIfRequested(rstKeywords, bufferSize, rv_, "RV",
+                                         FluidSystem::enableVaporizedOil(), true);
+
+        // PBPD requests the bubble and the dew point pressure together.
+        if (BaseType::allocBufferIfRequested(rstKeywords, bufferSize,
+                                             bubblePointPressure_, "PBPD", true)) {
+            dewPointPressure_.resize(bufferSize, 0.0);
+        }
+
+        // "WOG" ordering, as used by the shared module's keyword naming.
+        constexpr auto phaseChar = std::string_view{"WOG"};
+        for (unsigned phase = 0; phase < numPhases; ++phase) {
+            if (!FluidSystem::phaseIsActive(phase)) {
+                continue;
+            }
+            // The black-oil phase ordering is the one the keyword names assume,
+            // so no reordering is needed here.
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, invB_[phase],
+                                             std::string("B")  + phaseChar[phase], true);
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, relativePermeability_[phase],
+                                             std::string("KR") + phaseChar[phase], true);
+        }
+    }
+
 private:
+
+    // Buffers of the quantities only the black-oil formulation produces.
+    using ScalarBuffer = typename BaseType::ScalarBuffer;
+    ScalarBuffer rs_;
+    ScalarBuffer rv_;
+    ScalarBuffer bubblePointPressure_;
+    ScalarBuffer dewPointPressure_;
+    std::array<ScalarBuffer, numPhases> invB_;
+    std::array<ScalarBuffer, numPhases> relativePermeability_;
     template <typename T>
     using RemoveCVR = std::remove_cv_t<std::remove_reference_t<T>>;
 

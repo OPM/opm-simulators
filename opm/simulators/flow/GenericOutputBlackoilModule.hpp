@@ -183,6 +183,16 @@ public:
     void assignPhaseProperties(data::Solution& sol,
                                const PhasePropertyNames& names);
 
+    /// Resize \p buffer when the restart keyword \p kw is requested, and mark
+    /// the request as handled.  This is the allocation counterpart of
+    /// assignBuffer(), for buffers a derived module owns.
+    static bool allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
+                                       unsigned bufferSize,
+                                       std::vector<Scalar>& buffer,
+                                       std::string_view kw,
+                                       bool supported,
+                                       bool required = false);
+
     /// Move a single buffer to \p sol.  A negative \p index marks a phase
     /// that is not active, and an unallocated buffer has nothing to report.
     void assignBuffer(data::Solution& sol,
@@ -371,7 +381,9 @@ protected:
                         const bool isRestart,
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
-                        std::map<std::string, int> rstKeywords = {});
+                        std::map<std::string, int> rstKeywords = {},
+                        const std::function<void(std::map<std::string, int>&,
+                                                 unsigned)>& allocFormulationBuffers = {});
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -470,9 +482,7 @@ protected:
     ScalarBuffer rPorV_;
     ScalarBuffer fluidPressure_;
     ScalarBuffer temperature_;
-    ScalarBuffer rs_;
     ScalarBuffer rsw_;
-    ScalarBuffer rv_;
     ScalarBuffer rvw_;
     ScalarBuffer overburdenPressure_;
     ScalarBuffer oilSaturationPressure_;
@@ -496,8 +506,6 @@ protected:
     ScalarBuffer oilVaporizationFactor_;
     ScalarBuffer gasDissolutionFactorInWater_;
     ScalarBuffer waterVaporizationFactor_;
-    ScalarBuffer bubblePointPressure_;
-    ScalarBuffer dewPointPressure_;
     ScalarBuffer rockCompPorvMultiplier_;
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
@@ -513,10 +521,8 @@ protected:
     TpsaContainer<Scalar> tpsaC_;
 
     std::array<ScalarBuffer, numPhases> saturation_;
-    std::array<ScalarBuffer, numPhases> invB_;
     std::array<ScalarBuffer, numPhases> density_;
     std::array<ScalarBuffer, numPhases> viscosity_;
-    std::array<ScalarBuffer, numPhases> relativePermeability_;
 
     GeochemistryContainer<Scalar> geochemC_;
 

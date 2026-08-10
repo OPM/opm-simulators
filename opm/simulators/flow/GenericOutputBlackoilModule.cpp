@@ -312,6 +312,25 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
 }
 
 template<class FluidSystem>
+bool GenericOutputBlackoilModule<FluidSystem>::
+allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
+                       const unsigned bufferSize,
+                       std::vector<Scalar>& buffer,
+                       const std::string_view kw,
+                       const bool supported,
+                       const bool required)
+{
+    int dummy = 1;
+    auto& runtimeRequested = kw.empty() ? dummy : rstKeywords[std::string(kw)];
+    if (supported && (required || runtimeRequested > 0)) {
+        buffer.resize(bufferSize, 0.0);
+        runtimeRequested = 0;
+        return true;
+    }
+    return false;
+}
+
+template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 assignBuffer(data::Solution& sol,
              const std::string_view name,
@@ -575,9 +594,7 @@ setRestart(const data::Solution& sol,
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
         std::pair{"PRESSURE", &fluidPressure_},
-        std::pair{"RS",       &rs_},
         std::pair{"RSW",      &rsw_},
-        std::pair{"RV",       &rv_},
         std::pair{"RVW",      &rvw_},
         std::pair{"SALT",     &cSalt_},
         std::pair{"SALTP",    &pSalt_},
@@ -645,7 +662,9 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     isRestart,
                const EclHysteresisConfig* hysteresisConfig,
                const unsigned numOutputNnc,
-               std::map<std::string, int> rstKeywords)
+               std::map<std::string, int> rstKeywords,
+               const std::function<void(std::map<std::string, int>&,
+                                        unsigned)>& allocFormulationBuffers)
 {
     if (rstKeywords.empty()) {
         rstKeywords = schedule_.rst_keywords(reportStepNum);
@@ -758,10 +777,6 @@ doAllocBuffers(const unsigned bufferSize,
     const auto& simConfig = eclState_.getSimulationConfig();
     using OilVapP = OilVaporizationProperties::OilVaporization;
 
-    auto pbpd_fields = std::vector{
-        &bubblePointPressure_,
-        &dewPointPressure_
-    };
     auto rockc_fields = std::vector{
         &rockCompPorvMultiplier_,
         &rockCompTransMultiplier_,
@@ -776,9 +791,7 @@ doAllocBuffers(const unsigned bufferSize,
        // If TEMP is set in RPTRST we output temperature even if THERMAL
        // is not activated
        Entry{&temperature_,                   "TEMP", enableEnergy_ || (constantTemperature_ && rstKeywords["TEMP"] > 0)},
-       Entry{&rs_,                              "RS", FluidSystem::enableDissolvedGas()},
        Entry{&rsw_,                            "RSW", FluidSystem::enableDissolvedGasInWater()},
-       Entry{&rv_,                              "RV", FluidSystem::enableVaporizedOil()},
        Entry{&rvw_,                            "RVW", FluidSystem::enableVaporizedWater()},
        Entry{&drsdtcon_,                          "", oilvap.drsdtConvective()},
        Entry{&sSol_,                              "", enableSolvent_},
@@ -818,18 +831,15 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&oilVaporizationFactor_,        "RVSAT", FluidSystem::enableVaporizedOil(), false},
        Entry{&gasDissolutionFactorInWater_, "RSWSAT", FluidSystem::enableDissolvedGasInWater(), false},
        Entry{&waterVaporizationFactor_,     "RVWSAT", FluidSystem::enableVaporizedWater(), false},
-       Entry{&invB_,                             "B", true, false, EntryPhaseType::GWO},
        Entry{&rPorV_,                        "RPORV", true, false},
        Entry{&density_,                        "DEN", true, false, EntryPhaseType::NGWO},
        Entry{&viscosity_,                     "VISC", true, false, EntryPhaseType::NGasWatOil},
-       Entry{&relativePermeability_,            "KR", true, false, EntryPhaseType::GWO},
        Entry{&pcog_,                          "PCOG", FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx), false},
        Entry{&pcgw_,                          "PCGW", FluidSystem::phaseIsActive(gasPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx), false},
        Entry{&pcow_,                          "PCOW", FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx), false},
-       Entry{&pbpd_fields,                    "PBPD", true, false},
        Entry{&residual_,                  "RESIDUAL", true, false, EntryPhaseType::None},
        Entry{&rockc_fields,                  "ROCKC", true, false},
     };
@@ -840,14 +850,8 @@ doAllocBuffers(const unsigned bufferSize,
                                    const bool supported,
                                    const bool required)
     {
-        int dummy = 1;
-        auto& runtimeRequested = kw.empty() ? dummy : rstKeywords[std::string(kw)];
-        if (supported && (required || runtimeRequested > 0)) {
-            data.resize(bufferSize, 0.0);
-            runtimeRequested = 0;
-            return true;
-        }
-        return false;
+        return allocBufferIfRequested(rstKeywords, bufferSize, data,
+                                      kw, supported, required);
     };
 
     auto getName = [](std::string_view kw, EntryPhaseType type, int phase)
@@ -952,6 +956,12 @@ doAllocBuffers(const unsigned bufferSize,
                                     }
                                  }, entry.data);
                   });
+
+    // Buffers a derived module owns are allocated here, so that the keywords
+    // they consume are marked handled before the check below.
+    if (allocFormulationBuffers) {
+        allocFormulationBuffers(rstKeywords, bufferSize);
+    }
 
     if (enableMech_ && eclState_.runspec().mech()) {
         this->mech_.allocate(bufferSize, rstKeywords);
