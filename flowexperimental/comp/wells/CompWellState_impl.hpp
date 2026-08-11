@@ -102,7 +102,10 @@ initSingleInjector(const Well& well,
                                     temperature,
                                     conn_data,
                                     false) );
-    ws.update_injector_targets(well, summary_state);
+    ws.status = well.getStatus();
+    if (ws.status != WellStatus::SHUT) {
+        ws.update_injector_targets(well, summary_state);
+    }
 }
 
 template <typename FluidSystem>
@@ -120,7 +123,10 @@ initSingleProducer(const Well& well,
                                     temperature,
                                     conn_data,
                                     true) );
-    ws.update_producer_targets(well, cell_mole_fractions, summary_state);
+    ws.status = well.getStatus();
+    if (ws.status != WellStatus::SHUT) {
+        ws.update_producer_targets(well, cell_mole_fractions, summary_state);
+    }
 }
 
 template <typename FluidSystem>
