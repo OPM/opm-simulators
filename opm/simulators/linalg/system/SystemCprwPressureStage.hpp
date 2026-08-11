@@ -319,6 +319,8 @@ private:
         const auto& layout = wellLayout();
 
         const std::size_t dim = numRes + numWells;
+        // Sized from A alone; well rows are denser than that and land in the
+        // implicit-build overflow area, which is what overflowFraction is for.
         const std::size_t averageEntriesPerRow
             = static_cast<std::size_t>(std::ceil(static_cast<double>(A.nonzeroes()) / A.N()));
         const double overflowFraction = 1.2;
