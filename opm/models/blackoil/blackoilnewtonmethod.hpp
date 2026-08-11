@@ -94,6 +94,12 @@ public:
         wasSwitched_.resize(this->model().numTotalDof(), false);
     }
 
+    void resetPrimaryVariableSwitches()
+    {
+        numPriVarsSwitched_ = 0;
+        std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+    }
+
     /*!
      * \brief Register all run-time parameters for the blackoil newton method.
      */
