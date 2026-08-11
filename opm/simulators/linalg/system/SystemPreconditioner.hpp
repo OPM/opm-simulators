@@ -325,7 +325,9 @@ private:
                 ? resprm.get_child("preconditioner.coarsesolver")
                 : PropertyTree();
             const auto wellTransfer = wellTransferFromString(
-                prm.get("well_transfer", std::string{"full"}));
+                // Same default as setupPropertyTree ships, so a JSON that omits
+                // the key gets the same preconditioner as the built-in setup.
+                prm.get("well_transfer", std::string{"classic"}));
             const auto diagonal = wellCoarseDiagonalFromString(
                 prm.get("well_coarse_diagonal", std::string{"contract_d"}));
             cprwStage_ = std::make_unique<CprwStage>(S_, coarseprm, pressureIndex_,
