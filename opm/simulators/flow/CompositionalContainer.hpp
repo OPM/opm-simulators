@@ -21,7 +21,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \brief Restart-output buffers specific to compositional simulations.
  */
 #ifndef OPM_COMPOSITIONAL_CONTAINER_HPP
 #define OPM_COMPOSITIONAL_CONTAINER_HPP

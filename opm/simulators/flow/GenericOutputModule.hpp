@@ -21,7 +21,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \brief Common output functionality shared by simulator formulations.
  */
 #ifndef OPM_GENERIC_OUTPUT_MODULE_HPP
 #define OPM_GENERIC_OUTPUT_MODULE_HPP
@@ -165,47 +165,6 @@ public:
      * \brief Move all buffers to data::Solution.
      */
     virtual void assignToSolution(data::Solution& sol);
-
-    /// Names under which the phase densities and viscosities are reported.
-    /// The black-oil and the compositional formulations use different array
-    /// names for these same quantities, so the emitting module supplies them.
-    struct PhasePropertyNames
-    {
-        std::string_view oilDensity{};
-        std::string_view gasDensity{};
-        std::string_view waterDensity{};
-        std::string_view oilViscosity{};
-        std::string_view gasViscosity{};
-        std::string_view waterViscosity{};
-    };
-
-    /// Move the phase density and viscosity buffers to \p sol under \p names.
-    void assignPhaseProperties(data::Solution& sol,
-                               const PhasePropertyNames& names);
-
-    /// Resize \p buffer when the restart keyword \p kw is requested, and mark
-    /// the request as handled.  This is the allocation counterpart of
-    /// assignBuffer(), for buffers a derived module owns.
-    static bool allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
-                                       unsigned bufferSize,
-                                       std::vector<Scalar>& buffer,
-                                       std::string_view kw,
-                                       bool supported,
-                                       bool required = false);
-
-    /// Move a single buffer to \p sol.  A negative \p index marks a phase
-    /// that is not active, and an unallocated buffer has nothing to report.
-    void assignBuffer(data::Solution& sol,
-                      std::string_view name,
-                      UnitSystem::measure measure,
-                      std::vector<Scalar>& buffer);
-
-    /// A negative \p index marks an inactive phase and reports nothing.
-    void assignBuffer(data::Solution& sol,
-                      std::string_view name,
-                      UnitSystem::measure measure,
-                      std::vector<Scalar>& buffer,
-                      int index);
 
     virtual void setRestart(const data::Solution& sol,
                     unsigned elemIdx,
@@ -354,6 +313,46 @@ protected:
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     using Dir = FaceDir::DirEnum;
 
+    /// Names under which the phase densities and viscosities are reported.
+    /// The black-oil and compositional formulations use different names for
+    /// these quantities, so the derived module supplies them.
+    struct PhasePropertyNames
+    {
+        std::string_view oilDensity{};
+        std::string_view gasDensity{};
+        std::string_view waterDensity{};
+        std::string_view oilViscosity{};
+        std::string_view gasViscosity{};
+        std::string_view waterViscosity{};
+    };
+
+    /// Move the phase density and viscosity buffers to \p sol under \p names.
+    void assignPhaseProperties(data::Solution& sol,
+                               const PhasePropertyNames& names);
+
+    /// Resize \p buffer when the restart keyword \p kw is requested, and mark
+    /// the request as handled.
+    static bool allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
+                                       unsigned bufferSize,
+                                       std::vector<Scalar>& buffer,
+                                       std::string_view kw,
+                                       bool supported,
+                                       bool required = false);
+
+    /// Move a single buffer to \p sol.  An unallocated buffer has nothing to
+    /// report.
+    void assignBuffer(data::Solution& sol,
+                      std::string_view name,
+                      UnitSystem::measure measure,
+                      std::vector<Scalar>& buffer);
+
+    /// A negative \p index marks an inactive phase and reports nothing.
+    void assignBuffer(data::Solution& sol,
+                      std::string_view name,
+                      UnitSystem::measure measure,
+                      std::vector<Scalar>& buffer,
+                      int index);
+
     GenericOutputModule(const EclipseState& eclState,
                         const Schedule& schedule,
                         const SummaryConfig& summaryConfig,
@@ -386,9 +385,8 @@ protected:
     /// Allocate the buffers a derived module owns.  Called while the restart
     /// keywords are being handled, so that a keyword consumed here is marked
     /// as handled before the unhandled-keyword check.
-    virtual void allocFormulationBuffers(std::map<std::string, int>& /*rstKeywords*/,
-                                         unsigned /*bufferSize*/)
-    {}
+    virtual void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                         unsigned bufferSize) = 0;
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,

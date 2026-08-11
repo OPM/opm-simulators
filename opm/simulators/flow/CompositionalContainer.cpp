@@ -101,8 +101,8 @@ void CompositionalContainer<FluidSystem>::
 assignMoleFractions(const unsigned globalDofIdx,
                     const AssignFunction& fractions)
 {
-    // moleFractions_ is a std::array, so its empty() is a compile-time false:
-    // the per-component buffers are what may be unallocated.
+    // moleFractions_ has a fixed number of component slots; check whether its
+    // per-component buffers have been allocated.
     if (moleFractions_[0].empty()) {
         return;
     }

@@ -789,6 +789,7 @@ public:
         assign("RV", rv_);
     }
 
+protected:
     //! \brief Allocate the buffers of the quantities only the black-oil
     //!        formulation produces, keyed on their restart mnemonics.
     void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,

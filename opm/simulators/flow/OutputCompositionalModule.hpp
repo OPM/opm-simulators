@@ -72,8 +72,8 @@ class EcfvDiscretization;
 /*!
  * \ingroup BlackOilSimulator
  *
- * \brief Output module for the results black oil model writing in
- *        ECL binary format.
+ * \brief Output module for compositional-model results written in ECL binary
+ *        format.
  */
 template <class TypeTag>
 class OutputCompositionalModule : public GenericOutputModule<GetPropType<TypeTag, Properties::FluidSystem>>
@@ -201,9 +201,7 @@ public:
         this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
         BaseType::assignToSolution(sol);
 
-        // The phase densities and viscosities are named by the emitting
-        // module: these are the compositional array names for the same
-        // quantities the black-oil module reports as OIL_DEN, GAS_VISC, ...
+        // Use the compositional restart names for phase densities and viscosities.
         this->assignPhaseProperties(sol, typename BaseType::PhasePropertyNames {
             .oilDensity     = "DENO",
             .gasDensity     = "DENG",
@@ -213,8 +211,7 @@ public:
             .waterViscosity = "VWAT",
         });
 
-        // The relative permeabilities are reported by both formulations under
-        // different array names; these are the compositional ones.
+        // Report compositional relative permeabilities under their restart names.
         using M = UnitSystem::measure;
         this->assignBuffer(sol, "KRO", M::identity,
                            relativePermeability_[oilPhaseIdx], oilPhaseIdx);
@@ -354,10 +351,9 @@ public:
                                                 { return getValue(fs.moleFraction(compIdx)); });
                   }, this->compC_.moleFractionsAllocated()
             },
-            // The composition of a phase that is not present is undefined;
-            // report it as zero rather than as whatever the flash left behind.
-            // A vanishing but non-zero saturation still carries a meaningful
-            // composition.
+
+            // A phase with zero saturation has no defined composition; report zero instead
+            // of stale flash values. A positive, however small, saturation is meaningful.
             Entry{[&compC = this->compC_](const ExtractContext& ectx)
                   {
                       const bool hasGas =
@@ -544,9 +540,8 @@ public:
         // this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
-    //! \brief Allocate the buffers this module owns.  The relative
-    //!        permeabilities are reported by both formulations, under
-    //!        different array names, so each module allocates its own.
+protected:
+    //! \brief Allocate compositional relative-permeability buffers.
     void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
                                  const unsigned bufferSize) override
     {
@@ -566,10 +561,10 @@ public:
         }
     }
 
+private:
     using ScalarBuffer = typename BaseType::ScalarBuffer;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-private:
     bool isDefunctParallelWell(const std::string& wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)
