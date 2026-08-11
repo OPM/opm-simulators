@@ -295,9 +295,6 @@ namespace Amg
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
                         FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                    if(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                        rs = 0.0;
-                    }
                     bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
                         (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
                         / denominator);
@@ -312,15 +309,15 @@ namespace Amg
                 }
                 if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv
                     || priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    // If only two phases are active, reset the inactive component weight.
-                    unsigned activeCompIdx = 0;
+                    // If either gas or oil is undersaturated, we set the corresponding
+                    // weight for that component to zero.
                     if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                        activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
                             FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
                         bweights[activeCompIdx] = 0.0;
                     }
                     if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                        activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
                             FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
                         bweights[activeCompIdx] = 0.0;
                     }
