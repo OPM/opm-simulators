@@ -578,8 +578,10 @@ private:
         }
     }
 
-    // Same convention as the classic path: verbosity above 10 writes the
-    // coarse system out so the two can be compared entry by entry.
+    // Developer aid: verbosity above 10 writes the coarse system out so it can
+    // be compared entry by entry with the classic path.  This reads the
+    // preconditioner sub-tree, which only a JSON configuration sets, so
+    // --linear-solver-verbosity does not reach here and is not meant to.
     void dumpCoarseMatrix() const
     {
         if (verbosity_ <= 10) {
