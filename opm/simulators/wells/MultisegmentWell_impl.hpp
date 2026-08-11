@@ -764,10 +764,8 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
 
-        // After updating the primary variables, refresh the segment fluid state. Do it before
-        // computeInitialSegmentFluids() so the latter can reuse the cached segment volume ratios
-        // in getSegmentSurfaceVolume(). The fluid state is used to derive the segment fluid
-        // properties for all cases (and the enthalpy for the energy equation).
+        // Refresh the fluid state before computing the initial inventory, which reuses its
+        // cached segment volume ratio.
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
         computeInitialSegmentFluids();
@@ -1144,13 +1142,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeSegmentFluidProperties(const Simulator& simulator, DeferredLogger& deferred_logger)
     {
-        // Rebuild the per-segment fluid states from the current primary variables and derive
-        // all segment fluid properties from them. The fluid state holds the inverse formation
-        // volume factors, dissolution/vaporization ratios, phase densities and saturations
-        // (and the enthalpy for the energy equation), so only the phase viscosities require an
-        // additional PVT evaluation. Refreshing here, at the point of consumption, keeps the
-        // properties consistent with the primary variables no matter which code path updated
-        // them, and gives a single PVT sweep per assembly.
+        // Rebuild fluid states from the current primary variables before deriving segment
+        // properties, so both use consistent PVT data.
         const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
         this->segments_.computeFluidProperties(this->segment_fluid_state_,
@@ -1945,7 +1938,7 @@ namespace Opm
             this->linSys_.sumDistributed(this->parallel_well_info_.communication());
         }
 
-        // needed by updateWellHeadCondition() for the wellhead fluid state of injectors
+        // Needed to construct the injector wellhead fluid state.
         [[maybe_unused]] FSInfo info{};
         if constexpr (has_energy) {
             info = this->getFirstPerforationFluidStateInfo(simulator);
@@ -2157,10 +2150,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getSegmentSurfaceVolume(const int seg_idx) const
     {
-        // The segment volume ratio is cached whenever the segment fluid state is rebuilt
-        // (see updateSegmentFluidState), so reuse it here instead of recomputing the PVT
-        // quantities. All callers refresh the segment fluid state from the current primary
-        // variables before using this function.
+        // Reuse the volume ratio cached when the segment fluid state was rebuilt.
         const Scalar volume = this->wellEcl().getSegments()[seg_idx].volume();
         return volume / this->segments_.volumeRatio(seg_idx);
     }
@@ -2453,11 +2443,8 @@ namespace Opm
     {
         SegmentFluidState<ValueType> fluid_state;
         if constexpr (enable_temperature) {
-            // Set the temperature whenever the fluid state can store it (any thermal mode).
-            // In the fully implicit case @p temperature is the segment temperature primary
-            // variable; otherwise it is the (fixed) first-perforation temperature. When the
-            // fluid state does not store a temperature it falls back to the reservoir
-            // temperature.
+            // Populate temperature for every fluid state that stores it, including thermal
+            // modes without a fully implicit energy equation.
             fluid_state.setTemperature(temperature);
         }
         if constexpr (has_brine) {
@@ -2870,7 +2857,7 @@ namespace Opm
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             segment_fluid_state_[seg] = this->createSegmentFluidState(seg, info, deferred_logger);
-            // cache the volume ratio so getSegmentSurfaceVolume() can reuse it
+            // Cache the volume ratio for getSegmentSurfaceVolume().
             this->segments_.updateVolumeRatio(seg, segment_fluid_state_[seg],
                                               this->primary_variables_, deferred_logger);
         }

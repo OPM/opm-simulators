@@ -63,18 +63,15 @@ public:
 
     //! \brief Compute per-segment fluid properties from the pre-computed segment fluid states.
     //!
-    //! A BlackOilFluidState is maintained for each segment (see MultisegmentWell::
-    //! updateSegmentFluidState) for all cases, thermal or not. Its stored inverse formation
-    //! volume factors and dissolution/vaporization ratios are reused whenever they coincide
-    //! with the values needed here (both oil and gas present in the segment, which is the
-    //! common case); only the phase viscosities and a few single-phase corner cases require a
-    //! fresh PVT evaluation. Also refreshes the cached segment volume ratios.
+    //! Reuses the inverse formation volume factors and dissolution/vaporization ratios in each
+    //! fluid state where applicable, and evaluates the remaining PVT properties. Also updates
+    //! the cached segment volume ratios.
     template<class FluidState>
     void computeFluidProperties(const std::vector<FluidState>& segment_fluid_states,
                                 const PrimaryVariables& primary_variables,
                                 DeferredLogger& deferred_logger);
 
-    //! \brief Refresh the cached volume ratio of a segment from its fluid state.
+    //! \brief Update the cached volume ratio of a segment from its fluid state and composition.
     template<class FluidState>
     void updateVolumeRatio(const int seg,
                            const FluidState& fluid_state,
@@ -145,8 +142,7 @@ public:
 
     //! \brief Segment volume ratio (reservoir volume per unit surface volume).
     //!
-    //! Populated via updateVolumeRatio() so that getSegmentSurfaceVolume() can reuse it
-    //! instead of recomputing the PVT quantities.
+    //! Updated by updateVolumeRatio() for reuse when computing the segment surface volume.
     const EvalWell& volumeRatio(const int seg) const
     {
         return volume_ratios_[seg];
@@ -190,8 +186,8 @@ private:
     // we should not have this member variable
     std::vector<EvalWell> densities_;
 
-    // the segment volume ratio (reservoir volume per unit surface volume); taken from the
-    // segment fluid state (see setVolumeRatio)
+    // Segment volume ratios (reservoir volume per unit surface volume), derived from the fluid
+    // state and surface composition.
     std::vector<EvalWell> volume_ratios_;
 
     // the mass rate of the segments
@@ -217,10 +213,7 @@ private:
     Scalar mixtureDensityWithExponents(const int seg) const;
     Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
 
-    // Per-segment phase quantities needed for the segment fluid properties: the inverse
-    // formation volume factors and dissolution/vaporization ratios of the phases actually
-    // present in the segment (a phase that is absent uses the saturated values of the other),
-    // the reservoir-condition mixture composition and the volume ratio derived from them.
+    // Intermediate PVT properties used to calculate segment fluid properties and volume ratios.
     struct PhaseState
     {
         explicit PhaseState(const std::size_t num_quantities)
@@ -237,11 +230,8 @@ private:
 
     //! \brief Fill @p state from the segment fluid state and surface composition @p mix_s.
     //!
-    //! The stored inverse formation volume factors and Rs/Rv of @p fluid_state are reused
-    //! when both oil and gas are present in the segment (they coincide with the values
-    //! needed here); the single-phase corner cases require their own PVT evaluations since
-    //! the fluid state treats an absent phase differently than the property calculation
-    //! (which uses the saturated values of the present phase).
+    //! Reuses fluid-state PVT properties where they represent the requested composition, and
+    //! evaluates the required saturated properties for single-phase cases.
     template<class FluidState>
     void phaseState(const FluidState& fluid_state,
                     const std::vector<EvalWell>& mix_s,
@@ -294,7 +284,8 @@ phaseState(const FluidState& fluid_state,
                 state.rv = fluid_state.Rv();
                 state.b[gasActiveCompIdx] = fluid_state.invB(FluidSystem::gasPhaseIdx);
             } else {
-                // dry gas; the fluid state stores the saturated Rv here, so evaluate anew
+                // No free gas: the fluid state holds saturated Rv, but calculate the inverse
+                // formation volume factor with the local Rv and Rvw set to zero.
                 const EvalWell rvw{0.};
                 state.b[gasActiveCompIdx] = FluidSystem::gasPvt().inverseFormationVolumeFactor(
                         pvt_region_index, temperature, seg_pressure, state.rv, rvw);
