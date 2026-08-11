@@ -71,6 +71,23 @@ namespace {
         };
     }
 
+    // The trailing diagnostic columns, each with the longest token it can emit.
+    // Sizing them by their headings alone is not enough -- "GROUP+NETWORK" is
+    // wider than "Gate".  "WellStatus" appends free-form text after its token,
+    // which is why it must stay last.
+    auto diagnosticHeaders() noexcept
+    {
+        using namespace std::literals::string_view_literals;
+
+        return std::array {
+            std::pair { "CnvRelax"sv,   "FINALIT"sv  },  // to_string(CnvRelaxSource)
+            std::pair { "CnvTolUsed"sv, ""sv         },  // a number, never wider
+            std::pair { "OscSource"sv,  "WELLCTRL"sv },  // to_string(OscillationSource)
+            std::pair { "Gate"sv,       "GROUP+NETWORK"sv },
+            std::pair { "WellStatus"sv, "CONV"sv     },
+        };
+    }
+
     template <typename HeaderSequence>
     int maxHeaderSize(const HeaderSequence& headers)
     {
@@ -126,24 +143,27 @@ namespace {
             }
         }
 
-        const auto& metrics    = firstRequest.reports.front().reservoirConvergence();
-        const auto  headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        const auto& metrics = firstRequest.reports.front().reservoirConvergence();
+
+        auto headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        for (const auto& [heading, longestValue] : diagnosticHeaders()) {
+            headerSize = std::max({ headerSize,
+                                    static_cast<int>(heading.size() + 1),
+                                    static_cast<int>(longestValue.size() + 1) });
+        }
 
         for (const auto& metric : metrics) {
             os << std::right << std::setw(headerSize)
                << formatMetricColumn(getPhaseName, metric);
         }
 
+        for (const auto& [heading, _] : diagnosticHeaders()) {
+            os << std::right << std::setw(headerSize) << heading;
+        }
+
         // Note: Newline character intentionally placed in separate output
         // request to not influence right-justification of column header.
-        // "Gate" precedes "WellStatus" because well failures append
-        // variable-length text after the WellStatus token, which must
-        // therefore remain the last column.
-        os << std::right << std::setw(headerSize) << "CnvRelax";
-        os << std::right << std::setw(headerSize) << "CnvTolUsed";
-        os << std::right << std::setw(headerSize) << "OscSource";
-        os << std::right << std::setw(headerSize) << "Gate";
-        os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
+        os << '\n';
 
         return { minColSize, headerSize };
     }
@@ -232,7 +252,7 @@ namespace {
     }
 
     void writeCnvRelaxation(std::ostream&                 os,
-                            const std::string::size_type  colSize,
+                            const int                     colSize,
                             const Opm::ConvergenceReport& report)
     {
         // Which condition granted the relaxed CNV tolerance, and the tolerance actually
@@ -250,14 +270,14 @@ namespace {
     }
 
     void writeOscillationSource(std::ostream&                 os,
-                                const std::string::size_type  colSize,
+                                const int                     colSize,
                                 const Opm::ConvergenceReport& report)
     {
         os << std::right << std::setw(colSize) << to_string(report.oscillationSource());
     }
 
     void writeConvergenceGate(std::ostream&                 os,
-                              const std::string::size_type  colSize,
+                              const int                     colSize,
                               const Opm::ConvergenceReport& report)
     {
         // Which secondary gate, if any, kept this iteration from counting as
