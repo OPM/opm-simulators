@@ -696,12 +696,15 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids()
+    computeInitialSegmentInventory()
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             const Scalar surface_volume = getSegmentSurfaceVolume(seg).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
+            }
+            if constexpr (has_energy) {
+                segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
             }
         }
     }
@@ -768,10 +771,7 @@ namespace Opm
         // cached segment volume ratio.
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
-        computeInitialSegmentFluids();
-        if constexpr (has_energy) {
-            computeInitialSegmentEnergy();
-        }
+        computeInitialSegmentInventory();
     }
 
 
@@ -2759,15 +2759,6 @@ namespace Opm
                                   MSWEval::PrimaryVariables::Temperature,
                                   energy_scaling_factor_ * energy_flux,
                                   this->linSys_);
-    }
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::computeInitialSegmentEnergy()
-    {
-        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
-        }
     }
 
     template <typename TypeTag>
