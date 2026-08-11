@@ -332,7 +332,8 @@ private:
         // describe the coarse space and are ignored by FlexibleSolver.
         const auto& coarsePrm = *coarseResPrm_;
         const auto wellTransfer = wellTransferFromString(
-            coarsePrm.get("well_transfer", std::string{"full"}));
+            // Same default as setupPropertyTree ships for general_system_cpr.
+            coarsePrm.get("well_transfer", std::string{"classic"}));
         const auto diagonal = wellCoarseDiagonalFromString(
             coarsePrm.get("well_coarse_diagonal", std::string{"contract_d"}));
 
