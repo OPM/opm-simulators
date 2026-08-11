@@ -23,12 +23,12 @@
  * \file
  * \copydoc Opm::OutputBlackOilModule
  */
-#ifndef OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
-#define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#ifndef OPM_GENERIC_OUTPUT_MODULE_HPP
+#define OPM_GENERIC_OUTPUT_MODULE_HPP
 
-#include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
@@ -555,4 +555,4 @@ protected:
 
 } // namespace Opm
 
-#endif // OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#endif // OPM_GENERIC_OUTPUT_MODULE_HPP

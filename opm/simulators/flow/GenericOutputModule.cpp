@@ -365,30 +365,15 @@ void GenericOutputModule<FluidSystem>::
 assignPhaseProperties(data::Solution& sol,
                       const PhasePropertyNames& names)
 {
-    auto assign = [&sol](const std::string_view name,
-                         const UnitSystem::measure measure,
-                         std::vector<Scalar>& buffer,
-                         const int phaseIdx)
-    {
-        // An inactive phase has a negative index, and a buffer that was never
-        // allocated has nothing to report.
-        if ((phaseIdx < 0) || buffer.empty()) {
-            return;
-        }
-
-        sol.insert(std::string { name }, measure, std::move(buffer),
-                   data::TargetType::RESTART_SOLUTION);
-    };
-
-    assign(names.oilDensity,   UnitSystem::measure::density,   density_[oilPhaseIdx],   oilPhaseIdx);
-    assign(names.gasDensity,   UnitSystem::measure::density,   density_[gasPhaseIdx],   gasPhaseIdx);
-    assign(names.oilViscosity, UnitSystem::measure::viscosity, viscosity_[oilPhaseIdx], oilPhaseIdx);
-    assign(names.gasViscosity, UnitSystem::measure::viscosity, viscosity_[gasPhaseIdx], gasPhaseIdx);
+    assignBuffer(sol, names.oilDensity,   UnitSystem::measure::density,   density_[oilPhaseIdx],   oilPhaseIdx);
+    assignBuffer(sol, names.gasDensity,   UnitSystem::measure::density,   density_[gasPhaseIdx],   gasPhaseIdx);
+    assignBuffer(sol, names.oilViscosity, UnitSystem::measure::viscosity, viscosity_[oilPhaseIdx], oilPhaseIdx);
+    assignBuffer(sol, names.gasViscosity, UnitSystem::measure::viscosity, viscosity_[gasPhaseIdx], gasPhaseIdx);
 
     // avoid output with generic fluid system and disabled water phase
     if constexpr (numPhases > 2) {
-        assign(names.waterDensity,   UnitSystem::measure::density,   density_[waterPhaseIdx],   waterPhaseIdx);
-        assign(names.waterViscosity, UnitSystem::measure::viscosity, viscosity_[waterPhaseIdx], waterPhaseIdx);
+        assignBuffer(sol, names.waterDensity,   UnitSystem::measure::density,   density_[waterPhaseIdx],   waterPhaseIdx);
+        assignBuffer(sol, names.waterViscosity, UnitSystem::measure::viscosity, viscosity_[waterPhaseIdx], waterPhaseIdx);
     }
 }
 
@@ -425,9 +410,6 @@ assignToSolution(data::Solution& sol)
 
     std::vector<DataEntry> baseSolutionVector;
 
-    // avoid output with generic fluid system and disabled water phase
-    if constexpr (numPhases > 2) {
-    }
     addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
     addEntry(baseSolutionVector, "PCGW",     UnitSystem::measure::pressure,                              pcgw_);
     addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
@@ -448,9 +430,6 @@ assignToSolution(data::Solution& sol)
     addEntry(baseSolutionVector, "SWHY1",    UnitSystem::measure::identity,                              swmin_);
     addEntry(baseSolutionVector, "SWMAX",    UnitSystem::measure::identity,                              swMax_);
 
-    // avoid output with generic fluid system and disabled water phase
-    if constexpr (numPhases > 2) {
-    }
 
     auto extendedSolutionArrays = std::array {
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
