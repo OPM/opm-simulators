@@ -241,9 +241,9 @@ namespace Opm {
                              WellStateType& well_state,
                              const Scalar relaxation_factor = 1.0);
 
-        // Compute the initial fluid inventory for well mass equations. Requires an up-to-date
+        // Compute the initial segment inventory for well equations. Requires an up-to-date
         // segment fluid state (see updateSegmentFluidState()).
-        void computeInitialSegmentFluids();
+        void computeInitialSegmentInventory();
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -403,8 +403,6 @@ namespace Opm {
 
         SegmentFluidState<EvalWell>
         createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
-
-        void computeInitialSegmentEnergy();
 
         // assemble the energy equation contribution for a single perforation/connection
         void assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
