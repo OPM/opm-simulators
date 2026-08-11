@@ -74,6 +74,21 @@ public:
     void outputRestart(data::Solution& sol,
                        ScalarBuffer& oil_saturation);
 
+    bool moleFractionsAllocated() const
+    { return !moleFractions_[0].empty(); }
+
+    bool gasFractionsAllocated() const
+    { return !phaseMoleFractions_[gasPhaseIdx][0].empty(); }
+
+    bool oilFractionsAllocated() const
+    { return !phaseMoleFractions_[oilPhaseIdx][0].empty(); }
+
+    bool phasePressuresAllocated() const
+    { return !oilPressure_.empty() || !gasPressure_.empty(); }
+
+    bool vaporFractionAllocated() const
+    { return !vaporFraction_.empty(); }
+
     bool allocated() const
     { return allocated_; }
 
