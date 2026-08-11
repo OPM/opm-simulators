@@ -212,6 +212,18 @@ public:
             .gasViscosity   = "VGAS",
             .waterViscosity = "VWAT",
         });
+
+        // The relative permeabilities are reported by both formulations under
+        // different array names; these are the compositional ones.
+        using M = UnitSystem::measure;
+        this->assignBuffer(sol, "KRO", M::identity,
+                           relativePermeability_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "KRG", M::identity,
+                           relativePermeability_[gasPhaseIdx], gasPhaseIdx);
+        if constexpr (numPhases > 2) {
+            this->assignBuffer(sol, "KRW", M::identity,
+                               relativePermeability_[waterPhaseIdx], waterPhaseIdx);
+        }
     }
 
     void outputFipAndResvLog(const Inplace& inplace,
@@ -381,6 +393,10 @@ public:
                   }, this->compC_.allocated()
             },
             // The phase densities and viscosities, reported where the phase is present.
+            Entry{PhaseEntry{&this->relativePermeability_,
+                  [](const unsigned phaseIdx, const ExtractContext& ectx)
+                  { return getValue(ectx.intQuants.relativePermeability(phaseIdx)); }}
+            },
             Entry{PhaseEntry{&this->density_,
                   [](const unsigned phaseIdx, const ExtractContext& ectx)
                   {
@@ -517,6 +533,31 @@ public:
     {
         // this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
+
+    //! \brief Allocate the buffers this module owns.  The relative
+    //!        permeabilities are reported by both formulations, under
+    //!        different array names, so each module allocates its own.
+    void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                 const unsigned bufferSize) override
+    {
+        // Name each phase explicitly: the compositional phase ordering is not
+        // the one the black-oil keyword names assume.
+        const auto named = std::array{
+            std::pair{static_cast<unsigned>(oilPhaseIdx),   std::string_view{"KRO"}},
+            std::pair{static_cast<unsigned>(gasPhaseIdx),   std::string_view{"KRG"}},
+            std::pair{static_cast<unsigned>(waterPhaseIdx), std::string_view{"KRW"}},
+        };
+        for (const auto& [phase, kw] : named) {
+            if (phase >= numPhases || !FluidSystem::phaseIsActive(phase)) {
+                continue;
+            }
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize,
+                                             relativePermeability_[phase], kw, true);
+        }
+    }
+
+    using ScalarBuffer = typename BaseType::ScalarBuffer;
+    std::array<ScalarBuffer, numPhases> relativePermeability_;
 
 private:
     bool isDefunctParallelWell(const std::string& wname) const override
