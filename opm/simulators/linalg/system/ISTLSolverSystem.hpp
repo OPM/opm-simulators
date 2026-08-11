@@ -446,12 +446,15 @@ private:
     {
         std::function<ResVector<Scalar>()> resWeightCalc;
         if (prm.get("preconditioner.type", std::string{}) == "general_system_cpr") {
-            // The general layout names the weighting directly, at the top of
-            // the preconditioner as cpr does, rather than through a nested CPR
-            // preconditioner sub-tree.
-            resWeightCalc = this->makeWeightsCalculator(
-                prm.get("preconditioner.weight_type", std::string{"trueimpes"}),
-                this->getMatrix(), pressureIndex);
+            // The general layout names the weighting directly at the top of the
+            // preconditioner rather than through a nested CPR sub-tree, so hand
+            // the base class the two keys it reads instead of teaching it a
+            // second entry point.
+            Opm::PropertyTree cprPrm;
+            cprPrm.put("preconditioner.type", std::string{"cpr"});
+            cprPrm.put("preconditioner.weight_type",
+                       prm.get("preconditioner.weight_type", std::string{"trueimpes"}));
+            resWeightCalc = this->getWeightsCalculator(cprPrm, this->getMatrix(), pressureIndex);
         } else {
             // Derive weights from the reservoir sub-block config (which uses CPR internally)
             resWeightCalc = this->getWeightsCalculator(
