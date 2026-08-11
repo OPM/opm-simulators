@@ -666,6 +666,7 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 
     // Top-level preconditioner: system_cpr
     prm.put("preconditioner.type", "system_cpr"s);
+    prm.put("preconditioner.verbosity", p.linear_solver_verbosity_);
     setupSystemCPRWellOptions(prm);
 
     setupSystemReservoirSmoother(prm, "preconditioner.reservoir_smoother"s, p);
@@ -697,7 +698,9 @@ setupGeneralSystemCPR(const std::string& conf, const FlowLinearSolverParameters&
     prm.put("solver", getSolverString(p));
 
     prm.put("preconditioner.type", "general_system_cpr"s);
-    prm.put("preconditioner.verbosity", 0);
+    // The pressure stage dumps its coarse matrix above 10, same convention as
+    // the solver-level dump; hardcoding 0 here made that unreachable.
+    prm.put("preconditioner.verbosity", p.linear_solver_verbosity_);
     // Sweeps before and after the coarse correction, as for cpr. 0/1 is the
     // composition the fixed three-stage system_cpr uses.
     prm.put("preconditioner.pre_smooth", 0);
