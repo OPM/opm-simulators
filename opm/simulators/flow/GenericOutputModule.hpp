@@ -164,7 +164,7 @@ public:
     /*!
      * \brief Move all buffers to data::Solution.
      */
-    void assignToSolution(data::Solution& sol);
+    virtual void assignToSolution(data::Solution& sol);
 
     /// Names under which the phase densities and viscosities are reported.
     /// The black-oil and the compositional formulations use different array
@@ -207,7 +207,7 @@ public:
                       std::vector<Scalar>& buffer,
                       int index);
 
-    void setRestart(const data::Solution& sol,
+    virtual void setRestart(const data::Solution& sol,
                     unsigned elemIdx,
                     unsigned globalDofIndex);
 
@@ -381,9 +381,14 @@ protected:
                         const bool isRestart,
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
-                        std::map<std::string, int> rstKeywords = {},
-                        const std::function<void(std::map<std::string, int>&,
-                                                 unsigned)>& allocFormulationBuffers = {});
+                        std::map<std::string, int> rstKeywords = {});
+
+    /// Allocate the buffers a derived module owns.  Called while the restart
+    /// keywords are being handled, so that a keyword consumed here is marked
+    /// as handled before the unhandled-keyword check.
+    virtual void allocFormulationBuffers(std::map<std::string, int>& /*rstKeywords*/,
+                                         unsigned /*bufferSize*/)
+    {}
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,

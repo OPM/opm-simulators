@@ -261,11 +261,7 @@ public:
                              log,
                              isRestart,
                              &problem.materialLawManager()->hysteresisConfig(),
-                             problem.eclWriter().getOutputNnc().front().size(),
-                             {},
-                             [this](std::map<std::string, int>& rstKeywords,
-                                    const unsigned size)
-                             { this->allocBlackoilBuffers(rstKeywords, size); });
+                             problem.eclWriter().getOutputNnc().front().size());
     }
 
     //! \brief Setup list of active element-level data extractors
@@ -288,7 +284,7 @@ public:
     /*!
      * \brief Move all buffers to data::Solution.
      */
-    void assignToSolution(data::Solution& sol)
+    void assignToSolution(data::Solution& sol) override
     {
         BaseType::assignToSolution(sol);
 
@@ -777,7 +773,7 @@ public:
     //! \brief Restore the buffers this module owns from a restart file.
     void setRestart(const data::Solution& sol,
                     const unsigned elemIdx,
-                    const unsigned globalDofIndex)
+                    const unsigned globalDofIndex) override
     {
         BaseType::setRestart(sol, elemIdx, globalDofIndex);
 
@@ -795,8 +791,8 @@ public:
 
     //! \brief Allocate the buffers of the quantities only the black-oil
     //!        formulation produces, keyed on their restart mnemonics.
-    void allocBlackoilBuffers(std::map<std::string, int>& rstKeywords,
-                              const unsigned bufferSize)
+    void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                 const unsigned bufferSize) override
     {
         // RS and RV are allocated whenever the fluid system supports them,
         // not only when the restart keyword asks for them.

@@ -641,9 +641,7 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     isRestart,
                const EclHysteresisConfig* hysteresisConfig,
                const unsigned numOutputNnc,
-               std::map<std::string, int> rstKeywords,
-               const std::function<void(std::map<std::string, int>&,
-                                        unsigned)>& allocFormulationBuffers)
+               std::map<std::string, int> rstKeywords)
 {
     if (rstKeywords.empty()) {
         rstKeywords = schedule_.rst_keywords(reportStepNum);
@@ -938,9 +936,7 @@ doAllocBuffers(const unsigned bufferSize,
 
     // Buffers a derived module owns are allocated here, so that the keywords
     // they consume are marked handled before the check below.
-    if (allocFormulationBuffers) {
-        allocFormulationBuffers(rstKeywords, bufferSize);
-    }
+    this->allocFormulationBuffers(rstKeywords, bufferSize);
 
     if (enableMech_ && eclState_.runspec().mech()) {
         this->mech_.allocate(bufferSize, rstKeywords);

@@ -196,7 +196,7 @@ public:
                              std::move(rstKeywords));
     }
 
-    void assignToSolution(data::Solution& sol)
+    void assignToSolution(data::Solution& sol) override
     {
         this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
         BaseType::assignToSolution(sol);
