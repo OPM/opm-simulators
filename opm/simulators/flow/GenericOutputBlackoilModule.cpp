@@ -418,6 +418,7 @@ assignToSolution(data::Solution& sol)
     }
 
     this->mech_.outputRestart(sol);
+    this->tpsaC_.outputRestart(sol);
     this->extboC_.outputRestart(sol);
 
     if (! this->temperature_.empty())
@@ -909,6 +910,11 @@ doAllocBuffers(const unsigned bufferSize,
 
     if (enableMech_ && eclState_.runspec().mech()) {
         this->mech_.allocate(bufferSize, rstKeywords);
+
+        // TPSA-specific output
+        if (eclState_.runspec().mechSolver().tpsa()) {
+            this->tpsaC_.allocate(bufferSize, rstKeywords);
+        }
     }
 
     if (enableExtbo_) {

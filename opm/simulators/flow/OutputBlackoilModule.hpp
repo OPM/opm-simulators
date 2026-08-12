@@ -2013,6 +2013,19 @@ private:
                     true
                 );
             }
+            if (this->tpsaC_.allocated()) {
+                this->extractors_.emplace_back(
+                    [&tpsaC = this->tpsaC_,
+                        &model = simulator_.problem().geoMechModel()](const Context& ectx) {
+                        tpsaC.assignRotation(ectx.globalDofIdx,
+                                             model.rotation(ectx.globalDofIdx));
+
+                        tpsaC.assignSolidPressure(ectx.globalDofIdx,
+                                                  model.solidPressure(ectx.globalDofIdx));
+                    },
+                    true
+                );
+            }
         }
     }
 

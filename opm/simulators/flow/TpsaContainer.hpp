@@ -1,0 +1,73 @@
+/*
+This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+/*!
+ * \file
+ * \copydoc Opm::OutputBlackOilModule
+ */
+#ifndef OPM_TPSA_CONTAINER_HPP
+#define OPM_TPSA_CONTAINER_HPP
+
+#include <dune/common/fvector.hh>
+
+#include <array>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <vector>
+
+namespace Opm
+{
+
+namespace data
+{
+    class Solution;
+}
+
+template <typename Scalar>
+class TpsaContainer
+{
+    using ScalarBuffer = std::vector<Scalar>;
+
+public:
+    void allocate(const std::size_t bufferSize,
+                  std::map<std::string, int>& rstKeywords);
+
+    void assignRotation(const unsigned globalDofIdx,
+                        const Dune::FieldVector<Scalar, 3>& rotation);
+
+    void assignSolidPressure(const unsigned globalDofIdx,
+                             const Scalar solidPressure);
+
+    void outputRestart(data::Solution& sol);
+
+    bool allocated() const
+    {
+        return allocated_;
+    }
+
+private:
+    bool allocated_{false};
+    ScalarBuffer solidPressure_;
+    std::array<ScalarBuffer, 3> rotation_;
+}; // class TpsaContainer
+
+} // namespace Opm
+
+#endif //OPM_TPSA_CONTAINER_HPP

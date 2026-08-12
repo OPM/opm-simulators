@@ -144,6 +144,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
+  opm/simulators/flow/TpsaContainer.cpp
   opm/simulators/flow/TracerContainer.cpp
   opm/simulators/flow/Transmissibility.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -1071,6 +1072,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
+  opm/simulators/flow/TpsaContainer.hpp
   opm/simulators/flow/TracerContainer.hpp
   opm/simulators/flow/TemperatureModel.hpp
   opm/simulators/flow/TracerModel.hpp

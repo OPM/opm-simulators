@@ -44,6 +44,7 @@
 #include <opm/simulators/flow/RFTContainer.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/flow/GeochemistryContainer.hpp>
+#include <opm/simulators/flow/TpsaContainer.hpp>
 #include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -476,6 +477,7 @@ protected:
 
     // buffers for mechanical output
     MechContainer<Scalar> mech_;
+    TpsaContainer<Scalar> tpsaC_;
 
     std::array<ScalarBuffer, numPhases> saturation_;
     std::array<ScalarBuffer, numPhases> invB_;
