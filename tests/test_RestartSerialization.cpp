@@ -36,6 +36,7 @@
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
@@ -127,6 +128,9 @@ TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeStepping3rdOrder, serializationTestObje
 
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
+
+namespace Opm { using BMP = BlackoilModelParameters<double>; }
+TEST_FOR_TYPE_NAMED(BMP, BlackoilModelParameters)
 
 namespace Opm {
     struct DummyMaterial {
@@ -535,7 +539,7 @@ struct AquiferFixture {
         Parameters::Register<Parameters::NewtonMaxIterations>("The maximum number of Newton iterations per time step");
         Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
-        BlackoilModelParameters<double>::registerParameters();
+        Opm::BlackoilModelParameters<double>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true, false, true, 0);
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
