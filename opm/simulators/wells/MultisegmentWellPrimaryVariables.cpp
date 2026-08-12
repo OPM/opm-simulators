@@ -217,8 +217,7 @@ updateNewton(const BVectorWell& dwells,
 
         // update the segment pressure
         {
-            // the solution is in scaled units, the limit in physical ones
-            const Scalar dspres = varScale(SPres) * dwells[seg][SPres];
+            const Scalar dspres = this->physicalIncrement(dwells, seg, SPres);
             const int sign = dspres > 0.? 1 : -1;
             const Scalar dx_limited = sign * std::min(std::abs(dspres) * relaxation_factor, max_pressure_change);
             // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
@@ -230,7 +229,7 @@ updateNewton(const BVectorWell& dwells,
         // update the total rate // TODO: should we have a limitation of the total rate change?
         {
             value_[seg][WQTotal] = old_primary_variables[seg][WQTotal]
-                - relaxation_factor * varScale(WQTotal) * dwells[seg][WQTotal];
+                - relaxation_factor * this->physicalIncrement(dwells, seg, WQTotal);
 
             // make sure that no injector produce and no producer inject
             if (seg == 0) {
