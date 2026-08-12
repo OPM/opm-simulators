@@ -323,8 +323,7 @@ updateNewton(const BVectorWell& dwells,
     this->processFractions();
 
     // updating the total rates Q_t
-    // The solution is in scaled units, value_ is physical, so convert the increment.
-    value_[WQTotal] -= varScale(WQTotal) * dwells[0][WQTotal];
+    value_[WQTotal] -= this->physicalIncrement(dwells, WQTotal);
 
     // here, we make sure it is zero for wells with zero rate target(including stopped wells)
     if (stop_or_zero_rate_target) {
@@ -339,7 +338,7 @@ updateNewton(const BVectorWell& dwells,
     }
 
     // updating the bottom hole pressure
-    const Scalar dbhp = varScale(Bhp) * dwells[0][Bhp];
+    const Scalar dbhp = this->physicalIncrement(dwells, Bhp);
     const int sign1 = dbhp > 0 ? 1: -1;
     const Scalar dx1_limited = sign1 * std::min(std::abs(dbhp),
                                                 std::abs(value_[Bhp]) * dBHPLimit);
