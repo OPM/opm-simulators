@@ -1336,6 +1336,11 @@ reportConnectionFracture(const std::size_t well_index,
     const auto num_perf_well = perf_data.size();
 
     const auto& data = perf_data.fracture_data;
+    if (data.area.size() != num_perf_well) {
+        // No fracture model has claimed this well, so there is nothing to
+        // report and the containers were never sized.
+        return;
+    }
 
     for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
         auto& fracture = connections[i].fracture;

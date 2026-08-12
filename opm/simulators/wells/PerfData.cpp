@@ -68,7 +68,9 @@ void PerfData<Scalar>::prepareInjectorContainers()
     this->skin_pressure.resize(num_perf);
     this->water_velocity.resize(num_perf);
     this->filtrate_data.resize(num_perf);
-    this->fracture_data.resize(num_perf);
+    // fracture_data is deliberately not sized here: a fracture model calls
+    // resize() when it has something to store, so a run without one pays
+    // nothing.  Everything reading it must tolerate the empty state.
 }
 
 template<class Scalar>
