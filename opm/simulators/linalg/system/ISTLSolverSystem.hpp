@@ -31,6 +31,10 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -86,6 +90,16 @@ public:
     explicit ISTLSolverSystem(const Simulator& simulator)
         : Parent(simulator)
     {
+    }
+
+    ~ISTLSolverSystem()
+    {
+        if (thpEliminationTried_ > 0) {
+            OpmLog::debug(fmt::format("cellavg_vfp: control-row elimination "
+                                      "applied {} of {} times",
+                                      thpEliminationTried_ - thpEliminationRejected_,
+                                      thpEliminationTried_));
+        }
     }
 
     void prepare(const SparseMatrixAdapter& M, Vector& b) override
@@ -149,6 +163,11 @@ private:
     WellDofLayout wellLayout_;
     std::string wellWeightType_ = "quasiimpes";
     bool wellThpIsPressureControl_ = true;
+    std::vector<char> thpControlled_;  // per well, order as wellDMatrices_
+    // Diagnostics for cellavg_vfp: how often the control-row elimination was
+    // attempted and how often the diagonal guard refused it.
+    mutable long thpEliminationTried_ = 0;
+    mutable long thpEliminationRejected_ = 0;
 
     // Current per-well B/C/D blocks for the explicit 2x2 system matrix.
     std::vector<WRMatrix<Scalar>> wellBMatrices_;
@@ -295,23 +314,57 @@ private:
         // layer's job; below here it is just a flag per well.  The order
         // matches addBCDMatrix, which walks the same well container.
         wellLayout_.pressureControlled.clear();
-        if (wellLayout_.identityOnPressureControl) {
+        thpControlled_.clear();
+        {
             const auto& wellModel = this->simulator_.problem().wellModel();
             const auto& wellState = wellModel.wellState();
+            thpControlled_.reserve(wellDMatrices_.size());
             wellLayout_.pressureControlled.reserve(wellDMatrices_.size());
+            std::size_t j = 0;
             for (const auto& well : wellModel) {
+                const auto& ws = wellState.well(well->indexOfWell());
+                const bool thp = well->isInjector()
+                    ? ws.injection_cmode == Well::InjectorCMode::THP
+                    : ws.production_cmode == Well::ProducerCMode::THP;
+                thpControlled_.push_back(thp ? 1 : 0);
+
                 bool pc = well->isPressureControlled(wellState);
-                if (pc && !wellThpIsPressureControl_) {
-                    // Only actual BHP control (where the trivial row is exact)
-                    // counts; a THP well keeps its contracted equation.
-                    const auto& ws = wellState.well(well->indexOfWell());
-                    pc = well->isInjector()
-                        ? ws.injection_cmode == Well::InjectorCMode::BHP
-                        : ws.production_cmode == Well::ProducerCMode::BHP;
+                if (pc && thp) {
+                    if (wellWeightType_ == "cellavg_vfp") {
+                        // The control-row elimination replaces the trivial row
+                        // for a single-block well with a usable VFP derivative;
+                        // a flat VFP behaves like BHP control, so keep the
+                        // trivial row there (and for multisegment wells).
+                        const bool singleBlock = wellDMatrices_[j].N() == 1;
+                        pc = !(singleBlock
+                               && wellDMatrices_[j].exists(0, 0)
+                               && usableThpDerivative(wellDMatrices_[j][0][0]));
+                    } else if (!wellThpIsPressureControl_) {
+                        // Only actual BHP control (where the trivial row is
+                        // exact) counts; a THP well keeps its contracted row.
+                        pc = false;
+                    }
                 }
-                wellLayout_.pressureControlled.push_back(pc ? 1 : 0);
+                if (wellLayout_.identityOnPressureControl) {
+                    wellLayout_.pressureControlled.push_back(pc ? 1 : 0);
+                }
+                ++j;
             }
         }
+    }
+
+    // The control-row elimination divides by the control equation's
+    // total-rate derivative; refuse it when that entry is negligible
+    // against the rest of the row (flat VFP, or BHP control).
+    template <class Block>
+    static bool usableThpDerivative(const Block& d)
+    {
+        const int k = numWellDofs - 1;
+        Scalar rowMax = 0.0;
+        for (int c = 0; c < numWellDofs; ++c) {
+            rowMax = std::max(rowMax, std::abs(d[k][c]));
+        }
+        return rowMax > 0.0 && std::abs(d[k][0]) > 1e-8 * rowMax;
     }
 
     // Weights used to contract each well's equations down to the single scalar
@@ -344,7 +397,8 @@ private:
                 continue;
             }
 
-            if (wellWeightType_ == "cellavg" || wellWeightType_ == "cellblockavg") {
+            if (wellWeightType_ == "cellavg" || wellWeightType_ == "cellblockavg"
+                || wellWeightType_ == "cellavg_vfp") {
                 // The classic CPRW weighting (use_well_weights = false):
                 // average the reservoir weights over perforated cells and use
                 // them on the conservation equations only, weight zero on the
@@ -355,7 +409,7 @@ private:
                 // what MultisegmentWellEquations::extractCPRPressureMatrix
                 // does. "cellblockavg" averages per block row instead, which
                 // is a finer but non-classic variant.
-                const bool perWell = (wellWeightType_ == "cellavg");
+                const bool perWell = (wellWeightType_ != "cellblockavg");
                 const std::size_t first = perWell ? wellLayout_.firstBlock(wellOfBlock(wb)) : wb;
                 const std::size_t last = perWell ? wellLayout_.endBlock(wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
@@ -380,6 +434,42 @@ private:
                     }
                 }
                 lambda[q] = 0.0;
+
+                if (wellWeightType_ == "cellavg_vfp") {
+                    // Eliminate the total-rate correction through the control
+                    // equation: weight mu on the control row cancels the
+                    // WQTotal column of the contracted equation, which turns
+                    // the coarse diagonal into the Schur value
+                    //   w'D_cb - (w'D_cq) D_kb / D_kq.
+                    // Rate control has D_kb = 0, so only THP wells change.
+                    const auto j = wellOfBlock(wb);
+                    const bool singleBlock
+                        = wellLayout_.endBlock(j) - wellLayout_.firstBlock(j) == 1;
+                    if (singleBlock && j < thpControlled_.size() && thpControlled_[j]
+                        && mergedD_.exists(wb, wb)) {
+                        const auto& d = mergedD_[wb][wb];
+                        if (usableThpDerivative(d)) {
+                            const int k = numWellDofs - 1;
+                            Scalar num = 0.0;
+                            Scalar diag0 = 0.0;
+                            for (int i = 0; i < k; ++i) {
+                                num += lambda[i] * d[i][0];
+                                diag0 += lambda[i] * d[i][k];
+                            }
+                            const Scalar mu = -num / d[k][0];
+                            const Scalar diagc = diag0 + mu * d[k][k];
+                            // On the unstable VFP branch the Schur value can
+                            // shrink or flip the diagonal; keep the plain
+                            // contracted row there.
+                            if (diagc * diag0 > 0.01 * diag0 * diag0) {
+                                lambda[k] = mu;
+                            } else {
+                                ++thpEliminationRejected_;
+                            }
+                            ++thpEliminationTried_;
+                        }
+                    }
+                }
                 continue;
             }
 

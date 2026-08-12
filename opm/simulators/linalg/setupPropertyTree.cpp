@@ -623,6 +623,13 @@ void setupSystemCPRWellOptions(PropertyTree& prm, const std::string& at = "preco
     //   quasiimpes   - inv(D)^T e_bhp, normalised. Catastrophic for
     //                  multisegment wells; do not make it the default again
     //                  without re-checking them.
+    //   cellavg_vfp  - cellavg plus a control-row weight for THP-controlled
+    //                  standard wells, chosen to cancel the total-rate column;
+    //                  the coarse diagonal becomes the Schur value
+    //                  w'D_cb - (w'D_cq) D_kb/D_kq. Identical to cellavg for
+    //                  every other control mode; a flat VFP falls back to the
+    //                  trivial row. Implies THP wells are not treated as
+    //                  pressure-controlled.
     //   unit         - the pressure row as-is; a debugging baseline.
     prm.put(at + "well_weight_type", "cellavg"s);
     // How the well unknowns take part in the pressure-stage transfer:

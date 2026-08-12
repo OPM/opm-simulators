@@ -598,10 +598,15 @@ private:
             return;
         }
         static int counter = 0;
-        std::ofstream out("system_cprw_weights_" + std::to_string(counter++) + ".mm");
+        std::ofstream out("system_cprw_weights_" + std::to_string(counter) + ".mm");
         if (out) {
             Dune::writeMatrixMarket(weights[Dune::Indices::_0], out);
         }
+        std::ofstream wout("system_cprw_wweights_" + std::to_string(counter) + ".mm");
+        if (wout) {
+            Dune::writeMatrixMarket(weights[Dune::Indices::_1], wout);
+        }
+        ++counter;
     }
 
     void dumpCoarseRhs() const
