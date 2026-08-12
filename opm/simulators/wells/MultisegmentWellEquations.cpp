@@ -404,63 +404,76 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 
     // make cpr weights for well by pure avarage of reservoir weights of the perforations
-    if (!well.isPressureControlled(well_state)) {
-        auto well_weight = weights[0];
-        well_weight = 0.0;
-        int num_perfs = 0;
-        for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
-            for (auto colB = duneB_[rowB].begin(),
-                      endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                // map the well perforated cell index to global cell index
-                const auto col_index = cells_[colB.index()];
-                const auto& bw = weights[col_index];
-                well_weight += bw;
-                num_perfs += 1;
-            }
+    // Computed for pressure-controlled wells too: their trivial equation is
+    // decoupled with a zero right-hand side, so its scale cannot affect the
+    // solution -- but the pattern keeps the couplings as stored zeros, the AMG
+    // aggregation follows the pattern, and a diagonal far above the reservoir
+    // rows' scale poisons the aggregate it lands in.
+    const bool pressure_controlled = well.isPressureControlled(well_state);
+    auto well_weight = weights[0];
+    well_weight = 0.0;
+    int num_perfs = 0;
+    for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+        for (auto colB = duneB_[rowB].begin(),
+                  endB = duneB_[rowB].end(); colB != endB; ++colB) {
+            // map the well perforated cell index to global cell index
+            const auto col_index = cells_[colB.index()];
+            const auto& bw = weights[col_index];
+            well_weight += bw;
+            num_perfs += 1;
         }
+    }
 
-        well_weight /= num_perfs;
-        assert(num_perfs > 0);
+    if (num_perfs == 0) {
+        jacobian[welldof_ind][welldof_ind][0][0] = Scalar{1.0};
+        return;
+    }
+    well_weight /= num_perfs;
 
-        // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
-        Scalar diag_ell = 0.0;
-        for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
-            const auto& bw = well_weight;
-            for (auto colB = duneB_[rowB].begin(),
-                      endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                // map the well perforated cell index to global cell index
-                const auto col_index = cells_[colB.index()];
-                Scalar matel = 0.0;
-                for (std::size_t i = 0; i< bw.size(); ++i) {
-                    matel += bw[i] *(*colB)[i][pressureVarIndex];
-                }
+    // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
+    Scalar diag_ell = 0.0;
+    for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+        const auto& bw = well_weight;
+        for (auto colB = duneB_[rowB].begin(),
+                  endB = duneB_[rowB].end(); colB != endB; ++colB) {
+            // map the well perforated cell index to global cell index
+            const auto col_index = cells_[colB.index()];
+            Scalar matel = 0.0;
+            for (std::size_t i = 0; i< bw.size(); ++i) {
+                matel += bw[i] *(*colB)[i][pressureVarIndex];
+            }
+            if (!pressure_controlled) {
                 jacobian[welldof_ind][col_index][0][0] += matel;
-                diag_ell -= matel;
             }
+            diag_ell -= matel;
         }
+    }
 
-        // Standard wells have always contracted D for the coarse diagonal;
-        // only this path was left on the row sum.
-        if (contract_d_diagonal) {
-            diag_ell = mswellhelpers::contractCprWellDiagonal(duneD_,
-                                                              well_weight,
-                                                              seg_pressure_var_ind);
-        }
+    // Standard wells have always contracted D for the coarse diagonal;
+    // only this path was left on the row sum.
+    if (contract_d_diagonal) {
+        diag_ell = mswellhelpers::contractCprWellDiagonal(duneD_,
+                                                          well_weight,
+                                                          seg_pressure_var_ind);
+    }
 
 #define EXTRA_DEBUG_MSW 0
 #if EXTRA_DEBUG_MSW
-        if (diag_ell <= 0.0) {
-            std::stringstream msg;
-            msg << "Diagonal element for cprw on "
-                      << this->name()
-                      << " is " << diag_ell;
-            OpmLog::warning(msg.str());
-        }
+    if (diag_ell <= 0.0) {
+        std::stringstream msg;
+        msg << "Diagonal element for cprw on "
+                  << this->name()
+                  << " is " << diag_ell;
+        OpmLog::warning(msg.str());
+    }
 #endif
 #undef EXTRA_DEBUG_MSW
-        jacobian[welldof_ind][welldof_ind][0][0] = diag_ell;
+    if (pressure_controlled) {
+        jacobian[welldof_ind][welldof_ind][0][0] = std::abs(diag_ell) > 0.0
+            ? Scalar(1e-6) * std::abs(diag_ell)
+            : Scalar(1.0);
     } else {
-        jacobian[welldof_ind][welldof_ind][0][0] = Scalar{1.0}; // maybe we could have used diag_ell if calculated
+        jacobian[welldof_ind][welldof_ind][0][0] = diag_ell;
     }
 }
 
