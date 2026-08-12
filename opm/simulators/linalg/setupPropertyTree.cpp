@@ -641,6 +641,11 @@ void setupSystemCPRWellOptions(PropertyTree& prm, const std::string& at = "preco
     // Give a pressure-controlled well a trivial coarse equation, matching
     // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
     prm.put(at + "well_identity_on_pressure_control", "true"s);
+    // Whether THP control counts as pressure control above. The trivial row
+    // assumes constant bhp, the contracted row constant rates; under THP
+    // neither holds (the well moves along the VFP curve), so this is a knob
+    // for experiments. true matches classic cprw.
+    prm.put(at + "well_thp_is_pressure_control", "true"s);
     // How a well's coarse diagonal is formed:
     //   auto       - contract D for single-block wells, minus the row sum for
     //                multisegment ones, i.e. what classic cprw does

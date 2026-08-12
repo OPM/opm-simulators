@@ -148,6 +148,7 @@ private:
     // preconditioner consumes them as plain numbers.
     WellDofLayout wellLayout_;
     std::string wellWeightType_ = "quasiimpes";
+    bool wellThpIsPressureControl_ = true;
 
     // Current per-well B/C/D blocks for the explicit 2x2 system matrix.
     std::vector<WRMatrix<Scalar>> wellBMatrices_;
@@ -200,6 +201,22 @@ private:
         this->simulator_.problem().wellModel().addBCDMatrix(
             wellBMatrices_, wellCMatrices_, wellDMatrices_, wellCells_);
 
+        {
+            // Read the coarse-space options before building the layout, so
+            // the very first assembly already honours them.
+            const auto wellOpts = coarseSpaceTree(this->prm_[this->activeSolverNum_]);
+            wellWeightType_ = wellOpts.get("well_weight_type", std::string{"cellavg"});
+            // Give a pressure-controlled well a trivial coarse equation, as the
+            // classic CPRW does.  Off keeps the contracted equation for every well.
+            wellLayout_.identityOnPressureControl
+                = wellOpts.get("well_identity_on_pressure_control", false);
+            // Whether THP control counts as pressure control above.  The
+            // contracted row assumes constant rates, the trivial row constant
+            // bhp; under THP neither holds, so this is an experiment knob.
+            wellThpIsPressureControl_
+                = wellOpts.get("well_thp_is_pressure_control", true);
+        }
+
         buildWellDofLayout();
 
         const Opm::WellMatrixMerger<Scalar> merger(
@@ -220,14 +237,6 @@ private:
         const bool needStructureRefresh = !sysInitialized_ || globalStructureChanged;
 
         const auto& prm = this->prm_[this->activeSolverNum_];
-        // The keys describing the coarse space live beside the coarse solver
-        // for general_system_cpr and at the top for system_cpr.
-        const auto wellOpts = coarseSpaceTree(prm);
-        wellWeightType_ = wellOpts.get("well_weight_type", std::string{"cellavg"});
-        // Give a pressure-controlled well a trivial coarse equation, as the
-        // classic CPRW does.  Off keeps the contracted equation for every well.
-        wellLayout_.identityOnPressureControl
-            = wellOpts.get("well_identity_on_pressure_control", false);
 
         if (needStructureRefresh) {
             OPM_TIMEBLOCK(flexibleSolverCreate);
@@ -291,8 +300,16 @@ private:
             const auto& wellState = wellModel.wellState();
             wellLayout_.pressureControlled.reserve(wellDMatrices_.size());
             for (const auto& well : wellModel) {
-                wellLayout_.pressureControlled.push_back(
-                    well->isPressureControlled(wellState) ? 1 : 0);
+                bool pc = well->isPressureControlled(wellState);
+                if (pc && !wellThpIsPressureControl_) {
+                    // Only actual BHP control (where the trivial row is exact)
+                    // counts; a THP well keeps its contracted equation.
+                    const auto& ws = wellState.well(well->indexOfWell());
+                    pc = well->isInjector()
+                        ? ws.injection_cmode == Well::InjectorCMode::BHP
+                        : ws.production_cmode == Well::ProducerCMode::BHP;
+                }
+                wellLayout_.pressureControlled.push_back(pc ? 1 : 0);
             }
         }
     }
