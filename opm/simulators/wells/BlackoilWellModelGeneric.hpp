@@ -265,6 +265,7 @@ public:
         serializer(guideRate_);
         serializer(genNetwork_);
         serializer(prev_inj_multipliers_);
+        serializer(filter_cake_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
         serializer(nupcol_wgstate_);

@@ -51,6 +51,7 @@
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/WellFilterCake.hpp>
 
 #define BOOST_TEST_MODULE TestRestartSerialization
 #define BOOST_TEST_NO_MAIN
@@ -131,6 +132,8 @@ TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
 
 namespace Opm { using BMP = BlackoilModelParameters<double>; }
 TEST_FOR_TYPE_NAMED(BMP, BlackoilModelParameters)
+namespace Opm { using WFC = WellFilterCake<double, BlackOilDefaultFluidSystemIndices>; }
+TEST_FOR_TYPE_NAMED(WFC, WellFilterCake)
 
 namespace Opm {
     struct DummyMaterial {
