@@ -39,6 +39,7 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -393,6 +394,7 @@ private:
         *coarseMatrix_ = 0.0;
 
         // Reservoir rows, reservoir columns:  sum_i w0[c][i] * A[c][c'][i][p]
+        Scalar minAbsResDiag = std::numeric_limits<Scalar>::infinity();
         for (auto row = A.begin(), rowEnd = A.end(); row != rowEnd; ++row) {
             const auto& bw = w0[row.index()];
             for (auto col = row->begin(), colEnd = row->end(); col != colEnd; ++col) {
@@ -401,8 +403,25 @@ private:
                     el += (*col)[i][p] * bw[i];
                 }
                 (*coarseMatrix_)[row.index()][col.index()] = el;
+                if (row.index() == col.index() && std::abs(el) > 0.0) {
+                    minAbsResDiag = std::min(minAbsResDiag, std::abs(el));
+                }
             }
         }
+
+        // Scale for the trivial rows below.  Their value cannot affect the
+        // coarse solution (the rows are decoupled and their right-hand side
+        // is zero), but it leaks into the AMG anyway: the pattern keeps the
+        // well couplings as stored zeros, the aggregation follows the
+        // pattern, and the Galerkin product mixes the diagonal into whatever
+        // aggregate the well node joins.  Anything much larger than the
+        // reservoir diagonals poisons the coarse correction near the wells
+        // (model5 network: 395 -> 183 linear iterations at production
+        // tolerance from this factor alone); anything much smaller is
+        // harmless, and the effect saturates in both directions.
+        const Scalar trivialDiag = std::isfinite(minAbsResDiag)
+            ? Scalar(1e-6) * minAbsResDiag
+            : Scalar(1.0);
 
         // Reservoir rows, well columns:  sum over every block row of well j of
         //   sum_i w0[c][i] * C[c][wb][i][q].
@@ -437,7 +456,7 @@ private:
                 // A pressure-controlled well has a trivial coarse equation:
                 // its bhp is prescribed, so the coarse system carries dp = 0
                 // rather than a contracted well equation.
-                (*coarseMatrix_)[wdof][wdof] = 1.0;
+                (*coarseMatrix_)[wdof][wdof] = trivialDiag;
                 continue;
             }
             const bool rowSumDiag
@@ -533,6 +552,12 @@ private:
         }
 
         for (std::size_t j = 0; j < layout.numWells(); ++j) {
+            // A pressure-controlled well's coarse equation is the trivial one
+            // with a zero right-hand side; restricting a residual against it
+            // would produce an arbitrary bhp correction.
+            if (layout.isPressureControlled(j)) {
+                continue;
+            }
             Scalar el = 0.0;
             for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
                 const auto& lw = w1[wb];
