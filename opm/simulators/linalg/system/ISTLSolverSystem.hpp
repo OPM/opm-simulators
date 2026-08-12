@@ -162,7 +162,7 @@ private:
     // preconditioner consumes them as plain numbers.
     WellDofLayout wellLayout_;
     std::string wellWeightType_ = "quasiimpes";
-    bool wellThpIsPressureControl_ = true;
+    std::string wellThpTreatment_ = "bhp";
     std::vector<char> thpControlled_;  // per well, order as wellDMatrices_
     // Diagnostics for cellavg_vfp: how often the control-row elimination was
     // attempted and how often the diagonal guard refused it.
@@ -229,11 +229,18 @@ private:
             // classic CPRW does.  Off keeps the contracted equation for every well.
             wellLayout_.identityOnPressureControl
                 = wellOpts.get("well_identity_on_pressure_control", false);
-            // Whether THP control counts as pressure control above.  The
-            // contracted row assumes constant rates, the trivial row constant
-            // bhp; under THP neither holds, so this is an experiment knob.
-            wellThpIsPressureControl_
-                = wellOpts.get("well_thp_is_pressure_control", true);
+            // How a THP-controlled well enters the coarse system.  The
+            // trivial row assumes constant bhp, the contracted row constant
+            // rates; under THP neither holds, and "vfp" eliminates the rate
+            // through the control equation instead.
+            wellThpTreatment_
+                = wellOpts.get("well_thp_treatment", std::string{"bhp"});
+            if (wellThpTreatment_ != "bhp" && wellThpTreatment_ != "rate"
+                && wellThpTreatment_ != "vfp") {
+                OPM_THROW(std::invalid_argument,
+                          "well_thp_treatment must be bhp, rate or vfp, got "
+                          + wellThpTreatment_);
+            }
         }
 
         buildWellDofLayout();
@@ -330,7 +337,11 @@ private:
 
                 bool pc = well->isPressureControlled(wellState);
                 if (pc && thp) {
-                    if (wellWeightType_ == "cellavg_vfp") {
+                    if (wellThpTreatment_ == "rate") {
+                        // A THP well keeps its contracted row; the trivial
+                        // row is reserved for BHP control, where it is exact.
+                        pc = false;
+                    } else if (wellThpTreatment_ == "vfp") {
                         // The control-row elimination replaces the trivial row
                         // for a single-block well with a usable VFP derivative;
                         // a flat VFP behaves like BHP control, so keep the
@@ -339,11 +350,8 @@ private:
                         pc = !(singleBlock
                                && wellDMatrices_[j].exists(0, 0)
                                && usableThpDerivative(wellDMatrices_[j][0][0]));
-                    } else if (!wellThpIsPressureControl_) {
-                        // Only actual BHP control (where the trivial row is
-                        // exact) counts; a THP well keeps its contracted row.
-                        pc = false;
                     }
+                    // "bhp": THP counts as pressure control, as classic cprw.
                 }
                 if (wellLayout_.identityOnPressureControl) {
                     wellLayout_.pressureControlled.push_back(pc ? 1 : 0);
@@ -397,8 +405,7 @@ private:
                 continue;
             }
 
-            if (wellWeightType_ == "cellavg" || wellWeightType_ == "cellblockavg"
-                || wellWeightType_ == "cellavg_vfp") {
+            if (wellWeightType_ == "cellavg" || wellWeightType_ == "cellblockavg") {
                 // The classic CPRW weighting (use_well_weights = false):
                 // average the reservoir weights over perforated cells and use
                 // them on the conservation equations only, weight zero on the
@@ -409,7 +416,7 @@ private:
                 // what MultisegmentWellEquations::extractCPRPressureMatrix
                 // does. "cellblockavg" averages per block row instead, which
                 // is a finer but non-classic variant.
-                const bool perWell = (wellWeightType_ != "cellblockavg");
+                const bool perWell = (wellWeightType_ == "cellavg");
                 const std::size_t first = perWell ? wellLayout_.firstBlock(wellOfBlock(wb)) : wb;
                 const std::size_t last = perWell ? wellLayout_.endBlock(wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
@@ -435,13 +442,15 @@ private:
                 }
                 lambda[q] = 0.0;
 
-                if (wellWeightType_ == "cellavg_vfp") {
+                if (wellThpTreatment_ == "vfp") {
                     // Eliminate the total-rate correction through the control
                     // equation: weight mu on the control row cancels the
                     // WQTotal column of the contracted equation, which turns
                     // the coarse diagonal into the Schur value
                     //   w'D_cb - (w'D_cq) D_kb / D_kq.
                     // Rate control has D_kb = 0, so only THP wells change.
+                    // Acts through the D contraction only, so it is a no-op
+                    // under well_coarse_diagonal = row_sum.
                     const auto j = wellOfBlock(wb);
                     const bool singleBlock
                         = wellLayout_.endBlock(j) - wellLayout_.firstBlock(j) == 1;

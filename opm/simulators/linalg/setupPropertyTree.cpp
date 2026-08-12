@@ -623,15 +623,19 @@ void setupSystemCPRWellOptions(PropertyTree& prm, const std::string& at = "preco
     //   quasiimpes   - inv(D)^T e_bhp, normalised. Catastrophic for
     //                  multisegment wells; do not make it the default again
     //                  without re-checking them.
-    //   cellavg_vfp  - cellavg plus a control-row weight for THP-controlled
-    //                  standard wells, chosen to cancel the total-rate column;
-    //                  the coarse diagonal becomes the Schur value
-    //                  w'D_cb - (w'D_cq) D_kb/D_kq. Identical to cellavg for
-    //                  every other control mode; a flat VFP falls back to the
-    //                  trivial row. Implies THP wells are not treated as
-    //                  pressure-controlled.
     //   unit         - the pressure row as-is; a debugging baseline.
     prm.put(at + "well_weight_type", "cellavg"s);
+    // How a THP-controlled well enters the coarse system:
+    //   bhp  - trivial row, as classic cprw treats all pressure control
+    //   rate - keep the contracted equation (constant-rate assumption)
+    //   vfp  - contracted equation plus a control-row weight that eliminates
+    //          the total-rate column; the coarse diagonal becomes the Schur
+    //          value w'D_cb - (w'D_cq) D_kb/D_kq, carrying the VFP slope.
+    //          Standard wells with cellavg/cellblockavg weights and a
+    //          contract_d diagonal only; degenerates to bhp on a flat VFP.
+    // Only the THP case is affected: BHP wells always get the trivial row
+    // (exact) and rate-controlled wells the contracted equation (consistent).
+    prm.put(at + "well_thp_treatment", "bhp"s);
     // How the well unknowns take part in the pressure-stage transfer:
     //   full            - restrict the well residual, prolong the bhp correction
     //   no_prolongation - restrict, but discard the bhp correction
@@ -648,11 +652,6 @@ void setupSystemCPRWellOptions(PropertyTree& prm, const std::string& at = "preco
     // Give a pressure-controlled well a trivial coarse equation, matching
     // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
     prm.put(at + "well_identity_on_pressure_control", "true"s);
-    // Whether THP control counts as pressure control above. The trivial row
-    // assumes constant bhp, the contracted row constant rates; under THP
-    // neither holds (the well moves along the VFP curve), so this is a knob
-    // for experiments. true matches classic cprw.
-    prm.put(at + "well_thp_is_pressure_control", "true"s);
     // How a well's coarse diagonal is formed:
     //   auto       - contract D for single-block wells, minus the row sum for
     //                multisegment ones, i.e. what classic cprw does
