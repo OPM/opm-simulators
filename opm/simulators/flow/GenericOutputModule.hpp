@@ -21,13 +21,14 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \brief Common output functionality shared by simulator formulations.
  */
-#ifndef OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
-#define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#ifndef OPM_GENERIC_OUTPUT_MODULE_HPP
+#define OPM_GENERIC_OUTPUT_MODULE_HPP
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
@@ -54,6 +55,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -78,12 +80,12 @@ class SummaryConfigNode;
 class SummaryState;
 
 template<class FluidSystem>
-class GenericOutputBlackoilModule {
+class GenericOutputModule {
 public:
     using Scalar = typename FluidSystem::Scalar;
 
     // Virtual destructor for safer inheritance.
-    virtual ~GenericOutputBlackoilModule();
+    virtual ~GenericOutputModule();
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
@@ -162,9 +164,9 @@ public:
     /*!
      * \brief Move all buffers to data::Solution.
      */
-    void assignToSolution(data::Solution& sol);
+    virtual void assignToSolution(data::Solution& sol);
 
-    void setRestart(const data::Solution& sol,
+    virtual void setRestart(const data::Solution& sol,
                     unsigned elemIdx,
                     unsigned globalDofIndex);
 
@@ -311,25 +313,65 @@ protected:
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     using Dir = FaceDir::DirEnum;
 
-    GenericOutputBlackoilModule(const EclipseState& eclState,
-                                const Schedule& schedule,
-                                const SummaryConfig& summaryConfig,
-                                const SummaryState& summaryState,
-                                const std::string& moduleVersionName,
-                                RSTConv::LocalToGlobalCellFunc globalCell,
-                                std::function<bool(const unsigned)> isInterior,
-                                const Parallel::Communication& comm,
-                                bool enableEnergy,
-                                bool constantTemperature,
-                                bool enableMech,
-                                bool enableSolvent,
-                                bool enablePolymer,
-                                bool enableFoam,
-                                bool enableBrine,
-                                bool enableSaltPrecipitation,
-                                bool enableExtbo,
-                                bool enableBioeffects,
-                                bool enableGeochemistry);
+    /// Names under which the phase densities and viscosities are reported.
+    /// The black-oil and compositional formulations use different names for
+    /// these quantities, so the derived module supplies them.
+    struct PhasePropertyNames
+    {
+        std::string_view oilDensity{};
+        std::string_view gasDensity{};
+        std::string_view waterDensity{};
+        std::string_view oilViscosity{};
+        std::string_view gasViscosity{};
+        std::string_view waterViscosity{};
+    };
+
+    /// Move the phase density and viscosity buffers to \p sol under \p names.
+    void assignPhaseProperties(data::Solution& sol,
+                               const PhasePropertyNames& names);
+
+    /// Resize \p buffer when the restart keyword \p kw is requested, and mark
+    /// the request as handled.
+    static bool allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
+                                       unsigned bufferSize,
+                                       std::vector<Scalar>& buffer,
+                                       std::string_view kw,
+                                       bool supported,
+                                       bool required = false);
+
+    /// Move a single buffer to \p sol.  An unallocated buffer has nothing to
+    /// report.
+    void assignBuffer(data::Solution& sol,
+                      std::string_view name,
+                      UnitSystem::measure measure,
+                      std::vector<Scalar>& buffer);
+
+    /// A negative \p index marks an inactive phase and reports nothing.
+    void assignBuffer(data::Solution& sol,
+                      std::string_view name,
+                      UnitSystem::measure measure,
+                      std::vector<Scalar>& buffer,
+                      int index);
+
+    GenericOutputModule(const EclipseState& eclState,
+                        const Schedule& schedule,
+                        const SummaryConfig& summaryConfig,
+                        const SummaryState& summaryState,
+                        const std::string& moduleVersionName,
+                        RSTConv::LocalToGlobalCellFunc globalCell,
+                        std::function<bool(const unsigned)> isInterior,
+                        const Parallel::Communication& comm,
+                        bool enableEnergy,
+                        bool constantTemperature,
+                        bool enableMech,
+                        bool enableSolvent,
+                        bool enablePolymer,
+                        bool enableFoam,
+                        bool enableBrine,
+                        bool enableSaltPrecipitation,
+                        bool enableExtbo,
+                        bool enableBioeffects,
+                        bool enableGeochemistry);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -339,6 +381,12 @@ protected:
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
                         std::map<std::string, int> rstKeywords = {});
+
+    /// Allocate the buffers a derived module owns.  Called while the restart
+    /// keywords are being handled, so that a keyword consumed here is marked
+    /// as handled before the unhandled-keyword check.
+    virtual void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                         unsigned bufferSize) = 0;
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -415,7 +463,7 @@ protected:
     bool enableExtbo_{false};
     bool enableBioeffects_{false};
     bool enableGeochemistry_{false};
-    
+
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
     bool computeFip_{false};
@@ -437,9 +485,7 @@ protected:
     ScalarBuffer rPorV_;
     ScalarBuffer fluidPressure_;
     ScalarBuffer temperature_;
-    ScalarBuffer rs_;
     ScalarBuffer rsw_;
-    ScalarBuffer rv_;
     ScalarBuffer rvw_;
     ScalarBuffer overburdenPressure_;
     ScalarBuffer oilSaturationPressure_;
@@ -463,8 +509,6 @@ protected:
     ScalarBuffer oilVaporizationFactor_;
     ScalarBuffer gasDissolutionFactorInWater_;
     ScalarBuffer waterVaporizationFactor_;
-    ScalarBuffer bubblePointPressure_;
-    ScalarBuffer dewPointPressure_;
     ScalarBuffer rockCompPorvMultiplier_;
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
@@ -480,10 +524,8 @@ protected:
     TpsaContainer<Scalar> tpsaC_;
 
     std::array<ScalarBuffer, numPhases> saturation_;
-    std::array<ScalarBuffer, numPhases> invB_;
     std::array<ScalarBuffer, numPhases> density_;
     std::array<ScalarBuffer, numPhases> viscosity_;
-    std::array<ScalarBuffer, numPhases> relativePermeability_;
 
     GeochemistryContainer<Scalar> geochemC_;
 
@@ -516,4 +558,4 @@ protected:
 
 } // namespace Opm
 
-#endif // OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#endif // OPM_GENERIC_OUTPUT_MODULE_HPP

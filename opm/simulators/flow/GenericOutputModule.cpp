@@ -21,7 +21,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputModule.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/Visitor.hpp>
@@ -118,8 +118,8 @@ namespace {
 namespace Opm {
 
 template<class FluidSystem>
-GenericOutputBlackoilModule<FluidSystem>::
-GenericOutputBlackoilModule(const EclipseState& eclState,
+GenericOutputModule<FluidSystem>::
+GenericOutputModule(const EclipseState& eclState,
                             const Schedule& schedule,
                             const SummaryConfig& summaryConfig,
                             const SummaryState& summaryState,
@@ -186,11 +186,11 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
 }
 
 template<class FluidSystem>
-GenericOutputBlackoilModule<FluidSystem>::
-~GenericOutputBlackoilModule() = default;
+GenericOutputModule<FluidSystem>::
+~GenericOutputModule() = default;
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 registerParameters()
 {
     Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
@@ -202,7 +202,7 @@ registerParameters()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputTimeStamp(const std::string& lbl,
                 const double elapsed,
                 const int rstep,
@@ -212,7 +212,7 @@ outputTimeStamp(const std::string& lbl,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 prepareDensityAccumulation()
 {
     if (this->regionAvgDensity_.has_value()) {
@@ -221,7 +221,7 @@ prepareDensityAccumulation()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 accumulateDensityParallel()
 {
     if (this->regionAvgDensity_.has_value()) {
@@ -230,7 +230,7 @@ accumulateDensityParallel()
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputCumLog(std::size_t reportStepNum,
              const bool connData)
 {
@@ -238,7 +238,7 @@ outputCumLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputProdLog(std::size_t reportStepNum,
               const bool connData)
 {
@@ -249,7 +249,7 @@ outputProdLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputInjLog(std::size_t reportStepNum,
              const bool connData)
 {
@@ -260,14 +260,14 @@ outputInjLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputMSWLog(std::size_t reportStepNum)
 {
     this->logOutput_.msw(reportStepNum);
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 calc_initial_inplace(const Parallel::Communication& comm)
 {
     if (!this->initialInplace_.has_value()) {
@@ -276,7 +276,7 @@ calc_initial_inplace(const Parallel::Communication& comm)
 }
 
 template<class FluidSystem>
-Inplace GenericOutputBlackoilModule<FluidSystem>::
+Inplace GenericOutputModule<FluidSystem>::
 calc_inplace(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
              const Parallel::Communication& comm)
@@ -295,7 +295,7 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputWellspecReport(const std::vector<std::string>& changedWells,
                      const bool                      changedWellLists,
                      const std::size_t               reportStepNum,
@@ -312,7 +312,73 @@ outputWellspecReport(const std::vector<std::string>& changedWells,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+bool GenericOutputModule<FluidSystem>::
+allocBufferIfRequested(std::map<std::string, int>& rstKeywords,
+                       const unsigned bufferSize,
+                       std::vector<Scalar>& buffer,
+                       const std::string_view kw,
+                       const bool supported,
+                       const bool required)
+{
+    int dummy = 1;
+    auto& runtimeRequested = kw.empty() ? dummy : rstKeywords[std::string(kw)];
+    if (supported && (required || runtimeRequested > 0)) {
+        buffer.resize(bufferSize, 0.0);
+        runtimeRequested = 0;
+        return true;
+    }
+    return false;
+}
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
+assignBuffer(data::Solution& sol,
+             const std::string_view name,
+             const UnitSystem::measure measure,
+             std::vector<Scalar>& buffer)
+{
+    if (buffer.empty()) {
+        return;
+    }
+
+    sol.insert(std::string { name }, measure, std::move(buffer),
+               data::TargetType::RESTART_SOLUTION);
+}
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
+assignBuffer(data::Solution& sol,
+             const std::string_view name,
+             const UnitSystem::measure measure,
+             std::vector<Scalar>& buffer,
+             const int index)
+{
+    if (index < 0) {
+        return;
+    }
+
+    this->assignBuffer(sol, name, measure, buffer);
+}
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
+assignPhaseProperties(data::Solution& sol,
+                      const PhasePropertyNames& names)
+{
+    assignBuffer(sol, names.oilDensity,   UnitSystem::measure::density,   density_[oilPhaseIdx],   oilPhaseIdx);
+    assignBuffer(sol, names.gasDensity,   UnitSystem::measure::density,   density_[gasPhaseIdx],   gasPhaseIdx);
+    assignBuffer(sol, names.oilViscosity, UnitSystem::measure::viscosity, viscosity_[oilPhaseIdx], oilPhaseIdx);
+    assignBuffer(sol, names.gasViscosity, UnitSystem::measure::viscosity, viscosity_[gasPhaseIdx], gasPhaseIdx);
+
+    // avoid output with generic fluid system and disabled water phase
+    if constexpr (numPhases > 2) {
+        assignBuffer(sol, names.waterDensity,   UnitSystem::measure::density,   density_[waterPhaseIdx],   waterPhaseIdx);
+        assignBuffer(sol, names.waterViscosity, UnitSystem::measure::viscosity, viscosity_[waterPhaseIdx], waterPhaseIdx);
+    }
+}
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =
@@ -343,34 +409,17 @@ assignToSolution(data::Solution& sol)
     };
 
     std::vector<DataEntry> baseSolutionVector;
-    addEntry(baseSolutionVector, "1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx],                                              gasPhaseIdx);
-    addEntry(baseSolutionVector, "1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx],                                              oilPhaseIdx);
 
-    // avoid output with generic fluid system and disabled water phase
-    if constexpr (numPhases > 2) {
-        addEntry(baseSolutionVector,
-                                 "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
-    }
     addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
-    addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
-    addEntry(baseSolutionVector, "GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx],                                           gasPhaseIdx);
-    addEntry(baseSolutionVector, "GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx],                                         gasPhaseIdx);
-    addEntry(baseSolutionVector, "OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx],                              oilPhaseIdx);
-    addEntry(baseSolutionVector, "OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx],                                           oilPhaseIdx);
-    addEntry(baseSolutionVector, "OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx],                                         oilPhaseIdx);
-    addEntry(baseSolutionVector, "PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_);
     addEntry(baseSolutionVector, "PCGW",     UnitSystem::measure::pressure,                              pcgw_);
     addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
     addEntry(baseSolutionVector, "PCOW",     UnitSystem::measure::pressure,                              pcow_);
-    addEntry(baseSolutionVector, "PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_);
     addEntry(baseSolutionVector, "POLYMER",  UnitSystem::measure::concentration,                         cPolymer_);
     addEntry(baseSolutionVector, "PPCW",     UnitSystem::measure::pressure,                              ppcw_);
     addEntry(baseSolutionVector, "PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_);
     addEntry(baseSolutionVector, "PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_);
     addEntry(baseSolutionVector, "RPORV",    UnitSystem::measure::volume,                                rPorV_);
-    addEntry(baseSolutionVector, "RS",       UnitSystem::measure::gas_oil_ratio,                         rs_);
     addEntry(baseSolutionVector, "RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_);
-    addEntry(baseSolutionVector, "RV",       UnitSystem::measure::oil_gas_ratio,                         rv_);
     addEntry(baseSolutionVector, "RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_);
     addEntry(baseSolutionVector, "SALT",     UnitSystem::measure::concentration,                         cSalt_);
     addEntry(baseSolutionVector, "SGMAX",    UnitSystem::measure::identity,                              sgmax_);
@@ -381,12 +430,6 @@ assignToSolution(data::Solution& sol)
     addEntry(baseSolutionVector, "SWHY1",    UnitSystem::measure::identity,                              swmin_);
     addEntry(baseSolutionVector, "SWMAX",    UnitSystem::measure::identity,                              swMax_);
 
-    // avoid output with generic fluid system and disabled water phase
-    if constexpr (numPhases > 2) {
-        addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                          relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
-        addEntry(baseSolutionVector, "WAT_DEN",  UnitSystem::measure::density,                           density_[waterPhaseIdx],                                         waterPhaseIdx);
-        addEntry(baseSolutionVector, "WAT_VISC", UnitSystem::measure::viscosity,                         viscosity_[waterPhaseIdx],                                       waterPhaseIdx);
-    }
 
     auto extendedSolutionArrays = std::array {
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
@@ -480,7 +523,7 @@ assignToSolution(data::Solution& sol)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setRestart(const data::Solution& sol,
            unsigned elemIdx,
            unsigned globalDofIndex)
@@ -530,9 +573,7 @@ setRestart(const data::Solution& sol,
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
         std::pair{"PRESSURE", &fluidPressure_},
-        std::pair{"RS",       &rs_},
         std::pair{"RSW",      &rsw_},
-        std::pair{"RV",       &rv_},
         std::pair{"RVW",      &rvw_},
         std::pair{"SALT",     &cSalt_},
         std::pair{"SALTP",    &pSalt_},
@@ -556,8 +597,8 @@ setRestart(const data::Solution& sol,
 }
 
 template<class FluidSystem>
-typename GenericOutputBlackoilModule<FluidSystem>::ScalarBuffer
-GenericOutputBlackoilModule<FluidSystem>::
+typename GenericOutputModule<FluidSystem>::ScalarBuffer
+GenericOutputModule<FluidSystem>::
 regionSum(const ScalarBuffer& property,
           const std::vector<int>& regionId,
           std::size_t maxNumberOfRegions,
@@ -592,7 +633,7 @@ regionSum(const ScalarBuffer& property,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 doAllocBuffers(const unsigned bufferSize,
                const unsigned reportStepNum,
                const bool     substep,
@@ -713,10 +754,6 @@ doAllocBuffers(const unsigned bufferSize,
     const auto& simConfig = eclState_.getSimulationConfig();
     using OilVapP = OilVaporizationProperties::OilVaporization;
 
-    auto pbpd_fields = std::vector{
-        &bubblePointPressure_,
-        &dewPointPressure_
-    };
     auto rockc_fields = std::vector{
         &rockCompPorvMultiplier_,
         &rockCompTransMultiplier_,
@@ -731,9 +768,7 @@ doAllocBuffers(const unsigned bufferSize,
        // If TEMP is set in RPTRST we output temperature even if THERMAL
        // is not activated
        Entry{&temperature_,                   "TEMP", enableEnergy_ || (constantTemperature_ && rstKeywords["TEMP"] > 0)},
-       Entry{&rs_,                              "RS", FluidSystem::enableDissolvedGas()},
        Entry{&rsw_,                            "RSW", FluidSystem::enableDissolvedGasInWater()},
-       Entry{&rv_,                              "RV", FluidSystem::enableVaporizedOil()},
        Entry{&rvw_,                            "RVW", FluidSystem::enableVaporizedWater()},
        Entry{&drsdtcon_,                          "", oilvap.drsdtConvective()},
        Entry{&sSol_,                              "", enableSolvent_},
@@ -773,18 +808,15 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&oilVaporizationFactor_,        "RVSAT", FluidSystem::enableVaporizedOil(), false},
        Entry{&gasDissolutionFactorInWater_, "RSWSAT", FluidSystem::enableDissolvedGasInWater(), false},
        Entry{&waterVaporizationFactor_,     "RVWSAT", FluidSystem::enableVaporizedWater(), false},
-       Entry{&invB_,                             "B", true, false, EntryPhaseType::GWO},
        Entry{&rPorV_,                        "RPORV", true, false},
        Entry{&density_,                        "DEN", true, false, EntryPhaseType::NGWO},
        Entry{&viscosity_,                     "VISC", true, false, EntryPhaseType::NGasWatOil},
-       Entry{&relativePermeability_,            "KR", true, false, EntryPhaseType::GWO},
        Entry{&pcog_,                          "PCOG", FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(gasPhaseIdx), false},
        Entry{&pcgw_,                          "PCGW", FluidSystem::phaseIsActive(gasPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx), false},
        Entry{&pcow_,                          "PCOW", FluidSystem::phaseIsActive(oilPhaseIdx) &&
                                                       FluidSystem::phaseIsActive(waterPhaseIdx), false},
-       Entry{&pbpd_fields,                    "PBPD", true, false},
        Entry{&residual_,                  "RESIDUAL", true, false, EntryPhaseType::None},
        Entry{&rockc_fields,                  "ROCKC", true, false},
     };
@@ -795,14 +827,8 @@ doAllocBuffers(const unsigned bufferSize,
                                    const bool supported,
                                    const bool required)
     {
-        int dummy = 1;
-        auto& runtimeRequested = kw.empty() ? dummy : rstKeywords[std::string(kw)];
-        if (supported && (required || runtimeRequested > 0)) {
-            data.resize(bufferSize, 0.0);
-            runtimeRequested = 0;
-            return true;
-        }
-        return false;
+        return allocBufferIfRequested(rstKeywords, bufferSize, data,
+                                      kw, supported, required);
     };
 
     auto getName = [](std::string_view kw, EntryPhaseType type, int phase)
@@ -908,6 +934,10 @@ doAllocBuffers(const unsigned bufferSize,
                                  }, entry.data);
                   });
 
+    // Buffers a derived module owns are allocated here, so that the keywords
+    // they consume are marked handled before the check below.
+    this->allocFormulationBuffers(rstKeywords, bufferSize);
+
     if (enableMech_ && eclState_.runspec().mech()) {
         this->mech_.allocate(bufferSize, rstKeywords);
 
@@ -966,7 +996,7 @@ doAllocBuffers(const unsigned bufferSize,
 }
 
 template<class FluidSystem>
-bool GenericOutputBlackoilModule<FluidSystem>::
+bool GenericOutputModule<FluidSystem>::
 isOutputCreationDirective_(const std::string& keyword)
 {
     return (keyword == "BASIC") || (keyword == "FREQ")
@@ -975,7 +1005,7 @@ isOutputCreationDirective_(const std::string& keyword)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 outputErrorLog(const Parallel::Communication& comm) const
 {
     const auto root = 0;
@@ -993,7 +1023,7 @@ outputErrorLog(const Parallel::Communication& comm) const
 }
 
 template<class FluidSystem>
-int GenericOutputBlackoilModule<FluidSystem>::
+int GenericOutputModule<FluidSystem>::
 regionMax(const std::vector<int>& region,
           const Parallel::Communication& comm)
 {
@@ -1002,7 +1032,7 @@ regionMax(const std::vector<int>& region,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 update(Inplace& inplace,
        const std::string& region_name,
        const Inplace::Phase phase,
@@ -1019,7 +1049,7 @@ update(Inplace& inplace,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 makeRegionSum(Inplace& inplace,
               const std::string& region_name,
               const Parallel::Communication& comm) const
@@ -1051,10 +1081,10 @@ makeRegionSum(Inplace& inplace,
 }
 
 template<class FluidSystem>
-Inplace GenericOutputBlackoilModule<FluidSystem>::
+Inplace GenericOutputModule<FluidSystem>::
 accumulateRegionSums(const Parallel::Communication& comm)
 {
-    OPM_TIMEBLOCK(GenericOutputBlackoilModule_accumulateRegionSums);
+    OPM_TIMEBLOCK(GenericOutputModule_accumulateRegionSums);
     Inplace inplace;
 
     for (const auto& region : this->regions_) {
@@ -1065,20 +1095,20 @@ accumulateRegionSums(const Parallel::Communication& comm)
 }
 
 template<class FluidSystem>
-typename GenericOutputBlackoilModule<FluidSystem>::Scalar
-GenericOutputBlackoilModule<FluidSystem>::
+typename GenericOutputModule<FluidSystem>::Scalar
+GenericOutputModule<FluidSystem>::
 sum(const ScalarBuffer& v)
 {
     return std::accumulate(v.begin(), v.end(), Scalar{0});
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 updateSummaryRegionValues(const Inplace& inplace,
                           std::map<std::string, double>& miscSummaryData,
                           std::map<std::string, std::vector<double>>& regionData) const
 {
-    OPM_TIMEBLOCK(GenericOutputBlackoilModule_updateSummaryRegionValues);
+    OPM_TIMEBLOCK(GenericOutputModule_updateSummaryRegionValues);
     // The field summary vectors should only use the FIPNUM based region sum.
     {
         for (const auto& phase : Inplace::phases()) {
@@ -1157,7 +1187,7 @@ updateSummaryRegionValues(const Inplace& inplace,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 {
     for (const auto& node : summaryConfig_) {
@@ -1173,7 +1203,7 @@ setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
                   const std::function<bool(int, int)>& isLgrCellOnThisRank)
 {
@@ -1218,7 +1248,7 @@ setupLgrBlockData(const std::map<std::string, int>& lgrNameToLevel,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 setupExtraBlockData(const std::size_t        reportStepNum,
                     std::function<bool(int)> isCartIdxOnThisRank)
 {
@@ -1238,7 +1268,7 @@ setupExtraBlockData(const std::size_t        reportStepNum,
 }
 
 template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputModule<FluidSystem>::
 assignGlobalFieldsToSolution(data::Solution& sol)
 {
     this->rst_conv_.outputRestart(sol);
@@ -1247,7 +1277,7 @@ assignGlobalFieldsToSolution(data::Solution& sol)
 template<class T> using FS = BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE_TYPE(T) \
-    template class GenericOutputBlackoilModule<FS<T>>;
+    template class GenericOutputModule<FS<T>>;
 
 INSTANTIATE_TYPE(double)
 
@@ -1257,11 +1287,11 @@ INSTANTIATE_TYPE(float)
 
 #define INSTANTIATE_COMP_THREEPHASE(NUM) \
     template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM, true>; \
-    template class GenericOutputBlackoilModule<FS##NUM<double>>;
+    template class GenericOutputModule<FS##NUM<double>>;
 
 #define INSTANTIATE_COMP_TWOPHASE(NUM) \
     template<class T> using GFS##NUM = GenericOilGasWaterFluidSystem<T, NUM, false>; \
-    template class GenericOutputBlackoilModule<GFS##NUM<double>>;
+    template class GenericOutputModule<GFS##NUM<double>>;
 
 #define INSTANTIATE_COMP(NUM) \
     INSTANTIATE_COMP_THREEPHASE(NUM) \
