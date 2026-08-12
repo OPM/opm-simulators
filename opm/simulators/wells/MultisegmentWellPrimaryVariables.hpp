@@ -161,8 +161,15 @@ public:
 
 private:
     //! \brief Scaling of well primary variable \p eqIdx, 1.0 unless configured.
-    //! \details Only the Jacobian column is scaled; value_ stays physical.
     static Scalar varScale(const int eqIdx);
+
+    //! \brief The physical increment for \p eqIdx in \p seg from a solver-space update.
+    //! \details The only place solver-space quantities enter this class, see the
+    //!          note on value_ below.
+    Scalar physicalIncrement(const BVectorWell& dwells,
+                             const int seg,
+                             const int eqIdx) const
+    { return varScale(eqIdx) * dwells[seg][eqIdx]; }
 
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
@@ -176,6 +183,18 @@ private:
 
     //! \brief The values for the primary variables
     //! \details Based on different solution strategies, the wells can have different primary variables
+    //!
+    //! Units contract when scaling is enabled (varScale() != 1):
+    //!  - value_ is PHYSICAL, and so is everything exchanged with WellState and
+    //!    every segment pressure or rate handed to a PVT lookup.
+    //!  - The linear system's unknown is X = x/varScale, so dwells arrives in
+    //!    X-space; physicalIncrement() is the only conversion, and the absolute
+    //!    limits in updateNewton() are therefore compared in physical units.
+    //!  - eval(seg)[i] has a physical value and derivative varScale(i), so any
+    //!    Jacobian entry must come from a derivative rather than a literal.
+    //! An alternative is to store X here and multiply out in the accessors; that
+    //! keeps value_ and the solution in one space but moves the conversion to
+    //! every WellState exchange and every getter.
     std::vector<std::array<Scalar, numWellEq>> value_;
 
     //! \brief The Evaluation for the well primary variables.
