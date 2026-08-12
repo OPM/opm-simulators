@@ -47,6 +47,8 @@ namespace Opm
         static SimulatorTimer serializationTestObject();
 
         /// Use the SimulatorTimer as a shim around opm-commons Schedule class
+        /// \param[in] schedule Schedule to initialize for
+        /// \param[in] report_step Report step to initialize for
         /// \param[in] end_step  Stop after this report step; negative means
         ///                      run to the end of the schedule.
         void init(const Schedule& schedule,
