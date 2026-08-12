@@ -975,7 +975,7 @@ run()
             }
 
             // set new time step length
-            checkTimeStepCanAdvance_(dt_estimate);
+            checkTimeStepCanAdvance_(dt, dt_estimate);
             setTimeStep_(dt_estimate);
 
             report.success.converged = this->substep_timer_.done();
@@ -1065,7 +1065,8 @@ template<class TypeTag>
 template<class Solver>
 void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-checkTimeStepCanAdvance_(const double new_time_step) const
+checkTimeStepCanAdvance_(const double current_time_step,
+                         const double new_time_step) const
 {
     // Both dt floors - the minimum step size and the restart count - sit on
     // the failure path.  A run whose substeps all converge, but for which the
@@ -1073,6 +1074,14 @@ checkTimeStepCanAdvance_(const double new_time_step) const
     // step size shrinks without bound while the elapsed time stands still,
     // and the run never ends.  Hold the accepted path to the same minimum.
     if (new_time_step >= minTimeStep_()) {
+        return;
+    }
+
+    // A sub-minimum step is valid when the report step is already complete, or
+    // when timestep control is increasing it. Reject only a shrinking
+    // sub-minimum step, which is the one that stalls short of the report-step
+    // boundary.
+    if (this->substep_timer_.done() || new_time_step >= current_time_step) {
         return;
     }
 
