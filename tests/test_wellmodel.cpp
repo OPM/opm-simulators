@@ -326,6 +326,7 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariableScaling) {
     const StandardWell well(well_ecl, pinfo, setup_test.current_timestep,
                             param, rateConverter, 0, 3, 3, 0, pdata);
 
+    constexpr double pv_bhp_scale = 65536.0;
     using PV = std::decay_t<decltype(well.primaryVariables())>;
     PV pv(well);
     pv.resize(well.numStaticWellEq);
@@ -353,4 +354,32 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariableScaling) {
     // The dimensionless fractions stay unscaled.
     BOOST_CHECK_EQUAL(pv.eval(PV::WFrac).derivative(numEq + PV::WFrac), 1.0);
     BOOST_CHECK_EQUAL(pv.eval(PV::GFrac).derivative(numEq + PV::GFrac), 1.0);
+
+    // Every slot: the stored value and the Evaluation agree, and only the own
+    // column carries a derivative. This is the assertion a forgotten conversion
+    // in setEvaluationsFromValues would break.
+    for (int i = 0; i < well.numStaticWellEq; ++i) {
+        BOOST_CHECK_EQUAL(pv.eval(i).value(), pv.value(i));
+        for (int j = 0; j < well.numStaticWellEq; ++j) {
+            if (i != j) {
+                BOOST_CHECK_EQUAL(pv.eval(i).derivative(numEq + j), 0.0);
+            }
+        }
+    }
+
+    // value()/setValue() must be exact inverses, or the getPrimaryVars round
+    // trip used by NLDD would rescale on every save/restore.
+    const double bhp_phys = 300.0 * Opm::unit::barsa;
+    pv.setValue(PV::Bhp, bhp_phys);
+    BOOST_CHECK_EQUAL(pv.value(PV::Bhp), bhp_phys);
+
+    // Newton step with the absolute bhp floor ACTIVE. The limit is physical, the
+    // increment arrives scaled; a missing conversion on either side lands
+    // somewhere other than exactly the floor. The unscaled test above never
+    // reaches this branch because its increment is zero.
+    constexpr double bhp_floor = 1.0 * Opm::unit::barsa - 1.0 * Opm::unit::Pascal;
+    pv.setValue(PV::Bhp, 1.5 * Opm::unit::barsa);
+    dwells[0][PV::Bhp] = (1.0 * Opm::unit::barsa) / pv_bhp_scale; // scaled: drives well below the floor
+    pv.updateNewton(dwells, false, 0.2, 1.0, logger);
+    BOOST_CHECK_EQUAL(pv.value(PV::Bhp), bhp_floor);
 }
