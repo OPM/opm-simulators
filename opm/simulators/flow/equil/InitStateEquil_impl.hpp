@@ -1517,10 +1517,13 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             // onto the leaf via LookUpData (a refined cell inherits its parent
             // cell's value; identity without LGRs).
             const LookUpData<Grid, GridView> lookUpData(gridView);
-            const auto input =
+            auto input =
                 lookUpData.assignFieldPropsDoubleOnLeaf(eclipseState.fieldProps(), "SWATINIT");
-            swatInit_.resize(input.size());
-            std::ranges::copy(input, swatInit_.begin());
+            if constexpr (std::is_same_v<Scalar, double>) {
+                swatInit_ = std::move(input);
+            } else {
+                swatInit_.assign(input.begin(), input.end());
+            }
         }
     }
 
