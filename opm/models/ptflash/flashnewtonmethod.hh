@@ -87,8 +87,12 @@ protected:
                                  const EqVector& update,
                                  const EqVector& /* currentResidual */)
     {
+        // nextValue may alias currentValue. Preserve the pre-update value because the
+        // limiters below must chop relative to it after nextValue has been updated.
+        const PrimaryVariables priVarsOld = currentValue;
+
         // normal Newton-Raphson update
-        nextValue = currentValue;
+        nextValue = priVarsOld;
         nextValue -= update;
 
         ////
@@ -99,8 +103,8 @@ protected:
         constexpr Scalar upper_bound = 1. + max_percent_change;
         constexpr Scalar lower_bound = 1. - max_percent_change;
         nextValue[pressure0Idx] = std::clamp(nextValue[pressure0Idx],
-                                             currentValue[pressure0Idx] * lower_bound,
-                                             currentValue[pressure0Idx] * upper_bound);
+                                             priVarsOld[pressure0Idx] * lower_bound,
+                                             priVarsOld[pressure0Idx] * upper_bound);
 
         ////
         // z updates
@@ -122,7 +126,7 @@ protected:
         if (maxDeltaZ > deltaz_limit) {
             const Scalar alpha = deltaz_limit / maxDeltaZ;
             for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-                nextValue[z0Idx + compIdx] = currentValue[z0Idx + compIdx] - alpha * update[z0Idx + compIdx];
+                nextValue[z0Idx + compIdx] = priVarsOld[z0Idx + compIdx] - alpha * update[z0Idx + compIdx];
             }
         }
 
@@ -136,7 +140,7 @@ protected:
             // limit change in water saturation
             constexpr Scalar dSwMax = 0.2;
             if (update[Indices::water0Idx] > dSwMax) {
-                nextValue[Indices::water0Idx] = currentValue[Indices::water0Idx] - dSwMax;
+                nextValue[Indices::water0Idx] = priVarsOld[Indices::water0Idx] - dSwMax;
             }
         }
     }
