@@ -197,10 +197,14 @@ public:
                 }
             }
 
-            for (; auxIdx < numAuxConstraints; ++auxIdx, ++switchIdx) {
-                const unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
-                auxConstraints[auxIdx].set(lowestPresentPhaseIdx, compIdx,
-                                           priVars.makeEvaluation(switch0Idx + switchIdx, timeIdx));
+            // only reachable when numComponents > numPhases; constexpr guard prevents
+            // false -Warray-bounds on instantiations where the two are equal
+            if constexpr (numComponents > numPhases) {
+                for (; auxIdx < numAuxConstraints; ++auxIdx, ++switchIdx) {
+                    const unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
+                    auxConstraints[auxIdx].set(lowestPresentPhaseIdx, compIdx,
+                                               priVars.makeEvaluation(switch0Idx + switchIdx, timeIdx));
+                }
             }
 
             // both phases are present, i.e. phase compositions are a result of the the
