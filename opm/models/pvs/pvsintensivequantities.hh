@@ -72,13 +72,13 @@ class PvsIntensiveQuantities
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    enum { switch0Idx = Indices::switch0Idx };
-    enum { pressure0Idx = Indices::pressure0Idx };
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    static constexpr int switch0Idx = Indices::switch0Idx;
+    static constexpr int pressure0Idx = Indices::pressure0Idx;
+    static constexpr int numPhases = getPropValue<TypeTag, Properties::NumPhases>();
+    static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
-    enum { dimWorld = GridView::dimensionworld };
+    static constexpr int dimWorld = GridView::dimensionworld;
 
     using Toolbox = MathToolbox<Evaluation>;
     using MiscibleMultiPhaseComposition = ::Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem, Evaluation>;
