@@ -255,12 +255,15 @@ public:
 
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
-        this->updateCellDepths_();
         this->updateCellThickness_();
 
 #if HAVE_MPI
         this->distributeFieldProps_(this->eclState());
 #endif
+
+        // Must be done after the field properties have been distributed, since the
+        // DEPTH property is needed on all ranks to honour DEPTH in the EDIT section.
+        this->updateCellDepths_();
     }
 
     /*!
