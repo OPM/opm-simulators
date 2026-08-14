@@ -1232,10 +1232,10 @@ public:
         if (bcindex_(dir)[globalSpaceIdx] == 0) {
             return { BCType::NONE, RateVector(0.0) };
         }
-        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
+        if (schedule[this->episodeIndex()].bcstate.size() == 0) {
             return { BCType::NONE, RateVector(0.0) };
         }
-        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
+        const auto& bc = schedule[this->episodeIndex()].bcstate[bcindex_(dir)[globalSpaceIdx]];
         if (bc.bctype!=BCType::RATE) {
             return { bc.bctype, RateVector(0.0) };
         }
@@ -1891,15 +1891,15 @@ protected:
         }
     };
 
-    virtual void handleSolventBC(const BCProp::BCFace&, RateVector&) const = 0;
+    virtual void handleSolventBC(const BCState::BCFace&, RateVector&) const = 0;
 
-    virtual void handlePolymerBC(const BCProp::BCFace&, RateVector&) const = 0;
+    virtual void handlePolymerBC(const BCState::BCFace&, RateVector&) const = 0;
 
-    virtual void handleMicrBC(const BCProp::BCFace&, RateVector&) const = 0;
+    virtual void handleMicrBC(const BCState::BCFace&, RateVector&) const = 0;
 
-    virtual void handleOxygBC(const BCProp::BCFace&, RateVector&) const = 0;
+    virtual void handleOxygBC(const BCState::BCFace&, RateVector&) const = 0;
 
-    virtual void handleUreaBC(const BCProp::BCFace&, RateVector&) const = 0;
+    virtual void handleUreaBC(const BCState::BCFace&, RateVector&) const = 0;
 
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;

@@ -793,8 +793,8 @@ public:
     InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
     {
         OPM_TIMEBLOCK_LOCAL(boundaryFluidState, Subsystem::Assembly);
-        const auto& bcprop = this->simulator().vanguard().schedule()[this->episodeIndex()].bcprop;
-        if (bcprop.size() > 0) {
+        const auto& bcstate = this->simulator().vanguard().schedule()[this->episodeIndex()].bcstate;
+        if (bcstate.size() > 0) {
             FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
 
             // index == 0: no boundary conditions for this
@@ -802,7 +802,7 @@ public:
             if (this->bcindex_(dir)[globalDofIdx] == 0)
                 return initialFluidStates_[globalDofIdx];
 
-            const auto& bc = bcprop[this->bcindex_(dir)[globalDofIdx]];
+            const auto& bc = bcstate[this->bcindex_(dir)[globalDofIdx]];
             if (bc.bctype == BCType::DIRICHLET )
             {
                 InitialFluidState fluidState;
@@ -1605,7 +1605,7 @@ protected:
 
     }
 
-    void handleSolventBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handleSolventBC(const BCState::BCFace& bc, RateVector& rate) const override
     {
         if constexpr (!enableSolvent)
             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
@@ -1613,7 +1613,7 @@ protected:
         rate[Indices::solventSaturationIdx] = bc.rate;
     }
 
-    void handlePolymerBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handlePolymerBC(const BCState::BCFace& bc, RateVector& rate) const override
     {
         if constexpr (!enablePolymer)
             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
@@ -1621,7 +1621,7 @@ protected:
         rate[Indices::polymerConcentrationIdx] = bc.rate;
     }
 
-    void handleMicrBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handleMicrBC(const BCState::BCFace& bc, RateVector& rate) const override
     {
         if constexpr (!enableMICP)
             throw std::logic_error("MICP is disabled and you're trying to add microbes to BC");
@@ -1629,7 +1629,7 @@ protected:
         rate[Indices::microbialConcentrationIdx] = bc.rate;
     }
 
-    void handleOxygBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handleOxygBC(const BCState::BCFace& bc, RateVector& rate) const override
     {
         if constexpr (!enableMICP)
             throw std::logic_error("MICP is disabled and you're trying to add oxygen to BC");
@@ -1637,7 +1637,7 @@ protected:
         rate[Indices::oxygenConcentrationIdx] = bc.rate;
     }
 
-    void handleUreaBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handleUreaBC(const BCState::BCFace& bc, RateVector& rate) const override
     {
         if constexpr (!enableMICP)
             throw std::logic_error("MICP is disabled and you're trying to add urea to BC");

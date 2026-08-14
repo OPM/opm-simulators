@@ -280,20 +280,22 @@ public:
     std::pair<BCMECHType, Dune::FieldVector<Evaluation, 3>>
     mechBoundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
     {
-        // Default boundary conditions if BCCON/BCPROP not defined
+        // Default boundary conditions if BCCON/BCMECH not defined
         if (!this->nonTrivialBoundaryConditions()) {
             return { BCMECHType::NONE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
         }
 
-        // Default for BCPROP index = 0 or no BCPROP defined at current episode
+        // Default for BCMECH index = 0 or no BCMECH defined at current episode
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
         const auto& schedule = this->simulator().vanguard().schedule();
-        if (this->bcindex_(dir)[globalSpaceIdx] == 0 || schedule[this->episodeIndex()].bcprop.size() == 0) {
-            return { BCMECHType::NONE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
+        if (this->bcindex_(dir)[globalSpaceIdx] == 0
+            || schedule[this->episodeIndex()].bcstate.size() == 0) {
+            return {BCMECHType::NONE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
         }
 
         // Get current BC
-        const auto& bc = schedule[this->episodeIndex()].bcprop[this->bcindex_(dir)[globalSpaceIdx]];
+        const auto& bc =
+            schedule[this->episodeIndex()].bcstate[this->bcindex_(dir)[globalSpaceIdx]];
         if (bc.bcmechtype == BCMECHType::FREE) {
             return { BCMECHType::FREE, Dune::FieldVector<Evaluation, 3>{0.0, 0.0, 0.0} };
         }

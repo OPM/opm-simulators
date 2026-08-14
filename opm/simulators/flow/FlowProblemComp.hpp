@@ -601,27 +601,27 @@ protected:
 
 private:
 
-    void handleSolventBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    void handleSolventBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("solvent is disabled for compositional modeling and you're trying to add solvent to BC");
     }
 
-    void handlePolymerBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    void handlePolymerBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("polymer is disabled for compositional modeling and you're trying to add polymer to BC");
     }
 
-    void handleMicrBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    void handleMicrBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add microbes to BC");
     }
 
-    void handleOxygBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    void handleOxygBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add oxygen to BC");
     }
 
-    void handleUreaBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    void handleUreaBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add urea to BC");
     }
