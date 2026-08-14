@@ -62,9 +62,12 @@ namespace Opm
         // put the welldofs to the beginning
         assert(loc_max + 1 == indset.size());
         for (int i = 0; i < nw; ++i) {
-            // need to set unique global number, distributed wells are not matched across ranks
-            // and make one smaller well per rank and each rank owns its part
+            // Each well DoF has a unique ID. A distributed well gets
+            // a different ID on each rank, which makes it appear as several
+            // smaller wells - one per rank.
             const std::size_t v = global_max + max_nw * rank + i + 1;
+            // The last argument "false" signifies that this
+            // DoF is not on any other rank (small optimization).
             indset_rw.add(v, LocalIndex(i, Dune::OwnerOverlapCopyAttributeSet::owner, false));
         }
         indset_rw.endResize();
@@ -120,8 +123,8 @@ namespace Opm
             OPM_TIMEBLOCK(createCoarseLevelSystem);
             using CoarseMatrix = typename CoarseOperator::matrix_type;
             const auto& fineLevelMatrix = fineOperator.getmat();
-            nrWells_ = fineOperator.getNumberOfExtraEquations();
             if (prm_.get<bool>("add_wells")) {
+                nrWells_ = fineOperator.getNumberOfExtraEquations();
                 const std::size_t average_elements_per_row
                     = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
                 const double overflow_fraction = 1.2;
@@ -138,7 +141,7 @@ namespace Opm
                     ++rownum;
                 }
             } else {
-                // TODO! not adding wells might make the matrix incopatible with other changed parts of the code
+                nrWells_ = 0;
                 coarseLevelMatrix_.reset(
                     new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), fineLevelMatrix.nonzeroes(), CoarseMatrix::row_wise));
                 auto createIter = coarseLevelMatrix_->createbegin();

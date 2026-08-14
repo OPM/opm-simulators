@@ -316,15 +316,15 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         for (auto colC = duneC_[0].begin(),
                   endC = duneC_[0].end(); colC != endC; ++colC) {
             // map the well perforated cell index to global cell index
-            const auto row_index = cells_[colC.index()];
-            const auto& bw = weights[row_index];
+            const auto row_index = cells_[colC.index()] + nrWells;
+            const auto& bw = weights[row_index - nrWells];
             Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
 
-            jacobian[row_index + nrWells][welldof_ind] = matel;
+            jacobian[row_index][welldof_ind] = matel;
             cell_weights += bw;
             nperf += 1;
         }
@@ -399,13 +399,13 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB) {
             // map the well perforated cell index to global cell index
-            const auto col_index = cells_[colB.index()];
+            const auto col_index = cells_[colB.index()] + nrWells;
             const auto& bw = bweights[0];
             Scalar matel = 0;
             for (std::size_t i = 0; i < bw.size(); ++i) {
                  matel += (*colB)[i][pressureVarIndex] * bw[i];
             }
-            jacobian[welldof_ind][col_index + nrWells] = matel;
+            jacobian[welldof_ind][col_index] = matel;
         }
     }
 }
