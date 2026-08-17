@@ -210,6 +210,7 @@ nonlinearIteration(const SimulatorTimerInterface& timer,
         this->residual_norms_history_.clear();
         this->conv_monitor_.reset();
         this->current_relaxation_ = 1.0;
+        this->contracting_iterations_ = 0;
         this->dx_old_ = 0.0;
         this->convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
         this->convergence_reports_.back().report.reserve(11);
@@ -290,9 +291,38 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
             if (isOscillate) {
                 this->current_relaxation_ -= nonlinear_solver.relaxIncrement();
                 this->current_relaxation_ = std::max(this->current_relaxation_, nonlinear_solver.relaxMax());
+                this->contracting_iterations_ = 0;
                 if (this->terminalOutputEnabled()) {
                     OpmLog::info("    Oscillating behavior detected: Relaxation set to "
                                  + std::to_string(this->current_relaxation_));
+                }
+            }
+            else if ((nonlinear_solver.relaxRecovery() > 0) &&
+                     (this->current_relaxation_ < 1.0))
+            {
+                // The factor is otherwise only ever reduced within a substep, so a single
+                // oscillation early on damps every later iteration. Let it recover once
+                // the residuals have contracted for a few iterations in a row.
+                const auto& hist = this->residual_norms_history_;
+                bool contracting = false;
+                if (hist.size() >= 2) {
+                    const auto normOf = [](const std::vector<Scalar>& norms)
+                    {
+                        return *std::max_element(norms.begin(), norms.end());
+                    };
+                    contracting = normOf(hist.back()) < normOf(hist[hist.size() - 2]);
+                }
+                this->contracting_iterations_ = contracting
+                    ? this->contracting_iterations_ + 1 : 0;
+                if (this->contracting_iterations_ >= nonlinear_solver.relaxRecovery()) {
+                    this->current_relaxation_ =
+                        std::min(Scalar{1.0},
+                                 this->current_relaxation_ + nonlinear_solver.relaxIncrement());
+                    this->contracting_iterations_ = 0;
+                    if (this->terminalOutputEnabled()) {
+                        OpmLog::info("    Residuals contracting: Relaxation restored to "
+                                     + std::to_string(this->current_relaxation_));
+                    }
                 }
             }
             nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
