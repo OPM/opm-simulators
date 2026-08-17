@@ -19,6 +19,7 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 #include <string>
@@ -105,6 +106,59 @@ namespace Opm
     {
         return fmt::format("PenaltyCard {{ NonConverged: {}, DistanceDecay: {}, LargeWellResiduals: {}, Total: {} }}",
                            pc.nonConverged, pc.distanceDecay, pc.largeWellResiduals, pc.total());
+    }
+
+    std::string to_string(const ConvergenceReport::CnvRelaxSource s)
+    {
+        using S = ConvergenceReport::CnvRelaxSource;
+        switch (s) {
+        case S::None:       return "NONE";
+        case S::PvFraction: return "PVFRAC";
+        case S::SolChange:  return "DSOL";
+        case S::FinalIter:  return "FINALIT";
+        case S::IterCount:  return "ITER";
+        }
+        return "?";
+    }
+
+    std::string to_string(const ConvergenceReport::OscillationSource s)
+    {
+        using S = ConvergenceReport::OscillationSource;
+        switch (s) {
+        case S::NotDetected: return "NONE";
+        case S::Reservoir:   return "RES";
+        case S::WellControl: return "WELLCTRL";
+        case S::Mixed:       return "MIXED";
+        }
+        return "?";
+    }
+
+    ConvergenceReport::OscillationSource
+    classifyOscillationSource(const ConvergenceReport& report)
+    {
+        using WT = ConvergenceReport::WellFailure::Type;
+
+        const auto& wellFailures = report.wellFailures();
+        const bool controlUnsatisfied =
+            std::any_of(wellFailures.begin(), wellFailures.end(),
+                        [](const ConvergenceReport::WellFailure& wf)
+                        {
+                            return (wf.type() == WT::ControlBHP)
+                                || (wf.type() == WT::ControlTHP)
+                                || (wf.type() == WT::ControlRate);
+                        })
+            || report.wellGroupTargetsViolated()
+            || report.networkNeedsMoreBalancing();
+
+        const bool reservoirUnsatisfied = report.reservoirFailed();
+
+        if (controlUnsatisfied && reservoirUnsatisfied) {
+            return ConvergenceReport::OscillationSource::Mixed;
+        }
+        if (controlUnsatisfied) {
+            return ConvergenceReport::OscillationSource::WellControl;
+        }
+        return ConvergenceReport::OscillationSource::Reservoir;
     }
 
 } // namespace Opm

@@ -71,6 +71,23 @@ namespace {
         };
     }
 
+    // The trailing diagnostic columns, each with the longest token it can emit.
+    // Sizing them by their headings alone is not enough -- "GROUP+NETWORK" is
+    // wider than "Gate".  "WellStatus" appends free-form text after its token,
+    // which is why it must stay last.
+    auto diagnosticHeaders() noexcept
+    {
+        using namespace std::literals::string_view_literals;
+
+        return std::array {
+            std::pair { "CnvRelax"sv,   "FINALIT"sv  },  // to_string(CnvRelaxSource)
+            std::pair { "CnvTolUsed"sv, ""sv         },  // a number, never wider
+            std::pair { "OscSource"sv,  "WELLCTRL"sv },  // to_string(OscillationSource)
+            std::pair { "Gate"sv,       "GROUP+NETWORK"sv },
+            std::pair { "WellStatus"sv, "CONV"sv     },
+        };
+    }
+
     template <typename HeaderSequence>
     int maxHeaderSize(const HeaderSequence& headers)
     {
@@ -126,17 +143,27 @@ namespace {
             }
         }
 
-        const auto& metrics    = firstRequest.reports.front().reservoirConvergence();
-        const auto  headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        const auto& metrics = firstRequest.reports.front().reservoirConvergence();
+
+        auto headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        for (const auto& [heading, longestValue] : diagnosticHeaders()) {
+            headerSize = std::max({ headerSize,
+                                    static_cast<int>(heading.size() + 1),
+                                    static_cast<int>(longestValue.size() + 1) });
+        }
 
         for (const auto& metric : metrics) {
             os << std::right << std::setw(headerSize)
                << formatMetricColumn(getPhaseName, metric);
         }
 
+        for (const auto& [heading, _] : diagnosticHeaders()) {
+            os << std::right << std::setw(headerSize) << heading;
+        }
+
         // Note: Newline character intentionally placed in separate output
         // request to not influence right-justification of column header.
-        os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
+        os << '\n';
 
         return { minColSize, headerSize };
     }
@@ -224,6 +251,46 @@ namespace {
         }
     }
 
+    void writeCnvRelaxation(std::ostream&                 os,
+                            const int                     colSize,
+                            const Opm::ConvergenceReport& report)
+    {
+        // Which condition granted the relaxed CNV tolerance, and the tolerance actually
+        // applied.  Without this the accepted state's quality is invisible: the same run
+        // may accept some steps at tolerance-cnv and others at its relaxed twin.
+        os << std::right << std::setw(colSize) << to_string(report.cnvRelaxSource());
+
+        const auto tol = report.cnvToleranceApplied();
+        if (tol > 0.0) {
+            os << std::right << std::setw(colSize) << tol;
+        }
+        else {
+            os << std::right << std::setw(colSize) << '-';
+        }
+    }
+
+    void writeOscillationSource(std::ostream&                 os,
+                                const int                     colSize,
+                                const Opm::ConvergenceReport& report)
+    {
+        os << std::right << std::setw(colSize) << to_string(report.oscillationSource());
+    }
+
+    void writeConvergenceGate(std::ostream&                 os,
+                              const int                     colSize,
+                              const Opm::ConvergenceReport& report)
+    {
+        // Which secondary gate, if any, kept this iteration from counting as
+        // converged.  These gates fire when the residual metrics themselves
+        // are already satisfied, so they identify iterations spent purely on
+        // well/group control changes or network balancing.
+        const auto gate = report.wellGroupTargetsViolated()
+            ? (report.networkNeedsMoreBalancing() ? "GROUP+NETWORK" : "GROUP")
+            : (report.networkNeedsMoreBalancing() ? "NETWORK" : "NONE");
+
+        os << std::right << std::setw(colSize) << gate;
+    }
+
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
                                  const int                                               firstColSize,
@@ -243,6 +310,9 @@ namespace {
             writePenaltyCount(os, firstColSize, report);
 
             writeReservoirConvergence(os, colSize, report);
+            writeCnvRelaxation(os, colSize, report);
+            writeOscillationSource(os, colSize, report);
+            writeConvergenceGate(os, colSize, report);
             writeWellConvergence(os, colSize, report);
 
             os << '\n';
