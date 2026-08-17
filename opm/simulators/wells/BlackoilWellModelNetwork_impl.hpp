@@ -115,14 +115,22 @@ update(const bool mandatory_network_balance,
             well_model_.param().network_pressure_update_damping_factor_;
         const Scalar network_max_pressure_update =
             well_model_.param().network_max_pressure_update_in_bars_ * unit::barsa;
-        const bool use_secant = well_model_.param().network_pressure_update_secant_;
+        const auto& secant_mode = well_model_.param().network_pressure_update_secant_;
+        if (secant_mode != "injection" && secant_mode != "all" && secant_mode != "none") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + secant_mode + "' for --network-pressure-update-secant; "
+                             "expected injection, all or none", deferred_logger);
+        }
+        const bool use_secant = secant_mode != "none";
+        const bool secant_production = secant_mode == "all";
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =
                 this->updatePressures(episodeIdx,
                                       network_pressure_update_damping_factor,
                                       network_max_pressure_update,
-                                      use_secant);
+                                      use_secant,
+                                      secant_production);
             network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = well_model_.schedule()[episodeIdx].network_balance();
             constexpr Scalar relaxation_factor = 10.0;
