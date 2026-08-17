@@ -472,40 +472,57 @@ updatePressures(const int reportStepIdx,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
-                          std::map<std::string, data::BranchData>& branchvalues,
-                          std::map<std::string, data::BranchData>& converged_branchvalues,
+assignNodeAndBranchValues(data::GroupAndNetworkValues& values,
                           const int reportStepIdx) const
 {
+    auto& nodevalues = values.nodeData;
+    auto& branchvalues = values.branchData;
+    auto& converged_branchvalues = values.convergedBranchData;
     nodevalues.clear();
     branchvalues.clear();
     converged_branchvalues.clear();
+    values.gasInjNodeData.clear();
+    values.gasInjBranchData.clear();
+    values.waterInjNodeData.clear();
+    values.waterInjBranchData.clear();
     if (reportStepIdx < 0) return;
-    for (const auto& [node, pressure] : node_pressures_) {
-        nodevalues.emplace(node, data::NodeData{pressure});
-        // Assign node values of well groups to GPR:WELLNAME
-        const auto& sched = well_model_.schedule();
-        if (!sched.hasGroup(node, reportStepIdx)) {
-            continue;
+
+    const auto& sched = well_model_.schedule();
+    // Node values are also assigned to the wells of the node's group (GPR:WELLNAME).
+    auto assign_nodes = [&sched, reportStepIdx](const std::map<std::string, Scalar>& pressures,
+                                                std::map<std::string, data::NodeData>& out)
+    {
+        for (const auto& [node, pressure] : pressures) {
+            out.emplace(node, data::NodeData{pressure});
+            if (!sched.hasGroup(node, reportStepIdx)) {
+                continue;
+            }
+            for (const std::string& wellname : sched.getGroup(node, reportStepIdx).wells()) {
+                out.emplace(wellname, data::NodeData{pressure});
+            }
         }
-        const auto& group = sched.getGroup(node, reportStepIdx);
-        for (const std::string& wellname : group.wells()) {
-            nodevalues.emplace(wellname, data::NodeData{pressure});
-        }
-    }
+    };
+
+    assign_nodes(node_pressures_, nodevalues);
     for (const auto& [branch, branch_data] : branch_data_) {
         branchvalues.emplace(branch, branch_data);
         // Skip wells (do not consider well->group a branch, at least not for now)
     }
 
-    const auto& network = well_model_.schedule()[reportStepIdx].network();
+    // Injection networks: current pressures only (no converged variant reported).
+    assign_nodes(this->nodePressures(details::NetworkDomain::InjectionGas), values.gasInjNodeData);
+    values.gasInjBranchData = this->branchData(details::NetworkDomain::InjectionGas);
+    assign_nodes(this->nodePressures(details::NetworkDomain::InjectionWater), values.waterInjNodeData);
+    values.waterInjBranchData = this->branchData(details::NetworkDomain::InjectionWater);
+
+    const auto& network = sched[reportStepIdx].network();
     if (!network.active()) {
         return;
     }
 
     auto converged = this->computePressures(network,
                                             *well_model_.getVFPProperties().getProd(),
-                                            well_model_.schedule().getUnits(),
+                                            sched.getUnits(),
                                             reportStepIdx,
                                             well_model_.comm());
     const auto& converged_pressures = converged.node_pressures;
@@ -515,7 +532,6 @@ assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
         assert(it != nodevalues.end() );
         it->second.converged_pressure = converged_pressure;
         // Assign node values of group to GPR:WELLNAME
-        const auto& sched = well_model_.schedule();
         if (!sched.hasGroup(node, reportStepIdx)) {
             continue;
         }

@@ -138,9 +138,10 @@ public:
         }
     }
 
-    void assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
-                                   std::map<std::string, data::BranchData>& branchvalues,
-                                   std::map<std::string, data::BranchData>& converged_branchvalues,
+    /// Fill the production node/branch values (GPR, GPRB, ..., with the converged
+    /// pressures recomputed from the current rates) and the gas/water injection
+    /// network node and branch values (GPRG, GPRW) of `values`.
+    void assignNodeAndBranchValues(data::GroupAndNetworkValues& values,
                                    const int reportStepIdx) const;
 
     void commitState()
