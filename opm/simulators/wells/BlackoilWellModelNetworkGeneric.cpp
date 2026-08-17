@@ -37,6 +37,11 @@
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <algorithm>
 #include <cassert>
 
@@ -130,8 +135,9 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 updateActiveStateImpl(const Network::ExtNetwork& network)
 {
+    // Accumulates into active_ across the domains; an inactive network must not
+    // clear what an earlier domain set.
     if (!network.active()) {
-        this->active_ = false;
         return;
     }
     bool network_active = false;
@@ -259,25 +265,26 @@ updatePressures(const int reportStepIdx,
     const auto previous_node_pressures = this->domain_node_pressures_;
 
     for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
+        NetworkPressures result;
         if (network.domain == details::NetworkDomain::Production) {
-            std::tie(this->nodePressures(network.domain), this->branchData(network.domain)) =
-                this->computePressures(network.network.get(),
-                                       *well_model_.getVFPProperties().getProd(),
-                                       well_model_.schedule().getUnits(),
-                                       reportStepIdx,
-                                       well_model_.comm());
-            continue;
+            result = this->computePressures(network.network.get(),
+                                            *well_model_.getVFPProperties().getProd(),
+                                            well_model_.schedule().getUnits(),
+                                            reportStepIdx,
+                                            well_model_.comm());
+        } else {
+            const auto injection_phase = details::injectionPhaseForDomain(network.domain);
+            assert(injection_phase.has_value());
+            result = this->computePressures(network.network.get(),
+                                            *well_model_.getVFPProperties().getInj(),
+                                            well_model_.schedule().getUnits(),
+                                            reportStepIdx,
+                                            well_model_.comm(),
+                                            *injection_phase);
         }
-
-        const auto injection_phase = details::injectionPhaseForDomain(network.domain);
-        assert(injection_phase.has_value());
-        std::tie(this->nodePressures(network.domain), this->branchData(network.domain)) =
-            this->computePressures(network.network.get(),
-                                   *well_model_.getVFPProperties().getInj(),
-                                   well_model_.schedule().getUnits(),
-                                   reportStepIdx,
-                                   well_model_.comm(),
-                                   *injection_phase);
+        this->nodePressures(network.domain) = std::move(result.node_pressures);
+        this->branchData(network.domain) = std::move(result.branch_data);
+        this->invalidNodes(network.domain) = std::move(result.invalid_nodes);
     }
     this->syncLegacyProductionState_();
 
@@ -289,10 +296,24 @@ updatePressures(const int reportStepIdx,
 
     for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
         auto& domain_pressures = this->nodePressures(network.domain);
+        const auto& invalid = this->invalidNodes(network.domain);
         const auto& previous_domain_pressures = previous_node_pressures[details::domainIndex(network.domain)];
 
+        if (!invalid.empty()) {
+            // The VFP tables gave no pressure for these nodes (rate/pressure outside what
+            // the tables can deliver). Keep the previous value and report the network as
+            // unbalanced so that the wells get another chance to move into range.
+            network_imbalance = std::max(network_imbalance, upper_update_bound);
+            if (this->invalid_nodes_report_step_ != reportStepIdx) {
+                this->invalid_nodes_report_step_ = reportStepIdx;
+                OpmLog::warning(fmt::format("Network: no VFP solution for node(s) {} at report step {}; "
+                                            "keeping the previous node pressure(s).",
+                                            fmt::join(invalid, ", "), reportStepIdx + 1));
+            }
+        }
+
         if (!previous_domain_pressures.empty()) {
-            for (const auto& [name, new_pressure]: domain_pressures) {
+            for (auto& [name, new_pressure]: domain_pressures) {
                 if (previous_domain_pressures.count(name) <= 0) {
                     if (std::abs(new_pressure) > network_imbalance) {
                         network_imbalance = std::abs(new_pressure);
@@ -301,6 +322,10 @@ updatePressures(const int reportStepIdx,
                 }
 
                 const auto pressure = previous_domain_pressures.at(name);
+                if (invalid.count(name) > 0) {
+                    new_pressure = pressure;
+                    continue;
+                }
                 const Scalar change = (new_pressure - pressure);
                 if (std::abs(change) > network_imbalance) {
                     network_imbalance = std::abs(change);
@@ -310,7 +335,7 @@ updatePressures(const int reportStepIdx,
                 // the maximum update is limited (to 5 bar by default, can be changed with --network-max-pressure-update-in-bars).
                 const Scalar damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);
                 const Scalar sign = change > 0 ? 1. : -1.;
-                domain_pressures[name] = pressure + sign * damped_change;
+                new_pressure = pressure + sign * damped_change;
             }
             continue;
         }
@@ -346,6 +371,10 @@ updatePressures(const int reportStepIdx,
 
         const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
         if (it != this->nodePressures(*domain).end()) {
+            if (this->invalidNodes(*domain).count(well->wellEcl().groupName()) > 0) {
+                // No valid leaf pressure this iteration; keep the well's current THP limit.
+                continue;
+            }
             if (well->isProducer()) {
                 // For producers the leaf-node pressure is the group wellhead THP;
                 // apply it directly as a dynamic THP constraint.
@@ -420,12 +449,13 @@ assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
         return;
     }
 
-    auto converged_pressures = node_pressures_;
-    std::tie(converged_pressures, converged_branchvalues) = this->computePressures(network,
-                                                      *well_model_.getVFPProperties().getProd(),
-                                                      well_model_.schedule().getUnits(),
-                                                      reportStepIdx,
-                                                      well_model_.comm());
+    auto converged = this->computePressures(network,
+                                            *well_model_.getVFPProperties().getProd(),
+                                            well_model_.schedule().getUnits(),
+                                            reportStepIdx,
+                                            well_model_.comm());
+    const auto& converged_pressures = converged.node_pressures;
+    converged_branchvalues = std::move(converged.branch_data);
     for (const auto& [node, converged_pressure] : converged_pressures) {
         auto it = nodevalues.find(node);
         assert(it != nodevalues.end() );
@@ -491,7 +521,7 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 }
 
 template <typename Scalar, typename IndexTraits>
-std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+typename BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::NetworkPressures
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 computePressures(const Network::ExtNetwork& network,
                  const VFPProdProperties<Scalar>& vfp_prod_props,
@@ -509,11 +539,12 @@ computePressures(const Network::ExtNetwork& network,
         network_pressure_computation(
             well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm);
 
-    return network_pressure_computation.run();
+    auto [node_pressures, branch_data] = network_pressure_computation.run();
+    return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};
 }
 
 template <typename Scalar, typename IndexTraits>
-std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+typename BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::NetworkPressures
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 computePressures(const Network::ExtNetwork& network,
                  const VFPInjProperties<Scalar>& vfp_inj_props,
@@ -532,7 +563,8 @@ computePressures(const Network::ExtNetwork& network,
         network_pressure_computation(
             well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm, injectionPhase);
 
-    return network_pressure_computation.run();
+    auto [node_pressures, branch_data] = network_pressure_computation.run();
+    return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};
 }
 
 template<typename Scalar, typename IndexTraits>

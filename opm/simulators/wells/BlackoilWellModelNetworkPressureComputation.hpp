@@ -25,15 +25,20 @@
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <map>
 #include <optional>
 #include <ranges>
@@ -43,6 +48,48 @@
 #include <vector>
 
 namespace Opm {
+
+/// Result of a single network branch VFP lookup.
+template<typename Scalar>
+struct NetworkBranchPressure
+{
+    Scalar pressure{0.0};
+    // False when the table has no solution at this point (zero-filled cells give
+    // bhp <= 1 atm); the pressure must then not be used as a node pressure.
+    bool valid{true};
+    // True when the flow rate or upstream pressure had to be clamped to the table axes.
+    bool clamped{false};
+};
+
+namespace detail {
+    /// Clamp the VFP lookup point to the table axes; the tables must not be extrapolated
+    /// for network branches (a zero-filled tail extrapolates to negative pressures).
+    /// Rates are scaled uniformly so that WFR/GFR fractions are preserved.
+    template<typename Scalar, typename IndexTraits, typename Table>
+    bool clampToTableAxes(const Table& table, std::vector<Scalar>& rates, Scalar& up_press)
+    {
+        bool clamped = false;
+        const auto& thp_axis = table.getTHPAxis();
+        const Scalar thp_lo = thp_axis.front();
+        const Scalar thp_hi = thp_axis.back();
+        if (up_press < thp_lo || up_press > thp_hi) {
+            up_press = std::clamp(up_press, thp_lo, thp_hi);
+            clamped = true;
+        }
+        const auto& flo_axis = table.getFloAxis();
+        const Scalar flo = std::abs(getFlo(table,
+                                           rates[IndexTraits::waterPhaseIdx],
+                                           rates[IndexTraits::oilPhaseIdx],
+                                           rates[IndexTraits::gasPhaseIdx]));
+        const Scalar flo_hi = flo_axis.back();
+        if (flo > flo_hi && flo > 0.0) {
+            const Scalar s = flo_hi / flo;
+            std::ranges::transform(rates, rates.begin(), [s](const auto r) { return s * r; });
+            clamped = true;
+        }
+        return clamped;
+    }
+} // namespace detail
 
 /// @brief  Helper class to insulate the NetworkPressureComputation class from
 ///         the differences between production and injection VFP tables.
@@ -75,29 +122,34 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
     }
 
     template<typename Branch>
-    static Scalar compute(const VFPProdProperties<Scalar>& vfp_props,
-                          const int table_id,
-                          const std::vector<Scalar>& rates,
-                          const Scalar up_press,
-                          const Branch& upbranch,
-                          const UnitSystem& unit_system)
+    static NetworkBranchPressure<Scalar> compute(const VFPProdProperties<Scalar>& vfp_props,
+                                                 const int table_id,
+                                                 std::vector<Scalar> rates,
+                                                 Scalar up_press,
+                                                 const Branch& upbranch,
+                                                 const UnitSystem& unit_system)
     {
         // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
         //     gas lift rates only enters the network pressure calculations through the rates
         //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
-        const auto alq_type = vfp_props.getTable(table_id).getALQType();
+        const auto& table = vfp_props.getTable(table_id);
+        const auto alq_type = table.getALQType();
         const auto dimension = VFPProdTable::ALQDimension(alq_type, unit_system);
         const Scalar alq = upbranch.alq_value(dimension).value_or(0.0);
 
-        return vfp_props.bhp(table_id,
-                             rates[IndexTraits::waterPhaseIdx],
-                             rates[IndexTraits::oilPhaseIdx],
-                             rates[IndexTraits::gasPhaseIdx],
-                             up_press,
-                             alq,
-                             0.0, // explicit_wfr
-                             0.0, // explicit_gfr
-                             false); // use_expvfp we dont support explicit lookup
+        NetworkBranchPressure<Scalar> result;
+        result.clamped = detail::clampToTableAxes<Scalar, IndexTraits>(table, rates, up_press);
+        result.pressure = vfp_props.bhp(table_id,
+                                        rates[IndexTraits::waterPhaseIdx],
+                                        rates[IndexTraits::oilPhaseIdx],
+                                        rates[IndexTraits::gasPhaseIdx],
+                                        up_press,
+                                        alq,
+                                        0.0, // explicit_wfr
+                                        0.0, // explicit_gfr
+                                        false); // use_expvfp we dont support explicit lookup
+        result.valid = result.pressure > unit::atm;
+        return result;
     }
 };
 
@@ -125,18 +177,22 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     }
 
     template<typename Branch>
-    static Scalar compute(const VFPInjProperties<Scalar>& vfp_props,
-                          const int table_id,
-                          const std::vector<Scalar>& rates,
-                          const Scalar up_press,
-                          const Branch&,
-                          const UnitSystem&)
+    static NetworkBranchPressure<Scalar> compute(const VFPInjProperties<Scalar>& vfp_props,
+                                                 const int table_id,
+                                                 std::vector<Scalar> rates,
+                                                 Scalar up_press,
+                                                 const Branch&,
+                                                 const UnitSystem&)
     {
-        return vfp_props.bhp(table_id,
-                             rates[IndexTraits::waterPhaseIdx],
-                             rates[IndexTraits::oilPhaseIdx],
-                             rates[IndexTraits::gasPhaseIdx],
-                             up_press);
+        NetworkBranchPressure<Scalar> result;
+        result.clamped = detail::clampToTableAxes<Scalar, IndexTraits>(vfp_props.getTable(table_id), rates, up_press);
+        result.pressure = vfp_props.bhp(table_id,
+                                        rates[IndexTraits::waterPhaseIdx],
+                                        rates[IndexTraits::oilPhaseIdx],
+                                        rates[IndexTraits::gasPhaseIdx],
+                                        up_press);
+        result.valid = result.pressure > unit::atm;
+        return result;
     }
 };
 
@@ -204,6 +260,14 @@ public:
         }
 
         return {node_pressures_, branch_data_};
+    }
+
+    /// Nodes whose pressure could not be computed from the VFP tables (and their
+    /// descendants). Their entries in the pressure map are placeholders (the upstream
+    /// pressure) and must not be used as node pressures.
+    const std::set<std::string>& invalidNodes() const
+    {
+        return invalid_nodes_;
     }
 
 private:
@@ -354,7 +418,12 @@ private:
                 continue;
             }
 
-            const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
+            const std::string& up_node = (*upbranch).uptree_node();
+            const Scalar up_press = node_pressures_[up_node];
+            // Descendants of a node without a valid pressure have none either.
+            if (invalid_nodes_.count(up_node) > 0) {
+                invalid_nodes_.insert(node);
+            }
             const auto vfp_table = (*upbranch).vfp_table();
             if (!vfp_table) {
                 // Table number specified as 9999 in the deck, no pressure loss.
@@ -377,7 +446,23 @@ private:
             auto rates = node_inflows.at(node);
             assert(rates.size() == 3);
             Calc::prepareRates(rates);
-            auto node_pressure = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
+            const auto branch = Calc::compute(vfp_props_, *vfp_table, rates, up_press, *upbranch, unit_system_);
+            // An invalid lookup (zero-filled table cells) gets the upstream pressure as a
+            // placeholder so downstream lookups stay in range; callers must consult invalidNodes().
+            const Scalar node_pressure = branch.valid ? branch.pressure : up_press;
+            if (!branch.valid) {
+                invalid_nodes_.insert(node);
+            }
+            if (!branch.valid || branch.clamped) {
+                OpmLog::debug(fmt::format("Network branch {} -> {}: VFP table {} {} at rates ({:.4g}, {:.4g}, {:.4g}) sm3/d, "
+                                          "upstream pressure {:.2f} bar",
+                                          up_node, node, *vfp_table,
+                                          branch.valid ? "lookup clamped to the table axes" : "has no solution",
+                                          rates[IndexTraits::waterPhaseIdx] * unit::day,
+                                          rates[IndexTraits::oilPhaseIdx] * unit::day,
+                                          rates[IndexTraits::gasPhaseIdx] * unit::day,
+                                          up_press / unit::barsa));
+            }
             node_pressures_[node] = node_pressure;
             // Prefer inserting after computing the pressure, hence negating rates
             branch_data_.try_emplace(node,
@@ -397,6 +482,7 @@ private:
     const std::optional<Phase> injection_phase_;
     std::map<std::string, Scalar> node_pressures_;
     std::map<std::string, data::BranchData> branch_data_;
+    std::set<std::string> invalid_nodes_;
 };
 
 } // namespace Opm
