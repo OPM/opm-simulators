@@ -358,6 +358,12 @@ updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                                               deferred_logger, closure_reason);
         well_test.updateWellTestStateCECON(ws, simulationTime, writeMessageToOPMLog, wellTestState,
                                            unit_system, start_time, deferred_logger);
+    } else if (this->isInjector() && this->getDynamicThpLimit().has_value()) {
+        // Not operable under a THP set by the injection network. That pressure changes
+        // with the other wells' rates, so keep the well stopped this step (the local
+        // solve reopens it when the network pressure allows) instead of shutting it.
+        deferred_logger.debug("Injector " + this->name() + " cannot operate at the current "
+                              "network THP; kept stopped, not shut.");
     } else {
         // updating well test state based on physical (THP/BHP) limits.
         well_test.updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
