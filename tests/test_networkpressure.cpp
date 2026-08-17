@@ -30,6 +30,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Schedule/Network/Branch.hpp>
@@ -231,7 +232,8 @@ struct MockWellModel
         struct MockGroupState
         {
             // Leaf rates in Sm3/day, phase order water, oil, gas. Tests may override
-            // these before running the computation.
+            // these before running the computation. Injection leaf rates are per network
+            // phase: the gas network sees only the gas rate, the water network only water.
             static inline std::vector<double> injection_rates_sm3_day {500.0, 0.0, 5000.0};
             static inline std::vector<double> production_rates_sm3_day {500.0, 500.0, 5000.0};
 
@@ -243,11 +245,24 @@ struct MockWellModel
             }
 
             bool has_production_rates(const std::string) const { return true; }
-            bool has_network_leaf_node_injection_rates(const std::string) const { return true; }
+            bool has_network_leaf_node_injection_rates(const std::string, Phase) const { return true; }
             bool has_network_leaf_node_production_rates(const std::string) const { return true; }
+            std::vector<double> network_leaf_node_injection_rates(const std::string, const Phase phase) const
+            {
+                auto r = injection_rates_sm3_day;
+                // Only the network's own phase is injected into it.
+                if (phase == Phase::GAS) {
+                    r[0] = 0.0;
+                } else if (phase == Phase::WATER) {
+                    r[2] = 0.0;
+                }
+                return toSI(r);
+            }
+            // Phase-less lookups (no such network) get no rate.
+            bool has_network_leaf_node_injection_rates(const std::string) const { return false; }
             std::vector<double> network_leaf_node_injection_rates(const std::string) const
             {
-                return toSI(injection_rates_sm3_day);
+                return {0.0, 0.0, 0.0};
             }
             std::vector<double> network_leaf_node_production_rates(const std::string) const
             {
@@ -351,7 +366,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     auto unit_system = UnitSystem {};
     // Test using mock setup.
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(463.483, bars);
@@ -375,7 +390,7 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::WATER);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(150.488, bars);
@@ -422,7 +437,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_rate_beyond_flow_axis)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     // Clamped to the axis end the table gives 0.0 -> no solution: the node is flagged and the
@@ -443,7 +458,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_zero_cell_region)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     BOOST_CHECK(pressures.at("G1") >= unit::atm);
@@ -462,7 +477,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_thp_below_axis)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(68.834, bars), 1e-7);

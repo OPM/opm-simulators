@@ -108,7 +108,9 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
     }
 
     template <class GroupState>
-    static bool hasLeafNodeRate(const GroupState& group_state, const std::string& node)
+    static bool hasLeafNodeRate(const GroupState& group_state,
+                                const std::string& node,
+                                const std::optional<Phase>&)
     {
         return group_state.has_network_leaf_node_production_rates(node);
     }
@@ -163,18 +165,22 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     }
 
     template <class GroupState>
-    static bool hasLeafNodeRate(const GroupState& group_state, const std::string& node)
+    static bool hasLeafNodeRate(const GroupState& group_state,
+                                const std::string& node,
+                                const std::optional<Phase>& injection_phase)
     {
-        return group_state.has_network_leaf_node_injection_rates(node);
+        assert(injection_phase.has_value());
+        return group_state.has_network_leaf_node_injection_rates(node, *injection_phase);
     }
 
     template <class GroupState>
     static const std::vector<Scalar>
     leafNodeRate(const GroupState& group_state,
                  const std::string& node,
-                 const std::optional<Phase>&)
+                 const std::optional<Phase>& injection_phase)
     {
-        return group_state.network_leaf_node_injection_rates(node);
+        assert(injection_phase.has_value());
+        return group_state.network_leaf_node_injection_rates(node, *injection_phase);
     }
 
     template<typename Branch>
@@ -308,7 +314,7 @@ private:
             // rate map rather than the production rate map (which is always empty for
             // pure injection groups, causing zero-rate pressure calculations).
             using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
-            if (!Calc::hasLeafNodeRate(well_model_.groupStateHelper().groupState(), node)) {
+            if (!Calc::hasLeafNodeRate(well_model_.groupStateHelper().groupState(), node, injection_phase_)) {
                 node_inflows[node] = zero_rates;
                 continue;
             }
