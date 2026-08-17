@@ -1288,8 +1288,9 @@ void
 GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeRates()
 {
     auto do_update = [&](const Network::ExtNetwork& network,
-                         const bool is_injector) -> void
+                         const std::optional<Phase> injection_phase) -> void
     {
+        const bool is_injector = injection_phase.has_value();
         if (network.active()) {
             const int np = this->numPhases();
             for (const auto& group_name : network.leaf_nodes()) {
@@ -1303,19 +1304,19 @@ GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeRates()
                     }
                 }
                 if (is_injector) {
-                    this->groupState().update_network_leaf_node_injection_rates(group_name, network_rates);
+                    this->groupState().update_network_leaf_node_injection_rates(group_name, *injection_phase, network_rates);
                 } else {
                     this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
                 }
             }
         }
     };
-    do_update(this->schedule_[this->report_step_].network(), /*is_injector=*/false);
+    do_update(this->schedule_[this->report_step_].network(), std::nullopt);
     for (const Phase phase : {Phase::GAS, Phase::WATER}) {
         if (const auto injNetwork = this->schedule_[this->report_step_].injectionNetwork.get_ptr(phase);
             injNetwork != nullptr)
         {
-            do_update(*injNetwork, /* is_injector = */ true);
+            do_update(*injNetwork, phase);
         }
     }
 }
