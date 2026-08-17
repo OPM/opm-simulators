@@ -33,6 +33,7 @@
 #include <array>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 
 namespace Opm {
@@ -158,14 +159,24 @@ public:
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
-    std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+    /// Result of one network pressure evaluation for one network (domain).
+    struct NetworkPressures
+    {
+        std::map<std::string, Scalar> node_pressures;
+        std::map<std::string, data::BranchData> branch_data;
+        // Nodes (and their descendants) whose VFP lookup has no solution; their
+        // node_pressures entries are placeholders and must not be used.
+        std::set<std::string> invalid_nodes;
+    };
+
+    NetworkPressures
     computePressures(const Network::ExtNetwork& network,
                      const VFPProdProperties<Scalar>& vfp_prod_props,
                      const UnitSystem& unit_system,
                      const int reportStepIdx,
                      const Parallel::Communication& comm) const;
 
-    std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+    NetworkPressures
     computePressures(const Network::ExtNetwork& network,
                      const VFPInjProperties<Scalar>& vfp_inj_props,
                      const UnitSystem& unit_system,
@@ -200,6 +211,16 @@ protected:
         return domain_branch_data_[details::domainIndex(domain)];
     }
 
+    const std::set<std::string>& invalidNodes(const details::NetworkDomain domain) const
+    {
+        return domain_invalid_nodes_[details::domainIndex(domain)];
+    }
+
+    std::set<std::string>& invalidNodes(const details::NetworkDomain domain)
+    {
+        return domain_invalid_nodes_[details::domainIndex(domain)];
+    }
+
     void syncLegacyProductionState_()
     {
         this->node_pressures_ = this->nodePressures(productionNetworkDomain());
@@ -222,6 +243,10 @@ protected:
     // Domain-scoped pressure state to avoid collisions between production and injection networks.
     std::array<std::map<std::string, Scalar>, details::domainIndex(details::NetworkDomain::Count)> domain_node_pressures_;
     std::array<std::map<std::string, data::BranchData>, details::domainIndex(details::NetworkDomain::Count)> domain_branch_data_;
+    // Nodes without a valid VFP solution in the last evaluation (per domain); not serialized,
+    // recomputed on every updatePressures().
+    std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;
+    int invalid_nodes_report_step_{-1};
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations
