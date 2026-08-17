@@ -115,12 +115,14 @@ update(const bool mandatory_network_balance,
             well_model_.param().network_pressure_update_damping_factor_;
         const Scalar network_max_pressure_update =
             well_model_.param().network_max_pressure_update_in_bars_ * unit::barsa;
+        const bool use_secant = well_model_.param().network_pressure_update_secant_;
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =
                 this->updatePressures(episodeIdx,
                                       network_pressure_update_damping_factor,
-                                      network_max_pressure_update);
+                                      network_max_pressure_update,
+                                      use_secant);
             network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = well_model_.schedule()[episodeIdx].network_balance();
             constexpr Scalar relaxation_factor = 10.0;
@@ -166,25 +168,6 @@ update(const bool mandatory_network_balance,
                                                       dt,
                                                       well_model_.groupStateHelper(),
                                                       well_model_.wellState());
-                    // Option B: after re-solving at the current network THP, update
-                    // ws.well_potentials for injection wells.  The rate_less_than_potential
-                    // check in WellConstraints::activeInjectionConstraint compares current
-                    // injection rates against ws.well_potentials to decide whether switching
-                    // to THP mode would increase or decrease injection.  The potentials are
-                    // normally computed once per timestep at the static WCONINJE THP and are
-                    // stale during network iterations.  Refreshing them here (from the rate
-                    // the well just solved to under the current network THP) makes the check
-                    // accurate for subsequent outer iterations.
-                    if (well->isInjector()) {
-                        auto& ws = well_model_.wellState().well(well->indexOfWell());
-                        if (ws.injection_cmode == Well::InjectorCMode::THP) {
-                            const int np = well_model_.numPhases();
-                            for (int p = 0; p < np; ++p) {
-                                ws.well_potentials[p] =
-                                    std::max(Scalar{0.0}, ws.surface_rates[p]);
-                            }
-                        }
-                    }
                 }
             }
             well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
