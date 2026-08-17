@@ -278,8 +278,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkPressureUpdateSecant>
-        ("Use a secant update of the network node pressures in the inner network iterations "
-         "(falls back to the damped update when the secant is not usable)");
+        ("Networks whose node pressures use the bracketing/secant update in the inner network "
+         "iterations instead of the damped update: injection, all or none");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>

@@ -274,7 +274,8 @@ BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 updatePressures(const int reportStepIdx,
                 const Scalar damping_factor,
                 const Scalar upper_update_bound,
-                const bool use_secant)
+                const bool use_secant,
+                const bool secant_for_production)
 {
     OPM_TIMEFUNCTION();
     if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
@@ -369,7 +370,9 @@ updatePressures(const int reportStepIdx,
                 // the network gives for the resulting rates.
                 const auto pressure = previous_domain_pressures.at(name);
                 const bool valid = invalid.count(name) == 0;
-                if (use_secant) {
+                const bool secant_here = use_secant
+                    && (secant_for_production || network.domain != details::NetworkDomain::Production);
+                if (secant_here) {
                     auto& updater = updaters[name];
                     const auto& floors = plateau_floor[details::domainIndex(network.domain)];
                     std::optional<Scalar> floor;
