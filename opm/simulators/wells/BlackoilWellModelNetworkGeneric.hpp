@@ -28,6 +28,7 @@
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
+#include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
@@ -118,9 +119,24 @@ public:
     /// Checks if we will perform a network re-balance on the next Newton iteration.
     bool willBalanceOnNextIteration(const int reportStepIndex) const;
 
+    /// Recompute the node pressures from the current leaf rates and move the applied
+    /// pressures towards them. With use_secant the per-node update is a secant step on
+    /// r(P) = P_computed(P) - P (clipped to the bracket [P, P_computed], which contains
+    /// the fixed point when the wells respond monotonically); otherwise, and as fallback,
+    /// the change is damped by damping_factor and capped at update_upper_bound.
+    /// Returns the largest |r| over the nodes.
     Scalar updatePressures(const int reportStepIdx,
                            const Scalar damping_factor,
-                           const Scalar update_upper_bound);
+                           const Scalar update_upper_bound,
+                           const bool use_secant = false);
+
+    /// Forget the secant history; call at the start of every time step.
+    void beginTimeStep()
+    {
+        for (auto& u : pressure_updaters_) {
+            u.clear();
+        }
+    }
 
     void assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
                                    std::map<std::string, data::BranchData>& branchvalues,
@@ -247,6 +263,9 @@ protected:
     // recomputed on every updatePressures().
     std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;
     int invalid_nodes_report_step_{-1};
+    // Per node: state of the bracketing/secant pressure update. Not serialized.
+    std::array<std::map<std::string, NodePressureUpdater<Scalar>>,
+               details::domainIndex(details::NetworkDomain::Count)> pressure_updaters_;
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations

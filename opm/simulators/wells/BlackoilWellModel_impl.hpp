@@ -345,6 +345,7 @@ namespace Opm {
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
+        this->network_.beginTimeStep();
 
         if (this->wellStructureChangedDynamically_) {
             // Something altered the well structure/topology.  Possibly

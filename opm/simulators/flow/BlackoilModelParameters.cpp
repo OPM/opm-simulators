@@ -116,6 +116,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     rc_network_loose_coupling_ = Parameters::Get<Parameters::RcNetworkLooseCoupling>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
+    network_pressure_update_secant_ = Parameters::Get<Parameters::NetworkPressureUpdateSecant>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -276,6 +277,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkPressureUpdateSecant>
+        ("Use a secant update of the network node pressures in the inner network iterations "
+         "(falls back to the damped update when the secant is not usable)");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>
