@@ -65,6 +65,7 @@ public:
         serializer(producer);
         serializer(bhp);
         serializer(thp);
+        serializer(network_thp_limit);
         serializer(pressure_first_connection);
         serializer(temperature);
         serializer(energy_rate);
@@ -104,6 +105,9 @@ public:
     PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
+    // Network-imposed THP limit retained until the schedule re-specifies the
+    // well's THP limit or VFP table.
+    std::optional<Scalar> network_thp_limit;
     Scalar pressure_first_connection{0};
 
     // thermal related

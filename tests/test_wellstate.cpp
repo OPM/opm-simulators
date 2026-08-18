@@ -157,7 +157,8 @@ namespace {
 
     Opm::WellState<double, IndexTraits>
     buildWellState(const Setup& setup, const std::size_t timeStep,
-                   std::vector<Opm::ParallelWellInfo<double>>& pinfos)
+                   std::vector<Opm::ParallelWellInfo<double>>& pinfos,
+                   const WellState* prevState = nullptr)
     {
         auto state  = WellState{setup.pu};
 
@@ -186,7 +187,7 @@ namespace {
 
         state.init(cpress, ctemp, setup.sched,
                    wells, ppinfos,
-                   timeStep, nullptr, setup.well_perf_data, setup.st,
+                   timeStep, prevState, setup.well_perf_data, setup.st,
                    false /*enableDistributedWells*/);
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
@@ -240,6 +241,87 @@ WCONPROD
 /
 WCONINJE
   'INJ' 'WATER' 'OPEN' 'RATE' 100 1* 200 /
+/
+
+END
+)");
+    }
+
+
+    Opm::Deck makeRetainedThpLimitDeck()
+    {
+        return Opm::Parser{}.parseString(R"(
+RUNSPEC
+OIL
+WATER
+GAS
+METRIC
+DIMENS
+    2 1 1 /
+
+START
+  1 JAN 2000 /
+
+GRID
+DXV
+  2*100 /
+DYV
+  1*100 /
+DZV
+  1*10 /
+DEPTHZ
+  6*1000 /
+PORO
+  2*0.20 /
+PERMX
+  2*100 /
+PERMY
+  2*100 /
+PERMZ
+  2*20 /
+
+SCHEDULE
+VFPPROD
+-- table, datum, flo, wfr, gfr, pressure, alq, unit, table_vals
+  1 1000.0 LIQ WCT GOR THP ' ' METRIC BHP /
+  1.0 /
+  0.0 1.0 /
+  0.0 /
+  0.0 /
+  0.0 /
+  1 1 1 1 0.0 /
+  2 1 1 1 1.0 /
+
+WELSPECS
+  'PROD' 'G' 1 1 1000 'OIL' /
+/
+COMPDAT
+  'PROD' 1 1 1 1 'OPEN' 1* 100 0.1 /
+/
+WCONPROD
+  'PROD' 'OPEN' 'ORAT' 100 4* 100 25.0 1 /
+/
+
+DATES     -- 1: nothing is re-specified
+  1 FEB 2000 /
+/
+
+DATES     -- 2
+  1 MAR 2000 /
+/
+WELTARG   -- a target that is neither the THP limit nor the VFP table
+  'PROD' ORAT 90 /
+/
+
+DATES     -- 3
+  1 APR 2000 /
+/
+WELTARG   -- re-specifies the THP limit
+  'PROD' THP 30 /
+/
+
+DATES     -- 4
+  1 MAY 2000 /
 /
 
 END
@@ -498,6 +580,38 @@ BOOST_AUTO_TEST_CASE(RSCONST_InjectionWellDoesNotSynthesizeGas)
     const auto& rates = rpt.at("INJ").rates;
     BOOST_CHECK(!rates.has(Opm::data::Rates::opt::gas));
     BOOST_CHECK(!rates.has(Opm::data::Rates::opt::dissolved_gas));
+}
+
+// ---------------------------------------------------------------------
+
+// A network-imposed THP limit is retained in the well state so that it stays
+// in force after the well leaves the network, where nothing recomputes it.
+// It is dropped only when the schedule re-specifies the THP limit or the VFP
+// table, which is the sole way a deck can get rid of it again.
+BOOST_AUTO_TEST_CASE(RetainedNetworkThpLimit)
+{
+    const auto setup = Setup { makeRetainedThpLimitDeck() };
+    const auto limit = 50.0*Opm::unit::barsa;
+
+    auto pinfos = std::vector<std::vector<Opm::ParallelWellInfo<double>>>(4);
+
+    // The network imposed a THP limit on the well at the first step.
+    auto imposed = buildWellState(setup, 0, pinfos[0]);
+    imposed.well("PROD").network_thp_limit = limit;
+
+    // Nothing is re-specified, the limit stays in force.
+    const auto kept = buildWellState(setup, 1, pinfos[1], &imposed);
+    BOOST_REQUIRE(kept.well("PROD").network_thp_limit.has_value());
+    BOOST_CHECK_CLOSE(*kept.well("PROD").network_thp_limit, limit, 1.0e-10);
+
+    // A target that is neither the THP limit nor the VFP table leaves it alone.
+    const auto other_target = buildWellState(setup, 2, pinfos[2], &kept);
+    BOOST_REQUIRE(other_target.well("PROD").network_thp_limit.has_value());
+    BOOST_CHECK_CLOSE(*other_target.well("PROD").network_thp_limit, limit, 1.0e-10);
+
+    // Re-specifying the THP limit drops it, the well reverts to the deck limit.
+    const auto respecified = buildWellState(setup, 3, pinfos[3], &other_target);
+    BOOST_CHECK(!respecified.well("PROD").network_thp_limit.has_value());
 }
 
 // ---------------------------------------------------------------------

@@ -75,6 +75,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
     result.perf_data = PerfData<Scalar>::serializationTestObject();
     result.weldraw_max_rate = 3.0;
     result.weldraw_cmode = WellProducerCMode::LRAT;
+    result.network_thp_limit = 4.0;
 
     return result;
 }
@@ -395,6 +396,7 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->producer == rhs.producer &&
            this->bhp == rhs.bhp &&
            this->thp == rhs.thp &&
+           this->network_thp_limit == rhs.network_thp_limit &&
            this->pressure_first_connection == rhs.pressure_first_connection &&
            this->temperature == rhs.temperature &&
            this->phase_mixing_rates == rhs.phase_mixing_rates &&
