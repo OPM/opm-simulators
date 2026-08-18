@@ -28,6 +28,8 @@
 
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
+#include <optional>
+
 #include <map>
 #include <string>
 #include <tuple>
@@ -66,6 +68,26 @@ public:
     void doPreStepRebalance(DeferredLogger& deferred_logger);
 
 protected:
+    /// Balance the injection networks against the wells' well-index linearisation
+    /// (q = ipr_b*bhp - ipr_a, from the converged well Jacobian) instead of re-solving the
+    /// well equations, so a residual evaluation costs a handful of VFP lookups. Returns the
+    /// last imbalance. Experimental, off unless --network-well-proxy=ipr.
+    Scalar proxyBalance(const int episodeIdx,
+                        const double dt,
+                        const int max_iterations,
+                        const Scalar damping_factor,
+                        const Scalar max_pressure_update,
+                        const bool use_secant,
+                        const bool secant_production,
+                        DeferredLogger& deferred_logger);
+
+    /// Rate this injector would take at its current THP constraint, from the well-index
+    /// linearisation alone. nullopt when it admits no solution there.
+    std::optional<Scalar>
+    proxyInjectionRate(WellInterface<TypeTag>& well,
+                       const int phase_pos,
+                       DeferredLogger& deferred_logger) const;
+
     /// This function is to be used for well groups in an extended network that act as a subsea manifold
     /// The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     /// the well group constraint set by GCONPROD

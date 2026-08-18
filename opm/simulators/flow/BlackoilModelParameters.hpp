@@ -161,6 +161,8 @@ struct NetworkMaxPressureUpdateInBars { static constexpr Scalar value = 5.0; };
 struct NetworkPressureUpdateSecant { static constexpr auto value = "injection"; };
 struct NetworkPressureUpdateAcceleration { static constexpr auto value = "none"; };
 struct NetworkAndersonDepth { static constexpr int value = 4; };
+struct NetworkWellProxy { static constexpr auto value = "none"; };
+struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
 // (tight coupling).  When true, the exchange happens only once per master outer network
@@ -371,6 +373,13 @@ public:
 
     /// Number of past iterates Anderson acceleration keeps
     int network_anderson_depth_;
+
+    /// Balance the injection networks against the wells' well-index linearisation
+    /// before re-solving them: "none" (default) or "ipr"
+    std::string network_well_proxy_;
+
+    /// Iteration cap for that inner balance
+    int network_well_proxy_max_iterations_;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.

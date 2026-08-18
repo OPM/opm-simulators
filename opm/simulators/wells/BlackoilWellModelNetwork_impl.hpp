@@ -144,6 +144,21 @@ update(const bool mandatory_network_balance,
         };
         const bool refresh_group_data_between =
             has_domain(/*production=*/true) && has_domain(/*production=*/false);
+        const auto& proxy_mode = well_model_.param().network_well_proxy_;
+        if (proxy_mode != "none" && proxy_mode != "ipr") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + proxy_mode + "' for --network-well-proxy; "
+                             "expected none or ipr", deferred_logger);
+        }
+        if (proxy_mode == "ipr") {
+            // Get the network close to balance against the frozen well linearisation first;
+            // the loop below then does the real well solves from a much better starting point.
+            this->proxyBalance(episodeIdx, dt,
+                               well_model_.param().network_well_proxy_max_iterations_,
+                               network_pressure_update_damping_factor,
+                               network_max_pressure_update,
+                               use_secant, secant_production, deferred_logger);
+        }
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =
@@ -206,6 +221,125 @@ update(const bool mandatory_network_balance,
         more_network_update = more_network_sub_update || well_group_thp_updated;
     }
     return { more_network_update, network_imbalance };
+}
+
+template<typename TypeTag>
+std::optional<typename BlackoilWellModelNetwork<TypeTag>::Scalar>
+BlackoilWellModelNetwork<TypeTag>::
+proxyInjectionRate(WellInterface<TypeTag>& well,
+                   const int phase_pos,
+                   DeferredLogger& deferred_logger) const
+{
+    const auto& summary_state = well_model_.simulator().vanguard().summaryState();
+    const auto& ws = well_model_.wellState().well(well.indexOfWell());
+    const auto& ipr_a = ws.implicit_ipr_a;
+    const auto& ipr_b = ws.implicit_ipr_b;
+    if (ipr_a.empty() || ipr_b.empty()) {
+        return std::nullopt;
+    }
+
+    // The well index linearisation of the converged well equation: rates linear in bhp,
+    // exact at the bhp the well was last solved at. Both arrays are phase-indexed.
+    auto frates = [&ipr_a, &ipr_b](const Scalar bhp)
+    {
+        std::vector<Scalar> rates(ipr_a.size(), 0.0);
+        for (std::size_t p = 0; p < rates.size(); ++p) {
+            rates[p] = ipr_b[p] * bhp - ipr_a[p];
+        }
+        return rates;
+    };
+
+    // getTHPConstraint() returns the dynamic limit updatePressures() has just applied,
+    // so this is the rate at the current node pressure.
+    const auto bhp = WellBhpThpCalculator(well)
+        .computeBhpAtThpLimitInj(frates, summary_state, well.refDensity(),
+                                 1e-6, 50, /*throwOnError=*/false, deferred_logger);
+    if (!bhp.has_value()) {
+        return std::nullopt;
+    }
+    const auto controls = well.wellEcl().injectionControls(summary_state);
+    const Scalar rate = frates(std::min(*bhp, static_cast<Scalar>(controls.bhp_limit)))[phase_pos];
+    return std::max(rate, Scalar{0});
+}
+
+template<typename TypeTag>
+typename BlackoilWellModelNetwork<TypeTag>::Scalar
+BlackoilWellModelNetwork<TypeTag>::
+proxyBalance(const int episodeIdx,
+             const double dt,
+             const int max_iterations,
+             const Scalar damping_factor,
+             const Scalar max_pressure_update,
+             const bool use_secant,
+             const bool secant_production,
+             DeferredLogger& deferred_logger)
+{
+    OPM_TIMEFUNCTION();
+    const auto& comm = well_model_.simulator().vanguard().grid().comm();
+    const auto& balance = well_model_.schedule()[episodeIdx].network_balance();
+    auto& group_state = well_model_.groupStateHelper().groupState();
+
+    // Refresh the well index linearisation once, at the state the wells were last solved
+    // in. Only injectors need it: producers keep the rates the well solve gave them.
+    for (const auto& well : well_model_) {
+        if (well->isInjector() && well->wellEcl().predictionMode()) {
+            well->updateIPRImplicit(well_model_.simulator(),
+                                    well_model_.groupStateHelper(),
+                                    well_model_.wellState());
+        }
+    }
+
+    Scalar imbalance = 0.0;
+    for (int it = 0; it < max_iterations; ++it) {
+        imbalance = comm.max(this->updatePressures(episodeIdx, damping_factor,
+                                                  max_pressure_update, use_secant,
+                                                  secant_production));
+        if (!this->active() || imbalance <= balance.pressure_tolerance()) {
+            break;
+        }
+        // Predict the leaf rates at the pressures just applied. Producers and the
+        // production network are left alone; only the injection leaves are refreshed.
+        for (const auto& network : details::activeNetworks(well_model_.schedule(), episodeIdx)) {
+            const auto phase = details::injectionPhaseForDomain(network.domain);
+            if (!phase.has_value()) {
+                continue;
+            }
+            const int phase_pos = (*phase == Phase::GAS)
+                ? well_model_.phaseUsage().canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)
+                : well_model_.phaseUsage().canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+            std::map<std::string, Scalar> leaf_rate;
+            for (const auto& well : well_model_) {
+                if (!well->isInjector() || !well->wellEcl().predictionMode()) {
+                    continue;
+                }
+                if (details::domainForWell(*well) != network.domain) {
+                    continue;
+                }
+                const auto& node = well->wellEcl().groupName();
+                if (!network.network.get().has_node(node)) {
+                    continue;
+                }
+                const auto& ws = well_model_.wellState().well(well->indexOfWell());
+                const Scalar current = ws.surface_rates[phase_pos];
+                Scalar rate = current;
+                if (const auto q = this->proxyInjectionRate(*well, phase_pos, deferred_logger)) {
+                    // A well not on THP control is held by its group or rate target: it
+                    // follows the node pressure only once the THP limit bites.
+                    rate = (ws.injection_cmode == Well::InjectorCMode::THP)
+                        ? *q : std::min(*q, current);
+                }
+                leaf_rate[node] += rate * well->wellEcl().getEfficiencyFactor(/*network=*/true);
+            }
+            for (const auto& [node, rate] : leaf_rate) {
+                auto rates = group_state.has_network_leaf_node_injection_rates(node, *phase)
+                    ? group_state.network_leaf_node_injection_rates(node, *phase)
+                    : std::vector<Scalar>(well_model_.numPhases(), 0.0);
+                rates[phase_pos] = comm.sum(rate);
+                group_state.update_network_leaf_node_injection_rates(node, *phase, rates);
+            }
+        }
+    }
+    return imbalance;
 }
 
 template <typename TypeTag>
