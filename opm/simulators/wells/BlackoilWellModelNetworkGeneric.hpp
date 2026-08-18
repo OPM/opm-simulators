@@ -23,6 +23,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
@@ -86,6 +87,9 @@ namespace details {
         }
         return std::nullopt;
     }
+
+    /// The injected phase of an injection network domain, nullopt for the production one.
+    std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain);
 
     /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
     bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);
