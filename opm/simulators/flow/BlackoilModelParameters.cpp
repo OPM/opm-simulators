@@ -117,6 +117,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
     network_pressure_update_secant_ = Parameters::Get<Parameters::NetworkPressureUpdateSecant>();
+    network_pressure_update_acceleration_ = Parameters::Get<Parameters::NetworkPressureUpdateAcceleration>();
+    network_anderson_depth_ = Parameters::Get<Parameters::NetworkAndersonDepth>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -277,6 +279,11 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkPressureUpdateAcceleration>
+        ("Acceleration of the network node-pressure iteration, applied to the whole pressure "
+         "vector of a network instead of the per-node update: none or anderson");
+    Parameters::Register<Parameters::NetworkAndersonDepth>
+        ("Number of past iterates kept by Anderson acceleration of the network pressures");
     Parameters::Register<Parameters::NetworkPressureUpdateSecant>
         ("Networks whose node pressures use the bracketing/secant update in the inner network "
          "iterations instead of the damped update: injection, all or none");

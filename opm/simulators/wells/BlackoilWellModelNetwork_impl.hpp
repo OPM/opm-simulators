@@ -124,6 +124,14 @@ update(const bool mandatory_network_balance,
         }
         const bool use_secant = secant_mode != "none";
         const bool secant_production = secant_mode == "all";
+        const auto& accel_mode = well_model_.param().network_pressure_update_acceleration_;
+        if (accel_mode != "none" && accel_mode != "anderson") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + accel_mode + "' for --network-pressure-update-acceleration; "
+                             "expected none or anderson", deferred_logger);
+        }
+        const int anderson_depth = (accel_mode == "anderson")
+            ? well_model_.param().network_anderson_depth_ : 0;
         // Only a deck with both a production and an injection network can have the
         // producers re-solved here feed an injection group target in the same
         // sub-iteration; nothing else pays for the extra group update.
@@ -143,7 +151,8 @@ update(const bool mandatory_network_balance,
                                       network_pressure_update_damping_factor,
                                       network_max_pressure_update,
                                       use_secant,
-                                      secant_production);
+                                      secant_production,
+                                      anderson_depth);
             network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = well_model_.schedule()[episodeIdx].network_balance();
             constexpr Scalar relaxation_factor = 10.0;

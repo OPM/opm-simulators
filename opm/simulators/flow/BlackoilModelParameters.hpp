@@ -159,6 +159,8 @@ struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1;
 template<class Scalar>
 struct NetworkMaxPressureUpdateInBars { static constexpr Scalar value = 5.0; };
 struct NetworkPressureUpdateSecant { static constexpr auto value = "injection"; };
+struct NetworkPressureUpdateAcceleration { static constexpr auto value = "none"; };
+struct NetworkAndersonDepth { static constexpr int value = 4; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
 // (tight coupling).  When true, the exchange happens only once per master outer network
@@ -362,6 +364,13 @@ public:
     /// Which networks use the bracketing/secant node-pressure update in the inner network
     /// iterations instead of the damped one: "injection" (default), "all" or "none"
     std::string network_pressure_update_secant_;
+
+    /// Acceleration applied to the whole node-pressure vector of a network instead of the
+    /// per-node update: "none" (default) or "anderson"
+    std::string network_pressure_update_acceleration_;
+
+    /// Number of past iterates Anderson acceleration keeps
+    int network_anderson_depth_;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.
