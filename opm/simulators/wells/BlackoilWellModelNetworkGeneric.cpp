@@ -81,23 +81,6 @@ namespace details {
         return active_networks;
     }
 
-    template<class Well>
-    std::optional<NetworkDomain> domainForWell(const Well& well)
-    {
-        if (well.isProducer()) {
-            return NetworkDomain::Production;
-        }
-        if (well.isInjector()) {
-            if (well.wellEcl().injectorType() == InjectorType::GAS) {
-                return NetworkDomain::InjectionGas;
-            }
-            if (well.wellEcl().injectorType() == InjectorType::WATER) {
-                return NetworkDomain::InjectionWater;
-            }
-        }
-        return std::nullopt;
-    }
-
     std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain)
     {
         switch (domain) {
