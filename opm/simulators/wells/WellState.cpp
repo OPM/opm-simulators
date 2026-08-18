@@ -396,7 +396,10 @@ init(const std::vector<Scalar>& cellPressures,
                 continue;
             }
 
-            new_well.status = prev_well.status;
+            // A current schedule STOP/OPEN must take precedence over the previous runtime status.
+            if (!new_well.events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+                new_well.status = prev_well.status;
+            }
 
             if (new_well.producer != prev_well.producer) {
                 // Well changed to/from injector from/to producer, do not

@@ -635,8 +635,8 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
         bool converged = true;
         auto& ws = well_state.well(this->index_of_well_);
-        // if well is stopped, check if we can reopen with explicit fraction
-        if (this->wellIsStopped()) {
+        // Solver recovery may reopen dynamic stops, but never an explicit schedule STOP.
+        if (this->wellIsStopped() && this->well_ecl_.getStatus() != Well::Status::STOP) {
             this->openWell();
             const bool use_vfpexplicit = this->operability_status_.use_vfpexplicit;
             this->operability_status_.use_vfpexplicit = true;
@@ -1145,7 +1145,9 @@ namespace Opm
                 deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration" + ctx);
                 changed_to_stopped_this_step_ = true;
             }
-        } else if (well_state.isOpen(this->name())) {
+        // Do not let automatic revival override an explicit schedule STOP.
+        } else if (well_state.isOpen(this->name()) &&
+                   this->well_ecl_.getStatus() != Well::Status::STOP) {
             this->openWell();
             if (!old_well_operable) {
                 const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
