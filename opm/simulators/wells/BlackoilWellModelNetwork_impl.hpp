@@ -41,6 +41,7 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <optional>
 
 namespace Opm {
@@ -123,6 +124,18 @@ update(const bool mandatory_network_balance,
         }
         const bool use_secant = secant_mode != "none";
         const bool secant_production = secant_mode == "all";
+        // Only a deck with both a production and an injection network can have the
+        // producers re-solved here feed an injection group target in the same
+        // sub-iteration; nothing else pays for the extra group update.
+        const auto active_networks = details::activeNetworks(well_model_.schedule(), episodeIdx);
+        const auto has_domain = [&active_networks](const bool production)
+        {
+            return std::any_of(active_networks.begin(), active_networks.end(),
+                               [production](const auto& n)
+                               { return (n.domain == details::NetworkDomain::Production) == production; });
+        };
+        const bool refresh_group_data_between =
+            has_domain(/*production=*/true) && has_domain(/*production=*/false);
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =
@@ -150,34 +163,35 @@ update(const bool mandatory_network_balance,
                 break;
             }
 
-            for (const auto& well : well_model_) {
-                if (!well->wellEcl().predictionMode()) {
-                     continue;
-                }
-
-                std::optional<details::NetworkDomain> domain;
-                if (well->isProducer()) {
-                    domain = details::NetworkDomain::Production;
-                } else if (well->isInjector()) {
-                    if (well->wellEcl().injectorType() == InjectorType::GAS) {
-                        domain = details::NetworkDomain::InjectionGas;
-                    } else if (well->wellEcl().injectorType() == InjectorType::WATER) {
-                        domain = details::NetworkDomain::InjectionWater;
+            // Re-solve the producers before the injectors: an injection group target
+            // (GCONINJE VREP/REIN) is a function of the produced voidage, so the
+            // injectors must see this sub-iteration's production, not the previous
+            // one's. The intermediate group update is skipped when no injection
+            // network is active, which keeps production-only runs unchanged.
+            const auto resolve = [&](const bool injectors)
+            {
+                for (const auto& well : well_model_) {
+                    if (well->isInjector() != injectors || !well->wellEcl().predictionMode()) {
+                        continue;
+                    }
+                    const auto domain = details::domainForWell(*well);
+                    if (!domain.has_value()) {
+                        continue;
+                    }
+                    const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
+                    if (it != this->nodePressures(*domain).end()) {
+                        well->prepareWellBeforeAssembling(well_model_.simulator(),
+                                                          dt,
+                                                          well_model_.groupStateHelper(),
+                                                          well_model_.wellState());
                     }
                 }
-
-                if (!domain.has_value()) {
-                    continue;
-                }
-
-                const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
-                if (it != this->nodePressures(*domain).end()) {
-                    well->prepareWellBeforeAssembling(well_model_.simulator(),
-                                                      dt,
-                                                      well_model_.groupStateHelper(),
-                                                      well_model_.wellState());
-                }
+            };
+            resolve(/*injectors=*/false);
+            if (refresh_group_data_between) {
+                well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
             }
+            resolve(/*injectors=*/true);
             well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
         }
         more_network_update = more_network_sub_update || well_group_thp_updated;
