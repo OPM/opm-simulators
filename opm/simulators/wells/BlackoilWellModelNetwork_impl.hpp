@@ -266,7 +266,7 @@ template<typename TypeTag>
 typename BlackoilWellModelNetwork<TypeTag>::Scalar
 BlackoilWellModelNetwork<TypeTag>::
 proxyBalance(const int episodeIdx,
-             const double dt,
+             const double,
              const int max_iterations,
              const Scalar damping_factor,
              const Scalar max_pressure_update,
