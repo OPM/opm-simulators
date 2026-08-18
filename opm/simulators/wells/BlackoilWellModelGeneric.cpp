@@ -75,6 +75,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -238,6 +239,39 @@ initFromRestartFile(const RestartValue& restartValues,
                         handle_ms_well,
                         this->wellState(),
                         this->groupState());
+
+    // Reconstruct the retained network THP limit, which the restart file does
+    // not carry. A well is attached to the network when its group is a network
+    // node, and detached once it is not, for instance after WELSPECS moved it
+    // to a non-network group. Attached wells recover their limit from the
+    // restored node pressures; a detached well must recover it from itself: a
+    // THP-controlled well enforces its limit as ws.thp, so the restart THP is
+    // that limit, unless it matches the schedule limit. In that case the well
+    // runs on its own limit and seeding would freeze it against later (UDA)
+    // updates. A limit that was inactive when the restart was written, e.g. on
+    // a rate-controlled well, cannot be recovered.
+    // The network.active() test asks whether the deck defines a network at
+    // all; without it a restart would put ordinary THP wells in network-free
+    // decks on the dynamic-THP-limit path.
+    if (const auto& network = this->schedule()[report_step].network(); network.active()) {
+        for (const auto& well : wells_ecl_) {
+            if (!well.isProducer() || !well.predictionMode() ||
+                network.has_node(well.groupName()))
+            {
+                continue;
+            }
+            auto& ws = this->wellState().well(well.name());
+            if (ws.production_cmode != Well::ProducerCMode::THP || !(ws.thp > 0.0)) {
+                continue;
+            }
+            const Scalar schedule_limit = well.productionControls(summaryState_).thp_limit;
+            // Relative tolerance for the unit round-trip through the restart file.
+            const Scalar tol = 1e-7 * std::max(std::abs(ws.thp), std::abs(schedule_limit));
+            if (std::abs(ws.thp - schedule_limit) > tol) {
+                ws.network_thp_limit = ws.thp;
+            }
+        }
+    }
 
     if (config.has_model()) {
         BlackoilWellModelRestart(*this).
