@@ -911,6 +911,21 @@ updateEclWells(const int timeStepIdx,
 {
     this->updateEclWellsConstraints(timeStepIdx, sim_update, st);
 
+    // Re-specifying THP or VFP controls in ACTIONX cancels a retained
+    // network-imposed limit, even if the value is unchanged and the well is
+    // therefore absent from affected_wells.
+    for (const auto& wname : sim_update.thp_respecified_wells) {
+        if (const auto well_index = this->wellState().index(wname)) {
+            this->wellState().well(*well_index).network_thp_limit.reset();
+        }
+        auto well_it = std::ranges::find_if(this->well_container_generic_,
+                                            [&wname](const auto* well)
+                                            { return well->name() == wname; });
+        if (well_it != this->well_container_generic_.end()) {
+            (*well_it)->setDynamicThpLimit(std::nullopt);
+        }
+    }
+
     if (! sim_update.well_structure_changed &&
         ! this->wellStructureChangedDynamically_)
     {
