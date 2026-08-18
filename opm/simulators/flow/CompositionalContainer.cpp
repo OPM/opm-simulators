@@ -62,6 +62,24 @@ allocate(const unsigned bufferSize,
             phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
         }
     }
+
+    if (auto& poil = rstKeywords["POIL"]; poil > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+        this->allocated_ = true;
+        poil = 0;
+        oilPressure_.resize(bufferSize, 0.0);
+    }
+
+    if (auto& pgas = rstKeywords["PGAS"]; pgas > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+        this->allocated_ = true;
+        pgas = 0;
+        gasPressure_.resize(bufferSize, 0.0);
+    }
+
+    if (auto& vmf = rstKeywords["VMF"]; vmf > 0) {
+        this->allocated_ = true;
+        vmf = 0;
+        vaporFraction_.resize(bufferSize, 0.0);
+    }
 }
 
 template<class FluidSystem>
@@ -83,7 +101,9 @@ void CompositionalContainer<FluidSystem>::
 assignMoleFractions(const unsigned globalDofIdx,
                     const AssignFunction& fractions)
 {
-    if (moleFractions_.empty()) {
+    // moleFractions_ has a fixed number of component slots; check whether its
+    // per-component buffers have been allocated.
+    if (moleFractions_[0].empty()) {
         return;
     }
 
@@ -104,6 +124,30 @@ assignOilFractions(const unsigned globalDofIdx,
     std::ranges::for_each(phaseMoleFractions_[oilPhaseIdx],
                           [globalDofIdx, &fractions, c = 0](auto& comp) mutable
                           { comp[globalDofIdx] = fractions(c++); });
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
+assignPhasePressures(const unsigned globalDofIdx,
+                     const Scalar oilPressure,
+                     const Scalar gasPressure)
+{
+    if (!oilPressure_.empty()) {
+        oilPressure_[globalDofIdx] = oilPressure;
+    }
+    if (!gasPressure_.empty()) {
+        gasPressure_[globalDofIdx] = gasPressure;
+    }
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
+assignVaporFraction(const unsigned globalDofIdx,
+                    const Scalar vmf)
+{
+    if (!vaporFraction_.empty()) {
+        vaporFraction_[globalDofIdx] = vmf;
+    }
 }
 
 template<class FluidSystem>
@@ -158,6 +202,10 @@ outputRestart(data::Solution& sol,
     if (!oil_saturation.empty()) {
         entries.emplace_back("SOIL", UnitSystem::measure::identity, oil_saturation);
     }
+
+    entries.emplace_back("POIL", UnitSystem::measure::pressure, oilPressure_);
+    entries.emplace_back("PGAS", UnitSystem::measure::pressure, gasPressure_);
+    entries.emplace_back("VMF", UnitSystem::measure::identity, vaporFraction_);
 
     std::ranges::for_each(entries,
                           [&doInsert](auto& array)

@@ -21,7 +21,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \brief Restart-output buffers specific to compositional simulations.
  */
 #ifndef OPM_COMPOSITIONAL_CONTAINER_HPP
 #define OPM_COMPOSITIONAL_CONTAINER_HPP
@@ -64,8 +64,30 @@ public:
     void assignOilFractions(const unsigned globalDofIdx,
                             const AssignFunction& fractions);
 
+    void assignPhasePressures(const unsigned globalDofIdx,
+                              const Scalar oilPressure,
+                              const Scalar gasPressure);
+
+    void assignVaporFraction(const unsigned globalDofIdx,
+                             const Scalar vmf);
+
     void outputRestart(data::Solution& sol,
                        ScalarBuffer& oil_saturation);
+
+    bool moleFractionsAllocated() const
+    { return !moleFractions_[0].empty(); }
+
+    bool gasFractionsAllocated() const
+    { return !phaseMoleFractions_[gasPhaseIdx][0].empty(); }
+
+    bool oilFractionsAllocated() const
+    { return !phaseMoleFractions_[oilPhaseIdx][0].empty(); }
+
+    bool phasePressuresAllocated() const
+    { return !oilPressure_.empty() || !gasPressure_.empty(); }
+
+    bool vaporFractionAllocated() const
+    { return !vaporFraction_.empty(); }
 
     bool allocated() const
     { return allocated_; }
@@ -76,6 +98,11 @@ private:
     std::array<ScalarBuffer, numComponents> moleFractions_;
     // mole fractions for each component in each phase
     std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
+    // phase pressures (POIL, PGAS)
+    ScalarBuffer oilPressure_;
+    ScalarBuffer gasPressure_;
+    // vapour mole fraction of the total mixture (VMF)
+    ScalarBuffer vaporFraction_;
 };
 
 } // namespace Opm

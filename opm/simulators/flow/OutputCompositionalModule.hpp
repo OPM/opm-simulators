@@ -48,7 +48,7 @@
 
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputModule.hpp>
 #include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
@@ -72,11 +72,11 @@ class EcfvDiscretization;
 /*!
  * \ingroup BlackOilSimulator
  *
- * \brief Output module for the results black oil model writing in
- *        ECL binary format.
+ * \brief Output module for compositional-model results written in ECL binary
+ *        format.
  */
 template <class TypeTag>
-class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>>
+class OutputCompositionalModule : public GenericOutputModule<GetPropType<TypeTag, Properties::FluidSystem>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -84,7 +84,7 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using BaseType = GenericOutputModule<FluidSystem>;
     using Extractor = detail::Extractor<TypeTag>;
 
     enum { numPhases = FluidSystem::numPhases };
@@ -196,10 +196,31 @@ public:
                              std::move(rstKeywords));
     }
 
-    void assignToSolution(data::Solution& sol)
+    void assignToSolution(data::Solution& sol) override
     {
         this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
         BaseType::assignToSolution(sol);
+
+        // Use the compositional restart names for phase densities and viscosities.
+        this->assignPhaseProperties(sol, typename BaseType::PhasePropertyNames {
+            .oilDensity     = "DENO",
+            .gasDensity     = "DENG",
+            .waterDensity   = "DENW",
+            .oilViscosity   = "VOIL",
+            .gasViscosity   = "VGAS",
+            .waterViscosity = "VWAT",
+        });
+
+        // Report compositional relative permeabilities under their restart names.
+        using M = UnitSystem::measure;
+        this->assignBuffer(sol, "KRO", M::identity,
+                           relativePermeability_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "KRG", M::identity,
+                           relativePermeability_[gasPhaseIdx], gasPhaseIdx);
+        if constexpr (numPhases > 2) {
+            this->assignBuffer(sol, "KRW", M::identity,
+                               relativePermeability_[waterPhaseIdx], waterPhaseIdx);
+        }
     }
 
     void outputFipAndResvLog(const Inplace& inplace,
@@ -328,19 +349,75 @@ public:
                       compC.assignMoleFractions(ectx.globalDofIdx,
                                                 [&fs = ectx.fs](const unsigned compIdx)
                                                 { return getValue(fs.moleFraction(compIdx)); });
+                  }, this->compC_.moleFractionsAllocated()
+            },
 
-                      if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                          compC.assignGasFractions(ectx.globalDofIdx,
-                                                   [&fs = ectx.fs](const unsigned compIdx)
-                                                   { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
-                      }
-
-                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                          compC.assignOilFractions(ectx.globalDofIdx,
-                                                   [&fs = ectx.fs](const unsigned compIdx)
-                                                   { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
-                      }
-                  }, this->compC_.allocated()
+            // A phase with zero saturation has no defined composition; report zero instead
+            // of stale flash values. A positive, however small, saturation is meaningful.
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      const bool hasGas =
+                          getValue(ectx.fs.saturation(gasPhaseIdx)) > Scalar{0};
+                      compC.assignGasFractions(ectx.globalDofIdx,
+                                               [&fs = ectx.fs, hasGas](const unsigned compIdx)
+                                               {
+                                                   return hasGas
+                                                       ? getValue(fs.moleFraction(gasPhaseIdx, compIdx))
+                                                       : Scalar{0};
+                                               });
+                  }, FluidSystem::phaseIsActive(gasPhaseIdx) &&
+                     this->compC_.gasFractionsAllocated()
+            },
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      const bool hasOil =
+                          getValue(ectx.fs.saturation(oilPhaseIdx)) > Scalar{0};
+                      compC.assignOilFractions(ectx.globalDofIdx,
+                                               [&fs = ectx.fs, hasOil](const unsigned compIdx)
+                                               {
+                                                   return hasOil
+                                                       ? getValue(fs.moleFraction(oilPhaseIdx, compIdx))
+                                                       : Scalar{0};
+                                               });
+                  }, FluidSystem::phaseIsActive(oilPhaseIdx) &&
+                     this->compC_.oilFractionsAllocated()
+            },
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      compC.assignPhasePressures(ectx.globalDofIdx,
+                                                 getValue(ectx.fs.pressure(oilPhaseIdx)),
+                                                 getValue(ectx.fs.pressure(gasPhaseIdx)));
+                  }, this->compC_.phasePressuresAllocated()
+            },
+            // Vapour mole fraction of the total mixture from the flash.
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      const Scalar liquidFraction = getValue(ectx.fs.L());
+                      compC.assignVaporFraction(ectx.globalDofIdx,
+                                                std::clamp(Scalar{1} - liquidFraction,
+                                                           Scalar{0}, Scalar{1}));
+                  }, this->compC_.vaporFractionAllocated()
+            },
+            // The phase densities and viscosities, reported where the phase is present.
+            Entry{PhaseEntry{&this->relativePermeability_,
+                  [](const unsigned phaseIdx, const ExtractContext& ectx)
+                  { return getValue(ectx.intQuants.relativePermeability(phaseIdx)); }}
+            },
+            Entry{PhaseEntry{&this->density_,
+                  [](const unsigned phaseIdx, const ExtractContext& ectx)
+                  {
+                      return getValue(ectx.fs.saturation(phaseIdx)) > 0.0
+                          ? getValue(ectx.fs.density(phaseIdx))
+                          : Scalar{0};
+                  }}
+            },
+            Entry{PhaseEntry{&this->viscosity_,
+                  [](const unsigned phaseIdx, const ExtractContext& ectx)
+                  {
+                      return getValue(ectx.fs.saturation(phaseIdx)) > 0.0
+                          ? getValue(ectx.fs.viscosity(phaseIdx))
+                          : Scalar{0};
+                  }}
             },
         };
 
@@ -463,7 +540,31 @@ public:
         // this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
+protected:
+    //! \brief Allocate compositional relative-permeability buffers.
+    void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                 const unsigned bufferSize) override
+    {
+        // Name each phase explicitly: the compositional phase ordering is not
+        // the one the black-oil keyword names assume.
+        const auto named = std::array{
+            std::pair{static_cast<unsigned>(oilPhaseIdx),   std::string_view{"KRO"}},
+            std::pair{static_cast<unsigned>(gasPhaseIdx),   std::string_view{"KRG"}},
+            std::pair{static_cast<unsigned>(waterPhaseIdx), std::string_view{"KRW"}},
+        };
+        for (const auto& [phase, kw] : named) {
+            if (phase >= numPhases || !FluidSystem::phaseIsActive(phase)) {
+                continue;
+            }
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize,
+                                             relativePermeability_[phase], kw, true);
+        }
+    }
+
 private:
+    using ScalarBuffer = typename BaseType::ScalarBuffer;
+    std::array<ScalarBuffer, numPhases> relativePermeability_;
+
     bool isDefunctParallelWell(const std::string& wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)

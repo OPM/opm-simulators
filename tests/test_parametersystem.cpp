@@ -181,3 +181,26 @@ SimpleParamInt="10"
 SimpleParamString="foo"
 )"));
 }
+
+namespace {
+
+struct PrecisionFixture
+{
+    PrecisionFixture()
+    {
+        Opm::Parameters::reset();
+        Opm::Parameters::Register<Opm::Parameters::SimpleParamDouble>("Simple double parameter");
+        // 2^23 + 2^-2: exactly representable, but needs 9 significant digits,
+        // so it does not survive a round trip through 6-digit text.
+        Opm::Parameters::SetDefault<Opm::Parameters::SimpleParamDouble>(8388608.25);
+        Opm::Parameters::endRegistration();
+    }
+};
+
+}
+
+BOOST_FIXTURE_TEST_CASE(SetDefaultKeepsPrecision, PrecisionFixture)
+{
+    BOOST_CHECK_EQUAL(Opm::Parameters::Get<Opm::Parameters::SimpleParamDouble>(),
+                      8388608.25);
+}

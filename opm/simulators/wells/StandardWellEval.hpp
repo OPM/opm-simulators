@@ -71,6 +71,11 @@ public:
     const StandardWellEquations<Scalar, IndexTraits, Indices::numEq>& linSys() const
     { return linSys_; }
 
+    //! \brief Read access to the well primary variables (adjoint module:
+    //!        rate <-> primary-variable derivatives via getQs()).
+    const PrimaryVariables& primaryVariables() const
+    { return primary_variables_; }
+
     static constexpr int numResDofs = Indices::numEq;
     static constexpr int numWellDofs = numResDofs + 1;// NB will fail for for thermal for now
     using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;

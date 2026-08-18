@@ -325,9 +325,13 @@ public:
         const auto& fs = iq.fluidState();
         const auto pres = decay<Scalar>(fs.pressure(this->refPressurePhaseIdx_()));
         const auto initPres = this->initialFluidState(globalSpaceIdx).pressure(this->refPressurePhaseIdx_());
+        const auto dPres = biot * (pres - initPres);
 
-        auto sourceFromFlow = -biot / lameParam * (pres - initPres);
+        auto sourceFromFlow = -dPres / lameParam;
         sourceTerm[contiSolidPresEqIdx] += sourceFromFlow;
+
+        // Store potential pressure force for output
+        geoMechModel_.setMechPotentialPressForce(globalSpaceIdx, dPres);
     }
 
     /*!

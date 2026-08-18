@@ -27,9 +27,13 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/outflowproblem.hh"
@@ -43,6 +47,21 @@ struct OutflowProblem
 { using InheritsFrom = std::tuple<OutflowBaseProblem, PvsModel>; };
 
 } // end namespace TTag
+
+//! We use a vertex centered finite volume method
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::OutflowProblem>
+{ using type = TTag::VcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::OutflowProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::OutflowProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

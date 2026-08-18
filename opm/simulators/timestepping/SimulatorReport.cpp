@@ -34,9 +34,9 @@ namespace Opm
     {
         return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
                                      7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
-                                     13, 14, 15, 16, 17, 18,
-                                     true, false, false, 19, 20.0, 21.0,
-                                     22, 23, 24, 25, 26, 27, 28, 29};
+                                     13, 14, 15, 16, 17, 18, 19,
+                                     true, false, false, 20, 21.0, 22.0,
+                                     23, 24, 25, 26, 27, 28, 29, 30};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -56,6 +56,7 @@ namespace Opm
                this->total_well_iterations == rhs.total_well_iterations &&
                this->total_linearizations == rhs.total_linearizations &&
                this->total_newton_iterations == rhs.total_newton_iterations &&
+               this->relaxed_cnv_acceptances == rhs.relaxed_cnv_acceptances &&
                this->total_linear_iterations == rhs.total_linear_iterations &&
                this->min_linear_iterations == rhs.min_linear_iterations &&
                this->max_linear_iterations == rhs.max_linear_iterations &&
@@ -92,6 +93,7 @@ namespace Opm
         total_well_iterations += sr.total_well_iterations;
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
+        relaxed_cnv_acceptances += sr.relaxed_cnv_acceptances;
         total_linear_iterations += sr.total_linear_iterations;
         if (sr.total_linear_iterations > 0) {
             min_linear_iterations = std::min(min_linear_iterations, sr.total_linear_iterations);
@@ -237,6 +239,13 @@ namespace Opm
                             100.0*failureReport->total_linear_iterations/noZero(n));
         }
         os << std::endl;
+
+        // A step accepted only under the relaxed CNV tolerance carries a local
+        // volumetric error up to tolerance-cnv-relaxed rather than tolerance-cnv.
+        if (relaxed_cnv_acceptances > 0) {
+            os << fmt::format("Relaxed CNV acceptances:   {:7}", relaxed_cnv_acceptances)
+               << std::endl;
+        }
     }
 
 

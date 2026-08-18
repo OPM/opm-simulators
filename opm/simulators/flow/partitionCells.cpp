@@ -364,7 +364,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
         auto otherProc = 0;
 
         for (const auto& conn : well.getConnections()) {
-            auto locPos = g2l.find(conn.global_index());
+            auto locPos = g2l.find(static_cast<int>(conn.global_index()));
             if (locPos == g2l.end()) {
                 ++otherProc;
                 continue;

@@ -36,6 +36,7 @@
 
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <set>
 #include <sstream>
 #include <string>
@@ -216,6 +217,11 @@ void SetDefault(decltype(Param::value) new_value)
 {
     const std::string paramName = detail::getParamName<Param>();
     std::ostringstream oss;
+    // full precision: the default stream setting of 6 significant digits
+    // silently corrupts values on the text round trip
+    if constexpr (std::is_floating_point_v<decltype(Param::value)>) {
+        oss.precision(std::numeric_limits<decltype(Param::value)>::max_digits10);
+    }
     oss << new_value;
     detail::SetDefault_(paramName, oss.str());
 }

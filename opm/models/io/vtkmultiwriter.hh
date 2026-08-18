@@ -156,6 +156,20 @@ public:
      * If the grid changes between two calls of beginWrite(), this
      * method _must_ be called before the second beginWrite()!
      */
+
+    /*!
+     * \brief Rebind the writer to a grid view that has been regenerated.
+     *
+     * For writers whose grid is rebuilt during the run rather than merely
+     * refined - opm-flowgeomechanics does this for the fracture grid as it
+     * grows (Fracture.cpp) - the stored view otherwise refers to the old grid.
+     */
+    void gridViewChanged(const GridView& gridView)
+    {
+        gridView_ = gridView;
+        gridChanged();
+    }
+
     void gridChanged()
     {
         elementMapper_.update(gridView_);
@@ -516,7 +530,7 @@ private:
         managedVectorBuffers_.clear();
     }
 
-    const GridView gridView_;
+    GridView gridView_;
     ElementMapper elementMapper_;
     VertexMapper vertexMapper_;
 

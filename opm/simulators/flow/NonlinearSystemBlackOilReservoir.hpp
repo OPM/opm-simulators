@@ -145,7 +145,7 @@ public:
     /// \param[in] terminal_output  request output to cout/cerr
     NonlinearSystemBlackOilReservoir(Simulator& simulator,
                   const ModelParameters& param,
-                  BlackoilWellModel<TypeTag>& well_model,
+                  typename ParentType::WellModel& well_model,
                   const bool terminal_output);
 
     const EclipseState& eclState() const

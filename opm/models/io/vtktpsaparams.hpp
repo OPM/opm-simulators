@@ -33,6 +33,10 @@ struct VtkWriteDisplacement { static constexpr bool value = true; };
 struct VtkWriteRotation { static constexpr bool value = true; };
 struct VtkWriteSolidPressure { static constexpr bool value = true; };
 struct VtkWriteStress { static constexpr bool value = true; };
+struct VtkWriteDelStress { static constexpr bool value = true; };
+struct VtkWriteLinStress { static constexpr bool value = true; };
+struct VtkWriteStrain { static constexpr bool value = true; };
+struct VtkWritePotentialPressureForce { static constexpr bool value = true; };
 
 }  // namespace Opm::Parameters
 
@@ -50,6 +54,10 @@ struct VtkTpsaParams
     bool rotationOutput_;
     bool solidPressureOutput_;
     bool stressOutput_;
+    bool delStressOutput_;
+    bool linStressOutput_;
+    bool strainOutput_;
+    bool potPresForceOutput_;
 };
 
 }  // namespace Opm

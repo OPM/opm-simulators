@@ -27,9 +27,12 @@
  */
 #include "config.h"
 
-#include <opm/models/utils/start.hh>
-#include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/fingerproblem.hh"
@@ -38,10 +41,25 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct FingerProblemEcfv { using InheritsFrom = std::tuple<FingerBaseProblem, ImmiscibleTwoPhaseModel>; };
+
+struct FingerProblemEcfv
+{ using InheritsFrom = std::tuple<FingerBaseProblem, ImmiscibleTwoPhaseModel>; };
+
 } // end namespace TTag
+
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemEcfv> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemEcfv>
+{ using type = TTag::EcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::FingerProblemEcfv>
+{ using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FingerProblemEcfv>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

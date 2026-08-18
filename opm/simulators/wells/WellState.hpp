@@ -50,8 +50,7 @@
 #include <utility>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
@@ -59,6 +58,9 @@ template<class Scalar> class ConnFracStatistics;
 class Schedule;
 enum class WellStatus : std::uint8_t;
 
+} // namespace Opm
+
+namespace Opm {
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
 template<typename Scalar, typename IndexTraits>
@@ -177,11 +179,10 @@ public:
            const std::function<bool(const std::size_t)>& wasDynamicallyClosed,
            const RsConstInfo&                    rsConst = RsConstInfo{}) const;
 
-    void reportConnections(std::vector<data::Connection>& connections,
-                           std::size_t well_index,
-                           const int* globalCellIdxMap) const;
 
     /// init the MS well related.
+    /// \param wells_ecl Vector of ECL well definitions
+    /// \param prev_well_state Previous well state
     /// \param thermal  when false, segment temperature is kept uniform (no
     ///                 unused per-segment profile).
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
@@ -384,12 +385,6 @@ private:
     // Keep track of permanently inactive well names
     std::vector<std::string> permanently_inactive_well_names_;
 
-    data::Segment
-    reportSegmentResults(const int         well_id,
-                         const int         seg_ix,
-                         const int         seg_no) const;
-
-
     /// Allocate and initialize if wells is non-null.
     /// Also tries to give useful initial values to the bhp() and
     /// wellRates() fields, depending on controls.  The
@@ -431,6 +426,15 @@ private:
                                                const int                            segment,
                                                std::vector<Scalar>&                 segment_rates);
 
+    void reportConnections(std::vector<data::Connection>& connections,
+                           std::size_t well_index,
+                           const int* globalCellIdxMap) const;
+
+    data::Segment
+    reportSegmentResults(const int well_id,
+                         const int seg_ix,
+                         const int seg_no) const;
+
     void reportConnectionFactors(const std::size_t well_index,
                                  std::vector<data::Connection>& connections) const;
 
@@ -438,6 +442,9 @@ private:
                                            std::vector<data::Connection>& connections) const;
 
     void reportConnectionFilterCake(const std::size_t well_index,
+                                    std::vector<data::Connection>& connections) const;
+
+    void reportConnectionFracture(const std::size_t well_index,
                                     std::vector<data::Connection>& connections) const;
 
     void reportFractureStatistics(const std::vector<ConnFracStatistics<Scalar>>& stats,

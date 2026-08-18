@@ -33,32 +33,18 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/EconomicLimitsMessage.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <fmt/format.h>
 
-#include <chrono>
 #include <ctime>
-#include <iomanip>
 #include <limits>
-#include <sstream>
 #include <vector>
 
 namespace Opm {
-
-std::string simTimeToString(const std::time_t start_time, const double sim_time)
-{
-    const auto start_timep = std::chrono::system_clock::from_time_t(start_time);
-    const auto sim_duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
-        std::chrono::duration<double>(sim_time)
-    );
-    const std::time_t cur_time = std::chrono::system_clock::to_time_t(start_timep + sim_duration);
-    std::ostringstream ss;
-    ss << std::put_time(std::localtime(&cur_time), "%d-%b-%Y");
-    return ss.str();
-}
 
 template<typename Scalar, typename IndexTraits>
 GroupEconomicLimitsChecker<Scalar, IndexTraits>::
@@ -73,7 +59,7 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar, IndexTraits>& 
     , simulation_time_{simulation_time}
     , report_step_idx_{report_step_idx}
     , deferred_logger_{deferred_logger}
-    , date_string_{simTimeToString(well_model.schedule().getStartTime(),simulation_time)}
+    , date_string_{economicLimitDateString(well_model.schedule().getStartTime(), simulation_time)}
     , unit_system_{well_model.eclipseState().getUnits()}
     , well_state_{well_model.wellState()}
     , well_test_state_{well_test_state}

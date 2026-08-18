@@ -29,6 +29,7 @@
 
 #include <dune/istl/superlu.hh>
 #include <dune/istl/umfpack.hh>
+#include <dune/istl/istlexception.hh>
 #include <dune/istl/matrixutils.hh>
 
 #include <opm/common/Exceptions.hpp>
@@ -65,9 +66,10 @@ static inline void invertMatrix(Dune::FieldMatrix<K,3,3>& matrix)
     Dune::FMatrixHelp::invertMatrix(tmp,matrix);
 }
 
-//! invert 4x4 Matrix without changing the original matrix
+//! Compute the adjugate of a 4x4 matrix and return its determinant.
+//! The inverse of the matrix is the adjugate divided by the determinant.
 template <template<class K> class Matrix, typename K>
-static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
+static inline K adjugateMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
 {
     inverse[0][0] = matrix[1][1] * matrix[2][2] * matrix[3][3] -
             matrix[1][1] * matrix[2][3] * matrix[3][2] -
@@ -181,17 +183,42 @@ static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
             matrix[2][0] * matrix[0][1] * matrix[1][2] -
             matrix[2][0] * matrix[0][2] * matrix[1][1];
 
-    K det = matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] +
-            matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
+    return matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] +
+           matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
+}
 
-    // return identity for singular or nearly singular matrices.
-    // Note for maintainers: If updating this value, also update the value
-    // in gpuistl/detail/deviceBlockOperations.hpp
+//! invert 4x4 Matrix without changing the original matrix
+//!
+//! The cofactor expansion is used by default. It is branch free and roughly an
+//! order of magnitude faster than a pivoted LU at this size, which matters
+//! because every diagonal block of the ILU decomposition goes through here.
+//!
+//! Its determinant is however the product of the four column scales, so it
+//! underflows for blocks whose residuals are insensitive to some of the
+//! primary variables - a cell in which a phase is absent or immobile - even
+//! though those blocks are perfectly well invertible. Dividing the adjugate by
+//! such a determinant is unreliable, so fall back to Dune's invert(), which
+//! uses Gaussian elimination with partial pivoting and reports a matrix as
+//! singular only when a pivot is exactly zero. Block sizes 5 and above already
+//! use that routine.
+template <template<class K> class Matrix, typename K>
+static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
+{
+    const K det = adjugateMatrix4<Matrix, K>(matrix, inverse);
+
     if (std::abs(det) < 1e-40) {
-        inverse = std::numeric_limits<K>::quiet_NaN();
-        throw NumericalProblem("Singular matrix");
-    } else
-      inverse *= 1.0 / det;
+        inverse = matrix;
+        try {
+            inverse.invert();
+        }
+        catch (const Dune::FMatrixError&) {
+            inverse = std::numeric_limits<K>::quiet_NaN();
+            DUNE_THROW(Dune::MatrixBlockError, "Singular matrix block");
+        }
+    }
+    else {
+        inverse *= 1.0 / det;
+    }
 
     return det;
 }

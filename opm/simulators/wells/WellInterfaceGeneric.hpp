@@ -28,6 +28,7 @@
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 
+#include <ctime>
 #include <map>
 #include <optional>
 #include <string>
@@ -38,6 +39,7 @@ namespace Opm
 
 class DeferredLogger;
 class GuideRate;
+class UnitSystem;
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 class SummaryState;
@@ -151,6 +153,12 @@ public:
 
     const std::vector<Scalar>& wellIndex() const { return well_index_; }
 
+    //! \brief Mutable per-perforation well indices (connection transmissibility
+    //!        factors). Adjoint hook: the dJ/dperm well-coupling gradient
+    //!        perturbs the CTF here and re-linearizes. Not used in the forward
+    //!        path.
+    std::vector<Scalar>& wellIndex() { return well_index_; }
+
     const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
     Scalar getTHPConstraint(const SummaryState& summaryState) const;
@@ -177,11 +185,26 @@ public:
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
+    //! \param ws Well state
+    //! \param simulationTime Simulation time
+    //! \param writeMessageToOPMLog True to write message to the OPM log
+    //! \param during_well_test  true when called from WTEST re-open testing,
+    //!        which re-solves the well after every completion closure; false for
+    //!        the regular timestep update. See
+    //!        WellTest::updateWellTestStateEconomic().
+    //! \param zero_group_target True if the group has no target
+    //! \param wellTestState Well test state
+    //! \param unit_system Unit system to use
+    //! \param start_time Starting time
+    //! \param deferred_logger Deferred logging helper
     void updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
+                             const bool during_well_test,
                              const bool zero_group_target,
                              WellTestState& wellTestState,
+                             const UnitSystem& unit_system,
+                             const std::time_t start_time,
                              DeferredLogger& deferred_logger) const;
 
     bool isPressureControlled(const WellStateType& well_state) const;

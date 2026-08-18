@@ -54,6 +54,7 @@
 #endif
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -272,6 +273,23 @@ public:
      */
     bool runStep(SimulatorTimer& timer);
 
+    /** \brief Install a callback that restores simulation state at the start of
+     *         each report step, from a store the caller owns.
+     *
+     * Invoked inside \ref runStep at the same point as the `--load-step`
+     * OPMRST restore: after the episode has been set up and before the solve,
+     * with the current report-step number. Intended for drivers that re-run
+     * stretches of a simulation from their own checkpoints -- the adjoint
+     * checkpoint/recompute sweep -- and must therefore reproduce the recorded
+     * trajectory rather than start from the deck.
+     *
+     * The callback is responsible for the whole restore, including
+     * `prepareDeserialize` and invalidating the intensive quantities, exactly
+     * as the OPMRST path does. Pass an empty function to disable.
+     */
+    void setRestoreStateHook(std::function<void(int)> hook)
+    { restoreStateHook_ = std::move(hook); }
+
     /** \brief Stop the timers and emit the final OPMRST output.
      *
      * Called by \ref run after the report-step loop finishes.  Stops
@@ -385,6 +403,10 @@ protected:
 
     /// OPMRST save / load.
     SimulatorSerializer serializer_;
+
+    /// Caller-supplied per-report-step state restore; see
+    /// \ref setRestoreStateHook. Empty (inactive) unless installed.
+    std::function<void(int)> restoreStateHook_{};
 };
 
 } // namespace Opm

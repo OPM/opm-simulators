@@ -41,6 +41,15 @@ void VtkTpsaParams::registerParameters()
         ("Include solid pressure in VTK output files");
     Parameters::Register<Parameters::VtkWriteStress>
         ("Include stress tensor in VTK output files");
+    Parameters::Register<Parameters::VtkWriteDelStress>
+        ("Include stress tensor without potential fracture stress in VTK output files");
+    Parameters::Register<Parameters::VtkWriteLinStress>
+        ("Include stress tensor without pressure, temperature, or fracture forces in "
+         "VTK output files");
+    Parameters::Register<Parameters::VtkWriteStrain>
+        ("Include strain tensor in VTK output files");
+    Parameters::Register<Parameters::VtkWritePotentialPressureForce>
+        ("Include potential pressure force in VTK output files");
 }
 
 /*!
@@ -52,6 +61,10 @@ void VtkTpsaParams::read()
     rotationOutput_ = Parameters::Get<Parameters::VtkWriteRotation>();
     solidPressureOutput_ = Parameters::Get<Parameters::VtkWriteSolidPressure>();
     stressOutput_ = Parameters::Get<Parameters::VtkWriteStress>();
+    delStressOutput_ = Parameters::Get<Parameters::VtkWriteDelStress>();
+    linStressOutput_ = Parameters::Get<Parameters::VtkWriteLinStress>();
+    strainOutput_ = Parameters::Get<Parameters::VtkWriteStrain>();
+    potPresForceOutput_ = Parameters::Get<Parameters::VtkWritePotentialPressureForce>();
 }
 
 }  // namespace Opm

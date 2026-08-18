@@ -64,7 +64,7 @@ class MixedSolver : public InverseOperator<X,X>
 
     }
 
-    virtual void apply (X& x, X& b, InverseOperatorResult& res) override
+    void apply (X& x, X& b, InverseOperatorResult& res) override
     {
         // transpose each dense block to make them column-major
         double B[9];
@@ -87,7 +87,7 @@ class MixedSolver : public InverseOperator<X,X>
         res.iterations = count;
     }
 
-    virtual void apply (X& x, X& b, double reduction, InverseOperatorResult& res) override
+    void apply (X& x, X& b, double reduction, InverseOperatorResult& res) override
     {
         x=0;
         b=0;
@@ -96,7 +96,7 @@ class MixedSolver : public InverseOperator<X,X>
 
     }
 
-    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+    Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 
     private:
     bsr_matrix  *jacobian_;
@@ -107,4 +107,3 @@ class MixedSolver : public InverseOperator<X,X>
 }
 
 #endif // OPM_MIXED_SOLVER_HEADER_INCLUDED
-

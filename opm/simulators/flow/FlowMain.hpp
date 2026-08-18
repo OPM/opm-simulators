@@ -53,6 +53,8 @@ namespace Opm::Parameters {
 // Do not merge parallel output files or warn about them
 struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 struct OutputInterval { static constexpr int value = 1; };
+// Stop after this report step; negative means run to the end of the schedule
+struct EndStep { static constexpr int value = -1; };
 // Set global debug verbosity level
 struct DebugVerbosityLevel { static constexpr int value = 1; };
 } // namespace Opm::Parameters
@@ -104,6 +106,9 @@ namespace Opm {
                  "In that case it will be appended to the *.DBG or *.PRT files");
             Parameters::Register<Parameters::DebugVerbosityLevel>
                 ("Set debug verbosity level globally. Default is 1, increasing values give additional output and 0 disables most messages to the .DBG file");
+            Parameters::Register<Parameters::EndStep>
+                ("Stop the simulation after this report step. "
+                 "A negative value runs to the end of the schedule");
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
@@ -208,6 +213,15 @@ namespace Opm {
         SimulatorTimer* getSimTimer()
         {
             return simtimer_.get();
+        }
+
+        /// The report-step driver, for callers that step the simulation
+        /// themselves via executeStep() and need to configure it -- e.g. to
+        /// install a SimulatorFullyImplicit::setRestoreStateHook. Null until
+        /// executeInitStep() has run.
+        Simulator* getStepDriverPtr()
+        {
+            return simulator_.get();
         }
 
         /// Get the size of the previous report step
@@ -421,7 +435,8 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report,
+                             simulator_->model().simulator().problem().extraTrailerSummary());
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
@@ -440,7 +455,9 @@ namespace Opm {
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer_->init(schedule, static_cast<std::size_t>(initConfig.getRestartStep()));
+            simtimer_->init(schedule,
+                            static_cast<std::size_t>(initConfig.getRestartStep()),
+                            Parameters::Get<Parameters::EndStep>());
 
             if (this->output_cout_) {
                 std::ostringstream oss;

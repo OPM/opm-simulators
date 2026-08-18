@@ -56,7 +56,7 @@
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputModule.hpp>
 #include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
@@ -92,7 +92,7 @@ namespace detail {
  *        ECL binary format.
  */
 template <class TypeTag>
-class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>>
+class OutputBlackOilModule : public GenericOutputModule<GetPropType<TypeTag, Properties::FluidSystem>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -107,7 +107,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
-    using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using BaseType = GenericOutputModule<FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
     using BlockExtractor = detail::BlockExtractor<TypeTag>;
@@ -279,6 +279,48 @@ public:
         this->blockExtractors_.clear();
         this->extraBlockExtractors_.clear();
         this->lgrBlockExtractors_.clear();
+    }
+
+    /*!
+     * \brief Move all buffers to data::Solution.
+     */
+    void assignToSolution(data::Solution& sol) override
+    {
+        BaseType::assignToSolution(sol);
+
+        // Quantities that only the black-oil formulation reports.
+        using M = UnitSystem::measure;
+        this->assignBuffer(sol, "1OVERBO", M::oil_inverse_formation_volume_factor,
+                           this->invB_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "1OVERBG", M::gas_inverse_formation_volume_factor,
+                           this->invB_[gasPhaseIdx], gasPhaseIdx);
+        this->assignBuffer(sol, "OILKR", M::identity,
+                           this->relativePermeability_[oilPhaseIdx], oilPhaseIdx);
+        this->assignBuffer(sol, "GASKR", M::identity,
+                           this->relativePermeability_[gasPhaseIdx], gasPhaseIdx);
+        this->assignBuffer(sol, "PBUB", M::pressure, this->bubblePointPressure_);
+        this->assignBuffer(sol, "PDEW", M::pressure, this->dewPointPressure_);
+        this->assignBuffer(sol, "RS",   M::gas_oil_ratio, this->rs_);
+        this->assignBuffer(sol, "RV",   M::oil_gas_ratio, this->rv_);
+
+        // avoid output with generic fluid system and disabled water phase
+        if constexpr (numPhases > 2) {
+            this->assignBuffer(sol, "1OVERBW", M::water_inverse_formation_volume_factor,
+                               this->invB_[waterPhaseIdx], waterPhaseIdx);
+            this->assignBuffer(sol, "WATKR", M::identity,
+                               this->relativePermeability_[waterPhaseIdx], waterPhaseIdx);
+        }
+
+        // The phase densities and viscosities are named by the emitting
+        // module: these are the black-oil array names.
+        this->assignPhaseProperties(sol, typename BaseType::PhasePropertyNames {
+            .oilDensity     = "OIL_DEN",
+            .gasDensity     = "GAS_DEN",
+            .waterDensity   = "WAT_DEN",
+            .oilViscosity   = "OIL_VISC",
+            .gasViscosity   = "GAS_VISC",
+            .waterViscosity = "WAT_VISC",
+        });
     }
 
     /*!
@@ -728,7 +770,69 @@ public:
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
+    //! \brief Restore the buffers this module owns from a restart file.
+    void setRestart(const data::Solution& sol,
+                    const unsigned elemIdx,
+                    const unsigned globalDofIndex) override
+    {
+        BaseType::setRestart(sol, elemIdx, globalDofIndex);
+
+        auto assign = [&sol, elemIdx, globalDofIndex](const std::string& name,
+                                                      ScalarBuffer& data)
+        {
+            if (!data.empty() && sol.has(name)) {
+                data[elemIdx] = sol.data<double>(name)[globalDofIndex];
+            }
+        };
+
+        assign("RS", rs_);
+        assign("RV", rv_);
+    }
+
+protected:
+    //! \brief Allocate the buffers of the quantities only the black-oil
+    //!        formulation produces, keyed on their restart mnemonics.
+    void allocFormulationBuffers(std::map<std::string, int>& rstKeywords,
+                                 const unsigned bufferSize) override
+    {
+        // RS and RV are allocated whenever the fluid system supports them,
+        // not only when the restart keyword asks for them.
+        BaseType::allocBufferIfRequested(rstKeywords, bufferSize, rs_, "RS",
+                                         FluidSystem::enableDissolvedGas(), true);
+        BaseType::allocBufferIfRequested(rstKeywords, bufferSize, rv_, "RV",
+                                         FluidSystem::enableVaporizedOil(), true);
+
+        // PBPD requests the bubble and the dew point pressure together.
+        if (BaseType::allocBufferIfRequested(rstKeywords, bufferSize,
+                                             bubblePointPressure_, "PBPD", true)) {
+            dewPointPressure_.resize(bufferSize, 0.0);
+        }
+
+        // "WOG" ordering, as used by the shared module's keyword naming.
+        constexpr auto phaseChar = std::string_view{"WOG"};
+        for (unsigned phase = 0; phase < numPhases; ++phase) {
+            if (!FluidSystem::phaseIsActive(phase)) {
+                continue;
+            }
+            // The black-oil phase ordering is the one the keyword names assume,
+            // so no reordering is needed here.
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, invB_[phase],
+                                             std::string("B")  + phaseChar[phase], true);
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, relativePermeability_[phase],
+                                             std::string("KR") + phaseChar[phase], true);
+        }
+    }
+
 private:
+
+    // Buffers of the quantities only the black-oil formulation produces.
+    using ScalarBuffer = typename BaseType::ScalarBuffer;
+    ScalarBuffer rs_;
+    ScalarBuffer rv_;
+    ScalarBuffer bubblePointPressure_;
+    ScalarBuffer dewPointPressure_;
+    std::array<ScalarBuffer, numPhases> invB_;
+    std::array<ScalarBuffer, numPhases> relativePermeability_;
     template <typename T>
     using RemoveCVR = std::remove_cv_t<std::remove_reference_t<T>>;
 
@@ -2009,6 +2113,19 @@ private:
                         // Total stress is not stored but calculated result is Voigt notation
                         mech.assignStress(ectx.globalDofIdx,
                                           model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                    },
+                    true
+                );
+            }
+            if (this->tpsaC_.allocated()) {
+                this->extractors_.emplace_back(
+                    [&tpsaC = this->tpsaC_,
+                        &model = simulator_.problem().geoMechModel()](const Context& ectx) {
+                        tpsaC.assignRotation(ectx.globalDofIdx,
+                                             model.rotation(ectx.globalDofIdx));
+
+                        tpsaC.assignSolidPressure(ectx.globalDofIdx,
+                                                  model.solidPressure(ectx.globalDofIdx));
                     },
                     true
                 );

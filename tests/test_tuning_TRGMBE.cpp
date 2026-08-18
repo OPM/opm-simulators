@@ -83,7 +83,7 @@ struct ColumnData
         while (iss >> colname) {
             column_names.push_back(colname);
             raw_columns.emplace_back(colname);
-            columns[colname] = &(raw_columns.back());
+            columns[colname] = raw_columns.size() - 1;
         }
         const int num_columns = column_names.size();
 
@@ -104,14 +104,16 @@ struct ColumnData
     }
 
            // Get data vectors of different types
-    std::vector<double> get_dvector(const std::string& colname) const { return columns.at(colname)->dvalues(); }
-    std::vector<int> get_ivector(const std::string& colname) const { return columns.at(colname)->ivalues(); }
+    std::vector<double> get_dvector(const std::string& colname) const { return raw_columns[columns.at(colname)].dvalues(); }
+    std::vector<int> get_ivector(const std::string& colname) const { return raw_columns[columns.at(colname)].ivalues(); }
     // Default is to return double values
-    std::vector<double> operator[](const std::string& colname) const { return columns.at(colname)->dvalues(); }
+    std::vector<double> operator[](const std::string& colname) const { return raw_columns[columns.at(colname)].dvalues(); }
 
     std::vector<std::string> column_names;
     std::vector<Column> raw_columns;
-    std::map<std::string, Column*> columns;
+    // Index, not pointer: raw_columns reallocates as soon as the file has more
+    // columns than the reserve, which dangles every pointer stored before it.
+    std::map<std::string, std::size_t> columns;
 };
 
 BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinTRGMBE)

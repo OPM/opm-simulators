@@ -71,20 +71,34 @@ namespace {
         };
     }
 
-    template <typename HeaderSequence>
-    auto maxHeaderSize(const HeaderSequence& headers)
+    // The trailing diagnostic columns, each with the longest token it can emit.
+    // Sizing them by their headings alone is not enough -- "GROUP+NETWORK" is
+    // wider than "Gate".  "WellStatus" appends free-form text after its token,
+    // which is why it must stay last.
+    auto diagnosticHeaders() noexcept
     {
-        using sz_t = std::remove_cv_t<std::remove_reference_t<
-            decltype(std::declval<HeaderSequence>().front().size())>>;
+        using namespace std::literals::string_view_literals;
 
+        return std::array {
+            std::pair { "CnvRelax"sv,   "FINALIT"sv  },  // to_string(CnvRelaxSource)
+            std::pair { "CnvTolUsed"sv, ""sv         },  // a number, never wider
+            std::pair { "OscSource"sv,  "WELLCTRL"sv },  // to_string(OscillationSource)
+            std::pair { "Gate"sv,       "GROUP+NETWORK"sv },
+            std::pair { "WellStatus"sv, "CONV"sv     },
+        };
+    }
+
+    template <typename HeaderSequence>
+    int maxHeaderSize(const HeaderSequence& headers)
+    {
         if (headers.empty()) {
-            return sz_t{0};
+            return 0;
         }
 
-        return std::accumulate(headers.begin(), headers.end(), sz_t{1},
+        return std::accumulate(headers.begin(), headers.end(), 0,
                                [](const auto m, const auto& header)
                                {
-                                   return std::max(m, header.size() + 1);
+                                   return std::max(m, static_cast<int>(header.size() + 1));
                                });
     }
 
@@ -98,20 +112,20 @@ namespace {
         return os.str();
     }
 
-    std::string::size_type
-    maxColHeaderSize(const std::string::size_type                                           minColSize,
+    int
+    maxColHeaderSize(const int                                                              minColSize,
                      const Opm::ConvergenceOutputThread::ComponentToPhaseName&              getPhaseName,
                      const std::vector<Opm::ConvergenceReport::ReservoirConvergenceMetric>& cols)
     {
         return std::accumulate(cols.begin(), cols.end(), minColSize,
-            [&getPhaseName](const std::string::size_type                              maxChar,
+            [&getPhaseName](const int                                                 maxChar,
                             const Opm::ConvergenceReport::ReservoirConvergenceMetric& metric)
         {
-            return std::max(maxChar, formatMetricColumn(getPhaseName, metric).size() + 1);
+            return std::max(maxChar, static_cast<int>(formatMetricColumn(getPhaseName, metric).size() + 1));
         });
     }
 
-    std::pair<std::string::size_type, std::string::size_type>
+    std::pair<int, int>
     writeConvergenceHeader(std::ostream&                                             os,
                            const Opm::ConvergenceOutputThread::ComponentToPhaseName& getPhaseName,
                            const Opm::ConvergenceReportQueue::OutputRequest&         firstRequest)
@@ -129,24 +143,34 @@ namespace {
             }
         }
 
-        const auto& metrics    = firstRequest.reports.front().reservoirConvergence();
-        const auto  headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        const auto& metrics = firstRequest.reports.front().reservoirConvergence();
+
+        auto headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
+        for (const auto& [heading, longestValue] : diagnosticHeaders()) {
+            headerSize = std::max({ headerSize,
+                                    static_cast<int>(heading.size() + 1),
+                                    static_cast<int>(longestValue.size() + 1) });
+        }
 
         for (const auto& metric : metrics) {
             os << std::right << std::setw(headerSize)
                << formatMetricColumn(getPhaseName, metric);
         }
 
+        for (const auto& [heading, _] : diagnosticHeaders()) {
+            os << std::right << std::setw(headerSize) << heading;
+        }
+
         // Note: Newline character intentionally placed in separate output
         // request to not influence right-justification of column header.
-        os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
+        os << '\n';
 
         return { minColSize, headerSize };
     }
 
     void writeTimeColumns(std::ostream&                                           os,
                           const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
-                          const std::string::size_type                            firstColSize,
+                          const int                                               firstColSize,
                           const int                                               iter,
                           const Opm::ConvergenceReport&                           report,
                           const Opm::ConvergenceReportQueue::OutputRequest&       request)
@@ -160,7 +184,7 @@ namespace {
 
     void writeCnvPvSplit(std::ostream&                        os,
                          const std::vector<double>::size_type expectedNumValues,
-                         const std::string::size_type         firstColSize,
+                         const int                            firstColSize,
                          const Opm::ConvergenceReport&        report)
     {
         const auto& [splitPv, cellCnt] = report.cnvPvSplit();
@@ -194,7 +218,7 @@ namespace {
     }
 
     void writePenaltyCount(std::ostream&                 os,
-                           const std::string::size_type  firstColSize,
+                           const int                     firstColSize,
                            const Opm::ConvergenceReport& report)
     {
         const auto& penaltyCard = report.getPenaltyCard();
@@ -205,7 +229,7 @@ namespace {
     }
 
     void writeReservoirConvergence(std::ostream&                 os,
-                                   const std::string::size_type  colSize,
+                                   const int                     colSize,
                                    const Opm::ConvergenceReport& report)
     {
         for (const auto& metric : report.reservoirConvergence()) {
@@ -214,7 +238,7 @@ namespace {
     }
 
     void writeWellConvergence(std::ostream&                 os,
-                              const std::string::size_type  colSize,
+                              const int                     colSize,
                               const Opm::ConvergenceReport& report)
     {
         os << std::right << std::setw(colSize)
@@ -227,10 +251,50 @@ namespace {
         }
     }
 
+    void writeCnvRelaxation(std::ostream&                 os,
+                            const int                     colSize,
+                            const Opm::ConvergenceReport& report)
+    {
+        // Which condition granted the relaxed CNV tolerance, and the tolerance actually
+        // applied.  Without this the accepted state's quality is invisible: the same run
+        // may accept some steps at tolerance-cnv and others at its relaxed twin.
+        os << std::right << std::setw(colSize) << to_string(report.cnvRelaxSource());
+
+        const auto tol = report.cnvToleranceApplied();
+        if (tol > 0.0) {
+            os << std::right << std::setw(colSize) << tol;
+        }
+        else {
+            os << std::right << std::setw(colSize) << '-';
+        }
+    }
+
+    void writeOscillationSource(std::ostream&                 os,
+                                const int                     colSize,
+                                const Opm::ConvergenceReport& report)
+    {
+        os << std::right << std::setw(colSize) << to_string(report.oscillationSource());
+    }
+
+    void writeConvergenceGate(std::ostream&                 os,
+                              const int                     colSize,
+                              const Opm::ConvergenceReport& report)
+    {
+        // Which secondary gate, if any, kept this iteration from counting as
+        // converged.  These gates fire when the residual metrics themselves
+        // are already satisfied, so they identify iterations spent purely on
+        // well/group control changes or network balancing.
+        const auto gate = report.wellGroupTargetsViolated()
+            ? (report.networkNeedsMoreBalancing() ? "GROUP+NETWORK" : "GROUP")
+            : (report.networkNeedsMoreBalancing() ? "NETWORK" : "NONE");
+
+        os << std::right << std::setw(colSize) << gate;
+    }
+
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
-                                 const std::string::size_type                            firstColSize,
-                                 const std::string::size_type                            colSize,
+                                 const int                                               firstColSize,
+                                 const int                                               colSize,
                                  const Opm::ConvergenceReportQueue::OutputRequest&       request)
     {
         os.setf(std::ios_base::scientific);
@@ -246,6 +310,9 @@ namespace {
             writePenaltyCount(os, firstColSize, report);
 
             writeReservoirConvergence(os, colSize, report);
+            writeCnvRelaxation(os, colSize, report);
+            writeOscillationSource(os, colSize, report);
+            writeConvergenceGate(os, colSize, report);
             writeWellConvergence(os, colSize, report);
 
             os << '\n';
@@ -283,8 +350,8 @@ private:
     ComponentToPhaseName getPhaseName_{};
     ConvertToTimeUnits convertTime_{};
     std::optional<std::ofstream> infoIter_{};
-    std::string::size_type firstColSize_{0};
-    std::string::size_type colSize_{0};
+    int firstColSize_{0};
+    int colSize_{0};
     bool haveOutputIterHeader_{false};
     bool finalRequestWritten_{false};
 
@@ -326,25 +393,31 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
         return;
     }
 
-    if (! this->haveOutputIterHeader_) {
-        std::tie(this->firstColSize_, this->colSize_) =
-            writeConvergenceHeader(this->infoIter_.value(),
-                                   this->getPhaseName_,
-                                   requests.front());
-        this->haveOutputIterHeader_ = true;
-    }
-
     for (const auto& request : requests) {
+        if (request.reports.empty()) {
+            // Empty request signals end of production.  Must be detected
+            // before the header is written, since forming the header needs a
+            // convergence report to name the metric columns.  A run that
+            // fails before completing a single non-linear iteration - e.g.,
+            // one that chops its way to the minimum time step - sends this
+            // sentinel as its very first request.
+            this->finalRequestWritten_ = true;
+            break;
+        }
+
+        if (! this->haveOutputIterHeader_) {
+            std::tie(this->firstColSize_, this->colSize_) =
+                writeConvergenceHeader(this->infoIter_.value(),
+                                       this->getPhaseName_,
+                                       request);
+            this->haveOutputIterHeader_ = true;
+        }
+
         writeConvergenceRequest(this->infoIter_.value(),
                                 this->convertTime_,
                                 this->firstColSize_,
                                 this->colSize_,
                                 request);
-
-        if (request.reports.empty()) {
-            this->finalRequestWritten_ = true;
-            break;
-        }
     }
 
     this->infoIter_.value().flush();
@@ -391,8 +464,8 @@ ConvergenceOutputThread(std::string_view               outputDir,
                         ConvergenceReportQueue&        queue)
     : pImpl_ { std::make_unique<Impl>(outputDir,
                                       baseName,
-                                      getPhaseName,
-                                      convertTime,
+                                      std::move(getPhaseName),
+                                      std::move(convertTime),
                                       config,
                                       queue) }
 {}

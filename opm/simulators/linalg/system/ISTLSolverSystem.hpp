@@ -20,6 +20,7 @@
 #define OPM_ISTLSOLVERSYSTEM_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
+#include <opm/simulators/linalg/system/SystemPreconditioner.hpp>
 #include <opm/simulators/linalg/system/SystemPreconditionerFactory.hpp>
 #include <opm/simulators/linalg/system/WellMatrixMerger.hpp>
 

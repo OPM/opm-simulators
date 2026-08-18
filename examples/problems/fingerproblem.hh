@@ -60,6 +60,8 @@
 
 #include <opm/models/io/structuredgridvanguard.hh>
 
+#include <opm/models/utils/propertysystem.hh>
+
 #include <string>
 
 namespace Opm {

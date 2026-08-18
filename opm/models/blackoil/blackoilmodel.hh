@@ -34,7 +34,6 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilboundaryratevector.hh>
-#include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
@@ -126,12 +125,6 @@ struct IntensiveQuantities<TypeTag, TTag::BlackOilModel>
 template<class TypeTag>
 struct ExtensiveQuantities<TypeTag, TTag::BlackOilModel>
 { using type = BlackOilExtensiveQuantities<TypeTag>; };
-
-//! Use the the velocity module which is aware of the black-oil specific model extensions
-//! (i.e., the polymer and solvent extensions)
-template<class TypeTag>
-struct FluxModule<TypeTag, TTag::BlackOilModel>
-{ using type = BlackOilDarcyFluxModule<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>

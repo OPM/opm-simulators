@@ -170,6 +170,11 @@ protected:
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
 public:
+
+    /// Extra module-specific lines appended to the final simulation trailer
+    /// (e.g. geomechanics timing). Derived problems may shadow this.
+    std::string extraTrailerSummary() const
+    { return {}; }
     using BaseType::briefDescription;
     using BaseType::helpPreamble;
     using BaseType::shouldWriteOutput;
@@ -1353,7 +1358,6 @@ protected:
         if (this->maxWaterSaturation_.empty())
             return false;
 
-        this->maxWaterSaturation_[/*timeIdx=*/1] = this->maxWaterSaturation_[/*timeIdx=*/0];
         this->updateProperty_("FlowProblem::updateMaxWaterSaturation_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {

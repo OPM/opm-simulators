@@ -1438,7 +1438,7 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     }
     ss << topEntry("PAV", pav, UnitSystem::measure::pressure)
        << topEntry("PORV", cip[Inplace::Phase::PoreVolume], UnitSystem::measure::volume);
-    if (!reg) {
+    if (reg == 0) {
         ss << topLabel("Pressure is weighted by hydrocarbon pore volume")
            << topLabel("Pore volumes are taken at reference conditions");
     }

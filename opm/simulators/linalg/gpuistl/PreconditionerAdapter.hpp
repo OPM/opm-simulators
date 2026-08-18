@@ -63,7 +63,7 @@ public:
     //! \brief Prepare the preconditioner.
     //!
     //! Currently not supported.
-    virtual void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
+    void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
     {
         static_assert(!detail::shouldCallPreconditionerPre<CudaPreconditionerType>(),
                       "We currently do not support Preconditioner::pre().");
@@ -73,7 +73,7 @@ public:
     //! \brief Apply the preconditoner.
     //!
     //! \copydoc Preconditioner::apply(X&,const Y&)
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         if (!m_inputBuffer) {
             m_inputBuffer.reset(new GpuVector<field_type>(v.dim()));
@@ -88,7 +88,7 @@ public:
     //! \brief Clean up.
     //!
     //! Currently not supported.
-    virtual void post([[maybe_unused]] X& x) override
+    void post([[maybe_unused]] X& x) override
     {
         static_assert(!detail::shouldCallPreconditionerPost<CudaPreconditionerType>(),
                       "We currently do not support Preconditioner::post().");
@@ -102,7 +102,7 @@ public:
     }
 
     //! Calls update on the underlying CUDA preconditioner
-    virtual void update() override
+    void update() override
     {
         m_underlyingPreconditioner->update();
     }
@@ -116,13 +116,13 @@ public:
         return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
     }
 
-    virtual std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>
+    std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>
     getUnderlyingPreconditioner() override
     {
         return m_underlyingPreconditioner;
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return m_underlyingPreconditioner->hasPerfectUpdate();
     }
 

@@ -112,6 +112,12 @@ struct GroupTreeBalancerTolerance { static constexpr Scalar value = 1e-5; };
 
 struct UseMultisegmentWell { static constexpr bool value = true; };
 
+// Convert plain (single-segment) wells into multisegment wells at
+// construction, so the wellbore hydrostatic head is handled implicitly.
+// A string rather than a bool because more than one topology is useful:
+// "per-connection" gives one segment per connection. "none" is the default.
+struct ConvertToMultisegmentWell { static constexpr auto value = "none"; };
+
 template<class Scalar>
 struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
 

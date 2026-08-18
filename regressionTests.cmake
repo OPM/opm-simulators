@@ -1039,6 +1039,25 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    wecon_pluscon_complump
+  FILENAME
+    WECON_PLUSCON_COMPLUMP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wecon_wtest
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
     gconinje_resv_gas_01
   FILENAME
     GCONINJE_RESV_GAS-01
@@ -2680,6 +2699,63 @@ add_test_compareECLFiles(
     gecon
   TEST_ARGS
     --solver-max-time-step-in-days=15
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    cecon_01
+  FILENAME
+    CECON-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    cecon_02
+  FILENAME
+    CECON-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    cecon_03
+  FILENAME
+    CECON-03
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    cecon
+  TEST_ARGS
+    --enable-tuning=true
 )
 
 if(BUILD_FLOW_POLY_GRID)

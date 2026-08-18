@@ -32,10 +32,13 @@
 #include <opm/material/common/quad.hpp>
 #endif
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/flash/flashmodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/flash/flashmodel.hh>
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
@@ -55,8 +58,18 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
 // use the flash solver adapted to the CO2 injection problem
 template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
-{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
-                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
+{ using type = Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                 GetPropType<TypeTag, Properties::FluidSystem>>; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,

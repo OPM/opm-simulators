@@ -152,7 +152,7 @@ std::pair<Scalar,Scalar> cellCenterXY(const Element& element)
     static constexpr int yCoord = Element::dimension - 2;
     Scalar yy = 0.0;
     Scalar xx = 0.0;
-        
+
 
     const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
@@ -282,7 +282,7 @@ Scalar calculateTrueVerticalDepth(Scalar z, Scalar x, Scalar y,
                                 const std::array<Scalar, 3>& referencePoint)
 {
     // For True Vertical Depth calculation:
-    // TVD = reference_depth + (z - reference_z) * cos(dipAngle) 
+    // TVD = reference_depth + (z - reference_z) * cos(dipAngle)
     //       + lateral_distance * sin(dipAngle) * cos(azimuth_difference)
 
     // Calculate lateral displacement from reference point
@@ -357,11 +357,14 @@ operator()(const Scalar x) const
     // (Hermite interpolation)
     const Scalar h = stepsize();
     int i = (x - span_[0]) / h;
-    const Scalar t = (x - (span_[0] + i*h)) / h;
 
     // Crude handling of evaluation point outside "span_";
     if (i  <  0) { i = 0;      }
     if (N_ <= i) { i = N_ - 1; }
+
+    // Relative to the interval actually used, so that a point at the end of
+    // the span lands on t = 1 of the final interval rather than t = 0.
+    const Scalar t = (x - (span_[0] + i*h)) / h;
 
     const Scalar y0 = y_[i], y1 = y_[i + 1];
     const Scalar f0 = f_[i], f1 = f_[i + 1];

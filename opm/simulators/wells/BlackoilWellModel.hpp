@@ -477,6 +477,48 @@ template<class Scalar> class WellContributions;
             // TODO: finding a better naming
             void assembleWellEqWithoutIteration(const double dt);
 
+            //! \brief Assemble the well equations at an already-converged state
+            //!        that the caller has restored, without advancing anything.
+            //!
+            //! \warning Not part of the forward process. It assumes the well and
+            //!   group state already hold this step's converged values, and it
+            //!   deliberately skips the machinery that would re-derive them.
+            //!
+            //! updatePrimaryVariables() here is a *restore*, not a fresh
+            //! derivation: a converged step writes its primary variables into
+            //! SingleWellState::primaryvar (see
+            //! StandardWellPrimaryVariables::copyToWellState), that member is
+            //! serialized, and the update reads it back. The forward path throws
+            //! those values away when controls change --
+            //! WellInterface::updateWellStateWithTarget does
+            //! \c ws.primaryvar.resize(0) -- which is one of the reasons this
+            //! entry point exists rather than reusing assemble().
+            //!
+            //! Also skipped: updateWellControlsAndNetwork, which re-derives the
+            //! group/control state. From a restored snapshot it does not
+            //! reproduce the forward's converged values (different allocation)
+            //! and aborts on wells that were shut at the point being restored.
+            //! Likewise skipped is the forward-only preparation that precedes a
+            //! normal assemble().
+            //!
+            //! \note The restore is exact for BHP and the phase fractions.
+            //!   WQTotal is *not* taken from the stored primary variables; it is
+            //!   recomputed from the well state's surface rates, and forced to
+            //!   zero for a stopped or zero-rate-target well.
+            //!
+            //! Used by an out-of-tree adjoint module to re-linearize a
+            //! previously converged step.
+            void assembleWellEqAtRestoredState(const double dt)
+            {
+                // restore the well primary variables from the (converged) well
+                // state, then the well-local quantities, then assemble --
+                // without touching the group/control state.
+                auto logger_guard = this->groupStateHelper().pushLogger();
+                updatePrimaryVariables();
+                assembleWellEqWithoutIteration(dt);
+                updateCellRates();
+            }
+
             const std::vector<Scalar>& B_avg() const
             { return B_avg_; }
 

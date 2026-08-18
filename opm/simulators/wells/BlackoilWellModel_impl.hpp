@@ -715,11 +715,17 @@ namespace Opm {
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
-        updateWellTestState(simulationTime, this->wellTestState());
+        // simulationTime is the start of the step that has just been completed,
+        // but a well shut by the economic or physical limit checks below keeps
+        // flowing until its end. Record that instant as the closure time, so
+        // the WTEST re-test countdown starts when the well actually stops.
+        const double closure_time = simulationTime + dt;
+
+        updateWellTestState(closure_time, this->wellTestState());
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = this->schedule_.getGroup("FIELD", reportStepIdx);
-        this->checkGEconLimits(fieldGroup, simulationTime,
+        this->checkGEconLimits(fieldGroup, closure_time,
                                simulator_.episodeIndex(), local_deferredLogger);
         this->checkGconsaleLimits(fieldGroup, this->wellState(),
                                   simulator_.episodeIndex(), local_deferredLogger);
@@ -909,7 +915,17 @@ namespace Opm {
                     // a timestep without the well in question, after it caused
                     // repeated timestep cuts. It should therefore not be opened,
                     // even if it was new or received new targets this report step.
-                    const bool closed_this_step = (this->wellTestState().lastTestTime(well_name) == simulator_.time());
+                    //
+                    // The time stamp alone cannot establish that, since a shut-in
+                    // decided at the *end* of the previous step carries that
+                    // step's end time, which coincides with the current step's
+                    // start time. Such shut-ins are the ones a new WCON keyword
+                    // may undo, and are exactly what wasDynamicallyShutThisTimeStep()
+                    // reports; mid-step ones from forceShutWellByName() are not
+                    // registered there, so they still block the re-open.
+                    const bool closed_this_step =
+                        (this->wellTestState().lastTestTime(well_name) == simulator_.time()) &&
+                        !this->wasDynamicallyShutThisTimeStep(well_name);
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
@@ -1871,8 +1887,11 @@ namespace Opm {
             well->updateWellTestState(this->wellState().well(wname),
                                       simulationTime,
                                       /*writeMessageToOPMLog=*/ true,
+                                      /*during_well_test=*/ false,
                                       under_zero_target,
                                       wellTestState,
+                                      this->eclipseState().getUnits(),
+                                      this->schedule().getStartTime(),
                                       local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {

@@ -28,10 +28,12 @@
  */
 #include "config.h"
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/immiscible/immisciblemodel.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include "problems/co2injectionproblem.hh"
 
@@ -47,6 +49,16 @@ struct Co2InjectionImmiscibleEcfvProblem
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleEcfvProblem>
 { using type = TTag::EcfvDiscretization; };
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionImmiscibleEcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionImmiscibleEcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

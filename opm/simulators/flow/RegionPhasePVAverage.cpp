@@ -66,7 +66,7 @@ namespace {
             start[rset + 1] += *m;
         }
 
-        comm.max(start.data(), start.size());
+        comm.max(start.data(), static_cast<int>(start.size()));
 
         std::partial_sum(start.begin(), start.end(), start.begin());
 
@@ -127,7 +127,7 @@ addCell(const std::size_t activeCell,
 
 void Opm::RegionPhasePoreVolAverage::accumulateParallel()
 {
-    this->comm_.get().sum(this->x_.data(), this->x_.size());
+    this->comm_.get().sum(this->x_.data(), static_cast<int>(this->x_.size()));
 }
 
 double Opm::RegionPhasePoreVolAverage::averageValueWithFallback(const Ix start) const
@@ -153,7 +153,7 @@ Opm::RegionPhasePoreVolAverage::fieldStartIx(const unsigned int phase) const
 
 Opm::RegionPhasePoreVolAverage::Ix
 Opm::RegionPhasePoreVolAverage::rsetStartIx(const std::size_t  rset,
-                                            const int          region,
+                                            const std::size_t  region,
                                             const unsigned int phase) const
 {
     return this->startIx(this->rsStart_[rset] + region, phase);

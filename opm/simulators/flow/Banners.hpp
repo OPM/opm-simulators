@@ -31,7 +31,8 @@ struct SimulatorReport;
 struct SimulatorReportSingle;
 
 // Print an ASCII-art header to the PRT and DEBUG files.
-void printPRTHeader(const int nprocs, const int nthreads,
+void printPRTHeader(const std::size_t nprocs,
+                    const std::size_t nthreads,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp);
@@ -44,7 +45,8 @@ void printFlowTrailer(int nprocs,
                       int nthreads,
                       const double total_setup_time,
                       const double deck_read_time,
-                      const SimulatorReport& report);
+                      const SimulatorReport& report,
+                      std::string_view extra_summary);
 
 } // namespace Opm
 

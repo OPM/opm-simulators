@@ -35,6 +35,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
+#include <opm/input/eclipse/Schedule/MSW/makeMSWellFromStandardWell.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
@@ -273,14 +274,27 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool enable_dist
     this->initializeWellProdIndCalculators();
     initializeWellPerfData();
 
-    if (! this->wells_ecl_.empty()) {
-        const bool handle_ms_well = param_.use_multisegment_well_ && anyMSWellOpenLocal();
-        this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
-                                 this->schedule(), handle_ms_well, numCells,
-                                 this->well_perf_data_, this->summaryState_, enable_distributed_wells,
-                                 this->eclState().getSimulationConfig().isThermal());
-
-    }
+    // Resize unconditionally, including when this rank has no local wells at
+    // report_step. Skipping it there leaves the PREVIOUS call's well state in
+    // place, so the well state no longer describes report_step and a
+    // subsequent deserialization fails on the size check in
+    // WellState::serializeOp.
+    //
+    // A forward restart never notices, because it deserializes one step into a
+    // fresh model. Walking a run backwards does: a rank goes from "has wells"
+    // to "has none" as it moves to earlier report steps, and a stale non-empty
+    // well state survives into a step whose stored state is empty. Norne, where
+    // wells are drilled progressively, hits this; decks whose wells all exist
+    // from step 0 (SPE1, SPE9) never do.
+    //
+    // WellState::resize handles an empty well list correctly - base_init clears
+    // the well container and init returns early after the bookkeeping.
+    const bool handle_ms_well = param_.use_multisegment_well_ &&
+                                !this->wells_ecl_.empty() && anyMSWellOpenLocal();
+    this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
+                             this->schedule(), handle_ms_well, numCells,
+                             this->well_perf_data_, this->summaryState_, enable_distributed_wells,
+                             this->eclState().getSimulationConfig().isThermal());
     this->wellState().clearWellRates();
     this->commitWGState();
     this->updateNupcolWGState();
@@ -301,6 +315,26 @@ getLocalWells(const int timeStepIdx) const
                            [&st = this->schedule()[timeStepIdx]]
                            (const std::string& wname)
                            { return st.wells(wname); });
+
+    // Optionally turn plain single-segment wells into multisegment wells so the
+    // wellbore hydrostatic head is solved implicitly. No-op for wells that are
+    // already multisegment.
+    const auto& convert = this->param_.convert_to_multisegment_well_;
+    if (convert == "per-connection") {
+        // One linear tubing with a segment per connection: a pressure unknown
+        // per perforation, so the head between perforations is solved for.
+        constexpr double tubing_diameter = 0.1524; // 6"
+        const auto& units = this->schedule().getUnits();
+        for (auto& well : w) {
+            well = makeMultiSegmentWellPerConnection(well, units, tubing_diameter);
+        }
+    }
+    else if (convert != "none") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Unknown value '{}' for ConvertToMultisegmentWell. "
+                              "Valid values are 'none' and 'per-connection'.",
+                              convert));
+    }
 
     return w;
 }

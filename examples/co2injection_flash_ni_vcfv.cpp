@@ -31,10 +31,13 @@
 // this must be included before the vanguard
 #include <opm/material/common/quad.hpp>
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/flash/flashmodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/flash/flashmodel.hh>
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
@@ -59,8 +62,14 @@ struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
 // use the CO2 injection problem adapted flash solver
 template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
-{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
-                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
+{ using type = Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                 GetPropType<TypeTag, Properties::FluidSystem>>; };
+
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
@@ -70,6 +79,11 @@ template<class TypeTag>
 struct Scalar<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
 { using type = quad; };
 #endif
+
+// //! Use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

@@ -28,10 +28,13 @@
  */
 #include "config.h"
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
-#include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/io/dgfvanguard.hh>
+#include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include "problems/reservoirproblem.hh"
@@ -50,6 +53,14 @@ struct ReservoirNcpVcfvProblem
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem>
 { using type = TTag::VcfvDiscretization; };
+
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::ReservoirNcpVcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
+
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirNcpVcfvProblem>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 // reduce the base epsilon for the finite difference method to 10^-11. for some reason
 // the simulator converges better with this. (TODO: use automatic differentiation?)

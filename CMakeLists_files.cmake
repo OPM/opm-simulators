@@ -122,7 +122,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GeochemistryContainer.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
-  opm/simulators/flow/GenericOutputBlackoilModule.cpp
+  opm/simulators/flow/GenericOutputModule.cpp
   opm/simulators/flow/GenericTemperatureModel.cpp
   opm/simulators/flow/GenericThresholdPressure.cpp
   opm/simulators/flow/GenericTracerModel.cpp
@@ -144,6 +144,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
+  opm/simulators/flow/TpsaContainer.cpp
   opm/simulators/flow/TracerContainer.cpp
   opm/simulators/flow/Transmissibility.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -172,6 +173,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/linalg/system/SystemPreconditioner.cpp
+  opm/simulators/linalg/system/SystemPreconditionerFactory.cpp
+  opm/simulators/linalg/system/WellMatrixMerger.cpp
   opm/simulators/linalg/TPSALinearSolverParameters.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
@@ -185,6 +188,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
+  opm/simulators/utils/ParallelRegionsetVariableDescriptor.cpp
+  opm/simulators/utils/ParallelRegionVariableValues.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/PressureAverage.cpp
@@ -214,7 +219,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/BlackoilWellModelRestart.cpp
   opm/simulators/wells/BlackoilWellModelWBP.cpp
   opm/simulators/wells/ConnFiltrateData.cpp
-  opm/simulators/wells/GuideRateHandler.cpp
+  opm/simulators/wells/ConnFractureData.cpp
   opm/simulators/wells/FractionCalculator.cpp
   opm/simulators/wells/GasLiftCommon.cpp
   opm/simulators/wells/GasLiftGroupInfo.cpp
@@ -224,6 +229,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GroupEconomicLimitsChecker.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/GroupStateHelper.cpp
+  opm/simulators/wells/GuideRateHandler.cpp
   opm/simulators/wells/ProdGroupTreeBalancer.cpp
   opm/simulators/wells/MSWellHelpers.cpp
   opm/simulators/wells/MultisegmentWellAssemble.cpp
@@ -468,6 +474,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_dilu.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_equil.cpp
+  tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
   tests/test_GasSatfuncConsistencyChecks.cpp
@@ -1029,7 +1036,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowThresholdPressure.hpp
   opm/simulators/flow/GeochemistryContainer.hpp
   opm/simulators/flow/GenericCpGridVanguard.hpp
-  opm/simulators/flow/GenericOutputBlackoilModule.hpp
+  opm/simulators/flow/GenericOutputModule.hpp
   opm/simulators/flow/GenericTemperatureModel.hpp
   opm/simulators/flow/GenericTemperatureModel_impl.hpp
   opm/simulators/flow/GenericThresholdPressure.hpp
@@ -1069,6 +1076,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
+  opm/simulators/flow/TpsaContainer.hpp
   opm/simulators/flow/TracerContainer.hpp
   opm/simulators/flow/TemperatureModel.hpp
   opm/simulators/flow/TracerModel.hpp
@@ -1203,6 +1211,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelCommunication.hpp
+  opm/simulators/utils/ParallelRegionsetVariableDescriptor.hpp
+  opm/simulators/utils/ParallelRegionVariableValues.hpp
   opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/utils/satfunc/GasPhaseConsistencyChecks.hpp
@@ -1238,6 +1248,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/ConnectionIndexMap.hpp
   opm/simulators/wells/ConnFiltrateData.hpp
   opm/simulators/wells/ConnFracStatistics.hpp
+  opm/simulators/wells/ConnFractureData.hpp
+  opm/simulators/wells/EconomicLimitsMessage.hpp
   opm/simulators/wells/FractionCalculator.hpp
   opm/simulators/wells/GasLiftCommon.hpp
   opm/simulators/wells/GasLiftGroupInfo.hpp
@@ -1355,6 +1367,9 @@ if (HAVE_AVX2_EXTENSION)
     opm/simulators/linalg/mixed/prec.h
     opm/simulators/linalg/mixed/vec.h
     opm/simulators/linalg/mixed/wrapper.hpp
+    opm/simulators/linalg/mixed/MatrixWrapper.hpp
+    opm/simulators/linalg/mixed/PreconditionerWrapper.hpp
+    opm/simulators/linalg/mixed/SolverAdapter.hpp
   )
 endif()
 

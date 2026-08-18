@@ -32,33 +32,36 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/StreamLog.hpp>
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/utils/start.hh>
+
 #include "problems/co2ptflashproblem.hh"
 
 #include <iostream>
 #include <memory>
 
-
 namespace Opm::Properties {
 
 namespace TTag {
-    struct CO2PTEcfvProblem {
-    using InheritsFrom = std::tuple<CO2PTBaseProblem, FlashModel>;
-};
+
+struct CO2PTEcfvProblem
+{ using InheritsFrom = std::tuple<CO2PTBaseProblem, FlashModel>; };
+
 }
 
 template <class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::CO2PTEcfvProblem>
-{
-    using type = TTag::EcfvDiscretization;
-};
+{ using type = TTag::EcfvDiscretization; };
 
 template <class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::CO2PTEcfvProblem>
-{
-    using type = TTag::AutoDiffLocalLinearizer;
-};
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::CO2PTEcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 } // namespace Opm::Properties
 

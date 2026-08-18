@@ -21,6 +21,8 @@
 #ifndef OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 #define OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 
+#include <dune/istl/istlexception.hh>
+
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -166,6 +168,9 @@ try {
 #define OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type,          \
                                   obptc_exc_msg)           \
 catch (const Opm::NumericalProblem& e){                    \
+    obptc_exc_type = Opm::ExceptionType::NUMERICAL_ISSUE;  \
+    obptc_exc_msg = e.what();                              \
+} catch (const Dune::MatrixBlockError& e) {                \
     obptc_exc_type = Opm::ExceptionType::NUMERICAL_ISSUE;  \
     obptc_exc_msg = e.what();                              \
 } catch (const std::runtime_error& e) {                    \

@@ -36,6 +36,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/EconomicLimitsMessage.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
@@ -605,7 +606,18 @@ namespace Opm
         OPM_TIMEFUNCTION();
         auto& deferred_logger = groupStateHelper.deferredLogger();
         const auto& group_state = groupStateHelper.groupState();
-        deferred_logger.info(" well " + this->name() + " is being tested");
+        // A well test is run at the start of the time step, so this is also the
+        // instant the well resumes flowing if the test succeeds -- the mirror of
+        // the economic-limit messages, which report when a well stops flowing.
+        const auto& unit_system = simulator.vanguard().eclState().getUnits();
+        const auto start_time = simulator.vanguard().schedule().getStartTime();
+        const auto when =
+            fmt::format("at time {:.2f} {} (date = {})",
+                        unit_system.from_si(UnitSystem::measure::time, simulation_time),
+                        unit_system.name(UnitSystem::measure::time),
+                        economicLimitDateString(start_time, simulation_time));
+
+        deferred_logger.info(fmt::format(" well {} is being tested {}", this->name(), when));
 
         GroupStateHelperType groupStateHelper_copy = groupStateHelper;
         WellStateType well_state_copy = well_state;
@@ -682,8 +694,11 @@ namespace Opm
             this->updateWellTestState(well_state_copy.well(this->indexOfWell()),
                                      simulation_time,
                                       /*writeMessageToOPMLog=*/ false,
+                                      /*during_well_test=*/ true,
                                       under_zero_target,
                                       welltest_state_temp,
+                                      simulator.vanguard().eclState().getUnits(),
+                                      simulator.vanguard().schedule().getStartTime(),
                                       deferred_logger);
             this->closeCompletions(welltest_state_temp);
 
@@ -701,8 +716,8 @@ namespace Opm
         if (!welltest_state_temp.well_is_closed(this->name())) {
             well_test_state.open_well(this->name());
 
-            std::string msg = std::string("well ") + this->name() + std::string(" is re-opened");
-            deferred_logger.info(msg);
+            deferred_logger.info(
+                fmt::format("well {} is re-opened {}", this->name(), when));
 
             // also reopen completions
             for (const auto& completion : this->well_ecl_.getCompletions()) {

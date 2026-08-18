@@ -20,7 +20,10 @@
 #ifndef OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 #define OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 
+#include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
+
+#include <fmt/format.h>
 
 #include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -28,6 +31,7 @@
 #include <opm/models/parallel/threadmanager.hpp>
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 #if HAVE_CUDA
 #if USE_HIP
@@ -208,7 +212,35 @@ namespace Amg
                         }
                     }
                 }
-                block_transpose.solve(bweights, rhs);
+                try {
+                    block_transpose.solve(bweights, rhs);
+                }
+                catch (const Dune::FMatrixError&) {
+                    // Rank-deficient storage derivatives: no combination of the
+                    // mass balances has a storage term that depends on pressure
+                    // alone, so there is no weight vector to compute here.
+                    //
+                    // Deliberately no fallback value.  bweights is indexed by
+                    // equation while rhs is indexed by primary variable, so
+                    // substituting rhs would put unit weight on whichever
+                    // equation happens to share the pressure variable's index -
+                    // an arbitrary choice that goes on to make the CPR pressure
+                    // system itself singular.  Name the cell instead, so the
+                    // cause can be found.
+                    const auto globalDofIdx =
+                        localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+                    throw std::runtime_error {
+                        fmt::format("Singular storage matrix when forming the CPR "
+                                    "pressure weights for cell {} (Cartesian index "
+                                    "{}).  The storage derivatives of that cell are "
+                                    "rank deficient, so the pressure equation cannot "
+                                    "be formed there.",
+                                    globalDofIdx,
+                                    localElemCtx.simulator().vanguard()
+                                        .cartesianIndex(globalDofIdx))
+                    };
+                }
 
                 const double abs_max =
                     *std::ranges::max_element(bweights,

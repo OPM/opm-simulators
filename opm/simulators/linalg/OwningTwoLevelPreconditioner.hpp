@@ -149,33 +149,33 @@ public:
         }
     }
 
-    virtual void pre(VectorType& x, VectorType& b) override
+    void pre(VectorType& x, VectorType& b) override
     {
         twolevel_method_.pre(x, b);
     }
 
-    virtual void apply(VectorType& v, const VectorType& d) override
+    void apply(VectorType& v, const VectorType& d) override
     {
         twolevel_method_.apply(v, d);
     }
 
-    virtual void post(VectorType& x) override
+    void post(VectorType& x) override
     {
         twolevel_method_.post(x);
     }
 
-    virtual void update() override
+    void update() override
     {
         weights_ = weightsCalculator_();
         updateImpl(comm_);
     }
 
-    virtual Dune::SolverCategory::Category category() const override
+    Dune::SolverCategory::Category category() const override
     {
         return linear_operator_.category();
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override {
         return twolevel_method_.hasPerfectUpdate();
     }
 

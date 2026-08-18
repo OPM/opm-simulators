@@ -975,6 +975,7 @@ run()
             }
 
             // set new time step length
+            checkTimeStepCanAdvance_(dt, dt_estimate);
             setTimeStep_(dt_estimate);
 
             report.success.converged = this->substep_timer_.done();
@@ -1058,6 +1059,46 @@ checkTimeStepMaxRestartLimit_(const int restarts) const
         // Use throw directly to prevent file and line
         throw TimeSteppingBreakdown{msg};
     }
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+checkTimeStepCanAdvance_(const double current_time_step,
+                         const double new_time_step) const
+{
+    // Both dt floors - the minimum step size and the restart count - sit on
+    // the failure path.  A run whose substeps all converge, but for which the
+    // controller keeps proposing ever smaller steps, consults neither: the
+    // step size shrinks without bound while the elapsed time stands still,
+    // and the run never ends.  Hold the accepted path to the same minimum.
+    if (new_time_step >= minTimeStep_()) {
+        return;
+    }
+
+    // A sub-minimum step is valid when the report step is already complete, or
+    // when timestep control is increasing it. Reject only a shrinking
+    // sub-minimum step, which is the one that stalls short of the report-step
+    // boundary.
+    if (this->substep_timer_.done() || new_time_step >= current_time_step) {
+        return;
+    }
+
+    const auto msg =
+        fmt::format("Time step control proposed a step of {:.3E} DAYS, below the "
+                    "minimum of {:.3E} DAYS, while every substep converges.  The "
+                    "run is not advancing past {:.6E} DAYS.",
+                    new_time_step / 86400.0,
+                    minTimeStep_() / 86400.0,
+                    this->substep_timer_.simulationTimeElapsed() / 86400.0);
+
+    if (solverVerbose_()) {
+        OpmLog::error(msg);
+    }
+
+    // Use throw directly to prevent file and line
+    throw TimeSteppingBreakdown{msg};
 }
 
 template<class TypeTag>

@@ -22,6 +22,7 @@
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
+#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/ptflash/flashmodel.hh>
 
@@ -131,6 +132,10 @@ struct TracerModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     using type = EmptyModel<TypeTag>;
 };
 
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag, int NumComp, bool EnableWater>
+struct FluxModule<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 template <class TypeTag, int NumComp, bool EnableWater>
 struct FlashSolver<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {

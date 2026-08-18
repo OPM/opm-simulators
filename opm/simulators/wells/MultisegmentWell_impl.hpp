@@ -2535,8 +2535,12 @@ namespace Opm
                 case FluidSystem::gasPhaseIdx: {
                     if constexpr (compositionSwitchEnabled) {
                         if (both_oil_gas) {
-                            // starting with saturated rv value
-                            ValueType rv = FluidSystem::saturatedVaporizationFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
+                            // Starting with the saturated rv value. Note that for the gas phase
+                            // saturatedDissolutionFactor() is the saturated *oil* vaporization
+                            // factor Rv (saturatedVaporizationFactor() would be the saturated
+                            // *water* vaporization factor Rvw, which is zero without vaporized
+                            // water and is not what is needed here).
+                            ValueType rv = FluidSystem::saturatedDissolutionFactor(fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
                             const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
                             if (fluid_composition[activeCompIdx] > epsilon) {
                                 const ValueType max_possible_rv = fluid_composition[oilCompIdx] / fluid_composition[activeCompIdx];

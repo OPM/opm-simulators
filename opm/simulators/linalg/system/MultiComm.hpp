@@ -19,6 +19,7 @@
 #ifndef OPM_MULTICOMM_HEADER_INCLUDED
 #define OPM_MULTICOMM_HEADER_INCLUDED
 
+#include <dune/common/parallel/communication.hh>
 #include <dune/common/hybridutilities.hh>
 
 #if HAVE_MPI

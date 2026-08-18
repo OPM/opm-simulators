@@ -32,10 +32,13 @@
 #include <opm/material/common/quad.hpp>
 #endif
 
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/flash/flashmodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/models/flash/flashmodel.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
@@ -63,6 +66,12 @@ template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
 { using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
                                       GetPropType<TypeTag, Properties::FluidSystem>>; };
+
+
+//! Use the Darcy relation to determine the phase velocity
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,

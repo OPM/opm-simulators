@@ -33,6 +33,10 @@
 #include <memory>
 #include <type_traits>
 
+#if HAVE_AVX2_EXTENSION
+#include <opm/simulators/linalg/mixed/PreconditionerWrapper.hpp>
+#endif
+
 namespace Opm {
 
 template <class X, class Y>
@@ -40,12 +44,12 @@ class TrivialPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 {
     public:
     TrivialPreconditioner(){};
-    virtual void update() override {};
-    virtual bool hasPerfectUpdate() const override {return true;}
-    virtual void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
-    virtual void post ([[maybe_unused]] X& x) override {};
-    virtual void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override {};
-    virtual Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
+    void update() override {};
+    bool hasPerfectUpdate() const override {return true;}
+    void pre ([[maybe_unused]] X& x, [[maybe_unused]] Y& y) override {};
+    void post ([[maybe_unused]] X& x) override {};
+    void apply ([[maybe_unused]] X& x, [[maybe_unused]] const Y& y) override {};
+    Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 };
 
 
@@ -88,12 +92,32 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             DUNE_UNUSED_PARAMETER(prm);
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
         });
+#if HAVE_AVX2_EXTENSION
         F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                OPM_THROW(std::logic_error, "mixed-ilu0 is not available for floats");
+                return nullptr;
+            } else {
+                return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat());
+            }
+        });
+        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            DUNE_UNUSED_PARAMETER(prm);
+            if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                OPM_THROW(std::logic_error, "mixed-dilu is not available for floats");
+                return nullptr;
+            } else {
+                return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat(),true);
+            }
+        });
+#endif
+        F::addCreator("legacy-mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
-        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("legacy-mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
             DUNE_UNUSED_PARAMETER(op);
             return std::make_shared<TrivialPreconditioner<V,V>>();
