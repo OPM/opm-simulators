@@ -122,7 +122,7 @@ namespace Opm {
  * instead of a \c DNAPL infiltrates from the top.
  */
 template <class TypeTag>
-class RichardsLensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class RichardsLensProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

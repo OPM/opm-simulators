@@ -193,7 +193,7 @@ double Co2InjectionTolerance = 1e-8;
  * hydrostatic pressure is assumed.
  */
 template <class TypeTag>
-class Co2InjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class Co2InjectionProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

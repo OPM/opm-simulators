@@ -145,7 +145,7 @@ namespace Opm {
  * of the domain requires much longer (about 10 days simulated time).
  */
 template <class TypeTag>
-class CuvetteProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class CuvetteProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

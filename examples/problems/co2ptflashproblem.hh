@@ -181,7 +181,7 @@ namespace Opm {
  *
  */
 template <class TypeTag>
-class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class CO2PTProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

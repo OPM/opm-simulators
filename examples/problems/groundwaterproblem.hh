@@ -131,7 +131,7 @@ namespace Opm {
  * occupied by a rectangular lens of lower permeability.
  */
 template <class TypeTag>
-class GroundWaterProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class GroundWaterProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

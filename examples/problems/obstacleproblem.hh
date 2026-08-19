@@ -143,7 +143,7 @@ namespace Opm {
  * and the right boundary where a free flow condition is assumed.
  */
 template <class TypeTag>
-class ObstacleProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class ObstacleProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

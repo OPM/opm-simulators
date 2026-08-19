@@ -140,7 +140,7 @@ namespace Opm {
  * Systems, University of Stuttgart, 2011
  */
 template <class TypeTag>
-class PowerInjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class PowerInjectionProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

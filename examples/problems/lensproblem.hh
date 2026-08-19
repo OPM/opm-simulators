@@ -173,7 +173,7 @@ namespace Opm {
  * saturation on both sides is zero.
  */
 template <class TypeTag>
-class LensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class LensProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

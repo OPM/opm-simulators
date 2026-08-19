@@ -120,7 +120,7 @@ namespace Opm {
  * diffusion.
  */
 template <class TypeTag>
-class DiffusionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class DiffusionProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

@@ -93,7 +93,7 @@ namespace Opm {
  * used.
  */
 template <class TypeTag>
-class OutflowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class OutflowProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

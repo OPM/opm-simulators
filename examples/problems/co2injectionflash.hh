@@ -39,7 +39,7 @@ namespace Opm {
  * problem.
  */
 template <class Scalar, class FluidSystem>
-class Co2InjectionFlash : public Opm::NcpFlash<Scalar, FluidSystem>
+class Co2InjectionFlash final: public Opm::NcpFlash<Scalar, FluidSystem>
 {
     using ParentType = Opm::NcpFlash<Scalar, FluidSystem>;
 

@@ -159,7 +159,7 @@ namespace Opm {
  * discretization is fine enough.
  */
 template <class TypeTag>
-class FingerProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class FingerProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     //!\cond SKIP_THIS
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;

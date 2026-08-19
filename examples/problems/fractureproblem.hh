@@ -197,7 +197,7 @@ namespace Opm {
  * where the pressure is kept constant.
  */
 template <class TypeTag>
-class FractureProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class FractureProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;

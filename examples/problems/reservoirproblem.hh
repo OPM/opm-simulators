@@ -160,7 +160,7 @@ namespace Opm {
  * the injector wells use a pressure which is 50% above the reservoir pressure.
  */
 template <class TypeTag>
-class ReservoirProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class ReservoirProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 

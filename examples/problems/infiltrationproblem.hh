@@ -120,7 +120,7 @@ namespace Opm {
  * except for the small infiltration zone in the upper left part.
  */
 template <class TypeTag>
-class InfiltrationProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class InfiltrationProblem final: public GetPropType<TypeTag, Properties::BaseProblem>
 {
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
