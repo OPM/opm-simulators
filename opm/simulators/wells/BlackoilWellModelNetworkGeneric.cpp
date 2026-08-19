@@ -263,9 +263,21 @@ newtonNodePressures(const Network::ExtNetwork& network,
                     const int reportStepIdx) const
 {
     OPM_TIMEFUNCTION();
+    // Every way out of here hands the network back to the relaxed update, so say
+    // which one was taken. It runs once per network sub-iteration, so this is
+    // debug level -- it lands in the .DBG file alongside the network trace.
+    const std::string domain_name = (injection_phase == Phase::GAS) ? "gas" : "water";
+    auto giveUp = [&](const std::string& why) {
+        OpmLog::debug(fmt::format("Network: solving the {} injection network simultaneously is not "
+                                  "possible at report step {} ({}); using the relaxed update.",
+                                  domain_name, reportStepIdx, why));
+        return std::optional<std::map<std::string, Scalar>>{};
+    };
+
     const auto roots = network.roots();
     if (roots.size() != 1 || !roots.front().get().terminal_pressure().has_value()) {
-        return std::nullopt;      // only a single rooted tree with a fixed head
+        return giveUp(roots.size() == 1 ? "the root has no terminal pressure"
+                                        : "the network has more than one root");
     }
     const Scalar terminal = *roots.front().get().terminal_pressure();
 
@@ -295,7 +307,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
     const int phase_pos = well_model_.phaseUsage().canonicalToActivePhaseIdx(
         injection_phase == Phase::GAS ? IndexTraits::gasPhaseIdx : IndexTraits::waterPhaseIdx);
     if (phase_pos < 0) {
-        return std::nullopt;
+        return giveUp("the injected phase is not active");
     }
 
     // Every rank has to solve the same system, so the input has to be the same
@@ -330,7 +342,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
                               static_cast<Scalar>(controls.surface_rate)});
     }
     if (candidates.empty()) {
-        return std::nullopt;
+        return giveUp("no injectors of this phase hang off it");
     }
 
     // Per candidate: present, usable, ipr_a, ipr_b, current rate, on group.
@@ -369,7 +381,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
             continue;                 // open on no rank; not part of the network
         }
         if (e[1] <= Scalar{0}) {
-            return std::nullopt;      // no usable response; leave it to the fixed point
+            return giveUp(fmt::format("{} has no usable inflow performance", candidates[i].name));
         }
         const auto& candidate = candidates[i];
         NetworkSolve::Well<Scalar> w;
@@ -402,12 +414,13 @@ newtonNodePressures(const Network::ExtNetwork& network,
         // the system effectively unlimited. Leave the whole network to the fixed
         // point rather than invent a limit for it.
         if (!(w.rate_limit > Scalar{0}) || !(w.guide > Scalar{0})) {
-            return std::nullopt;
+            return giveUp(fmt::format("{} has neither a rate nor a target to be limited by",
+                                      candidate.name));
         }
         system.addWell(std::move(w));
     }
     if (system.numWells() == 0) {
-        return std::nullopt;
+        return giveUp("none of its injectors is open");
     }
     if (group_target > Scalar{0} && use_group_target) {
         system.setGroupTarget(group_target);
@@ -434,8 +447,11 @@ newtonNodePressures(const Network::ExtNetwork& network,
 
     const auto result = NetworkSolve::solve(system, guess);
     if (!result.converged) {
-        return std::nullopt;
+        return giveUp(fmt::format("it did not converge in {} iterations", result.iterations - 1));
     }
+    OpmLog::debug(fmt::format("Network: solved the {} injection network simultaneously at report "
+                              "step {} in {} iterations.",
+                              domain_name, reportStepIdx, result.iterations));
     std::map<std::string, Scalar> pressures;
     for (std::size_t n = 0; n < order.size(); ++n) {
         pressures[order[n]] = result.node_pressure[n];
