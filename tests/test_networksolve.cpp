@@ -69,6 +69,7 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <map>
 #include <iomanip>
 #include <cmath>
 #include <functional>
@@ -246,6 +247,10 @@ VFPINJ
 
 using Vec = std::array<double, 2>;   // (p_M5S, p_M5N), SI
 
+constexpr int kWellTable = 1;   // VFPINJ on the wells' tubing
+constexpr int kM5nTable = 2;    // M5S -> M5N
+constexpr int kM5sTable = 3;    // PLAT-A -> M5S
+
 // One injector: linear IPR against VFPINJ 1, then the control logic.
 struct WellProxy
 {
@@ -264,9 +269,9 @@ class GasInjectionNetwork
 public:
     GasInjectionNetwork()
     {
-        addTable(vfp_well);
-        addTable(vfp_m5n);
-        addTable(vfp_m5s);
+        addTable(vfp_well);   // kWellTable
+        addTable(vfp_m5n);    // kM5nTable
+        addTable(vfp_m5s);    // kM5sTable
 
         const auto sm3_day = cubic(meter) / day;
         // Calibration point: Eclipse 100, day 31 (opm-tests/eclref).
@@ -293,6 +298,13 @@ public:
         }
     }
 
+    /// Clamp table lookups to the flow and THP axes, as the simulator's network
+    /// pressure computation does. Off the axes the tables are zero-filled and the
+    /// interpolation runs away, so leaving this off admits spurious roots; turning
+    /// it on removes them but flattens the residual, which a Newton cannot climb
+    /// off. See table_bounds_want_to_be_constraints.
+    void setClampToAxes(const bool on) { clamp_to_axes_ = on; }
+
     void setGroupTarget(const double sm3_day) { group_target_ = convert::from(sm3_day, cubic(meter) / day); }
 
     /// The fixed-point map: applied node pressures in, computed node pressures out.
@@ -302,8 +314,8 @@ public:
         const double q_total = q[0] + q[1] + q[2] + q[3];
         const double q_m5n = q[2] + q[3];
         Vec out;
-        out[0] = branchBhp(3, terminal_, q_total);
-        out[1] = branchBhp(2, p[0], q_m5n);
+        out[0] = branchBhp(kM5sTable, terminal_, q_total);
+        out[1] = branchBhp(kM5nTable, p[0], q_m5n);
         return out;
     }
 
@@ -330,9 +342,17 @@ public:
         return q;
     }
 
-    /// Pressure drop across one branch, for checking against the reference.
+    /// Downstream pressure of a branch: VFPINJ table `table` at this upstream
+    /// pressure and rate. Table kWellTable is the wells' own tubing.
     double branch(const int table, const double thp, const double q) const
     { return branchBhp(table, thp, q); }
+
+    const std::vector<WellProxy>& wells() const { return wells_; }
+    double terminal() const { return terminal_; }
+
+    /// The wells' rate response to their own bhp, without any control logic.
+    static double ipr(const WellProxy& w, const double bhp)
+    { return w.q_ref + w.dq_dbhp * (bhp - w.bhp_ref); }
 
 private:
     // VFPInjProperties keeps a reference_wrapper, so the tables have to outlive it and
@@ -342,19 +362,29 @@ private:
         decks_.push_back(Parser{}.parseString(s));
         tables_.emplace_back(decks_.back()["VFPINJ"].front(), UnitSystem{});
         props_.addTable(tables_.back());
+
+        const auto& t = tables_.back();
+        axes_[t.getTableNum()] = Axes{t.getFloAxis().front(), t.getFloAxis().back(),
+                                      t.getTHPAxis().front(), t.getTHPAxis().back()};
     }
 
     double branchBhp(const int table, const double thp, const double q) const
     {
-        return props_.bhp(table, 0.0, 0.0, q, thp);
+        if (!clamp_to_axes_) {
+            return props_.bhp(table, 0.0, 0.0, q, thp);
+        }
+        const auto& a = axes_.at(table);
+        return props_.bhp(table, 0.0, 0.0,
+                          std::clamp(q, a.flo_min, a.flo_max),
+                          std::clamp(thp, a.thp_min, a.thp_max));
     }
 
-    double wellBhp(const double thp, const double q) const { return branchBhp(1, thp, q); }
+    double wellBhp(const double thp, const double q) const { return branchBhp(kWellTable, thp, q); }
 
     /// q where the IPR meets VFPINJ 1 at this THP, then BHP and rate limits.
     double wellRate(const WellProxy& w, const double p_node) const
     {
-        const auto ipr = [&w](const double bhp) { return w.q_ref + w.dq_dbhp * (bhp - w.bhp_ref); };
+        const auto ipr = [&w](const double bhp) { return GasInjectionNetwork::ipr(w, bhp); };
         // bhp falls with rate at fixed thp in these tables, so f is decreasing and
         // bisection is safe. Search only where the table still has a solution.
         const auto f = [&](const double q) { return ipr(wellBhp(p_node, q)) - q; };
@@ -379,27 +409,227 @@ private:
         return std::clamp(q, 0.0, w.rate_limit);
     }
 
+    struct Axes { double flo_min, flo_max, thp_min, thp_max; };
+
+    std::map<int, Axes> axes_;
     std::deque<Deck> decks_;
     std::deque<VFPInjTable> tables_;
     VFPInjProperties<double> props_;
     std::vector<WellProxy> wells_;
     double terminal_ = convert::from(340.0, bars);
     double group_target_ = 0.0;
+    bool clamp_to_axes_ = false;
     double stiffness_ = convert::from(6.0e4, cubic(meter) / day) / convert::from(1.0, bars);
+};
+
+// ---------------------------------------------------------------------------
+// Two formulations of the same problem
+//
+// Eliminated: the unknowns are the node pressures alone. Every rate is recovered
+// from them by an inner solve, so the residual is cheap to state and awkward to
+// differentiate -- the control clamps put kinks in it.
+//
+// Full: node pressures, branch rates and each well's (rate, bhp) are all
+// unknowns, and the eliminations become equations. Bigger and smooth within an
+// active set, and the shape a reservoir/well system could absorb.
+//
+// Both expose size() and residual(x), so the Newton below does not know which
+// one it is solving.
+// ---------------------------------------------------------------------------
+
+using State = std::vector<double>;
+
+/// Residual scaling: pressure equations in bar, rate equations in units of
+/// kRateScale. Without this the two kinds of row differ by ~7 decades and no
+/// single convergence tolerance means anything.
+const double kPressureScale = convert::from(1.0, bars);
+const double kRateScale = convert::from(1.0e4, cubic(meter) / day);
+
+class EliminatedProblem
+{
+public:
+    explicit EliminatedProblem(const GasInjectionNetwork& net) : net_(net) {}
+
+    static constexpr const char* name = "eliminated (2 unknowns)";
+    int size() const { return 2; }
+
+    State residual(const State& x) const
+    {
+        const auto r = net_.residual({x[0], x[1]});
+        return {r[0] / kPressureScale, r[1] / kPressureScale};
+    }
+
+    /// Both formulations are started from the same pair of node pressures.
+    State start(const Vec& p) const { return {p[0], p[1]}; }
+
+    Vec pressures(const State& x) const { return {x[0], x[1]}; }
+
+    /// Natural magnitude of unknown i; both are pressures here.
+    double columnScale(const int) const { return kPressureScale; }
+
+private:
+    const GasInjectionNetwork& net_;
+};
+
+/// The same network without the eliminations.
+///
+///   unknowns   p(M5S) p(M5N) p(G1) p(F1)                                    4
+///              q on each of the four branches                               4
+///              (rate, bhp) for each of the four wells                       8
+///
+///   equations  branch drop      p_child - VFP_b(thp = p_parent, q_b) = 0    4
+///              node balance     inflow - outflows - wells = 0               4
+///              inflow perf.     q_w - ipr_w(bhp_w) = 0                      4
+///              control          whichever of THP / BHP / RATE is active     4
+///
+/// The group target is not part of this formulation yet; it wants a multiplier
+/// and an extra equation, and the comparisons below do not set one.
+class FullProblem
+{
+public:
+    explicit FullProblem(const GasInjectionNetwork& net) : net_(net) {}
+
+    static constexpr const char* name = "full (16 unknowns)";
+
+    enum Index {
+        P_M5S, P_M5N, P_G1, P_F1,
+        Q_PLATA_M5S, Q_M5S_M5N, Q_M5S_G1, Q_M5N_F1,
+        Q_WELL,                          // four rates
+        BHP_WELL = Q_WELL + 4,           // four bottom-hole pressures
+        NUM_UNKNOWNS = BHP_WELL + 4
+    };
+
+    /// Which equation closes each well. Chosen from the current iterate, the way
+    /// the well model picks a control, and held fixed while the step is taken.
+    enum class Control { Thp, Bhp, Rate };
+
+    int size() const { return NUM_UNKNOWNS; }
+
+    State residual(const State& x) const
+    {
+        const auto& wells = net_.wells();
+        // Wells 0,1 hang off G1 and wells 2,3 off F1.
+        const std::array<int, 4> well_node{P_G1, P_G1, P_F1, P_F1};
+
+        State r(NUM_UNKNOWNS, 0.0);
+
+        // Branch drops. G1 and F1 carry table 9999, which is no table at all.
+        r[0] = x[P_M5S] - net_.branch(kM5sTable, net_.terminal(), x[Q_PLATA_M5S]);
+        r[1] = x[P_M5N] - net_.branch(kM5nTable, x[P_M5S], x[Q_M5S_M5N]);
+        r[2] = x[P_G1] - x[P_M5S];
+        r[3] = x[P_F1] - x[P_M5N];
+
+        // Node balances.
+        r[4] = x[Q_PLATA_M5S] - x[Q_M5S_M5N] - x[Q_M5S_G1];
+        r[5] = x[Q_M5S_M5N] - x[Q_M5N_F1];
+        r[6] = x[Q_M5S_G1] - x[Q_WELL + 0] - x[Q_WELL + 1];
+        r[7] = x[Q_M5N_F1] - x[Q_WELL + 2] - x[Q_WELL + 3];
+
+        for (int w = 0; w < 4; ++w) {
+            const double q = x[Q_WELL + w];
+            const double bhp = x[BHP_WELL + w];
+            r[8 + w] = q - GasInjectionNetwork::ipr(wells[w], bhp);
+
+            switch (controls_[w]) {
+            case Control::Thp:
+                r[12 + w] = bhp - net_.branch(kWellTable, x[well_node[w]], q);
+                break;
+            case Control::Bhp:
+                r[12 + w] = bhp - wells[w].bhp_limit;
+                break;
+            case Control::Rate:
+                r[12 + w] = q - wells[w].rate_limit;
+                break;
+            }
+        }
+
+        for (int i = 0; i < 4; ++i) {
+            r[i] /= kPressureScale;
+        }
+        for (int i = 4; i < 12; ++i) {
+            r[i] /= kRateScale;
+        }
+        for (int i = 12; i < NUM_UNKNOWNS; ++i) {
+            r[i] /= (controls_[i - 12] == Control::Rate) ? kRateScale : kPressureScale;
+        }
+        return r;
+    }
+
+    /// Reselect each well's control: the most restrictive violated limit wins,
+    /// which is the same rule the eliminated form applies as a clamp. Picking by
+    /// a fixed priority instead makes the set chatter and the Newton never ends.
+    /// Returns true if anything moved, so the caller can tell an active-set
+    /// change from a converged step.
+    bool updateControls(const State& x)
+    {
+        const auto& wells = net_.wells();
+        bool changed = false;
+        for (int w = 0; w < 4; ++w) {
+            const auto& well = wells[w];
+            const bool over_bhp = x[BHP_WELL + w] > well.bhp_limit;
+            const bool over_rate = x[Q_WELL + w] > well.rate_limit;
+
+            auto wanted = Control::Thp;
+            if (over_bhp || over_rate) {
+                wanted = GasInjectionNetwork::ipr(well, well.bhp_limit) < well.rate_limit
+                    ? Control::Bhp : Control::Rate;
+            }
+            changed |= (wanted != controls_[w]);
+            controls_[w] = wanted;
+        }
+        return changed;
+    }
+
+    /// Everything derived from the two starting node pressures, so the two
+    /// formulations really do start from the same place.
+    State start(const Vec& p) const
+    {
+        const auto& wells = net_.wells();
+        const double q_guess = convert::from(1.0e5, cubic(meter) / day);
+
+        State x(NUM_UNKNOWNS, 0.0);
+        x[P_M5S] = x[P_G1] = p[0];
+        x[P_M5N] = x[P_F1] = p[1];
+        for (int w = 0; w < 4; ++w) {
+            const double thp = (w < 2) ? p[0] : p[1];
+            x[BHP_WELL + w] = net_.branch(kWellTable, thp, q_guess);
+            x[Q_WELL + w] = std::clamp(GasInjectionNetwork::ipr(wells[w], x[BHP_WELL + w]),
+                                       0.0, wells[w].rate_limit);
+        }
+        x[Q_M5S_G1] = x[Q_WELL + 0] + x[Q_WELL + 1];
+        x[Q_M5N_F1] = x[Q_WELL + 2] + x[Q_WELL + 3];
+        x[Q_M5S_M5N] = x[Q_M5N_F1];
+        x[Q_PLATA_M5S] = x[Q_M5S_G1] + x[Q_M5S_M5N];
+        return x;
+    }
+
+    Vec pressures(const State& x) const { return {x[P_M5S], x[P_M5N]}; }
+
+    /// Natural magnitude of unknown i. Pressures and bhp in bar, rates in
+    /// kRateScale -- this is what lets one step cap and one trust radius apply
+    /// to a vector holding both.
+    double columnScale(const int i) const
+    {
+        const bool is_rate = (i >= Q_PLATA_M5S && i < BHP_WELL);
+        return is_rate ? kRateScale : kPressureScale;
+    }
+
+private:
+    const GasInjectionNetwork& net_;
+    std::array<Control, 4> controls_{Control::Thp, Control::Thp, Control::Thp, Control::Thp};
 };
 
 // ---------------------------------------------------------------------------
 // Solvers
 //
-// Everything below works on the residual F(p) = G(p) - p. Convergence is in the
-// max norm, as in the simulator; the trust region uses the 2-norm because that
-// is what its reduction ratio is defined against.
+// The fixed-point methods only make sense on the eliminated form, so they take
+// the network directly. The Newton takes either problem.
 // ---------------------------------------------------------------------------
 
 // Start where the simulator does: the wells' WCONINJE THP.
 const Vec kStart = {convert::from(400.0, bars), convert::from(400.0, bars)};
-const double kTol = convert::from(0.01, bars);
-const double kMaxStep = convert::from(100.0, bars);
+const double kTol = 0.01;                                  // scaled: 0.01 bar
+const double kMaxStep = 100.0;                             // column scales: 100 bar
 constexpr int kMaxIter = 200;
 
 struct Result
@@ -409,24 +639,51 @@ struct Result
     Vec p{};
 };
 
-double normMax(const Vec& v) { return std::max(std::abs(v[0]), std::abs(v[1])); }
-double norm2(const Vec& v) { return std::hypot(v[0], v[1]); }
-Vec operator+(const Vec& a, const Vec& b) { return {a[0] + b[0], a[1] + b[1]}; }
-Vec operator-(const Vec& a, const Vec& b) { return {a[0] - b[0], a[1] - b[1]}; }
-Vec operator-(const Vec& v) { return {-v[0], -v[1]}; }
-Vec operator*(const double a, const Vec& v) { return {a * v[0], a * v[1]}; }
+double normMax(const State& v)
+{
+    double m = 0.0;
+    for (const double e : v) {
+        m = std::max(m, std::abs(e));
+    }
+    return m;
+}
+double norm2(const State& v)
+{
+    double sum = 0.0;
+    for (const double e : v) {
+        sum += e * e;
+    }
+    return std::sqrt(sum);
+}
+State operator+(const State& a, const State& b)
+{
+    State c(a.size());
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        c[i] = a[i] + b[i];
+    }
+    return c;
+}
+State operator*(const double a, const State& v)
+{
+    State c(v.size());
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        c[i] = a * v[i];
+    }
+    return c;
+}
+State operator-(const State& v) { return -1.0 * v; }
 
-// --- fixed-point methods -----------------------------------------------------
+// --- fixed-point methods, eliminated form only -------------------------------
 
 Result damped(const GasInjectionNetwork& net, Vec p, const double omega)
 {
     for (int it = 1; it <= kMaxIter; ++it) {
         const auto r = net.residual(p);
-        if (normMax(r) < kTol) {
+        if (std::max(std::abs(r[0]), std::abs(r[1])) < kTol * kPressureScale) {
             return {true, it, p};
         }
         for (int i = 0; i < 2; ++i) {
-            p[i] = NodePressureUpdater<double>::damped(p[i], r[i], omega, kMaxStep);
+            p[i] = NodePressureUpdater<double>::damped(p[i], r[i], omega, kMaxStep * kPressureScale);
         }
     }
     return {false, kMaxIter + 1, p};
@@ -437,11 +694,11 @@ Result bracketing(const GasInjectionNetwork& net, Vec p, const double omega)
     std::array<NodePressureUpdater<double>, 2> updater;
     for (int it = 1; it <= kMaxIter; ++it) {
         const auto g = net.G(p);
-        if (normMax(g - p) < kTol) {
+        if (std::max(std::abs(g[0] - p[0]), std::abs(g[1] - p[1])) < kTol * kPressureScale) {
             return {true, it, p};
         }
         for (int i = 0; i < 2; ++i) {
-            p[i] = updater[i].next(p[i], g[i], /*valid=*/true, omega, kMaxStep);
+            p[i] = updater[i].next(p[i], g[i], /*valid=*/true, omega, kMaxStep * kPressureScale);
         }
     }
     return {false, kMaxIter + 1, p};
@@ -451,11 +708,11 @@ Result anderson(const GasInjectionNetwork& net, const Vec& start, const int dept
 {
     NetworkAndersonAccelerator<double> accelerator;
     accelerator.setDepth(depth);
-    std::vector<double> x{start[0], start[1]};
+    State x{start[0], start[1]};
     for (int it = 1; it <= kMaxIter; ++it) {
         const Vec p{x[0], x[1]};
         const auto g = net.G(p);
-        if (normMax(g - p) < kTol) {
+        if (std::max(std::abs(g[0] - p[0]), std::abs(g[1] - p[1])) < kTol * kPressureScale) {
             return {true, it, p};
         }
         x = accelerator.next(x, {g[0], g[1]});
@@ -465,39 +722,77 @@ Result anderson(const GasInjectionNetwork& net, const Vec& start, const int dept
 
 // --- Newton ------------------------------------------------------------------
 
-/// Finite-difference Jacobian of F. The well response has kinks where a control
-/// switches, so a difference taken across one is not the local slope -- which is
-/// exactly why the step needs globalising.
-struct Jacobian
+/// Dense square system, small enough that Gaussian elimination with partial
+/// pivoting is the whole story.
+class Matrix
 {
-    double m[2][2];
+public:
+    explicit Matrix(const int n) : n_(n), a_(n * n, 0.0) {}
 
-    Vec solve(const Vec& rhs) const
+    double& operator()(const int i, const int j) { return a_[i * n_ + j]; }
+    double operator()(const int i, const int j) const { return a_[i * n_ + j]; }
+
+    /// Solves A y = b. Returns false if A is singular to working precision.
+    bool solve(State b, State& y) const
     {
-        const double det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
-        if (std::abs(det) < 1e-30) {
-            return {0.0, 0.0};
+        auto a = a_;
+        y.assign(n_, 0.0);
+        for (int k = 0; k < n_; ++k) {
+            int pivot = k;
+            for (int i = k + 1; i < n_; ++i) {
+                if (std::abs(a[i * n_ + k]) > std::abs(a[pivot * n_ + k])) {
+                    pivot = i;
+                }
+            }
+            if (std::abs(a[pivot * n_ + k]) < 1e-300) {
+                return false;
+            }
+            if (pivot != k) {
+                for (int j = 0; j < n_; ++j) {
+                    std::swap(a[k * n_ + j], a[pivot * n_ + j]);
+                }
+                std::swap(b[k], b[pivot]);
+            }
+            for (int i = k + 1; i < n_; ++i) {
+                const double f = a[i * n_ + k] / a[k * n_ + k];
+                for (int j = k; j < n_; ++j) {
+                    a[i * n_ + j] -= f * a[k * n_ + j];
+                }
+                b[i] -= f * b[k];
+            }
         }
-        return {(m[1][1] * rhs[0] - m[0][1] * rhs[1]) / det,
-                (m[0][0] * rhs[1] - m[1][0] * rhs[0]) / det};
+        for (int i = n_ - 1; i >= 0; --i) {
+            double sum = b[i];
+            for (int j = i + 1; j < n_; ++j) {
+                sum -= a[i * n_ + j] * y[j];
+            }
+            y[i] = sum / a[i * n_ + i];
+        }
+        return true;
     }
 
-    Vec apply(const Vec& v) const
-    {
-        return {m[0][0] * v[0] + m[0][1] * v[1], m[1][0] * v[0] + m[1][1] * v[1]};
-    }
+private:
+    int n_;
+    std::vector<double> a_;
 };
 
-Jacobian jacobian(const GasInjectionNetwork& net, const Vec& p, const Vec& r)
+/// Finite-difference Jacobian. On the eliminated problem the well response has
+/// kinks where a control switches, so a difference taken across one is not the
+/// local slope -- which is exactly why the step needs globalising. The full
+/// problem holds its controls fixed while this is taken, so it has no kinks.
+template <class Problem>
+Matrix jacobian(const Problem& problem, const State& x, const State& r)
 {
-    const double h = convert::from(0.01, bars);
-    Jacobian J{};
-    for (int j = 0; j < 2; ++j) {
-        Vec shifted = p;
+    const int n = problem.size();
+    Matrix J(n);
+    for (int j = 0; j < n; ++j) {
+        State shifted = x;
+        const double h = 1e-2 * problem.columnScale(j);
         shifted[j] += h;
-        const auto rj = net.residual(shifted);
-        J.m[0][j] = (rj[0] - r[0]) / h;
-        J.m[1][j] = (rj[1] - r[1]) / h;
+        const auto rj = problem.residual(shifted);
+        for (int i = 0; i < n; ++i) {
+            J(i, j) = (rj[i] - r[i]) / h;
+        }
     }
     return J;
 }
@@ -512,9 +807,11 @@ Jacobian jacobian(const GasInjectionNetwork& net, const Vec& p, const Vec& r)
 struct FullStep
 {
     static constexpr const char* name = "newton, full step";
-    Vec accept(const GasInjectionNetwork&, const Vec& p, const Vec&, const Vec& dp)
+
+    template <class Problem>
+    State accept(const Problem&, const State& x, const State&, const State& dx)
     {
-        return p + dp;
+        return x + dx;
     }
 };
 
@@ -522,11 +819,17 @@ struct FullStep
 struct CappedStep
 {
     static constexpr const char* name = "newton, capped step";
-    double cap = kMaxStep;
+    double cap = kMaxStep;   // in column scales, so 100 means 100 bar
 
-    Vec accept(const GasInjectionNetwork&, const Vec& p, const Vec&, const Vec& dp)
+    template <class Problem>
+    State accept(const Problem& problem, const State& x, const State&, const State& dx)
     {
-        return p + Vec{std::clamp(dp[0], -cap, cap), std::clamp(dp[1], -cap, cap)};
+        State capped = dx;
+        for (int i = 0; i < problem.size(); ++i) {
+            const double limit = cap * problem.columnScale(i);
+            capped[i] = std::clamp(capped[i], -limit, limit);
+        }
+        return x + capped;
     }
 };
 
@@ -538,20 +841,21 @@ struct LineSearch
     bool sufficient_decrease = false;
     int max_halvings = 12;
 
-    Vec accept(const GasInjectionNetwork& net, const Vec& p, const Vec& r, const Vec& dp)
+    template <class Problem>
+    State accept(const Problem& problem, const State& x, const State& r, const State& dx)
     {
         const double f0 = norm2(r);
         double lambda = 1.0;
         for (int k = 0; k < max_halvings; ++k) {
-            const Vec trial = p + lambda * dp;
-            const double f = norm2(net.residual(trial));
+            const State trial = x + lambda * dx;
+            const double f = norm2(problem.residual(trial));
             const double target = sufficient_decrease ? (1.0 - 1e-4 * lambda) * f0 : f0;
             if (f < target) {
                 return trial;
             }
             lambda *= 0.5;
         }
-        return p + lambda * dp;
+        return x + lambda * dx;
     }
 };
 
@@ -560,20 +864,26 @@ struct LineSearch
 struct TrustRegion
 {
     static constexpr const char* name = "newton, trust region";
-    double radius = convert::from(50.0, bars);
-    double radius_max = convert::from(400.0, bars);
-    double radius_min = convert::from(1e-4, bars);
-    double radius_start = convert::from(50.0, bars);
+    double radius = 50.0;          // in column scales, so 50 means 50 bar
+    double radius_max = 400.0;
+    double radius_min = 1e-4;
+    double radius_start = 50.0;
 
-    Vec accept(const GasInjectionNetwork& net, const Vec& p, const Vec& r, const Vec& dp)
+    template <class Problem>
+    State accept(const Problem& problem, const State& x, const State& r, const State& dx)
     {
         const double f0 = norm2(r);
-        const double len = norm2(dp);
+        // Measure the step in column scales, so one radius covers pressures and rates.
+        State scaled(dx.size());
+        for (int i = 0; i < problem.size(); ++i) {
+            scaled[i] = dx[i] / problem.columnScale(i);
+        }
+        const double len = norm2(scaled);
         while (radius > radius_min) {
             const double lambda = (len > radius && len > 0.0) ? radius / len : 1.0;
-            const Vec trial = p + lambda * dp;
-            const double f = norm2(net.residual(trial));
-            // The step solves J dp = -r, so the linear model predicts (1 - lambda)*r.
+            const State trial = x + lambda * dx;
+            const double f = norm2(problem.residual(trial));
+            // The step solves J dx = -r, so the linear model predicts (1 - lambda)*r.
             const double predicted = lambda * f0;
             const double rho = predicted > 0.0 ? (f0 - f) / predicted : -1.0;
 
@@ -589,22 +899,35 @@ struct TrustRegion
         // control switch. Take the smallest step and reopen rather than stalling.
         const double lambda = std::min(1.0, radius_min / std::max(len, radius_min));
         radius = radius_start;
-        return p + lambda * dp;
+        return x + lambda * dx;
     }
 };
 
-template <class Globalisation>
-Result newton(const GasInjectionNetwork& net, Vec p, Globalisation g = {})
+/// Newton on either formulation. The full problem reselects its well controls
+/// once per iteration; converging with a control still moving is not converged.
+template <class Problem, class Globalisation>
+Result newton(Problem problem, const Vec& start, Globalisation g = {})
 {
+    State x = problem.start(start);
     for (int it = 1; it <= kMaxIter; ++it) {
-        const auto r = net.residual(p);
-        if (normMax(r) < kTol) {
-            return {true, it, p};
+        bool controls_moved = false;
+        if constexpr (requires { problem.updateControls(x); }) {
+            controls_moved = problem.updateControls(x);
         }
-        const auto dp = jacobian(net, p, r).solve(-r);
-        p = g.accept(net, p, r, dp);
+        const auto r = problem.residual(x);
+        if (normMax(r) < kTol && !controls_moved) {
+            return {true, it, problem.pressures(x)};
+        }
+        State dx;
+        if (!jacobian(problem, x, r).solve(-r, dx)) {
+            return {false, kMaxIter + 1, problem.pressures(x)};
+        }
+        // The residual jumps when a control switches, and that jump is not a
+        // failure to make progress. Letting a globalisation veto it stalls the
+        // active set instead of resolving it.
+        x = controls_moved ? x + dx : g.accept(problem, x, r, dx);
     }
-    return {false, kMaxIter + 1, p};
+    return {false, kMaxIter + 1, problem.pressures(x)};
 }
 
 } // anonymous namespace
@@ -618,23 +941,33 @@ BOOST_AUTO_TEST_CASE(branches_match_eclipse)
     const GasInjectionNetwork net;
     const auto sm3d = cubic(meter) / day;
     // E100 day 31: M5S = 209.4 bar at 1.532e6 sm3/d, M5N = 204.2 bar at 5.53e5 sm3/d.
-    const double m5s = net.branch(3, convert::from(340.0, bars), convert::from(1.532e6, sm3d));
-    const double m5n = net.branch(2, convert::from(209.4, bars), convert::from(5.53e5, sm3d));
+    const double m5s = net.branch(kM5sTable, convert::from(340.0, bars), convert::from(1.532e6, sm3d));
+    const double m5n = net.branch(kM5nTable, convert::from(209.4, bars), convert::from(5.53e5, sm3d));
     BOOST_TEST_MESSAGE("M5S " << convert::to(m5s, bars) << " (E100 209.4), M5N "
                        << convert::to(m5n, bars) << " (E100 204.2) bar");
     BOOST_CHECK_CLOSE(convert::to(m5s, bars), 209.4, 2.0);
     BOOST_CHECK_CLOSE(convert::to(m5n, bars), 204.2, 2.0);
 }
 
-BOOST_AUTO_TEST_CASE(solution_matches_eclipse)
+// Both formulations describe the same network, so they must land on the same point.
+BOOST_AUTO_TEST_CASE(both_formulations_match_eclipse)
 {
     const GasInjectionNetwork net;
-    const auto r = newton(net, kStart, TrustRegion{});
-    BOOST_REQUIRE(r.converged);
-    BOOST_TEST_MESSAGE("solution (" << convert::to(r.p[0], bars) << ", "
-                       << convert::to(r.p[1], bars) << ") bar, E100 (209.4, 204.2)");
-    BOOST_CHECK_CLOSE(convert::to(r.p[0], bars), 209.4, 0.5);
-    BOOST_CHECK_CLOSE(convert::to(r.p[1], bars), 204.2, 0.5);
+    // Each formulation with the method that suits it: the eliminated residual
+    // needs globalising, the full one does not.
+    const auto eliminated = newton(EliminatedProblem{net}, kStart, TrustRegion{});
+    const auto full = newton(FullProblem{net}, kStart, FullStep{});
+
+    BOOST_REQUIRE(eliminated.converged);
+    BOOST_REQUIRE(full.converged);
+    for (const auto& r : {eliminated, full}) {
+        BOOST_TEST_MESSAGE("solution (" << convert::to(r.p[0], bars) << ", "
+                           << convert::to(r.p[1], bars) << ") bar, E100 (209.4, 204.2)");
+        BOOST_CHECK_CLOSE(convert::to(r.p[0], bars), 209.4, 0.5);
+        BOOST_CHECK_CLOSE(convert::to(r.p[1], bars), 204.2, 0.5);
+    }
+    BOOST_CHECK_SMALL(convert::to(full.p[0] - eliminated.p[0], bars), 0.05);
+    BOOST_CHECK_SMALL(convert::to(full.p[1] - eliminated.p[1], bars), 0.05);
 }
 
 // GCONINJE puts the wells on GRUP control once their unconstrained rates exceed the
@@ -656,11 +989,46 @@ BOOST_AUTO_TEST_CASE(group_target_caps_the_rates)
 namespace {
     void report(const char* name, const Result& r)
     {
-        BOOST_TEST_MESSAGE(std::left << std::setw(22) << name
+        BOOST_TEST_MESSAGE(std::left << std::setw(26) << name
                            << (r.converged ? "converged in " : "FAILED after ")
                            << std::setw(4) << r.iterations << " iterations, p = ("
                            << convert::to(r.p[0], bars) << ", "
                            << convert::to(r.p[1], bars) << ") bar");
+    }
+
+    // The grid the basin tests sweep: starting node pressures across the tables' THP axis.
+    std::vector<Vec> startingPoints()
+    {
+        std::vector<Vec> starts;
+        for (int a = 60; a <= 500; a += 20) {
+            for (int b = 60; b <= 500; b += 20) {
+                starts.push_back({convert::from(a, bars), convert::from(b, bars)});
+            }
+        }
+        return starts;
+    }
+
+    /// How many of the starting points a method reaches the right answer from.
+    template <class Solve>
+    int basin(const char* name, Solve&& solve)
+    {
+        const auto starts = startingPoints();
+        const Vec expected = {convert::from(209.30, bars), convert::from(204.19, bars)};
+        const double tol = convert::from(1.0, bars);
+
+        int solved = 0, iterations = 0;
+        for (const auto& start : starts) {
+            const auto r = solve(start);
+            if (r.converged && std::max(std::abs(r.p[0] - expected[0]),
+                                        std::abs(r.p[1] - expected[1])) < tol) {
+                ++solved;
+                iterations += r.iterations;
+            }
+        }
+        BOOST_TEST_MESSAGE(std::left << std::setw(26) << name << solved << "/" << starts.size()
+                           << " starts, mean " << (solved ? iterations / solved : 0)
+                           << " iterations");
+        return solved;
     }
 }
 
@@ -668,20 +1036,21 @@ namespace {
 BOOST_AUTO_TEST_CASE(method_comparison)
 {
     const GasInjectionNetwork net;
+    const EliminatedProblem eliminated{net};
 
     const auto fixed_point = damped(net, kStart, 0.1);
     const auto bracket = bracketing(net, kStart, 0.1);
     const auto acc = anderson(net, kStart, 4);
-    const auto full = newton(net, kStart, FullStep{});
-    const auto capped = newton(net, kStart, CappedStep{});
-    const auto search = newton(net, kStart, LineSearch{});
-    const auto armijo = newton(net, kStart, LineSearch{/*sufficient_decrease=*/true});
-    const auto region = newton(net, kStart, TrustRegion{});
+    const auto full_step = newton(eliminated, kStart, FullStep{});
+    const auto capped = newton(eliminated, kStart, CappedStep{});
+    const auto search = newton(eliminated, kStart, LineSearch{});
+    const auto armijo = newton(eliminated, kStart, LineSearch{/*sufficient_decrease=*/true});
+    const auto region = newton(eliminated, kStart, TrustRegion{});
 
     report("damped (omega 0.1)", fixed_point);
     report("bracketing (shipped)", bracket);
     report("anderson (depth 4)", acc);
-    report(FullStep::name, full);
+    report(FullStep::name, full_step);
     report(CappedStep::name, capped);
     report(LineSearch::name, search);
     report("newton, armijo", armijo);
@@ -690,7 +1059,7 @@ BOOST_AUTO_TEST_CASE(method_comparison)
     // The damped update is the original branch's method: it limit-cycles here.
     BOOST_CHECK(!fixed_point.converged);
     // An unglobalised Newton step overshoots off the plateau and does not return.
-    BOOST_CHECK(!full.converged);
+    BOOST_CHECK(!full_step.converged);
     BOOST_CHECK(bracket.converged);
     for (const auto& r : {capped, search, armijo, region}) {
         BOOST_CHECK(r.converged);
@@ -699,69 +1068,130 @@ BOOST_AUTO_TEST_CASE(method_comparison)
 }
 
 // The real test of a globalisation is not its iteration count from one good start
-// but how much of the space it recovers from. Sweep a grid of starting pressures
-// spanning the tables' THP axis and count what converges to the right answer.
+// but how much of the space it recovers from.
 BOOST_AUTO_TEST_CASE(globalisation_basin)
 {
     const GasInjectionNetwork net;
-    const Vec expected = {convert::from(209.30, bars), convert::from(204.19, bars)};
-    const double tol = convert::from(1.0, bars);
+    const EliminatedProblem problem{net};
+    const auto n = static_cast<int>(startingPoints().size());
 
-    std::vector<Vec> starts;
-    for (int a = 60; a <= 500; a += 20) {
-        for (int b = 60; b <= 500; b += 20) {
-            starts.push_back({convert::from(a, bars), convert::from(b, bars)});
-        }
-    }
-
-    auto basin = [&](const char* name, auto&& solve) {
-        int solved = 0, iterations = 0;
-        for (const auto& start : starts) {
-            const auto r = solve(start);
-            if (r.converged && normMax(r.p - expected) < tol) {
-                ++solved;
-                iterations += r.iterations;
-            }
-        }
-        BOOST_TEST_MESSAGE(std::left << std::setw(22) << name << solved << "/" << starts.size()
-                           << " starts, mean " << (solved ? iterations / solved : 0)
-                           << " iterations");
-        return solved;
-    };
-
-    const auto n = static_cast<int>(starts.size());
     const int bracket = basin("bracketing (shipped)",
                               [&](const Vec& p) { return bracketing(net, p, 0.1); });
-    const int full = basin(FullStep::name, [&](const Vec& p) { return newton(net, p, FullStep{}); });
-    const int capped = basin(CappedStep::name, [&](const Vec& p) { return newton(net, p, CappedStep{}); });
-    const int search = basin(LineSearch::name, [&](const Vec& p) { return newton(net, p, LineSearch{}); });
-    const int region = basin(TrustRegion::name, [&](const Vec& p) { return newton(net, p, TrustRegion{}); });
+    const int full_step = basin(FullStep::name,
+                                [&](const Vec& p) { return newton(problem, p, FullStep{}); });
+    const int capped = basin(CappedStep::name,
+                             [&](const Vec& p) { return newton(problem, p, CappedStep{}); });
+    const int search = basin(LineSearch::name,
+                             [&](const Vec& p) { return newton(problem, p, LineSearch{}); });
+    const int region = basin(TrustRegion::name,
+                             [&](const Vec& p) { return newton(problem, p, TrustRegion{}); });
 
     // An unglobalised Newton recovers from almost none of the space, and merely
     // capping the step -- what --network-max-pressure-update-in-bars does today --
     // is not enough either. A real globalisation gives up nothing.
-    BOOST_CHECK_LT(full, n / 10);
+    BOOST_CHECK_LT(full_step, n / 10);
     BOOST_CHECK_LT(capped, n / 2);
-    BOOST_CHECK_GT(capped, full);
+    BOOST_CHECK_GT(capped, full_step);
     BOOST_CHECK_EQUAL(bracket, n);
     BOOST_CHECK_EQUAL(search, n);
     BOOST_CHECK_EQUAL(region, n);
 }
 
-// How the methods degrade as the wells stiffen. dq/dbhp sets the loop gain.
+// The question the full formulation exists to answer: does carrying the rates as
+// unknowns buy anything the eliminated form cannot get from a globalisation?
+BOOST_AUTO_TEST_CASE(eliminated_versus_full)
+{
+    const GasInjectionNetwork net;
+    const EliminatedProblem eliminated{net};
+    const FullProblem full{net};
+
+    const int e_step = basin("eliminated, full step",
+                             [&](const Vec& p) { return newton(eliminated, p, FullStep{}); });
+    const int f_step = basin("full, full step",
+                             [&](const Vec& p) { return newton(full, p, FullStep{}); });
+    const int e_search = basin("eliminated, line search",
+                               [&](const Vec& p) { return newton(eliminated, p, LineSearch{}); });
+    const int f_search = basin("full, line search",
+                               [&](const Vec& p) { return newton(full, p, LineSearch{}); });
+
+    const auto n = static_cast<int>(startingPoints().size());
+    // Holding the controls fixed while the step is taken removes the kinks, so the
+    // full system needs no globalisation at all: a plain Newton recovers from
+    // everything the globalised eliminated one does, in fewer iterations.
+    BOOST_CHECK_LT(e_step, n / 10);
+    BOOST_CHECK_EQUAL(f_step, n);
+    BOOST_CHECK_EQUAL(e_search, n);
+    BOOST_CHECK_EQUAL(f_search, n);
+}
+
+// The tables only describe a box in (rate, thp). Outside it they are zero-filled
+// and the interpolation runs away, so the full system has a root there too -- at
+// dq/dbhp = 1e4 a plain Newton reaches it from a third of the grid, ending with
+// every well at its rate limit (4e6 sm3/d, twice the tables' flow axis) and node
+// pressures of -683 and -10975 bar.
+//
+// Clamping the lookups to the axes removes that root, and costs more than it
+// saves: the residual goes flat outside the box, so the Jacobian there is
+// singular in the rates and the Newton has nothing to descend. Neither setting is
+// good, which is the point -- the table limits want to be bounds on the unknowns,
+// enforced in the active set alongside the well controls, not a flattening of the
+// residual. The bracketing method never meets this because its inner bisection
+// cannot leave the box in the first place.
+BOOST_AUTO_TEST_CASE(table_bounds_want_to_be_constraints)
+{
+    const auto n = static_cast<int>(startingPoints().size());
+
+    GasInjectionNetwork loose;
+    loose.setStiffness(1.0e4);
+    const int unclamped = basin("unclamped", [&](const Vec& p) {
+        return newton(FullProblem{loose}, p, FullStep{});
+    });
+
+    GasInjectionNetwork clamped;
+    clamped.setStiffness(1.0e4);
+    clamped.setClampToAxes(true);
+    const int with_clamp = basin("clamped to axes", [&](const Vec& p) {
+        return newton(FullProblem{clamped}, p, FullStep{});
+    });
+
+    // Both leave part of the grid unsolved, for opposite reasons.
+    BOOST_CHECK_LT(unclamped, n);
+    BOOST_CHECK_LT(with_clamp, unclamped);
+
+    // The bracketing method is indifferent: it cannot leave the box either way.
+    BOOST_CHECK_EQUAL(basin("bracketing, clamped",
+                            [&](const Vec& p) { return bracketing(clamped, p, 0.1); }), n);
+}
+
+// How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.
+// Measured over the whole grid of starts, because a single start says too little.
 BOOST_AUTO_TEST_CASE(stiffness_sweep)
 {
+    const auto n = static_cast<int>(startingPoints().size());
     for (const double stiffness : {1.0e4, 6.0e4, 3.0e5, 1.0e6}) {
         GasInjectionNetwork net;
         net.setStiffness(stiffness);
-        const auto bracket = bracketing(net, kStart, 0.1);
-        const auto region = newton(net, kStart, TrustRegion{});
-        BOOST_TEST_MESSAGE("dq/dbhp = " << std::setw(8) << stiffness << " sm3/d/bar : bracketing "
-                           << (bracket.converged ? "" : "FAILED ") << bracket.iterations
-                           << ", trust region " << (region.converged ? "" : "FAILED ")
-                           << region.iterations);
-        BOOST_CHECK(region.converged);
-        BOOST_CHECK_LT(region.iterations, bracket.iterations);
+        BOOST_TEST_MESSAGE("dq/dbhp = " << stiffness << " sm3/d/bar");
+
+        const int bracket = basin("  bracketing (shipped)",
+                                  [&](const Vec& p) { return bracketing(net, p, 0.1); });
+        const int eliminated = basin("  eliminated, trust region",
+                                     [&](const Vec& p) {
+                                         return newton(EliminatedProblem{net}, p, TrustRegion{});
+                                     });
+        const int full = basin("  full, plain newton",
+                               [&](const Vec& p) {
+                                   return newton(FullProblem{net}, p, FullStep{});
+                               });
+        const int full_ls = basin("  full, line search",
+                                  [&](const Vec& p) {
+                                      return newton(FullProblem{net}, p, LineSearch{});
+                                  });
+        BOOST_CHECK_EQUAL(bracket, n);
+        BOOST_CHECK_GE(eliminated, n - 1);
+        // The full system is uniformly better except at the softest wells, where
+        // the out-of-table root of table_bounds_want_to_be_constraints catches it.
+        BOOST_CHECK_GE(std::max(full, full_ls), (stiffness > 1.0e4) ? n : 7 * n / 10);
     }
 }
 
