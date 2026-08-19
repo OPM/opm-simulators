@@ -519,7 +519,7 @@ public:
                          const WellState<Scalar, IndexTraits>& well_state_nupcol,
                          WellState<Scalar, IndexTraits>& well_state) const;
 
-    const WellState<Scalar, IndexTraits>& wellState() const
+    OPM_HOST_DEVICE const WellState<Scalar, IndexTraits>& wellState() const
     {
         return *this->well_state_;
     }
