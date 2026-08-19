@@ -99,12 +99,14 @@ public:
     {
         this->last_valid_node_pressures_ = this->node_pressures_;
         this->last_valid_branch_data_ = this->branch_data_;
+        this->last_valid_network_imposed_thp_limits_ = this->network_imposed_thp_limits_;
     }
 
     void resetState()
     {
         this->node_pressures_ = this->last_valid_node_pressures_;
         this->branch_data_ = this->last_valid_branch_data_;
+        this->network_imposed_thp_limits_ = this->last_valid_network_imposed_thp_limits_;
     }
 
     template<class Serializer>
@@ -114,6 +116,8 @@ public:
         serializer(last_valid_node_pressures_);
         serializer(branch_data_);
         serializer(last_valid_branch_data_);
+        serializer(network_imposed_thp_limits_);
+        serializer(last_valid_network_imposed_thp_limits_);
     }
 
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
@@ -138,6 +142,12 @@ protected:
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations
     std::map<std::string, data::BranchData> last_valid_branch_data_;
+    // The latest THP limit the network imposed on each well. A well that is
+    // detached from the network keeps its network-imposed THP limit until new
+    // production controls are specified for it (matching Eclipse behavior).
+    std::map<std::string, Scalar> network_imposed_thp_limits_;
+    // Valid network-imposed THP limits for safe restart after failed iterations
+    std::map<std::string, Scalar> last_valid_network_imposed_thp_limits_;
 };
 
 } // namespace Opm
