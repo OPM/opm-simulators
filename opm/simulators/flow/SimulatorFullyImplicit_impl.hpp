@@ -37,6 +37,7 @@
 #include <fmt/format.h>
 
 #include <filesystem>
+#include <limits>
 #include <sstream>
 
 namespace Opm {
@@ -357,12 +358,30 @@ runStep(SimulatorTimer& timer)
             auto& schedule = this->simulator_.vanguard().schedule();
             auto& events = this->schedule()[reportStep].events();
 
-            bool result = false;
+            // The problem may cap the next time step (e.g. a geomechanical
+            // fracture model limiting steps while the fracture grows).
+            const double problem_max_next_tstep =
+                this->simulator_.problem().maxNextTimeStepSize();
+            const bool problem_caps =
+                problem_max_next_tstep < std::numeric_limits<double>::max();
+
+            bool result = problem_caps;
+            if (problem_caps) {
+                this->adaptiveTimeStepping_->updateNEXTSTEP(problem_max_next_tstep);
+            }
             if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                 // Unset the event to not trigger it again on the next sub step
                 schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
                 const auto& sched_state = schedule[reportStep];
-                const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                double max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                // Both are upper bounds on the next step, so the effective cap is
+                // the smaller one.  max_next_tstep() is -1 when the schedule sets
+                // no limit at all, and then the problem's limit stands alone.
+                if (problem_caps) {
+                    max_next_tstep = (max_next_tstep > 0.0)
+                        ? std::min(max_next_tstep, problem_max_next_tstep)
+                        : problem_max_next_tstep;
+                }
                 const auto& tuning = sched_state.tuning();
 
                 if (enableTUNING) {
