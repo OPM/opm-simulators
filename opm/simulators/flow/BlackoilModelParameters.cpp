@@ -122,6 +122,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_well_proxy_ = Parameters::Get<Parameters::NetworkWellProxy>();
     network_well_proxy_max_iterations_ = Parameters::Get<Parameters::NetworkWellProxyMaxIterations>();
     network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
+    network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
+    network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -296,6 +298,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("How the injection networks are solved: fixedpoint relaxes the node pressures against "
          "the wells, newton solves pressures and rates simultaneously and falls back to the "
          "fixed point when it does not converge");
+    Parameters::Register<Parameters::NetworkAnalyticJacobian>
+        ("Assemble the network Jacobian from the VFP table derivatives instead of differencing "
+         "the residual (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkGroupControl>
+        ("Let the network hold a group's injection total and place the split itself, so a well "
+         "that hits its own limit is taken up by the others (--network-solver=newton only)");
     Parameters::Register<Parameters::NetworkPressureUpdateSecant>
         ("Networks whose node pressures use the bracketing/secant update in the inner network "
          "iterations instead of the damped update: injection, all or none");
