@@ -24,6 +24,7 @@
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
 #include <opm/simulators/wells/NetworkSystem.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 
@@ -259,7 +260,7 @@ std::optional<std::map<std::string, Scalar>>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 newtonNodePressures(const Network::ExtNetwork& network,
                     const Phase injection_phase,
-                    const int) const
+                    const int reportStepIdx) const
 {
     OPM_TIMEFUNCTION();
     const auto roots = network.roots();
@@ -297,36 +298,89 @@ newtonNodePressures(const Network::ExtNetwork& network,
         return std::nullopt;
     }
 
+    // Every rank has to solve the same system, so the input has to be the same
+    // on every rank -- as it is for the group and node quantities the relaxed
+    // computation works from. The well *list* and everything static about a well
+    // come from the schedule, which is replicated. Only what the well is
+    // currently doing is rank-local, so that is summed, contributed once by the
+    // rank that owns the well. Distributed wells appear on several ranks with
+    // the same values, which is why it is the owner and not every holder.
+    const auto& schedule = well_model_.schedule();
+    std::map<std::string, const WellInterfaceGeneric<Scalar, IndexTraits>*> local;
+    for (const auto& well : well_model_.genericWells()) {
+        local.emplace(well->name(), well);
+    }
+
+    struct Candidate { std::string name; int node; int vfp_table; Scalar bhp_limit, rate_limit; };
+    std::vector<Candidate> candidates;
+    for (const auto& name : schedule.wellNames(reportStepIdx)) {
+        const auto& well = schedule.getWell(name, reportStepIdx);
+        if (!well.isInjector() || !well.predictionMode() || !index.count(well.groupName())) {
+            continue;
+        }
+        const auto type = well.injectionControls(summary_state).injector_type;
+        const bool wanted = (injection_phase == Phase::GAS) ? (type == InjectorType::GAS)
+                                                            : (type == InjectorType::WATER);
+        if (!wanted) {
+            continue;
+        }
+        const auto controls = well.injectionControls(summary_state);
+        candidates.push_back({name, index.at(well.groupName()), controls.vfp_table_number,
+                              static_cast<Scalar>(controls.bhp_limit),
+                              static_cast<Scalar>(controls.surface_rate)});
+    }
+    if (candidates.empty()) {
+        return std::nullopt;
+    }
+
+    // Per candidate: present, usable, ipr_a, ipr_b, current rate, on group.
+    constexpr int kEntries = 6;
+    std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        const auto it = local.find(candidates[i].name);
+        if (it == local.end() || !it->second->parallelWellInfo().isOwner()) {
+            continue;
+        }
+        const auto& ws = well_model_.wellState()[it->second->indexOfWell()];
+        if (ws.status != WellStatus::OPEN) {
+            continue;
+        }
+        Scalar* e = &shared[i * kEntries];
+        e[0] = 1.0;
+        if (static_cast<int>(ws.implicit_ipr_b.size()) > phase_pos
+            && ws.implicit_ipr_b[phase_pos] > Scalar{0}) {
+            e[1] = 1.0;
+            // The well state stores the linearisation as q = b*bhp - a.
+            e[2] = -ws.implicit_ipr_a[phase_pos];
+            e[3] = ws.implicit_ipr_b[phase_pos];
+        }
+        e[4] = std::max(ws.surface_rates[phase_pos], Scalar{0});
+        e[5] = (ws.injection_cmode == Well::InjectorCMode::GRUP) ? 1.0 : 0.0;
+    }
+    well_model_.comm().sum(shared.data(), shared.size());
+
+    // From here on every rank is working from the same numbers, so every
+    // decision below -- including giving up -- is reached by all of them.
     Scalar group_target = 0.0;
     const bool use_group_target = this->network_group_control_;
-    for (const auto& well : well_model_.genericWells()) {
-        if (!well->isInjector() || !well->wellEcl().predictionMode()) {
-            continue;
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        const Scalar* e = &shared[i * kEntries];
+        if (e[0] <= Scalar{0}) {
+            continue;                 // open on no rank; not part of the network
         }
-        const auto& node = well->wellEcl().groupName();
-        if (!index.count(node)) {
-            continue;
+        if (e[1] <= Scalar{0}) {
+            return std::nullopt;      // no usable response; leave it to the fixed point
         }
-        const auto& ws = well_model_.wellState()[well->indexOfWell()];
-        if (ws.status != WellStatus::OPEN
-            || static_cast<int>(ws.implicit_ipr_b.size()) <= phase_pos) {
-            return std::nullopt;
-        }
-
-        const auto controls = well->wellEcl().injectionControls(summary_state);
+        const auto& candidate = candidates[i];
         NetworkSolve::Well<Scalar> w;
-        w.name = well->name();
-        w.node = index.at(node);
-        w.vfp_table = controls.vfp_table_number;
-        // The well state stores the linearisation as q = b*bhp - a.
-        w.ipr_a = -ws.implicit_ipr_a[phase_pos];
-        w.ipr_b = ws.implicit_ipr_b[phase_pos];
-        if (!(w.ipr_b > Scalar{0})) {
-            return std::nullopt;   // no usable response; leave it to the fixed point
-        }
-        w.bhp_limit = controls.bhp_limit;
-        const bool on_group = ws.injection_cmode == Well::InjectorCMode::GRUP;
-        const Scalar current = std::max(ws.surface_rates[phase_pos], Scalar{0});
+        w.name = candidate.name;
+        w.node = candidate.node;
+        w.vfp_table = candidate.vfp_table;
+        w.ipr_a = e[2];
+        w.ipr_b = e[3];
+        w.bhp_limit = candidate.bhp_limit;
+        const Scalar current = e[4];
+        const bool on_group = e[5] > Scalar{0};
         w.q_start = current;
         if (on_group && use_group_target) {
             // The group machinery has already set the total these wells inject.
@@ -334,14 +388,14 @@ newtonNodePressures(const Network::ExtNetwork& network,
             // that runs into its own bhp or rate limit is taken up by the others
             // instead of the total quietly dropping.
             group_target += current;
-            w.rate_limit = static_cast<Scalar>(controls.surface_rate);
+            w.rate_limit = candidate.rate_limit;
             w.guide = current;
         } else if (on_group) {
             // Otherwise the well is simply held where the group put it.
             w.rate_limit = current;
             w.guide = current;
         } else {
-            w.rate_limit = static_cast<Scalar>(controls.surface_rate);
+            w.rate_limit = candidate.rate_limit;
             w.guide = w.rate_limit;
         }
         // A well with nothing to go on -- no rate and no target -- would enter
