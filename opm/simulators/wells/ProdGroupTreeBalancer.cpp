@@ -138,7 +138,7 @@ template<class Scalar, typename IndexTraits>
 std::vector<Scalar> toActive(const std::array<Scalar, 3>& canonical3,
                               const PhaseUsageInfo<IndexTraits>& pu)
 {
-    std::vector<Scalar> v(pu.numPhases, Scalar(0));
+    std::vector<Scalar> v(pu.numActivePhases(), Scalar(0));
     for (int c = 0; c < 3; ++c) {
         const int a = activeIdx(pu, c);
         if (a >= 0) {
@@ -277,8 +277,8 @@ void populateWellNode(ProdGroupTreeNode<Scalar>& node,
 
     // RESV conversion coefficients — computed from globally consistent rates.
     {
-        std::vector<Scalar> coeffVec(pu.numPhases, Scalar(0));
-        std::vector<Scalar> posRates(pu.numPhases, Scalar(0));
+        std::vector<Scalar> coeffVec(pu.numActivePhases(), Scalar(0));
+        std::vector<Scalar> posRates(pu.numActivePhases(), Scalar(0));
         for (int c = 0; c < 3; ++c) {
             const int a = activeIdx(pu, c);
             if (a >= 0) posRates[a] = -node.rates[c]; // node.rates is negative = production
@@ -393,8 +393,8 @@ void populateGroupNode(ProdGroupTreeNode<Scalar>& node,
 
     // RESV conversion coefficients for this group (should check if needed)
     {
-        std::vector<Scalar> coeffVec(pu.numPhases, Scalar(0));
-        std::vector<Scalar> posRates(pu.numPhases, Scalar(0));
+        std::vector<Scalar> coeffVec(pu.numActivePhases(), Scalar(0));
+        std::vector<Scalar> posRates(pu.numActivePhases(), Scalar(0));
         // Convert group rates (negative=production) to positive rates for RESV calculation
         for (int c = 0; c < 3; ++c) {
             const int a = activeIdx(pu, c);
@@ -2179,7 +2179,7 @@ void applyTreeToState(const Tree<Scalar>& tree,
             // Group node: update group state
             // Rates in groupState are stored in active-phase order, positive = production
             const auto& pu = wellModel.phaseUsage();
-            std::vector<Scalar> activeRates(pu.numPhases, Scalar(0));
+            std::vector<Scalar> activeRates(pu.numActivePhases(), Scalar(0));
             for (int c = 0; c < 3; ++c) {
                 const int a = activeIdx(pu, c);
                 if (a >= 0) {

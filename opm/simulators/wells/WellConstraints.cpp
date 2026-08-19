@@ -362,7 +362,7 @@ getProductionControlModeScale(const std::vector<Scalar>& pos_surface_rates,
             for (int p = 0; p < well_.numPhases(); ++p) {
                 current_rate += pos_reservoir_rates[p];
             }
-            if (!controls.prediction_mode || target.has_value()) {
+            if (controls.prediction_mode || target.has_value()) {
                 target_rate = target.value_or(controls.resv_rate);
             } else {
                 const int fipreg = 0;

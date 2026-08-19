@@ -275,7 +275,22 @@ namespace Opm
                 break;
             case Well::ProducerCMode::RESV:
                 mode_potential = std::accumulate(reservoir_potentials.begin(), reservoir_potentials.end(), Scalar(0));
-                mode_target = controls.resv_rate;
+                if (controls.prediction_mode) {
+                    mode_target = controls.resv_rate;
+                } else {
+                    mode_target = Scalar(0);
+                    const int fipreg = 0;
+                    std::vector<Scalar> target_surface_rates(np, Scalar(0));
+                    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx))
+                        target_surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = controls.water_rate;
+                    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx))
+                        target_surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = controls.oil_rate;
+                    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx))
+                        target_surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = controls.gas_rate;
+                    std::vector<Scalar> target_voidage_rates(np, Scalar(0));
+                    this->rateConverter_.calcReservoirVoidageRates(fipreg, this->pvtRegionIdx(), target_surface_rates, target_voidage_rates);
+                    mode_target = std::accumulate(target_voidage_rates.begin(), target_voidage_rates.end(), Scalar(0));
+                }
                 break;
             default:
                 break;

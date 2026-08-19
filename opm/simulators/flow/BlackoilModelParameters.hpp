@@ -106,7 +106,7 @@ struct UpdateEquationsScaling { static constexpr bool value = false; };
 struct UseUpdateStabilization { static constexpr bool value = true; };
 struct MatrixAddWellContributions { static constexpr bool value = false; };
 
-struct EnableGroupTreeBalancer { static constexpr bool value = false; };
+struct EnableGroupTreeBalancer { static constexpr bool value = true; };
 template<class Scalar>
 struct GroupTreeBalancerTolerance { static constexpr Scalar value = 1e-5; };
 
