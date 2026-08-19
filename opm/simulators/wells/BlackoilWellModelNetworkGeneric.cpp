@@ -357,6 +357,10 @@ newtonNodePressures(const Network::ExtNetwork& network,
     }
     if (group_target > Scalar{0} && use_group_target) {
         system.setGroupTarget(group_target);
+        // The share each well takes of the total follows from what it can inject
+        // at the pressure the network gives it, not from what it happens to be
+        // injecting now -- that is the split being decided.
+        system.setGuidesFromPotential(true);
     }
     system.setAnalyticJacobian(analytic_jacobian_);
     system.finish();
