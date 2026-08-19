@@ -42,7 +42,10 @@
 #include <opm/simulators/flow/FlowProblemTPSA.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ISTLSolverTPSA.hpp>
-#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/tpsa/TpsaMatrix.hpp>
+#include <opm/simulators/linalg/tpsa/TpsaVector.hpp>
+
+#include <type_traits>
 
 
 namespace Opm::Properties {
@@ -94,7 +97,17 @@ struct EqVectorTPSA<TypeTag, TTag::FlowProblemTpsa>
 // Global TPSA equation vector
 template<class TypeTag>
 struct GlobalEqVectorTPSA<TypeTag, TTag::FlowProblemTpsa>
-{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVectorTPSA>>; };
+{
+private:
+    using Scalar = GetPropType<TypeTag, Scalar>;
+    static_assert(std::is_same_v<GetPropType<TypeTag, Properties::EqVectorTPSA>,
+                                 typename Linear::TpsaVector<Scalar>::EqVector>,
+                  "Linear::TpsaVector implements the 7-equation elasticity field "
+                  "split; EqVectorTPSA must be the matching block type");
+
+public:
+    using type = Linear::TpsaVector<Scalar>;
+};
 
 // TPSA Newton method
 template<class TypeTag>
@@ -132,12 +145,11 @@ struct SparseMatrixAdapterTPSA<TypeTag, TTag::FlowProblemTpsa>
 {
 private:
     using Scalar = GetPropType<TypeTag, Scalar>;
-    enum { numEq = getPropValue<TypeTag, Properties::NumEqTPSA>() };
-    using Block = MatrixBlock<Scalar, numEq, numEq>;
+    static_assert(getPropValue<TypeTag, Properties::NumEqTPSA>() == Linear::numTpsaEq,
+                  "Linear::TpsaMatrix implements the 7-equation elasticity field split");
 
 public:
-    using type = typename Linear::IstlSparseMatrixAdapter<Block>;
-
+    using type = Linear::TpsaMatrix<Scalar>;
 };
 
 // Set linear solver backend

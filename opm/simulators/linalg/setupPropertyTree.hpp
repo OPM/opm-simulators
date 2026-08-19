@@ -47,6 +47,7 @@ void validateSystemCPRTree(const PropertyTree& prm);
 // --matrix-add-well-contributions=true. Call this after detecting system_cpr is active.
 void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions);
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
+PropertyTree setupTpsa(std::string conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupLegacyMixedILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupMixedILU(const std::string& conf, const FlowLinearSolverParameters& p);

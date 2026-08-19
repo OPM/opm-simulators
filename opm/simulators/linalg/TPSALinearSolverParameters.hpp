@@ -42,7 +42,7 @@ struct TpsaIluRelaxation { static constexpr double value = 0.9; };
 struct TpsaIluFillinLevel { static constexpr int value = 0; };
 struct TpsaUseGmres { static constexpr bool value = false; };
 struct TpsaLinearSolverIgnoreConvergenceFailure { static constexpr bool value = false; };
-struct TpsaLinearSolver { static constexpr auto value = "ilu0"; };
+struct TpsaLinearSolver { static constexpr auto value = "hypre"; };
 struct TpsaLinearSolverPrintJsonDefinition { static constexpr auto value = false; };
 
 }  // namespace Opm::Parameters

@@ -34,6 +34,9 @@ namespace Opm
 
 namespace
 {
+    constexpr int cprDefaultMaxIter = 20;
+    constexpr double cprDefaultReduction = 0.005;
+
     // Populate DUNE AMG parameters under the given root prefix.
     inline void setupDuneAMG(PropertyTree& prm, const std::string& root)
     {
@@ -58,6 +61,24 @@ namespace
         prm.put(root + "maxconnectivity", prm.get<int>(root + "maxconnectivity", 15));
         prm.put(root + "maxaggsize", prm.get<int>(root + "maxaggsize", 6));
         prm.put(root + "minaggsize", prm.get<int>(root + "minaggsize", 4));
+    }
+
+    // Populate ILU0 preconditioner parameters under the given root prefix.
+    inline void
+    setupIluPrec(PropertyTree& prm,
+                 const std::string& root,
+                 const FlowLinearSolverParameters& p)
+    {
+        using namespace std::string_literals;
+        if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU
+            && !p.is_nldd_local_solver_) {
+            // TODO: We could add ParOverILU0 as an alias in the GPU path to simplify this.
+            prm.put(root + "type", "opmilu0"s);
+        } else {
+            prm.put(root + "type", "paroverilu0"s);
+        }
+        prm.put(root + "relaxation", p.ilu_relaxation_);
+        prm.put(root + "ilulevel", p.ilu_fillin_level_);
     }
 
     // Populate Hypre BoomerAMG defaults under the given root prefix.
@@ -171,6 +192,45 @@ namespace
                   "--linear-solver=dilu).");
 #endif
     }
+
+    /*!
+     * \brief Configure a TPSA block preconditioner
+     *
+     * \param prm Property tree to add the block solver configuration to
+     * \param root Key prefix of the block's sub-tree, including the trailing
+     *             dot, e.g. "preconditioner.disp_disp_solver."
+     * \param type Preconditioner to use for this block
+     * \param p Linear solver parameters (e.g. ILU setup)
+     */
+    void
+    setupTpsaBlockSolver(PropertyTree& prm,
+                         const std::string& root,
+                         const std::string& type,
+                         const FlowLinearSolverParameters& p)
+    {
+        using namespace std::string_literals;
+
+        prm.put(root + "solver", "loopsolver"s);
+        prm.put(root + "maxiter", 1);
+        prm.put(root + "tol", 0.0);
+        prm.put(root + "verbosity", 0);
+
+        const std::string prec = root + "preconditioner.";
+        if (type == "hypre") {
+            // Hypre's own defaults, see HypreSetup.hpp.
+            prm.put(prec + "type", "hypre"s);
+        } else if (type == "ilu0") {
+            setupIluPrec(prm, prec, p);
+        } else if (type == "dilu") {
+            prm.put(prec + "type", "dilu"s);
+        } else if (type == "amg") {
+            prm.put(prec + "type", "amg"s);
+            setupDuneAMG(prm, prec);
+        } else {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("Unknown TPSA block preconditioner \"{}\".", type));
+        }
+    }
 } // anonymous namespace
 
 /// Set up a property tree intended for FlexibleSolver by either reading
@@ -205,42 +265,46 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     // We use lower case as the internal canonical representation of solver names.
     std::ranges::transform(conf, conf.begin(), ::tolower);
 
-    // Use CPR configuration.
-    if (!tpsaSetup) {
-        if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic")) {
-            if (!linearSolverMaxIterSet) {
-                // Use our own default unless it was explicitly overridden by user.
-                p.linear_solver_maxiter_ = 20;
-            }
-            if (!linearSolverReductionSet) {
-                // Use our own default unless it was explicitly overridden by user.
-                p.linear_solver_reduction_ = 0.005;
-            }
-            return setupCPR(conf, p);
-        }
+    // Setup TPSA block preconditioners
+    if (tpsaSetup) {
+        return setupTpsa(conf, p);
+    }
 
-        if ((conf == "cpr") || (conf == "cprw")) {
-            if (!linearSolverMaxIterSet) {
-                // Use our own default unless it was explicitly overridden by user.
-                p.linear_solver_maxiter_ = 20;
-            }
-            if (!linearSolverReductionSet) {
-                // Use our own default unless it was explicitly overridden by user.
-                p.linear_solver_reduction_ = 0.005;
-            }
-            return setupCPRW(conf, p);
+    // Use CPR configuration.
+    if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")
+        || (conf == "cpr_trueimpesanalytic")) {
+        if (!linearSolverMaxIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = cprDefaultMaxIter;
         }
-        
-        // System CPR configuration (coupled reservoir-well system solver).
-        if (conf == "system_cpr") {
-            if (!linearSolverMaxIterSet) {
-                p.linear_solver_maxiter_ = 20;
-            }
-            if (!linearSolverReductionSet) {
-                p.linear_solver_reduction_ = 0.005;
-            }
-            return setupSystemCPR(conf, p);
+        if (!linearSolverReductionSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_reduction_ = cprDefaultReduction;
         }
+        return setupCPR(conf, p);
+    }
+
+    if ((conf == "cpr") || (conf == "cprw")) {
+        if (!linearSolverMaxIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = cprDefaultMaxIter;
+        }
+        if (!linearSolverReductionSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_reduction_ = cprDefaultReduction;
+        }
+        return setupCPRW(conf, p);
+    }
+
+    // System CPR configuration (coupled reservoir-well system solver).
+    if (conf == "system_cpr") {
+        if (!linearSolverMaxIterSet) {
+            p.linear_solver_maxiter_ = cprDefaultMaxIter;
+        }
+        if (!linearSolverReductionSet) {
+            p.linear_solver_reduction_ = cprDefaultReduction;
+        }
+        return setupSystemCPR(conf, p);
     }
 
     if (conf == "amg") {
@@ -289,21 +353,13 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // No valid configuration option found.
-    if (tpsaSetup) {
-        OPM_THROW(std::invalid_argument,
-                  fmt::format("No valid settings found for --tpsa-linear-solver={}! "
-                              "Valid preset options are: ilu0, dilu, amg, or umfpack.", conf));
-    }
-    else {
-        OPM_THROW(std::invalid_argument,
-                conf + " is not a valid setting for --linear-solver-configuration."
-                " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
-    }
-
-
+    OPM_THROW(std::invalid_argument,
+              conf + " is not a valid setting for --linear-solver-configuration."
+              " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
 }
 
-std::string getSolverString(const FlowLinearSolverParameters& p)
+std::string
+getSolverString(const FlowLinearSolverParameters& p)
 {
     if (p.newton_use_gmres_)
     {
@@ -413,6 +469,48 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     return prm;
 }
 
+PropertyTree
+setupTpsa(std::string conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    if (conf != "hypre" && conf != "ilu0" && conf != "dilu" && conf != "amg") {
+        OPM_THROW(std::invalid_argument,
+                  fmt::format(
+                      "No valid settings found for --tpsa-linear-solver={}! Valid preset "
+                      "options are: default, hypre, ilu0, dilu or amg. Alternatively, give "
+                      "the name of a .json file holding a full solver configuration.", conf)
+            );
+    }
+
+#if ! HAVE_HYPRE
+    if (conf == "hypre") {
+        OpmLog::warning(
+            "--tpsa-linear-solver=hypre requires a build with Hypre support (USE_HYPRE=ON). "
+            "Switching to ilu0!");
+        conf = "ilu0"s;
+    }
+#endif
+
+    PropertyTree prm;
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", getSolverString(p));
+
+    prm.put("preconditioner.type", "tpsa_block"s);
+    prm.put("preconditioner.verbosity", p.linear_solver_verbosity_);
+
+    // The three displacement blocks and the solid pressure block are scalar
+    // (1x1) by construction, so they take the requested preconditioner.
+    setupTpsaBlockSolver(prm, "preconditioner.disp_disp_solver.", conf, p);
+    setupTpsaBlockSolver(prm, "preconditioner.spres_spres_solver.", conf, p);
+
+    // The rotation block is 3x3, so it always uses ILU regardless of the choice
+    // above.
+    setupTpsaBlockSolver(prm, "preconditioner.rot_rot_solver.", "ilu0"s, p);
+
+    return prm;
+}
 
 PropertyTree
 setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
@@ -423,14 +521,7 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", getSolverString(p));
-    if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU && !p.is_nldd_local_solver_) {
-        // TODO: We could add ParOverILU0 as an alias in the GPU path to simplify this.
-        prm.put("preconditioner.type", "opmilu0"s);
-    } else {
-        prm.put("preconditioner.type", "paroverilu0"s);
-    }
-    prm.put("preconditioner.relaxation", p.ilu_relaxation_);
-    prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
+    setupIluPrec(prm, "preconditioner.", p);
     return prm;
 }
 
