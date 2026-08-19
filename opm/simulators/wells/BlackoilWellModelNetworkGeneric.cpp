@@ -447,7 +447,13 @@ newtonNodePressures(const Network::ExtNetwork& network,
 
     const auto result = NetworkSolve::solve(system, guess);
     if (!result.converged) {
-        return giveUp(fmt::format("it did not converge in {} iterations", result.iterations - 1));
+        return giveUp(fmt::format("it did not converge in {} iterations; residual {:.3g}{}{}",
+                                  result.iterations - 1, result.residual,
+                                  result.controls_moving ? ", a control was still switching" : "",
+                                  result.guides_moving ? ", group shares still moving" : "")
+                          + (result.control_trace.empty()
+                                 ? std::string{}
+                                 : fmt::format("; controls {}", result.control_trace)));
     }
     OpmLog::debug(fmt::format("Network: solved the {} injection network simultaneously at report "
                               "step {} in {} iterations.",

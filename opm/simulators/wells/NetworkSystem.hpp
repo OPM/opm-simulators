@@ -90,6 +90,15 @@ struct Result
     bool converged = false;
     int iterations = 0;
     std::vector<Scalar> node_pressure;   // every node, terminal included
+
+    /// Why it stopped, for the caller to report. A converged solve leaves these
+    /// at the values that satisfied the test.
+    Scalar residual = 0.0;          // max norm of the scaled residual
+    bool controls_moving = false;   // an active-set change on the last iteration
+    bool guides_moving = false;     // group shares still settling
+    /// One letter per well per iteration for the last few iterations, so a
+    /// cycling active set can be read off: T thp, B bhp, R rate, G group.
+    std::string control_trace;
 };
 
 /// Dense square system. The networks this solves have tens of unknowns, so
@@ -415,11 +424,24 @@ public:
                     wanted = c;
                 }
             };
+            // Strict, deliberately. An inclusive test looks right -- a well at
+            // its limit sits exactly on it -- but start() clamps the opening
+            // rate to the limit, so an inclusive test latches every well onto
+            // rate control at the first iteration and holds it there.
             consider(x[bhpIdx(w)] > well.bhp_limit, ipr(well, well.bhp_limit), Control::Bhp);
             consider(q > well.rate_limit, well.rate_limit, Control::Rate);
             if (grouped()) {
                 // Inclusive: at the solution the rate equals the share exactly,
                 // and a strict test would flip the control every iteration.
+                //
+                // This is still the weak point. The control_trace on a failed
+                // solve shows a period-2 cycle between GRUP and THP: the share
+                // moves with the guides and the multiplier while the rate is
+                // chasing it. Deciding membership from the group instead -- it
+                // binds when the wells could between them take more than the
+                // target -- cures the cycling (water fell back on 9.7 % of
+                // solves, then 0.6 %) but moves the gas case away from the
+                // reference, 8 deviations to 26, so it is not the answer yet.
                 const Scalar share = well.guide * x[lambdaIdx()];
                 consider(q >= share * (1.0 - 1e-9), share, Control::Grup);
             }
@@ -682,6 +704,15 @@ Result<Scalar> solve(System<Scalar>& system,
 {
     auto x = system.start(node_pressure_guess);
     const int n = system.size();
+    Result<Scalar> last;
+    std::vector<std::string> trace;
+    auto joined = [&trace] {
+        std::string out;
+        for (const auto& e : trace) {
+            out += (out.empty() ? "" : " ") + e;
+        }
+        return out;
+    };
 
     for (int it = 1; it <= max_iterations; ++it) {
         // Guides that follow the solution have to settle before it is solved,
@@ -694,9 +725,26 @@ Result<Scalar> solve(System<Scalar>& system,
         for (const auto e : r) {
             worst = std::max(worst, std::abs(e));
         }
-        if (worst < tolerance && !controls_moved && guides_moved < Scalar{1e-6}) {
-            return {true, it, system.pressures(x)};
+        {   // remember the active set, so a cycle can be seen in the report
+            std::string set;
+            for (int w = 0; w < system.numWells(); ++w) {
+                switch (system.control(w)) {
+                case Control::Thp:  set += 'T'; break;
+                case Control::Bhp:  set += 'B'; break;
+                case Control::Rate: set += 'R'; break;
+                case Control::Grup: set += 'G'; break;
+                }
+            }
+            trace.push_back(set);
+            if (trace.size() > 8) {
+                trace.erase(trace.begin());
+            }
         }
+        const bool settled = !controls_moved && guides_moved < Scalar{1e-6};
+        if (worst < tolerance && settled) {
+            return {true, it, system.pressures(x), worst, false, false, {}};
+        }
+        last = {false, it, {}, worst, controls_moved, guides_moved >= Scalar{1e-6}, joined()};
 
         DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
             ? system.jacobian(x)
@@ -719,7 +767,8 @@ Result<Scalar> solve(System<Scalar>& system,
             negative[i] = -r[i];
         }
         if (!J.solve(negative, dx)) {
-            return {false, it, system.pressures(x)};
+            last.node_pressure = system.pressures(x);
+            return last;
         }
 
         dx = system.limitStep(x, dx);
@@ -734,7 +783,9 @@ Result<Scalar> solve(System<Scalar>& system,
             x = globalisation.accept(system, x, r, dx);
         }
     }
-    return {false, max_iterations + 1, system.pressures(x)};
+    last.iterations = max_iterations + 1;
+    last.node_pressure = system.pressures(x);
+    return last;
 }
 
 } // namespace Opm::NetworkSolve
