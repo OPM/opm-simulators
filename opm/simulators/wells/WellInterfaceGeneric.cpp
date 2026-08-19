@@ -27,13 +27,13 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
+#include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
-#include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
@@ -669,29 +669,37 @@ isPressureControlled(const WellState<Scalar, IndexTraits>& well_state) const
 
 template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::
-applyWeldrawRateLimit(const SingleWellState<Scalar, IndexTraits>& ws,
-                      Well::ProductionControls& controls) const
+applyWeldrawRateLimit(const Well& well_ecl,
+                      const std::optional<Scalar>& weldraw_max_rate,
+                      Well::ProductionControls& controls)
 {
-    if (!ws.weldraw_max_rate.has_value()) {
+    if (!weldraw_max_rate.has_value()) {
         return;
     }
 
-    const Scalar max_rate = *ws.weldraw_max_rate;
-    if (this->well_ecl_.getWELDRAW().targetPhase() == WELDRAW::TargetPhase::GAS) {
-        if (!controls.hasControl(Well::ProducerCMode::GRAT) ||
-            max_rate < controls.gas_rate)
-        {
-            controls.gas_rate = max_rate;
-            controls.addControl(Well::ProducerCMode::GRAT);
-        }
-    } else {
-        if (!controls.hasControl(Well::ProducerCMode::LRAT) ||
-            max_rate < controls.liquid_rate)
-        {
-            controls.liquid_rate = max_rate;
-            controls.addControl(Well::ProducerCMode::LRAT);
-        }
+    const bool gas_target =
+        well_ecl.getWELDRAW().targetPhase() == WELDRAW::TargetPhase::GAS;
+    const auto cmode = gas_target ? Well::ProducerCMode::GRAT
+                                  : Well::ProducerCMode::LRAT;
+    double& rate = gas_target ? controls.gas_rate : controls.liquid_rate;
+
+    // Only ever tighten: an existing target below the drawdown limit stands.
+    const Scalar max_rate = *weldraw_max_rate;
+    if (!controls.hasControl(cmode) || (max_rate < rate)) {
+        rate = max_rate;
+        controls.addControl(cmode);
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+Well::ProductionControls
+WellInterfaceGeneric<Scalar, IndexTraits>::
+productionControlsWithWeldraw(const SummaryState& summary_state,
+                              const SingleWellState<Scalar, IndexTraits>& ws) const
+{
+    auto controls = this->well_ecl_.productionControls(summary_state);
+    applyWeldrawRateLimit(this->well_ecl_, ws.weldraw_max_rate, controls);
+    return controls;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -701,8 +709,7 @@ wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
 {
     if (this->isProducer()) { // producers
         const auto& ws = well_state.well(this->indexOfWell());
-        auto prod_controls = this->well_ecl_.productionControls(summary_state);
-        this->applyWeldrawRateLimit(ws, prod_controls);
+        const auto prod_controls = this->productionControlsWithWeldraw(summary_state, ws);
         const auto prod_mode = ws.production_cmode;
         return wellhelpers::rateControlWithZeroProdTarget(prod_controls, prod_mode);
     } else { // injectors

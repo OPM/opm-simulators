@@ -320,7 +320,8 @@ namespace Opm
         };
 
         Scalar coeff = 0.0;
-        if (weldraw.targetPhase() == WELDRAW::TargetPhase::GAS) {
+        const bool gas_target = (weldraw.targetPhase() == WELDRAW::TargetPhase::GAS);
+        if (gas_target) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 coeff += phase_coeff(FluidSystem::gasPhaseIdx);
             }
@@ -331,6 +332,19 @@ namespace Opm
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 coeff += phase_coeff(FluidSystem::waterPhaseIdx);
             }
+        }
+
+        if (!(coeff > 0.0)) {
+            // The target phase cannot flow at any drawdown (phase inactive,
+            // zero mobility, or all connections crossflowing).  Imposing
+            // Qmax = 0 would silently stop the well, so treat the limit as
+            // inactive instead.
+            deferred_logger.warning("WELDRAW_NO_TARGET_PHASE_MOBILITY",
+                fmt::format("Well {}: the WELDRAW target phase ({}) has no "
+                            "producible mobility; the drawdown limit is ignored.",
+                            this->name(), gas_target ? "GAS" : "LIQ"));
+            ws.weldraw_max_rate.reset();
+            return;
         }
 
         ws.weldraw_max_rate = max_draw * coeff;
@@ -624,10 +638,9 @@ namespace Opm
         auto& deferred_logger = groupStateHelper.deferredLogger();
 
         const auto& summary_state = simulator.vanguard().summaryState();
-        const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         const auto& ws = well_state.well(this->indexOfWell());
-        this->applyWeldrawRateLimit(ws, prod_controls);
+        const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = this->well_ecl_.isProducer() ? this->productionControlsWithWeldraw(summary_state, ws) : Well::ProductionControls(0);
         const auto pmode_orig = ws.production_cmode;
         const auto imode_orig = ws.injection_cmode;
         bool converged = false;
@@ -1076,8 +1089,9 @@ namespace Opm
         OPM_TIMEFUNCTION();
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        this->applyWeldrawRateLimit(well_state.well(this->index_of_well_), prod_controls);
+        const auto prod_controls = this->well_ecl_.isProducer()
+            ? this->productionControlsWithWeldraw(summary_state, well_state.well(this->index_of_well_))
+            : Well::ProductionControls(0);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state, solving_with_zero_rate);
@@ -1581,8 +1595,7 @@ namespace Opm
         else
         {
             const auto current = ws.production_cmode;
-            auto controls = well.productionControls(summaryState);
-            this->applyWeldrawRateLimit(ws, controls);
+            const auto controls = this->productionControlsWithWeldraw(summaryState, ws);
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {
