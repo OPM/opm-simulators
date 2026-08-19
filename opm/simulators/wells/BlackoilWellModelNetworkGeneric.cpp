@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
+#include <opm/simulators/wells/NetworkSystem.hpp>
+
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
@@ -251,6 +253,118 @@ willBalanceOnNextIteration(const int reportStepIdx) const
     }
 }
 
+
+template<typename Scalar, typename IndexTraits>
+std::optional<std::map<std::string, Scalar>>
+BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+newtonNodePressures(const Network::ExtNetwork& network,
+                    const Phase injection_phase,
+                    const int) const
+{
+    OPM_TIMEFUNCTION();
+    const auto roots = network.roots();
+    if (roots.size() != 1 || !roots.front().get().terminal_pressure().has_value()) {
+        return std::nullopt;      // only a single rooted tree with a fixed head
+    }
+    const Scalar terminal = *roots.front().get().terminal_pressure();
+
+    NetworkSolve::System<Scalar> system(*well_model_.getVFPProperties().getInj(), injection_phase);
+    system.setTerminalPressure(terminal);
+
+    // Nodes, parents before children.
+    std::map<std::string, int> index;
+    std::vector<std::string> order{roots.front().get().name()};
+    system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable});
+    index[order.front()] = 0;
+    for (std::size_t at = 0; at < order.size(); ++at) {
+        for (const auto& branch : network.downtree_branches(order[at])) {
+            const auto& child = branch.downtree_node();
+            if (index.count(child)) {
+                continue;
+            }
+            index[child] = static_cast<int>(order.size());
+            order.push_back(child);
+            system.addNode(NetworkSolve::Node{
+                child, static_cast<int>(at),
+                branch.vfp_table().value_or(NetworkSolve::NoTable)});
+        }
+    }
+
+    const auto& summary_state = well_model_.summaryState();
+    const int phase_pos = well_model_.phaseUsage().canonicalToActivePhaseIdx(
+        injection_phase == Phase::GAS ? IndexTraits::gasPhaseIdx : IndexTraits::waterPhaseIdx);
+    if (phase_pos < 0) {
+        return std::nullopt;
+    }
+
+    for (const auto& well : well_model_.genericWells()) {
+        if (!well->isInjector() || !well->wellEcl().predictionMode()) {
+            continue;
+        }
+        const auto& node = well->wellEcl().groupName();
+        if (!index.count(node)) {
+            continue;
+        }
+        const auto& ws = well_model_.wellState()[well->indexOfWell()];
+        if (ws.status != WellStatus::OPEN
+            || static_cast<int>(ws.implicit_ipr_b.size()) <= phase_pos) {
+            return std::nullopt;
+        }
+
+        const auto controls = well->wellEcl().injectionControls(summary_state);
+        NetworkSolve::Well<Scalar> w;
+        w.name = well->name();
+        w.node = index.at(node);
+        w.vfp_table = controls.vfp_table_number;
+        // The well state stores the linearisation as q = b*bhp - a.
+        w.ipr_a = -ws.implicit_ipr_a[phase_pos];
+        w.ipr_b = ws.implicit_ipr_b[phase_pos];
+        if (!(w.ipr_b > Scalar{0})) {
+            return std::nullopt;   // no usable response; leave it to the fixed point
+        }
+        w.bhp_limit = controls.bhp_limit;
+        // A well the group is holding is limited by its share, which the group
+        // machinery has already put in the well state; one it is not is limited
+        // by its own target. The group multiplier the system can carry is not
+        // used here -- the simulator has decided the split already.
+        w.rate_limit = (ws.injection_cmode == Well::InjectorCMode::GRUP)
+            ? std::max(ws.surface_rates[phase_pos], Scalar{0})
+            : static_cast<Scalar>(controls.surface_rate);
+        if (!(w.rate_limit > Scalar{0})) {
+            return std::nullopt;
+        }
+        w.guide = w.rate_limit;
+        system.addWell(std::move(w));
+    }
+    if (system.numWells() == 0) {
+        return std::nullopt;
+    }
+    system.finish();
+
+    // Start from where the network is now, so a converged state costs one
+    // residual evaluation.
+    const auto domain = (injection_phase == Phase::GAS) ? details::NetworkDomain::InjectionGas
+                                                        : details::NetworkDomain::InjectionWater;
+    const auto& previous = this->nodePressures(domain);
+    std::vector<Scalar> guess(order.size(), terminal);
+    for (std::size_t n = 0; n < order.size(); ++n) {
+        const auto it = previous.find(order[n]);
+        if (it != previous.end() && it->second > Scalar{0}) {
+            guess[n] = it->second;
+        }
+    }
+
+    const auto result = NetworkSolve::solve(system, guess);
+    if (!result.converged) {
+        return std::nullopt;
+    }
+    std::map<std::string, Scalar> pressures;
+    for (std::size_t n = 0; n < order.size(); ++n) {
+        pressures[order[n]] = result.node_pressure[n];
+    }
+    return pressures;
+}
+
 template<typename Scalar, typename IndexTraits>
 Scalar
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
@@ -311,6 +425,16 @@ updatePressures(const int reportStepIdx,
                                             reportStepIdx,
                                             well_model_.comm(),
                                             *injection_phase);
+            if (this->newton_solver_) {
+                // Solved simultaneously, the node pressures are already the fixed
+                // point, so the relaxation below sees no imbalance and stops. The
+                // branch data from the evaluation above is kept for the output.
+                if (auto solved = this->newtonNodePressures(network.network.get(),
+                                                            *injection_phase, reportStepIdx)) {
+                    result.node_pressures = std::move(*solved);
+                    result.invalid_nodes.clear();
+                }
+            }
         }
         this->nodePressures(network.domain) = std::move(result.node_pressures);
         this->branchData(network.domain) = std::move(result.branch_data);

@@ -162,6 +162,7 @@ struct NetworkPressureUpdateSecant { static constexpr auto value = "injection"; 
 struct NetworkPressureUpdateAcceleration { static constexpr auto value = "none"; };
 struct NetworkAndersonDepth { static constexpr int value = 4; };
 struct NetworkWellProxy { static constexpr auto value = "none"; };
+struct NetworkSolver { static constexpr auto value = "fixedpoint"; };
 struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
@@ -380,6 +381,11 @@ public:
 
     /// Iteration cap for that inner balance
     int network_well_proxy_max_iterations_;
+
+    /// How the injection networks are solved: "fixedpoint" (default) relaxes the
+    /// node pressures against the wells; "newton" solves pressures and rates
+    /// simultaneously, falling back to the fixed point when it does not converge.
+    std::string network_solver_;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.

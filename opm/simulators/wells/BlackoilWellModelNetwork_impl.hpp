@@ -159,6 +159,26 @@ update(const bool mandatory_network_balance,
                                network_max_pressure_update,
                                use_secant, secant_production, deferred_logger);
         }
+        const auto& solver_mode = well_model_.param().network_solver_;
+        if (solver_mode != "fixedpoint" && solver_mode != "newton") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + solver_mode + "' for --network-solver; "
+                             "expected fixedpoint or newton", deferred_logger);
+        }
+        this->useNewtonSolver(solver_mode == "newton");
+        if (solver_mode == "newton") {
+            // The simultaneous solve needs each injector's rate response to its own
+            // bhp. That is the implicit IPR, which the well solve only maintains for
+            // producers, so refresh it here.
+            for (const auto& well : well_model_) {
+                if (well->isInjector() && well->wellEcl().predictionMode()) {
+                    well->updateIPRImplicit(well_model_.simulator(),
+                                            well_model_.groupStateHelper(),
+                                            well_model_.wellState());
+                }
+            }
+        }
+
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =

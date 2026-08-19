@@ -204,6 +204,14 @@ public:
 
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
+
+    /// Solve an injection network simultaneously in its pressures and rates
+    /// instead of relaxing the node pressures against the wells. Off by default;
+    /// --network-solver=newton turns it on. Requires the injectors' implicit IPR
+    /// to have been refreshed, which the templated caller does.
+    void useNewtonSolver(const bool on) { newton_solver_ = on; }
+    bool usesNewtonSolver() const { return newton_solver_; }
+
 protected:
     /// Result of one network pressure evaluation for one network (domain).
     struct NetworkPressures
@@ -290,6 +298,15 @@ protected:
     std::array<std::map<std::string, Scalar>, details::domainIndex(details::NetworkDomain::Count)> domain_node_pressures_;
     std::array<std::map<std::string, data::BranchData>, details::domainIndex(details::NetworkDomain::Count)> domain_branch_data_;
     // Nodes without a valid VFP solution in the last evaluation (per domain); not serialized,
+    /// Node pressures from the simultaneous solve, or nullopt if it did not
+    /// converge -- in which case the caller keeps the fixed-point result.
+    std::optional<std::map<std::string, Scalar>>
+    newtonNodePressures(const Network::ExtNetwork& network,
+                        const Phase injection_phase,
+                        const int reportStepIdx) const;
+
+    bool newton_solver_ = false;
+
     // recomputed on every updatePressures().
     std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;
     int invalid_nodes_report_step_{-1};

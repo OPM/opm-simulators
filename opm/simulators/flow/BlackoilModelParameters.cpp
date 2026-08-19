@@ -121,6 +121,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_anderson_depth_ = Parameters::Get<Parameters::NetworkAndersonDepth>();
     network_well_proxy_ = Parameters::Get<Parameters::NetworkWellProxy>();
     network_well_proxy_max_iterations_ = Parameters::Get<Parameters::NetworkWellProxyMaxIterations>();
+    network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -291,6 +292,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "(q = A - B*bhp) before re-solving the wells: none or ipr");
     Parameters::Register<Parameters::NetworkWellProxyMaxIterations>
         ("Iteration cap for the inflow-performance network balance");
+    Parameters::Register<Parameters::NetworkSolver>
+        ("How the injection networks are solved: fixedpoint relaxes the node pressures against "
+         "the wells, newton solves pressures and rates simultaneously and falls back to the "
+         "fixed point when it does not converge");
     Parameters::Register<Parameters::NetworkPressureUpdateSecant>
         ("Networks whose node pressures use the bracketing/secant update in the inner network "
          "iterations instead of the damped update: injection, all or none");
