@@ -570,6 +570,18 @@ public:
     { return Parameters::Get<Parameters::MinTimeStepSize<Scalar>>(); }
 
     /*!
+     * \brief Upper bound for the next time step imposed by the problem.
+     *
+     * The default is no limit; problems with their own step restrictions
+     * (e.g. a geomechanical fracture model throttling growth per step)
+     * override this.  Deliberately double rather than Scalar: time step
+     * quantities are kept in double throughout, since float has too little
+     * precision at the magnitudes involved.
+     */
+    virtual double maxNextTimeStepSize() const
+    { return std::numeric_limits<double>::max(); }
+
+    /*!
      * \brief Returns the maximum number of subsequent failures for the time integration
      *        before giving up.
      */
