@@ -68,6 +68,7 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
 #include <opm/simulators/wells/NetworkAndersonAcceleration.hpp>
+#include <opm/simulators/wells/NetworkSystem.hpp>
 
 #include <algorithm>
 #include <array>
@@ -397,6 +398,35 @@ public:
     double terminalPressure() const { return terminal_pressure_; }
     double groupTarget() const { return group_target_; }
     bool hasTable(const Node& n) const { return n.vfp_table != kNoTable && axes_.count(n.vfp_table); }
+
+    /// The library system this case describes: the same object the simulator
+    /// assembles, differing only in where the wells' inflow performance came
+    /// from. Here it is a linearisation about the reference operating point.
+    NetworkSolve::System<double> system() const
+    {
+        NetworkSolve::System<double> s(props_, fluid_ == Fluid::Gas ? Phase::GAS : Phase::WATER);
+        s.setTerminalPressure(terminal_pressure_);
+        s.setGroupTarget(group_target_);
+        s.setClampToAxes(clamp_to_axes_);
+        for (const auto& n : nodes_) {
+            s.addNode(NetworkSolve::Node{n.name, n.parent, n.vfp_table});
+        }
+        for (const auto& w : wells_) {
+            NetworkSolve::Well<double> sw;
+            sw.name = w.name;
+            sw.node = w.node;
+            sw.vfp_table = w.vfp_table;
+            // q = q_ref + dq_dbhp*(bhp - bhp_ref) as q = a + b*bhp.
+            sw.ipr_a = w.q_ref - w.dq_dbhp * w.bhp_ref;
+            sw.ipr_b = w.dq_dbhp;
+            sw.bhp_limit = w.bhp_limit;
+            sw.rate_limit = w.rate_limit;
+            sw.guide = w.q_ref;
+            s.addWell(sw);
+        }
+        s.finish();
+        return s;
+    }
 
     /// The network's scalar rate as the triple a VFP lookup takes.
     Rates asRates(const double q) const
@@ -821,250 +851,63 @@ private:
     const NetworkCase& case_;
 };
 
-/// The same case without the eliminations.
-///
-///   unknowns   pressure of every non-terminal node                    nP
-///              rate through every node's parent branch                nP
-///              (rate, bhp) for every well                            2W
-///              the group multiplier, when a target is active          1
-///
-///   equations  branch drop    p_n - VFP(thp = p_parent, q_n) = 0      nP
-///              node balance   q_n - sum(children) - sum(wells) = 0    nP
-///              inflow perf.   q_w - ipr_w(bhp_w) = 0                   W
-///              control        whichever of THP / BHP / RATE / GRUP     W
-///              group          sum(q_w) - target = 0                    1
+/// The same case without the eliminations, solved by the library's
+/// NetworkSolve::System -- the very code the simulator runs. The bench only
+/// supplies the wells' inflow performance from its reference operating point,
+/// where the simulator supplies it from the well Jacobian.
 class FullProblem
 {
 public:
     explicit FullProblem(const NetworkCase& c)
-        : case_(c)
-        , nodes_(static_cast<int>(c.nodes().size()) - 1)
-        , wells_(static_cast<int>(c.wells().size()))
-        , grouped_(c.groupTarget() > 0.0)
-        , controls_(c.wells().size(), Control::Thp)
-    {
-        if (grouped_) {
-            std::fill(controls_.begin(), controls_.end(), Control::Grup);
-        }
-    }
+        : system_(c.system()), solved_(c.solvedNodes()), terminal_(c.terminalPressure())
+    {}
 
     static constexpr const char* name = "full";
 
-    /// Which equation closes each well.
-    enum class Control { Thp, Bhp, Rate, Grup };
+    int size() const { return system_.size(); }
+    State residual(const State& x) const { return system_.residual(x); }
+    bool updateControls(const State& x) { return system_.updateControls(x); }
+    double columnScale(const int i) const { return system_.columnScale(i); }
+    State limitStep(const State& x, const State& dx) const
+    {
+        return enforce_bounds_ ? system_.limitStep(x, dx) : dx;
+    }
 
-    int size() const { return 2 * nodes_ + 2 * wells_ + (grouped_ ? 1 : 0); }
-
-    /// Keep every iterate inside the box the tables describe, instead of
-    /// clamping the lookups. See table_bounds_want_to_be_constraints.
     void setEnforceBounds(const bool on) { enforce_bounds_ = on; }
 
-    int pIdx(const int node) const { return node - 1; }
-    int qIdx(const int node) const { return nodes_ + node - 1; }
-    int qwIdx(const int w) const { return 2 * nodes_ + w; }
-    int bhpIdx(const int w) const { return 2 * nodes_ + wells_ + w; }
-    int lambdaIdx() const { return 2 * nodes_ + 2 * wells_; }
-
-    State residual(const State& x) const
-    {
-        const auto& nodes = case_.nodes();
-        const auto& wells = case_.wells();
-        State r(size(), 0.0);
-
-        auto pressure = [&](const int n) {
-            return n == 0 ? case_.terminalPressure() : x[pIdx(n)];
-        };
-
-        for (int n = 1; n <= nodes_; ++n) {
-            const auto& node = nodes[n];
-            const double upstream = pressure(node.parent);
-            r[n - 1] = case_.hasTable(node)
-                ? x[pIdx(n)] - case_.tableBhp(node.vfp_table, upstream, x[qIdx(n)])
-                : x[pIdx(n)] - upstream;
-
-            double balance = x[qIdx(n)];
-            for (const int c : case_.children(n)) {
-                balance -= x[qIdx(c)];
-            }
-            for (const int w : case_.wellsAt(n)) {
-                balance -= x[qwIdx(w)];
-            }
-            r[nodes_ + n - 1] = balance;
-        }
-
-        double injected = 0.0;
-        for (int w = 0; w < wells_; ++w) {
-            const auto& well = wells[w];
-            const double q = x[qwIdx(w)];
-            const double bhp = x[bhpIdx(w)];
-            injected += q;
-
-            r[2 * nodes_ + w] = (q - NetworkCase::ipr(well, bhp)) / kRateScale;
-
-            double& control = r[2 * nodes_ + wells_ + w];
-            switch (controls_[w]) {
-            case Control::Thp:
-                control = (bhp - case_.tableBhp(well.vfp_table, pressure(well.node), q))
-                        / kPressureScale;
-                break;
-            case Control::Bhp:
-                control = (bhp - well.bhp_limit) / kPressureScale;
-                break;
-            case Control::Rate:
-                control = (q - well.rate_limit) / kRateScale;
-                break;
-            case Control::Grup:
-                control = (q - well.guide * x[lambdaIdx()]) / kRateScale;
-                break;
-            }
-        }
-
-        if (grouped_) {
-            // With nobody on group control the multiplier is free, so pin it
-            // rather than hand the Newton a singular column.
-            const bool any_grouped = std::find(controls_.begin(), controls_.end(), Control::Grup)
-                                   != controls_.end();
-            r[lambdaIdx()] = any_grouped ? (injected - case_.groupTarget()) / kRateScale
-                                         : (x[lambdaIdx()] - lambda0()) / kRateScale;
-        }
-
-        for (int n = 0; n < nodes_; ++n) {
-            r[n] /= kPressureScale;
-            r[nodes_ + n] /= kRateScale;
-        }
-        return r;
-    }
-
-    /// Reselect each well's control: the most restrictive violated limit wins,
-    /// which is the same rule the eliminated form applies as a clamp. Picking by
-    /// a fixed priority instead makes the set chatter and the Newton never ends.
-    /// Returns true if anything moved, so the caller can tell an active-set
-    /// change from a converged step.
-    bool updateControls(const State& x)
-    {
-        const auto& wells = case_.wells();
-        bool changed = false;
-        for (int w = 0; w < wells_; ++w) {
-            const auto& well = wells[w];
-            const double q = x[qwIdx(w)];
-
-            auto wanted = Control::Thp;
-            double smallest = std::numeric_limits<double>::max();
-            auto consider = [&](const bool violated, const double implied, const Control c) {
-                if (violated && implied < smallest) {
-                    smallest = implied;
-                    wanted = c;
-                }
-            };
-            consider(x[bhpIdx(w)] > well.bhp_limit, NetworkCase::ipr(well, well.bhp_limit),
-                     Control::Bhp);
-            consider(q > well.rate_limit, well.rate_limit, Control::Rate);
-            if (grouped_) {
-                // Inclusive: at the solution the rate equals the share exactly,
-                // and a strict test would flip the control every iteration.
-                const double share = well.guide * x[lambdaIdx()];
-                consider(q >= share * (1.0 - 1e-9), share, Control::Grup);
-            }
-
-            changed |= (wanted != controls_[w]);
-            controls_[w] = wanted;
-        }
-        return changed;
-    }
-
-    /// Everything derived from the node pressures the eliminated form starts
-    /// from, so the two formulations really do start from the same place.
+    /// The bench starts both formulations from the same applied node pressures.
     State start(const State& applied) const
     {
-        const auto& wells = case_.wells();
-        const auto p = case_.nodePressures(applied);
-        const double q_guess = convert::from(1.0e5, cubic(meter) / day);
-
-        State x(size(), 0.0);
-        for (int n = 1; n <= nodes_; ++n) {
-            x[pIdx(n)] = p[n];
-        }
-        std::vector<double> well_rate(wells_);
-        for (int w = 0; w < wells_; ++w) {
-            const auto& well = wells[w];
-            x[bhpIdx(w)] = case_.tableBhp(well.vfp_table, p[well.node], q_guess);
-            x[qwIdx(w)] = std::clamp(NetworkCase::ipr(well, x[bhpIdx(w)]), 0.0, well.rate_limit);
-            well_rate[w] = x[qwIdx(w)];
-        }
-        const auto branch = case_.branchFlows(well_rate);
-        for (int n = 1; n <= nodes_; ++n) {
-            x[qIdx(n)] = branch[n];
-        }
-        if (grouped_) {
-            x[lambdaIdx()] = lambda0();
-        }
-        return x;
+        return system_.start(applied_to_all_nodes_(applied));
     }
 
+    /// Only the nodes the eliminated form solves for, so the two are comparable.
     State pressures(const State& x) const
     {
+        const auto all = system_.pressures(x);
         State p;
-        for (const int n : case_.solvedNodes()) {
-            p.push_back(x[pIdx(n)]);
+        for (const int n : solved_) {
+            p.push_back(all[n]);
         }
         return p;
     }
 
-    /// Natural magnitude of unknown i. Pressures and bhp in bar, everything that
-    /// is a rate in kRateScale -- this is what lets one step cap and one trust
-    /// radius apply to a vector holding both.
-    double columnScale(const int i) const
-    {
-        const bool is_pressure = (i < nodes_) || (i >= bhpIdx(0) && i < lambdaIdx());
-        return is_pressure ? kPressureScale : kRateScale;
-    }
-
-    /// Keep the branch flows inside the box the tables describe, by projecting
-    /// the offending components of the step rather than scaling all of it --
-    /// one binding rate should not throttle the pressure updates too.
-    ///
-    /// Only the branch flows: a well's own rate limit already has a control
-    /// equation, and bounding it would stop that control ever activating. An
-    /// iterate already outside is left alone, or the step would be zero.
-    State limitStep(const State& x, const State& dx) const
-    {
-        if (!enforce_bounds_) {
-            return dx;
-        }
-        State limited = dx;
-        for (int n = 1; n <= nodes_; ++n) {
-            const auto& node = case_.nodes()[n];
-            if (!case_.hasTable(node)) {
-                continue;
-            }
-            const int i = qIdx(n);
-            const double hi = case_.maxFlow(node.vfp_table);
-            if (x[i] <= hi && x[i] + limited[i] > hi) {
-                limited[i] = hi - x[i];
-            }
-            if (x[i] >= 0.0 && x[i] + limited[i] < 0.0) {
-                limited[i] = -x[i];
-            }
-        }
-        return limited;
-    }
-
 private:
-    double lambda0() const
+    State applied_to_all_nodes_(const State& applied) const
     {
-        double guides = 0.0;
-        for (const auto& w : case_.wells()) {
-            guides += w.guide;
+        State p(system_.nodes().size(), terminal_);
+        for (std::size_t n = 1; n < system_.nodes().size(); ++n) {
+            const auto it = std::find(solved_.begin(), solved_.end(), static_cast<int>(n));
+            p[n] = (it != solved_.end()) ? applied[it - solved_.begin()]
+                                         : p[system_.nodes()[n].parent];
         }
-        return guides > 0.0 ? case_.groupTarget() / guides : 0.0;
+        return p;
     }
 
-    const NetworkCase& case_;
-    int nodes_;
-    int wells_;
-    bool grouped_;
+    NetworkSolve::System<double> system_;
+    std::vector<int> solved_;
+    double terminal_ = 0.0;
     bool enforce_bounds_ = false;
-    std::vector<Control> controls_;
 };
 
 // ---------------------------------------------------------------------------
