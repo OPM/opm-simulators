@@ -443,7 +443,7 @@ estimateStrictestProductionConstraint(const SingleWellState<Scalar, IndexTraits>
         most_strict_control = (*bhp_at_thp_limit > controls.bhp_limit)
                               ? Well::ProducerCMode::THP
                               : Well::ProducerCMode::BHP;
-        const Scalar most_strict_bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
+        const Scalar most_strict_bhp = std::max(*bhp_at_thp_limit, static_cast<Scalar>(controls.bhp_limit));
         const Scalar tot_ipr_b = std::accumulate(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), Scalar(0));
         const Scalar tot_ipr_a = std::accumulate(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), Scalar(0));
         const Scalar tot_rate_at_bhp = tot_ipr_b * most_strict_bhp - tot_ipr_a;
