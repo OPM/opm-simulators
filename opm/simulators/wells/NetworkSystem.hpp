@@ -269,6 +269,61 @@ public:
         return props_->bhp(table, aqua, Scalar{0}, vapour, p);
     }
 
+    /// Rate this well would take on THP control at a given node pressure: its
+    /// inflow performance met with its tubing curve, then its own limits.
+    ///
+    /// This is the well's capability at a network pressure, which is what a
+    /// share of a group target should be proportional to. Its current rate is
+    /// not: that is the split one is trying to decide, so using it as the guide
+    /// makes the allocation reproduce whatever it already was.
+    Scalar thpPotential(const Well<Scalar>& w, const Scalar p_node) const
+    {
+        const auto& t = props_->getTable(w.vfp_table);
+        const Scalar lo = t.getFloAxis().front();
+        const Scalar hi = std::min(w.rate_limit, t.getFloAxis().back());
+        if (!(hi > lo)) {
+            return Scalar{0};
+        }
+        // bhp falls with rate at fixed thp in these tables, so f is decreasing.
+        const auto f = [&](const Scalar q) { return ipr(w, tableBhp(w.vfp_table, p_node, q)) - q; };
+        if (f(lo) <= Scalar{0}) {
+            return Scalar{0};
+        }
+        if (f(hi) >= Scalar{0}) {
+            return hi;
+        }
+        Scalar a = lo, b = hi, q = hi;
+        for (int it = 0; it < 60; ++it) {
+            q = Scalar{0.5} * (a + b);
+            (f(q) > Scalar{0} ? a : b) = q;
+        }
+        return std::clamp(q, Scalar{0}, w.rate_limit);
+    }
+
+    /// Take the guide rates from thpPotential() at the current node pressures
+    /// instead of whatever the caller supplied. Only meaningful with a group
+    /// target, and only when the caller has no better guide of its own.
+    void setGuidesFromPotential(const bool on) { guides_from_potential_ = on; }
+
+    /// Recompute the guides from the current iterate. Returns the largest
+    /// relative change, so the caller can tell when they have settled.
+    Scalar refreshGuides(const State& x)
+    {
+        if (!guides_from_potential_ || !grouped()) {
+            return Scalar{0};
+        }
+        Scalar moved = 0.0;
+        for (auto& w : wells_) {
+            const Scalar p = (w.node == 0) ? terminal_pressure_ : x[pIdx(w.node)];
+            const Scalar potential = thpPotential(w, p);
+            if (potential > Scalar{0}) {
+                moved = std::max(moved, std::abs(potential - w.guide) / std::max(w.guide, potential));
+                w.guide = potential;
+            }
+        }
+        return moved;
+    }
+
     /// Largest rate the table describes. Past it the cells are zero-filled and
     /// the interpolation runs away, so this is the edge of the feasible set.
     Scalar maxFlow(const int table) const { return props_->getTable(table).getFloAxis().back(); }
@@ -565,6 +620,7 @@ private:
     Scalar liquid_ = 0.0;
     bool clamp_to_axes_ = false;
     bool analytic_jacobian_ = false;
+    bool guides_from_potential_ = false;
     Scalar pressure_scale_ = unit::barsa;
 };
 
@@ -628,6 +684,9 @@ Result<Scalar> solve(System<Scalar>& system,
     const int n = system.size();
 
     for (int it = 1; it <= max_iterations; ++it) {
+        // Guides that follow the solution have to settle before it is solved,
+        // the same way the controls do.
+        const Scalar guides_moved = system.refreshGuides(x);
         const bool controls_moved = system.updateControls(x);
         const auto r = system.residual(x);
 
@@ -635,7 +694,7 @@ Result<Scalar> solve(System<Scalar>& system,
         for (const auto e : r) {
             worst = std::max(worst, std::abs(e));
         }
-        if (worst < tolerance && !controls_moved) {
+        if (worst < tolerance && !controls_moved && guides_moved < Scalar{1e-6}) {
             return {true, it, system.pressures(x)};
         }
 
