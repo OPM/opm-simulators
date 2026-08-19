@@ -232,7 +232,7 @@ private:
     //!        the well has been shut.
     //!
     //! \param ratio_subject  Owner of the violated ratio in the closing message,
-    //!                inserted as "Because \p ratio_subject \p reason". WECON
+    //!                inserted as "because \p ratio_subject \p reason". WECON
     //!                reports a well-level ratio ("the well"); CECON reports the
     //!                completion's own ratio ("its").
     bool closeOffendingCompletion(int offending_completion,

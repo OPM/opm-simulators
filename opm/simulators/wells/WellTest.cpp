@@ -767,9 +767,9 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                 const std::string& sep = economicLimitMessageSeparator();
                 deferred_logger.info(
                     // Possessive descriptor: the same sentence the CON / +CON
-                    // workover logs as "Because its <ratio> ...", with "its"
+                    // workover logs as "because its <ratio> ...", with "its"
                     // spelled out as the completion it refers to.
-                    fmt::format("{}\nWell {} will be {} {},\nBecause {}'s {}.\n{}",
+                    fmt::format("{}\nWell {} will be {} {},\nbecause {}'s {}.\n{}",
                                 sep, well_.name(), action, when,
                                 this->completionDescriptor(complnum), reason, sep));
             }
@@ -848,7 +848,7 @@ closeOffendingCompletion(const int offending_completion,
         // \p ratio_subject identifies the owner of the violated ratio: WECON
         // reports a well-level ratio ("the well"), CECON the completion's ("its").
         deferred_logger.info(
-            fmt::format("{}\n{} will be closed {},\nBecause {} {}.\n{}",
+            fmt::format("{}\n{} will be closed {},\nbecause {} {}.\n{}",
                         sep, subject, when, ratio_subject, reason, sep));
     }
 
@@ -867,7 +867,7 @@ closeOffendingCompletion(const int offending_completion,
             const std::string& sep = economicLimitMessageSeparator();
             deferred_logger.info(
                 fmt::format("{}\nWell {} will be shut {},\n"
-                            "Because all its completions are closed.\n{}",
+                            "because all its completions are closed.\n{}",
                             sep, well_.name(), when, sep));
         }
     }
@@ -888,7 +888,7 @@ reportEconomicLimitClosure(const std::string& when,
             well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
         const std::string& sep = economicLimitMessageSeparator();
         deferred_logger.info(
-            fmt::format("{}\nWell {} will be {} {},\nBecause {}.\n{}",
+            fmt::format("{}\nWell {} will be {} {},\nbecause {}.\n{}",
                         sep, well_.name(), action, when, reason, sep));
     }
     else if (closure_reason != nullptr) {
