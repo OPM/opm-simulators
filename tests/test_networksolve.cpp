@@ -874,6 +874,9 @@ public:
     }
 
     void setEnforceBounds(const bool on) { enforce_bounds_ = on; }
+    void setAnalyticJacobian(const bool on) { system_.setAnalyticJacobian(on); }
+    const NetworkSolve::System<double>& system() const { return system_; }
+    NetworkSolve::System<double>& system() { return system_; }
 
     /// The bench starts both formulations from the same applied node pressures.
     State start(const State& applied) const
@@ -1536,6 +1539,94 @@ BOOST_AUTO_TEST_CASE(method_comparison)
         BOOST_CHECK(r.converged);
         BOOST_CHECK_LT(r.iterations, bracket.iterations);
     }
+}
+
+// The Jacobian entries the tables already compute and throw away, against the
+// difference quotient they replace. Everything but the two lookups is constant,
+// so an error here is an error in the branch or tubing rows.
+BOOST_AUTO_TEST_CASE(analytic_jacobian_matches_differences)
+{
+    // Every control row has its own derivative, so check a state that exercises
+    // each: the ordinary THP one, one where the group is holding the wells, and
+    // one driven hard enough that the bhp and rate limits bite.
+    auto check = [](const char* what, FullProblem& problem, const State& x) {
+        problem.updateControls(x);
+        const auto r = problem.residual(x);
+        const auto analytic = problem.system().jacobian(x);
+
+        const int n = problem.size();
+        double worst = 0.0, scale = 0.0;
+        for (int j = 0; j < n; ++j) {
+            auto shifted = x;
+            const double h = 1e-4 * problem.columnScale(j);
+            shifted[j] += h;
+            const auto rj = problem.residual(shifted);
+            for (int i = 0; i < n; ++i) {
+                const double fd = (rj[i] - r[i]) / h;
+                worst = std::max(worst, std::abs(fd - analytic(i, j)));
+                scale = std::max(scale, std::abs(fd));
+            }
+        }
+        BOOST_TEST_MESSAGE("  " << std::left << std::setw(16) << what
+                           << "largest entry " << scale << ", largest difference " << worst);
+        BOOST_CHECK_LT(worst, 1e-4 * std::max(scale, 1.0));
+    };
+
+    {
+        const auto c = gnetinjeGas();
+        FullProblem problem{c};
+        check("thp", problem, problem.start(kStart));
+        // A converged state, where the controls have settled.
+        const auto solved = newton(FullProblem{c}, kStart, FullStep{});
+        BOOST_REQUIRE(solved.converged);
+        FullProblem at_solution{c};
+        check("thp, converged", at_solution, at_solution.start(solved.p));
+    }
+    {
+        auto c = gnetinjeGas();
+        c.setGroupTarget(convert::from(1.0e6, cubic(meter) / day));
+        c.finish();
+        FullProblem problem{c};
+        check("group", problem, problem.start(kStart));
+    }
+    {
+        // A very low terminal pressure drives the wells onto their limits.
+        auto c = gnetinjeGas();
+        c.setStiffness(1.0e6);
+        c.finish();
+        FullProblem problem{c};
+        check("limits", problem, problem.start({convert::from(80.0, bars),
+                                                convert::from(80.0, bars)}));
+    }
+}
+
+// It should change what a solve costs, not where it lands.
+BOOST_AUTO_TEST_CASE(analytic_jacobian_changes_only_the_cost)
+{
+    const auto c = gnetinjeGas();
+    const auto n = static_cast<int>(startingPoints().size());
+
+    const int differenced = basin("full, differenced", [&](const State& p) {
+        return newton(FullProblem{c}, p, FullStep{});
+    });
+    const int analytic = basin("full, analytic", [&](const State& p) {
+        FullProblem problem{c};
+        problem.setAnalyticJacobian(true);
+        return newton(problem, p, FullStep{});
+    });
+
+    BOOST_CHECK_GE(differenced, n - 1);
+    BOOST_CHECK_GE(analytic, n - 1);
+
+    // Same answer from the point the simulator starts at.
+    FullProblem exact{c};
+    exact.setAnalyticJacobian(true);
+    const auto a = newton(exact, kStart, FullStep{});
+    const auto d = newton(FullProblem{c}, kStart, FullStep{});
+    BOOST_REQUIRE(a.converged);
+    BOOST_REQUIRE(d.converged);
+    BOOST_CHECK_SMALL(convert::to(a.p[0] - d.p[0], bars), 1e-3);
+    BOOST_CHECK_SMALL(convert::to(a.p[1] - d.p[1], bars), 1e-3);
 }
 
 // The real test of a globalisation is not its iteration count from one good start

@@ -22,6 +22,7 @@
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 
 #include <algorithm>
@@ -73,6 +74,11 @@ struct Well
     Scalar bhp_limit = 0.0;
     Scalar rate_limit = 0.0;
     Scalar guide = 0.0;         // share of a group target
+    /// Rate to start the solve from. Zero means work one out from the tables,
+    /// which is all the bench can do; the simulator knows what the well is
+    /// actually doing and should say so, or the first control selection is made
+    /// on a rate that has nothing to do with the current state.
+    Scalar q_start = 0.0;
 };
 
 /// Which equation closes a well.
@@ -95,6 +101,7 @@ public:
     explicit DenseMatrix(const int n) : n_(n), a_(n * n, 0.0) {}
 
     Scalar& operator()(const int i, const int j) { return a_[i * n_ + j]; }
+    Scalar operator()(const int i, const int j) const { return a_[i * n_ + j]; }
 
     /// Solves A y = b. False if A is singular to working precision.
     bool solve(std::vector<Scalar> b, std::vector<Scalar>& y) const
@@ -213,6 +220,39 @@ public:
     /// descend. limitStep() is the treatment that works. It exists here only so
     /// that the comparison can be made -- see test_networksolve.cpp.
     void setClampToAxes(const bool on) { clamp_to_axes_ = on; }
+
+    /// A table lookup with the two derivatives the Jacobian needs. They come
+    /// free with the interpolation and are otherwise thrown away.
+    struct Lookup
+    {
+        Scalar value = 0.0;
+        Scalar dthp = 0.0;    // d(bhp)/d(thp)
+        Scalar dflo = 0.0;    // d(bhp)/d(rate)
+    };
+
+    Lookup tableLookup(const int table, const Scalar thp, const Scalar q_in) const
+    {
+        Scalar q = q_in;
+        Scalar p = thp;
+        const auto& t = props_->getTable(table);
+        bool clamped_flo = false;
+        bool clamped_thp = false;
+        if (clamp_to_axes_) {
+            const Scalar lo = t.getFloAxis().front(), hi = t.getFloAxis().back();
+            const Scalar plo = t.getTHPAxis().front(), phi = t.getTHPAxis().back();
+            clamped_flo = (q < lo) || (q > hi);
+            clamped_thp = (p < plo) || (p > phi);
+            q = std::clamp(q, lo, hi);
+            p = std::clamp(p, plo, phi);
+        }
+        const Scalar aqua = (phase_ == Phase::WATER) ? q : Scalar{0};
+        const Scalar vapour = (phase_ == Phase::GAS) ? q : Scalar{0};
+        const auto e = VFPHelpers<Scalar>::bhp(t, aqua, liquid_, vapour, p);
+        // Where the lookup was clamped the value no longer moves with the input,
+        // which is exactly the flat residual that makes clamping a bad idea for
+        // a Newton -- but the derivative has to report it honestly.
+        return {e.value, clamped_thp ? Scalar{0} : e.dthp, clamped_flo ? Scalar{0} : e.dflo};
+    }
 
     /// Downstream pressure of a branch, or a well's bhp: the same table lookup.
     Scalar tableBhp(const int table, const Scalar thp, const Scalar q_in) const
@@ -345,9 +385,12 @@ public:
         }
         for (int w = 0; w < numWells(); ++w) {
             const auto& well = wells_[w];
-            const Scalar guess = std::max(well.rate_limit * Scalar{0.1}, rate_scale_);
+            const Scalar guess = well.q_start > Scalar{0}
+                ? well.q_start : std::max(well.rate_limit * Scalar{0.1}, rate_scale_);
             x[bhpIdx(w)] = tableBhp(well.vfp_table, node_pressure[well.node], guess);
-            x[qwIdx(w)] = std::clamp(ipr(well, x[bhpIdx(w)]), Scalar{0}, well.rate_limit);
+            x[qwIdx(w)] = well.q_start > Scalar{0}
+                ? well.q_start
+                : std::clamp(ipr(well, x[bhpIdx(w)]), Scalar{0}, well.rate_limit);
             well_rate[w] = x[qwIdx(w)];
         }
         for (int n = numNodes(); n >= 1; --n) {
@@ -411,6 +454,93 @@ public:
 
     Scalar pressureScale() const { return pressure_scale_; }
 
+    /// Assemble the Jacobian from the table derivatives instead of differencing
+    /// the residual. Everything but the two branch/tubing lookups is constant,
+    /// so this is n+1 residual evaluations replaced by one pass.
+    void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
+    bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+
+    /// The Jacobian of residual() at x, entry by entry.
+    DenseMatrix<Scalar> jacobian(const State& x) const
+    {
+        const int nodes = numNodes();
+        const int wells = numWells();
+        DenseMatrix<Scalar> J(size());
+
+        auto pressure = [&](const int n) { return n == 0 ? terminal_pressure_ : x[pIdx(n)]; };
+        // Row i is divided by scale(i) in residual(), so its derivatives are too.
+        auto add = [&](const int row, const int col, const Scalar value, const Scalar scale) {
+            J(row, col) += value / scale;
+        };
+
+        for (int n = 1; n <= nodes; ++n) {
+            const auto& node = nodes_[n];
+            const int row = n - 1;
+            add(row, pIdx(n), 1.0, pressure_scale_);
+            if (hasTable(node)) {
+                const auto e = tableLookup(node.vfp_table, pressure(node.parent), x[qIdx(n)]);
+                if (node.parent != 0) {
+                    add(row, pIdx(node.parent), -e.dthp, pressure_scale_);
+                }
+                add(row, qIdx(n), -e.dflo, pressure_scale_);
+            } else if (node.parent != 0) {
+                add(row, pIdx(node.parent), -1.0, pressure_scale_);
+            }
+
+            const int balance = nodes + n - 1;
+            add(balance, qIdx(n), 1.0, rate_scale_);
+            for (const int c : children_[n]) {
+                add(balance, qIdx(c), -1.0, rate_scale_);
+            }
+            for (const int w : wells_at_[n]) {
+                add(balance, qwIdx(w), -1.0, rate_scale_);
+            }
+        }
+
+        for (int w = 0; w < wells; ++w) {
+            const auto& well = wells_[w];
+            const int ipr_row = 2 * nodes + w;
+            add(ipr_row, qwIdx(w), 1.0, rate_scale_);
+            add(ipr_row, bhpIdx(w), -well.ipr_b, rate_scale_);
+
+            const int row = 2 * nodes + wells + w;
+            switch (controls_[w]) {
+            case Control::Thp: {
+                const auto e = tableLookup(well.vfp_table, pressure(well.node), x[qwIdx(w)]);
+                add(row, bhpIdx(w), 1.0, pressure_scale_);
+                if (well.node != 0) {
+                    add(row, pIdx(well.node), -e.dthp, pressure_scale_);
+                }
+                add(row, qwIdx(w), -e.dflo, pressure_scale_);
+                break;
+            }
+            case Control::Bhp:
+                add(row, bhpIdx(w), 1.0, pressure_scale_);
+                break;
+            case Control::Rate:
+                add(row, qwIdx(w), 1.0, rate_scale_);
+                break;
+            case Control::Grup:
+                add(row, qwIdx(w), 1.0, rate_scale_);
+                add(row, lambdaIdx(), -well.guide, rate_scale_);
+                break;
+            }
+        }
+
+        if (grouped()) {
+            const bool any = std::find(controls_.begin(), controls_.end(), Control::Grup)
+                           != controls_.end();
+            if (any) {
+                for (int w = 0; w < wells; ++w) {
+                    add(lambdaIdx(), qwIdx(w), 1.0, rate_scale_);
+                }
+            } else {
+                add(lambdaIdx(), lambdaIdx(), 1.0, rate_scale_);
+            }
+        }
+        return J;
+    }
+
 private:
     Scalar lambda0() const
     {
@@ -432,7 +562,9 @@ private:
     Scalar terminal_pressure_ = 0.0;
     Scalar group_target_ = 0.0;
     Scalar rate_scale_ = 0.0;
+    Scalar liquid_ = 0.0;
     bool clamp_to_axes_ = false;
+    bool analytic_jacobian_ = false;
     Scalar pressure_scale_ = unit::barsa;
 };
 
@@ -507,16 +639,21 @@ Result<Scalar> solve(System<Scalar>& system,
             return {true, it, system.pressures(x)};
         }
 
-        DenseMatrix<Scalar> J(n);
-        for (int j = 0; j < n; ++j) {
-            auto shifted = x;
-            const Scalar h = 1e-2 * system.columnScale(j);
-            shifted[j] += h;
-            const auto rj = system.residual(shifted);
-            for (int i = 0; i < n; ++i) {
-                J(i, j) = (rj[i] - r[i]) / h;
-            }
-        }
+        DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
+            ? system.jacobian(x)
+            : [&] {
+                  DenseMatrix<Scalar> fd(n);
+                  for (int j = 0; j < n; ++j) {
+                      auto shifted = x;
+                      const Scalar h = 1e-2 * system.columnScale(j);
+                      shifted[j] += h;
+                      const auto rj = system.residual(shifted);
+                      for (int i = 0; i < n; ++i) {
+                          fd(i, j) = (rj[i] - r[i]) / h;
+                      }
+                  }
+                  return fd;
+              }();
 
         std::vector<Scalar> negative(n), dx;
         for (int i = 0; i < n; ++i) {

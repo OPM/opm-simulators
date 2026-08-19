@@ -212,6 +212,14 @@ public:
     void useNewtonSolver(const bool on) { newton_solver_ = on; }
     bool usesNewtonSolver() const { return newton_solver_; }
 
+    /// Assemble the network Jacobian from the VFP table derivatives instead of
+    /// differencing the residual.
+    void useAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
+
+    /// Let the network hold the group's total and place the split itself, rather
+    /// than taking each group-controlled well's rate as fixed.
+    void useNetworkGroupControl(const bool on) { network_group_control_ = on; }
+
 protected:
     /// Result of one network pressure evaluation for one network (domain).
     struct NetworkPressures
@@ -306,6 +314,8 @@ protected:
                         const int reportStepIdx) const;
 
     bool newton_solver_ = false;
+    bool analytic_jacobian_ = false;
+    bool network_group_control_ = false;
 
     // recomputed on every updatePressures().
     std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;

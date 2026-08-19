@@ -297,6 +297,8 @@ newtonNodePressures(const Network::ExtNetwork& network,
         return std::nullopt;
     }
 
+    Scalar group_target = 0.0;
+    const bool use_group_target = this->network_group_control_;
     for (const auto& well : well_model_.genericWells()) {
         if (!well->isInjector() || !well->wellEcl().predictionMode()) {
             continue;
@@ -323,22 +325,40 @@ newtonNodePressures(const Network::ExtNetwork& network,
             return std::nullopt;   // no usable response; leave it to the fixed point
         }
         w.bhp_limit = controls.bhp_limit;
-        // A well the group is holding is limited by its share, which the group
-        // machinery has already put in the well state; one it is not is limited
-        // by its own target. The group multiplier the system can carry is not
-        // used here -- the simulator has decided the split already.
-        w.rate_limit = (ws.injection_cmode == Well::InjectorCMode::GRUP)
-            ? std::max(ws.surface_rates[phase_pos], Scalar{0})
-            : static_cast<Scalar>(controls.surface_rate);
-        if (!(w.rate_limit > Scalar{0})) {
+        const bool on_group = ws.injection_cmode == Well::InjectorCMode::GRUP;
+        const Scalar current = std::max(ws.surface_rates[phase_pos], Scalar{0});
+        w.q_start = current;
+        if (on_group && use_group_target) {
+            // The group machinery has already set the total these wells inject.
+            // Hand the network that total and let it place the split, so a well
+            // that runs into its own bhp or rate limit is taken up by the others
+            // instead of the total quietly dropping.
+            group_target += current;
+            w.rate_limit = static_cast<Scalar>(controls.surface_rate);
+            w.guide = current;
+        } else if (on_group) {
+            // Otherwise the well is simply held where the group put it.
+            w.rate_limit = current;
+            w.guide = current;
+        } else {
+            w.rate_limit = static_cast<Scalar>(controls.surface_rate);
+            w.guide = w.rate_limit;
+        }
+        // A well with nothing to go on -- no rate and no target -- would enter
+        // the system effectively unlimited. Leave the whole network to the fixed
+        // point rather than invent a limit for it.
+        if (!(w.rate_limit > Scalar{0}) || !(w.guide > Scalar{0})) {
             return std::nullopt;
         }
-        w.guide = w.rate_limit;
         system.addWell(std::move(w));
     }
     if (system.numWells() == 0) {
         return std::nullopt;
     }
+    if (group_target > Scalar{0} && use_group_target) {
+        system.setGroupTarget(group_target);
+    }
+    system.setAnalyticJacobian(analytic_jacobian_);
     system.finish();
 
     // Start from where the network is now, so a converged state costs one

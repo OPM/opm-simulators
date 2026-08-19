@@ -163,6 +163,8 @@ struct NetworkPressureUpdateAcceleration { static constexpr auto value = "none";
 struct NetworkAndersonDepth { static constexpr int value = 4; };
 struct NetworkWellProxy { static constexpr auto value = "none"; };
 struct NetworkSolver { static constexpr auto value = "fixedpoint"; };
+struct NetworkAnalyticJacobian { static constexpr bool value = false; };
+struct NetworkGroupControl { static constexpr bool value = false; };
 struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
@@ -386,6 +388,12 @@ public:
     /// node pressures against the wells; "newton" solves pressures and rates
     /// simultaneously, falling back to the fixed point when it does not converge.
     std::string network_solver_;
+
+    /// Assemble the network Jacobian from the VFP table derivatives.
+    bool network_analytic_jacobian_;
+
+    /// Let the network place the split of a group's injection total itself.
+    bool network_group_control_;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.
