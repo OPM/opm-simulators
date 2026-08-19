@@ -21,14 +21,43 @@ add_test_compareECLFiles(
     spe1
 )
 
-add_test_compareECLFiles(CASENAME 1dcompositional
-                         FILENAME 1D_COMP
-                         SIMULATOR flowexp_comp
-                         DEV_SIMULATOR flowexp_comp3_2p
-                         REFERENCE_SIMULATOR flowexp_comp
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR compositional)
+add_test_compareECLFiles(
+  CASENAME
+    1dcompositional_flowexp_comp
+  FILENAME
+    1D_COMP
+  SIMULATOR
+    flowexp_comp
+  DEV_SIMULATOR
+    flowexp_comp3_2p
+  REFERENCE_SIMULATOR
+    flowexp_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    1dcompositional
+  FILENAME
+    1D_COMP
+  SIMULATOR
+    flow_comp
+  DEV_SIMULATOR
+    flow_comp3_2p
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional
+)
 
 add_test_compareECLFiles(
   CASENAME
