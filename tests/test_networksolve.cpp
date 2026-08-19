@@ -73,6 +73,7 @@
 #include <array>
 #include <deque>
 #include <filesystem>
+#include <fmt/format.h>
 #include <limits>
 #include <numeric>
 #include <tuple>
@@ -294,13 +295,12 @@ struct Well
     std::string name;
     int node = 0;
     int vfp_table = 1;
-    double q_ref = 0.0;      // rate at p_ref in the reference solution   [sm3/s]
-    double p_ref = 0.0;      // node pressure in the reference solution   [Pa]
+    double q_ref = 0.0;      // rate in the reference solution            [sm3/s]
+    double bhp_ref = 0.0;    // its own bhp there; the IPR pivots here       [Pa]
     double dq_dbhp = 0.0;    // IPR slope, the stiffness knob        [sm3/s/Pa]
     double bhp_limit = 0.0;
     double rate_limit = 0.0;
     double guide = 0.0;      // share of a group target; defaults to q_ref
-    double bhp_ref = 0.0;    // bhp at (p_ref, q_ref); filled in by finish()
 };
 
 class NetworkCase
@@ -341,7 +341,6 @@ public:
     void finish()
     {
         for (auto& w : wells_) {
-            w.bhp_ref = tableBhp(w.vfp_table, w.p_ref, w.q_ref);
             if (w.guide <= 0.0) {
                 w.guide = w.q_ref;
             }
@@ -371,6 +370,18 @@ public:
                         / convert::from(1.0, bars);
         for (auto& w : wells_) {
             w.dq_dbhp = si;
+        }
+    }
+
+    /// The same knob as a fraction of each well's own rate per bar, which is the
+    /// only form that transfers between cases: a gas injector taking 5e5 sm3/d
+    /// and a water injector taking 700 have nothing comparable to say in
+    /// absolute units. 0.12/bar reproduces the 6e4 sm3/d/bar used for the gas
+    /// case. Call after the rates are known.
+    void setRelativeStiffness(const double fraction_per_bar)
+    {
+        for (auto& w : wells_) {
+            w.dq_dbhp = fraction_per_bar * w.q_ref / convert::from(1.0, bars);
         }
     }
 
@@ -510,22 +521,27 @@ private:
 };
 
 /// The operating point a case is calibrated against: for each well, the rate it
-/// takes and the pressure at the node it hangs off. Set it by hand -- which is
-/// what the unit tests do, and what you would do to pose a difficult case -- or
-/// read it from a reference run's summary.
+/// takes and its own bottom-hole pressure. Set it by hand -- which is what the
+/// unit tests do, and what you would do to pose a difficult case -- or read it
+/// from a reference run's summary.
+///
+/// It has to be the well's bhp and not the pressure at its node. The two agree
+/// only while the well is on THP control; under group control the well sits well
+/// below its node (162 bar below, at day 91 of GNETINJE_GAS-01), and calibrating
+/// against the node pressure there produces a well that does not exist.
 class Reference
 {
 public:
-    /// Rate in sm3/d, node pressure in bar.
-    void set(const std::string& well, const double rate_sm3_day, const double pressure_bar)
+    /// Rate in sm3/d, bottom-hole pressure in bar.
+    void set(const std::string& well, const double rate_sm3_day, const double bhp_bar)
     {
         point_[well] = {convert::from(rate_sm3_day, cubic(meter) / day),
-                        convert::from(pressure_bar, bars)};
+                        convert::from(bhp_bar, bars)};
     }
 
     bool has(const std::string& well) const { return point_.count(well) > 0; }
     double rate(const std::string& well) const { return point_.at(well).first; }
-    double pressure(const std::string& well) const { return point_.at(well).second; }
+    double bhp(const std::string& well) const { return point_.at(well).second; }
 
     /// Read the point out of a summary case at the given time, taking the last
     /// report at or before it. `prefix` is the case path without .SMSPEC.
@@ -550,7 +566,9 @@ NetworkCase fromDeck(const std::string& deck_path, const Fluid fluid)
     NetworkCase c;
     c.setFluid(fluid);
 
-    const std::string wanted_phase = (fluid == Fluid::Gas) ? "GAS" : "WATER";
+    // GNETINJE spells the phase WAT where WCONINJE spells it WATER.
+    const std::string well_phase = (fluid == Fluid::Gas) ? "GAS" : "WATER";
+    const std::string node_phase = (fluid == Fluid::Gas) ? "GAS" : "WAT";
 
     // Which group each well belongs to, and each group's parent. These can be
     // spread over several keywords, so take them all.
@@ -573,7 +591,7 @@ NetworkCase fromDeck(const std::string& deck_path, const Fluid fluid)
     std::map<std::string, int> node_table;
     std::string terminal;
     for (const auto& record : deck["GNETINJE"].front()) {
-        if (record.getItem("PHASE").getTrimmedString(0) != wanted_phase) {
+        if (record.getItem("PHASE").getTrimmedString(0) != node_phase) {
             continue;
         }
         const auto name = record.getItem("GROUP").getTrimmedString(0);
@@ -587,7 +605,7 @@ NetworkCase fromDeck(const std::string& deck_path, const Fluid fluid)
             ? table.get<int>(0) : kNoTable;
     }
     if (terminal.empty()) {
-        throw std::runtime_error("no terminal node in GNETINJE for " + wanted_phase);
+        throw std::runtime_error("no terminal node in GNETINJE for " + node_phase);
     }
 
     // Nodes, terminal first, then each node after its parent.
@@ -617,7 +635,7 @@ NetworkCase fromDeck(const std::string& deck_path, const Fluid fluid)
 
     // Wells of the right phase whose group is a node of this network.
     for (const auto& record : deck["WCONINJE"].front()) {
-        if (record.getItem("TYPE").getTrimmedString(0) != wanted_phase) {
+        if (record.getItem("TYPE").getTrimmedString(0) != well_phase) {
             continue;
         }
         const auto name = record.getItem("WELL").getTrimmedString(0);
@@ -665,19 +683,12 @@ Reference Reference::fromSummary(const std::string& prefix,
         }
     }
 
-    const bool gas = c.fluid() == Fluid::Gas;
-    const std::string rate_key = gas ? "WGIR:" : "WWIR:";
-    const std::string node_key = gas ? "GPRG:" : "GPRW:";
+    const std::string rate_key = (c.fluid() == Fluid::Gas) ? "WGIR:" : "WWIR:";
 
     Reference ref;
     for (const auto& w : c.wells()) {
-        const auto node = c.nodes()[w.node].name;
-        ref.point_[w.name] = {summary.get_at_rstep(rate_key + w.name)[at],
-                              summary.get_at_rstep(node_key + node)[at]};
-        // Summary values are already in the deck's units; convert to SI.
-        ref.point_[w.name].first = convert::from(ref.point_[w.name].first,
-                                                 cubic(meter) / day);
-        ref.point_[w.name].second = convert::from(ref.point_[w.name].second, bars);
+        ref.set(w.name, summary.get_at_rstep(rate_key + w.name)[at],
+                summary.get_at_rstep("WBHP:" + w.name)[at]);
     }
     return ref;
 }
@@ -687,20 +698,21 @@ void NetworkCase::calibrate(const Reference& reference)
     for (auto& w : wells_) {
         if (reference.has(w.name)) {
             w.q_ref = reference.rate(w.name);
-            w.p_ref = reference.pressure(w.name);
+            w.bhp_ref = reference.bhp(w.name);
         }
     }
     finish();
 }
 
-/// Eclipse 100 at day 31, read off opm-tests/eclref/GNETINJE_GAS-01_ECL.
+/// Eclipse 100 at day 31 (rate and bhp per well), read off
+/// opm-tests/eclref/e100reference/GNETINJE_GAS-01_ECL.
 Reference referenceGnetinjeGasDay31()
 {
     Reference r;
-    r.set("G-3H", 486500.2, 209.4089);
-    r.set("G-4H", 486530.8, 209.4089);
-    r.set("F-1H", 276481.3, 204.2442);
-    r.set("F-2H", 277082.5, 204.2442);
+    r.set("G-3H", 486500.2, 295.3923);
+    r.set("G-4H", 486530.8, 295.3244);
+    r.set("F-1H", 276481.3, 295.0190);
+    r.set("F-2H", 277082.5, 294.9374);
     return r;
 }
 
@@ -1520,7 +1532,7 @@ BOOST_AUTO_TEST_CASE(built_from_deck_matches_the_builtin_case)
         // The hand-set reference is the summary rounded to four figures.
         BOOST_CHECK_CLOSE(convert::to(it->q_ref, cubic(meter) / day),
                           convert::to(well.q_ref, cubic(meter) / day), 0.5);
-        BOOST_CHECK_CLOSE(convert::to(it->p_ref, bars), convert::to(well.p_ref, bars), 0.5);
+        BOOST_CHECK_CLOSE(convert::to(it->bhp_ref, bars), convert::to(well.bhp_ref, bars), 0.5);
     }
 
     // And it solves to the same place.
@@ -1535,6 +1547,117 @@ BOOST_AUTO_TEST_CASE(built_from_deck_matches_the_builtin_case)
     const double m5n = solved.p[findNode(from_deck, "M5N") == from_deck.solvedNodes()[0] ? 0 : 1];
     BOOST_CHECK_CLOSE(convert::to(m5s, bars), 209.4, 0.5);
     BOOST_CHECK_CLOSE(convert::to(m5n, bars), 204.2, 0.5);
+}
+
+namespace {
+    /// Where opm-tests lives, if it does. The reference-driven cases skip
+    /// without it, since it is not a build dependency.
+    const std::string kTests = "/Users/hnil/Documents/OPM/opm_feature/opm-tests/";
+
+    struct DeckCase
+    {
+        std::string deck;
+        std::string reference;
+        Fluid fluid;
+        std::string rate_key;     // field injection rate
+    };
+
+    const DeckCase kGasCase{kTests + "network/GNETINJE_GAS-01.DATA",
+                            kTests + "eclref/e100reference/GNETINJE_GAS-01_ECL",
+                            Fluid::Gas, "FGIR"};
+    const DeckCase kWaterCase{kTests + "network/GNETINJE_WAT-01.DATA",
+                              kTests + "eclref/e100reference/GNETINJE_WAT-01_ECL",
+                              Fluid::Water, "FWIR"};
+
+    bool available(const DeckCase& c)
+    {
+        return std::filesystem::exists(c.deck) && std::filesystem::exists(c.reference + ".SMSPEC");
+    }
+
+    /// Solve the case at every report step of its reference run and report how
+    /// far the node pressures land from it. Returns (matched, considered).
+    ///
+    /// At each step the wells are calibrated to what the reference says they
+    /// were doing, and the field target is applied when the reference has the
+    /// wells on group control -- WMCTL 6 is THP, anything negative is a group.
+    /// So this asks whether the network side reproduces Eclipse at operating
+    /// points across the whole run, not just the one the bench was built on.
+    std::pair<int, int> sweepReference(const DeckCase& deck_case, const double tol_bar)
+    {
+        const EclIO::ESmry summary(deck_case.reference + ".SMSPEC");
+        const auto time = summary.get_at_rstep("TIME");
+        const auto field_rate = summary.get_at_rstep(deck_case.rate_key);
+        const bool gas = deck_case.fluid == Fluid::Gas;
+        const auto sm3d = cubic(meter) / day;
+
+        const auto base = fromDeck(deck_case.deck, deck_case.fluid);
+        const auto control = summary.get_at_rstep("WMCTL:" + base.wells().front().name);
+
+        int matched = 0, considered = 0;
+        for (std::size_t step = 0; step < time.size(); ++step) {
+            if (time[step] <= 0.0 || field_rate[step] <= 0.0) {
+                continue;      // nothing injected yet
+            }
+            ++considered;
+
+            auto c = fromDeck(deck_case.deck, deck_case.fluid);
+            c.calibrate(Reference::fromSummary(deck_case.reference, c, time[step]));
+            c.setRelativeStiffness(0.12);
+            const bool on_group = control[step] < 0.0;
+            if (on_group) {
+                c.setGroupTarget(convert::from(field_rate[step], sm3d));
+            }
+            c.finish();
+
+            const auto solved = newton(FullProblem{c}, kStart, FullStep{});
+            std::string detail;
+            double worst = 0.0;
+            for (std::size_t i = 0; i < c.solvedNodes().size(); ++i) {
+                const auto& node = c.nodes()[c.solvedNodes()[i]].name;
+                const double reference =
+                    summary.get_at_rstep((gas ? "GPRG:" : "GPRW:") + node)[step];
+                const double got = solved.converged ? convert::to(solved.p[i], bars) : 0.0;
+                worst = std::max(worst, std::abs(got - reference));
+                detail += fmt::format(" {} {:.2f}/{:.2f}", node, got, reference);
+            }
+            const bool ok = solved.converged && worst < tol_bar;
+            matched += ok ? 1 : 0;
+            BOOST_TEST_MESSAGE(fmt::format("  t={:6.1f} {:5} {:11} {:<26} worst {:.2f} bar {}",
+                                           time[step], on_group ? "GRUP" : "THP",
+                                           solved.converged
+                                               ? fmt::format("{} it", solved.iterations) : "FAILED",
+                                           detail, worst, ok ? "" : "  <--"));
+        }
+        BOOST_TEST_MESSAGE("  " << matched << "/" << considered << " report steps within "
+                           << tol_bar << " bar");
+        return {matched, considered};
+    }
+}
+
+// The full formulation against the whole of GNETINJE_GAS-01, not just the point
+// the bench was calibrated on.
+BOOST_AUTO_TEST_CASE(gas_case_across_the_run)
+{
+    if (!available(kGasCase)) {
+        BOOST_TEST_MESSAGE("opm-tests not present, skipping");
+        return;
+    }
+    BOOST_TEST_MESSAGE("GNETINJE_GAS-01:");
+    const auto [matched, considered] = sweepReference(kGasCase, 1.0);
+    BOOST_CHECK_GT(considered, 0);
+    BOOST_CHECK_EQUAL(matched, considered);
+}
+
+BOOST_AUTO_TEST_CASE(water_case_across_the_run)
+{
+    if (!available(kWaterCase)) {
+        BOOST_TEST_MESSAGE("opm-tests not present, skipping");
+        return;
+    }
+    BOOST_TEST_MESSAGE("GNETINJE_WAT-01:");
+    const auto [matched, considered] = sweepReference(kWaterCase, 1.0);
+    BOOST_CHECK_GT(considered, 0);
+    BOOST_CHECK_EQUAL(matched, considered);
 }
 
 // From the one starting point the simulator actually uses.
