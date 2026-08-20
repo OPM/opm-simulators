@@ -287,6 +287,9 @@ protected:
     /// Cell index, its Cartesian index, and on a refined grid its level.
     std::string describeCell_(unsigned elemIdx) const;
 
+    /// Whether the grid has an intersection between the two cells.
+    bool gridJoins_(unsigned elemIdx1, unsigned elemIdx2) const;
+
     std::vector<DimMatrix> permeability_;
     std::vector<Scalar> porosity_;
     std::vector<Scalar> dispersion_;

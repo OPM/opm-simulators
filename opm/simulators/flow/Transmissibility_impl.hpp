@@ -119,6 +119,31 @@ Transmissibility(const EclipseState& eclState,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+bool Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+gridJoins_(unsigned elemIdx1, unsigned elemIdx2) const
+{
+    ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+
+    for (const auto& elem : elements(gridView_)) {
+        if (elemMapper.index(elem) != static_cast<int>(elemIdx1)) {
+            continue;
+        }
+
+        for (const auto& intersection : intersections(gridView_, elem)) {
+            if (intersection.neighbor() &&
+                (elemMapper.index(intersection.outside()) == static_cast<int>(elemIdx2)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 std::string Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 describeCell_(unsigned elemIdx) const
 {
@@ -176,11 +201,20 @@ lookupTrans_(const std::unordered_map<std::uint64_t, Scalar>& map,
             ((delta % (cartDims[0]*cartDims[1])) == 0) ? "same column, several layers apart (a pinch-out or vertical NNC)"
                                                   : "not Cartesian neighbours (a non-neighbour connection)";
 
+        // Does the grid actually join these two cells? That separates a caller
+        // asking about a connection that does not exist from this calculation
+        // having missed one that does.
+        const auto joined = this->gridJoins_(elemIdx1, elemIdx2);
+
         OPM_THROW(std::out_of_range,
-                  fmt::format("No {} between {} and {}: {}. The model asked for a "
-                              "connection the transmissibility calculation did not "
-                              "produce.",
-                              what, this->describeCell_(elemIdx1), this->describeCell_(elemIdx2), kind));
+                  fmt::format("No {} between {} and {}: {}. {}",
+                              what, this->describeCell_(elemIdx1), this->describeCell_(elemIdx2), kind,
+                              joined
+                              ? "The grid does join them, so the transmissibility "
+                                "calculation skipped a face it should have computed."
+                              : "The grid does not join them either, so the caller asked "
+                                "about a connection that does not exist -- the cell "
+                                "indices it used are not the ones this grid knows."));
     }
 
     return entry->second;
