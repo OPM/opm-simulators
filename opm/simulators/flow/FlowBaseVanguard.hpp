@@ -363,10 +363,13 @@ protected:
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
 
         const auto num_aqu_cells = this->allAquiferCells();
+        const auto* depthEdits = this->editedCellDepths_(numCells);
 
-        for(const auto& element : elements(this->gridView())) {
+        for (const auto& element : elements(this->gridView())) {
             const unsigned int elemIdx = elemMapper.index(element);
-            cellCenterDepth_[elemIdx] = cellCenterDepth(element);
+            cellCenterDepth_[elemIdx] = depthEdits != nullptr
+                ? (*depthEdits)[elemIdx]
+                : cellCenterDepth(element);
 
             if (!num_aqu_cells.empty()) {
                 const unsigned int global_index = cartesianIndex(elemIdx);
@@ -377,6 +380,33 @@ protected:
                 }
             }
         }
+    }
+
+    /*!
+     * \brief Cell depths from a DEPTH assignment in the EDIT section, or nullptr.
+     *
+     * The DEPTH field property is used rather than EclipseGrid::getCellDepth() because
+     * the input grid is only available on the root process. Whether DEPTH was edited is
+     * likewise only known on the root process, so the flag has to be communicated to
+     * keep all ranks on the same branch.
+     */
+    const std::vector<double>* editedCellDepths_(const int numCells) const
+    {
+        const auto& comm = this->gridView().comm();
+
+        int depthEdited = (comm.rank() == 0)
+            && this->eclState().globalFieldProps().depth_edited();
+        depthEdited = comm.max(depthEdited);
+
+        if (!depthEdited) {
+            return nullptr;
+        }
+
+        const auto& depth = this->eclState().fieldProps().get_double("DEPTH");
+
+        // The field properties are given on the level zero grid, so they cannot be
+        // indexed by leaf element index when the grid has been refined.
+        return (static_cast<int>(depth.size()) == numCells) ? &depth : nullptr;
     }
     void updateCellThickness_()
     {
@@ -395,7 +425,6 @@ protected:
     }
 
 private:
-    // computed from averaging cell corner depths
     Scalar cellCenterDepth(const Element& element) const
     {
         typedef typename Element::Geometry Geometry;
@@ -404,10 +433,10 @@ private:
 
         const Geometry& geometry = element.geometry();
         const int corners = geometry.corners();
-        for (int i=0; i < corners; ++i)
+        for (int i = 0; i < corners; ++i)
             zz += geometry.corner(i)[zCoord];
 
-        return zz/Scalar(corners);
+        return zz / Scalar(corners);
     }
 
     Scalar computeCellThickness(const typename GridView::template Codim<0>::Entity& element) const
