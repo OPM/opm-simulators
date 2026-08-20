@@ -162,6 +162,8 @@ public:
         }
     }
 
+    virtual ~FvBaseProblem() = default;
+
     /*!
      * \brief Registers all available parameters for the problem and
      *        the model.
