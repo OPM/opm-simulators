@@ -168,6 +168,7 @@ update(const bool mandatory_network_balance,
         this->useNewtonSolver(solver_mode == "newton");
         this->useAnalyticJacobian(well_model_.param().network_analytic_jacobian_);
         this->useNetworkGroupControl(well_model_.param().network_group_control_);
+        this->dumpNetworkFailuresTo(well_model_.param().network_dump_failures_);
         if (solver_mode == "newton") {
             // The simultaneous solve needs each injector's rate response to its own
             // bhp. That is the implicit IPR, which the well solve only maintains for

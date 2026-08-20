@@ -124,6 +124,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
     network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
     network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
+    network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -304,6 +305,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::NetworkGroupControl>
         ("Let the network hold a group's injection total and place the split itself, so a well "
          "that hits its own limit is taken up by the others (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkDumpFailures>
+        ("Path prefix for writing out each network system that fails to converge, for replay in "
+         "the standalone bench; empty disables it");
     Parameters::Register<Parameters::NetworkPressureUpdateSecant>
         ("Networks whose node pressures use the bracketing/secant update in the inner network "
          "iterations instead of the damped update: injection, all or none");

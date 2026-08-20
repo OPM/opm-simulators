@@ -165,6 +165,7 @@ struct NetworkWellProxy { static constexpr auto value = "none"; };
 struct NetworkSolver { static constexpr auto value = "fixedpoint"; };
 struct NetworkAnalyticJacobian { static constexpr bool value = false; };
 struct NetworkGroupControl { static constexpr bool value = false; };
+struct NetworkDumpFailures { static constexpr auto value = ""; };
 struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
@@ -394,6 +395,9 @@ public:
 
     /// Let the network place the split of a group's injection total itself.
     bool network_group_control_;
+
+    /// Path prefix for writing network systems that fail to converge; empty off.
+    std::string network_dump_failures_;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.

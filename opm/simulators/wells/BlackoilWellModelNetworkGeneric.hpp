@@ -220,6 +220,10 @@ public:
     /// than taking each group-controlled well's rate as fixed.
     void useNetworkGroupControl(const bool on) { network_group_control_ = on; }
 
+    /// Write each network system that fails to converge, for replay in
+    /// tests/test_networksolve.cpp. Empty disables it.
+    void dumpNetworkFailuresTo(const std::string& prefix) { network_dump_prefix_ = prefix; }
+
 protected:
     /// Result of one network pressure evaluation for one network (domain).
     struct NetworkPressures
@@ -316,6 +320,8 @@ protected:
     bool newton_solver_ = false;
     bool analytic_jacobian_ = false;
     bool network_group_control_ = false;
+    std::string network_dump_prefix_;
+    mutable int network_dumps_written_ = 0;
 
     // recomputed on every updatePressures().
     std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;

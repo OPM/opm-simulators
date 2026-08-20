@@ -75,6 +75,8 @@
 #include <deque>
 #include <filesystem>
 #include <fmt/format.h>
+#include <fstream>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
 #include <tuple>
@@ -422,11 +424,17 @@ public:
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
             sw.guide = w.q_ref;
-            sw.q_start = w.q_ref;   // the simulator starts from the current rates
             s.addWell(sw);
         }
         s.finish();
         return s;
+    }
+
+    /// Rebuild a system written by the simulator, against this case's tables.
+    std::pair<NetworkSolve::System<double>, std::vector<double>>
+    systemFromDump(std::istream& is) const
+    {
+        return NetworkSolve::read<double>(is, props_);
     }
 
     /// The network's scalar rate as the triple a VFP lookup takes.
@@ -1818,6 +1826,44 @@ BOOST_AUTO_TEST_CASE(refreshing_guides_does_not_break_convergence)
     // And on the same answer.
     BOOST_CHECK_SMALL(convert::to(followed.p[0] - settled.p[0], bars), 0.05);
     BOOST_CHECK_SMALL(convert::to(followed.p[1] - settled.p[1], bars), 0.05);
+}
+
+// Replay network systems the simulator could not solve. Run flow with
+//   --network-solver=newton --network-dump-failures=/tmp/netfail
+// and point OPM_NETWORK_DUMP at the directory; each file is a system that fell
+// back to the relaxed update, with the wells' inflow performance as the well
+// Jacobian actually gave it. That is the half the synthetic wells here cannot
+// reproduce, so it is the only way to work on those failures at bench speed.
+BOOST_AUTO_TEST_CASE(replay_simulator_failures)
+{
+    const char* dir = std::getenv("OPM_NETWORK_DUMP");
+    if (dir == nullptr || !std::filesystem::is_directory(dir)) {
+        BOOST_TEST_MESSAGE("OPM_NETWORK_DUMP not set to a directory, nothing to replay");
+        return;
+    }
+
+    const auto gas = gnetinjeGas();
+    std::vector<std::filesystem::path> files;
+    for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+        if (entry.path().extension() == ".txt") {
+            files.push_back(entry.path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    BOOST_TEST_MESSAGE("replaying " << files.size() << " dumped systems");
+
+    int solved = 0;
+    for (const auto& file : files) {
+        std::ifstream in(file);
+        auto [system, guess] = gas.systemFromDump(in);
+        const auto r = NetworkSolve::solve(system, guess);
+        solved += r.converged ? 1 : 0;
+        BOOST_TEST_MESSAGE("  " << file.filename().string() << ": "
+                           << (r.converged ? "converged in " : "FAILED after ")
+                           << r.iterations << " iterations, residual " << r.residual
+                           << (r.control_trace.empty() ? "" : "  controls " + r.control_trace));
+    }
+    BOOST_TEST_MESSAGE("  " << solved << "/" << files.size() << " replayed systems converge");
 }
 
 // How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.
