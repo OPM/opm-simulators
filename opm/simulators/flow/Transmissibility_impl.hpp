@@ -124,22 +124,33 @@ describeCell_(unsigned elemIdx) const
 {
     auto text = fmt::format("cell {}", elemIdx);
 
-    if (elemIdx < static_cast<unsigned>(gridView_.size(/*codim=*/0))) {
-        text += fmt::format(" (Cartesian {}", cartMapper_.cartesianIndex(elemIdx));
-        if constexpr (requires { grid_.maxLevel(); }) {
-            if (grid_.maxLevel() > 0) {
-                // Which grid the cell belongs to is the first thing worth
-                // knowing here: a pair that spans a refinement boundary, or two
-                // cells refining one coarse cell, is where these lookups go
-                // wrong.
-                const auto& elem = *std::next(elements(gridView_).begin(), elemIdx);
-                text += fmt::format(", level {}", elem.level());
-            }
-        }
-        text += ")";
+    if (elemIdx >= static_cast<unsigned>(gridView_.size(/*codim=*/0))) {
+        return text + " (out of range)";
     }
 
-    return text;
+    const auto cartIdx = cartMapper_.cartesianIndex(elemIdx);
+    std::array<int,dimWorld> ijk{};
+    cartMapper_.cartesianCoordinate(elemIdx, ijk);
+
+    text += fmt::format(" (Cartesian {} = [{},{},{}]", cartIdx, ijk[0], ijk[1], ijk[2]);
+
+    if constexpr (requires { grid_.maxLevel(); }) {
+        if (grid_.maxLevel() > 0) {
+            // Which grid the cell belongs to is the first thing worth knowing:
+            // a pair spanning a refinement boundary, or two cells refining one
+            // coarse cell, is where these lookups go wrong. Found through the
+            // mapper -- iteration order is not index order.
+            ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+            for (const auto& elem : elements(gridView_)) {
+                if (elemMapper.index(elem) == static_cast<int>(elemIdx)) {
+                    text += fmt::format(", level {}", elem.level());
+                    break;
+                }
+            }
+        }
+    }
+
+    return text + ")";
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -151,11 +162,25 @@ lookupTrans_(const std::unordered_map<std::uint64_t, Scalar>& map,
     if (entry == map.end()) {
         // "unordered_map::at: key not found" on its own says nothing about
         // which connection the model asked for.
+        // Whether the pair is Cartesian-adjacent says which kind of connection
+        // went missing: a face the grid should have, or a non-neighbour one.
+        const auto& cartDims = cartMapper_.cartesianDimensions();
+        const auto gc1 = cartMapper_.cartesianIndex(std::min(elemIdx1, elemIdx2));
+        const auto gc2 = cartMapper_.cartesianIndex(std::max(elemIdx1, elemIdx2));
+        const auto delta = gc2 - gc1;
+        const auto kind =
+            (delta == 0)                          ? "same coarse cell (refined siblings)" :
+            (delta == 1)                          ? "neighbours in I" :
+            (delta == cartDims[0])                ? "neighbours in J" :
+            (delta == cartDims[0]*cartDims[1])    ? "neighbours in K" :
+            ((delta % (cartDims[0]*cartDims[1])) == 0) ? "same column, several layers apart (a pinch-out or vertical NNC)"
+                                                  : "not Cartesian neighbours (a non-neighbour connection)";
+
         OPM_THROW(std::out_of_range,
-                  fmt::format("No {} between {} and {}. The model asked for a "
+                  fmt::format("No {} between {} and {}: {}. The model asked for a "
                               "connection the transmissibility calculation did not "
                               "produce.",
-                              what, this->describeCell_(elemIdx1), this->describeCell_(elemIdx2)));
+                              what, this->describeCell_(elemIdx1), this->describeCell_(elemIdx2), kind));
     }
 
     return entry->second;
