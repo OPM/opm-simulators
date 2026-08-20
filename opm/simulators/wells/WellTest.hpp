@@ -74,7 +74,8 @@ public:
                                      bool zero_group_target,
                                      const UnitSystem& unit_system,
                                      const std::time_t start_time,
-                                     DeferredLogger& deferred_logger) const;
+                                     DeferredLogger& deferred_logger,
+                                     std::string* closure_reason = nullptr) const;
 
     void updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                                   const double simulation_time,
@@ -107,6 +108,36 @@ private:
         Scalar ratio_value = 0.0;
         Scalar ratio_limit = 0.0;
     };
+
+    //! \brief The violated minimum rate limit, for the closing message.
+    struct RateLimitCheckReport {
+        //! \brief "oil", "gas", "liquid" or "reservoir fluid". Always a string
+        //!        literal, so the view outlives the report.
+        std::string_view quantity_name{};
+        UnitSystem::measure rate_measure = UnitSystem::measure::identity;
+        //! \brief Magnitude compared against \c rate_limit, from the potentials
+        //!        rather than the rates when WECON item 10 is POTN.
+        Scalar rate_value = 0.0;
+        Scalar rate_limit = 0.0;
+    };
+
+    //! \brief Report that an economic limit closed the well: to the PRT during the
+    //!        regular update, or into \p closure_reason when a well test is only
+    //!        trying the well out and no shut-in actually happens.
+    void reportEconomicLimitClosure(const std::string& when,
+                                    const std::string& reason,
+                                    const bool write_message_to_opmlog,
+                                    std::string* closure_reason,
+                                    DeferredLogger& deferred_logger) const;
+
+    //! \brief Format the "<quantity> production rate ... is below the limit ..."
+    //!        clause of the WECON rate-limit closing message.
+    //!
+    //! \param on_potentials  say "production potential" instead of "production
+    //!        rate" (WECON item 10 is POTN).
+    static std::string rateViolationReason(const UnitSystem& unit_system,
+                                           const RateLimitCheckReport& report,
+                                           const bool on_potentials);
 
     //! \brief Format the "<ratio> ... exceeds the limit ..." clause shared by the
     //!        WECON and CECON workover messages.
@@ -168,9 +199,16 @@ private:
                                        const UnitSystem::measure ratio_measure,
                                        RatioLimitCheckReport& report) const;
 
+    //! \brief Check the minimum production rate limits (WECON items 2, 3, 14 and
+    //!        16) against \p rates_or_potentials, the well's surface rates or,
+    //!        when WECON item 10 is POTN, its potentials. Item 16 applies to the
+    //!        reservoir voidage rate those rates correspond to. Limits on a phase
+    //!        the run does not have are ignored.
+    //!
+    //! \param report  the first violated limit; untouched when none is violated.
     bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                              const std::vector<Scalar>& rates_or_potentials,
-                             DeferredLogger& deferred_logger) const;
+                             RateLimitCheckReport& report) const;
 
     //! \brief Check all active ratio limits, ignoring \p excluded_completions
     //!        (completions already closed by the ongoing workover event).
@@ -194,7 +232,7 @@ private:
     //!        the well has been shut.
     //!
     //! \param ratio_subject  Owner of the violated ratio in the closing message,
-    //!                inserted as "Because \p ratio_subject \p reason". WECON
+    //!                inserted as "because \p ratio_subject \p reason". WECON
     //!                reports a well-level ratio ("the well"); CECON reports the
     //!                completion's own ratio ("its").
     bool closeOffendingCompletion(int offending_completion,

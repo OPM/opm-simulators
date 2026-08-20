@@ -70,6 +70,8 @@ public:
         return rateConverter_;
     }
 
+    Scalar totalReservoirVoidageRate(const std::vector<Scalar>& surface_rates) const override;
+
 protected:
     WellInterfaceFluidSystem(const Well& well,
                              const ParallelWellInfo<Scalar>& parallel_well_info,

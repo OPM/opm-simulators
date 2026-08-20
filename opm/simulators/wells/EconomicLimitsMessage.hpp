@@ -22,6 +22,8 @@
 
 #include <opm/common/utility/TimeService.hpp>
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
@@ -40,6 +42,18 @@ inline std::string economicLimitDateString(const std::time_t start_time, const d
 {
     const std::time_t cur_time = TimeService::advance(start_time, sim_time);
     return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
+}
+
+//! \brief The "at time ... (date = ...)" clause shared by the well (WECON) and
+//!        connection (CECON) economic-limit messages.
+inline std::string economicLimitWhenString(const UnitSystem& unit_system,
+                                           const std::time_t start_time,
+                                           const double sim_time)
+{
+    return fmt::format("at time {:.2f} {} (date = {})",
+                       unit_system.from_si(UnitSystem::measure::time, sim_time),
+                       unit_system.name(UnitSystem::measure::time),
+                       economicLimitDateString(start_time, sim_time));
 }
 
 //! \brief Separator line used to frame economic-limit workover messages.
