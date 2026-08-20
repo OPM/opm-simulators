@@ -55,6 +55,7 @@
 #include <initializer_list>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -118,10 +119,53 @@ Transmissibility(const EclipseState& eclState,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+std::string Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+describeCell_(unsigned elemIdx) const
+{
+    auto text = fmt::format("cell {}", elemIdx);
+
+    if (elemIdx < static_cast<unsigned>(gridView_.size(/*codim=*/0))) {
+        text += fmt::format(" (Cartesian {}", cartMapper_.cartesianIndex(elemIdx));
+        if constexpr (requires { grid_.maxLevel(); }) {
+            if (grid_.maxLevel() > 0) {
+                // Which grid the cell belongs to is the first thing worth
+                // knowing here: a pair that spans a refinement boundary, or two
+                // cells refining one coarse cell, is where these lookups go
+                // wrong.
+                const auto& elem = *std::next(elements(gridView_).begin(), elemIdx);
+                text += fmt::format(", level {}", elem.level());
+            }
+        }
+        text += ")";
+    }
+
+    return text;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+lookupTrans_(const std::unordered_map<std::uint64_t, Scalar>& map,
+             unsigned elemIdx1, unsigned elemIdx2, std::string_view what) const
+{
+    const auto entry = map.find(details::isId(elemIdx1, elemIdx2));
+    if (entry == map.end()) {
+        // "unordered_map::at: key not found" on its own says nothing about
+        // which connection the model asked for.
+        OPM_THROW(std::out_of_range,
+                  fmt::format("No {} between {} and {}. The model asked for a "
+                              "connection the transmissibility calculation did not "
+                              "produce.",
+                              what, this->describeCell_(elemIdx1), this->describeCell_(elemIdx2)));
+    }
+
+    return entry->second;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 {
-    return trans_.at(details::isId(elemIdx1, elemIdx2));
+    return this->lookupTrans_(trans_, elemIdx1, elemIdx2, "transmissibility");
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -159,7 +203,7 @@ diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
     if (diffusivity_.empty())
         return 0.0;
 
-    return diffusivity_.at(details::isId(elemIdx1, elemIdx2));
+    return this->lookupTrans_(diffusivity_, elemIdx1, elemIdx2, "diffusivity");
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -169,7 +213,7 @@ dispersivity(unsigned elemIdx1, unsigned elemIdx2) const
     if (dispersivity_.empty())
         return 0.0;
 
-    return dispersivity_.at(details::isId(elemIdx1, elemIdx2));
+    return this->lookupTrans_(dispersivity_, elemIdx1, elemIdx2, "dispersivity");
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>

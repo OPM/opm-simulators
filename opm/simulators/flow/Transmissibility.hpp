@@ -278,6 +278,15 @@ protected:
                           const FaceInfo& face,
                           const std::vector<double>& ntg);
 
+    /// Look a connection up, reporting which one is missing rather than
+    /// leaving std::unordered_map::at to say only "key not found".
+    Scalar lookupTrans_(const std::unordered_map<std::uint64_t, Scalar>& map,
+                        unsigned elemIdx1, unsigned elemIdx2,
+                        std::string_view what) const;
+
+    /// Cell index, its Cartesian index, and on a refined grid its level.
+    std::string describeCell_(unsigned elemIdx) const;
+
     std::vector<DimMatrix> permeability_;
     std::vector<Scalar> porosity_;
     std::vector<Scalar> dispersion_;
