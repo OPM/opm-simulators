@@ -308,7 +308,25 @@ public:
     std::function<std::array<double,dimensionworld>(int)>
     cellCentroids() const
     {
-        return this->cellCentroids_(this->cartesianIndexMapper(), true);
+        if (!cellCentroidsFromGrid_) {
+            return this->cellCentroids_(this->cartesianIndexMapper(), true);
+        } else {
+            // Use centroids from the grid file if available
+            auto centroidIter = this->grid().beginCellCentroids();
+            int num_cells = this->gridView().size(0);
+            return [centroidIter, num_cells](int i) -> std::array<double, dimensionworld> {
+                if (i < 0 || i >= num_cells) return std::array<double, dimensionworld>{};
+                auto it = centroidIter;
+                std::advance(it, i);
+                const auto& centroid = *it;
+                return {centroid[0], centroid[1], centroid[2]};
+            };
+        }
+    }
+
+    bool gridFromFile() const
+    {
+        return cellCentroidsFromGrid_;
     }
 
     const std::vector<int>& globalCell()
@@ -319,6 +337,11 @@ public:
 protected:
     void createGrids_()
     {
+        // Check if grid will be loaded from file
+        const auto gridFileName = Parameters::Get<Parameters::UnstructuredGridFileName>();
+        if (!gridFileName.empty()) {
+            cellCentroidsFromGrid_ = true;
+        }
         this->doCreateGrids_(this->edgeConformal(), this->eclState());
     }
 
@@ -333,7 +356,8 @@ protected:
                                                     getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal ||
                                                     getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::SequentialImplicitThermal,
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
-                                                    getPropValue<TypeTag, Properties::EnableDispersion>()));
+                                                    getPropValue<TypeTag, Properties::EnableDispersion>(),
+                                                    cellCentroidsFromGrid_));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
     }
 
@@ -364,6 +388,9 @@ protected:
     // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
     // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
+
+    // Flag to indicate if cell centroids should be read from the grid file
+    bool cellCentroidsFromGrid_ = false;
 };
 
 } // namespace Opm

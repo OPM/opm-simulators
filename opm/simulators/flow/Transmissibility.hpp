@@ -66,7 +66,8 @@ public:
                      std::function<std::array<double,dimWorld>(int)> centroids,
                      bool enableEnergy,
                      bool enableDiffusivity,
-                     bool enableDispersivity);
+                     bool enableDispersivity,
+                     bool gridFromFile = false);
 
     /*!
      * \brief Return the permeability for an element.
@@ -294,6 +295,7 @@ protected:
     bool enableEnergy_;
     bool enableDiffusivity_;
     bool enableDispersivity_;
+    bool gridFromFile_;
     bool warnEditNNC_ = true;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
