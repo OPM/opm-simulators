@@ -32,6 +32,8 @@
 
 #include <opm/grid/utility/ElementChunks.hpp>
 
+#include <opm/common/utility/SymmTensor.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/parallel/threadmanager.hpp>
@@ -77,7 +79,7 @@ class TpsaModel
     using MaterialState = MaterialStateTPSA<Evaluation>;
 
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
-    using SymTensor = Dune::FieldVector<Scalar, 6>;
+    using SymTensor = SymmTensor<Scalar>;
     using PotForceVector = Dune::BlockVector<Scalar>;
 
 public:
@@ -491,7 +493,7 @@ public:
         // the total stress
         SymTensor linStressTensor = stress(globalIdx, false);
         const auto potForce = mechPotentialForce(globalIdx);
-        for (unsigned dirIdx = 0; dirIdx < 3; ++dirIdx) {
+        for (const auto& dirIdx : SymTensor::diag_indices) {
             linStressTensor[dirIdx] -= potForce;
         }
         return -1.0 * linStressTensor;
@@ -591,12 +593,12 @@ public:
 
             // Reconstructed stress tensor at cell center
             const auto& stress = lsq.x();
-            stressOutput[0] = stress[0]; // XX
-            stressOutput[1] = stress[1]; // YY
-            stressOutput[2] = stress[2]; // ZZ
-            stressOutput[3] = stress[5]; // YZ
-            stressOutput[4] = stress[4]; // XZ
-            stressOutput[5] = stress[3]; // XY
+            stressOutput[VoigtIndex::XX] = stress[0]; // XX
+            stressOutput[VoigtIndex::YY] = stress[1]; // YY
+            stressOutput[VoigtIndex::ZZ] = stress[2]; // ZZ
+            stressOutput[VoigtIndex::YZ] = stress[5]; // YZ
+            stressOutput[VoigtIndex::XZ] = stress[4]; // XZ
+            stressOutput[VoigtIndex::XY] = stress[3]; // XY
         }
         return stressOutput;
     }
@@ -612,10 +614,10 @@ public:
     {
         // Deviatoric stress
         auto stressDev = this->linstress(globalIdx);
-        Scalar traceStress = 1.0 / 3.0 * (stressDev[0] + stressDev[1] + stressDev[2]);
-        stressDev[0] -= traceStress;
-        stressDev[1] -= traceStress;
-        stressDev[2] -= traceStress;
+        Scalar traceStress = 1.0 / 3.0 * stressDev.trace();
+        stressDev[VoigtIndex::XX] -= traceStress;
+        stressDev[VoigtIndex::YY] -= traceStress;
+        stressDev[VoigtIndex::ZZ] -= traceStress;
 
         // Deviatoric strain
         auto& problem = simulator_.problem();
@@ -627,9 +629,9 @@ public:
         Scalar strainVolTerm = traceStress / (3.0 * lameParam + 2 * sMod);
 
         SymTensor strainVol;
-        strainVol[0] = strainVolTerm;
-        strainVol[1] = strainVolTerm;
-        strainVol[2] = strainVolTerm;
+        strainVol[VoigtIndex::XX] = strainVolTerm;
+        strainVol[VoigtIndex::YY] = strainVolTerm;
+        strainVol[VoigtIndex::ZZ] = strainVolTerm;
 
         // Total
         SymTensor strainOutput = strainDev + strainVol;
