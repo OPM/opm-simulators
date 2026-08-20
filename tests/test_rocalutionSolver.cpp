@@ -25,11 +25,11 @@
 
 #include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <rocalution/rocalution.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/preconditioners.hh>
@@ -38,7 +38,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 template <int bz>
-using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 template <int bz>
 using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
 

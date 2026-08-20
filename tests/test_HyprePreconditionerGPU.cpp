@@ -47,7 +47,7 @@ BOOST_GLOBAL_FIXTURE(MPIFixture);
 BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_CpuInputGpuBackend, HypreTestFixture)
 {
     constexpr int N = 100; // 100x100 grid
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 
     // Create matrix
@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputGpuBackend, HypreTestFix
     using namespace Opm::gpuistl;
 
     constexpr int N = 100; // 100x100 grid
-    using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using CpuMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     using GpuMatrixType = GpuSparseMatrixWrapper<double>;
     using GpuVectorType = GpuVector<double>;
 
@@ -81,7 +81,7 @@ BOOST_FIXTURE_TEST_CASE(TestHyprePreconditioner_GpuInputCpuBackend, HypreTestFix
     using namespace Opm::gpuistl;
 
     constexpr int N = 100; // 100x100 grid
-    using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using CpuMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     using GpuMatrixType = GpuSparseMatrixWrapper<double>;
     using GpuVectorType = GpuVector<double>;
 
