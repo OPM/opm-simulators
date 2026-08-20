@@ -422,6 +422,7 @@ public:
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
             sw.guide = w.q_ref;
+            sw.q_start = w.q_ref;   // the simulator starts from the current rates
             s.addWell(sw);
         }
         s.finish();
@@ -875,6 +876,7 @@ public:
 
     void setEnforceBounds(const bool on) { enforce_bounds_ = on; }
     void setAnalyticJacobian(const bool on) { system_.setAnalyticJacobian(on); }
+    void setGuidesFromPotential(const bool on) { system_.setGuidesFromPotential(on); }
     const NetworkSolve::System<double>& system() const { return system_; }
     NetworkSolve::System<double>& system() { return system_; }
 
@@ -1776,6 +1778,46 @@ BOOST_AUTO_TEST_CASE(group_target_is_an_equation)
 
     // Under a group target the network runs at higher pressure than it does free.
     BOOST_CHECK_GT(full.p[0], kExpected[0]);
+}
+
+// The simulator refreshes each well's share of a group total from what it can
+// inject at the network pressure, and roughly a tenth of its network solves then
+// fail as a GRUP/THP limit cycle. This was the one path the bench did not cover.
+//
+// It covers it now, and the guide refresh converges here -- in the simulator's
+// own group configuration, where the target is the total the wells are already
+// injecting and every well starts exactly on its share, sitting right on the
+// activation boundary. So the cycling is not the guide logic by itself. What the
+// bench cannot supply is the other half of the input: inflow performance taken
+// from the well Jacobian at a start-up or post-control-change state, which is
+// where every one of the simulator's failures falls.
+//
+// Reproducing those needs the failing system dumped from the simulator and
+// replayed here. Until then this test pins down what is *not* the cause.
+BOOST_AUTO_TEST_CASE(refreshing_guides_does_not_break_convergence)
+{
+    auto c = gnetinjeGas();
+    double total = 0.0;
+    for (const auto& w : c.wells()) {
+        total += w.q_ref;
+    }
+    c.setGroupTarget(total);
+    c.finish();
+
+    FullProblem fixed_guides{c};
+    const auto settled = newton(fixed_guides, kStart, FullStep{});
+
+    FullProblem refreshed{c};
+    refreshed.setGuidesFromPotential(true);
+    const auto followed = newton(refreshed, kStart, FullStep{});
+
+    BOOST_TEST_MESSAGE("guides held fixed " << settled.iterations
+                       << " iterations, refreshed from potential " << followed.iterations);
+    BOOST_CHECK(settled.converged);
+    BOOST_CHECK(followed.converged);
+    // And on the same answer.
+    BOOST_CHECK_SMALL(convert::to(followed.p[0] - settled.p[0], bars), 0.05);
+    BOOST_CHECK_SMALL(convert::to(followed.p[1] - settled.p[1], bars), 0.05);
 }
 
 // How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.
