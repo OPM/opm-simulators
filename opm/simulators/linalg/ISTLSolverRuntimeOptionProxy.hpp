@@ -51,7 +51,7 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using Matrix = typename SparseMatrixAdapter::IstlMatrix;
+    using Matrix =  typename SparseMatrixAdapter::IstlMatrix;
 
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -155,21 +155,22 @@ private:
     void createSolver(const Simulator& simulator, Args&&... args)
     {
         auto linSolverConf = Parameters::Get<Parameters::LinearSolver>();
-        bool useSystemCpr = (linSolverConf == "system_cpr");
-        if (!useSystemCpr && linSolverConf.size() > 5
+        bool useSystemSolver = (linSolverConf == "system_cpr" || linSolverConf == "system_cprw");
+        if (!useSystemSolver && linSolverConf.size() > 5
             && linSolverConf.ends_with(".json")
             && std::filesystem::exists(linSolverConf)) {
             try {
                 PropertyTree prm(linSolverConf);
-                useSystemCpr = (prm.get<std::string>("preconditioner.type", "") == "system_cpr");
+                const auto precType = prm.get<std::string>("preconditioner.type", "");
+                useSystemSolver = (precType == "system_cpr" || precType == "system_cprw");
             } catch (...) {}
         }
-        if (useSystemCpr) {
+        if (useSystemSolver) {
             using Indices = GetPropType<TypeTag, Properties::Indices>;
             const auto backend = Parameters::linearSolverAcceleratorTypeFromCLI();
             if (backend != Parameters::LinearSolverAcceleratorType::CPU) {
                 OPM_THROW(std::invalid_argument,
-                          "The system_cpr preconditioner currently only "
+                          "The system_cpr/system_cprw preconditioner currently only "
                           "supports --linear-solver-accelerator=cpu");
             }
             // System solver types are hardcoded for 3-equation blackoil (see SystemTypes.hpp).
@@ -178,7 +179,7 @@ private:
                     simulator, std::forward<Args>(args)...);
             } else {
                 OPM_THROW(std::invalid_argument,
-                          "The system_cpr preconditioner is only supported for "
+                          "The system_cpr/system_cprw preconditioner is only supported for "
                           "standard 3-phase blackoil (3 equations). This model has " +
                               std::to_string(Indices::numEq) + " equations.");
             }
