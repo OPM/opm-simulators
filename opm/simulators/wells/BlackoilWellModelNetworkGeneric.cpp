@@ -24,6 +24,8 @@
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
 #include <opm/simulators/wells/NetworkSystem.hpp>
+
+#include <fstream>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/common/TimingMacros.hpp>
@@ -446,6 +448,16 @@ newtonNodePressures(const Network::ExtNetwork& network,
     }
 
     const auto result = NetworkSolve::solve(system, guess);
+    if (!result.converged && !this->network_dump_prefix_.empty()) {
+        // Everything the solve worked from, so it can be replayed in the bench
+        // against the same tables without a simulator.
+        const auto path = fmt::format("{}_{}_{}.txt", this->network_dump_prefix_,
+                                      domain_name, this->network_dumps_written_++);
+        std::ofstream out(path);
+        if (out) {
+            NetworkSolve::write(system, guess, out);
+        }
+    }
     if (!result.converged) {
         return giveUp(fmt::format("it did not converge in {} iterations; residual {:.3g}{}{}",
                                   result.iterations - 1, result.residual,

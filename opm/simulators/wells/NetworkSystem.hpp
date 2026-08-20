@@ -29,7 +29,11 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <istream>
+#include <ostream>
+#include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm::NetworkSolve {
@@ -209,6 +213,9 @@ public:
     bool grouped() const { return group_target_ > 0.0; }
     int size() const { return 2 * numNodes() + 2 * numWells() + (grouped() ? 1 : 0); }
 
+    Phase phase() const { return phase_; }
+    Scalar terminalPressure() const { return terminal_pressure_; }
+    Scalar groupTarget() const { return group_target_; }
     const std::vector<Node>& nodes() const { return nodes_; }
     const std::vector<Well<Scalar>>& wells() const { return wells_; }
     Control control(const int w) const { return controls_[w]; }
@@ -367,7 +374,13 @@ public:
             const auto& well = wells_[w];
             const Scalar q = x[qwIdx(w)];
             const Scalar bhp = x[bhpIdx(w)];
-            injected += q;
+            // Only what the group is actually holding counts against its target.
+            // Summing every well instead asks the group to account for rates it
+            // does not control, which is a constraint nothing can satisfy -- the
+            // active set then thrashes against it rather than settling.
+            if (controls_[w] == Control::Grup) {
+                injected += q;
+            }
 
             r[2 * nodes + w] = (q - ipr(well, bhp)) / rate_scale_;
 
@@ -424,26 +437,17 @@ public:
                     wanted = c;
                 }
             };
-            // Strict, deliberately. An inclusive test looks right -- a well at
-            // its limit sits exactly on it -- but start() clamps the opening
-            // rate to the limit, so an inclusive test latches every well onto
-            // rate control at the first iteration and holds it there.
+            // Inclusive, all of them. A well held at a limit sits exactly on it
+            // at the solution, so a strict test reads "not over the limit",
+            // releases the control, finds the well wants more, and takes it
+            // again -- a period-2 cycle that never settles. start() opens just
+            // inside the limits so this cannot latch at the first iteration.
+            constexpr Scalar at_limit = 1.0 - 1e-9;
             consider(x[bhpIdx(w)] > well.bhp_limit, ipr(well, well.bhp_limit), Control::Bhp);
             consider(q > well.rate_limit, well.rate_limit, Control::Rate);
             if (grouped()) {
-                // Inclusive: at the solution the rate equals the share exactly,
-                // and a strict test would flip the control every iteration.
-                //
-                // This is still the weak point. The control_trace on a failed
-                // solve shows a period-2 cycle between GRUP and THP: the share
-                // moves with the guides and the multiplier while the rate is
-                // chasing it. Deciding membership from the group instead -- it
-                // binds when the wells could between them take more than the
-                // target -- cures the cycling (water fell back on 9.7 % of
-                // solves, then 0.6 %) but moves the gas case away from the
-                // reference, 8 deviations to 26, so it is not the answer yet.
                 const Scalar share = well.guide * x[lambdaIdx()];
-                consider(q >= share * (1.0 - 1e-9), share, Control::Grup);
+                consider(q >= share * at_limit, share, Control::Grup);
             }
 
             changed |= (wanted != controls_[w]);
@@ -465,9 +469,13 @@ public:
             const Scalar guess = well.q_start > Scalar{0}
                 ? well.q_start : std::max(well.rate_limit * Scalar{0.1}, rate_scale_);
             x[bhpIdx(w)] = tableBhp(well.vfp_table, node_pressure[well.node], guess);
+            // Deliberately just inside the limit, never exactly on it: the
+            // control tests below are inclusive, so opening on the limit would
+            // put every well on rate control before the solve has begun.
+            const Scalar most = Scalar{0.999} * well.rate_limit;
             x[qwIdx(w)] = well.q_start > Scalar{0}
-                ? well.q_start
-                : std::clamp(ipr(well, x[bhpIdx(w)]), Scalar{0}, well.rate_limit);
+                ? std::min(well.q_start, most)
+                : std::clamp(ipr(well, x[bhpIdx(w)]), Scalar{0}, most);
             well_rate[w] = x[qwIdx(w)];
         }
         for (int n = numNodes(); n >= 1; --n) {
@@ -646,6 +654,86 @@ private:
     Scalar pressure_scale_ = unit::barsa;
 };
 
+/// Write everything the solve works from, so a failure can be replayed offline.
+/// The VFP tables are not included -- the reader supplies them from the deck.
+template<class Scalar>
+void write(const System<Scalar>& system, const std::vector<Scalar>& guess, std::ostream& os)
+{
+    os << "phase " << (system.phase() == Phase::GAS ? "GAS" : "WATER") << '\n'
+       << "terminal " << system.terminalPressure() << '\n'
+       << "group_target " << system.groupTarget() << '\n';
+    for (const auto& n : system.nodes()) {
+        os << "node " << n.name << ' ' << n.parent << ' ' << n.vfp_table << '\n';
+    }
+    for (const auto& w : system.wells()) {
+        os << "well " << w.name << ' ' << w.node << ' ' << w.vfp_table << ' '
+           << w.ipr_a << ' ' << w.ipr_b << ' ' << w.bhp_limit << ' '
+           << w.rate_limit << ' ' << w.guide << ' ' << w.q_start << '\n';
+    }
+    os << "guess";
+    for (const auto p : guess) {
+        os << ' ' << p;
+    }
+    os << '\n';
+}
+
+/// Rebuild a written system against tables the caller already has. Returns the
+/// system and the starting pressures it was given.
+template<class Scalar>
+std::pair<System<Scalar>, std::vector<Scalar>>
+read(std::istream& is, const VFPInjProperties<Scalar>& props)
+{
+    std::string tag;
+    Phase phase = Phase::GAS;
+    Scalar terminal = 0.0, target = 0.0;
+    std::vector<Node> nodes;
+    std::vector<Well<Scalar>> wells;
+    std::vector<Scalar> guess;
+
+    std::string line;
+    while (std::getline(is, line)) {
+        std::istringstream in(line);
+        if (!(in >> tag)) {
+            continue;
+        }
+        if (tag == "phase") {
+            std::string name;
+            in >> name;
+            phase = (name == "GAS") ? Phase::GAS : Phase::WATER;
+        } else if (tag == "terminal") {
+            in >> terminal;
+        } else if (tag == "group_target") {
+            in >> target;
+        } else if (tag == "node") {
+            Node n;
+            in >> n.name >> n.parent >> n.vfp_table;
+            nodes.push_back(std::move(n));
+        } else if (tag == "well") {
+            Well<Scalar> w;
+            in >> w.name >> w.node >> w.vfp_table >> w.ipr_a >> w.ipr_b
+               >> w.bhp_limit >> w.rate_limit >> w.guide >> w.q_start;
+            wells.push_back(std::move(w));
+        } else if (tag == "guess") {
+            Scalar p;
+            while (in >> p) {
+                guess.push_back(p);
+            }
+        }
+    }
+
+    System<Scalar> system(props, phase);
+    system.setTerminalPressure(terminal);
+    system.setGroupTarget(target);
+    for (auto& n : nodes) {
+        system.addNode(std::move(n));
+    }
+    for (auto& w : wells) {
+        system.addWell(std::move(w));
+    }
+    system.finish();
+    return {std::move(system), std::move(guess)};
+}
+
 /// Take the Newton step as it comes. This is what the full system wants: it has
 /// no kinks within an active set, so there is nothing for a globalisation to fix.
 struct FullStep
@@ -714,10 +802,13 @@ Result<Scalar> solve(System<Scalar>& system,
         return out;
     };
 
+    // Guide rates are explicit: the simulator sets them once per timestep, and
+    // this follows that. Refreshing them inside the Newton makes each well's
+    // share a moving target while its rate is chasing it, and the active set
+    // then cycles between group and thp control instead of settling.
+    system.refreshGuides(x);
+
     for (int it = 1; it <= max_iterations; ++it) {
-        // Guides that follow the solution have to settle before it is solved,
-        // the same way the controls do.
-        const Scalar guides_moved = system.refreshGuides(x);
         const bool controls_moved = system.updateControls(x);
         const auto r = system.residual(x);
 
@@ -740,11 +831,11 @@ Result<Scalar> solve(System<Scalar>& system,
                 trace.erase(trace.begin());
             }
         }
-        const bool settled = !controls_moved && guides_moved < Scalar{1e-6};
+        const bool settled = !controls_moved;
         if (worst < tolerance && settled) {
             return {true, it, system.pressures(x), worst, false, false, {}};
         }
-        last = {false, it, {}, worst, controls_moved, guides_moved >= Scalar{1e-6}, joined()};
+        last = {false, it, {}, worst, controls_moved, false, joined()};
 
         DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
             ? system.jacobian(x)
