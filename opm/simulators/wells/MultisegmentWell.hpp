@@ -175,7 +175,8 @@ namespace Opm {
                                       const BVector& x,
                                       const int pressureVarIndex,
                                       const bool use_well_weights,
-                                      const WellStateType& well_state) const override;
+                                      const WellStateType& well_state,
+                                      const int nrWells) const override;
 
         std::vector<Scalar>
         computeCurrentWellRates(const Simulator& simulator,
