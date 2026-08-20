@@ -289,6 +289,7 @@ function(add_test_compare_parallel_simulation)
     DIR
     POSTFIX
     MPI_PROCS
+    COMPARE_MODE
   )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
@@ -313,6 +314,17 @@ function(add_test_compare_parallel_simulation)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
+  # COMPARE_MODE "init": dry-run, compares EGRID+INIT only (parallel INIT-file regressions,
+  # e.g. parallel LGR transmissibility). Default (unset): compares SMRY+UNRST as before.
+  if(PARAM_COMPARE_MODE STREQUAL "init")
+    set(TEST_NAME_PREFIX compareParallelInitSim_)
+  elseif(PARAM_COMPARE_MODE)
+    message(FATAL_ERROR "add_test_compare_parallel_simulation(${PARAM_CASENAME}): "
+                        "unknown COMPARE_MODE '${PARAM_COMPARE_MODE}' (expected 'init' or unset)")
+  else()
+    set(TEST_NAME_PREFIX compareParallelSim_)
+  endif()
+
   if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL MPI_PROCS)
     # Local computer system has at least ${MPI_PROCS} CPUs. Register test.
     set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
@@ -325,9 +337,12 @@ function(add_test_compare_parallel_simulation)
                     -t ${PARAM_REL_TOL}
                     -c $<TARGET_FILE:compareECL>
                     -n ${MPI_PROCS})
+    if(PARAM_COMPARE_MODE STREQUAL "init")
+      list(APPEND DRIVER_ARGS -m init)
+    endif()
 
     # Add test that runs flow_mpi and outputs the results to file
-    opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
+    opm_add_test(${TEST_NAME_PREFIX}${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
       EXE_TARGET
         ${PARAM_SIMULATOR}
       DRIVER_ARGS
@@ -335,7 +350,7 @@ function(add_test_compare_parallel_simulation)
       TEST_ARGS
         ${TEST_ARGS}
     )
-    set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
+    set_tests_properties(${TEST_NAME_PREFIX}${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
                          PROPERTIES PROCESSORS ${MPI_PROCS})
   endif()
 endfunction()
