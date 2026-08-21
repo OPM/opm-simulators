@@ -14,9 +14,6 @@ class MixedSolver : public InverseOperator<X,X>
 {
     public:
 
-    // extract block size
-    static constexpr auto block_size = X::block_type::dimension;
-
     MixedSolver(const M &A, double tol, int maxiter, bool use_dilu)
     {
         // verify that well contributions are added to the matrix
@@ -104,6 +101,10 @@ class MixedSolver : public InverseOperator<X,X>
     Dune::SolverCategory::Category category() const override { return Dune::SolverCategory::sequential; };
 
     private:
+
+    // extract block size
+    static constexpr auto block_size = X::block_type::dimension;
+
     bsr_matrix  *jacobian_;
     bslv_memory *mem_;
     double const *data_;
