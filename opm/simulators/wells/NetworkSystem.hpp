@@ -273,8 +273,11 @@ public:
             wells_at_[wells_[w].node].push_back(static_cast<int>(w));
         }
         for (auto& w : wells_) {
-            if (w.guide <= 0.0) {
-                w.guide = std::max(w.rate_limit, Scalar{1.0});
+            // A guide of nothing is a real answer for a well the group has put
+            // at zero -- it takes no share. Only fill one in when there is a
+            // rate limit to derive it from.
+            if (w.guide <= 0.0 && w.rate_limit > 0.0) {
+                w.guide = w.rate_limit;
             }
         }
         if (rate_scale_ <= 0.0) {
@@ -341,6 +344,9 @@ public:
 
     bool hasTable(const Node& n) const { return n.vfp_table != NoTable; }
 
+    /// Below this a table lookup has not answered, it has run out of table.
+    static constexpr Scalar kTableFloor = unit::barsa;
+
     static Scalar ipr(const Well<Scalar>& w, const Scalar bhp) { return w.ipr_a + w.ipr_b * bhp; }
 
     /// Clamp table lookups to the axes, as the fixed-point pressure computation
@@ -405,11 +411,38 @@ public:
     /// share of a group target should be proportional to. Its current rate is
     /// not: that is the split one is trying to decide, so using it as the guide
     /// makes the allocation reproduce whatever it already was.
-    Scalar thpPotential(const Well<Scalar>& w, const Scalar p_node) const
+    /// The rate thp control allows at this node pressure.
+    ///
+    /// `cap_by_rate_limit` is the whole subtlety. Bounding the search by the
+    /// well's own rate limit makes thp's allowance tie with that limit and win
+    /// the tie, so the well stays on thp -- whose equation says nothing about a
+    /// rate -- and can settle above its limit. Removing the bound fixes that and
+    /// costs far more than it buys: while the pressures are still moving, a
+    /// well's crossing routinely lies past its limit, rate control pins it
+    /// there, four wells pinned at their limits ask the network for several
+    /// times what it carries, and the globalisation basin falls from 511/529 to
+    /// 271/529. So the bound stays on while the solve is still moving, and
+    /// solve() drops it once there is a converged point to enforce the limit
+    /// from -- an iterate that is no longer transient.
+    Scalar thpPotential(const Well<Scalar>& w, const Scalar p_node,
+                        const bool cap_by_rate_limit = true) const
     {
         const auto& t = props_->getTable(w.vfp_table);
-        const Scalar lo = t.getFloAxis().front();
-        const Scalar hi = std::min(w.rate_limit, t.getFloAxis().back());
+        const auto& axis = t.getFloAxis();
+        const Scalar lo = axis.front();
+        Scalar hi = (cap_by_rate_limit && w.rate_limit > Scalar{0})
+            ? std::min(w.rate_limit, axis.back()) : axis.back();
+        if (!cap_by_rate_limit) {
+            // These tables are padded with zeros past the rates they describe,
+            // and a bhp of nothing is not a bhp. Walk back to the last rate this
+            // one answers for; a root past that is a root in the padding.
+            for (std::size_t i = axis.size(); i-- > 0;) {
+                if (axis[i] > lo && tableBhp(w.vfp_table, p_node, axis[i]) > kTableFloor) {
+                    hi = axis[i];
+                    break;
+                }
+            }
+        }
         if (!(hi > lo)) {
             return Scalar{0};
         }
@@ -426,7 +459,24 @@ public:
             q = Scalar{0.5} * (a + b);
             (f(q) > Scalar{0} ? a : b) = q;
         }
-        return std::clamp(q, Scalar{0}, w.rate_limit);
+        return std::max(q, Scalar{0});
+    }
+
+    /// Stop capping thp's allowance with each well's rate limit, so a well whose
+    /// tubing would carry more than it is allowed goes on rate control. Only
+    /// safe from a converged iterate -- see thpPotential().
+    void setEnforceRateLimits(const bool on) { enforce_rate_limits_ = on; }
+
+    /// Any well come to rest above its own rate limit.
+    bool rateLimitsViolated(const State& x) const
+    {
+        for (int w = 0; w < numWells(); ++w) {
+            if (wells_[w].rate_limit > Scalar{0}
+                && x[qwIdx(w)] > wells_[w].rate_limit * (Scalar{1} + Scalar{1e-9})) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// Take the guide rates from thpPotential() at the current node pressures
@@ -560,8 +610,11 @@ public:
         for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
             const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
-            thp[w] = thpPotential(well, p_node);
-            own[w] = std::min({thp[w], ipr(well, well.bhp_limit), well.rate_limit});
+            thp[w] = thpPotential(well, p_node, !enforce_rate_limits_);
+            own[w] = std::min(thp[w], ipr(well, well.bhp_limit));
+            if (well.rate_limit > Scalar{0}) {
+                own[w] = std::min(own[w], well.rate_limit);
+            }
         }
 
         const auto share = shareByGuide(guides(), inGroup(), own, group_target_);
@@ -583,7 +636,11 @@ public:
                 }
             };
             consider(Control::Bhp, ipr(well, well.bhp_limit));
-            consider(Control::Rate, well.rate_limit);
+            // A well the deck gives no rate limit is not a well limited to
+            // nothing; rate control simply has nothing to say about it.
+            if (well.rate_limit > Scalar{0}) {
+                consider(Control::Rate, well.rate_limit);
+            }
             if (grouped() && well.in_group) {
                 consider(Control::Grup, share_from_multiplier_ ? well.guide * x[lambdaIdx()]
                                                                : share[w]);
@@ -810,6 +867,7 @@ private:
     bool clamp_to_axes_ = false;
     bool analytic_jacobian_ = false;
     bool share_from_multiplier_ = false;
+    bool enforce_rate_limits_ = false;
     bool guides_from_potential_ = false;
     Scalar pressure_scale_ = unit::barsa;
 };
@@ -1416,6 +1474,7 @@ solve(Sys& system,
     }
 
     int switches = 0;
+    bool enforcing = false;
     for (int it = 1; it <= max_iterations; ++it) {
         const bool controls_moved = system.updateControls(x);
         switches += controls_moved ? 1 : 0;
@@ -1437,6 +1496,19 @@ solve(Sys& system,
         }
         const bool settled = !controls_moved;
         if (worst < tolerance && settled) {
+            // Converged, but possibly with a well parked above its own rate
+            // limit -- thp's allowance is capped by that limit while the solve
+            // is moving, and a capped allowance ties with it. Now that the
+            // iterate is not transient, drop the cap and carry on from here;
+            // whoever is over the line goes on rate control and the rest take
+            // it up. Once round only.
+            if constexpr (requires { system.setEnforceRateLimits(true); }) {
+                if (!enforcing && system.rateLimitsViolated(x)) {
+                    system.setEnforceRateLimits(true);
+                    enforcing = true;
+                    continue;
+                }
+            }
             return {true, it, system.pressures(x), system.wellRates(x), worst,
                     false, false, {}, switches};
         }

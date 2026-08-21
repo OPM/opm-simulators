@@ -2333,25 +2333,22 @@ BOOST_AUTO_TEST_CASE(trace_one_dumped_system)
 }
 
 
-// A well on a rate limit ends up above it, and this is why.
+// A well on a rate limit stays under it, which took two goes.
 //
 // thpPotential() searches between the table's first rate and the smaller of the
-// well's rate limit and the table's reach -- the cap has to be there, because
-// past the table's last rate the cells are zero-filled and a root found there is
-// not a root (uncapping it takes the globalisation basin from 511/529 to
-// 271/529). But when the crossing lies past the cap the function reports the cap
-// itself, so thp's allowance ties with the rate limit, and "smallest allowance
-// wins" breaks the tie towards thp. The thp row is bhp = tableBhp(p_node, q),
-// which says nothing about a rate, so the well then settles wherever the tubing
-// curve crosses the ipr -- here 485 550 against a limit of 200 000.
+// well's rate limit and the table's reach. That cap makes thp's allowance tie
+// with the rate limit, and "smallest allowance wins" breaks the tie towards thp
+// -- whose row is bhp = tableBhp(p_node, q) and says nothing about a rate, so
+// the well settles wherever the tubing crosses the ipr, here 485 550 against a
+// limit of 200 000.
 //
-// Reporting "at least the cap" instead does fix this case and costs the same
-// basin, because at a bad iterate a well whose crossing is momentarily past its
-// rate limit gets pinned there, and pinning a well at 1e6 sm3/d wrecks the node
-// balance. The fix has to distinguish a transient from a real limit, which is
-// more than a tie-break.
-BOOST_AUTO_TEST_CASE(a_rate_limited_well_stays_under_its_limit,
-                     *boost::unit_test::expected_failures(1))
+// Simply removing the cap fixes this case and costs 511/529 of the globalisation
+// basin down to 271/529: while the pressures are still moving a well's crossing
+// routinely lies past its limit, rate control pins it there, and four wells
+// pinned at their limits ask the network for several times what it carries.
+// What works is to keep the cap while the solve is moving and drop it once there
+// is a converged iterate to enforce the limit from -- see solve().
+BOOST_AUTO_TEST_CASE(a_rate_limited_well_stays_under_its_limit)
 {
     const auto sm3d = cubic(meter) / day;
 
@@ -2760,6 +2757,79 @@ guess 3.4e+07 4.50559e+07 4.50559e+07 4.994e+07 4.994e+07
     BOOST_CHECK(resolved.converged);
     BOOST_CHECK_LT(resolved.iterations, 15);
     BOOST_CHECK_LT(resolved.switches, 5);
+}
+
+
+// Is the relaxed update ever needed as a fallback?
+//
+// Over the grid of starting pressures, ungrouped and at three group targets,
+// with the step limiter the simulator runs -- and with a line search behind the
+// full step, to see whether a globalisation would do instead.
+//
+// Everything up to a target the wells can just about meet is solved outright,
+// and the line search never gets a chance to help. What is left, at 1.2 times
+// what the wells can deliver, is not a globalisation problem: the retry recovers
+// none of it. Those are an active set chasing the pressures -- everyone on group
+// control drives the nodes out to where no well has a potential, every well is
+// dropped from the pool, nobody is on group control, the pressures recover and
+// the shares look feasible again: GGGG, TTTT, GGTT, round again. A different
+// cycle from the one resolving the split removed, and with no multiplier in it.
+//
+// So the answer is: not on either deck -- both run with no fallback at all --
+// but yes in general, and this is the case it is still there for.
+BOOST_AUTO_TEST_CASE(the_fallback_still_has_one_case_to_cover)
+{
+    const auto starts = startingPoints();
+
+    auto measure = [&](const double fraction) {
+        int plain = 0, retried = 0, cycling = 0;
+        for (const auto& start : starts) {
+            auto c = gnetinjeGas();
+            double free_total = 0.0;
+            for (const auto& w : c.wells()) {
+                free_total += w.q_ref;
+            }
+            c.setGroupTarget(fraction * free_total);
+            c.finish();
+
+            auto system = c.system();
+            const auto guess = c.nodePressures(start);
+            const auto first = NetworkSolve::solve(system, guess);
+            if (first.converged) {
+                ++plain;
+                ++retried;
+                continue;
+            }
+            auto again = c.system();
+            const auto second =
+                NetworkSolve::solve(again, guess, 1e-2, 50, NetworkSolve::LineSearch{});
+            if (second.converged) {
+                ++retried;
+            } else if (second.switches > second.iterations / 4) {
+                ++cycling;
+            }
+        }
+        BOOST_TEST_MESSAGE("target " << fraction << " of free:  full step " << plain
+                           << "/" << starts.size() << ",  line search behind it "
+                           << retried << "/" << starts.size() << ",  of the rest "
+                           << cycling << " cycling");
+        return std::make_tuple(plain, retried, cycling);
+    };
+
+    const auto n = static_cast<int>(starts.size());
+    for (const double fraction : {0.0, 0.95, 1.05}) {
+        const auto [plain, retried, cycling] = measure(fraction);
+        BOOST_CHECK_EQUAL(plain, n);
+        BOOST_CHECK_EQUAL(retried, n);
+        BOOST_CHECK_EQUAL(cycling, 0);
+    }
+
+    // Over capacity: a line search buys nothing, and every failure is cycling
+    // rather than a step that overshot.
+    const auto [plain, retried, cycling] = measure(1.2);
+    BOOST_CHECK_EQUAL(plain, retried);
+    BOOST_CHECK_LT(retried, n);
+    BOOST_CHECK_EQUAL(cycling, n - retried);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

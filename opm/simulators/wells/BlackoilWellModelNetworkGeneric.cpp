@@ -413,18 +413,20 @@ newtonNodePressures(const Network::ExtNetwork& network,
             w.rate_limit = candidate.rate_limit;
             w.guide = w.rate_limit;
         }
-        // A well with nothing to go on -- no rate and no target -- would enter
-        // the system effectively unlimited. Leave the whole network to the fixed
-        // point rather than invent a limit for it.
-        if (!(w.rate_limit > Scalar{0}) || !(w.guide > Scalar{0})) {
-            return giveUp(fmt::format("{} has neither a rate nor a target to be limited by",
-                                      candidate.name));
+        // A well the group has placed at zero injects nothing, so it changes no
+        // node balance; leaving it out is the same system with two unknowns
+        // fewer. A well with no rate limit at all is not limited to nothing --
+        // its thp and bhp still bound it, and the system reads a rate limit of
+        // zero as "rate control has nothing to say here".
+        if (on_group && !(current > Scalar{0})) {
+            continue;
         }
         system.addWell(std::move(w));
     }
-    if (system.numWells() == 0) {
-        return giveUp("none of its injectors is open");
-    }
+    // No injectors is not a failure, it is an idle network: nothing flows, so
+    // every branch is at zero rate and the system says so in one iteration.
+    // Handing that to the relaxed update instead would be handing it the same
+    // answer, more slowly.
     if (group_target > Scalar{0} && use_group_target) {
         system.setGroupTarget(group_target);
         // The share each well takes of the total follows from what it can inject
