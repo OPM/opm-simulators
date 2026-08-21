@@ -287,6 +287,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool use_well_weights,
+                         const bool /*contract_d_diagonal*/, // a standard well always contracts D
                          const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                          const int bhp_var_index,
                          const WellState<Scalar, IndexTraits>& well_state) const
@@ -310,23 +311,25 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     const int number_cells = weights.size();
     const int welldof_ind = number_cells + well.indexOfWell();
     // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
-    if (!well.isPressureControlled(well_state) || use_well_weights) {
-        // make coupling for reservoir to well
-        for (auto colC = duneC_[0].begin(),
-                  endC = duneC_[0].end(); colC != endC; ++colC) {
-            // map the well perforated cell index to global cell index
-            const auto row_index = cells_[colC.index()];
-            const auto& bw = weights[row_index];
+    const bool couple = !well.isPressureControlled(well_state) || use_well_weights;
+    // accumulate the cell weights for every well: a pressure-controlled well
+    // needs them too, to put its trivial equation on the right scale below
+    for (auto colC = duneC_[0].begin(),
+              endC = duneC_[0].end(); colC != endC; ++colC) {
+        // map the well perforated cell index to global cell index
+        const auto row_index = cells_[colC.index()];
+        const auto& bw = weights[row_index];
+        if (couple) {
+            // make coupling for reservoir to well
             Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
-
             jacobian[row_index][welldof_ind] = matel;
-            cell_weights += bw;
-            nperf += 1;
         }
+        cell_weights += bw;
+        nperf += 1;
     }
     if (nperf != 0)
         cell_weights /= nperf;
@@ -369,7 +372,20 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         // set diagonal element
         if (well.isPressureControlled(well_state)) {
             bweights[0][blockSz-1] = 1.0;
-            diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
+            // The trivial equation is decoupled with a zero right-hand side,
+            // so its scale cannot affect the solution -- but the pattern keeps
+            // the couplings as stored zeros, the AMG aggregation follows the
+            // pattern, and a diagonal far above the reservoir rows' scale
+            // poisons the aggregate it lands in. Scale it well below the
+            // contracted diagonal instead of using 1.
+            Scalar contracted = 0.0;
+            const auto& locmat = duneD_[0][0];
+            for (std::size_t i = 0; i < blockSz - 1; ++i) {
+                contracted += locmat[i][bhp_var_index] * cell_weights[i];
+            }
+            diagElem = std::abs(contracted) > 0.0
+                ? Scalar(1e-6) * std::abs(contracted)
+                : Scalar(1.0);
         } else {
             // The first (blockSz - 1) block weights will scale the
             // conservation well equations, and is therefore set equal
@@ -425,6 +441,7 @@ sumDistributed(Parallel::Communication comm)
         extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
                                  const typename StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::BVector&, \
                                  const int,                                           \
+                                 const bool,                                          \
                                  const bool,                                          \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                      \
                                  const int,                                           \

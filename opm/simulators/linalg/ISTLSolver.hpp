@@ -56,7 +56,9 @@
 
 #include <any>
 #include <cstddef>
+#include <fstream>
 #include <functional>
+#include <iomanip>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -376,6 +378,37 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (isParallel() && type != "paroverilu0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
+
+            dumpPrimaryVariables();
+        }
+
+        // Diagnostic (verbosity > 10): the primary variables and their meanings at
+        // every linearization, so two solver variants can be compared cell by cell.
+        void dumpPrimaryVariables() const
+        {
+            if (prm_[activeSolverNum_].template get<int>("verbosity", 0) <= 10) {
+                return;
+            }
+            static int counter = 0;
+            std::ofstream out("primvars_" + std::to_string(counter++) + ".txt");
+            if (!out) {
+                return;
+            }
+            const auto& sol = simulator_.model().solution(/*timeIdx=*/0);
+            out << std::setprecision(16);
+            for (std::size_t i = 0; i < sol.size(); ++i) {
+                const auto& pv = sol[i];
+                out << i;
+                for (unsigned j = 0; j < std::decay_t<decltype(pv)>::dimension; ++j) {
+                    out << ' ' << pv[j];
+                }
+                if constexpr (requires { pv.primaryVarsMeaningGas(); }) {
+                    out << " gas=" << static_cast<int>(pv.primaryVarsMeaningGas())
+                        << " wat=" << static_cast<int>(pv.primaryVarsMeaningWater())
+                        << " pre=" << static_cast<int>(pv.primaryVarsMeaningPressure());
+                }
+                out << '\n';
+            }
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b) override
@@ -613,18 +646,30 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                      const Matrix& matrix,
                                                      std::size_t pressIndex) const
         {
-            std::function<Vector()> weightsCalculator;
-
             using namespace std::string_literals;
 
             auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
             // We use lower case as the internal canonical representation of solver names
             std::ranges::transform(preconditionerType, preconditionerType.begin(), ::tolower);
-            if (preconditionerType == "cpr" || preconditionerType == "cprt"
-                || preconditionerType == "cprw" || preconditionerType == "cprwt") {
-                const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+            if (preconditionerType != "cpr" && preconditionerType != "cprt"
+                && preconditionerType != "cprw" && preconditionerType != "cprwt") {
+                return {};
+            }
+            const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+            return makeWeightsCalculator(prm.get("preconditioner.weight_type"s, "quasiimpes"s),
+                                         matrix, pressIndex, transpose);
+        }
+
+        // The same, for a caller that knows the weighting directly rather than
+        // through a CPR preconditioner sub-tree.
+        std::function<Vector()> makeWeightsCalculator(const std::string& weightsType,
+                                                      const Matrix& matrix,
+                                                      std::size_t pressIndex,
+                                                      const bool transpose = false) const
+        {
+            std::function<Vector()> weightsCalculator;
+            {
                 const bool enableThreadParallel = this->parameters_[0].cpr_weights_thread_parallel_;
-                const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {
                     // weights will be created as default in the solver
                     // assignment p = pressureIndex prevent compiler warning about
