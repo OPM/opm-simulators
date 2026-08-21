@@ -92,6 +92,7 @@ public:
         serializer(use_group_target_fallback);
         serializer(was_shut_before_action_applied);
         serializer(weldraw_max_rate);
+        serializer(weldraw_cmode);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -175,6 +176,10 @@ public:
     // well's drawdown limit; updated during the first NUPCOL iterations of
     // each timestep and unset when no drawdown limit is active.
     std::optional<Scalar> weldraw_max_rate{};
+    // The rate control which carries that limit, set only while the limit is
+    // at least as restrictive as the well's own target for the same phase.
+    // The well is under drawdown control when this is its active control.
+    std::optional<WellProducerCMode> weldraw_cmode{};
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.

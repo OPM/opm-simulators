@@ -298,6 +298,7 @@ namespace Opm
         const auto& weldraw = this->well_ecl_.getWELDRAW();
         if (!weldraw.active()) {
             ws.weldraw_max_rate.reset();
+            ws.weldraw_cmode.reset();
             return;
         }
 
@@ -305,6 +306,7 @@ namespace Opm
         const Scalar max_draw = this->well_ecl_.weldrawMaxDrawdown(summary_state);
         if (!(max_draw > 0.0)) {
             ws.weldraw_max_rate.reset();
+            ws.weldraw_cmode.reset();
             return;
         }
 
@@ -344,10 +346,27 @@ namespace Opm
                             "producible mobility; the drawdown limit is ignored.",
                             this->name(), gas_target ? "GAS" : "LIQ"));
             ws.weldraw_max_rate.reset();
+            ws.weldraw_cmode.reset();
             return;
         }
 
-        ws.weldraw_max_rate = max_draw * coeff;
+        const Scalar max_rate = max_draw * coeff;
+        ws.weldraw_max_rate = max_rate;
+
+        // Remember the rate control the limit is imposed through, but only
+        // while the limit is the more restrictive of the two: a well already
+        // held at a tighter target of its own is not under drawdown control.
+        const auto controls = this->well_ecl_.productionControls(summary_state);
+        const auto cmode = gas_target ? Well::ProducerCMode::GRAT
+                                      : Well::ProducerCMode::LRAT;
+        const Scalar own_target = gas_target ? controls.gas_rate
+                                             : controls.liquid_rate;
+        if (!controls.hasControl(cmode) || (max_rate <= own_target)) {
+            ws.weldraw_cmode = cmode;
+        }
+        else {
+            ws.weldraw_cmode.reset();
+        }
     }
 
     template<typename TypeTag>

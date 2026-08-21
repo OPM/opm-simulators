@@ -650,6 +650,12 @@ report(const int*                            globalCellIdxMap,
             curr.isProducer = ws.producer;
             curr.prod = ws.production_cmode;
             curr.inj  = ws.injection_cmode;
+
+            // A producer whose active control is the one carrying its
+            // converted drawdown limit reports drawdown control instead.
+            curr.drawdownLimited = ws.producer
+                && ws.weldraw_cmode.has_value()
+                && (ws.production_cmode == *ws.weldraw_cmode);
         }
 
         if (const auto& pwinfo = ws.parallel_info.get();
