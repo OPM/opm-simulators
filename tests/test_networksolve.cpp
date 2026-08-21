@@ -62,10 +62,12 @@
 #include <opm/io/eclipse/ESmry.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
 #include <opm/simulators/wells/NetworkAndersonAcceleration.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
@@ -250,6 +252,25 @@ VFPINJ
  10  657.480 657.173 656.610 655.752 654.562 653.038 651.182
  648.981 646.446 640.328 632.814 623.893 613.525 601.685
  588.334 556.910 518.715 472.942 418.222 351.918 /
+)";
+
+
+/// A VFPPROD table, from tests/test_networkpressure.cpp: LIQ rate, WCT / GOR
+/// fractions, GRAT alq. Small enough to reason about by hand.
+const std::string vfp_prod = R"(
+VFPPROD
+     3     250.00      LIQ        WCT         GOR         THP        GRAT      METRIC   BHP      /
+       20.0       100.0    1000.0     2000.0 /
+      10.00      30.00 /
+      0.000      0.5      1.0 /
+       100.0 /
+        0.0 /
+  1  1  1  1    12.0   15.0   20.0   30.0 /
+  1  2  1  1    13.0   16.0   21.0   31.0 /
+  1  3  1  1    14.0   17.0   22.0   32.0 /
+  2  1  1  1    32.0   35.0   40.0   50.0 /
+  2  2  1  1    33.0   36.0   41.0   51.0 /
+  2  3  1  1    34.0   37.0   42.0   52.0 /
 )";
 
 // ---------------------------------------------------------------------------
@@ -1932,6 +1953,73 @@ BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
     // Whatever the limited well does, the group's own wells are the ones that
     // count against its target -- not every well in the network.
     BOOST_CHECK(c.wells()[0].bhp_limit < c.wells()[1].bhp_limit);
+}
+
+// Prototype: the same formulation on a production network.
+//
+// A rate becomes three numbers instead of one, and that is the whole difference.
+// VFPPROD works the water and gas fractions out of the triple it is given, so
+// they never become unknowns, and mixing at a node is a sum. The Newton, the
+// active set and the scaling are the injection ones, unchanged.
+//
+// PROD -> FIELD, terminal at 80 bar, two producers on one node.
+BOOST_AUTO_TEST_CASE(production_network_prototype)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    const auto sm3d = cubic(meter) / day;
+
+    const auto deck = Parser{}.parseString(vfp_prod);
+    const VFPProdTable table(deck["VFPPROD"].front(), /*gaslift_opt_active=*/false, UnitSystem{});
+    VFPProdProperties<double> props;
+    props.addTable(table);
+    const UnitSystem units{};
+
+    Sys system(props, units);
+    system.setTerminalPressure(convert::from(80.0, bars));
+    system.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable});
+    system.addNode(NetworkSolve::Node{"PROD", 0, 3});
+
+    // Two producers, water-cut about 0.3, GOR near the table's single value.
+    for (const auto& [name, productivity] : std::initializer_list<std::pair<const char*, double>>{
+             {"P-1", 1.0}, {"P-2", 0.7}}) {
+        Sys::Well w;
+        w.name = name;
+        w.node = 1;
+        w.vfp_table = 3;
+        w.bhp_limit = convert::from(40.0, bars);
+        w.oil_rate_limit = convert::from(600.0, sm3d);
+        // q_p = a_p - b_p * bhp: production falls as bhp rises.
+        const double q0 = convert::from(400.0 * productivity, sm3d);
+        const double slope = q0 / convert::from(120.0, bars);
+        for (int ph = 0; ph < Sys::NP; ++ph) {
+            const double share = (ph == 0) ? 0.3 : (ph == 1) ? 0.7 : 70.0;  // water, oil, gas
+            w.ipr_a[ph] = share * q0 * 2.0;
+            w.ipr_b[ph] = -share * slope * 2.0;
+        }
+        system.addWell(w);
+    }
+    system.finish();
+
+    BOOST_TEST_MESSAGE("unknowns: " << system.size() << "  (nodes " << system.numNodes()
+                       << ", wells " << system.numWells() << ")");
+
+    const std::vector<double> guess{convert::from(80.0, bars), convert::from(90.0, bars)};
+    const auto r = NetworkSolve::solve(system, guess);
+    BOOST_TEST_MESSAGE((r.converged ? "converged in " : "FAILED after ") << r.iterations
+                       << " iterations, residual " << r.residual
+                       << (r.control_trace.empty() ? "" : "  controls " + r.control_trace));
+    BOOST_REQUIRE(r.converged);
+
+    const double p_prod = r.node_pressure[1];
+    BOOST_TEST_MESSAGE("PROD node " << convert::to(p_prod, bars) << " bar, oil "
+                       << convert::to(r.well_rate[0], sm3d) << " + "
+                       << convert::to(r.well_rate[1], sm3d) << " sm3/d");
+
+    // The node sits above its terminal, and every well is producing.
+    BOOST_CHECK_GT(convert::to(p_prod, bars), 80.0);
+    for (const double q : r.well_rate) {
+        BOOST_CHECK_GT(convert::to(q, sm3d), 0.0);
+    }
 }
 
 // How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.

@@ -24,8 +24,10 @@
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -171,6 +173,7 @@ class System
 {
 public:
     using State = std::vector<Scalar>;
+    using ScalarType = Scalar;
 
     System(const VFPInjProperties<Scalar>& props, const Phase phase)
         : props_(&props), phase_(phase)
@@ -230,6 +233,18 @@ public:
     const std::vector<Node>& nodes() const { return nodes_; }
     const std::vector<Well<Scalar>>& wells() const { return wells_; }
     Control control(const int w) const { return controls_[w]; }
+
+    /// One letter for the trace a failed solve reports.
+    char controlLetter(const int w) const
+    {
+        switch (controls_[w]) {
+        case Control::Thp:  return 'T';
+        case Control::Bhp:  return 'B';
+        case Control::Rate: return 'R';
+        case Control::Grup: return 'G';
+        }
+        return '?';
+    }
 
     int pIdx(const int node) const { return node - 1; }
     int qIdx(const int node) const { return numNodes() + node - 1; }
@@ -757,6 +772,276 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
     return {std::move(system), std::move(guess)};
 }
 
+
+// ---------------------------------------------------------------------------
+// Production networks
+//
+// The same formulation, with one thing different: a rate is three numbers
+// instead of one. That turns out to be the whole of it. VFPPROD derives the
+// water and gas fractions from the rate triple it is handed, so the fractions
+// never become unknowns, and mixing at a node is then just a sum -- linear.
+// The only nonlinearity is still the table lookup.
+//
+//   unknowns    pressure of every non-terminal node                     nP
+//               three phase rates through every parent branch          3nP
+//               three phase rates and a bhp for every well              4W
+//
+//   equations   branch drop  p_n - VFPPROD(thp = p_parent, q_n, alq)     nP
+//               node balance per phase                                 3nP
+//               inflow perf. per phase  q_wp - ipr_p(bhp_w)              3W
+//               control      whichever of THP / BHP / ORAT is active      W
+//
+// Prototype: ALQ comes from the branch as it does today, guide rates and group
+// targets are not handled, and re-routing (BRANPROP changing the tree) is not
+// modelled -- the tree is taken as given.
+template<class Scalar>
+class ProductionSystem
+{
+public:
+    using State = std::vector<Scalar>;
+    using ScalarType = Scalar;
+    static constexpr int NP = 3;   // water, oil, gas -- the order VFPPROD wants
+
+    enum class Control { Thp, Bhp, OilRate };
+
+    struct Well
+    {
+        std::string name;
+        int node = 0;
+        int vfp_table = 0;
+        Scalar alq = 0.0;
+        /// Per phase, production positive: q_p = ipr_a[p] + ipr_b[p] * bhp.
+        std::array<Scalar, NP> ipr_a{};
+        std::array<Scalar, NP> ipr_b{};
+        Scalar bhp_limit = 0.0;
+        Scalar oil_rate_limit = 0.0;
+    };
+
+    ProductionSystem(const VFPProdProperties<Scalar>& props, const UnitSystem& units)
+        : props_(&props), units_(&units)
+    {}
+
+    void addNode(Node n, const Scalar alq = 0.0) { nodes_.push_back(std::move(n)); branch_alq_.push_back(alq); }
+    void addWell(Well w) { wells_.push_back(std::move(w)); }
+    void setTerminalPressure(const Scalar p) { terminal_pressure_ = p; }
+    void setRateScale(const Scalar s) { rate_scale_ = s; }
+
+    void finish()
+    {
+        children_.assign(nodes_.size(), {});
+        wells_at_.assign(nodes_.size(), {});
+        for (std::size_t n = 1; n < nodes_.size(); ++n) {
+            children_[nodes_[n].parent].push_back(static_cast<int>(n));
+        }
+        for (std::size_t w = 0; w < wells_.size(); ++w) {
+            wells_at_[wells_[w].node].push_back(static_cast<int>(w));
+        }
+        if (rate_scale_ <= 0.0) {
+            Scalar largest = 0.0;
+            for (const auto& w : wells_) {
+                largest = std::max(largest, w.oil_rate_limit);
+            }
+            rate_scale_ = std::max(largest * Scalar{0.01},
+                                   unit::convert::from(1.0, unit::cubic(unit::meter) / unit::day));
+        }
+        controls_.assign(wells_.size(), Control::Thp);
+    }
+
+    int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
+    int numWells() const { return static_cast<int>(wells_.size()); }
+    int size() const { return 4 * numNodes() + 4 * numWells(); }
+
+    const std::vector<Node>& nodes() const { return nodes_; }
+    const std::vector<Well>& wells() const { return wells_; }
+    Control control(const int w) const { return controls_[w]; }
+
+    char controlLetter(const int w) const
+    {
+        switch (controls_[w]) {
+        case Control::Thp:     return 'T';
+        case Control::Bhp:     return 'B';
+        case Control::OilRate: return 'O';
+        }
+        return '?';
+    }
+
+    int pIdx(const int node) const { return node - 1; }
+    int qIdx(const int node, const int ph) const { return numNodes() + NP * (node - 1) + ph; }
+    int qwIdx(const int w, const int ph) const { return 4 * numNodes() + NP * w + ph; }
+    int bhpIdx(const int w) const { return 4 * numNodes() + NP * numWells() + w; }
+
+    bool hasTable(const Node& n) const { return n.vfp_table != NoTable; }
+
+    static Scalar ipr(const Well& w, const int ph, const Scalar bhp)
+    {
+        return w.ipr_a[ph] + w.ipr_b[ph] * bhp;
+    }
+
+    /// Pressure below a branch carrying these phase rates. Production rates are
+    /// positive here and negative to the table, as the relaxed path does.
+    Scalar tableBhp(const int table, const Scalar thp,
+                    const std::array<Scalar, NP>& q, const Scalar alq) const
+    {
+        return props_->bhp(table, -q[0], -q[1], -q[2], thp, alq,
+                           Scalar{0}, Scalar{0}, /*use_expvfp=*/false);
+    }
+
+    State residual(const State& x) const
+    {
+        const int nodes = numNodes();
+        const int wells = numWells();
+        State r(size(), 0.0);
+        auto pressure = [&](const int n) { return n == 0 ? terminal_pressure_ : x[pIdx(n)]; };
+        auto branchRates = [&](const int n) {
+            std::array<Scalar, NP> q{};
+            for (int ph = 0; ph < NP; ++ph) {
+                q[ph] = x[qIdx(n, ph)];
+            }
+            return q;
+        };
+
+        for (int n = 1; n <= nodes; ++n) {
+            const auto& node = nodes_[n];
+            const Scalar upstream = pressure(node.parent);
+            r[n - 1] = (hasTable(node)
+                ? x[pIdx(n)] - tableBhp(node.vfp_table, upstream, branchRates(n), branch_alq_[n])
+                : x[pIdx(n)] - upstream) / pressure_scale_;
+
+            for (int ph = 0; ph < NP; ++ph) {
+                Scalar balance = x[qIdx(n, ph)];
+                for (const int c : children_[n]) {
+                    balance -= x[qIdx(c, ph)];
+                }
+                for (const int w : wells_at_[n]) {
+                    balance -= x[qwIdx(w, ph)];
+                }
+                r[nodes + NP * (n - 1) + ph] = balance / rate_scale_;
+            }
+        }
+
+        for (int w = 0; w < wells; ++w) {
+            const auto& well = wells_[w];
+            const Scalar bhp = x[bhpIdx(w)];
+            std::array<Scalar, NP> q{};
+            for (int ph = 0; ph < NP; ++ph) {
+                q[ph] = x[qwIdx(w, ph)];
+                r[4 * nodes + NP * w + ph] = (q[ph] - ipr(well, ph, bhp)) / rate_scale_;
+            }
+            Scalar& control = r[4 * nodes + NP * wells + w];
+            switch (controls_[w]) {
+            case Control::Thp:
+                control = (bhp - tableBhp(well.vfp_table, pressure(well.node), q, well.alq))
+                        / pressure_scale_;
+                break;
+            case Control::Bhp:
+                control = (bhp - well.bhp_limit) / pressure_scale_;
+                break;
+            case Control::OilRate:
+                control = (q[1] - well.oil_rate_limit) / rate_scale_;
+                break;
+            }
+        }
+        return r;
+    }
+
+    /// Most restrictive wins, as for injection -- but a producer is limited by a
+    /// bhp that is too *low*, not too high.
+    bool updateControls(const State& x)
+    {
+        bool changed = false;
+        for (int w = 0; w < numWells(); ++w) {
+            const auto& well = wells_[w];
+            auto wanted = Control::Thp;
+            Scalar smallest = std::numeric_limits<Scalar>::max();
+            auto consider = [&](const bool violated, const Scalar implied, const Control c) {
+                if (violated && implied < smallest) {
+                    smallest = implied;
+                    wanted = c;
+                }
+            };
+            consider(x[bhpIdx(w)] <= well.bhp_limit * (1.0 + 1e-9),
+                     ipr(well, 1, well.bhp_limit), Control::Bhp);
+            if (well.oil_rate_limit > Scalar{0}) {
+                consider(x[qwIdx(w, 1)] > well.oil_rate_limit, well.oil_rate_limit,
+                         Control::OilRate);
+            }
+            changed |= (wanted != controls_[w]);
+            controls_[w] = wanted;
+        }
+        return changed;
+    }
+
+    State start(const State& node_pressure) const
+    {
+        State x(size(), 0.0);
+        for (int n = 1; n <= numNodes(); ++n) {
+            x[pIdx(n)] = node_pressure[n];
+        }
+        for (int w = 0; w < numWells(); ++w) {
+            const auto& well = wells_[w];
+            // Open a little above the bhp limit so the control test does not latch.
+            x[bhpIdx(w)] = std::max(well.bhp_limit * Scalar{1.05}, node_pressure[well.node]);
+            for (int ph = 0; ph < NP; ++ph) {
+                x[qwIdx(w, ph)] = std::max(ipr(well, ph, x[bhpIdx(w)]), Scalar{0});
+            }
+        }
+        for (int n = numNodes(); n >= 1; --n) {
+            for (int ph = 0; ph < NP; ++ph) {
+                Scalar q = 0.0;
+                for (const int w : wells_at_[n]) {
+                    q += x[qwIdx(w, ph)];
+                }
+                for (const int c : children_[n]) {
+                    q += x[qIdx(c, ph)];
+                }
+                x[qIdx(n, ph)] = q;
+            }
+        }
+        return x;
+    }
+
+    State pressures(const State& x) const
+    {
+        State p(nodes_.size(), terminal_pressure_);
+        for (int n = 1; n <= numNodes(); ++n) {
+            p[n] = x[pIdx(n)];
+        }
+        return p;
+    }
+
+    /// Oil rate per well, which is what a caller usually wants back.
+    State wellRates(const State& x) const
+    {
+        State q(wells_.size());
+        for (int w = 0; w < numWells(); ++w) {
+            q[w] = x[qwIdx(w, 1)];
+        }
+        return q;
+    }
+
+    Scalar columnScale(const int i) const
+    {
+        const bool is_pressure = (i < numNodes()) || (i >= bhpIdx(0));
+        return is_pressure ? pressure_scale_ : rate_scale_;
+    }
+
+    State limitStep(const State&, const State& dx) const { return dx; }
+
+private:
+    const VFPProdProperties<Scalar>* props_;
+    const UnitSystem* units_;
+    std::vector<Node> nodes_;
+    std::vector<Scalar> branch_alq_;
+    std::vector<Well> wells_;
+    std::vector<std::vector<int>> children_;
+    std::vector<std::vector<int>> wells_at_;
+    std::vector<Control> controls_;
+
+    Scalar terminal_pressure_ = 0.0;
+    Scalar rate_scale_ = 0.0;
+    Scalar pressure_scale_ = unit::barsa;
+};
+
 /// Take the Newton step as it comes. This is what the full system wants: it has
 /// no kinks within an active set, so there is nothing for a globalisation to fix.
 struct FullStep
@@ -806,13 +1091,40 @@ struct LineSearch
 
 /// Solve the system from a guess at the node pressures. The tolerance is on the
 /// scaled residual, so it reads as bar on the pressure rows.
-template<class Scalar, class Globalisation = FullStep>
-Result<Scalar> solve(System<Scalar>& system,
-                     const std::vector<Scalar>& node_pressure_guess,
-                     const Scalar tolerance = 1e-2,
-                     const int max_iterations = 50,
-                     Globalisation globalisation = {})
+/// Ask a system whether it assembles its own Jacobian, without requiring that
+/// every system knows how.
+template<class Sys>
+bool systemUsesAnalytic(const Sys& system)
 {
+    if constexpr (requires { system.usesAnalyticJacobian(); }) {
+        return system.usesAnalyticJacobian();
+    } else {
+        return false;
+    }
+}
+
+template<class Sys, class State>
+auto systemJacobian(const Sys& system, const State& x)
+{
+    if constexpr (requires { system.jacobian(x); }) {
+        return system.jacobian(x);
+    } else {
+        return DenseMatrix<typename Sys::ScalarType>(system.size());
+    }
+}
+
+/// Solve any of the systems in this file. They differ in what a rate is -- one
+/// number for an injection network, three for a production one -- but not in how
+/// the Newton, the active set or the bounds work.
+template<class Sys, class Globalisation = FullStep>
+Result<typename Sys::ScalarType>
+solve(Sys& system,
+      const std::vector<typename Sys::ScalarType>& node_pressure_guess,
+      const typename Sys::ScalarType tolerance = 1e-2,
+      const int max_iterations = 50,
+      Globalisation globalisation = {})
+{
+    using Scalar = typename Sys::ScalarType;
     auto x = system.start(node_pressure_guess);
     const int n = system.size();
     Result<Scalar> last;
@@ -829,7 +1141,9 @@ Result<Scalar> solve(System<Scalar>& system,
     // this follows that. Refreshing them inside the Newton makes each well's
     // share a moving target while its rate is chasing it, and the active set
     // then cycles between group and thp control instead of settling.
-    system.refreshGuides(x);
+    if constexpr (requires { system.refreshGuides(x); }) {
+        system.refreshGuides(x);
+    }
 
     for (int it = 1; it <= max_iterations; ++it) {
         const bool controls_moved = system.updateControls(x);
@@ -842,12 +1156,7 @@ Result<Scalar> solve(System<Scalar>& system,
         {   // remember the active set, so a cycle can be seen in the report
             std::string set;
             for (int w = 0; w < system.numWells(); ++w) {
-                switch (system.control(w)) {
-                case Control::Thp:  set += 'T'; break;
-                case Control::Bhp:  set += 'B'; break;
-                case Control::Rate: set += 'R'; break;
-                case Control::Grup: set += 'G'; break;
-                }
+                set += system.controlLetter(w);
             }
             trace.push_back(set);
             if (trace.size() > 8) {
@@ -860,8 +1169,10 @@ Result<Scalar> solve(System<Scalar>& system,
         }
         last = {false, it, {}, {}, worst, controls_moved, false, joined()};
 
-        DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
-            ? system.jacobian(x)
+        // A system that can hand over an assembled Jacobian does; the rest are
+        // differenced. The production prototype has no analytic one yet.
+        DenseMatrix<Scalar> J = systemUsesAnalytic(system)
+            ? systemJacobian(system, x)
             : [&] {
                   DenseMatrix<Scalar> fd(n);
                   for (int j = 0; j < n; ++j) {
