@@ -276,10 +276,13 @@ calculateGroupConstraint()
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
     auto constraint = this->calculateGroupConstraintRecursive_(this->parentGroup(group), efficiency_factor);
     if (constraint.has_value()) {
-        // TODO: We could probably switch the group to FLD control mode now. However, this call is coming
-        //    from beginTimeStep() in BlackoilWellModel_impl.hpp, but the regular higher constraints
-        //    checks (for all groups, not just the master group) will first be done during the assemble() step,
-        //    at which point the group should be switched to FLD control mode if necessary.
+        // NOTE: The group is not switched to FLD control mode here, and it does not need to be:
+        //    the constraint is re-derived from the top of the hierarchy on every call, so a group
+        //    left under an individual rate mode still follows its parent's target.  Do not expect
+        //    the regular higher-level constraint checks during assemble() to correct the mode
+        //    either -- they switch a group to FLD only when its rate violates its share of the
+        //    parent's target, so a group holding a share larger than it can produce is never
+        //    switched by them.
         return constraint;
     }
     // If a higher level constraint was not found or not violated, use the group's own constraint.
@@ -597,6 +600,9 @@ calculateGroupConstraint()
     // NOTE: Injection targets for VREP, RESV, and REIN modes are always sent as RATE
     //   control mode to the slave, see
     //   RescoupConstraintsCalculator.cpp::calculateSlaveGroupConstraints_()
+    // bottom_group_current_rate_available is a positive magnitude for producers (the sign is
+    // normalized at the source in getBottomGroupCurrentRateAvailable_()), so it is directly
+    // comparable to the positive full_target.
     if (bottom_group_current_rate_available > TARGET_RATE_TOLERANCE) {  // > 1e-12
         const auto toplevel_control_mode = this->getToplevelControlMode_();
         if ((bottom_group_current_rate_available > full_target)) {
@@ -625,12 +631,12 @@ calculateGroupConstraint()
     // Return the more restrictive of the top-level distributed target and the
     // bottom group's own target. This prevents the slave group from overshooting the
     // top-level budget.
-    auto bottom_constraint = this->getGroupConstraintNoGuideRate_(this->bottom_group_);
-    if (!bottom_constraint.has_value()) {
-        // The bottom group has no own constraint (e.g. production cmode NONE or FLD).
-        // Check if the bottom group has a limit defined for the top-level control mode
-        // (e.g. an ORAT limit in GCONPROD even though the active cmode is NONE).
-        const auto toplevel_control_mode = this->getToplevelControlMode_();
+    const auto toplevel_control_mode = this->getToplevelControlMode_();
+    // The top-level target, capped by the bottom group's own limit for the top-level
+    // control mode if it defines one.  Used whenever the bottom group's own target
+    // cannot be compared with the top-level one (it has none, or it is a target for a
+    // different rate type).
+    auto toplevel_target_capped_by_own_limit = [&]() {
         Scalar capped_target = full_target;
         if (this->isProductionConstraint()) {
             const auto* prod_cmode = std::get_if<Group::ProductionCMode>(&toplevel_control_mode);
@@ -642,9 +648,25 @@ calculateGroupConstraint()
             }
         }
         return ConstraintInfo{capped_target, toplevel_control_mode};
+    };
+    auto bottom_constraint = this->getGroupConstraintNoGuideRate_(this->bottom_group_);
+    if (!bottom_constraint.has_value()) {
+        // The bottom group has no own constraint (e.g. production cmode NONE or FLD).
+        // Check if the bottom group has a limit defined for the top-level control mode
+        // (e.g. an ORAT limit in GCONPROD even though the active cmode is NONE).
+        return toplevel_target_capped_by_own_limit();
+    }
+    if (bottom_constraint->cmode != toplevel_control_mode) {
+        // The two targets are rates of different phases -- comparing them numerically is
+        // meaningless, and picking the smaller number is not "more restrictive": an oil
+        // rate is always a smaller number than a gas rate.  This happens when a superior
+        // group switches control mode (an oil-controlled field becoming gas-controlled,
+        // say) while the bottom group still carries a target for the old mode.  The
+        // top-level target is the one that reflects the current constraint, so use it,
+        // capped by the bottom group's own limit for that same mode if it has one.
+        return toplevel_target_capped_by_own_limit();
     }
     if (full_target < bottom_constraint->constraint) {
-        const auto toplevel_control_mode = this->getToplevelControlMode_();
         return ConstraintInfo{full_target, toplevel_control_mode};
     }
     return bottom_constraint;
@@ -721,9 +743,16 @@ getBottomGroupCurrentRateAvailable_() const
     }
     else {
         const auto& tcalc = std::get<TargetCalculator>(this->target_calculator_);
-        return tcalc.calcModeRateFromRates(
+        const Scalar avail = tcalc.calcModeRateFromRates(
             this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/false)
         );
+        // Source-level sign fix: getGroupRatesAvailableForHigherLevelControl() returns producer
+        // rates in the signed (negative) convention. Negate to a positive magnitude so the value
+        // is consistent with the (positive) top-level target everywhere it is used in
+        // calculateGroupConstraint() -- both the reduction add-back and the overshoot
+        // comparison/scaling. Mirrors the non-coupled path in GroupStateHelper.cpp, which uses
+        // current_rate_available = -tcalc.calcModeRateFromRates(rates) for producers.
+        return -avail;
     }
 }
 
