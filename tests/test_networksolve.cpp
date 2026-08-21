@@ -2373,4 +2373,248 @@ BOOST_AUTO_TEST_CASE(a_rate_limited_well_stays_under_its_limit,
     BOOST_CHECK_LE(convert::to(r.well_rate[0], sm3d), convert::to(limit, sm3d) * 1.001);
 }
 
+
+// The prototype's network, built to order so several cases can share it.
+// FIELD -> PROD at 80 bar, two producers of different productivity on the node.
+// The table has to outlive the properties object, which keeps a reference.
+class ProductionCase
+{
+public:
+    using Sys = NetworkSolve::ProductionSystem<double>;
+
+    explicit ProductionCase(const double productivity_2 = 0.7)
+    {
+        const auto deck = Parser{}.parseString(vfp_prod);
+        tables_.emplace_back(deck["VFPPROD"].front(), /*gaslift_opt_active=*/false, UnitSystem{});
+        props_.addTable(tables_.back());
+
+        for (const auto& [name, productivity] :
+             std::initializer_list<std::pair<const char*, double>>{{"P-1", 1.0},
+                                                                   {"P-2", productivity_2}}) {
+            Sys::Well w;
+            w.name = name;
+            w.node = 1;
+            w.vfp_table = 3;
+            w.bhp_limit = convert::from(40.0, bars);
+            w.oil_rate_limit = convert::from(600.0, cubic(meter) / day);
+            w.in_group = true;
+            const double q0 = convert::from(400.0 * productivity, cubic(meter) / day);
+            const double slope = q0 / convert::from(120.0, bars);
+            for (int ph = 0; ph < Sys::NP; ++ph) {
+                const double share = (ph == 0) ? 0.3 : (ph == 1) ? 0.7 : 70.0;
+                w.ipr_a[ph] = share * q0 * 2.0;
+                w.ipr_b[ph] = -share * slope * 2.0;
+            }
+            wells_.push_back(w);
+        }
+    }
+
+    std::vector<Sys::Well>& wells() { return wells_; }
+    void setGroupTarget(const double t) { target_ = t; }
+    double groupTarget() const { return target_; }
+
+    Sys system() const
+    {
+        Sys s(props_, units_);
+        s.setTerminalPressure(convert::from(80.0, bars));
+        s.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable});
+        s.addNode(NetworkSolve::Node{"PROD", 0, 3});
+        for (const auto& w : wells_) {
+            s.addWell(w);
+        }
+        s.setGroupTarget(target_);
+        s.finish();
+        return s;
+    }
+
+    /// What the two wells produce with no group target, at the pressures they
+    /// settle on themselves. The scale every target here is quoted against.
+    double freeTotal() const
+    {
+        ProductionCase open(*this);
+        open.target_ = 0.0;
+        auto s = open.system();
+        const auto r = NetworkSolve::solve(s, guess());
+        BOOST_REQUIRE(r.converged);
+        return r.well_rate[0] + r.well_rate[1];
+    }
+
+    static std::vector<double> guess()
+    {
+        return {convert::from(80.0, bars), convert::from(90.0, bars)};
+    }
+
+private:
+    std::deque<VFPProdTable> tables_;
+    VFPProdProperties<double> props_;
+    UnitSystem units_{};
+    std::vector<Sys::Well> wells_;
+    double target_ = 0.0;
+};
+
+// Group control on the production network, the same two equations as injection:
+// sum of the group's oil rates meets the target, and each held well takes
+// guide * multiplier.
+BOOST_AUTO_TEST_CASE(production_group_target_is_an_equation)
+{
+    const auto sm3d = cubic(meter) / day;
+
+    ProductionCase c;
+    const double free_total = c.freeTotal();
+    const double target = 0.6 * free_total;
+    c.setGroupTarget(target);
+
+    auto system = c.system();
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    BOOST_TEST_MESSAGE("production group: " << (r.converged ? "converged in " : "FAILED after ")
+                       << r.iterations << " iterations, residual " << r.residual);
+    BOOST_REQUIRE(r.converged);
+
+    const double total = r.well_rate[0] + r.well_rate[1];
+    BOOST_TEST_MESSAGE("free " << convert::to(free_total, sm3d) << ", target "
+                       << convert::to(target, sm3d) << ", delivered " << convert::to(total, sm3d)
+                       << " sm3/d  (" << convert::to(r.well_rate[0], sm3d) << " + "
+                       << convert::to(r.well_rate[1], sm3d) << ")");
+    BOOST_CHECK_CLOSE(convert::to(total, sm3d), convert::to(target, sm3d), 0.1);
+
+    // Both wells held, so the split follows the guide rates.
+    const auto& wells = system.wells();
+    BOOST_CHECK_CLOSE(r.well_rate[0] / wells[0].guide, r.well_rate[1] / wells[1].guide, 0.1);
+}
+
+// The production group equations against the rule they replace, exactly the
+// check the injection side gets: cap each well by what it can take at the
+// pressures the equations settled on, share by guide rate, fix any well whose
+// share exceeds its cap and re-divide.
+BOOST_AUTO_TEST_CASE(production_equations_match_the_rule_based_allocation)
+{
+    const auto sm3d = cubic(meter) / day;
+
+    auto ruleBased = [](const NetworkSolve::ProductionSystem<double>& system,
+                        const std::vector<double>& node_pressure, const double target) {
+        const auto& wells = system.wells();
+        const int n = static_cast<int>(wells.size());
+        std::vector<double> cap(n), share(n, 0.0);
+        std::vector<bool> pooled(n, true);
+        for (int w = 0; w < n; ++w) {
+            const double p = node_pressure[wells[w].node];
+            cap[w] = std::min({system.thpPotential(wells[w], p),
+                               NetworkSolve::ProductionSystem<double>::ipr(wells[w], 1,
+                                                                           wells[w].bhp_limit),
+                               wells[w].oil_rate_limit});
+        }
+        double remaining = target;
+        for (int pass = 0; pass <= n; ++pass) {
+            double guides = 0.0;
+            for (int w = 0; w < n; ++w) {
+                if (pooled[w]) {
+                    guides += wells[w].guide;
+                }
+            }
+            if (guides <= 0.0) {
+                break;
+            }
+            bool fixed_one = false;
+            for (int w = 0; w < n; ++w) {
+                if (!pooled[w]) {
+                    continue;
+                }
+                const double sh = remaining * wells[w].guide / guides;
+                if (sh > cap[w]) {
+                    share[w] = cap[w];
+                    pooled[w] = false;
+                    remaining -= cap[w];
+                    fixed_one = true;
+                    break;
+                }
+                share[w] = sh;
+            }
+            if (!fixed_one) {
+                break;
+            }
+        }
+        return share;
+    };
+
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+
+    for (const double fraction : {0.9, 0.6, 0.25, 0.999, 1.5}) {
+        ProductionCase c;
+        c.setGroupTarget(fraction * free_total);
+        auto system = c.system();
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        if (!r.converged) {
+            BOOST_TEST_MESSAGE("fraction " << fraction << ": does not converge");
+            BOOST_CHECK(false);
+            continue;
+        }
+        const auto share = ruleBased(system, r.node_pressure, c.groupTarget());
+        double rule_total = 0.0, solved_total = 0.0;
+        for (std::size_t w = 0; w < share.size(); ++w) {
+            rule_total += share[w];
+            solved_total += r.well_rate[w];
+        }
+        BOOST_TEST_MESSAGE("fraction " << fraction << ": target "
+                           << convert::to(c.groupTarget(), sm3d) << ", rule "
+                           << convert::to(rule_total, sm3d) << ", equations "
+                           << convert::to(solved_total, sm3d) << "  ("
+                           << convert::to(r.well_rate[0], sm3d) << " + "
+                           << convert::to(r.well_rate[1], sm3d) << ")");
+        for (std::size_t w = 0; w < share.size(); ++w) {
+            BOOST_CHECK_CLOSE(convert::to(r.well_rate[w], sm3d), convert::to(share[w], sm3d), 1.0);
+        }
+        BOOST_CHECK_LE(convert::to(solved_total, sm3d),
+                       convert::to(c.groupTarget(), sm3d) * 1.001);
+    }
+}
+
+// How far from the answer the production solve can start and still land on it,
+// and what happens when a limit binds -- the production counterpart of
+// globalisation_basin, and the measure any change to its control rule has to
+// answer to. Four configurations over a wide grid of starting node pressures.
+BOOST_AUTO_TEST_CASE(production_control_rule_basin)
+{
+    const auto sm3d = cubic(meter) / day;
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+
+    struct Config { const char* what; double bhp_limit; double oil_limit; double fraction; };
+    const std::vector<Config> configs{
+        {"free",         40.0, 600.0, 0.0},
+        {"bhp binds",    85.0, 600.0, 0.0},
+        {"rate binds",   40.0,  80.0, 0.0},
+        {"group binds",  40.0, 600.0, 0.5},
+    };
+
+    int all_solved = 0, all_total = 0;
+    for (const auto& cfg : configs) {
+        int solved = 0, total = 0, iterations = 0;
+        for (int pf = 0; pf < 14; ++pf) {
+            const double p = convert::from(50.0 + 30.0 * pf, bars);
+            ProductionCase c;
+            for (auto& w : c.wells()) {
+                w.bhp_limit = convert::from(cfg.bhp_limit, bars);
+                w.oil_rate_limit = convert::from(cfg.oil_limit, sm3d);
+            }
+            c.setGroupTarget(cfg.fraction * free_total);
+            auto system = c.system();
+            const auto r = NetworkSolve::solve(
+                system, std::vector<double>{convert::from(80.0, bars), p});
+            ++total;
+            if (r.converged) {
+                ++solved;
+                iterations += r.iterations;
+            }
+        }
+        BOOST_TEST_MESSAGE("production basin, " << std::setw(11) << cfg.what << "  "
+                           << solved << "/" << total << " starts, mean "
+                           << (solved > 0 ? iterations / solved : 0) << " iterations");
+        all_solved += solved;
+        all_total += total;
+    }
+    BOOST_TEST_MESSAGE("production basin, total       " << all_solved << "/" << all_total);
+    BOOST_CHECK_GT(all_solved, 3 * all_total / 4);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

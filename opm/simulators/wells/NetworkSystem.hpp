@@ -167,6 +167,63 @@ private:
     int n_;
     std::vector<Scalar> a_;
 };
+/// Divide a group target by guide rate, take out the wells whose own limits keep
+/// them below their share, and re-divide the rest among those that can take it.
+/// A well that is out gets no share at all, so its own control binds.
+///
+/// This is the fixed point an active set would otherwise have to find by
+/// iterating, and finding it here is what stops it cycling: a multiplier read
+/// from the iterate means "the even split" while nobody is on group control and
+/// "the remainder after the others' rates" while somebody is, and each of those
+/// two numbers selects the state that produces the other.
+template<class Scalar>
+std::vector<Scalar> shareByGuide(const std::vector<Scalar>& guide,
+                                 const std::vector<char>& in_group,
+                                 const std::vector<Scalar>& own,
+                                 const Scalar target)
+{
+    const int n = static_cast<int>(guide.size());
+    std::vector<Scalar> share(n, std::numeric_limits<Scalar>::max());
+    if (!(target > Scalar{0})) {
+        return share;
+    }
+
+    std::vector<char> pooled(in_group);
+    Scalar guides = 0.0;
+    for (int w = 0; w < n; ++w) {
+        if (pooled[w] != 0) {
+            guides += guide[w];
+        }
+    }
+
+    Scalar remaining = target;
+    for (int pass = 0; pass <= n; ++pass) {
+        if (!(guides > Scalar{0})) {
+            break;
+        }
+        int drop = -1;
+        Scalar worst = 0.0;
+        for (int w = 0; w < n; ++w) {
+            if (pooled[w] == 0) {
+                continue;
+            }
+            share[w] = guide[w] / guides * std::max(remaining, Scalar{0});
+            if (share[w] - own[w] > worst) {
+                worst = share[w] - own[w];
+                drop = w;
+            }
+        }
+        if (drop < 0) {
+            break;
+        }
+        pooled[drop] = 0;
+        guides -= guide[drop];
+        remaining -= own[drop];
+        share[drop] = std::numeric_limits<Scalar>::max();
+    }
+    return share;
+}
+
 
 template<class Scalar>
 class System
@@ -236,6 +293,22 @@ public:
     int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
     int numWells() const { return static_cast<int>(wells_.size()); }
     bool grouped() const { return group_target_ > 0.0; }
+
+    std::vector<Scalar> guides() const
+    {
+        std::vector<Scalar> g(wells_.size());
+        std::transform(wells_.begin(), wells_.end(), g.begin(),
+                       [](const auto& w) { return w.guide; });
+        return g;
+    }
+
+    std::vector<char> inGroup() const
+    {
+        std::vector<char> in(wells_.size());
+        std::transform(wells_.begin(), wells_.end(), in.begin(),
+                       [](const auto& w) { return static_cast<char>(w.in_group); });
+        return in;
+    }
     int size() const { return 2 * numNodes() + 2 * numWells() + (grouped() ? 1 : 0); }
 
     Phase phase() const { return phase_; }
@@ -480,8 +553,7 @@ public:
         // mid-Newton those are not a consistent well state, on rate control q
         // *is* the limit, and the multiplier is defined by the very active set
         // being chosen here.
-        constexpr Scalar unbounded = std::numeric_limits<Scalar>::max();
-        std::vector<Scalar> own(n), thp(n, unbounded);
+        std::vector<Scalar> own(n), thp(n);
         for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
             const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
@@ -489,7 +561,7 @@ public:
             own[w] = std::min({thp[w], ipr(well, well.bhp_limit), well.rate_limit});
         }
 
-        const auto share = groupShares(own);
+        const auto share = shareByGuide(guides(), inGroup(), own, group_target_);
 
         bool changed = false;
         for (int w = 0; w < n; ++w) {
@@ -517,61 +589,6 @@ public:
             controls_[w] = wanted;
         }
         return changed;
-    }
-
-    /// Divide the group target by guide rate, take out the wells whose own
-    /// limits keep them below their share, and re-divide the rest among those
-    /// that can take it. A well that is out gets no share at all, so its own
-    /// control binds.
-    ///
-    /// This is the fixed point the active set would otherwise have to find by
-    /// iterating, and finding it here is what stops it cycling: the multiplier
-    /// in the iterate means "the even split" while nobody is on group control
-    /// and "the remainder after the others' rates" while somebody is, and each
-    /// of those two numbers selects the state that produces the other.
-    std::vector<Scalar> groupShares(const std::vector<Scalar>& own) const
-    {
-        const int n = numWells();
-        std::vector<Scalar> share(n, std::numeric_limits<Scalar>::max());
-        if (!grouped()) {
-            return share;
-        }
-
-        std::vector<bool> pooled(n, false);
-        Scalar guides = 0.0;
-        for (int w = 0; w < n; ++w) {
-            pooled[w] = wells_[w].in_group;
-            if (pooled[w]) {
-                guides += wells_[w].guide;
-            }
-        }
-
-        Scalar remaining = group_target_;
-        for (int pass = 0; pass <= n; ++pass) {
-            if (!(guides > Scalar{0})) {
-                break;
-            }
-            int drop = -1;
-            Scalar worst = 0.0;
-            for (int w = 0; w < n; ++w) {
-                if (!pooled[w]) {
-                    continue;
-                }
-                share[w] = wells_[w].guide / guides * std::max(remaining, Scalar{0});
-                if (share[w] - own[w] > worst) {
-                    worst = share[w] - own[w];
-                    drop = w;
-                }
-            }
-            if (drop < 0) {
-                break;
-            }
-            pooled[drop] = false;
-            guides -= wells_[drop].guide;
-            remaining -= own[drop];
-            share[drop] = std::numeric_limits<Scalar>::max();
-        }
-        return share;
     }
 
     /// A starting point derived from a guess at every node's pressure.
@@ -913,7 +930,7 @@ public:
     using ScalarType = Scalar;
     static constexpr int NP = 3;   // water, oil, gas -- the order VFPPROD wants
 
-    enum class Control { Thp, Bhp, OilRate };
+    enum class Control { Thp, Bhp, OilRate, Grup };
 
     struct Well
     {
@@ -926,6 +943,10 @@ public:
         std::array<Scalar, NP> ipr_b{};
         Scalar bhp_limit = 0.0;
         Scalar oil_rate_limit = 0.0;
+        /// Held by the group, so its rate counts against the target whatever
+        /// control it ends on.
+        bool in_group = false;
+        Scalar guide = 0.0;
     };
 
     ProductionSystem(const VFPProdProperties<Scalar>& props, const UnitSystem& units)
@@ -936,6 +957,10 @@ public:
     void addWell(Well w) { wells_.push_back(std::move(w)); }
     void setTerminalPressure(const Scalar p) { terminal_pressure_ = p; }
     void setRateScale(const Scalar s) { rate_scale_ = s; }
+    /// Oil rate the group above this network is asked for.
+    void setGroupTarget(const Scalar target) { group_target_ = target; }
+
+    bool grouped() const { return group_target_ > 0.0; }
 
     void finish()
     {
@@ -947,8 +972,13 @@ public:
         for (std::size_t w = 0; w < wells_.size(); ++w) {
             wells_at_[wells_[w].node].push_back(static_cast<int>(w));
         }
+        for (auto& w : wells_) {
+            if (w.guide <= 0.0) {
+                w.guide = std::max(w.oil_rate_limit, Scalar{1.0});
+            }
+        }
         if (rate_scale_ <= 0.0) {
-            Scalar largest = 0.0;
+            Scalar largest = group_target_;
             for (const auto& w : wells_) {
                 largest = std::max(largest, w.oil_rate_limit);
             }
@@ -956,11 +986,16 @@ public:
                                    unit::convert::from(1.0, unit::cubic(unit::meter) / unit::day));
         }
         controls_.assign(wells_.size(), Control::Thp);
+        for (std::size_t w = 0; w < wells_.size(); ++w) {
+            if (grouped() && wells_[w].in_group) {
+                controls_[w] = Control::Grup;
+            }
+        }
     }
 
     int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
     int numWells() const { return static_cast<int>(wells_.size()); }
-    int size() const { return 4 * numNodes() + 4 * numWells(); }
+    int size() const { return 4 * numNodes() + 4 * numWells() + 1; }
 
     const std::vector<Node>& nodes() const { return nodes_; }
     const std::vector<Well>& wells() const { return wells_; }
@@ -972,6 +1007,7 @@ public:
         case Control::Thp:     return 'T';
         case Control::Bhp:     return 'B';
         case Control::OilRate: return 'O';
+        case Control::Grup:    return 'G';
         }
         return '?';
     }
@@ -980,6 +1016,7 @@ public:
     int qIdx(const int node, const int ph) const { return numNodes() + NP * (node - 1) + ph; }
     int qwIdx(const int w, const int ph) const { return 4 * numNodes() + NP * w + ph; }
     int bhpIdx(const int w) const { return 4 * numNodes() + NP * numWells() + w; }
+    int lambdaIdx() const { return 4 * numNodes() + 4 * numWells(); }
 
     bool hasTable(const Node& n) const { return n.vfp_table != NoTable; }
 
@@ -995,6 +1032,64 @@ public:
     {
         return props_->bhp(table, -q[0], -q[1], -q[2], thp, alq,
                            Scalar{0}, Scalar{0}, /*use_expvfp=*/false);
+    }
+
+    /// The oil rate thp control allows at this node pressure. Searched in bhp
+    /// rather than in rate: the tubing lookup wants the whole triple, and the
+    /// inflow performance gives it from a bhp directly, so the fractions never
+    /// have to be guessed at. h(bhp) = bhp - tableBhp(...) rises with bhp, since
+    /// a higher bhp draws less and a smaller rate needs less lift.
+    Scalar thpPotential(const Well& w, const Scalar p_node) const
+    {
+        if (!(w.ipr_b[1] < Scalar{0})) {
+            return Scalar{0};
+        }
+        const Scalar shut = -w.ipr_a[1] / w.ipr_b[1];   // bhp at which oil stops
+        const Scalar lo = w.bhp_limit;
+        if (!(shut > lo)) {
+            return Scalar{0};
+        }
+        auto rates = [&](const Scalar bhp) {
+            std::array<Scalar, NP> q{};
+            for (int ph = 0; ph < NP; ++ph) {
+                q[ph] = std::max(ipr(w, ph, bhp), Scalar{0});
+            }
+            return q;
+        };
+        auto h = [&](const Scalar bhp) {
+            return bhp - tableBhp(w.vfp_table, p_node, rates(bhp), w.alq);
+        };
+        // At the bhp limit the well already lifts, so thp does not hold it back
+        // and the bhp limit is the binding one; report what that allows.
+        if (h(lo) >= Scalar{0}) {
+            return ipr(w, 1, lo);
+        }
+        // Not even a shut-in well can lift against this node pressure.
+        if (h(shut) <= Scalar{0}) {
+            return Scalar{0};
+        }
+        Scalar a = lo, b = shut, bhp = shut;
+        for (int it = 0; it < 60; ++it) {
+            bhp = Scalar{0.5} * (a + b);
+            (h(bhp) < Scalar{0} ? a : b) = bhp;
+        }
+        return std::max(ipr(w, 1, bhp), Scalar{0});
+    }
+
+    std::vector<Scalar> guides() const
+    {
+        std::vector<Scalar> g(wells_.size());
+        std::transform(wells_.begin(), wells_.end(), g.begin(),
+                       [](const Well& w) { return w.guide; });
+        return g;
+    }
+
+    std::vector<char> inGroup() const
+    {
+        std::vector<char> in(wells_.size());
+        std::transform(wells_.begin(), wells_.end(), in.begin(),
+                       [](const Well& w) { return static_cast<char>(w.in_group); });
+        return in;
     }
 
     State residual(const State& x) const
@@ -1030,6 +1125,7 @@ public:
             }
         }
 
+        Scalar produced = 0.0;
         for (int w = 0; w < wells; ++w) {
             const auto& well = wells_[w];
             const Scalar bhp = x[bhpIdx(w)];
@@ -1037,6 +1133,11 @@ public:
             for (int ph = 0; ph < NP; ++ph) {
                 q[ph] = x[qwIdx(w, ph)];
                 r[4 * nodes + NP * w + ph] = (q[ph] - ipr(well, ph, bhp)) / rate_scale_;
+            }
+            // Every well the group allocated counts against the target, on
+            // whatever control it ended on.
+            if (well.in_group) {
+                produced += q[1];
             }
             Scalar& control = r[4 * nodes + NP * wells + w];
             switch (controls_[w]) {
@@ -1050,31 +1151,63 @@ public:
             case Control::OilRate:
                 control = (q[1] - well.oil_rate_limit) / rate_scale_;
                 break;
+            case Control::Grup:
+                control = (q[1] - well.guide * x[lambdaIdx()]) / rate_scale_;
+                break;
             }
         }
+
+        // With nobody on group control the multiplier is free, so pin it rather
+        // than hand the Newton a singular column.
+        const bool any = std::find(controls_.begin(), controls_.end(), Control::Grup)
+                       != controls_.end();
+        r[lambdaIdx()] = grouped() && any ? (produced - group_target_) / rate_scale_
+                                          : (x[lambdaIdx()] - lambda0()) / rate_scale_;
         return r;
     }
 
-    /// Most restrictive wins, as for injection -- but a producer is limited by a
-    /// bhp that is too *low*, not too high.
+    /// Each control names the oil rate it would allow at this node pressure and
+    /// the smallest wins, exactly as on the injection side -- a producer is just
+    /// held back by a bhp that is too *low* rather than too high, so the bhp
+    /// limit's allowance is the rate the inflow gives at it.
+    ///
+    /// Nothing here reads the iterate's rates, bhp or multiplier: mid-Newton
+    /// those are not a consistent well state, on rate control q *is* the limit,
+    /// and the multiplier is defined by the very active set being chosen here.
     bool updateControls(const State& x)
     {
+        const int n = numWells();
+
+        std::vector<Scalar> own(n), thp(n);
+        for (int w = 0; w < n; ++w) {
+            const auto& well = wells_[w];
+            const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
+            thp[w] = thpPotential(well, p_node);
+            own[w] = std::min(thp[w], ipr(well, 1, well.bhp_limit));
+            if (well.oil_rate_limit > Scalar{0}) {
+                own[w] = std::min(own[w], well.oil_rate_limit);
+            }
+        }
+
+        const auto share = shareByGuide(guides(), inGroup(), own, group_target_);
+
         bool changed = false;
-        for (int w = 0; w < numWells(); ++w) {
+        for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
             auto wanted = Control::Thp;
-            Scalar smallest = std::numeric_limits<Scalar>::max();
-            auto consider = [&](const bool violated, const Scalar implied, const Control c) {
-                if (violated && implied < smallest) {
-                    smallest = implied;
+            Scalar smallest = thp[w];
+            auto consider = [&](const Control c, const Scalar allows) {
+                if (allows < smallest) {
+                    smallest = allows;
                     wanted = c;
                 }
             };
-            consider(x[bhpIdx(w)] <= well.bhp_limit * (1.0 + 1e-9),
-                     ipr(well, 1, well.bhp_limit), Control::Bhp);
+            consider(Control::Bhp, ipr(well, 1, well.bhp_limit));
             if (well.oil_rate_limit > Scalar{0}) {
-                consider(x[qwIdx(w, 1)] > well.oil_rate_limit, well.oil_rate_limit,
-                         Control::OilRate);
+                consider(Control::OilRate, well.oil_rate_limit);
+            }
+            if (grouped() && well.in_group) {
+                consider(Control::Grup, share[w]);
             }
             changed |= (wanted != controls_[w]);
             controls_[w] = wanted;
@@ -1108,6 +1241,7 @@ public:
                 x[qIdx(n, ph)] = q;
             }
         }
+        x[lambdaIdx()] = lambda0();
         return x;
     }
 
@@ -1132,13 +1266,27 @@ public:
 
     Scalar columnScale(const int i) const
     {
-        const bool is_pressure = (i < numNodes()) || (i >= bhpIdx(0));
+        const bool is_pressure = (i < numNodes())
+                              || (i >= bhpIdx(0) && i < lambdaIdx());
         return is_pressure ? pressure_scale_ : rate_scale_;
     }
 
     State limitStep(const State&, const State& dx) const { return dx; }
 
 private:
+    /// The multiplier an even guide-rate split would imply, which is what the
+    /// row pins it to while nobody is on group control.
+    Scalar lambda0() const
+    {
+        Scalar guides = 0.0;
+        for (const auto& w : wells_) {
+            if (w.in_group) {
+                guides += w.guide;
+            }
+        }
+        return guides > Scalar{0} ? group_target_ / guides : Scalar{0};
+    }
+
     const VFPProdProperties<Scalar>* props_;
     const UnitSystem* units_;
     std::vector<Node> nodes_;
@@ -1149,6 +1297,7 @@ private:
     std::vector<Control> controls_;
 
     Scalar terminal_pressure_ = 0.0;
+    Scalar group_target_ = 0.0;
     Scalar rate_scale_ = 0.0;
     Scalar pressure_scale_ = unit::barsa;
 };
