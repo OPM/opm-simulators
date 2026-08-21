@@ -345,6 +345,7 @@ namespace Opm {
 
         this->switched_prod_groups_.clear();
         this->switched_inj_groups_.clear();
+        this->network_.beginTimeStep();
 
         if (this->wellStructureChangedDynamically_) {
             // Something altered the well structure/topology.  Possibly
@@ -596,8 +597,7 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
-            const auto& network = this->schedule()[timeStepIdx].network();
-            if (network.active()) {
+            if (details::anyNetworkActive(this->schedule(), timeStepIdx)) {
                 this->network_.initializeWell(*well);
             }
             try {
@@ -1172,8 +1172,7 @@ namespace Opm {
                 this->updateNetworkActiveState_();
             }
             const int episodeIdx = simulator_.episodeIndex();
-            const auto& network = this->schedule()[episodeIdx].network();
-            if (!this->wellsActive() && !network.active()) {
+            if (!this->wellsActive() && !details::anyNetworkActive(this->schedule(), episodeIdx)) {
                 return;
             }
         }
@@ -1240,8 +1239,15 @@ namespace Opm {
         while (do_network_update) {
             if (!this->isRescoupSlaveCoupledNetworkIteration_()
                 && network_update_iteration >= max_iteration ) {
-                // only output to terminal if we at the last newton iterations where we try to balance the network.
                 const int episodeIdx = simulator_.episodeIndex();
+                const auto& balance = this->schedule()[episodeIdx].network_balance();
+                // If the imbalance is already within tolerance, the network is converged; the
+                // outer loop continued only due to ALQ or control changes. Don't report this
+                // as an unconverged result -- just break quietly.
+                if (network_imbalance <= balance.pressure_tolerance()) {
+                    break;
+                }
+                // only output to terminal if we at the last newton iterations where we try to balance the network.
                 if (this->network_.willBalanceOnNextIteration(episodeIdx)) {
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"

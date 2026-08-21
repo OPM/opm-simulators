@@ -116,6 +116,15 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     rc_network_loose_coupling_ = Parameters::Get<Parameters::RcNetworkLooseCoupling>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
+    network_pressure_update_secant_ = Parameters::Get<Parameters::NetworkPressureUpdateSecant>();
+    network_pressure_update_acceleration_ = Parameters::Get<Parameters::NetworkPressureUpdateAcceleration>();
+    network_anderson_depth_ = Parameters::Get<Parameters::NetworkAndersonDepth>();
+    network_well_proxy_ = Parameters::Get<Parameters::NetworkWellProxy>();
+    network_well_proxy_max_iterations_ = Parameters::Get<Parameters::NetworkWellProxyMaxIterations>();
+    network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
+    network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
+    network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
+    network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -276,6 +285,32 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkPressureUpdateAcceleration>
+        ("Acceleration of the network node-pressure iteration, applied to the whole pressure "
+         "vector of a network instead of the per-node update: none or anderson");
+    Parameters::Register<Parameters::NetworkAndersonDepth>
+        ("Number of past iterates kept by Anderson acceleration of the network pressures");
+    Parameters::Register<Parameters::NetworkWellProxy>
+        ("Balance the injection networks against the wells' inflow-performance linearisation "
+         "(q = A - B*bhp) before re-solving the wells: none or ipr");
+    Parameters::Register<Parameters::NetworkWellProxyMaxIterations>
+        ("Iteration cap for the inflow-performance network balance");
+    Parameters::Register<Parameters::NetworkSolver>
+        ("How the injection networks are solved: fixedpoint relaxes the node pressures against "
+         "the wells, newton solves pressures and rates simultaneously and falls back to the "
+         "fixed point when it does not converge");
+    Parameters::Register<Parameters::NetworkAnalyticJacobian>
+        ("Assemble the network Jacobian from the VFP table derivatives instead of differencing "
+         "the residual (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkGroupControl>
+        ("Let the network hold a group's injection total and place the split itself, so a well "
+         "that hits its own limit is taken up by the others (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkDumpFailures>
+        ("Path prefix for writing out each network system that fails to converge, for replay in "
+         "the standalone bench; empty disables it");
+    Parameters::Register<Parameters::NetworkPressureUpdateSecant>
+        ("Networks whose node pressures use the bracketing/secant update in the inner network "
+         "iterations instead of the damped update: injection, all or none");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>

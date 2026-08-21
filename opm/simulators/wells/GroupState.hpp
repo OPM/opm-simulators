@@ -51,11 +51,14 @@ public:
     void update_production_rates(const std::string& gname,
                                  const std::vector<Scalar>& rates);
     void update_network_leaf_node_injection_rates(const std::string& gname,
+                                 const Phase phase,
                                  const std::vector<Scalar>& rates);
     void update_network_leaf_node_production_rates(const std::string& gname,
                                  const std::vector<Scalar>& rates);
     const std::vector<Scalar>& production_rates(const std::string& gname) const;
-    const std::vector<Scalar>& network_leaf_node_injection_rates(const std::string& gname) const;
+    bool has_network_leaf_node_injection_rates(const std::string& gname, const Phase phase) const;
+    const std::vector<Scalar>& network_leaf_node_injection_rates(const std::string& gname, const Phase phase) const;
+    bool has_network_leaf_node_production_rates(const std::string& gname) const;
     const std::vector<Scalar>& network_leaf_node_production_rates(const std::string& gname) const;
 
     void update_well_group_thp(const std::string& gname, const double& thp);
@@ -241,7 +244,8 @@ public:
 private:
     std::size_t num_phases{};
     std::map<std::string, std::vector<Scalar>> m_production_rates;
-    std::map<std::string, std::vector<Scalar>> m_network_leaf_node_injection_rates;
+    // Injection networks are per phase (GNETINJE GAS / WAT); a group can be a leaf of both.
+    std::map<std::pair<Phase, std::string>, std::vector<Scalar>> m_network_leaf_node_injection_rates;
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
     std::map<std::string, std::vector<Scalar>> m_prev_production_rates;

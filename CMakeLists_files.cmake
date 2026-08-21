@@ -491,6 +491,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_networkpressure.cpp
+  tests/test_networksolve.cpp
   tests/test_nonnc.cpp
   tests/test_norne_pvt.cpp
   tests/test_OilSatfuncConsistencyChecks.cpp
@@ -1238,6 +1239,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelNetwork_impl.hpp
   opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp
   opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp
+  opm/simulators/wells/NetworkAndersonAcceleration.hpp
+  opm/simulators/wells/NetworkNodePressureUpdater.hpp
+  opm/simulators/wells/NetworkSystem.hpp
   opm/simulators/wells/BlackoilWellModelNldd.hpp
   opm/simulators/wells/BlackoilWellModelNldd_impl.hpp
   opm/simulators/wells/BlackoilWellModelRescoup.hpp
