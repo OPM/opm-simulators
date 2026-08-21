@@ -82,15 +82,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                 if(local_[irow++]==1) for(auto col = row->begin(); col != row->end(); col++) nnz++;
             }
         }
-/*
-        printf("nnz           = %d\n",nnz);
-        printf("A.nonzeroes() = %ld\n",A.nonzeroes());
 
-        printf("local = %d\n",nrows);
-        printf("halo  = %d\n",halo);
-        printf("total = %ld\n",A.N());
-        //getchar();
-*/
         // Access matrix data from double precision operator
         double_data_ = &A[0][0][0][0];
 

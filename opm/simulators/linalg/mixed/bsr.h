@@ -79,7 +79,6 @@ void bsr_vmspumv4(bsr_matrix *A, const double *x, double *y, double alpha);
  * @param x Pointer to input vector.
  * @param y Pointer to output vector.
  */
-
 void bsr_vmspmv2(bsr_matrix *A, const double *x, double *y);
 void bsr_vmspmv3(bsr_matrix *A, const double *x, double *y);
 void bsr_vmspmv4(bsr_matrix *A, const double *x, double *y);

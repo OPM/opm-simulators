@@ -113,8 +113,6 @@ void prec_downcast(prec_t *P);
  */
 void prec_info(prec_t *P);
 
-
-void prec_test();
 #ifdef __cplusplus
 }
 #endif

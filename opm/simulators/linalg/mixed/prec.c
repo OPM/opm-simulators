@@ -772,51 +772,7 @@ void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
         }
     }
 }
-#if 0
-/**
- * @brief In-place matrix-vector multiplication for 3x3 matrices.
- *
- * @param A Pointer to input matrix.
- * @param x Pointer to input/output vector.
- */
-static inline void mat3_vecmul(const double *A, double *x)
-{
-    const int b=3;
-    double z[3];
-    for(int k=0;k<3;k++) z[k]=0;
-    for(int c=0;c<b;c++)
-    {
-        for(int r=0;r<b;r++)
-        {
-            z[r]+=A[c*b+r]*x[c];
-        }
-    }
-    for(int k=0;k<3;k++) x[k]=z[k];
-}
 
-/**
- * @brief In-place fused matrix-vector multiply-subtract for 3x3 matrices.
- *
- * @param y Pointer to input/output vector.
- * @param A Pointer to input matrix.
- * @param x Pointer to input vector.
- */
-
-static inline void mat3_vecfms(double *y, const double *A, const double *x)
-{
-    const int b=3;
-    double z[3];
-    for(int k=0;k<3;k++) z[k]=0;
-    for(int c=0;c<b;c++)
-    {
-        for(int r=0;r<b;r++)
-        {
-            z[r]+=A[b*c+r]*x[c];
-        }
-    }
-    for(int k=0;k<3;k++) y[k]-=z[k];
-}
-#endif
 void prec_mapply2c(prec_t *restrict P, double *x)
 {
     bsr_matrix *L  = P->L;
@@ -1105,74 +1061,5 @@ void prec_info(prec_t *P)
     bsr_info(P->L);
     bsr_info(P->D);
     bsr_info(P->U);
-}
-
-void prec_test()
-{
-//#if 0
-    // verify 2x2 inverse and matrix-matrix multiplications
-    double A[4] = {1,0.2,0.3,4};
-    double B[4] = {1,0.2,0.3,4};
-    double C[4] = {1,0.2,0.3,4};
-    double I[4] = {1,0,0,1};
-
-    mat_show(A,2,"A");
-
-    mat2_inv(A,A);
-    mat_show(A,2,"A");
-
-    mat2_vfms(I,A,B);
-    mat_show(I,2,"I");
-
-    mat2_rmul(B,A);
-    mat_show(B,2,"B");
-
-    mat2_lmul(A,C);
-    mat_show(C,2,"C");
-//#endif
-#if 0
-    // verify 4x4 inverse and matrix-matrix multiplications
-    double AA[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double BB[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double CC[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double II[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
-    mat_show(AA,4,"AA");
-
-    mat4_inv2(AA,AA);
-    mat_show(AA,4,"AA");
-
-    mat4_vfms(II,AA,BB);
-    mat_show(II,4,"II");
-
-    mat4_rmul(BB,AA);
-    mat_show(BB,4,"BB");
-
-    mat4_lmul(AA,CC);
-    mat_show(CC,4,"CC");
-#endif
-#if 0
-    // verify 4x4 inverse and matrix-matrix multiplications
-    double A[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double B[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double C[16] = {1,0.2,0.3,0.4,  0.5,6,0.7,0.8, 0.9,1.0,11,1.2, 1.3,1.4,1.5,16};
-    double I[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
-/*
-    mat_fshow(A,4,"A");
-    mat4_inv2(A);
-    mat_fshow(A,4,"A");
-*/
-    mat_show(A,4,"A");
-    mat4_vinv(A,A);
-    mat_show(A,4,"A");
-
-    mat4_vfms(I,A,B);
-    mat_show(I,4,"I");
-
-    mat4_rmul(B,A);
-    mat_show(B,4,"B");
-
-    mat4_lmul(A,C);
-    mat_show(C,4,"C");
-#endif
 }
 

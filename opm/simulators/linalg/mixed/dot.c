@@ -4,7 +4,6 @@
 
 double vec_dot (double const *x, double const *y, int NN)
 {
-
     // unroll loop in multiples of 8
     int n=NN/8;
     int N=8*n;
@@ -23,9 +22,9 @@ double vec_dot (double const *x, double const *y, int NN)
 
 double vec_bdot (double const *x, double const *y, int NN)
 {
-
     // unroll loop in multiples of 8
-    //int n=NN/8;
+    // assumes vectors are padded by zeros
+    // to nearest multiple of 8 doubles
     int N=8*((NN+7)/8);
     double agg[8];
     for(int i=0;i<8;i++) agg[i]=0.0;
@@ -34,13 +33,6 @@ double vec_bdot (double const *x, double const *y, int NN)
     for(int j=0;j<4;j++) agg[j]+=agg[j+4];
     for(int j=0;j<2;j++) agg[j]+=agg[j+2];
     for(int j=0;j<1;j++) agg[j]+=agg[j+1];
-/*
-    // loop-peeling of trailing end
-    for(int j=N;j<NN;j++) agg[0]+=x[j]*y[j];
 
-    for(int i=NN;i<NN+8;i++) printf("x[%d]: %+.4e\n",i-NN,x[i-3]);
-    for(int i=NN;i<NN+8;i++) printf("y[%d]: %+.4e\n",i-NN,y[i-3]);
-    getchar();
-*/
     return agg[0];
 }
