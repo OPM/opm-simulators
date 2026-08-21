@@ -17,9 +17,6 @@ template<class M, class V, class C>
 class MixedGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,V,V>
 {
 public:
-    // extract block size
-    static constexpr auto block_size = V::block_type::dimension;
-
     //! constructor: just store a reference to matrix and communicator
     MixedGhostLastMatrixAdapter (const M& A, const C& comm) : A_( A ), comm_(comm) {}
 
@@ -47,6 +44,8 @@ public:
     }
 
 private:
+    // extract block size
+    static constexpr auto block_size = V::block_type::dimension;
 
     void ghostLast_project( V& y ) const
     {
