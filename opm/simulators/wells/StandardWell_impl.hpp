@@ -1987,12 +1987,14 @@ namespace Opm
                                                     const BVector& weights,
                                                     const int pressureVarIndex,
                                                     const bool use_well_weights,
+                                                    const bool contract_d_diagonal,
                                                     const WellStateType& well_state) const
     {
         this->linSys_.extractCPRPressureMatrix(jacobian,
                                                weights,
                                                pressureVarIndex,
                                                use_well_weights,
+                                               contract_d_diagonal,
                                                *this,
                                                Bhp,
                                                well_state);
