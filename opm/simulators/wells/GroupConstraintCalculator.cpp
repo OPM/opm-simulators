@@ -276,10 +276,13 @@ calculateGroupConstraint()
     const auto efficiency_factor = group.getGroupEfficiencyFactor();
     auto constraint = this->calculateGroupConstraintRecursive_(this->parentGroup(group), efficiency_factor);
     if (constraint.has_value()) {
-        // TODO: We could probably switch the group to FLD control mode now. However, this call is coming
-        //    from beginTimeStep() in BlackoilWellModel_impl.hpp, but the regular higher constraints
-        //    checks (for all groups, not just the master group) will first be done during the assemble() step,
-        //    at which point the group should be switched to FLD control mode if necessary.
+        // NOTE: The group is not switched to FLD control mode here, and it does not need to be:
+        //    the constraint is re-derived from the top of the hierarchy on every call, so a group
+        //    left under an individual rate mode still follows its parent's target.  Do not expect
+        //    the regular higher-level constraint checks during assemble() to correct the mode
+        //    either -- they switch a group to FLD only when its rate violates its share of the
+        //    parent's target, so a group holding a share larger than it can produce is never
+        //    switched by them.
         return constraint;
     }
     // If a higher level constraint was not found or not violated, use the group's own constraint.
