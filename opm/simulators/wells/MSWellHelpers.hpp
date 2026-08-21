@@ -96,9 +96,10 @@ namespace mswellhelpers
     /// Returns 1 if the contraction cancels exactly, since a zero would make
     /// the coarse pressure system singular.
     ///
-    /// Keep in sync with the inline D-loop in
-    /// SystemCprwPressureStage::assembleCoarseMatrix: same contraction, over
-    /// merged blocks rather than a Dune BCRSMatrix.
+    /// SystemCprwPressureStage::assembleCoarseMatrix runs the same inner
+    /// kernel over its merged matrix, but distributes into a whole coarse row
+    /// with per-block weights instead of accumulating one well's D into a
+    /// single scalar, so the two are not one function.
     template <class DiagMatWell, class WellWeight>
     typename DiagMatWell::field_type
     contractCprWellDiagonal(const DiagMatWell& D,
