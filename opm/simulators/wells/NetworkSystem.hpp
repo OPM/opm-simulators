@@ -477,25 +477,28 @@ public:
             const auto& well = wells_[w];
             const Scalar q = x[qwIdx(w)];
 
+            // Given the node pressure, every control determines the well
+            // completely and so names the rate it would allow. The binding one
+            // is simply the smallest: nothing is "violated", and a control stops
+            // binding by being overtaken, which is how a well leaves one.
+            //
+            // Nothing here reads the iterate's q or bhp. Mid-Newton those are
+            // not a consistent well state, and on rate control q *is* the limit,
+            // so a test against them has no stable answer.
+            const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
+
             auto wanted = Control::Thp;
-            Scalar smallest = std::numeric_limits<Scalar>::max();
-            auto consider = [&](const bool violated, const Scalar implied, const Control c) {
-                if (violated && implied < smallest) {
-                    smallest = implied;
+            Scalar smallest = thpPotential(well, p_node);
+            auto consider = [&](const Control c, const Scalar allows) {
+                if (allows < smallest) {
+                    smallest = allows;
                     wanted = c;
                 }
             };
-            // Inclusive, all of them. A well held at a limit sits exactly on it
-            // at the solution, so a strict test reads "not over the limit",
-            // releases the control, finds the well wants more, and takes it
-            // again -- a period-2 cycle that never settles. start() opens just
-            // inside the limits so this cannot latch at the first iteration.
-            constexpr Scalar at_limit = 1.0 - 1e-9;
-            consider(x[bhpIdx(w)] > well.bhp_limit, ipr(well, well.bhp_limit), Control::Bhp);
-            consider(q > well.rate_limit, well.rate_limit, Control::Rate);
+            consider(Control::Bhp, ipr(well, well.bhp_limit));
+            consider(Control::Rate, well.rate_limit);
             if (grouped() && well.in_group) {
-                const Scalar share = well.guide * x[lambdaIdx()];
-                consider(q >= share * at_limit, share, Control::Grup);
+                consider(Control::Grup, well.guide * x[lambdaIdx()]);
             }
 
             changed |= (wanted != controls_[w]);
