@@ -322,7 +322,6 @@ void bsr_vmspumv2(bsr_matrix *A, const double *x, double *y, double alpha)
 }
 
 
-
 void bsr_downcast(bsr_matrix *M)
 {
     int nnz = M->nnz;
