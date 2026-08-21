@@ -142,6 +142,17 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 halfTransmissibility(unsigned insideElemIdx, unsigned outsideElemIdx) const
 {
+    if (!storeHalfTrans_) {
+        // Without this the caller gets a bare std::out_of_range from the empty
+        // map.  One branch on a bool, and this is not a hot path: only the
+        // adjoint code asks for these today.
+        OPM_THROW(std::logic_error,
+                  "One-sided half transmissibilities were not stored. "
+                  "Call setStoreHalfTrans(true) before update() to have them "
+                  "computed; they are off by default because only the adjoint "
+                  "code needs them.");
+    }
+
     return halfTrans_.at(details::directionalIsId(insideElemIdx, outsideElemIdx));
 }
 
