@@ -329,6 +329,11 @@ wellHasTHPConstraints(const SummaryState& summaryState) const
         return false;
     }
 
+    // A THP constraint cannot be evaluated without a VFP table.
+    if (this->wellEcl().vfp_table_number() <= 0) {
+        return false;
+    }
+
     if (dynamic_thp_limit_) {
         return true;
     }

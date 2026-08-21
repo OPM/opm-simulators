@@ -65,6 +65,7 @@ public:
         serializer(producer);
         serializer(bhp);
         serializer(thp);
+        serializer(network_thp_limit);
         serializer(pressure_first_connection);
         serializer(temperature);
         serializer(energy_rate);
@@ -103,6 +104,9 @@ public:
     PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
+    // Network-imposed THP limit retained until the schedule re-specifies the
+    // well's THP limit or VFP table.
+    std::optional<Scalar> network_thp_limit;
     Scalar pressure_first_connection{0};
 
     // thermal related
@@ -130,8 +134,8 @@ public:
         Scalar guiderate_ratio{1.0}; // well to group guide rate ratio for diagnostics
 
         bool operator==(const GroupTarget& other) const {
-            return (group_name == other.group_name 
-                 && target_value == other.target_value 
+            return (group_name == other.group_name
+                 && target_value == other.target_value
                  && production_cmode == other.production_cmode
                  && injection_cmode == other.injection_cmode
                  && guiderate_ratio == other.guiderate_ratio);
