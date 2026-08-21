@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <fmt/format.h>
@@ -545,7 +546,12 @@ getProducerWellRates_(const Well* well, int well_index)
         ? wrate[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)]
         : 0.0;
 
-    const auto controls = well->productionControls(this->summary_state_);
+    // The drawdown limit is a rate target like the others applied below, so
+    // the rates this well contributes to its group must respect it too.
+    auto controls = well->productionControls(this->summary_state_);
+    WellInterfaceGeneric<Scalar, IndexTraits>::
+        applyWeldrawRateLimit(*well, ws.weldraw_max_rate, controls);
+
     Scalar oil_rate = oil_pot;
     Scalar water_rate = water_pot;
     Scalar gas_rate = gas_pot;
