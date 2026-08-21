@@ -201,15 +201,18 @@ namespace Opm
             OPM_TIMEBLOCK(cprwAddWellEquation);
             assert(transpose == false); // not implemented
             const bool use_well_weights = prm_.get<bool>("use_well_weights");
-            // "contract_d" takes the coarse well diagonal from lambda' D(:,bhp)
-            // for every well; "auto" (the default) leaves the multisegment path
-            // on its historical row-sum diagonal. Standard wells contract D
-            // either way, so this only changes multisegment wells.
-            const auto diagonal = prm_.get<std::string>("well_coarse_diagonal", "auto");
-            if (diagonal != "auto" && diagonal != "contract_d") {
+            // How a multisegment well's coarse diagonal is formed: "row_sum"
+            // (the default) keeps the historical minus-the-row-sum diagonal,
+            // "contract_d" takes it from lambda' D(:,bhp) as standard wells
+            // have always done. Standard wells contract D either way, so this
+            // only ever changes multisegment wells. Named after the operation
+            // rather than "auto" so a configuration says which it wants, and
+            // to match the vocabulary of the system solver's own key.
+            const auto diagonal = prm_.get<std::string>("well_coarse_diagonal", "row_sum");
+            if (diagonal != "row_sum" && diagonal != "contract_d") {
                 OPM_THROW(std::invalid_argument,
                           "Unknown well_coarse_diagonal '" + diagonal +
-                          "'. Valid values are 'auto' and 'contract_d'.");
+                          "'. Valid values are 'row_sum' and 'contract_d'.");
             }
             const bool contract_d_diagonal = (diagonal == "contract_d");
             fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_,
