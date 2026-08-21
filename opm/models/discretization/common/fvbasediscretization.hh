@@ -67,8 +67,10 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <exception>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <sstream>
 #include <string>
@@ -726,49 +728,86 @@ public:
     {
         invalidateIntensiveQuantitiesCache(timeIdx);
 
+        // exceptions must not escape the parallel block below (that calls
+        // std::terminate()); tuck any exception away and rethrow it after the
+        // block, so that e.g. a failed flash in the property evaluation leads
+        // to a time step chop instead of an abort
+        std::mutex exceptionLock;
+        std::exception_ptr exceptionPtr = nullptr;
+
         // loop over all elements...
         ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
         {
-            ElementContext elemCtx(simulator_);
-            ElementIterator elemIt = threadedElemIt.beginParallel();
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                const Element& elem = *elemIt;
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+            try {
+                ElementContext elemCtx(simulator_);
+                for (ElementIterator elemIt = threadedElemIt.beginParallel();
+                     !threadedElemIt.isFinished(elemIt);
+                     elemIt = threadedElemIt.increment())
+                {
+                    const Element& elem = *elemIt;
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                }
             }
+            catch (...) {
+                std::lock_guard<std::mutex> take(exceptionLock);
+                exceptionPtr = std::current_exception();
+                threadedElemIt.setFinished();
+            }
+        }
+
+        if (exceptionPtr) {
+            std::rethrow_exception(exceptionPtr);
         }
     }
 
     template <class GridViewType>
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx, const GridViewType& gridView) const
     {
+        // see the overload above for why exceptions are bridged out of the
+        // parallel block like this
+        std::mutex exceptionLock;
+        std::exception_ptr exceptionPtr = nullptr;
+
         // loop over all elements...
         ThreadedEntityIterator<GridViewType, /*codim=*/0> threadedElemIt(gridView);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
         {
-
-            ElementContext elemCtx(simulator_);
-            auto elemIt = threadedElemIt.beginParallel();
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                if (elemIt->partitionType() != Dune::InteriorEntity) {
-                    continue;
+            try {
+                ElementContext elemCtx(simulator_);
+                for (auto elemIt = threadedElemIt.beginParallel();
+                     !threadedElemIt.isFinished(elemIt);
+                     elemIt = threadedElemIt.increment())
+                {
+                    if (elemIt->partitionType() != Dune::InteriorEntity) {
+                        continue;
+                    }
+                    const Element& elem = *elemIt;
+                    elemCtx.updatePrimaryStencil(elem);
+                    // Mark cache for this element as invalid.
+                    const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                    for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
+                        const unsigned globalIndex = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+                        setIntensiveQuantitiesCacheEntryValidity(globalIndex, timeIdx, false);
+                    }
+                    // Update for this element.
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
-                const Element& elem = *elemIt;
-                elemCtx.updatePrimaryStencil(elem);
-                // Mark cache for this element as invalid.
-                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
-                for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    const unsigned globalIndex = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-                    setIntensiveQuantitiesCacheEntryValidity(globalIndex, timeIdx, false);
-                }
-                // Update for this element.
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
+            catch (...) {
+                std::lock_guard<std::mutex> take(exceptionLock);
+                exceptionPtr = std::current_exception();
+                threadedElemIt.setFinished();
+            }
+        }
+
+        if (exceptionPtr) {
+            std::rethrow_exception(exceptionPtr);
         }
     }
 
