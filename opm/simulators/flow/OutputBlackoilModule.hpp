@@ -30,6 +30,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/LookUpData.hh>
 
 #include <opm/simulators/utils/moduleVersion.hpp>
 
@@ -226,15 +227,27 @@ public:
             auto rset = this->eclState_.fieldProps().fip_regions();
             rset.push_back("PVTNUM");
 
-            // Note: We explicitly use decltype(auto) here because the
-            // default scheme (-> auto) will deduce an undesirable type.  We
-            // need the "reference to vector" semantics in this instance.
+            // RegionPhasePoreVolAverage indexes by leaf cell.  The FIP entries of
+            // regions_ are already on the leaf (createLocalRegion_ maps them), so
+            // serve those directly.  PVTNUM is not an FIP region and is deliberately
+            // kept out of regions_, so it needs its own leaf-mapped copy - with LGRs
+            // a refined cell inherits its parent's PVTNUM; identity without.
+            // decltype(auto) keeps the required "reference to vector" semantics.
+            const LookUpData<Grid, GridView> lookUpData(this->simulator_.gridView());
+            auto pvtnum = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+                this->eclState_.fieldProps(), "PVTNUM", /*needsTranslation=*/false);
+
             this->regionAvgDensity_
                 .emplace(this->simulator_.gridView().comm(),
                          FluidSystem::numPhases, rset,
-                         [fp = std::cref(this->eclState_.fieldProps())]
+                         [&regions = std::as_const(this->regions_),
+                          pvtnum = std::move(pvtnum)]
                          (const std::string& rsetName) -> decltype(auto)
-                         { return fp.get().get_int(rsetName); });
+                         {
+                             return (rsetName == "PVTNUM")
+                                 ? static_cast<const std::vector<int>&>(pvtnum)
+                                 : static_cast<const std::vector<int>&>(regions.at(rsetName));
+                         });
         }
     }
 
@@ -896,19 +909,25 @@ private:
 
     void createLocalRegion_(std::vector<int>& region)
     {
-        // For CpGrid with LGRs, where level zero grid has been distributed,
-        // resize region is needed, since in this case the total amount of
-        // element - per process - in level zero grid and leaf grid do not
-        // coincide, in general.
-        region.resize(simulator_.gridView().size(0));
+        // The array arrives on the (unrefined) input grid, but the FIP/field sums
+        // run over the leaf.  With LGRs the leaf has more cells, so it must be
+        // MAPPED - a refined cell inherits its parent's region - not merely
+        // resize()d, which zero-padded the refined cells into region 0 and dropped
+        // them from the sums.  LookUpData is the identity without LGRs.
+        const LookUpData<Grid, GridView> lookUpData(simulator_.gridView());
+
+        std::vector<int> onLeaf(simulator_.gridView().size(0), 0);
         std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                region[elemIdx] = 0;
+            // Non-interior (overlap/ghost) cells stay out of the region sums.
+            if (elem.partitionType() == Dune::InteriorEntity) {
+                onLeaf[elemIdx] = lookUpData(elem, region);
             }
 
             ++elemIdx;
         }
+
+        region = std::move(onLeaf);
     }
 
     template <typename FluidState>

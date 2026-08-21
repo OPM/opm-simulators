@@ -28,6 +28,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/utility/RegionMapping.hpp>
+#include <opm/grid/LookUpData.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
@@ -1449,8 +1450,18 @@ equilnum(const EclipseState& eclipseState,
     std::vector<int> eqlnum(gridview.size(0), 0);
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
-        const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
-        std::ranges::transform(e, eqlnum.begin(), [](int n) { return n - 1; });
+        // EQLNUM is given on the (unrefined) input grid, but the equilibration
+        // works on the leaf grid. With LGRs the leaf has more cells than the
+        // input grid and a different ordering, so copying the input array
+        // directly into a leaf-sized vector misaligns it (and leaves refined
+        // cells at region 1). LookUpData maps each leaf cell to its input-grid
+        // origin - a refined cell inherits its parent cell's EQLNUM - which for
+        // an unrefined grid reduces to the identity, so non-LGR cases are
+        // unchanged. needsTranslation == true applies the 1-based -> 0-based
+        // shift previously done by the transform.
+        const LookUpData<typename GridView::Grid, GridView> lookUpData(gridview);
+        eqlnum = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+            eclipseState.fieldProps(), "EQLNUM", /*needsTranslation=*/true);
     }
     OPM_BEGIN_PARALLEL_TRY_CATCH();
     const int num_regions = eclipseState.getTableManager().getEqldims().getNumEquilRegions();
@@ -1501,12 +1512,17 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     //Check for presence of kw SWATINIT
     if (applySwatInit) {
         if (eclipseState.fieldProps().has_double("SWATINIT")) {
-            if constexpr (std::is_same_v<Scalar,double>) {
-                swatInit_ = eclipseState.fieldProps().get_double("SWATINIT");
+            // SWATINIT is given on the (unrefined) input grid but is consumed per
+            // leaf cell; with LGRs the leaf is larger and reordered, so map it
+            // onto the leaf via LookUpData (a refined cell inherits its parent
+            // cell's value; identity without LGRs).
+            const LookUpData<Grid, GridView> lookUpData(gridView);
+            auto input =
+                lookUpData.assignFieldPropsDoubleOnLeaf(eclipseState.fieldProps(), "SWATINIT");
+            if constexpr (std::is_same_v<Scalar, double>) {
+                swatInit_ = std::move(input);
             } else {
-                const auto& input = eclipseState.fieldProps().get_double("SWATINIT");
-                swatInit_.resize(input.size());
-                std::ranges::copy(input, swatInit_.begin());
+                swatInit_.assign(input.begin(), input.end());
             }
         }
     }
@@ -1520,10 +1536,10 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     const std::vector<EquilRecord> rec = getEquil(eclipseState);
     const auto& tables = eclipseState.getTableManager();
     // Create (inverse) region mapping.
-    const RegionMapping<> eqlmap(equilnum(eclipseState, grid));
+    const RegionMapping<> eqlmap(equilnum(eclipseState, gridView));
     const int invalidRegion = -1;
     regionPvtIdx_.resize(rec.size(), invalidRegion);
-    setRegionPvtIdx(eclipseState, eqlmap);
+    setRegionPvtIdx(eclipseState, gridView, eqlmap);
 
     // Create Rs functions.
     rsFunc_.reserve(rec.size());
@@ -1979,13 +1995,22 @@ void InitialStateComputer<FluidSystem,
                           GridView,
                           ElementMapper,
                           CartesianIndexMapper>::
-setRegionPvtIdx(const EclipseState& eclState, const RMap& reg)
+setRegionPvtIdx(const EclipseState& eclState, const GridView& gridView, const RMap& reg)
 {
-    const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
+    // PVTNUM is given on the (unrefined) input grid, but reg.cells(r) are leaf
+    // cell indices. With LGRs the leaf has more cells (and a different ordering)
+    // than the input grid, so indexing the input PVTNUM array by a leaf index is
+    // wrong (and out of bounds for refined cells). Map PVTNUM onto the leaf via
+    // LookUpData - a refined cell inherits its parent cell's PVTNUM - which is
+    // the identity without LGRs. needsTranslation == true applies the 1-based ->
+    // 0-based shift previously done explicitly.
+    const LookUpData<typename GridView::Grid, GridView> lookUpData(gridView);
+    const auto pvtnumData = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+        eclState.fieldProps(), "PVTNUM", /*needsTranslation=*/true);
 
     for (const auto& r : reg.activeRegions()) {
         const auto& cells = reg.cells(r);
-        regionPvtIdx_[r] = pvtnumData[*cells.begin()] - 1;
+        regionPvtIdx_[r] = pvtnumData[*cells.begin()];
     }
 }
 
