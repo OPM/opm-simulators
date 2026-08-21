@@ -1055,6 +1055,9 @@ public:
         }
         controls_.assign(wells_.size(), Control::Thp);
         for (std::size_t w = 0; w < wells_.size(); ++w) {
+            if (!hasTubing(wells_[w])) {
+                controls_[w] = Control::Bhp;
+            }
             if (grouped() && wells_[w].in_group) {
                 controls_[w] = Control::Grup;
             }
@@ -1107,12 +1110,27 @@ public:
     /// inflow performance gives it from a bhp directly, so the fractions never
     /// have to be guessed at. h(bhp) = bhp - tableBhp(...) rises with bhp, since
     /// a higher bhp draws less and a smaller rate needs less lift.
+    /// Whether thp control is even available: a well the deck gives no VFPPROD
+    /// table has no tubing curve, so its rate does not answer to the node
+    /// pressure and thp is not one of its controls.
+    static bool hasTubing(const Well& w) { return w.vfp_table > 0; }
+
     Scalar thpPotential(const Well& w, const Scalar p_node) const
     {
-        if (!(w.ipr_b[1] < Scalar{0})) {
+        if (!hasTubing(w) || !(w.ipr_b[1] < Scalar{0})) {
             return Scalar{0};
         }
-        const Scalar shut = -w.ipr_a[1] / w.ipr_b[1];   // bhp at which oil stops
+        // The bhp at which the *last* phase stops, not the one at which oil
+        // does. Water and gas have their own zero crossings, and at the oil
+        // one they are still flowing -- so the tubing still has something to
+        // lift there, the bracket does not contain the crossing, and the well
+        // reads as unable to produce at all.
+        Scalar shut = w.bhp_limit;
+        for (int ph = 0; ph < NP; ++ph) {
+            if (w.ipr_b[ph] < Scalar{0}) {
+                shut = std::max(shut, -w.ipr_a[ph] / w.ipr_b[ph]);
+            }
+        }
         const Scalar lo = w.bhp_limit;
         if (!(shut > lo)) {
             return Scalar{0};
@@ -1246,11 +1264,24 @@ public:
     {
         const int n = numWells();
 
-        std::vector<Scalar> own(n), thp(n);
+        constexpr Scalar unbounded = std::numeric_limits<Scalar>::max();
+        std::vector<Scalar> own(n), thp(n, unbounded);
         for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
             const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
-            thp[w] = thpPotential(well, p_node);
+            // Zero from thpPotential() means the well cannot lift against this
+            // node pressure at all -- its table does not reach that high, or the
+            // inflow cannot feed the tubing. That makes thp *unavailable*, not a
+            // control that allows nothing: taken as an allowance of zero it wins
+            // "most restrictive" every time, and the thp row it then imposes
+            // says nothing about a rate, so the well produces whatever the
+            // tubing crossing happens to be.
+            if (hasTubing(well)) {
+                const Scalar found = thpPotential(well, p_node);
+                if (found > Scalar{0}) {
+                    thp[w] = found;
+                }
+            }
             own[w] = std::min(thp[w], ipr(well, 1, well.bhp_limit));
             if (well.oil_rate_limit > Scalar{0}) {
                 own[w] = std::min(own[w], well.oil_rate_limit);
@@ -1262,7 +1293,7 @@ public:
         bool changed = false;
         for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
-            auto wanted = Control::Thp;
+            auto wanted = (thp[w] < unbounded) ? Control::Thp : Control::Bhp;
             Scalar smallest = thp[w];
             auto consider = [&](const Control c, const Scalar allows) {
                 if (allows < smallest) {

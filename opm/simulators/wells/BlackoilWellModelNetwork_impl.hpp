@@ -170,11 +170,14 @@ update(const bool mandatory_network_balance,
         this->useNetworkGroupControl(well_model_.param().network_group_control_);
         this->dumpNetworkFailuresTo(well_model_.param().network_dump_failures_);
         if (solver_mode == "newton") {
-            // The simultaneous solve needs each injector's rate response to its own
-            // bhp. That is the implicit IPR, which the well solve only maintains for
-            // producers, so refresh it here.
+            // The simultaneous solve needs every well's rate response to its own
+            // bhp. That is the implicit IPR, which the well solve maintains only
+            // where its own control logic happens to need it -- never for
+            // injectors, and for producers only on some paths. Refresh it here
+            // for all of them, or a network solve arrives with a well it cannot
+            // linearise and hands the whole network back to the relaxed update.
             for (const auto& well : well_model_) {
-                if (well->isInjector() && well->wellEcl().predictionMode()) {
+                if (well->wellEcl().predictionMode()) {
                     well->updateIPRImplicit(well_model_.simulator(),
                                             well_model_.groupStateHelper(),
                                             well_model_.wellState());

@@ -23,6 +23,7 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
 
 #include <fstream>
@@ -481,6 +482,210 @@ newtonNodePressures(const Network::ExtNetwork& network,
 }
 
 template<typename Scalar, typename IndexTraits>
+std::optional<std::map<std::string, Scalar>>
+BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+newtonProductionNodePressures(const Network::ExtNetwork& network,
+                              const int reportStepIdx) const
+{
+    OPM_TIMEFUNCTION();
+    using Sys = NetworkSolve::ProductionSystem<Scalar>;
+
+    auto giveUp = [&](const std::string& why) {
+        OpmLog::debug(fmt::format("Network: solving the production network simultaneously is not "
+                                  "possible at report step {} ({}); using the relaxed update.",
+                                  reportStepIdx, why));
+        return std::optional<std::map<std::string, Scalar>>{};
+    };
+
+    const auto roots = network.roots();
+    if (roots.size() != 1 || !roots.front().get().terminal_pressure().has_value()) {
+        return giveUp(roots.size() == 1 ? "the root has no terminal pressure"
+                                        : "the network has more than one root");
+    }
+
+    const auto& units = well_model_.schedule().getUnits();
+    const Scalar terminal = *roots.front().get().terminal_pressure();
+    Sys system(*well_model_.getVFPProperties().getProd(), units);
+    system.setTerminalPressure(terminal);
+
+    // Nodes, parents before children.
+    std::map<std::string, int> index;
+    std::vector<std::string> order{roots.front().get().name()};
+    system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable});
+    index[order.front()] = 0;
+    for (std::size_t at = 0; at < order.size(); ++at) {
+        for (const auto& branch : network.downtree_branches(order[at])) {
+            const auto& child = branch.downtree_node();
+            if (index.count(child)) {
+                continue;
+            }
+            index[child] = static_cast<int>(order.size());
+            order.push_back(child);
+            // A branch's alq is quoted in the units of its own table's alq type.
+            Scalar alq = 0.0;
+            if (branch.vfp_table().has_value()) {
+                const auto& table = well_model_.getVFPProperties().getProd()
+                                        ->getTable(*branch.vfp_table());
+                alq = branch.alq_value(VFPProdTable::ALQDimension(table.getALQType(), units))
+                          .value_or(0.0);
+            }
+            system.addNode(NetworkSolve::Node{child, static_cast<int>(at),
+                                              branch.vfp_table().value_or(NetworkSolve::NoTable)},
+                           alq);
+        }
+    }
+
+    // Water, oil, gas -- the order VFPPROD wants -- as positions in the well
+    // state's active-phase arrays.
+    const auto& pu = well_model_.phaseUsage();
+    const std::array<int, Sys::NP> pos{
+        pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+        pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
+        pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)};
+    if (std::any_of(pos.begin(), pos.end(), [](const int p) { return p < 0; })) {
+        return giveUp("the network needs all three phases and one of them is inactive");
+    }
+
+    // Same reasoning as the injection network: every rank must solve the same
+    // system, so the static data comes from the replicated schedule and only
+    // what the well is currently doing is summed, contributed once by the rank
+    // that owns it.
+    const auto& summary_state = well_model_.summaryState();
+    const auto& schedule = well_model_.schedule();
+    std::map<std::string, const WellInterfaceGeneric<Scalar, IndexTraits>*> local;
+    for (const auto& well : well_model_.genericWells()) {
+        local.emplace(well->name(), well);
+    }
+
+    struct Candidate {
+        std::string name;
+        int node, vfp_table;
+        Scalar alq, bhp_limit, oil_rate_limit;
+    };
+    std::vector<Candidate> candidates;
+    for (const auto& name : schedule.wellNames(reportStepIdx)) {
+        const auto& well = schedule.getWell(name, reportStepIdx);
+        if (!well.isProducer() || !well.predictionMode() || !index.count(well.groupName())) {
+            continue;
+        }
+        const auto controls = well.productionControls(summary_state);
+        candidates.push_back({name, index.at(well.groupName()), controls.vfp_table_number,
+                              static_cast<Scalar>(controls.alq_value),
+                              static_cast<Scalar>(controls.bhp_limit),
+                              static_cast<Scalar>(controls.oil_rate)});
+    }
+    if (candidates.empty()) {
+        return giveUp("no producers hang off it");
+    }
+
+    // Per candidate: present, usable, three ipr_a, three ipr_b, current oil
+    // rate, on group.
+    constexpr int kEntries = 10;
+    std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        const auto it = local.find(candidates[i].name);
+        if (it == local.end() || !it->second->parallelWellInfo().isOwner()) {
+            continue;
+        }
+        const auto& ws = well_model_.wellState()[it->second->indexOfWell()];
+        if (ws.status != WellStatus::OPEN) {
+            continue;
+        }
+        Scalar* e = &shared[i * kEntries];
+        e[0] = 1.0;
+        if (static_cast<int>(ws.implicit_ipr_b.size()) >= pu.numActivePhases()
+            && ws.implicit_ipr_b[pos[1]] > Scalar{0}) {
+            e[1] = 1.0;
+            for (int ph = 0; ph < Sys::NP; ++ph) {
+                // The well state holds q = b*bhp - a in opm's signed rates,
+                // where production is negative. The system wants production
+                // positive and falling with bhp, which is the same line negated.
+                e[2 + ph] = ws.implicit_ipr_a[pos[ph]];
+                e[5 + ph] = -ws.implicit_ipr_b[pos[ph]];
+            }
+        }
+        e[8] = std::max(-ws.surface_rates[pos[1]], Scalar{0});
+        e[9] = (ws.production_cmode == Well::ProducerCMode::GRUP) ? 1.0 : 0.0;
+    }
+    well_model_.comm().sum(shared.data(), shared.size());
+
+    // From here every rank works from the same numbers, so every decision below
+    // -- including giving up -- is reached by all of them.
+    Scalar group_target = 0.0;
+    const bool use_group_target = this->network_group_control_;
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        const Scalar* e = &shared[i * kEntries];
+        if (e[0] <= Scalar{0}) {
+            continue;                 // open on no rank; not part of the network
+        }
+        if (e[1] <= Scalar{0}) {
+            return giveUp(fmt::format("{} has no usable inflow performance", candidates[i].name));
+        }
+        const auto& candidate = candidates[i];
+        typename Sys::Well w;
+        w.name = candidate.name;
+        w.node = candidate.node;
+        w.vfp_table = candidate.vfp_table;
+        w.alq = candidate.alq;
+        for (int ph = 0; ph < Sys::NP; ++ph) {
+            w.ipr_a[ph] = e[2 + ph];
+            w.ipr_b[ph] = e[5 + ph];
+        }
+        w.bhp_limit = candidate.bhp_limit;
+        const Scalar current = e[8];
+        const bool on_group = e[9] > Scalar{0};
+        if (on_group && use_group_target) {
+            // The group has set the total; hand the network that and let it
+            // place the split, bounded by each well's own limit.
+            group_target += current;
+            w.in_group = true;
+            w.oil_rate_limit = candidate.oil_rate_limit;
+            w.guide = current;
+        } else {
+            // Otherwise the well is held where it already is. Re-deriving it
+            // from the deck's WCONPROD limit would overwrite an operating point
+            // the group and the well solve have already agreed on, and a limit
+            // that is not binding in the simulator would become one here.
+            w.oil_rate_limit = current;
+            w.guide = current;
+        }
+        if (!(current > Scalar{0}) && !w.in_group) {
+            continue;                 // producing nothing; not part of the network
+        }
+        system.addWell(std::move(w));
+    }
+    if (use_group_target && group_target > Scalar{0}) {
+        system.setGroupTarget(group_target);
+    }
+    system.finish();
+
+    std::vector<Scalar> guess(order.size(), terminal);
+    const auto& previous = this->nodePressures(details::NetworkDomain::Production);
+    for (std::size_t n = 0; n < order.size(); ++n) {
+        const auto it = previous.find(order[n]);
+        if (it != previous.end() && it->second > Scalar{0}) {
+            guess[n] = it->second;
+        }
+    }
+
+    const auto result = NetworkSolve::solve(system, guess);
+    if (!result.converged) {
+        return giveUp(fmt::format("it did not converge in {} iterations; residual {:.3g}{}",
+                                  result.iterations - 1, result.residual,
+                                  result.control_trace.empty()
+                                      ? std::string{}
+                                      : fmt::format("; controls {}", result.control_trace)));
+    }
+    OpmLog::debug(fmt::format("Network: solved the production network simultaneously at report "
+                              "step {} in {} iterations.", reportStepIdx, result.iterations));
+    std::map<std::string, Scalar> pressures;
+    for (std::size_t n = 0; n < order.size(); ++n) {
+        pressures[order[n]] = result.node_pressure[n];
+    }
+    return pressures;
+}
+
+template<typename Scalar, typename IndexTraits>
 Scalar
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 updatePressures(const int reportStepIdx,
@@ -531,6 +736,13 @@ updatePressures(const int reportStepIdx,
                                             well_model_.schedule().getUnits(),
                                             reportStepIdx,
                                             well_model_.comm());
+            if (this->newton_solver_) {
+                if (auto solved = this->newtonProductionNodePressures(network.network.get(),
+                                                                      reportStepIdx)) {
+                    result.node_pressures = std::move(*solved);
+                    result.invalid_nodes.clear();
+                }
+            }
         } else {
             const auto injection_phase = details::injectionPhaseForDomain(network.domain);
             assert(injection_phase.has_value());
