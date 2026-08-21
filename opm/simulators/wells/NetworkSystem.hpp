@@ -357,6 +357,7 @@ public:
     /// instead of whatever the caller supplied. Only meaningful with a group
     /// target, and only when the caller has no better guide of its own.
     void setGuidesFromPotential(const bool on) { guides_from_potential_ = on; }
+    bool guidesFromPotential() const { return guides_from_potential_; }
 
     /// Recompute the guides from the current iterate. Returns the largest
     /// relative change, so the caller can tell when they have settled.
@@ -472,23 +473,34 @@ public:
     /// converged.
     bool updateControls(const State& x)
     {
-        bool changed = false;
-        for (int w = 0; w < numWells(); ++w) {
+        const int n = numWells();
+
+        // What each well could inject on a control of its own, at this iterate's
+        // node pressures. Nothing here reads the iterate's q, bhp or multiplier:
+        // mid-Newton those are not a consistent well state, on rate control q
+        // *is* the limit, and the multiplier is defined by the very active set
+        // being chosen here.
+        constexpr Scalar unbounded = std::numeric_limits<Scalar>::max();
+        std::vector<Scalar> own(n), thp(n, unbounded);
+        for (int w = 0; w < n; ++w) {
             const auto& well = wells_[w];
-            const Scalar q = x[qwIdx(w)];
+            const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
+            thp[w] = thpPotential(well, p_node);
+            own[w] = std::min({thp[w], ipr(well, well.bhp_limit), well.rate_limit});
+        }
+
+        const auto share = groupShares(own);
+
+        bool changed = false;
+        for (int w = 0; w < n; ++w) {
+            const auto& well = wells_[w];
 
             // Given the node pressure, every control determines the well
             // completely and so names the rate it would allow. The binding one
             // is simply the smallest: nothing is "violated", and a control stops
             // binding by being overtaken, which is how a well leaves one.
-            //
-            // Nothing here reads the iterate's q or bhp. Mid-Newton those are
-            // not a consistent well state, and on rate control q *is* the limit,
-            // so a test against them has no stable answer.
-            const Scalar p_node = (well.node == 0) ? terminal_pressure_ : x[pIdx(well.node)];
-
             auto wanted = Control::Thp;
-            Scalar smallest = thpPotential(well, p_node);
+            Scalar smallest = thp[w];
             auto consider = [&](const Control c, const Scalar allows) {
                 if (allows < smallest) {
                     smallest = allows;
@@ -498,13 +510,68 @@ public:
             consider(Control::Bhp, ipr(well, well.bhp_limit));
             consider(Control::Rate, well.rate_limit);
             if (grouped() && well.in_group) {
-                consider(Control::Grup, well.guide * x[lambdaIdx()]);
+                consider(Control::Grup, share[w]);
             }
 
             changed |= (wanted != controls_[w]);
             controls_[w] = wanted;
         }
         return changed;
+    }
+
+    /// Divide the group target by guide rate, take out the wells whose own
+    /// limits keep them below their share, and re-divide the rest among those
+    /// that can take it. A well that is out gets no share at all, so its own
+    /// control binds.
+    ///
+    /// This is the fixed point the active set would otherwise have to find by
+    /// iterating, and finding it here is what stops it cycling: the multiplier
+    /// in the iterate means "the even split" while nobody is on group control
+    /// and "the remainder after the others' rates" while somebody is, and each
+    /// of those two numbers selects the state that produces the other.
+    std::vector<Scalar> groupShares(const std::vector<Scalar>& own) const
+    {
+        const int n = numWells();
+        std::vector<Scalar> share(n, std::numeric_limits<Scalar>::max());
+        if (!grouped()) {
+            return share;
+        }
+
+        std::vector<bool> pooled(n, false);
+        Scalar guides = 0.0;
+        for (int w = 0; w < n; ++w) {
+            pooled[w] = wells_[w].in_group;
+            if (pooled[w]) {
+                guides += wells_[w].guide;
+            }
+        }
+
+        Scalar remaining = group_target_;
+        for (int pass = 0; pass <= n; ++pass) {
+            if (!(guides > Scalar{0})) {
+                break;
+            }
+            int drop = -1;
+            Scalar worst = 0.0;
+            for (int w = 0; w < n; ++w) {
+                if (!pooled[w]) {
+                    continue;
+                }
+                share[w] = wells_[w].guide / guides * std::max(remaining, Scalar{0});
+                if (share[w] - own[w] > worst) {
+                    worst = share[w] - own[w];
+                    drop = w;
+                }
+            }
+            if (drop < 0) {
+                break;
+            }
+            pooled[drop] = false;
+            guides -= wells_[drop].guide;
+            remaining -= own[drop];
+            share[drop] = std::numeric_limits<Scalar>::max();
+        }
+        return share;
     }
 
     /// A starting point derived from a guess at every node's pressure.
@@ -727,14 +794,17 @@ void write(const System<Scalar>& system, const std::vector<Scalar>& guess, std::
 {
     os << "phase " << (system.phase() == Phase::GAS ? "GAS" : "WATER") << '\n'
        << "terminal " << system.terminalPressure() << '\n'
-       << "group_target " << system.groupTarget() << '\n';
+       << "group_target " << system.groupTarget() << '\n'
+       << "guides_from_potential " << system.guidesFromPotential() << '\n'
+       << "analytic_jacobian " << system.usesAnalyticJacobian() << '\n';
     for (const auto& n : system.nodes()) {
         os << "node " << n.name << ' ' << n.parent << ' ' << n.vfp_table << '\n';
     }
     for (const auto& w : system.wells()) {
         os << "well " << w.name << ' ' << w.node << ' ' << w.vfp_table << ' '
            << w.ipr_a << ' ' << w.ipr_b << ' ' << w.bhp_limit << ' '
-           << w.rate_limit << ' ' << w.guide << ' ' << w.q_start << '\n';
+           << w.rate_limit << ' ' << w.guide << ' ' << w.q_start << ' '
+           << w.in_group << '\n';
     }
     os << "guess";
     for (const auto p : guess) {
@@ -752,6 +822,7 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
     std::string tag;
     Phase phase = Phase::GAS;
     Scalar terminal = 0.0, target = 0.0;
+    bool guides_from_potential = false, analytic_jacobian = false;
     std::vector<Node> nodes;
     std::vector<Well<Scalar>> wells;
     std::vector<Scalar> guess;
@@ -778,7 +849,17 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
             Well<Scalar> w;
             in >> w.name >> w.node >> w.vfp_table >> w.ipr_a >> w.ipr_b
                >> w.bhp_limit >> w.rate_limit >> w.guide >> w.q_start;
+            // Without this a replay solves an ungrouped system -- a different,
+            // easier problem than the one that failed. Older dumps have no
+            // field; take them as fully grouped, which is what they were.
+            int grouped = 1;
+            in >> grouped;
+            w.in_group = (grouped != 0);
             wells.push_back(std::move(w));
+        } else if (tag == "guides_from_potential") {
+            in >> guides_from_potential;
+        } else if (tag == "analytic_jacobian") {
+            in >> analytic_jacobian;
         } else if (tag == "guess") {
             Scalar p;
             while (in >> p) {
@@ -790,6 +871,8 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
     System<Scalar> system(props, phase);
     system.setTerminalPressure(terminal);
     system.setGroupTarget(target);
+    system.setGuidesFromPotential(guides_from_potential);
+    system.setAnalyticJacobian(analytic_jacobian);
     for (auto& n : nodes) {
         system.addNode(std::move(n));
     }
