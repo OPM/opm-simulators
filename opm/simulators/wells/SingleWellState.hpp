@@ -78,7 +78,6 @@ public:
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
         serializer(frac_rate);
-        serializer(trivial_group_target);
         serializer(segments);
         serializer(events);
         serializer(injection_cmode);
@@ -156,7 +155,6 @@ public:
     std::vector<Scalar> prev_surface_rates;
     Scalar frac_rate{0.0};
     PerfData<Scalar> perf_data;
-    bool trivial_group_target;
     std::optional<GroupTarget> group_target;
     std::optional<GroupTarget> group_target_fallback;
     bool use_group_target_fallback;
