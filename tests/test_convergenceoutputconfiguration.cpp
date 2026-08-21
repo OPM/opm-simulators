@@ -84,6 +84,44 @@ BOOST_AUTO_TEST_CASE(Iterations_Alias)
                         "option value must activate Steps option");
 }
 
+BOOST_AUTO_TEST_CASE(Performance)
+{
+    const auto config = Opm::ConvergenceOutputConfiguration{"performance"};
+    BOOST_CHECK_MESSAGE(config.any(),
+                        "Configuration object with supported "
+                        "option value must activate option");
+    BOOST_CHECK_MESSAGE(config.want(Opm::ConvergenceOutputConfiguration::Option::Performance),
+                        "Configuration object with \"performance\" "
+                        "option value must activate Performance option");
+}
+
+BOOST_AUTO_TEST_CASE(Performance_Alias)
+{
+    const auto config = Opm::ConvergenceOutputConfiguration{"perf"};
+    BOOST_CHECK_MESSAGE(config.any(),
+                        "Configuration object with supported "
+                        "option value must activate option");
+    BOOST_CHECK_MESSAGE(config.want(Opm::ConvergenceOutputConfiguration::Option::Performance),
+                        "Configuration object with \"perf\" "
+                        "option value must activate Performance option");
+}
+
+BOOST_AUTO_TEST_CASE(Performance_Combination)
+{
+    const auto both = Opm::ConvergenceOutputConfiguration{"iterations,performance"};
+    BOOST_CHECK_MESSAGE(both.want(Opm::ConvergenceOutputConfiguration::Option::Iterations),
+                        "Combined option must activate Iterations");
+    BOOST_CHECK_MESSAGE(both.want(Opm::ConvergenceOutputConfiguration::Option::Performance),
+                        "Combined option must activate Performance");
+}
+
+BOOST_AUTO_TEST_CASE(Performance_None_Overrides)
+{
+    const auto config = Opm::ConvergenceOutputConfiguration{"performance,none"};
+    BOOST_CHECK_MESSAGE(!config.any(),
+                        "\"none\" must override the performance option");
+}
+
 BOOST_AUTO_TEST_CASE(Combinations)
 {
     const auto steps_iter = Opm::ConvergenceOutputConfiguration{"steps,iterations"};

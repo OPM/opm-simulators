@@ -309,6 +309,10 @@ namespace Opm
             return;
         }
 
+        // attribute the well solves done below (also those done by well
+        // copies) to the well potential calculations in the solve statistics
+        const auto potential_scope = this->potentialCalculationScope();
+
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
         if (this->param_.local_well_solver_control_switching_) {
@@ -622,7 +626,11 @@ namespace Opm
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         try{
-            const BVectorWell dx_well = this->linSys_.solve();
+            BVectorWell dx_well;
+            {
+                const auto linear_solve_timer = this->solveLinearSolveTimer();
+                dx_well = this->linSys_.solve();
+            }
             updateWellState(simulator, dx_well, groupStateHelper, well_state);
         }
         catch(const NumericalProblem& exp) {
@@ -1557,6 +1565,7 @@ namespace Opm
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<Scalar> measure_history;
         int it = 0;
+        const auto solve_scope = this->solveScope(it);
         // relaxation factor
         Scalar relaxation_factor = 1.;
         bool converged = false;
@@ -1616,7 +1625,10 @@ namespace Opm
 
             BVectorWell dx_well;
             try{
-                dx_well = this->linSys_.solve();
+                {
+                    const auto linear_solve_timer = this->solveLinearSolveTimer();
+                    dx_well = this->linSys_.solve();
+                }
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
@@ -1695,6 +1707,7 @@ namespace Opm
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<Scalar> measure_history;
         int it = 0;
+        const auto solve_scope = this->solveScope(it);
         // relaxation factor
         Scalar relaxation_factor = 1.;
         bool converged = false;
@@ -1809,7 +1822,11 @@ namespace Opm
                 }
             }
             try{
-                const BVectorWell dx_well = this->linSys_.solve();
+                BVectorWell dx_well;
+                {
+                    const auto linear_solve_timer = this->solveLinearSolveTimer();
+                    dx_well = this->linSys_.solve();
+                }
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
                 if constexpr (has_energy) {
                     // segment fluid state is only consumed by the energy equation
@@ -1869,6 +1886,8 @@ namespace Opm
                                    const bool solving_with_zero_rate)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
+        const auto assemble_timer = this->solveAssembleTimer();
 
         auto& deferred_logger = groupStateHelper.deferredLogger();
 

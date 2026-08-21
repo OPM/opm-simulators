@@ -182,38 +182,47 @@ receiveMasterGroupNodePressuresFromMaster()
     if (num_pressures > 0) {
         rescoup_slave.receiveMasterGroupNodePressuresFromMaster(num_pressures);
     }
-    // Apply pressures as dynamic THP limits on every producer whose
-    // group has a master-supplied pressure.  Wells in master groups that
-    // are not network leaves are not touched (no entry in the map).
-    // Mirrors the standard local-network apply pattern in
+    // Apply pressures as dynamic THP limits on every producer whose group
+    // has a master-supplied pressure *and* whose group the slave's own deck
+    // placed in its own surface network as a fixed-pressure node.  Wells in
+    // master groups that are not network leaves are not touched either (no
+    // entry in the map).  Mirrors the standard local-network apply pattern in
     // BlackoilWellModelNetworkGeneric::updatePressures(): when the well is
     // currently THP-controlled, also write the new THP into the WellState
     // directly, because setDynamicThpLimit() alone leaves the active
     // control's THP value stale and the subsequent well-solve would
     // converge against the old THP.
     //
-    // TODO (follow-up PR): this THP-direct path is only correct when the
-    // slave has no extended network between its slave group and the wells
-    // (the case exercised here).  When the slave uses an extended network
-    // with the slave group declared as a fixed-pressure node, the master-
-    // supplied pressure should instead be installed as that node's terminal
-    // pressure and the slave's network solver should propagate it down to
-    // the wells.  The plumbing exists -- the solver already reads
+    // The node-pressure exchange is a boundary condition between two
+    // networks: the master's network ends at the master groups, and the
+    // pressure it computes there is the fixed pressure of the corresponding
+    // slave group's node in the *slave's* network.  A slave that declares no
+    // network has no such node, and its wells keep the THP limits from their
+    // own WCONPROD records -- so the messages are still received (the
+    // protocol is unchanged) but nothing is imposed.
+    //
+    // TODO (follow-up PR): when the slave group is a fixed-pressure node with
+    // branches below it, the pressure belongs at the top of the slave's own
+    // network solve rather than directly on the wells; the slave's branches
+    // and their pressure losses then decide the wells' THP limits.  The
+    // plumbing exists -- the solver already reads
     // Network::Node::terminal_pressure() when walking up branches -- but
     // surfacing the master-sent value into the solver needs a runtime
     // override path (e.g. a fixed-pressure override map on
     // BlackoilWellModelNetwork) so we do not mutate the parsed Schedule
-    // network at runtime.  Until then, decks where the slave group is a
-    // fixed-pressure node in the slave's extended network are not handled
-    // correctly.
+    // network at runtime.  Until then the direct write below is exact only
+    // for a slave group that is itself a well group, where there is no
+    // branch between the node and the wells.
     const auto& pressures = rescoup_slave.masterGroupNodePressures();
     if (pressures.empty()) return;
     const auto& summary_state = this->well_model_.summaryState();
     auto& well_state = this->wellState();
     for (auto& well : this->wellContainer()) {
         if (!well->isProducer() || !well->wellEcl().predictionMode()) continue;
-        const auto it = pressures.find(well->wellEcl().groupName());
+        const auto& group_name = well->wellEcl().groupName();
+        const auto it = pressures.find(group_name);
         if (it == pressures.end()) continue;
+        if (!this->slaveGroupIsFixedPressureNodeInOwnNetwork_(group_name)) continue;
         well->setDynamicThpLimit(it->second);
         auto& ws = well_state[well->indexOfWell()];
         if (ws.production_cmode == Well::ProducerCMode::THP) {
@@ -402,6 +411,18 @@ masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const
         }
     }
     return false;
+}
+
+template<typename TypeTag>
+bool
+BlackoilWellModelRescoup<TypeTag>::
+slaveGroupIsFixedPressureNodeInOwnNetwork_(const std::string& group_name) const
+{
+    const int episodeIdx = this->simulator_.episodeIndex();
+    const auto& network = this->schedule()[episodeIdx].network();
+    if (!network.active()) return false;
+    if (!network.has_node(group_name)) return false;
+    return network.node(group_name).terminal_pressure().has_value();
 }
 
 
