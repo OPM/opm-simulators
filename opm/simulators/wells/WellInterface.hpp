@@ -158,6 +158,16 @@ public:
     /// Virtual destructor
     virtual ~WellInterface() = default;
 
+    std::optional<std::pair<Well::ProducerCMode, Scalar>>
+    estimateStrictestProductionLimitForBalancer(const WellStateType& well_state,
+                                                const SummaryState& summary_state,
+                                                DeferredLogger& deferred_logger) const override;
+
+    std::optional<std::pair<Well::ProducerCMode, Scalar>>
+    estimateStrictestProductionLimitFromPotentials(const WellStateType& well_state,
+                                                   const SummaryState& summary_state,
+                                                   DeferredLogger& deferred_logger) const override;
+
     virtual void init(const std::vector<Scalar>& depth_arg,
                       const Scalar gravity_arg,
                       const std::vector<Scalar>& B_avg,

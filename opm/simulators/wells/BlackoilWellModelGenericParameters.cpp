@@ -32,6 +32,7 @@ BlackoilWellModelGenericParameters<Scalar>::BlackoilWellModelGenericParameters()
     , max_number_of_group_switches_(Parameters::Get<Parameters::MaximumNumberOfGroupSwitches>())
     , use_multisegment_well_(Parameters::Get<Parameters::UseMultisegmentWell>())
     , convert_to_multisegment_well_(Parameters::Get<Parameters::ConvertToMultisegmentWell>())
+    , enable_group_tree_balancer_(Parameters::Get<Parameters::EnableGroupTreeBalancer>())
 {}
 
 template struct BlackoilWellModelGenericParameters<double>;
