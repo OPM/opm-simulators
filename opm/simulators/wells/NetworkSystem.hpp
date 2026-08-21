@@ -445,6 +445,15 @@ public:
         return r;
     }
 
+    /// Take the last well out of the group, so a test can build a network whose
+    /// group does not hold every well on it.
+    void dropLastFromGroup()
+    {
+        if (!wells_.empty()) {
+            wells_.back().in_group = false;
+        }
+    }
+
     /// Reselect each well's control: the most restrictive violated limit wins,
     /// the same rule a clamp would apply. Choosing by a fixed priority instead
     /// makes the active set chatter and the Newton never terminates. Returns
@@ -654,8 +663,13 @@ public:
             const bool any = std::find(controls_.begin(), controls_.end(), Control::Grup)
                            != controls_.end();
             if (any) {
+                // The group's own wells, matching the residual. Differentiating
+                // every well instead is a wrong derivative that no bench case
+                // could see, because there every well is in the group.
                 for (int w = 0; w < wells; ++w) {
-                    add(lambdaIdx(), qwIdx(w), 1.0, rate_scale_);
+                    if (wells_[w].in_group) {
+                        add(lambdaIdx(), qwIdx(w), 1.0, rate_scale_);
+                    }
                 }
             } else {
                 add(lambdaIdx(), lambdaIdx(), 1.0, rate_scale_);

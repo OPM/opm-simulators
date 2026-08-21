@@ -910,6 +910,7 @@ public:
     void setEnforceBounds(const bool on) { enforce_bounds_ = on; }
     void setAnalyticJacobian(const bool on) { system_.setAnalyticJacobian(on); }
     void setGuidesFromPotential(const bool on) { system_.setGuidesFromPotential(on); }
+    void dropLastFromGroup() { system_.dropLastFromGroup(); }
     State wellRates(const State& x) const { return system_.wellRates(x); }
     const NetworkSolve::System<double>& system() const { return system_; }
     NetworkSolve::System<double>& system() { return system_; }
@@ -1586,7 +1587,11 @@ BOOST_AUTO_TEST_CASE(analytic_jacobian_matches_differences)
     // Every control row has its own derivative, so check a state that exercises
     // each: the ordinary THP one, one where the group is holding the wells, and
     // one driven hard enough that the bhp and rate limits bite.
-    auto check = [](const char* what, FullProblem& problem, const State& x) {
+    auto check = [](const char* what, FullProblem& problem, const State& x,
+                    const bool drop_last_from_group = false) {
+        if (drop_last_from_group) {
+            problem.dropLastFromGroup();
+        }
         problem.updateControls(x);
         const auto r = problem.residual(x);
         const auto analytic = problem.system().jacobian(x);
@@ -1625,6 +1630,18 @@ BOOST_AUTO_TEST_CASE(analytic_jacobian_matches_differences)
         c.finish();
         FullProblem problem{c};
         check("group", problem, problem.start(kStart));
+    }
+    {
+        // A group that does not hold every well on the network. The group row
+        // differentiates only its own, and with every well in the group -- which
+        // is the only case the tests had -- a wrong derivative there is
+        // invisible.
+        auto c = gnetinjeGas();
+        c.setGroupTarget(convert::from(1.0e6, cubic(meter) / day));
+        c.finish();
+        auto system = c.system();
+        FullProblem problem{c};
+        check("group, partial", problem, problem.start(kStart), /*drop_last_from_group=*/true);
     }
     {
         // A very low terminal pressure drives the wells onto their limits.
