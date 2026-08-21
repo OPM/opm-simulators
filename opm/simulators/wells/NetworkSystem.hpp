@@ -111,6 +111,9 @@ struct Result
     /// One letter per well per iteration for the last few iterations, so a
     /// cycling active set can be read off: T thp, B bhp, R rate, G group.
     std::string control_trace;
+    /// Iterations on which some well changed control. A solve that has to move
+    /// the active set a few times is working; one that keeps moving it is not.
+    int switches = 0;
 };
 
 /// Dense square system. The networks this solves have tens of unknowns, so
@@ -582,7 +585,8 @@ public:
             consider(Control::Bhp, ipr(well, well.bhp_limit));
             consider(Control::Rate, well.rate_limit);
             if (grouped() && well.in_group) {
-                consider(Control::Grup, share[w]);
+                consider(Control::Grup, share_from_multiplier_ ? well.guide * x[lambdaIdx()]
+                                                               : share[w]);
             }
 
             changed |= (wanted != controls_[w]);
@@ -689,6 +693,11 @@ public:
     /// so this is n+1 residual evaluations replaced by one pass.
     void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
     bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+
+    /// Take a well's group share from the iterate's multiplier instead of
+    /// resolving the split. This is the rule that cycles, kept so the bench can
+    /// measure the two on the same systems; nothing should turn it on.
+    void setGroupShareFromMultiplier(const bool on) { share_from_multiplier_ = on; }
 
     /// The Jacobian of residual() at x, entry by entry.
     DenseMatrix<Scalar> jacobian(const State& x) const
@@ -800,6 +809,7 @@ private:
     Scalar liquid_ = 0.0;
     bool clamp_to_axes_ = false;
     bool analytic_jacobian_ = false;
+    bool share_from_multiplier_ = false;
     bool guides_from_potential_ = false;
     Scalar pressure_scale_ = unit::barsa;
 };
@@ -1405,8 +1415,10 @@ solve(Sys& system,
         system.refreshGuides(x);
     }
 
+    int switches = 0;
     for (int it = 1; it <= max_iterations; ++it) {
         const bool controls_moved = system.updateControls(x);
+        switches += controls_moved ? 1 : 0;
         const auto r = system.residual(x);
 
         Scalar worst = 0.0;
@@ -1425,9 +1437,10 @@ solve(Sys& system,
         }
         const bool settled = !controls_moved;
         if (worst < tolerance && settled) {
-            return {true, it, system.pressures(x), system.wellRates(x), worst, false, false, {}};
+            return {true, it, system.pressures(x), system.wellRates(x), worst,
+                    false, false, {}, switches};
         }
-        last = {false, it, {}, {}, worst, controls_moved, false, joined()};
+        last = {false, it, {}, {}, worst, controls_moved, false, joined(), switches};
 
         // A system that can hand over an assembled Jacobian does; the rest are
         // differenced. The production prototype has no analytic one yet.

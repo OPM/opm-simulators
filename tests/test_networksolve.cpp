@@ -76,6 +76,7 @@
 #include <array>
 #include <deque>
 #include <filesystem>
+#include <sstream>
 #include <fmt/format.h>
 #include <fstream>
 #include <cstdlib>
@@ -445,7 +446,7 @@ public:
             sw.ipr_b = w.dq_dbhp;
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
-            sw.guide = w.q_ref;
+            sw.guide = w.guide > 0.0 ? w.guide : w.q_ref;
             sw.in_group = group_target_ > 0.0;
             s.addWell(sw);
         }
@@ -2615,6 +2616,150 @@ BOOST_AUTO_TEST_CASE(production_control_rule_basin)
     }
     BOOST_TEST_MESSAGE("production basin, total       " << all_solved << "/" << all_total);
     BOOST_CHECK_GT(all_solved, 3 * all_total / 4);
+}
+
+
+// Does resolving the split actually flip less, or only converge more?
+//
+// The two selections on the same systems, over the whole 529-point grid of
+// starting pressures at four group targets, counting the iterations on which
+// some well changed control -- not just whether the solve landed. Taking the
+// share from the iterate's multiplier is the rule that cycles; resolving it is
+// the shipped one.
+//
+// The guides matter more than anything else here. Left at each well's own
+// reference rate they are proportional to what each well can take, every share
+// is feasible, nobody is ever dropped from the pool and the active set is
+// uniformly GGGG -- there is nothing for either rule to get wrong, and the two
+// measure the same. That is not the situation a timestep produces: guides are
+// set once, from the previous operating point, and the solve then settles
+// somewhere else. `equal_guides` is that case -- four equal guides against wells
+// whose capacities differ by a factor of two, which is what the gas deck's own
+// failures look like.
+BOOST_AUTO_TEST_CASE(resolving_the_split_flips_less)
+{
+    const auto starts = startingPoints();
+
+    struct Tally { int solved = 0; int switches = 0; int cycled = 0; };
+    auto run = [&](const bool from_multiplier, const double fraction, const bool equal_guides) {
+        Tally t;
+        for (const auto& start : starts) {
+            auto c = gnetinjeGas();
+            double free_total = 0.0;
+            for (const auto& w : c.wells()) {
+                free_total += w.q_ref;
+            }
+            if (equal_guides) {
+                for (auto& w : c.wells()) {
+                    w.guide = free_total / c.wells().size();
+                }
+            }
+            c.setGroupTarget(fraction * free_total);
+            c.finish();
+            auto system = c.system();
+            system.setGroupShareFromMultiplier(from_multiplier);
+            // nodePressures() spreads the two applied pressures over the whole
+            // tree; System::start() wants one per node, and handing it the bare
+            // pair reads past the end of it.
+            const auto r = NetworkSolve::solve(system, c.nodePressures(start));
+            t.switches += r.switches;
+            if (r.converged) {
+                ++t.solved;
+            } else if (r.controls_moving) {
+                ++t.cycled;
+            }
+        }
+        return t;
+    };
+
+    for (const bool equal_guides : {false, true}) {
+        const std::string heading = equal_guides ? "guides equal, capacities differ:"
+                                                 : "guides proportional to capacity:";
+        BOOST_TEST_MESSAGE(heading);
+        int old_solved = 0, new_solved = 0;
+        int old_switches = 0, new_switches = 0;
+        int old_cycled = 0, new_cycled = 0;
+        for (const double fraction : {0.7, 0.95, 1.0, 1.05, 1.2}) {
+            const auto from_lambda = run(true, fraction, equal_guides);
+            const auto resolved = run(false, fraction, equal_guides);
+            BOOST_TEST_MESSAGE(
+                "  target " << fraction << " of free:  multiplier "
+                << from_lambda.solved << "/" << starts.size() << ", "
+                << from_lambda.switches << " switches, " << from_lambda.cycled << " cycling"
+                << "   |   resolved " << resolved.solved << "/" << starts.size() << ", "
+                << resolved.switches << " switches, " << resolved.cycled << " cycling");
+            old_solved += from_lambda.solved;   new_solved += resolved.solved;
+            old_switches += from_lambda.switches; new_switches += resolved.switches;
+            old_cycled += from_lambda.cycled;   new_cycled += resolved.cycled;
+        }
+        BOOST_TEST_MESSAGE("  totals: multiplier " << old_solved << " solved, " << old_switches
+                           << " switches, " << old_cycled << " cycling  |  resolved "
+                           << new_solved << " solved, " << new_switches << " switches, "
+                           << new_cycled << " cycling");
+        if (equal_guides) {
+            // Where the guides do not already encode each well's capacity --
+            // which is every real timestep -- all three have to improve.
+            BOOST_CHECK_GT(new_solved, old_solved);
+            BOOST_CHECK_LT(new_switches, old_switches);
+            BOOST_CHECK_LT(new_cycled, old_cycled);
+        }
+    }
+}
+
+
+// One network the simulator could not solve, kept verbatim.
+//
+// Written by --network-dump-failures from GNETINJE_GAS-01 at a step where the
+// field target sits just above what the four injectors can deliver. It is the
+// shape every one of those failures had: equal guide rates against wells whose
+// capacities differ by two, and a target the pool cannot meet. Taking the group
+// share from the iterate's multiplier cycles TTGG / TTTT here and never lands;
+// resolving the split converges in a handful of iterations.
+BOOST_AUTO_TEST_CASE(a_dumped_simulator_failure_converges)
+{
+    const std::string dump = R"(phase GAS
+terminal 3.4e+07
+group_target 18.3248
+guides_from_potential 1
+analytic_jacobian 1
+node PLAT-A -1 9999
+node M5S 0 3
+node G1 1 9999
+node M5N 1 2
+node F1 3 9999
+well F-1H 4 1 -39469 0.0013367 4.25e+07 11.5741 11.5741 4.96921 1
+well F-2H 4 1 -85174 0.00288533 4.25e+07 11.5741 11.5741 4.97161 1
+well G-3H 2 1 -69029.9 0.00233706 4.25e+07 11.5741 11.5741 4.19187 1
+well G-4H 2 1 -76010.4 0.00257402 4.25e+07 11.5741 11.5741 4.19211 1
+guess 3.4e+07 4.50559e+07 4.50559e+07 4.994e+07 4.994e+07
+)";
+
+    const auto gas = gnetinjeGas();
+    auto solve = [&](const bool from_multiplier) {
+        std::istringstream in(dump);
+        auto [system, guess] = gas.systemFromDump(in);
+        system.setGroupShareFromMultiplier(from_multiplier);
+        return NetworkSolve::solve(system, guess);
+    };
+
+    const auto from_lambda = solve(true);
+    BOOST_TEST_MESSAGE("share from the multiplier: "
+                       << (from_lambda.converged ? "converged in " : "FAILED after ")
+                       << from_lambda.iterations << " iterations, " << from_lambda.switches
+                       << " switches, controls " << from_lambda.control_trace);
+    BOOST_CHECK(!from_lambda.converged);
+    // It is still moving the set on two thirds of its iterations when it gives
+    // up; `controls_moving` only reports the last one, which lands either way.
+    BOOST_CHECK_GT(from_lambda.switches, from_lambda.iterations / 2);
+
+    const auto resolved = solve(false);
+    BOOST_TEST_MESSAGE("split resolved:            "
+                       << (resolved.converged ? "converged in " : "FAILED after ")
+                       << resolved.iterations << " iterations, " << resolved.switches
+                       << " switches");
+    BOOST_CHECK(resolved.converged);
+    BOOST_CHECK_LT(resolved.iterations, 15);
+    BOOST_CHECK_LT(resolved.switches, 5);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
