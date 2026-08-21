@@ -861,6 +861,26 @@ public:
     std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
     { return thermalLawManager_; }
 
+    // Fused variant used by the intensive quantities: relperms and capillary
+    // pressures from one call, so a table-based satfunc representation can
+    // serve both from a single lookup pass. This default implementation is
+    // behaviorally identical to updateRelperms + MaterialLaw::capillaryPressures;
+    // the dispatch through asImp_() keeps derived-problem updateRelperms
+    // overrides effective, exactly as when the intensive quantities called it.
+    template <class FluidState, class ...Args>
+    void updateRelpermsAndCapillaryPressures(
+        std::array<Evaluation,numPhases> &mobility,
+        DirectionalMobilityPtr &dirMob,
+        std::array<Evaluation,numPhases> &pC,
+        FluidState &fluidState,
+        unsigned globalSpaceIdx) const
+    {
+        using ContainerT = std::array<Evaluation, numPhases>;
+        asImp_().template updateRelperms<FluidState, Args...>(mobility, dirMob, fluidState, globalSpaceIdx);
+        const auto& materialParams = materialLawParams(globalSpaceIdx);
+        MaterialLaw::template capillaryPressures<ContainerT, FluidState, Args...>(pC, materialParams, fluidState);
+    }
+
     template <class FluidState, class ...Args>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
