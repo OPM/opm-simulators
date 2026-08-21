@@ -273,7 +273,7 @@ private:
             const auto salt = Scalar { 0 };
             const auto rsw = Scalar { 0 };
             waterViscosity = FluidSystem::waterPvt()
-                .viscosity(pvtRegionIdx(), temp, press, rsw, salt);
+                .viscosity(pvtRegionIdx(), temp, press, rsw, salt, this->aquiferDepth());
         }
         else {
             OPM_THROW(std::runtime_error, "water or oil phase is needed to run CO2Store.");
@@ -305,7 +305,7 @@ private:
             const auto salinity = Scalar { 0 };
             const auto rsw = Scalar { 0 };
 
-            return pvt.inverseFormationVolumeFactor(reg, temp, press, rsw, salinity)
+            return pvt.inverseFormationVolumeFactor(reg, temp, press, rsw, salinity, this->aquiferDepth())
                 * pvt.waterReferenceDensity(reg);
         }
         else {

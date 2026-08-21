@@ -720,7 +720,11 @@ public:
                             Scalar temperature = source_temp.value();
                             fs.setTemperature(temperature);
                         }
-                        const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
+                        typename FluidSystem::template ParameterCache<Scalar> paramCache;
+                        paramCache.setRegionIndex(pvtRegionIdx);
+                        paramCache.setDepth(this->dofCenterDepth(globalDofIdx));
+                        paramCache.updateAll(fs);
+                        const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
                         Scalar mass_rate = source.rate(ijk, sourceComp)/ this->model().dofTotalVolume(globalDofIdx);
                         Scalar energy_rate = getValue(h)*mass_rate;
                         rate[Indices::contiEnergyEqIdx] += energy_rate;
@@ -895,13 +899,18 @@ public:
                 for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
                     const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
 
-                    const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
+                    typename FluidSystem::template ParameterCache<Scalar> paramCache;
+                    paramCache.setRegionIndex(pvtRegionIdx);
+                    paramCache.setDepth(this->dofCenterDepth(globalDofIdx));
+                    paramCache.updateAll(fluidState);
+
+                    const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, paramCache, phaseIdx);
                     fluidState.setInvB(phaseIdx, b);
 
-                    const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
+                    const auto& rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
                     fluidState.setDensity(phaseIdx, rho);
                     if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
-                        const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, pvtRegionIdx);
+                        const auto& h = FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
                         fluidState.setEnthalpy(phaseIdx, h);
                     }
                 }
@@ -1299,7 +1308,8 @@ protected:
                                                             this->gravity_[dim - 1],
                                                             perm[dim - 1][dim - 1],
                                                             distZ,
-                                                            pvtRegionIdx);
+                                                            pvtRegionIdx,
+                                                            this->dofCenterDepth(compressedDofIdx));
                               }
         );
 
@@ -1551,14 +1561,18 @@ protected:
             //////
             // set invB_
             //////
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.setRegionIndex(pvtRegionIndex(dofIdx));
+            paramCache.setDepth(this->dofCenterDepth(dofIdx));
+            paramCache.updateAll(dofFluidState);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                const auto& b = FluidSystem::inverseFormationVolumeFactor(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
+                const auto& b = FluidSystem::inverseFormationVolumeFactor(dofFluidState, paramCache, phaseIdx);
                 dofFluidState.setInvB(phaseIdx, b);
 
-                const auto& rho = FluidSystem::density(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
+                const auto& rho = FluidSystem::density(dofFluidState, paramCache, phaseIdx);
                 dofFluidState.setDensity(phaseIdx, rho);
 
             }

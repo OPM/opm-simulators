@@ -559,7 +559,8 @@ public:
             if (SolventModule::isSolubleInWater()) {
                 const Scalar p = (*this)[pressureSwitchIdx]; // cap-pressure?
                 const Scalar solLimit =
-                    SolventModule::solubilityLimit(pvtRegionIndex(), T , p, saltConcentration);
+                    SolventModule::solubilityLimit(pvtRegionIndex(), T, p, saltConcentration,
+                                                  problem.dofCenterDepth(globalDofIdx));
                 if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
                     const Scalar solSat = (*this)[solventSaturationIdx];
                     if (solSat < -eps) { // solvent dissappears
@@ -666,7 +667,8 @@ public:
                         FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
                                                                               T,
                                                                               pw,
-                                                                              saltConcentration);
+                                                                              saltConcentration,
+                                                                              problem.dofCenterDepth(globalDofIdx));
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
                     const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                     (*this)[Indices::waterSwitchIdx] = std::min(rswSat, rswMax); //primary variable becomes Rsw
@@ -712,7 +714,8 @@ public:
                     FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
                                                                           T,
                                                                           pw,
-                                                                          saltConcentration);
+                                                                          saltConcentration,
+                                                                          problem.dofCenterDepth(globalDofIdx));
 
                 const Scalar rsw = (*this)[Indices::waterSwitchIdx];
                 const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);

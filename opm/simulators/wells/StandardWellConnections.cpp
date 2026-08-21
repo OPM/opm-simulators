@@ -498,6 +498,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
         const Scalar p_avg = (perf_press[perf] + p_above[perf])/2;
         const Scalar temperature = prop_func.getTemperature(cell_idx, IndexTraits::oilPhaseIdx);
         const Scalar saltConcentration = prop_func.getSaltConcentration(cell_idx);
+        const Scalar depth = well_.perfDepth()[perf];
         const int region_idx = prop_func.pvtRegionIdx(cell_idx);
 
         if (waterPresent) {
@@ -508,7 +509,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
                 assert(!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
                 const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
                 const Scalar waterrate = std::abs(ws.surface_rates[water_pos]);
-                props.rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration);
+                props.rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration, depth);
                 if (waterrate > 0) {
                     const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
                     const Scalar gasrate = std::abs(ws.surface_rates[gas_pos]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
@@ -520,7 +521,7 @@ computePropertiesForPressures(const WellState<Scalar, IndexTraits>&         well
             }
 
             props.b_perf[waterCompIdx + perf * well_.numConservationQuantities()] = FluidSystem::waterPvt()
-                .inverseFormationVolumeFactor(region_idx, temperature, p_avg, rsw, saltConcentration);
+                .inverseFormationVolumeFactor(region_idx, temperature, p_avg, rsw, saltConcentration, depth);
         }
 
         if (gasPresent) {

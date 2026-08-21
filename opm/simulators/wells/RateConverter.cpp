@@ -116,8 +116,9 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
         const Scalar bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx,
                                                                                T,
                                                                                p,
-                                                                               Scalar{0.0},
-                                                                               saltConcentration);
+                                                                               /*Rsw*/ Scalar{0.0},
+                                                                               saltConcentration,
+                                                                               /*depth*/ Scalar{0.0});
 
         coeff[iw] = 1.0 / bw;
     }
@@ -146,7 +147,7 @@ void SurfaceToReservoirVoidage<FluidSystem,  Region>::
 calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
 {
     const auto& ra = attr_.attributes(r);
-    calcCoeff(pvtRegionIdx, ra.pressure, ra.rs, ra.rv, ra.rsw, ra.rvw, ra.temperature, ra.saltConcentration, coeff);
+    calcCoeff(pvtRegionIdx, ra.pressure, ra.rs, ra.rv, ra.rsw, ra.rvw, ra.temperature, ra.saltConcentration, ra.depth, coeff);
 }
 
 template <class FluidSystem, class Region>
@@ -164,7 +165,7 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, 
     const auto [Rsw, Rvw] =
         dissolvedVaporisedRatio(iw, ig, ra.rsw, ra.rvw, surface_rates);
 
-    calcCoeff(pvtRegionIdx, ra.pressure, Rs, Rv, Rsw, Rvw, ra.temperature, ra.saltConcentration, coeff);
+    calcCoeff(pvtRegionIdx, ra.pressure, Rs, Rv, Rsw, Rvw, ra.temperature, ra.saltConcentration, ra.depth, coeff);
 }
 
 template <class FluidSystem, class Region>
@@ -178,6 +179,7 @@ calcCoeff(const int pvtRegionIdx,
           const Scalar Rvw,
           const Scalar T,
           const Scalar saltConcentration,
+          const Scalar depth,
           Coeff& coeff) const
 {
     const int   iw = phaseIdx<FluidSystem>(FluidSystem::waterPhaseIdx);
@@ -192,7 +194,7 @@ calcCoeff(const int pvtRegionIdx,
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
 
-        const Scalar bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
+        const Scalar bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration, depth);
 
         const Scalar den = bw * detRw;
 
@@ -259,6 +261,7 @@ calcReservoirVoidageRates(const int           pvtRegionIdx,
                           const Scalar        rvw,
                           const Scalar        T,
                           const Scalar        saltConcentration,
+                          const Scalar        depth,
                           const SurfaceRates& surface_rates,
                           VoidageRates&       voidage_rates) const
 {
@@ -286,7 +289,8 @@ calcReservoirVoidageRates(const int           pvtRegionIdx,
         const auto bw = FluidSystem::waterPvt()
             .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
                                           Rsw,
-                                          saltConcentration);
+                                          saltConcentration,
+                                          depth);
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             voidage_rates[iw] -= Rvw * surface_rates[ig];
@@ -355,6 +359,7 @@ calcReservoirVoidageRates(const RegionId r,
                                     ra.rsw, ra.rvw,
                                     ra.temperature,
                                     ra.saltConcentration,
+                                    ra.depth,
                                     surface_rates,
                                     voidage_rates);
 }
@@ -400,10 +405,12 @@ using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
                                   const T,                               \
                                   const T,                               \
                                   const T,                               \
+                                  const T,                               \
                                   const std::vector<T>&,                 \
                                   std::vector<T>&) const;                \
     template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
         calcReservoirVoidageRates(const int,                             \
+                                  const T,                               \
                                   const T,                               \
                                   const T,                               \
                                   const T,                               \

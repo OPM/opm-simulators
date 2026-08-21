@@ -518,6 +518,15 @@ public:
                        unsigned /*timeIdx*/) const
     { return temperature_; }
 
+    template <class Context>
+    Scalar dofCenterDepth(const Context& /*context*/,
+                          unsigned /*spaceIdx*/,
+                          unsigned /*timeIdx*/) const
+    { return 0.0; }
+
+    Scalar dofCenterDepth(unsigned /*globalSpaceIdx*/) const
+    { return 0.0; }
+
     // \}
 
     /*!
@@ -654,8 +663,11 @@ private:
         //////
         // set composition of the oil phase
         //////
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
+        paramCache.setRegionIndex(0);
+        paramCache.setDepth(0.0);
         Scalar RsSat =
-            FluidSystem::saturatedDissolutionFactor(fs, oilPhaseIdx, /*pvtRegionIdx=*/0);
+            FluidSystem::saturatedDissolutionFactor(fs, paramCache, oilPhaseIdx);
         Scalar XoGSat = FluidSystem::convertRsToXoG(RsSat, /*pvtRegionIdx=*/0);
         Scalar xoGSat = FluidSystem::convertXoGToxoG(XoGSat, /*pvtRegionIdx=*/0);
         Scalar xoG = 0.95*xoGSat;
@@ -666,7 +678,6 @@ private:
         fs.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
 
         using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
-        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs,
                     paramCache,
                     /*refPhaseIdx=*/oilPhaseIdx,

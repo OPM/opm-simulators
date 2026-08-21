@@ -421,7 +421,8 @@ density(const Scalar depth,
                                                                       temp,
                                                                       press,
                                                                       Scalar{0.0} /*=Rsw*/,
-                                                                      saltConcentration);
+                                                                      saltConcentration,
+                                                                      depth);
     rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
     return rho;
 }
