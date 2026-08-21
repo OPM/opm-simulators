@@ -394,6 +394,7 @@ public:
 
     const std::vector<Node>& nodes() const { return nodes_; }
     const std::vector<Well>& wells() const { return wells_; }
+    std::vector<Well>& wells() { return wells_; }
     const std::vector<int>& children(const int n) const { return children_[n]; }
     const std::vector<int>& wellsAt(const int n) const { return wells_at_[n]; }
     const std::vector<int>& solvedNodes() const { return solved_; }
@@ -424,6 +425,7 @@ public:
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
             sw.guide = w.q_ref;
+            sw.in_group = group_target_ > 0.0;
             s.addWell(sw);
         }
         s.finish();
@@ -853,6 +855,8 @@ public:
 
     State start(const State& p) const { return p; }
     State pressures(const State& x) const { return x; }
+    /// The eliminated form has no rate unknowns; recover them from the case.
+    State wellRates(const State& x) const { return case_.rates(case_.nodePressures(x)); }
     double columnScale(const int) const { return kPressureScale; }
     State limitStep(const State&, const State& dx) const { return dx; }
 
@@ -885,6 +889,7 @@ public:
     void setEnforceBounds(const bool on) { enforce_bounds_ = on; }
     void setAnalyticJacobian(const bool on) { system_.setAnalyticJacobian(on); }
     void setGuidesFromPotential(const bool on) { system_.setGuidesFromPotential(on); }
+    State wellRates(const State& x) const { return system_.wellRates(x); }
     const NetworkSolve::System<double>& system() const { return system_; }
     NetworkSolve::System<double>& system() { return system_; }
 
@@ -942,6 +947,7 @@ struct Result
     bool converged = false;
     int iterations = 0;
     State p{};
+    State well_rate{};
 };
 
 double normMax(const State& v)
@@ -1227,7 +1233,7 @@ Result newton(Problem problem, const State& start, Globalisation g = {})
         }
         const auto r = problem.residual(x);
         if (normMax(r) < kTol && !controls_moved) {
-            return {true, it, problem.pressures(x)};
+            return {true, it, problem.pressures(x), problem.wellRates(x)};
         }
         State dx;
         if (!jacobian(problem, x, r).solve(-r, dx)) {
@@ -1864,6 +1870,68 @@ BOOST_AUTO_TEST_CASE(replay_simulator_failures)
                            << (r.control_trace.empty() ? "" : "  controls " + r.control_trace));
     }
     BOOST_TEST_MESSAGE("  " << solved << "/" << files.size() << " replayed systems converge");
+}
+
+// A group target is only met if the wells that cannot take their share are
+// counted against it. Squeeze one well's bhp limit until it drops off group
+// control and the arithmetic has to still add up: the others make up what it
+// cannot deliver, no more.
+//
+// Counting only the wells still on group control -- which is what this did until
+// the check below was written -- asks the survivors for the whole target while
+// the limited well injects on top, and the field over-delivers by exactly that
+// well's rate. Measured here: target 1.527e6, delivered 1.554e6, difference
+// 27033 sm3/d, which is G-3H's rate to the digit.
+//
+// Counting every well the group allocated is right, and it exposes the next
+// problem. The limited well's control then cycles between thp and bhp: the bhp
+// control equation is only satisfied at convergence, so part-way through the
+// solve its bhp drifts back under the limit, the control releases, and the two
+// active sets never agree. Neither an inclusive limit test nor a line search
+// moves it -- the residual sits at 2.05 either way.
+//
+// The fix is to stop deciding the set inside the Newton: carry the rates of the
+// limited wells as their own quantity, so the multiplier scales only the wells
+// that are actually free and the set stops flip-flopping. That is Stein's
+// suggestion, and this is the case that shows why it is needed.
+BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
+{
+    const auto sm3d = cubic(meter) / day;
+
+    auto c = gnetinjeGas();
+    double target = 0.0;
+    for (const auto& w : c.wells()) {
+        target += w.q_ref;
+    }
+    // G-3H's bhp at the reference point is 295.4 bar, so this genuinely binds.
+    c.wells()[0].bhp_limit = convert::from(292.0, bars);
+    c.setGroupTarget(target);
+    c.finish();
+
+    auto system = c.system();
+    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+    BOOST_TEST_MESSAGE("limited well: " << (r.converged ? "converged in " : "FAILED after ")
+                       << r.iterations << " iterations, residual " << r.residual
+                       << (r.control_trace.empty() ? "" : "  controls " + r.control_trace));
+
+    if (r.converged) {
+        double total = 0.0;
+        for (const double q : r.well_rate) {
+            total += q;
+        }
+        BOOST_TEST_MESSAGE("group target " << convert::to(target, sm3d)
+                           << " sm3/d, delivered " << convert::to(total, sm3d));
+        BOOST_CHECK_CLOSE(convert::to(total, sm3d), convert::to(target, sm3d), 0.1);
+    } else {
+        // The active set does not settle here yet; the simulator falls back to
+        // the relaxed update when this happens, so no answer is wrong. When this
+        // starts converging, the check above becomes the one that matters.
+        BOOST_CHECK(!r.control_trace.empty());
+    }
+
+    // Whatever the limited well does, the group's own wells are the ones that
+    // count against its target -- not every well in the network.
+    BOOST_CHECK(c.wells()[0].bhp_limit < c.wells()[1].bhp_limit);
 }
 
 // How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.

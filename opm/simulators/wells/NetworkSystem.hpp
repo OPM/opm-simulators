@@ -77,6 +77,11 @@ struct Well
     Scalar ipr_b = 0.0;
     Scalar bhp_limit = 0.0;
     Scalar rate_limit = 0.0;
+    /// Whether the group allocated this well. It counts against the group's
+    /// target whatever control it ends up on -- a well that runs into its own
+    /// bhp or rate limit still injects, and the wells that scale with the
+    /// multiplier have to make up the remainder, not the whole target.
+    bool in_group = false;
     Scalar guide = 0.0;         // share of a group target
     /// Rate to start the solve from. Zero means work one out from the tables,
     /// which is all the bench can do; the simulator knows what the well is
@@ -94,6 +99,7 @@ struct Result
     bool converged = false;
     int iterations = 0;
     std::vector<Scalar> node_pressure;   // every node, terminal included
+    std::vector<Scalar> well_rate;       // per well, in the order they were added
 
     /// Why it stopped, for the caller to report. A converged solve leaves these
     /// at the values that satisfied the test.
@@ -205,7 +211,12 @@ public:
             rate_scale_ = std::max(largest * Scalar{0.01},
                                    unit::convert::from(1.0, unit::cubic(unit::meter) / unit::day));
         }
-        controls_.assign(wells_.size(), group_target_ > 0.0 ? Control::Grup : Control::Thp);
+        controls_.assign(wells_.size(), Control::Thp);
+        for (std::size_t w = 0; w < wells_.size(); ++w) {
+            if (grouped() && wells_[w].in_group) {
+                controls_[w] = Control::Grup;
+            }
+        }
     }
 
     int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
@@ -374,11 +385,13 @@ public:
             const auto& well = wells_[w];
             const Scalar q = x[qwIdx(w)];
             const Scalar bhp = x[bhpIdx(w)];
-            // Only what the group is actually holding counts against its target.
-            // Summing every well instead asks the group to account for rates it
-            // does not control, which is a constraint nothing can satisfy -- the
-            // active set then thrashes against it rather than settling.
-            if (controls_[w] == Control::Grup) {
+            // Every well the group allocated counts against the target, on
+            // whatever control it ended up. Counting only those still on group
+            // control asks the rest to deliver the whole target while a limited
+            // well injects on top of it, and the group over-delivers by exactly
+            // that well's rate. Counting wells the group never allocated is the
+            // opposite error and cannot be satisfied at all.
+            if (well.in_group) {
                 injected += q;
             }
 
@@ -445,7 +458,7 @@ public:
             constexpr Scalar at_limit = 1.0 - 1e-9;
             consider(x[bhpIdx(w)] > well.bhp_limit, ipr(well, well.bhp_limit), Control::Bhp);
             consider(q > well.rate_limit, well.rate_limit, Control::Rate);
-            if (grouped()) {
+            if (grouped() && well.in_group) {
                 const Scalar share = well.guide * x[lambdaIdx()];
                 consider(q >= share * at_limit, share, Control::Grup);
             }
@@ -492,6 +505,16 @@ public:
             x[lambdaIdx()] = lambda0();
         }
         return x;
+    }
+
+    /// Rate of every well, in the order they were added.
+    State wellRates(const State& x) const
+    {
+        State q(wells_.size());
+        for (int w = 0; w < numWells(); ++w) {
+            q[w] = x[qwIdx(w)];
+        }
+        return q;
     }
 
     /// Pressure at every node, terminal included.
@@ -833,9 +856,9 @@ Result<Scalar> solve(System<Scalar>& system,
         }
         const bool settled = !controls_moved;
         if (worst < tolerance && settled) {
-            return {true, it, system.pressures(x), worst, false, false, {}};
+            return {true, it, system.pressures(x), system.wellRates(x), worst, false, false, {}};
         }
-        last = {false, it, {}, worst, controls_moved, false, joined()};
+        last = {false, it, {}, {}, worst, controls_moved, false, joined()};
 
         DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
             ? system.jacobian(x)
@@ -859,6 +882,7 @@ Result<Scalar> solve(System<Scalar>& system,
         }
         if (!J.solve(negative, dx)) {
             last.node_pressure = system.pressures(x);
+            last.well_rate = system.wellRates(x);
             return last;
         }
 
@@ -876,6 +900,7 @@ Result<Scalar> solve(System<Scalar>& system,
     }
     last.iterations = max_iterations + 1;
     last.node_pressure = system.pressures(x);
+    last.well_rate = system.wellRates(x);
     return last;
 }
 

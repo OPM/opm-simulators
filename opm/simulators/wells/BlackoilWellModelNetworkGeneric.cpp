@@ -402,6 +402,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
             // that runs into its own bhp or rate limit is taken up by the others
             // instead of the total quietly dropping.
             group_target += current;
+            w.in_group = true;
             w.rate_limit = candidate.rate_limit;
             w.guide = current;
         } else if (on_group) {
