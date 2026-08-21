@@ -1061,45 +1061,10 @@ public:
         storage = 0;
 
         std::mutex mutex;
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView());
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        {
-            // Attention: the variables below are thread specific and thus cannot be
-            // moved in front of the #pragma!
-            const unsigned threadId = ThreadManager::threadId();
-            ElementContext elemCtx(simulator_);
-            ElementIterator elemIt = threadedElemIt.beginParallel();
-            LocalEvalBlockVector elemStorage;
-
-            // in this method, we need to disable the storage cache because we want to
-            // evaluate the storage term for other time indices than the most recent one
-            elemCtx.setEnableStorageCache(false);
-
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue; // ignore ghost and overlap elements
-                }
-
-                elemCtx.updateStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
-
-                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
-                elemStorage.resize(numPrimaryDof);
-
-                localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
-
-                mutex.lock();
-                for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                        storage[eqIdx] += Toolbox::value(elemStorage[dofIdx][eqIdx]);
-                    }
-                }
-                mutex.unlock();
-            }
-        }
+        forEachStorageTerm(timeIdx, [&storage, &mutex](const auto&, const EqVector& value) {
+            std::lock_guard lock(mutex);
+            storage += value;
+        });
 
         storage = gridView_.comm().sum(storage);
     }
@@ -1110,6 +1075,15 @@ public:
             return;
         }
 
+        forEachStorageTerm(timeIdx, [this, timeIdx](const auto& globalDofIdx, const EqVector& value) {
+            updateCachedStorage(globalDofIdx, timeIdx, value);
+        });
+    }
+
+private:
+    template<class Callback>
+    void forEachStorageTerm(const unsigned timeIdx, Callback&& callback) const
+    {
         ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1133,16 +1107,17 @@ public:
                 localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
 
                 for (std::size_t dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
                     EqVector storage(0.0);
                     for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[eqIdx] = Toolbox::value(elemStorage[dofIdx][eqIdx]);
                     }
-                    updateCachedStorage(globalDofIdx, timeIdx, storage);
+                    callback(elemCtx.globalSpaceIndex(dofIdx, timeIdx), storage);
                 }
             }
         }
     }
+
+public:
 
     /*!
      * \brief Ensure that the difference between the storage terms of the last and of the
