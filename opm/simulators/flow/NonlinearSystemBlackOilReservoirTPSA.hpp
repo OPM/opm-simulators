@@ -145,10 +145,10 @@ public:
             ++seqIter_;
 
             // Fixed-stress convergence check:
-            // If the initial residual error, hence check for no. linearizations == 1, was small enough, we have
-            // convergence in the fixed-stress iterations
+            // If the initial residual error was small enough, we have convergence in the
+            // fixed-stress iterations
             if (tpsaConv
-                && this->simulator_.problem().geoMechModel().newtonMethod().numLinearizations() == 1
+                && this->simulator_.problem().geoMechModel().newtonMethod().initiallyConverged()
                 && seqIter_ >= minSeqIter) {
                 // Info
                 std::string msg = fmt::format("TPSA: Fixed-stress scheme converged in {} iterations", seqIter_);

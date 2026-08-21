@@ -40,8 +40,6 @@ void TpsaNewtonMethodParams<Scalar>::registerParameters()
 {
     Parameters::Register<Parameters::TpsaNewtonVerbosity>
         ("Verbosity level of TPSA Newton solver: 0 (=none), 1 (=basic), 2 (=all)");
-    Parameters::Register<Parameters::TpsaNewtonTargetIterations>
-        ("The 'optimum' number of TPSA Newton iterations");
     Parameters::Register<Parameters::TpsaNewtonMaxIterations>
         ("The maximum number of TPSA Newton iterations");
     Parameters::Register<Parameters::TpsaNewtonMinIterations>
@@ -59,7 +57,6 @@ template<class Scalar>
 void TpsaNewtonMethodParams<Scalar>::read()
 {
     verbosity_ = Parameters::Get<Parameters::TpsaNewtonVerbosity>();
-    targetIterations_ = Parameters::Get<Parameters::TpsaNewtonTargetIterations>();
     minIterations_ = Parameters::Get<Parameters::TpsaNewtonMinIterations>();
     maxIterations_ = Parameters::Get<Parameters::TpsaNewtonMaxIterations>();
     tolerance_ = Parameters::Get<Parameters::TpsaNewtonTolerance<Scalar>>();

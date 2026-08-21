@@ -258,6 +258,83 @@ public:
         }
     }
 
+    /*!
+    * \brief Compute the stress (or traction) for mechanics output
+    */
+    void updateStressInfo()
+    {
+        OPM_TIMEBLOCK(updateStressInfoTPSA);
+
+        if (stressInfo_.empty()) {
+            return;
+        }
+
+        const auto& geoMechModel = geoMechModel_();
+        auto& problem = problem_();
+        const unsigned int numCells = fullDomain_.cells.size();
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        // Interior traction of every cell, one per face to its neighbors
+        for (unsigned ii = 0; ii < numCells; ++ii) {
+            const unsigned globI = fullDomain_.cells[ii];
+            const MaterialState& materialStateIn =
+                geoMechModel.materialState(globI, /*timeIdx=*/0);
+
+            short loc = 0;
+            for (const auto& nbInfo : neighborInfo_[globI]) {
+                const unsigned globJ = nbInfo.neighbor;
+                const MaterialState& materialStateEx =
+                    geoMechModel.materialState(globJ, /*timeIdx=*/0);
+
+                // Compute local face term
+                ADVectorBlock adres(0.0);
+                LocalResidual::computeFaceTerm(adres,
+                                               materialStateIn,
+                                               materialStateEx,
+                                               problem,
+                                               globI,
+                                               globJ);
+                adres *= nbInfo.faceArea;
+
+                // Insert interior traction vector
+                // OBS: Assume traction vector is the three first entries in residual!
+                stressInfo_[globI][loc].faceNormal = problem.cellFaceNormal(globI, globJ);
+                stressInfo_[globI][loc].faceArea = nbInfo.faceArea;
+                for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
+                    stressInfo_[globI][loc].traction[tractionIdx] = adres[tractionIdx].value();
+                }
+                ++loc;
+            }
+        }
+
+        // Boundary traction
+        for (const auto& bdyInfo : boundaryInfo_) {
+            const unsigned globI = bdyInfo.cell;
+            const MaterialState& materialStateIn = geoMechModel.materialState(globI, /*timeIdx=*/0);
+
+            // Compute local boundary condition
+            ADVectorBlock adres(0.0);
+            LocalResidual::computeBoundaryTerm(adres,
+                                               materialStateIn,
+                                               bdyInfo.bcdata,
+                                               problem,
+                                               globI);
+            adres *= bdyInfo.bcdata.faceArea;
+
+            // Insert boundary traction vector
+            // OBS: Assume traction vector is the three first entries in residual!
+            const short loc = neighborInfo_[globI].size() + bdyInfo.bfIndex;
+            stressInfo_[globI][loc].faceNormal =
+                problem.cellFaceNormalBoundary(globI, bdyInfo.bfIndex);
+            stressInfo_[globI][loc].faceArea = bdyInfo.bcdata.faceArea;
+            for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
+                stressInfo_[globI][loc].traction[tractionIdx] = adres[tractionIdx].value();
+            }
+        }
+    }
+
     // ///
     // Public get and set functions
     // ///
@@ -496,7 +573,6 @@ private:
                 OPM_TIMEBLOCK_LOCAL(faceCalculationForEachCellTPSA, Subsystem::Assembly);
 
                 // Loop over neighboring cells
-                short loc = 0;
                 for (auto& nbInfo : nbInfos) {
                     OPM_TIMEBLOCK_LOCAL(calculationForEachFaceTPSA, Subsystem::Assembly);
 
@@ -536,16 +612,6 @@ private:
                     // SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
                     bMat *= -1.0;
                     *nbInfo.matBlockAddress += bMat;
-
-                    // Insert interior traction vector
-                    // OBS: Assume traction vector is the three first entries in residual!
-                    const auto& faceNormal = problem.cellFaceNormal(globI, globJ);
-                    stressInfo_[globI][loc].faceNormal = faceNormal;
-                    stressInfo_[globI][loc].faceArea = nbInfo.faceArea;
-                    for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
-                        stressInfo_[globI][loc].traction[tractionIdx] = res[tractionIdx];
-                    }
-                    ++loc;
                 }
             }
 
@@ -627,17 +693,6 @@ private:
             // Insert contribution to (globI, globI) sub-block
             // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
-
-            // Insert boundary traction vector
-            // OBS: Assume traction vector is the three first entries in residual!
-            const auto& nbInfos = neighborInfo_[globI];
-            short loc = nbInfos.size() + bdyInfo.bfIndex;
-            const auto& bndyNormal = problem.cellFaceNormalBoundary(globI, bdyInfo.bfIndex);
-            stressInfo_[globI][loc].faceNormal = bndyNormal;
-            stressInfo_[globI][loc].faceArea = bdyInfo.bcdata.faceArea;
-            for (unsigned tractionIdx = 0; tractionIdx < 3; ++tractionIdx) {
-                stressInfo_[globI][loc].traction[tractionIdx] = res[tractionIdx];
-            }
         }
     }
 

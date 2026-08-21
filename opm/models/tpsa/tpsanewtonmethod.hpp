@@ -26,23 +26,18 @@
 #define TPSA_NEWTON_METHOD_HPP
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
 #include <opm/models/tpsa/tpsanewtonmethodparams.hpp>
 #include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 
-#include <opm/simulators/linalg/PropertyTree.hpp>
-
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <exception>
-#include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <unistd.h>
 
 
 namespace Opm {
@@ -52,6 +47,10 @@ namespace Opm {
 *
 * Generates the Jacobian matrix, J(u^n) and residual vector, R(u^n), with a solution vector, u^n, at iteration n.
 * Subsequently the linear system J(u^n)\delta u^n = -R(u^n) is solved to get u^{n+1} = u^n + \Delta u^n.
+*
+* By default only a single iteration is done to solve the linear elasticity system. Note that,
+* in this case, only linear solver convergence is checked, and Newton error is only used to check if
+* the linearization step produced a low enough residual to jump out before a linear solve.
 */
 template <class TypeTag>
 class TpsaNewtonMethod
@@ -82,8 +81,10 @@ public:
         , linearSolver_(simulator)
         , error_(1e100)
         , lastError_(1e100)
+        , initialError_(1e100)
         , numIterations_(0)
         , numLinearizations_(0)
+        , numTotLinearIterations_(0)
     {
         // Read runtime/default Newton parameters
         params_.read();
@@ -154,7 +155,6 @@ public:
                 linearSolver_.getResidual(residual);
                 solveTimer_.stop();
 
-                // The preSolve_() method usually computes the errors, but it can do something else in addition.
                 // TODO: should its costs be counted to the linearization or to the update?
                 updateTimer_.start();
                 preSolve_(currentSolution, residual);
@@ -174,12 +174,13 @@ public:
                 solveTimer_.start();
                 solutionUpdate = 0.0;
                 const bool conv = linearSolver_.solve(solutionUpdate);
+                numTotLinearIterations_ += linearSolver_.iterations();
                 solveTimer_.stop();
 
                 if (!conv) {
                     solveTimer_.stop();
                     if (verbosity_() > 0) {
-                        std::cout << "TPSA: Linear solver did not converge!" << std::endl;
+                        OpmLog::warning("TPSA: Linear solver did not converge!");
                     }
 
                     prePostProcessTimer_.start();
@@ -203,8 +204,8 @@ public:
         catch (const Dune::Exception& e)
         {
             if (verbosity_() > 0) {
-                std::cout << "TPSA: Newton method caught exception: \""
-                          << e.what() << "\"\n" << std::flush;
+                OpmLog::error("TPSA: Newton method caught exception: \"" +
+                              std::string(e.what()) + "\"");
             }
 
             prePostProcessTimer_.start();
@@ -216,8 +217,8 @@ public:
         catch (const NumericalProblem& e)
         {
             if (verbosity_() > 0) {
-                std::cout << "TPSA: Newton method caught exception: \""
-                          << e.what() << "\"\n" << std::flush;
+                OpmLog::error("TPSA: Newton method caught exception: \"" +
+                              std::string(e.what()) + "\"");
             }
 
             prePostProcessTimer_.start();
@@ -229,34 +230,30 @@ public:
 
         // print the timing summary of the time step
         if (verbosity_() > 0) {
-            Scalar elapsedTot =
-                linearizeTimer_.realTimeElapsed() +
-                solveTimer_.realTimeElapsed() +
-                updateTimer_.realTimeElapsed();
-            const auto default_precision{std::cout.precision()};
-            std::cout << std::setprecision(2)
-                      << "TPSA: "
-                      << "Newton iter = " << numIterations() << " (error="
-                      << error_ << ") | "
-                      << "linearization = "
-                      << linearizeTimer_.realTimeElapsed() << "s ("
-                      << 100 * linearizeTimer_.realTimeElapsed() / elapsedTot << "%) | "
-                      << "solve = "
-                      << solveTimer_.realTimeElapsed() << "s ("
-                      << 100 * solveTimer_.realTimeElapsed() / elapsedTot << "%) | "
-                      << "update = "
-                      << updateTimer_.realTimeElapsed() << "s ("
-                      << 100 * updateTimer_.realTimeElapsed() / elapsedTot << "%)"
-                      << "\n" << std::flush;
-            std::cout << std::setprecision(default_precision); // restore default output width
+            std::ostringstream oss;
+            oss << std::setprecision(2)
+                << "TPSA: "
+                << "Newton iter = " << numIterations();
+            if (!singleIteration_()) {
+                oss << " (error=" << error_ << ")";
+            }
+            oss << " | "
+                << "Linearizations = "
+                << numLinearizations() << " ("
+                << linearizeTimer_.realTimeElapsed() << "s) | "
+                << "Linear iter = "
+                << numTotLinearIterations() << " ("
+                << solveTimer_.realTimeElapsed() << "s)";
+            OpmLog::info(oss.str());
         }
 
-        // if we're not converged, tell the implementation that we've failed
-        if (!converged()) {
+        // if we're not converged, tell the implementation that we've failed; ignored for
+        // max. iteration = 1.
+        if (!singleIteration_() && !converged()) {
             prePostProcessTimer_.start();
             failed_();
             if (verbosity_() > 0) {
-                std::cout << "TPSA: Newton iterations did not converge!" << std::endl;
+                OpmLog::warning("TPSA: Newton iterations did not converge!");
             }
             prePostProcessTimer_.stop();
             return false;
@@ -268,9 +265,28 @@ public:
     * \brief Returns true if the error of the solution is below the tolerance.
     *
     * \returns Bool indicating if convergence has been achived
+    *
+    * \note Decides whether another iteration is worth doing, but not whether apply() succeeded when
+    *       only a single iteration is done, see singleIteration_()
     */
     bool converged() const
     { return error_ <= tolerance(); }
+
+    /*!
+    * \brief Returns the error of the first linearization of the last apply().
+    *
+    * \returns Weighted maximum norm of the residual the Newton method started from
+    */
+    Scalar initialError() const
+    { return initialError_; }
+
+    /*!
+    * \brief Returns true if the state handed to the last apply() already solved the system.
+    *
+    * \returns Bool indicating if the first linearization was below the tolerance
+    */
+    bool initiallyConverged() const
+    { return initialError_ <= tolerance(); }
 
     /*!
     * \brief Returns a reference to the object describing the current physical problem.
@@ -337,6 +353,14 @@ public:
     { return numLinearizations_; }
 
     /*!
+    * \brief Returns the number of linear solver iterations done since the Newton method was invoked.
+    *
+    * \returns Number of linear iterations, summed over the Newton iterations
+    */
+    int numTotLinearIterations() const
+    { return numTotLinearIterations_; }
+
+    /*!
     * \brief Return the current tolerance at which the Newton method considers itself to be converged.
     *
     * \returns Tolerance for Newton error
@@ -396,13 +420,26 @@ protected:
     { return simulator_.gridView().comm().rank() == 0 ? params_.verbosity_ : 0; }
 
     /*!
+    * \brief Whether the Newton method is limited to a single iteration.
+    *
+    * \returns Bool indicating if at most one linearization and linear solve is done
+    *
+    * If the elasticity system is linear, a single solve is exact and more than one Newton error is
+    * unnecessary.
+    */
+    bool singleIteration_() const
+    { return params_.maxIterations_ <= 1; }
+
+    /*!
     * \brief Called before the Newton method is applied to an non-linear system of equations.
     */
     void begin_()
     {
         numIterations_ = 0;
         numLinearizations_ = 0;
+        numTotLinearIterations_ = 0;
         error_ = 1e100;
+        initialError_ = 1e100;
     }
 
     /*!
@@ -448,6 +485,11 @@ protected:
 
         // Take the other processes into account
         error_ = simulator_.gridView().comm().max(error_);
+
+        // Remember what the state handed to the Newton method was worth, see initiallyConverged()
+        if (numLinearizations_ == 1) {
+            initialError_ = error_;
+        }
 
         // Make sure that the error never grows beyond the maximum allowed one
         if (error_ > newtonMaxError) {
@@ -519,9 +561,8 @@ protected:
 
         // Output error info
         if (verbosity_() > 1) {
-            std::cout << "TPSA: End Newton iteration " << numIterations_ << ""
-                      << " with error = " << error_
-                      << std::endl;
+            OpmLog::info("TPSA: End Newton iteration " + std::to_string(numIterations_) +
+                         " with error = " + std::to_string(error_));
         }
     }
 
@@ -532,6 +573,11 @@ protected:
     */
     bool proceed_() const
     {
+        // Exactly one linearization and one linear solve, whatever the error did
+        if (singleIteration_()) {
+            return numIterations() < 1;
+        }
+
         if (numIterations() < params_.minIterations_) {
             return true;
         }
@@ -555,7 +601,7 @@ protected:
     * \brief Called if the Newton method broke down.
     */
     void failed_()
-    { numIterations_ = params_.targetIterations_ * 2; }
+    { }
 
     Simulator& simulator_;
     LinearSolverBackend linearSolver_;
@@ -567,10 +613,12 @@ protected:
 
     Scalar error_;
     Scalar lastError_;
+    Scalar initialError_;
     TpsaNewtonMethodParams<Scalar> params_;
 
     int numIterations_;
     int numLinearizations_;
+    int numTotLinearIterations_;
 };  // class TpsaNewtonMethod
 
 }  // namespace Opm
