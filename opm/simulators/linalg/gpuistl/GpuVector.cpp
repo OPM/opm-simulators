@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 
 namespace Opm::gpuistl
@@ -49,6 +50,9 @@ template <class T>
 GpuVector<T>::GpuVector(const T* dataOnHost, const size_t numberOfElements)
     : GpuVector(numberOfElements)
 {
+    if (detail::isGPUPointer(dataOnHost)) {
+        OPM_THROW(std::invalid_argument, "dataOnHost is a GPU pointer, use copy constructor instead");
+    }
 
     OPM_GPU_SAFE_CALL(cudaMemcpy(
         m_dataOnDevice, dataOnHost, detail::to_size_t(m_numberOfElements) * sizeof(T), cudaMemcpyHostToDevice));
