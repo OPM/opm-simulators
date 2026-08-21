@@ -63,6 +63,27 @@ protected:
     using NeighborSet = std::set<unsigned>;
 
 public:
+    /*!
+     * \brief A flux connection between an auxiliary degree of freedom and another
+     *        degree of freedom of the model.
+     *
+     * This is for auxiliary modules whose degrees of freedom carry the *model's own*
+     * conservation equations -- an auxiliary "cell" with an authored volume and an
+     * authored connection list, as opposed to a genuinely different unknown such as a
+     * well's bottom hole pressure. Such a module only has to declare which pairs of
+     * degrees of freedom exchange fluxes; the discretization then assembles them with
+     * the same local residual it uses for the grid, reading the transmissibility (and
+     * the thermal/diffusive counterparts) from the problem exactly as it does for a
+     * geometric face. Both endpoints are stored as plain degree-of-freedom indices, so
+     * a connection may join two auxiliary degrees of freedom or an auxiliary one and a
+     * grid cell.
+     */
+    struct AuxiliaryConnection
+    {
+        unsigned dof1{};
+        unsigned dof2{};
+    };
+
     virtual ~BaseAuxiliaryModule() = default;
 
     /*!
@@ -82,8 +103,36 @@ public:
      * \brief Return the offset in the global system of equations for the first degree of
      *        freedom of this auxiliary module.
      */
-    int dofOffset()
+    int dofOffset() const
     { return dofOffset_; }
+
+    /*!
+     * \brief Whether this module's degrees of freedom carry the model's own
+     *        conservation equations.
+     *
+     * False by default, which describes a module whose unknowns are of a different
+     * kind -- a well's bottom hole pressure, a mortar multiplier -- and which
+     * assembles and scales its own equations in linearize().  Such degrees of freedom
+     * are deliberately kept out of the model's error norm and primary-variable
+     * switching.
+     *
+     * A module which returns true is declaring the opposite: its degrees of freedom are
+     * cells as far as the model is concerned, with the model's own unknowns, and they
+     * take part in the Newton update, the convergence measures and the variable
+     * switching exactly like a grid cell.
+     */
+    virtual bool carriesModelEquations() const
+    { return false; }
+
+    /*!
+     * \brief The volume associated with one of this module's degrees of freedom.
+     *
+     * Zero unless the module's degrees of freedom are cells.  A grid degree of freedom
+     * takes this from the geometry of its entity; an auxiliary cell has no entity, so it
+     * has to state the volume itself.
+     */
+    virtual Scalar dofVolume(unsigned /*localDofIdx*/) const
+    { return 0.0; }
 
     /*!
      * \brief Given a degree of freedom relative to the current auxiliary equation,
@@ -100,6 +149,20 @@ public:
      *        module.
      */
     virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const = 0;
+
+    /*!
+     * \brief Append this module's flux connections, if any.
+     *
+     * Modules whose degrees of freedom do not carry the model's conservation equations
+     * -- the well models, for instance, which assemble their own equations in
+     * linearize() -- leave this empty, which is the default.
+     *
+     * The discretization inserts each reported connection into the sparsity pattern in
+     * both directions and assembles it from both endpoints, so a connection must be
+     * reported exactly once, not once per endpoint.
+     */
+    virtual void addConnections(std::vector<AuxiliaryConnection>&) const
+    {}
 
     /*!
      * \brief Set the initial condition of the auxiliary module in the solution vector.

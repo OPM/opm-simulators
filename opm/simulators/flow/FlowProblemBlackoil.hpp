@@ -49,6 +49,7 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
+#include <opm/simulators/aquifers/NumericalAquiferAuxCells.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
@@ -321,6 +322,29 @@ public:
     /*!
      * \copydoc FvBaseProblem::finishInit
      */
+    /*!
+     * \brief Create the auxiliary cell modules this deck asks for.
+     *
+     * Called by the model before it sizes anything, which is the only point at which a
+     * module that introduces degrees of freedom may still be registered.
+     */
+    void registerAuxiliaryCellModules()
+    {
+        const auto& eclState = this->simulator().vanguard().eclState();
+
+        if ((eclState.numericalAquiferMode() == NumericalAquiferMode::AuxiliaryCells) &&
+            eclState.aquifer().hasNumericalAquifer())
+        {
+            const auto& aquifers = this->registerAuxCellModule_(
+                std::make_unique<NumericalAquiferAuxCells<TypeTag>>(this->simulator()));
+
+            if (this->simulator().gridView().comm().rank() == 0) {
+                OpmLog::info(fmt::format("Numerical aquifers represented as {} auxiliary "
+                                         "cells outside the grid", aquifers.numDofs()));
+            }
+        }
+    }
+
     void finishInit()
     {
         // TODO: there should be room to remove duplication for this
@@ -404,7 +428,9 @@ public:
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+            // By total degree of freedom count: maxOilSaturation() is asked by
+            // degree-of-freedom index, and an auxiliary cell asks the same way.
+            this->maxOilSaturation_.resize(this->model().numTotalDof(), 0.0);
         }
 
         this->readRockParameters_(simulator.vanguard().cellCenterDepths(),
@@ -427,7 +453,21 @@ public:
 
         finishTransmissibilities();
 
+        // The auxiliary cells' connections are authored, not geometric, so they are
+        // published once the grid's own transmissibilities are final.
+        this->applyAuxCellTransmissibilities_();
+
         const auto& initconfig = eclState.getInitConfig();
+
+        // Auxiliary cells do not appear in the restart file: it is written per grid
+        // element, so their state would come back undefined rather than merely stale.
+        if (initconfig.restartRequested() && !this->auxCellModules_.empty()) {
+            OPM_THROW(std::runtime_error,
+                      "Restart is not supported together with auxiliary cells "
+                      "(numerical aquifers represented outside the grid): their state "
+                      "is not written to the restart file.");
+        }
+
         this->tracerModel_.init(initconfig.restartRequested());
         if (initconfig.restartRequested()) {
             this->readEclRestartSolution_();
@@ -453,7 +493,8 @@ public:
         this->computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
-            this->drift_.resize(this->model().numGridDof());
+            // Sized like the residual it compensates, which spans the auxiliary DOFs.
+            this->drift_.resize(this->model().numTotalDof());
             this->drift_ = 0.0;
         }
 
@@ -487,7 +528,10 @@ public:
         // TODO: move to the end for later refactoring of the function finishInit()
         //
         // deal with DRSDT
-        this->mixControls_.init(this->model().numGridDof(),
+        // Sized over every degree of freedom, auxiliary ones included: the intensive
+        // quantities ask for the dissolution limits by degree-of-freedom index, and an
+        // auxiliary cell reaches this the same way a grid cell does.
+        this->mixControls_.init(this->model().numTotalDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
 
@@ -1175,7 +1219,7 @@ public:
 
         if (fip_init) {
             this->updateReferencePorosity_();
-            this->mixControls_.init(this->model().numGridDof(),
+            this->mixControls_.init(this->model().numTotalDof(),
                                     this->episodeIndex(),
                                     eclState.runspec().tabdims().getNumPVTTables());
         }

@@ -160,15 +160,19 @@ public:
 
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
+    //! \param aquiferMode How numerical aquifers are represented
     //! \details Only called on root process
-    ParallelEclipseState(const Deck& deck);
+    ParallelEclipseState(const Deck& deck,
+                         NumericalAquiferMode aquiferMode = NumericalAquiferMode::GridCells);
 
     //! EXPERIMENTAL FUNCTION TO ADD COMM AS INPUT.
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
     //! \param comm Parallel communicator
+    //! \param aquiferMode How numerical aquifers are represented
     //! \details Only called on root process
-    ParallelEclipseState(const Deck& deck, Parallel::Communication comm);
+    ParallelEclipseState(const Deck& deck, Parallel::Communication comm,
+                         NumericalAquiferMode aquiferMode = NumericalAquiferMode::GridCells);
 
     //! \brief Switch to global field properties.
     //! \details Called on root process to use the global field properties

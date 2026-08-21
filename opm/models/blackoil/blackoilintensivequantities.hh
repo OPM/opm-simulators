@@ -135,6 +135,18 @@ class BlackOilIntensiveQuantities
     using BioeffectsIntQua = BlackOilBioeffectsIntensiveQuantities<TypeTag, enableBioeffects>;
 
 public:
+    /*!
+     * \brief Whether update() can be called without an ElementContext.
+     *
+     * The index-based overload of update() covers the plain black-oil equations and the
+     * energy module; the modules listed here still reach for the element context and have
+     * no index-based path.  Callers that have no element to offer -- an auxiliary degree
+     * of freedom has none -- have to know in advance whether they may ask.
+     */
+    static constexpr bool supportsElementContextFreeUpdate =
+        !enableSolvent && !enableExtbo && !enablePolymer && !enableFoam &&
+        !enableMICP && !enableBrine && !enableDiffusion && !enableDispersion;
+
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
                                           energyModuleType != EnergyModules::NoTemperature,
@@ -764,19 +776,22 @@ public:
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
-        static_assert(!enableSolvent);
-        static_assert(!enableExtbo);
-        static_assert(!enablePolymer);
-        static_assert(!enableFoam);
-        static_assert(!enableMICP);
-        static_assert(!enableBrine);
-        static_assert(!enableDiffusion);
-        static_assert(!enableDispersion);
+        static_assert(supportsElementContextFreeUpdate);
 
         this->extrusionFactor_ = 1.0;// to avoid fixing parent update
         updateCommonPart<Args...>(problem, priVars, globalSpaceIdx, timeIdx);
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
+
+        // The element-context update does this from updateCommonPart(); here it has to be
+        // called separately because that overload is shared with configurations built
+        // against a problem that has no energy at all.  Without it the fluid enthalpies,
+        // the rock internal energy and the thermal conductivity are never computed, so
+        // nothing in the cell depends on its temperature and its diagonal block comes out
+        // with an entirely zero temperature column.
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+            asImp_().updateEnergyQuantities_(problem, globalSpaceIdx, timeIdx);
+        }
 
         // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
     }

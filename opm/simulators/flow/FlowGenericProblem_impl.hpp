@@ -211,7 +211,10 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
         for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             unsigned tableIdx = 0;
             if (!rockTableIdx_.empty()) {
-                tableIdx = rockTableIdx_[elemIdx];
+                // Auxiliary DOFs have no entry here; they take the first ROCK region.
+                if (elemIdx < rockTableIdx_.size()) {
+                    tableIdx = rockTableIdx_[elemIdx];
+                }
             }
             overburdenPressure_[elemIdx] =
                 overburdenTables[tableIdx].eval(cellCenterDepths[elemIdx], /*extrapolation=*/true);
@@ -327,7 +330,10 @@ rockCompressibility(unsigned globalSpaceIdx) const
 
     unsigned tableIdx = 0;
     if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        // Auxiliary DOFs have no entry here; they take the first ROCK region.
+        if (globalSpaceIdx < this->rockTableIdx_.size()) {
+            tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        }
     }
     return this->rockParams_[tableIdx].compressibility;
 }
