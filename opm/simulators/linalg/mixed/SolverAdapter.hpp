@@ -53,7 +53,8 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
                  const Comm &comm)
     {
         int halo;
-        int nrows;
+        //int nrows;
+        size_t nrows;
         int nnz=0;
 
         auto &A = op->getmat();

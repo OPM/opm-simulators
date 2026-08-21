@@ -160,7 +160,7 @@ public:
 
         // total array length
         int NN = block_size*vx.N();
-#if 1
+#if 0
         // unroll loop in multiples of 8
         int n=NN/8;
         int N=8*n;
