@@ -27,8 +27,9 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
@@ -238,13 +239,18 @@ updatePressures(const int reportStepIdx,
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer() && well->wellEcl().predictionMode()) {
+        // A well without a VFP table cannot translate the network nodal
+        // pressure into a BHP limit, so it cannot be put under THP control,
+        // while its rates still contribute to the network flows.
+        if (well->isProducer() && well->wellEcl().predictionMode()
+            && well->wellEcl().vfp_table_number() > 0) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
                 // The well belongs to a group with has a network pressure constraint,
                 // set the dynamic THP constraint of the well accordingly.
                 const Scalar new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
+                network_imposed_thp_limits_[well->name()] = new_limit;
                 SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                 // TODO: not sure why the thp is NOT updated properly elsewhere
@@ -318,6 +324,14 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initialize(const int report_step)
 {
+    // Wells with new production controls specified at this report step do not
+    // keep any THP limit imposed earlier by the network.
+    if (!network_imposed_thp_limits_.empty()) {
+        const auto& events = well_model_.schedule()[report_step].wellgroup_events();
+        std::erase_if(network_imposed_thp_limits_, [&events](const auto& item) {
+            return events.hasEvent(item.first, ScheduleEvents::PRODUCTION_UPDATE);
+        });
+    }
     const auto& network = well_model_.schedule()[report_step].network();
     if (network.active() && !node_pressures_.empty()) {
         for (auto& well : well_model_.genericWells()) {
@@ -333,12 +347,24 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
     // Producers only, since we so far only support the
     // "extended" network model (properties defined by
     // BRANPROP and NODEPROP) which only applies to producers.
-    if (well.isProducer() && !node_pressures_.empty()) {
+    // A well without a VFP table cannot translate the network nodal
+    // pressure into a BHP limit, so it cannot be put under THP control,
+    // while its rates still contribute to the network flows.
+    if (well.isProducer() && well.wellEcl().vfp_table_number() > 0) {
         const auto it = this->node_pressures_.find(well.wellEcl().groupName());
         if (it != this->node_pressures_.end()) {
             // The well belongs to a group which has a network nodal pressure,
             // set the dynamic THP constraint based on the network nodal pressure
             well.setDynamicThpLimit(it->second);
+            network_imposed_thp_limits_[well.name()] = it->second;
+        } else {
+            // The well is not (or no longer) attached to a network node. A THP
+            // limit imposed earlier by the network remains in force until new
+            // production controls are specified for the well (Eclipse behavior).
+            const auto imposed = network_imposed_thp_limits_.find(well.name());
+            if (imposed != network_imposed_thp_limits_.end()) {
+                well.setDynamicThpLimit(imposed->second);
+            }
         }
     }
 }
@@ -374,7 +400,9 @@ operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
         && this->node_pressures_ == rhs.node_pressures_
         && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
         && this->branch_data_ == rhs.branch_data_
-        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_;
+        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_
+        && this->network_imposed_thp_limits_ == rhs.network_imposed_thp_limits_
+        && this->last_valid_network_imposed_thp_limits_ == rhs.last_valid_network_imposed_thp_limits_;
 }
 
 template class BlackoilWellModelNetworkGeneric<double, BlackOilDefaultFluidSystemIndices>;
