@@ -187,17 +187,14 @@ template <typename T, typename std::enable_if_t<is_gpu_matrix_v<T>, int>>
 GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
     : m_underlyingMatrix(A)
     , m_w(w)
-    , m_LU(A.getNonZeroValues().data(),
-           A.getRowIndices().data(),
-           A.getColumnIndices().data(),
-           A.nonzeroes(),
-           A.blockSize(),
-           A.N())
+    , m_LU(A.getRowIndices(), A.getColumnIndices(), A.blockSize())
     , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
     , m_descriptionL(detail::createLowerDiagonalDescription())
     , m_descriptionU(detail::createUpperDiagonalDescription())
     , m_cuSparseHandle(detail::CuSparseHandle::getInstance())
 {
+    m_LU.updateNonzeroValues(A);
+
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_LU.N(),
                  fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
