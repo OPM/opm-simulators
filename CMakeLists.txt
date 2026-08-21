@@ -521,7 +521,7 @@ macro(opm-simulators_tests_hook)
                  GpuView
                  HypreInterfaceGPU
                  HyprePreconditionerGPU
-                 is_gpu_pointer
+                 gpu_pointer_attributes
                  MiniMatrix
                  MiniVector
                  preconditioner_factory_gpu

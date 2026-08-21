@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 
 namespace Opm::gpuistl

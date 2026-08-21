@@ -15,12 +15,15 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestIsGPUPointer
+#define BOOST_TEST_MODULE TestGPUPointerAttributes
 
 #include <boost/test/unit_test.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-BOOST_AUTO_TEST_CASE(TestIsGPUPointer)
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+
+# include <cuda.h>
+BOOST_AUTO_TEST_CASE(TestGPUPointerAttributes)
 {
     using namespace Opm::gpuistl::detail;
 
@@ -29,10 +32,30 @@ BOOST_AUTO_TEST_CASE(TestIsGPUPointer)
     auto devicePtr = Opm::gpuistl::make_gpu_unique_ptr<int>(1);
     auto devicePtrShared = Opm::gpuistl::make_gpu_shared_ptr<double>(23.0);
 
+    std::vector<double> vectorOnCPU {{1, 2, 3, 4, 5, 6, 7}};
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(vectorOnCPU.data(), vectorOnCPU.size());
+
+    // Checking GPU pointers
     BOOST_CHECK(isGPUPointer(devicePtr));
     BOOST_CHECK(isGPUPointer(devicePtr.get()));
     BOOST_CHECK(!isGPUPointer(hostPtr));
     BOOST_CHECK(!isGPUPointer(hostSmartPtr.get()));
     BOOST_CHECK(!isGPUPointer(hostSmartPtr));
     BOOST_CHECK(isGPUPointer(devicePtrShared));
+    BOOST_CHECK(isGPUPointer(vectorOnGPU.data()));
+    BOOST_CHECK(isGPUPointer(vectorOnGPU.data() + 4));
+    BOOST_CHECK(!isGPUPointer(vectorOnCPU.data()));
+    BOOST_CHECK(!isGPUPointer(vectorOnCPU.data() + 4));
+
+    // Checking CPU pointers
+    BOOST_CHECK(!isCPUPointer(devicePtr));
+    BOOST_CHECK(!isCPUPointer(devicePtr.get()));
+    BOOST_CHECK(!isCPUPointer(hostPtr));
+    BOOST_CHECK(isCPUPointer(hostSmartPtr.get()));
+    BOOST_CHECK(isCPUPointer(hostSmartPtr));
+    BOOST_CHECK(!isCPUPointer(devicePtrShared));
+    BOOST_CHECK(!isCPUPointer(vectorOnGPU.data()));
+    BOOST_CHECK(!isCPUPointer(vectorOnGPU.data() + 4));
+    BOOST_CHECK(isCPUPointer(vectorOnCPU.data()));
+    BOOST_CHECK(isCPUPointer(vectorOnCPU.data() + 4));
 }
