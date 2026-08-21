@@ -828,8 +828,8 @@ getReservoirConvergence(const double reportTime,
         || relax_iter_cnv
         || relax_dsol_cnv;
 
-    // Ensure that CNV convergence criteria is met when max.
-    // solution change tolerances have been fulfilled
+    // The solution-change criterion overrides CNV entirely rather than merely relaxing it:
+    // 1e20 is never exceeded, so a converged solution update accepts any CNV.
     Scalar tolerance_cnv_relaxed = relax_dsol_cnv ? 1e20 : this->param_.tolerance_cnv_relaxed_;
 
     const auto tol_cnv = use_relaxed_cnv ? tolerance_cnv_relaxed : this->param_.tolerance_cnv_;
