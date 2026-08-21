@@ -277,6 +277,32 @@ relativeChange() const
 template <class TypeTag>
 void
 NonlinearSystemCompositional<TypeTag>::
+updateSolution(const BVector& dx)
+{
+    OPM_TIMEBLOCK(updateSolution);
+
+    auto& model = this->simulator_.model();
+    auto& solution = model.solution(/*timeIdx=*/0);
+
+    model.newtonMethod().applyUpdate(/*nextSolution=*/solution,
+                                     /*curSolution=*/solution,
+                                     /*update=*/dx,
+                                     /*resid=*/dx);
+
+    // The linear solver leaves the rows of ghost cells untouched: fetch their
+    // updated primary variables from the owning processes before the intensive
+    // quantities are recomputed.
+    model.syncOverlap();
+
+    {
+        OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
+        model.invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+    }
+}
+
+template <class TypeTag>
+void
+NonlinearSystemCompositional<TypeTag>::
 solveJacobianSystem(BVector& x)
 {
     auto& jacobian = this->simulator_.model().linearizer().jacobian();
@@ -306,7 +332,12 @@ reservoirResidualMetrics() const
 
     std::vector<Scalar> residualMetrics(numEq, 0.0);
 
-    for (unsigned dofIdx = 0; dofIdx < residual.size(); ++dofIdx) {
+    // Only the interior cells: the residual of a ghost cell misses the flux
+    // contributions of neighbors outside the overlap layer and does not
+    // converge, and its converged value lives on the owning process.
+    const auto& elemMapper = model.elementMapper();
+    for (const auto& elem : elements(this->simulator_.gridView(), Dune::Partitions::interior)) {
+        const unsigned dofIdx = elemMapper.index(elem);
         if (dofIdx >= model.numGridDof() || model.dofTotalVolume(dofIdx) <= 0.0) {
             continue;
         }

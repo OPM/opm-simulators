@@ -83,6 +83,8 @@ public:
 
     void solveJacobianSystem(BVector& x);
 
+    void updateSolution(const BVector& dx);
+
     bool hasNlddSolver() const
     { return false; }
 
