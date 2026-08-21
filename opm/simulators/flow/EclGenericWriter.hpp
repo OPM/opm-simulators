@@ -51,6 +51,7 @@ class InterRegFlowMap;
 class Inplace;
 template <class Grid> class LevelCartesianIndexMapper;
 struct NNCdata;
+class RegionVariableCollection;
 class Schedule;
 class SummaryConfig;
 class SummaryState;
@@ -58,9 +59,13 @@ class UDQState;
 
 } // namespace Opm
 
-namespace Opm { namespace Action {
+namespace Opm::Action {
 class State;
-}} // namespace Opm::Action
+} // namespace Opm::Action
+
+namespace Opm::data {
+class RegionVariableMapping;
+} // namespace Opm::data
 
 namespace Opm {
 
@@ -149,6 +154,8 @@ protected:
                      const std::map<std::tuple<std::string, int, int>, double>& lgrBlockData,
                      const std::map<std::string, double>&                 miscSummaryData,
                      const std::map<std::string, std::vector<double>>&    regionData,
+                     const data::RegionVariableMapping&                   regVarMap,
+                     const RegionVariableCollection&                      regVars,
                      const Inplace&                                       inplace,
                      const Inplace*                                       initialInPlace,
                      const InterRegFlowMap&                               interRegFlows,

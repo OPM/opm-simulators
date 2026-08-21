@@ -26,9 +26,12 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
+
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -1327,6 +1330,34 @@ groupAndNetworkData(const int reportStepIdx) const
     this->genNetwork_.assignNodeAndBranchValues(grp_nwrk_values.nodeData, grp_nwrk_values.branchData, grp_nwrk_values.convergedBranchData, reportStepIdx - 1); // Schedule state info at previous step
 
     return grp_nwrk_values;
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+reportIntervalConnectionOilProduction(const double              dt,
+                                      const std::size_t         conn_opt_ix,
+                                      RegionVariableCollection& regVars) const
+{
+    auto wasDynamicallyClosed = [this](const std::string& wname)
+    {
+        return this->wasDynamicallyShutThisTimeStep(wname);
+    };
+
+    auto wellEffFac = [this](const std::string& wname)
+    {
+        auto wellPtrPos = std::ranges::find_if
+            (this->well_container_generic_,
+             [&wname](const auto* wellPtr) { return wellPtr->name() == wname; });
+
+        return (wellPtrPos == this->well_container_generic_.end())
+            ? 0.0
+            : (*wellPtrPos)->wellEfficiencyFactor();
+    };
+
+    this->wellState().reportIntervalConnectionOilProduction
+        (dt, wasDynamicallyClosed, wellEffFac,
+         [conn_opt_ix, &regVars](const std::size_t cell_ix, const double copt)
+        { regVars.addCellValue(conn_opt_ix, cell_ix, copt); });
 }
 
 template<typename Scalar, typename IndexTraits>

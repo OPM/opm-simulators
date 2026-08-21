@@ -35,6 +35,7 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/RegionVariableSupport.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
@@ -49,8 +50,15 @@
 
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <opm/output/data/RegionVariableValues.hpp>
+#include <opm/output/data/RegionsetVariableDescriptor.hpp>
 #include <opm/output/data/Solution.hpp>
 
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
+
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/utils/ParallelRegionVariableValues.hpp>
+#include <opm/simulators/utils/ParallelRegionsetVariableDescriptor.hpp>
 #include <opm/simulators/utils/PressureAverage.hpp>
 
 #include <algorithm>
@@ -58,6 +66,7 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -157,6 +166,8 @@ GenericOutputModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableBioeffects_(enableBioeffects)
     , enableGeochemistry_(enableGeochemistry)
+    , regionVars_ { std::make_unique<ParallelRegionsetVariableDescriptor>(comm),
+                    std::make_unique<ParallelRegionVariableValues>(comm) }
     , flowsC_(schedule, summaryConfig, isInterior)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname) { return this->isOwnedByCurrentRank(wname); },
@@ -164,25 +175,13 @@ GenericOutputModule(const EclipseState& eclState,
     , rst_conv_(std::move(globalCell), comm)
     , local_data_valid_(false)
 {
-    const auto& fp = eclState_.fieldProps();
-
-    this->regions_["FIPNUM"] = fp.get_int("FIPNUM");
-    for (const auto& region : fp.fip_regions()) {
-        this->regions_[region] = fp.get_int(region);
-    }
-
-    this->RPRNodes_  = summaryConfig_.keywords("RPR*");
-    this->RPRPNodes_ = summaryConfig_.keywords("RPRP*");
-
-    for (const auto& phase : Inplace::phases()) {
-        std::string key_pattern = "R" + Inplace::EclString(phase) + "*";
-        this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
-    }
-
-    forceDisableFipOutput_ =
+    this->forceDisableFipOutput_ =
         Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
-    forceDisableFipresvOutput_ =
+
+    this->forceDisableFipresvOutput_ =
         Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
+
+    this->initialiseRegionVariableSupport();
 }
 
 template<class FluidSystem>
@@ -1273,6 +1272,48 @@ assignGlobalFieldsToSolution(data::Solution& sol)
 {
     this->rst_conv_.outputRestart(sol);
 }
+
+template<class FluidSystem>
+void GenericOutputModule<FluidSystem>::
+initialiseRegionVariableSupport()
+{
+    const auto& fp = this->eclState_.fieldProps();
+
+    this->regions_.insert_or_assign("FIPNUM", fp.get_int("FIPNUM"));
+    for (const auto& region : fp.fip_regions()) {
+        this->regions_.insert_or_assign(region, fp.get_int(region));
+    }
+
+    this->RPRNodes_  = this->summaryConfig_.keywords("RPR*");
+    this->RPRPNodes_ = this->summaryConfig_.keywords("RPRP*");
+
+    for (const auto& phase : Inplace::phases()) {
+        const auto key_pattern = fmt::format("R{}*", Inplace::EclString(phase));
+        this->regionNodes_.insert_or_assign(phase, this->summaryConfig_.keywords(key_pattern));
+    }
+
+    // -----------------------------------------------------------------------
+
+    this->regVarMap_.prepareRegistration();
+
+    populateRegVarMapping(this->summaryConfig_, this->regVarMap_);
+
+    this->regVarMap_.commitStructure();
+
+    {
+        const auto declaredMaxRegID =
+            declaredMaxRegionID(this->eclState_.runspec());
+
+        this->regionVars_.initialise(static_cast<int>(declaredMaxRegID),
+                                     fp, this->regVarMap_);
+    }
+}
+
+// ===========================================================================
+// Explicit template specialisations below separator
+//
+// No other code permitted here.
+// ===========================================================================
 
 template<class T> using FS = BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>;
 

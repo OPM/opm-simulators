@@ -51,8 +51,11 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/output/data/Cells.hpp>
+#include <opm/output/data/RegionVariableMapping.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
+#include <opm/output/eclipse/RegionVariableCollection.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
