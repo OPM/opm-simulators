@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+// Developer helpers to visualize matrices
+#if 0
 void mat_fshow(float const *A, int n, char const *name)
 {
     printf("%s = [\n",name);
@@ -25,6 +27,7 @@ void mat_show(double const *A, int n, char const *name)
     }
     printf("]\n\n");
 }
+#endif
 
 /**
  * @brief In-place right matrix-matrix multiplication for 2x2 matrices.

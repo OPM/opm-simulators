@@ -47,14 +47,14 @@ class MixedMatrixWrapper
     //!
     //! @param x input vector
     //! @param y output vector
-    virtual void mv(const Vector& x, Vector& y) const;
+    void mv(const Vector& x, Vector& y) const;
 
     //! @brief block-sparse matrix-vector multiplication with
     //! update (y += M.x)
     //!
     //! @param x input vector
     //! @param y output vector
-    virtual void umv(const Vector& x, Vector& y) const;
+    void umv(const Vector& x, Vector& y) const;
 
     //! @brief block-sparse matrix-vector multiplication with
     //! scaled update (y += alpha * M.x)
@@ -62,7 +62,7 @@ class MixedMatrixWrapper
     //! @param alpha scaling factor
     //! @param x input vector
     //! @param y output vector
-    virtual void usmv(double alpha, const Vector& x, Vector& y) const;
+    void usmv(double alpha, const Vector& x, Vector& y) const;
 
     //! @brief access row offset pointer
     int *rowptr(){return M_->rowptr;}

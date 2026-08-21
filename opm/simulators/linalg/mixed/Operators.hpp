@@ -24,21 +24,21 @@ public:
     MixedGhostLastMatrixAdapter (const M& A, const C& comm) : A_( A ), comm_(comm) {}
 
     // y = A * x
-    virtual void apply( const V& x, V& y ) const override
+    void apply( const V& x, V& y ) const override
     {
         A_.mv(x,y);
         ghostLast_project(y);
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd (double alpha, const V& x, V& y) const override
+    void applyscaleadd (double alpha, const V& x, V& y) const override
     {
         A_.usmv(alpha,x,y);
         ghostLast_project(y);
     }
 
     // accessor to matix object
-    virtual const M& getmat() const override { return A_; }
+    const M& getmat() const override { return A_; }
 
     // solver category
     Dune::SolverCategory::Category category() const override
@@ -89,7 +89,7 @@ public:
     {}
 
     // y = A * x
-    virtual void apply( const V& x, V& y ) const override
+    void apply( const V& x, V& y ) const override
     {
         A_.mv(x,y);
         wellOper_.apply(x, y);
@@ -98,7 +98,7 @@ public:
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd (double alpha, const V& x, V& y) const override
+    void applyscaleadd (double alpha, const V& x, V& y) const override
     {
         A_.usmv(alpha,x,y);
         wellOper_.applyscaleadd(alpha, x, y);
