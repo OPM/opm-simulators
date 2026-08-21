@@ -80,7 +80,7 @@ class MixedBiCGSTABSolver:public InverseOperator<Vector, Vector>
             int irow=0;
             for(auto row=A.begin(); row.index() < nrows; row++)
             {
-                if(local_[irow++]==1) for(auto col = row->begin(); col != row->end(); col++) nnz++;
+                nnz += local_[irow++] ? std::distance(row->begin(), row->end()) : 0;
             }
         }
 

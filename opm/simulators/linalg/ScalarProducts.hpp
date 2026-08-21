@@ -16,9 +16,6 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
 {
     public:
 
-    ///Exctract block size from vector type
-    static constexpr auto block_size = Vector::block_type::dimension;
-
     /*! \brief constructor
     * \param com The communication object for syncing overlap and copy
     * data points.
@@ -46,7 +43,7 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     * \param vx first input vector
     * \param vy second input vector
     */
-    virtual double dot (const Vector& vx, const Vector& vy) const override
+    double dot (const Vector& vx, const Vector& vy) const override
     {
 
         // access underlying data
@@ -83,7 +80,7 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     /*! \brief Vector L2-norm.
     * \param vx input vector
     */
-    virtual double norm (const Vector& vx) const override
+    double norm (const Vector& vx) const override
     {
         return sqrt(dot(vx,vx));
     }
@@ -95,6 +92,10 @@ class GhostLastScalarProduct : public ScalarProduct<Vector>
     }
 
     private:
+
+    ///Exctract block size from vector type
+    static constexpr auto block_size = Vector::block_type::dimension;
+
     std::shared_ptr<const Comm> _communication;
     SolverCategory::Category _category;
     int count_;
@@ -145,14 +146,11 @@ class SeqOptmizedProduct : public Dune::SeqScalarProduct<Vector>
 {
 public:
 
-    // extract block size
-    static constexpr auto block_size = Vector::block_type::dimension;
-
     /*! \brief Dot product of two vectors.
     * \param vx first input vector
     * \param vy second input vector
     */
-    virtual double dot(const Vector& vx, const Vector& vy) const override
+    double dot(const Vector& vx, const Vector& vy) const override
     {
         // access underlying data
         double const *x = &vx[0][0];
@@ -183,9 +181,16 @@ public:
     /*! \brief Vector L2-norm.
     * \param vx input vector
     */
-    virtual double norm(const Vector& vx) const override {
+    double norm(const Vector& vx) const override {
         return std::sqrt(this->dot(vx, vx));
     }
+
+    private:
+
+    // extract block size
+    static constexpr auto block_size = Vector::block_type::dimension;
+
+
 };
 
 }
