@@ -329,6 +329,7 @@ runStep(SimulatorTimer& timer)
         wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
         serializer_.loadState();
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        simulator_.model().rebuildStorageCache(/*timeIdx=*/0);
         if (simulator_.problem().intensiveQuantityHistorySize() > 1) {
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/1);
             simulator_.model().rebuildStorageCache(/*timeIdx=*/1);
