@@ -274,10 +274,6 @@ namespace Opm
             this->linSys_.recoverSolutionWell(x, xw);
 
             updateWellState(simulator, xw, groupStateHelper, well_state);
-            if constexpr (has_energy) {
-                const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
-                updateSegmentFluidState(info, deferred_logger);
-            }
         }
         catch (const NumericalProblem& exp) {
             // Add information about the well and log to deferred logger
@@ -700,13 +696,18 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids(const FSInfo& info,
-                                DeferredLogger& deferred_logger)
+    computeInitialSegmentInventory(DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            const Scalar surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger).value();
+            const EvalWell volume_ratio =
+                this->segments_.computeVolumeRatio(seg, segment_fluid_state_[seg],
+                                                   this->primary_variables_, deferred_logger);
+            const Scalar surface_volume = getSegmentSurfaceVolume(seg, volume_ratio).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
+            }
+            if constexpr (has_energy) {
+                segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
             }
         }
     }
@@ -769,15 +770,10 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
 
+        // Refresh the fluid state before computing the initial inventory.
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
-
-        computeInitialSegmentFluids(info, deferred_logger);
-        if constexpr (has_energy) {
-            // after updating the primary variables, we need to update the segment fluid state
-            // it is only consumed by the energy equation, so we only do it when energy is active
-            updateSegmentFluidState(info, deferred_logger);
-            computeInitialSegmentEnergy();
-        }
+        updateSegmentFluidState(info, deferred_logger);
+        computeInitialSegmentInventory(deferred_logger);
     }
 
 
@@ -1148,24 +1144,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeSegmentFluidProperties(const Simulator& simulator, DeferredLogger& deferred_logger)
     {
-        // TODO: the concept of phases and components are rather confusing in this function.
-        // needs to be addressed sooner or later.
-
-        // get the temperature for later use. It is only useful when we are not handling
-        // thermal related simulation
-        // basically, it is a single value for all the segments
-        // not sure how to handle the pvt region related to segment
-        // for the current approach, we use the pvt region of the first perforated cell
-        // although there are some text indicating using the pvt region of the lowest
-        // perforated cell
-        // TODO: later to investigate how to handle the pvt region
-
-        auto info = this->getFirstPerforationFluidStateInfo(simulator);
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
-
-        this->segments_.computeFluidProperties(firstPerfTemperature,
-                                               firstPerfSaltConcentration,
+        // Rebuild fluid states from the current primary variables before deriving segment
+        // properties, so both use consistent PVT data.
+        const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+        updateSegmentFluidState(info, deferred_logger);
+        this->segments_.computeFluidProperties(this->segment_fluid_state_,
                                                this->primary_variables_,
                                                deferred_logger);
     }
@@ -1562,13 +1545,6 @@ namespace Opm
         bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
-        // The first-perforation fluid-state info is needed to refresh the segment
-        // fluid state for the energy equation. It depends solely on the reservoir cell
-        // state, which does not change during the inner iterations.
-        [[maybe_unused]] FSInfo info{};
-        if constexpr (has_energy) {
-            info = this->getFirstPerforationFluidStateInfo(simulator);
-        }
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
             if (it > this->param_.strict_inner_iter_wells_) {
@@ -1618,10 +1594,6 @@ namespace Opm
             try{
                 dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
-                if constexpr (has_energy) {
-                    // segment fluid state is only consumed by the energy equation
-                    updateSegmentFluidState(info, deferred_logger);
-                }
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
@@ -1725,13 +1697,6 @@ namespace Opm
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
-        // The first-perforation fluid-state info is needed to refresh the segment
-        // fluid state for the energy equation. It depends solely on the reservoir cell
-        // state, which does not change during the inner iterations.
-        [[maybe_unused]] FSInfo info{};
-        if constexpr (has_energy) {
-            info = this->getFirstPerforationFluidStateInfo(simulator);
-        }
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch && status_switch_count < max_status_switch){
@@ -1811,10 +1776,6 @@ namespace Opm
             try{
                 const BVectorWell dx_well = this->linSys_.solve();
                 updateWellState(simulator, dx_well, groupStateHelper, well_state, relaxation_factor);
-                if constexpr (has_energy) {
-                    // segment fluid state is only consumed by the energy equation
-                    updateSegmentFluidState(info, deferred_logger);
-                }
             }
             catch(const NumericalProblem& exp) {
                 // Add information about the well and log to deferred logger
@@ -1979,12 +1940,18 @@ namespace Opm
             this->linSys_.sumDistributed(this->parallel_well_info_.communication());
         }
 
-        const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+        // Needed to construct the injector wellhead fluid state.
+        [[maybe_unused]] FSInfo info{};
+        if constexpr (has_energy) {
+            info = this->getFirstPerforationFluidStateInfo(simulator);
+        }
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(seg, info, deferred_logger);
+                // The ratios were refreshed by computeSegmentFluidProperties() above.
+                const EvalWell segment_surface_volume =
+                    getSegmentSurfaceVolume(seg, this->segments_.volumeRatio(seg));
 
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
@@ -2186,17 +2153,10 @@ namespace Opm
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getSegmentSurfaceVolume(const int seg_idx,
-                            const FSInfo& info,
-                            DeferredLogger& deferred_logger) const
+                            const EvalWell& volume_ratio) const
     {
-        const Scalar firstPerfTemperature = std::get<0>(info);
-        const Scalar firstPerfSaltConcentration = std::get<1>(info);
-
-        return this->segments_.getSurfaceVolume(firstPerfTemperature,
-                                                firstPerfSaltConcentration,
-                                                this->primary_variables_,
-                                                seg_idx,
-                                                deferred_logger);
+        const Scalar volume = this->wellEcl().getSegments()[seg_idx].volume();
+        return volume / volume_ratio;
     }
 
 
@@ -2486,7 +2446,9 @@ namespace Opm
                      DeferredLogger& deferred_logger) const
     {
         SegmentFluidState<ValueType> fluid_state;
-        if constexpr (has_energy) {
+        if constexpr (enable_temperature) {
+            // Populate temperature for every fluid state that stores it, including thermal
+            // modes without a fully implicit energy equation.
             fluid_state.setTemperature(temperature);
         }
         if constexpr (has_brine) {
@@ -2801,15 +2763,6 @@ namespace Opm
                                   MSWEval::PrimaryVariables::Temperature,
                                   energy_scaling_factor_ * energy_flux,
                                   this->linSys_);
-    }
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::computeInitialSegmentEnergy()
-    {
-        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
-        }
     }
 
     template <typename TypeTag>
