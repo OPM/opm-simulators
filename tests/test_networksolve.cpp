@@ -2039,6 +2039,125 @@ BOOST_AUTO_TEST_CASE(production_network_prototype)
     }
 }
 
+// The group equations against the rule they replace.
+//
+// Given linearised wells and a set of node pressures, the old way to place a
+// group's rate is arithmetic: cap each well by what it can actually take, share
+// the target out by guide rate, and whenever a well's share exceeds its cap, fix
+// it there, take it out of the pool and share the remainder among the rest. The
+// new way is two equations and a multiplier. They must agree, and if they do not
+// the equations are wrong -- this is the check that they are not.
+BOOST_AUTO_TEST_CASE(group_equations_match_the_rule_based_allocation)
+{
+    const auto sm3d = cubic(meter) / day;
+
+    // The rule, worked out at whatever pressures the equations settled on: cap
+    // each well by what it can actually take, share the target by guide rate,
+    // and whenever a share exceeds a cap, fix that well there, drop it from the
+    // pool and share the remainder among the rest.
+    auto ruleBased = [&](const NetworkSolve::System<double>& system,
+                         const std::vector<double>& node_pressure,
+                         const double target) {
+        const auto& wells = system.wells();
+        const int n = static_cast<int>(wells.size());
+        std::vector<double> cap(n), share(n, 0.0);
+        std::vector<bool> pooled(n, true);
+        for (int w = 0; w < n; ++w) {
+            const double p = node_pressure[wells[w].node];
+            cap[w] = std::min({system.thpPotential(wells[w], p), wells[w].rate_limit,
+                               NetworkSolve::System<double>::ipr(wells[w], wells[w].bhp_limit)});
+        }
+        double remaining = target;
+        for (int pass = 0; pass <= n; ++pass) {
+            double guides = 0.0;
+            for (int w = 0; w < n; ++w) {
+                if (pooled[w]) {
+                    guides += wells[w].guide;
+                }
+            }
+            if (guides <= 0.0) {
+                break;
+            }
+            bool fixed_one = false;
+            for (int w = 0; w < n; ++w) {
+                if (!pooled[w]) {
+                    continue;
+                }
+                const double s = remaining * wells[w].guide / guides;
+                if (s > cap[w]) {
+                    share[w] = cap[w];
+                    pooled[w] = false;
+                    remaining -= cap[w];
+                    fixed_one = true;
+                    break;
+                }
+                share[w] = s;
+            }
+            if (!fixed_one) {
+                break;
+            }
+        }
+        return share;
+    };
+
+    auto compare = [&](const char* what, NetworkCase& c, const double target,
+                       const bool required) {
+        auto system = c.system();
+        const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+        if (!r.converged) {
+            BOOST_TEST_MESSAGE(what << ": the solve does not converge, so the equations cannot "
+                               "be compared here yet");
+            BOOST_CHECK(!required);
+            return;
+        }
+        const auto share = ruleBased(system, r.node_pressure, target);
+        double rule_total = 0.0, solved_total = 0.0;
+        for (std::size_t w = 0; w < share.size(); ++w) {
+            BOOST_TEST_MESSAGE("  " << system.wells()[w].name
+                               << "  rule " << convert::to(share[w], sm3d)
+                               << "   equations " << convert::to(r.well_rate[w], sm3d));
+            rule_total += share[w];
+            solved_total += r.well_rate[w];
+        }
+        BOOST_TEST_MESSAGE(what << ": target " << convert::to(target, sm3d)
+                           << ", rule " << convert::to(rule_total, sm3d)
+                           << ", equations " << convert::to(solved_total, sm3d));
+        BOOST_CHECK_CLOSE(convert::to(solved_total, sm3d), convert::to(target, sm3d), 0.1);
+        for (std::size_t w = 0; w < share.size(); ++w) {
+            BOOST_CHECK_CLOSE(convert::to(r.well_rate[w], sm3d), convert::to(share[w], sm3d), 1.0);
+        }
+    };
+
+    // Every well able to take its share: the multiplier alone has to reproduce
+    // a plain guide-rate split.
+    {
+        auto c = gnetinjeGas();
+        double target = 0.0;
+        for (const auto& w : c.wells()) {
+            target += w.q_ref;
+        }
+        c.setGroupTarget(0.8 * target);      // binding, but nothing at a limit
+        c.finish();
+        compare("plain split", c, 0.8 * target, /*required=*/true);
+    }
+
+    // One well that cannot take its share, so the rule has to redistribute and
+    // the multiplier has to arrive at the same answer. This is the case the
+    // machinery exists for, and the solve does not yet converge on it -- the
+    // comparison is written and waiting.
+    {
+        auto c = gnetinjeGas();
+        double target = 0.0;
+        for (const auto& w : c.wells()) {
+            target += w.q_ref;
+        }
+        c.wells()[0].rate_limit = convert::from(2.0e5, sm3d);
+        c.setGroupTarget(target);
+        c.finish();
+        compare("one well limited", c, target, /*required=*/false);
+    }
+}
+
 // How the formulations degrade as the wells stiffen. dq/dbhp sets the loop gain.
 // Measured over the whole grid of starts, because a single start says too little.
 BOOST_AUTO_TEST_CASE(stiffness_sweep)

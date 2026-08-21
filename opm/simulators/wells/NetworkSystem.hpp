@@ -182,6 +182,17 @@ public:
     void addNode(Node n) { nodes_.push_back(std::move(n)); }
     void addWell(Well<Scalar> w) { wells_.push_back(std::move(w)); }
     void setTerminalPressure(const Scalar p) { terminal_pressure_ = p; }
+    /// The target of the one group this system can carry.
+    ///
+    /// A well belongs to that group by being under group control, not by where
+    /// it sits in the network: the group tree and the network tree are
+    /// independent and share only their leaves, and nothing here assumes
+    /// otherwise.
+    ///
+    /// What it does assume is a **single** constraining group. Two groups
+    /// binding different subsets of these wells would be summed into one target,
+    /// which is wrong, and nested groups need a multiplier each with a well's
+    /// share the product down its chain. Neither is modelled.
     void setGroupTarget(const Scalar target) { group_target_ = target; }
 
     /// Residual scale for the rate rows. Without one, rate and pressure rows
