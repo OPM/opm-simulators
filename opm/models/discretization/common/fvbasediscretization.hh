@@ -1104,6 +1104,46 @@ public:
         storage = gridView_.comm().sum(storage);
     }
 
+    void rebuildStorageCache(const unsigned timeIdx) const
+    {
+        if (!enableStorageCache() || timeIdx >= historySize) {
+            return;
+        }
+
+        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        {
+            const unsigned threadId = ThreadManager::threadId();
+            ElementContext elemCtx(simulator_);
+            LocalEvalBlockVector elemStorage;
+            elemCtx.setEnableStorageCache(false);
+            auto elemIt = threadedElemIt.beginParallel();
+            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
+                const auto& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+
+                elemCtx.updateStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                elemStorage.resize(numPrimaryDof);
+                localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
+
+                for (std::size_t dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
+                    const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+                    EqVector storage(0.0);
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                        storage[eqIdx] = Toolbox::value(elemStorage[dofIdx][eqIdx]);
+                    }
+                    updateCachedStorage(globalDofIdx, timeIdx, storage);
+                }
+            }
+        }
+    }
+
     /*!
      * \brief Ensure that the difference between the storage terms of the last and of the
      *        current time step is consistent with the source and boundary terms.

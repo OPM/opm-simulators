@@ -331,6 +331,7 @@ runStep(SimulatorTimer& timer)
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         if (simulator_.problem().intensiveQuantityHistorySize() > 1) {
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/1);
+            simulator_.model().rebuildStorageCache(/*timeIdx=*/1);
         }
         wellModel_().beginReportStep(timer.currentStepNum());
     }
