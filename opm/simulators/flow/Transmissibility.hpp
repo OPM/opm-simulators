@@ -39,6 +39,7 @@
 #include <functional>
 #include <map>
 #include <cstdint>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
