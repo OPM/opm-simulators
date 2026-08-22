@@ -467,6 +467,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_aqantrc_flow_keyword.cpp
   tests/test_blackoil_amg.cpp
   tests/test_blackoilprimaryvariables.cpp
+  tests/test_compequil.cpp
   tests/test_compwell_equations.cpp
   tests/test_compwell_jacobian.cpp
   tests/test_convergenceoutputconfiguration.cpp
