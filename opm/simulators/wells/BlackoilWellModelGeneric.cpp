@@ -973,6 +973,22 @@ updateEclWellsConstraints(const int              timeStepIdx,
 
         ws.updateStatus(well.getStatus());
         ws.update_type_and_targets(well, st);
+
+        if (well.isProducer()) {
+            // New production controls also invalidate any THP limit the
+            // network has imposed on the well, matching the treatment of
+            // PRODUCTION_UPDATE events at report step initialization. A well
+            // that is still attached to a network node receives a fresh
+            // limit at the next network balance.
+            this->genNetwork_.eraseImposedThpLimit(well.name());
+            const auto genWell = std::find_if(
+                this->well_container_generic_.begin(),
+                this->well_container_generic_.end(),
+                [&wname = well.name()](const auto* w) { return w->name() == wname; });
+            if (genWell != this->well_container_generic_.end()) {
+                (*genWell)->setDynamicThpLimit(std::optional<Scalar> {});
+            }
+        }
     });
 }
 

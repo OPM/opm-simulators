@@ -72,6 +72,19 @@ public:
     //! \brief Initialize a single well according to network configuration.
     void initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well);
 
+    //! \brief Forget any THP limit the network has imposed on well \p wname.
+    //!
+    //! Needed when new production controls are specified for the well
+    //! outside the regular report-step processing (e.g. through ACTIONX),
+    //! so that a well detached from the network does not keep a stale
+    //! network-imposed THP limit. The entry is erased from the last-valid
+    //! state as well, since schedule changes survive retried time steps.
+    void eraseImposedThpLimit(const std::string& wname)
+    {
+        network_imposed_thp_limits_.erase(wname);
+        last_valid_network_imposed_thp_limits_.erase(wname);
+    }
+
     /// Checks if network is active (at least one network well on prediction).
     void updateActiveState(const int report_step);
 
