@@ -522,6 +522,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_vfpproperties.cpp
   tests/test_WellMatrixMerger.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
+  tests/test_weldraw.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstate.cpp
@@ -701,6 +702,7 @@ list (APPEND TEST_DATA_FILES
   tests/GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA
   tests/INJECTION_TOPUP_PHASE_VALIDATION.DATA
   tests/GLIFT1.DATA
+  tests/WELDRAW.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
