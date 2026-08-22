@@ -419,11 +419,26 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 cmode_tmp = target.second;
             }
             using TargetCalculatorType =  GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
-            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, group};
+            // Built on the control decided on above, not the group state's:
+            // the state says NONE for a group under its limit, and the
+            // calculator asserts on NONE.
+            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, cmode_tmp};
             if (!fld_none)
             {
-                // Target is set for the autochoke group itself
-                target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
+                // Target is set for the autochoke group itself. Read it off the
+                // deck control decided on above -- the group *state* may say NONE
+                // when the group is under its limit, and asking the state for a
+                // target then throws (NETWORK_MODEL5_STDW_AUTOCHK, day 3.2). A
+                // group under its limit is simply a choke that ends up open.
+                switch (cmode_tmp) {
+                case Group::ProductionCMode::ORAT: target_tmp = ctrl.oil_target;    break;
+                case Group::ProductionCMode::WRAT: target_tmp = ctrl.water_target;  break;
+                case Group::ProductionCMode::GRAT: target_tmp = ctrl.gas_target;    break;
+                case Group::ProductionCMode::LRAT: target_tmp = ctrl.liquid_target; break;
+                case Group::ProductionCMode::RESV: target_tmp = ctrl.resv_target;   break;
+                default:
+                    target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
+                }
             }
 
             const Scalar orig_target = target_tmp;
@@ -457,7 +472,11 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 
             const auto upbranch = network.uptree_branch(nodeName);
             const auto it = this->node_pressures_.find((*upbranch).uptree_node());
-            const Scalar nodal_pressure = it->second;
+            // Empty on the first pass of a run; dereferencing end() here
+            // handed the group a garbage pressure.
+            const Scalar nodal_pressure = (it != this->node_pressures_.end())
+                ? it->second
+                : network.node(nodeName).terminal_pressure().value_or(Scalar{0});
             Scalar well_group_thp = nodal_pressure;
 
             std::optional<Scalar> autochoke_thp;
