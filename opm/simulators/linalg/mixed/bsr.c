@@ -38,6 +38,14 @@ void bsr_free(bsr_matrix *A)
     A=NULL;
 }
 
+inline void * buffered_alloc(size_t alignment, size_t size)
+{
+    // round up to nearest integer multiple of alignment
+    size_t real_size = alignment*((size + alignment - 1)/alignment);
+
+    return aligned_alloc(alignment, real_size);
+}
+
 void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
 {
     A->nrows=nrows;
@@ -48,8 +56,8 @@ void bsr_init(bsr_matrix *A, int nrows, int nnz, int b)
     A->rowptr = malloc((nrows+1)*sizeof(int));
     A->colidx = malloc(nnz*sizeof(int));
 
-    A->dbl = aligned_alloc(64,b*b*nnz*sizeof(double));
-    A->flt = aligned_alloc(64,b*b*nnz*sizeof(float));
+    A->dbl = buffered_alloc(64,b*b*nnz*sizeof(double));
+    A->flt = buffered_alloc(64,b*b*nnz*sizeof(float));
 
     assert(A->rowptr);
     assert(A->colidx);
