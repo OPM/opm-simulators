@@ -47,6 +47,8 @@
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -59,7 +61,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/format.h>
 
 namespace Opm {
 namespace EQUIL {
@@ -241,15 +242,15 @@ private:
         return z;
     }
 
-    /// Whether the ZMFVD composition differs between the top and the bottom of
-    /// \p span, i.e. whether the table carries any variation over the region.
-    static bool compositionVariesAcross(const Region& reg,
-                                        const std::array<Scalar, 2>& span)
+    /// Whether the ZMFVD composition differs between \p depthA and \p depthB.
+    static bool compositionVariesBetween(const Region& reg,
+                                         const Scalar depthA,
+                                         const Scalar depthB)
     {
-        const CompVec top = composition(reg, span[0]);
-        const CompVec bottom = composition(reg, span[1]);
+        const CompVec a = composition(reg, depthA);
+        const CompVec b = composition(reg, depthB);
         for (int c = 0; c < numComponents; ++c) {
-            if (std::abs(top[c] - bottom[c]) > Scalar{1.0e-10}) {
+            if (std::abs(a[c] - b[c]) > Scalar{1.0e-10}) {
                 return true;
             }
         }
@@ -374,19 +375,32 @@ private:
             ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
 
         // Type 1 describes a continuous hydrocarbon phase, i.e. no gas-oil
-        // contact in the region.  A contact placed inside the region is only
-        // labelled correctly when ZMFVD varies across it, so say so rather
-        // than initializing a two-phase column as a single phase in silence.
-        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1]) &&
-            !compositionVariesAcross(reg, span))
-        {
-            OpmLog::warning(fmt::format("Equilibration region {}: EQUIL item 10 is 1 "
-                                        "(continuous hydrocarbon phase) but the gas-oil "
-                                        "contact at {} m lies inside the region, and ZMFVD "
-                                        "gives no compositional variation across it. The "
-                                        "phases cannot be labelled reliably; supply a "
-                                        "varying ZMFVD or use item 10 = 3.",
-                                        regionIdx + 1, reg.zgoc));
+        // contact in the region, and the whole column is integrated with the
+        // single EOS root chosen from the datum side of the contact.  Warn on
+        // a contact inside the region rather than initialize in silence: on
+        // the far side of it that root can be the wrong one of a three-root
+        // cubic, and a genuinely two-phase column needs item 10 = 3.
+        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1])) {
+            if (compositionVariesBetween(reg, span[0], reg.zgoc) ||
+                compositionVariesBetween(reg, reg.zgoc, span[1])) {
+                OpmLog::warning(fmt::format("Equilibration region {}: EQUIL item 10 is 1 "
+                                            "(continuous hydrocarbon phase) but the gas-oil "
+                                            "contact at {} m lies inside the region. The "
+                                            "gas/liquid EOS root is fixed from the datum "
+                                            "side, so densities across the contact may use "
+                                            "the wrong root; use item 10 = 3 for a "
+                                            "two-phase column.",
+                                            regionIdx + 1, reg.zgoc));
+            }
+            else {
+                OpmLog::warning(fmt::format("Equilibration region {}: EQUIL item 10 is 1 "
+                                            "(continuous hydrocarbon phase) but the gas-oil "
+                                            "contact at {} m lies inside the region, and ZMFVD "
+                                            "gives no compositional variation across it. The "
+                                            "phases cannot be labelled reliably; supply a "
+                                            "varying ZMFVD or use item 10 = 3.",
+                                            regionIdx + 1, reg.zgoc));
+            }
         }
 
         const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
