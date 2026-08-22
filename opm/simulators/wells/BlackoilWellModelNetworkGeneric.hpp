@@ -64,6 +64,14 @@ public:
     void setNodePressures(const std::map<std::string, Scalar>& values)
     { node_pressures_ = values; }
 
+    // do not use, only needed for serialization testing
+    void setNetworkImposedThpLimits(const std::map<std::string, Scalar>& current,
+                                    const std::map<std::string, Scalar>& last_valid)
+    {
+        network_imposed_thp_limits_ = current;
+        last_valid_network_imposed_thp_limits_ = last_valid;
+    }
+
     void setFromRestart(const std::optional<std::map<std::string, double>>& restart_pressures);
 
     //! \brief Initialize wells according to network configuration.
