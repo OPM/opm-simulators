@@ -26,7 +26,7 @@
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/grid/utility/SparseTable.hpp>
-#include <opm/input/eclipse/Schedule/BCProp.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
 #include <opm/common/utility/pointerArithmetic.hpp>
