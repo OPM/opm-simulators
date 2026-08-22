@@ -23,6 +23,7 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
 
@@ -263,7 +264,8 @@ std::optional<std::map<std::string, Scalar>>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 newtonNodePressures(const Network::ExtNetwork& network,
                     const Phase injection_phase,
-                    const int reportStepIdx) const
+                    const int reportStepIdx,
+                    const Network::Node& root) const
 {
     OPM_TIMEFUNCTION();
     // Every way out of here hands the network back to the relaxed update, so say
@@ -277,19 +279,17 @@ newtonNodePressures(const Network::ExtNetwork& network,
         return std::optional<std::map<std::string, Scalar>>{};
     };
 
-    const auto roots = network.roots();
-    if (roots.size() != 1 || !roots.front().get().terminal_pressure().has_value()) {
-        return giveUp(roots.size() == 1 ? "the root has no terminal pressure"
-                                        : "the network has more than one root");
+    if (!root.terminal_pressure().has_value()) {
+        return giveUp(fmt::format("the tree under {} has no terminal pressure", root.name()));
     }
-    const Scalar terminal = *roots.front().get().terminal_pressure();
+    const Scalar terminal = *root.terminal_pressure();
 
     NetworkSolve::System<Scalar> system(*well_model_.getVFPProperties().getInj(), injection_phase);
     system.setTerminalPressure(terminal);
 
     // Nodes, parents before children.
     std::map<std::string, int> index;
-    std::vector<std::string> order{roots.front().get().name()};
+    std::vector<std::string> order{root.name()};
     system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable});
     index[order.front()] = 0;
     for (std::size_t at = 0; at < order.size(); ++at) {
@@ -485,7 +485,8 @@ template<typename Scalar, typename IndexTraits>
 std::optional<std::map<std::string, Scalar>>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 newtonProductionNodePressures(const Network::ExtNetwork& network,
-                              const int reportStepIdx) const
+                              const int reportStepIdx,
+                              const Network::Node& root) const
 {
     OPM_TIMEFUNCTION();
     using Sys = NetworkSolve::ProductionSystem<Scalar>;
@@ -497,20 +498,19 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         return std::optional<std::map<std::string, Scalar>>{};
     };
 
-    const auto roots = network.roots();
-    if (roots.size() != 1 || !roots.front().get().terminal_pressure().has_value()) {
-        return giveUp(roots.size() == 1 ? "the root has no terminal pressure"
-                                        : "the network has more than one root");
+    if (!root.terminal_pressure().has_value()) {
+        return giveUp(fmt::format("the tree under {} has no terminal pressure", root.name()));
     }
 
-    const auto& units = well_model_.schedule().getUnits();
-    const Scalar terminal = *roots.front().get().terminal_pressure();
+    const auto& schedule = well_model_.schedule();
+    const auto& units = schedule.getUnits();
+    const Scalar terminal = *root.terminal_pressure();
     Sys system(*well_model_.getVFPProperties().getProd(), units);
     system.setTerminalPressure(terminal);
 
     // Nodes, parents before children.
     std::map<std::string, int> index;
-    std::vector<std::string> order{roots.front().get().name()};
+    std::vector<std::string> order{root.name()};
     system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable});
     index[order.front()] = 0;
     for (std::size_t at = 0; at < order.size(); ++at) {
@@ -521,6 +521,24 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             }
             index[child] = static_cast<int>(order.size());
             order.push_back(child);
+            // Three things the relaxed computation models at a node and this
+            // system does not, each of which would otherwise change the branch
+            // flow silently and move the node pressure by a good few per cent.
+            const auto& child_node = network.node(child);
+            // A node given its own pressure part-way down the tree is a boundary
+            // the extended network holds fixed; this system would compute it
+            // from the branch table instead.
+            if (child_node.terminal_pressure().has_value()) {
+                return giveUp(fmt::format("{} is a fixed-pressure node below the root", child));
+            }
+            if (child_node.add_gas_lift_gas()) {
+                return giveUp(fmt::format("{} adds gas lift, whose alq is the wells' own and "
+                                          "not the branch's", child));
+            }
+            if (schedule.getGroup(child, reportStepIdx).hasSatelliteProduction()) {
+                return giveUp(fmt::format("{} carries satellite production, which arrives as a "
+                                          "rate rather than as wells", child));
+            }
             // A branch's alq is quoted in the units of its own table's alq type.
             Scalar alq = 0.0;
             if (branch.vfp_table().has_value()) {
@@ -551,7 +569,6 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     // what the well is currently doing is summed, contributed once by the rank
     // that owns it.
     const auto& summary_state = well_model_.summaryState();
-    const auto& schedule = well_model_.schedule();
     std::map<std::string, const WellInterfaceGeneric<Scalar, IndexTraits>*> local;
     for (const auto& well : well_model_.genericWells()) {
         local.emplace(well->name(), well);
@@ -567,6 +584,14 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         const auto& well = schedule.getWell(name, reportStepIdx);
         if (!well.isProducer() || !well.predictionMode() || !index.count(well.groupName())) {
             continue;
+        }
+        if (schedule[reportStepIdx].glo().has_well(name)) {
+            return giveUp(fmt::format("{} is on gas lift optimisation, so its alq is not the "
+                                      "one the deck gives", name));
+        }
+        if (well.getEfficiencyFactor(/*network=*/true) != 1.0) {
+            return giveUp(fmt::format("{} has an efficiency factor, which scales its contribution "
+                                      "to the branch but not its own rate", name));
         }
         const auto controls = well.productionControls(summary_state);
         candidates.push_back({name, index.at(well.groupName()), controls.vfp_table_number,
@@ -737,10 +762,17 @@ updatePressures(const int reportStepIdx,
                                             reportStepIdx,
                                             well_model_.comm());
             if (this->newton_solver_) {
-                if (auto solved = this->newtonProductionNodePressures(network.network.get(),
-                                                                      reportStepIdx)) {
-                    result.node_pressures = std::move(*solved);
-                    result.invalid_nodes.clear();
+                // A network with several roots is a forest of independent trees
+                // -- every node has one parent, so they share nothing. Solve
+                // each and keep the relaxed answer for any that does not.
+                for (const auto& tree : network.network.get().roots()) {
+                    if (auto solved = this->newtonProductionNodePressures(
+                            network.network.get(), reportStepIdx, tree.get())) {
+                        for (const auto& [name, pressure] : *solved) {
+                            result.node_pressures[name] = pressure;
+                            result.invalid_nodes.erase(name);
+                        }
+                    }
                 }
             }
         } else {
@@ -756,10 +788,15 @@ updatePressures(const int reportStepIdx,
                 // Solved simultaneously, the node pressures are already the fixed
                 // point, so the relaxation below sees no imbalance and stops. The
                 // branch data from the evaluation above is kept for the output.
-                if (auto solved = this->newtonNodePressures(network.network.get(),
-                                                            *injection_phase, reportStepIdx)) {
-                    result.node_pressures = std::move(*solved);
-                    result.invalid_nodes.clear();
+                // Several roots means a forest of independent trees; solve each.
+                for (const auto& tree : network.network.get().roots()) {
+                    if (auto solved = this->newtonNodePressures(
+                            network.network.get(), *injection_phase, reportStepIdx, tree.get())) {
+                        for (const auto& [name, pressure] : *solved) {
+                            result.node_pressures[name] = pressure;
+                            result.invalid_nodes.erase(name);
+                        }
+                    }
                 }
             }
         }

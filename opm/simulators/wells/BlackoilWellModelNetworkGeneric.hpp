@@ -315,13 +315,15 @@ protected:
     std::optional<std::map<std::string, Scalar>>
     newtonNodePressures(const Network::ExtNetwork& network,
                         const Phase injection_phase,
-                        const int reportStepIdx) const;
+                        const int reportStepIdx,
+                        const Network::Node& root) const;
 
     /// The same for a production network. A rate is three numbers instead of
     /// one and the wells are producers, which is the whole difference.
     std::optional<std::map<std::string, Scalar>>
     newtonProductionNodePressures(const Network::ExtNetwork& network,
-                                  const int reportStepIdx) const;
+                                  const int reportStepIdx,
+                                  const Network::Node& root) const;
 
     bool newton_solver_ = false;
     bool analytic_jacobian_ = false;
