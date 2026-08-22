@@ -30,6 +30,7 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <fmt/format.h>
@@ -57,7 +58,14 @@ GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
     , summary_state_ {summary_state}
     , group_info_ {group_info}
     , sync_groups_ {sync_groups}
-    , controls_ {ecl_well_.productionControls(summary_state_)}
+    , controls_ {[&ecl_well, &summary_state, &well_state]() {
+          // Impose the WELDRAW-derived rate cap so that lift gas is not
+          // allocated toward a rate target the drawdown limit will cut.
+          auto controls = ecl_well.productionControls(summary_state);
+          WellInterfaceGeneric<Scalar, IndexTraits>::applyWeldrawRateLimit(
+              ecl_well, well_state.well(ecl_well.name()).weldraw_max_rate, controls);
+          return controls;
+      }()}
     , debug_limit_increase_decrease_ {false}
 {
     this->well_name_ = ecl_well_.name();

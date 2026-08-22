@@ -213,6 +213,23 @@ public:
 
     bool isPressureControlled(const WellStateType& well_state) const;
 
+    /// Impose a WELDRAW-derived maximum production rate as an additional
+    /// LRAT or GRAT constraint on \p controls. No-op when
+    /// \p weldraw_max_rate is unset. Static so that components without a
+    /// well interface (e.g. gas lift optimization) can apply the same limit.
+    static void applyWeldrawRateLimit(const Well& well_ecl,
+                                      const std::optional<Scalar>& weldraw_max_rate,
+                                      Well::ProductionControls& controls);
+
+    /// The well's production controls with the WELDRAW-derived rate limit
+    /// (stored in \p ws.weldraw_max_rate) applied. Constraint checking and
+    /// target computations should obtain controls through this method so
+    /// the drawdown limit cannot be missed; potential calculations use the
+    /// unadjusted Well::productionControls() (WELDRAW item 4 is NO).
+    Well::ProductionControls
+    productionControlsWithWeldraw(const SummaryState& summary_state,
+                                  const SingleWellState<Scalar, IndexTraits>& ws) const;
+
     Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
     //! \brief Update filter cake multipliers.

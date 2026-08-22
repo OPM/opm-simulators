@@ -1,0 +1,146 @@
+-- Test deck for the WELDRAW keyword (maximum allowable drawdown).
+--
+-- Three producers in a homogeneous, uniformly initialised reservoir:
+--
+--   PROD-A  drawdown limit 10 bar, loose ORAT target -> limit binds
+--   PROD-B  drawdown limit 20 bar, otherwise identical to PROD-A, so its
+--           derived rate limit must be exactly twice that of PROD-A
+--   PROD-C  drawdown limit 400 bar but a tight LRAT target -> deck target
+--           stands, the drawdown limit does not tighten it
+--
+RUNSPEC
+
+TITLE
+  WELDRAW TEST
+
+METRIC
+
+DIMENS
+ 10 1 1 /
+
+OIL
+WATER
+GAS
+
+TABDIMS
+/
+
+WELLDIMS
+ 4 2 2 4 /
+
+START
+ 1 'JAN' 2020 /
+
+UNIFIN
+UNIFOUT
+
+GRID
+
+INIT
+
+DXV
+ 10*100 /
+DYV
+ 100 /
+DZV
+ 10 /
+
+TOPS
+ 10*2000 /
+
+PERMX
+ 10*100 /
+PERMY
+ 10*100 /
+PERMZ
+ 10*100 /
+PORO
+ 10*0.3 /
+
+PROPS
+
+SWOF
+ 0.2  0.0   1.0  0.0
+ 0.5  0.1   0.4  0.0
+ 0.8  0.4   0.1  0.0
+ 1.0  1.0   0.0  0.0 /
+
+SGOF
+ 0.0  0.0   1.0  0.0
+ 0.4  0.3   0.2  0.0
+ 0.7  0.6   0.0  0.0
+ 0.8  0.8   0.0  0.0 /
+
+DENSITY
+ 850.0 1000.0 1.0 /
+
+PVTW
+ 200.0 1.0 4.0E-5 0.5 0.0 /
+
+PVDO
+   1.0 1.05 1.0
+ 200.0 1.02 1.2
+ 400.0 1.01 1.4 /
+
+PVDG
+   1.0 1.00  0.010
+ 200.0 0.005 0.020
+ 400.0 0.003 0.030 /
+
+ROCK
+ 200.0 4.0E-5 /
+
+SOLUTION
+
+PRESSURE
+ 10*200.0 /
+SWAT
+ 10*0.2 /
+SGAS
+ 10*0.0 /
+
+SUMMARY
+
+WOPR
+/
+WLPR
+/
+WBHP
+/
+
+SCHEDULE
+
+NUPCOL
+ 3 /
+
+WELSPECS
+ 'PROD-A' 'G1' 1 1 2005 'OIL' /
+ 'PROD-B' 'G1' 4 1 2005 'OIL' /
+ 'PROD-C' 'G1' 8 1 2005 'OIL' /
+/
+
+COMPDAT
+ 'PROD-A' 1 1 1 1 'OPEN' 2* 0.2 /
+ 'PROD-B' 4 1 1 1 'OPEN' 2* 0.2 /
+ 'PROD-C' 8 1 1 1 'OPEN' 2* 0.2 /
+/
+
+-- PROD-A and PROD-B have targets far above what the drawdown limits allow,
+-- so the WELDRAW-derived rate is the binding constraint.  PROD-C's LRAT
+-- target is far below its drawdown limit and must therefore survive.
+WCONPROD
+ 'PROD-A' 'OPEN' 'ORAT' 500.0 4* 50.0 /
+ 'PROD-B' 'OPEN' 'ORAT' 500.0 4* 50.0 /
+ 'PROD-C' 'OPEN' 'LRAT' 3* 5.0 1* 50.0 /
+/
+
+WELDRAW
+ 'PROD-A' 10.0 2* 'AVG' /
+ 'PROD-B' 20.0 2* 'AVG' /
+ 'PROD-C' 400.0 2* 'AVG' /
+/
+
+TSTEP
+ 1.0 /
+
+END
