@@ -124,6 +124,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
     network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
     network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
+    network_autochoke_ = Parameters::Get<Parameters::NetworkAutochoke>();
     network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
@@ -305,6 +306,11 @@ void BlackoilModelParameters<Scalar>::registerParameters()
     Parameters::Register<Parameters::NetworkGroupControl>
         ("Let the network hold a group's injection total and place the split itself, so a well "
          "that hits its own limit is taken up by the others (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkAutochoke>
+        ("Solve autochoke nodes inside the simultaneous network solve: the node pressure "
+         "becomes the group's common thp and is raised until the oil through the node meets "
+         "the group's target, instead of the bracketing search over well solves "
+         "(--network-solver=newton only).");
     Parameters::Register<Parameters::NetworkDumpFailures>
         ("Path prefix for writing out each network system that fails to converge, for replay in "
          "the standalone bench; empty disables it");

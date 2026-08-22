@@ -219,6 +219,11 @@ public:
     /// Let the network hold the group's total and place the split itself, rather
     /// than taking each group-controlled well's rate as fixed.
     void useNetworkGroupControl(const bool on) { network_group_control_ = on; }
+    void useNetworkAutochoke(const bool on) { network_autochoke_ = on; }
+    /// Per local well, the hydrostatic correction its tubing table needs;
+    /// computed on the typed side, where the well's density lives.
+    void setWellVfpDp(const std::string& well, const Scalar dp) { well_vfp_dp_[well] = dp; }
+    bool networkAutochoke() const { return network_autochoke_; }
 
     /// Write each network system that fails to converge, for replay in
     /// tests/test_networksolve.cpp. Empty disables it.
@@ -328,6 +333,8 @@ protected:
     bool newton_solver_ = false;
     bool analytic_jacobian_ = false;
     bool network_group_control_ = false;
+    bool network_autochoke_ = false;
+    std::map<std::string, Scalar> well_vfp_dp_;
     std::string network_dump_prefix_;
     mutable int network_dumps_written_ = 0;
 

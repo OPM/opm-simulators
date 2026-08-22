@@ -3006,4 +3006,50 @@ BOOST_AUTO_TEST_CASE(injection_efficiency_enters_the_branch)
     BOOST_CHECK_GT(r.node_pressure[1], rf.node_pressure[1]);
 }
 
+
+// An autochoke is a valve upstream of a node that throttles the oil collected
+// there to a target; the node pressure is whatever that takes. Closed when the
+// wells could deliver more than the target at the manifold pressure, open when
+// they cannot -- and then the node is at the manifold pressure and the group
+// produces what it can.
+BOOST_AUTO_TEST_CASE(an_autochoke_holds_the_target_or_opens)
+{
+    const auto sm3d = cubic(meter) / day;
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+
+    // Closed: target below what the wells deliver freely.
+    {
+        ProductionCase c;
+        auto system = c.system();
+        system.setChokeTarget(1, 0.5 * free_total);
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        const double total = r.well_rate[0] + r.well_rate[1];
+        BOOST_TEST_MESSAGE("choked: node " << convert::to(r.node_pressure[1], bars)
+                           << " bar, oil " << convert::to(total, sm3d) << " against target "
+                           << convert::to(0.5 * free_total, sm3d));
+        BOOST_CHECK(system.choked(1));
+        BOOST_CHECK_CLOSE(total, 0.5 * free_total, 0.1);
+        BOOST_CHECK_GT(r.node_pressure[1], convert::from(80.0, bars));
+        for (int w = 0; w < system.numWells(); ++w) {
+            BOOST_CHECK_EQUAL(system.controlLetter(w), 'T');
+        }
+    }
+
+    // Open: target beyond reach.
+    {
+        ProductionCase c;
+        auto system = c.system();
+        system.setChokeTarget(1, 2.0 * free_total);
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        const double total = r.well_rate[0] + r.well_rate[1];
+        BOOST_TEST_MESSAGE("open: node " << convert::to(r.node_pressure[1], bars)
+                           << " bar, oil " << convert::to(total, sm3d));
+        BOOST_CHECK(!system.choked(1));
+        BOOST_CHECK_CLOSE(total, free_total, 0.1);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -27,6 +27,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_NETWORK_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNetwork.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #endif
 
 #include <opm/common/TimingMacros.hpp>
@@ -168,6 +169,7 @@ update(const bool mandatory_network_balance,
         this->useNewtonSolver(solver_mode == "newton");
         this->useAnalyticJacobian(well_model_.param().network_analytic_jacobian_);
         this->useNetworkGroupControl(well_model_.param().network_group_control_);
+        this->useNetworkAutochoke(well_model_.param().network_autochoke_);
         this->dumpNetworkFailuresTo(well_model_.param().network_dump_failures_);
         if (solver_mode == "newton") {
             // The simultaneous solve needs every well's rate response to its own
@@ -181,6 +183,20 @@ update(const bool mandatory_network_balance,
                     well->updateIPRImplicit(well_model_.simulator(),
                                             well_model_.groupStateHelper(),
                                             well_model_.wellState());
+                    // The tubing table's datum is not the well's reference
+                    // depth; the well's thp evaluation corrects for it and
+                    // the network system has to apply the same.
+                    const int table = well->wellEcl().vfp_table_number();
+                    Scalar dp = 0.0;
+                    if (table > 0) {
+                        const auto& vfp = well_model_.getVFPProperties();
+                        const Scalar datum = well->isInjector()
+                            ? vfp.getInj()->getTable(table).getDatumDepth()
+                            : vfp.getProd()->getTable(table).getDatumDepth();
+                        // wellhelpers::computeHydrostaticCorrection, inline.
+                        dp = well->refDensity() * well->gravity() * (datum - well->refDepth());
+                    }
+                    this->setWellVfpDp(well->name(), dp);
                 }
             }
         }
@@ -384,6 +400,16 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     const Scalar thp_tolerance = balance.thp_tolerance();
 
     if (!network.active()) {
+        return false;
+    }
+
+    // With the simultaneous solve owning the choke nodes, the group thp is
+    // already in the group state and the search below would fight it. Read
+    // the parameters, not the flags: this runs before the flags are set on
+    // the first pass of a step, and one pass of the search is enough to
+    // register the group with a pressure nothing else will overwrite.
+    if (well_model_.param().network_solver_ == "newton"
+        && well_model_.param().network_autochoke_) {
         return false;
     }
 

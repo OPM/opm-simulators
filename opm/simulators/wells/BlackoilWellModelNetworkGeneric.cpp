@@ -360,8 +360,8 @@ newtonNodePressures(const Network::ExtNetwork& network,
     }
 
     // Per candidate: present, usable, ipr_a, ipr_b, current rate, on group,
-    // efficiency scaling.
-    constexpr int kEntries = 7;
+    // efficiency scaling, tubing-table correction.
+    constexpr int kEntries = 8;
     std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto it = local.find(candidates[i].name);
@@ -384,6 +384,9 @@ newtonNodePressures(const Network::ExtNetwork& network,
         e[4] = std::max(ws.surface_rates[phase_pos], Scalar{0});
         e[5] = (ws.injection_cmode == Well::InjectorCMode::GRUP) ? 1.0 : 0.0;
         e[6] = ws.efficiency_scaling_factor;
+        if (const auto dp = well_vfp_dp_.find(candidates[i].name); dp != well_vfp_dp_.end()) {
+            e[7] = dp->second;
+        }
     }
     well_model_.comm().sum(shared.data(), shared.size());
 
@@ -408,6 +411,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
         w.ipr_b = e[3];
         w.bhp_limit = candidate.bhp_limit;
         w.efficiency = candidate.efficiency * e[6];
+        w.vfp_dp = e[7];
         const Scalar current = e[4];
         const bool on_group = e[5] > Scalar{0};
         w.q_start = current;
@@ -542,6 +546,35 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             if (child_node.terminal_pressure().has_value()) {
                 return giveUp(fmt::format("{} is a fixed-pressure node below the root", child));
             }
+            std::optional<Scalar> choke_target;
+            if (child_node.as_choke()) {
+                // Without the option the legacy bracketing owns this node's
+                // pressure, and solving the tree here would overwrite it.
+                if (!this->network_autochoke_) {
+                    return giveUp(fmt::format("{} is an autochoke node (--network-autochoke is off)",
+                                              child));
+                }
+                const auto& group = schedule.getGroup(child, reportStepIdx);
+                const auto ctrl = group.productionControls(well_model_.summaryState());
+                auto cmode = ctrl.cmode;
+                Scalar target = 0.0;
+                if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
+                    // The target is an ancestor's; the group's share of it.
+                    const std::vector<Scalar> resv_coeff(well_model_.phaseUsage().numActivePhases(), 1.0);
+                    const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
+                    const auto derived = well_model_.groupStateHelper()
+                        .getAutoChokeGroupProductionTargetRate(group, parent, resv_coeff, Scalar{1});
+                    target = derived.first;
+                    cmode = derived.second;
+                } else if (cmode == Group::ProductionCMode::ORAT) {
+                    target = ctrl.oil_target;
+                }
+                if (cmode != Group::ProductionCMode::ORAT) {
+                    return giveUp(fmt::format("{} is an autochoke with a {} target; only ORAT yet",
+                                              child, Group::ProductionCMode2String(cmode)));
+                }
+                choke_target = target;
+            }
             // A branch's alq is quoted in the units of its own table's alq type.
             Scalar alq = 0.0;
             if (branch.vfp_table().has_value()) {
@@ -554,6 +587,9 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
                                     branch.vfp_table().value_or(NetworkSolve::NoTable)};
             node.efficiency = child_node.efficiency();
             system.addNode(std::move(node), alq);
+            if (choke_target.has_value()) {
+                system.setChokeTarget(index.at(child), *choke_target);
+            }
 
             // Satellite production arrives as a rate with no well behind it.
             // The group sum returns it *instead of* its wells, so its wells are
@@ -600,7 +636,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         std::string name;
         int node, vfp_table;
         Scalar bhp_limit, oil_rate_limit, efficiency;
-        bool node_adds_lift_gas;
+        bool node_adds_lift_gas, node_is_choke;
     };
     std::vector<Candidate> candidates;
     for (const auto& name : schedule.wellNames(reportStepIdx)) {
@@ -625,15 +661,17 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
                               static_cast<Scalar>(controls.bhp_limit),
                               static_cast<Scalar>(controls.oil_rate),
                               static_cast<Scalar>(well.getEfficiencyFactor(/*network=*/true)),
-                              network.node(well.groupName()).add_gas_lift_gas()});
+                              network.node(well.groupName()).add_gas_lift_gas(),
+                              network.node(well.groupName()).as_choke()});
     }
     if (candidates.empty()) {
         return giveUp("no producers hang off it");
     }
 
     // Per candidate: present, usable, three ipr_a, three ipr_b, current oil
-    // rate, on group, efficiency scaling, alq.
-    constexpr int kEntries = 12;
+    // rate, on group, efficiency scaling, alq, tubing-table correction,
+    // current thp.
+    constexpr int kEntries = 14;
     std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto it = local.find(candidates[i].name);
@@ -665,6 +703,10 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         // the network again when it changes -- so inside one solve it is a
         // constant, whoever decided it.
         e[11] = ws.alq_state.get();
+        if (const auto dp = well_vfp_dp_.find(candidates[i].name); dp != well_vfp_dp_.end()) {
+            e[12] = dp->second;
+        }
+        e[13] = ws.thp;
     }
     well_model_.comm().sum(shared.data(), shared.size());
 
@@ -686,6 +728,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.node = candidate.node;
         w.vfp_table = candidate.vfp_table;
         w.alq = e[11];
+        w.vfp_dp = e[12];
         w.efficiency = candidate.efficiency * e[10];
         if (candidate.node_adds_lift_gas) {
             w.lift_gas = e[11];
@@ -697,7 +740,19 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.bhp_limit = candidate.bhp_limit;
         const Scalar current = e[8];
         const bool on_group = e[9] > Scalar{0};
-        if (on_group && use_group_target) {
+        if (candidate.node_is_choke && this->network_autochoke_) {
+            // The choke decides these wells' rates through the node pressure;
+            // pinning them at what they do now would leave it nothing to act
+            // on. They keep only their own deck limits.
+            w.oil_rate_limit = candidate.oil_rate_limit;
+            w.guide = std::max(current, candidate.oil_rate_limit);
+            // A well the well model has at zero rate is dead at its thp, and
+            // the linearised inflow with the tubing table would still find a
+            // flowing crossing for it. More back-pressure cannot revive it.
+            if (!(current > Scalar{0}) && e[13] > Scalar{0}) {
+                w.dead_above = e[13];
+            }
+        } else if (on_group && use_group_target) {
             // The group has set the total; hand the network that and let it
             // place the split, bounded by each well's own limit.
             group_target += current;
@@ -711,14 +766,25 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             // that is not binding in the simulator would become one here.
             w.oil_rate_limit = current;
             w.guide = current;
+            w.pinned = true;          // a source; not offered thp
         }
-        if (!(current > Scalar{0}) && !w.in_group) {
+        if (!(current > Scalar{0}) && !w.in_group && !candidate.node_is_choke) {
             continue;                 // producing nothing; not part of the network
         }
         system.addWell(std::move(w));
     }
     if (use_group_target && group_target > Scalar{0}) {
         system.setGroupTarget(group_target);
+    }
+    // With every well a pinned source and nothing to place, the system is the
+    // relaxed evaluation with extra steps -- and a different path through the
+    // sub-iterations, which a well test downstream can turn into a different
+    // decision. Leave it to the evaluation it would only reproduce.
+    const bool anything_to_decide = system.grouped()
+        || std::any_of(system.wells().begin(), system.wells().end(),
+                       [](const auto& w) { return !w.pinned; });
+    if (!anything_to_decide) {
+        return std::optional<std::map<std::string, Scalar>>{};
     }
     system.finish();
 
@@ -791,9 +857,44 @@ updatePressures(const int reportStepIdx,
         }
     }
 
+    // Nodes a simultaneous solve has placed this pass, per domain; the update
+    // below treats them differently.
+    std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> solved_nodes;
     for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
         NetworkPressures result;
         if (network.domain == details::NetworkDomain::Production) {
+            if (this->newton_solver_ && this->network_autochoke_) {
+                // The relaxed evaluation below reads a choke node's pressure
+                // from the group state. Until a solve has placed the choke,
+                // give it the upstream pressure -- an open valve -- from the
+                // last pass, or the terminal pressure on the very first.
+                const auto& net = network.network.get();
+                const auto& previous = this->nodePressures(details::NetworkDomain::Production);
+                for (const auto& name : net.node_names()) {
+                    if (!net.node(name).as_choke()) {
+                        continue;
+                    }
+                    auto& gs = well_model_.groupState();
+                    if (gs.is_autochoke_group(name) && gs.well_group_thp(name) > Scalar{0}) {
+                        continue;
+                    }
+                    Scalar p_up = 0.0;
+                    std::string at = name;
+                    while (true) {
+                        const auto up = net.uptree_branch(at);
+                        if (!up) {
+                            p_up = net.node(at).terminal_pressure().value_or(Scalar{0});
+                            break;
+                        }
+                        at = (*up).uptree_node();
+                        if (const auto it = previous.find(at); it != previous.end() && it->second > 0) {
+                            p_up = it->second;
+                            break;
+                        }
+                    }
+                    gs.update_well_group_thp(name, p_up);
+                }
+            }
             result = this->computePressures(network.network.get(),
                                             *well_model_.getVFPProperties().getProd(),
                                             well_model_.schedule().getUnits(),
@@ -809,6 +910,14 @@ updatePressures(const int reportStepIdx,
                         for (const auto& [name, pressure] : *solved) {
                             result.node_pressures[name] = pressure;
                             result.invalid_nodes.erase(name);
+                            solved_nodes[details::domainIndex(network.domain)].insert(name);
+                            // A choke node's pressure is the group thp. Hand it
+                            // to the group state, where the relaxed evaluation
+                            // and the wells' dynamic thp limits read it from.
+                            if (this->network_autochoke_
+                                && network.network.get().node(name).as_choke()) {
+                                well_model_.groupState().update_well_group_thp(name, pressure);
+                            }
                         }
                     }
                 }
@@ -833,6 +942,7 @@ updatePressures(const int reportStepIdx,
                         for (const auto& [name, pressure] : *solved) {
                             result.node_pressures[name] = pressure;
                             result.invalid_nodes.erase(name);
+                            solved_nodes[details::domainIndex(network.domain)].insert(name);
                         }
                     }
                 }
@@ -914,8 +1024,16 @@ updatePressures(const int reportStepIdx,
                 // the network gives for the resulting rates.
                 const auto pressure = previous_domain_pressures.at(name);
                 const bool valid = invalid.count(name) == 0;
+                // A node a simultaneous solve has placed is at its fixed point,
+                // but the wells still need the step to it bounded -- handing
+                // them the whole jump at once is how a well near its tubing
+                // limit gets shut as inoperable in a transient. The bracketing
+                // update lands in a couple of sub-iterations; the damped one
+                // creeps ten per cent at a time and runs out the cap.
+                const bool solved_here = solved_nodes[details::domainIndex(network.domain)].count(name) > 0;
                 const bool secant_here = use_secant
-                    && (secant_for_production || network.domain != details::NetworkDomain::Production);
+                    && (secant_for_production || solved_here
+                        || network.domain != details::NetworkDomain::Production);
                 if (secant_here) {
                     auto& updater = updaters[name];
                     const auto& floors = plateau_floor[details::domainIndex(network.domain)];
