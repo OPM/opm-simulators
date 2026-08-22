@@ -65,6 +65,8 @@ struct Node
     std::string name;
     int parent = -1;            // -1 only for the terminal
     int vfp_table = NoTable;
+    /// NEFAC: what this node passes on of what it collects.
+    double efficiency = 1.0;
 };
 
 template<class Scalar>
@@ -85,6 +87,9 @@ struct Well
     /// multiplier have to make up the remainder, not the whole target.
     bool in_group = false;
     Scalar guide = 0.0;         // share of a group target
+    /// WEFAC as it applies to the network: the well's own rate is q, the branch
+    /// above it sees efficiency * q.
+    Scalar efficiency = 1.0;
     /// Rate to start the solve from. Zero means work one out from the tables,
     /// which is all the bench can do; the simulator knows what the well is
     /// actually doing and should say so, or the first control selection is made
@@ -525,10 +530,10 @@ public:
 
             Scalar balance = x[qIdx(n)];
             for (const int c : children_[n]) {
-                balance -= x[qIdx(c)];
+                balance -= nodes_[c].efficiency * x[qIdx(c)];
             }
             for (const int w : wells_at_[n]) {
-                balance -= x[qwIdx(w)];
+                balance -= wells_[w].efficiency * x[qwIdx(w)];
             }
             r[nodes + n - 1] = balance;
         }
@@ -677,10 +682,10 @@ public:
         for (int n = numNodes(); n >= 1; --n) {
             Scalar q = 0.0;
             for (const int w : wells_at_[n]) {
-                q += well_rate[w];
+                q += wells_[w].efficiency * well_rate[w];
             }
             for (const int c : children_[n]) {
-                q += x[qIdx(c)];
+                q += nodes_[c].efficiency * x[qIdx(c)];
             }
             x[qIdx(n)] = q;
         }
@@ -786,10 +791,10 @@ public:
             const int balance = nodes + n - 1;
             add(balance, qIdx(n), 1.0, rate_scale_);
             for (const int c : children_[n]) {
-                add(balance, qIdx(c), -1.0, rate_scale_);
+                add(balance, qIdx(c), -nodes_[c].efficiency, rate_scale_);
             }
             for (const int w : wells_at_[n]) {
-                add(balance, qwIdx(w), -1.0, rate_scale_);
+                add(balance, qwIdx(w), -wells_[w].efficiency, rate_scale_);
             }
         }
 
@@ -883,13 +888,14 @@ void write(const System<Scalar>& system, const std::vector<Scalar>& guess, std::
        << "guides_from_potential " << system.guidesFromPotential() << '\n'
        << "analytic_jacobian " << system.usesAnalyticJacobian() << '\n';
     for (const auto& n : system.nodes()) {
-        os << "node " << n.name << ' ' << n.parent << ' ' << n.vfp_table << '\n';
+        os << "node " << n.name << ' ' << n.parent << ' ' << n.vfp_table << ' '
+           << n.efficiency << '\n';
     }
     for (const auto& w : system.wells()) {
         os << "well " << w.name << ' ' << w.node << ' ' << w.vfp_table << ' '
            << w.ipr_a << ' ' << w.ipr_b << ' ' << w.bhp_limit << ' '
            << w.rate_limit << ' ' << w.guide << ' ' << w.q_start << ' '
-           << w.in_group << '\n';
+           << w.in_group << ' ' << w.efficiency << '\n';
     }
     os << "guess";
     for (const auto p : guess) {
@@ -929,6 +935,7 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
         } else if (tag == "node") {
             Node n;
             in >> n.name >> n.parent >> n.vfp_table;
+            in >> n.efficiency;          // older dumps: stays 1
             nodes.push_back(std::move(n));
         } else if (tag == "well") {
             Well<Scalar> w;
@@ -940,6 +947,7 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
             int grouped = 1;
             in >> grouped;
             w.in_group = (grouped != 0);
+            in >> w.efficiency;          // older dumps: stays 1
             wells.push_back(std::move(w));
         } else if (tag == "guides_from_potential") {
             in >> guides_from_potential;
@@ -1015,13 +1023,27 @@ public:
         /// control it ends on.
         bool in_group = false;
         Scalar guide = 0.0;
+        /// WEFAC as it applies to the network: the branch sees efficiency * q.
+        Scalar efficiency = 1.0;
+        /// Gas the well is lifted with. It goes up the tubing and so into the
+        /// branch's gas stream, but it is not produced, so it is not in q. Zero
+        /// unless the node is set to add it (NODEPROP item 4).
+        Scalar lift_gas = 0.0;
     };
 
     ProductionSystem(const VFPProdProperties<Scalar>& props, const UnitSystem& units)
         : props_(&props), units_(&units)
     {}
 
-    void addNode(Node n, const Scalar alq = 0.0) { nodes_.push_back(std::move(n)); branch_alq_.push_back(alq); }
+    void addNode(Node n, const Scalar alq = 0.0)
+    {
+        nodes_.push_back(std::move(n));
+        branch_alq_.push_back(alq);
+        node_source_.push_back({});
+    }
+    /// A rate that enters at a node without a well behind it -- satellite
+    /// production, or lift gas that is not any well's. Water, oil, gas.
+    void setNodeSource(const int node, const std::array<Scalar, NP>& q) { node_source_[node] = q; }
     void addWell(Well w) { wells_.push_back(std::move(w)); }
     void setTerminalPressure(const Scalar p) { terminal_pressure_ = p; }
     void setRateScale(const Scalar s) { rate_scale_ = s; }
@@ -1145,10 +1167,13 @@ public:
         auto h = [&](const Scalar bhp) {
             return bhp - tableBhp(w.vfp_table, p_node, rates(bhp), w.alq);
         };
-        // At the bhp limit the well already lifts, so thp does not hold it back
-        // and the bhp limit is the binding one; report what that allows.
+        // At the bhp limit the tubing already needs less than the limit, so thp
+        // does not hold the well back: it is the bhp limit that binds. Say so by
+        // allowing more than the limit does -- reporting exactly what the limit
+        // allows makes a tie, the tie goes to thp, and the thp row then settles
+        // the bhp *below* its limit.
         if (h(lo) >= Scalar{0}) {
-            return ipr(w, 1, lo);
+            return std::numeric_limits<Scalar>::max();
         }
         // Not even a shut-in well can lift against this node pressure.
         if (h(shut) <= Scalar{0}) {
@@ -1200,12 +1225,15 @@ public:
                 : x[pIdx(n)] - upstream) / pressure_scale_;
 
             for (int ph = 0; ph < NP; ++ph) {
-                Scalar balance = x[qIdx(n, ph)];
+                Scalar balance = x[qIdx(n, ph)] - node_source_[n][ph];
                 for (const int c : children_[n]) {
-                    balance -= x[qIdx(c, ph)];
+                    balance -= nodes_[c].efficiency * x[qIdx(c, ph)];
                 }
                 for (const int w : wells_at_[n]) {
-                    balance -= x[qwIdx(w, ph)];
+                    balance -= wells_[w].efficiency * x[qwIdx(w, ph)];
+                    if (ph == 2) {
+                        balance -= wells_[w].efficiency * wells_[w].lift_gas;
+                    }
                 }
                 r[nodes + NP * (n - 1) + ph] = balance / rate_scale_;
             }
@@ -1330,12 +1358,13 @@ public:
         }
         for (int n = numNodes(); n >= 1; --n) {
             for (int ph = 0; ph < NP; ++ph) {
-                Scalar q = 0.0;
+                Scalar q = node_source_[n][ph];
                 for (const int w : wells_at_[n]) {
-                    q += x[qwIdx(w, ph)];
+                    q += wells_[w].efficiency
+                       * (x[qwIdx(w, ph)] + (ph == 2 ? wells_[w].lift_gas : Scalar{0}));
                 }
                 for (const int c : children_[n]) {
-                    q += x[qIdx(c, ph)];
+                    q += nodes_[c].efficiency * x[qIdx(c, ph)];
                 }
                 x[qIdx(n, ph)] = q;
             }
@@ -1390,6 +1419,7 @@ private:
     const UnitSystem* units_;
     std::vector<Node> nodes_;
     std::vector<Scalar> branch_alq_;
+    std::vector<std::array<Scalar, NP>> node_source_;
     std::vector<Well> wells_;
     std::vector<std::vector<int>> children_;
     std::vector<std::vector<int>> wells_at_;

@@ -326,6 +326,7 @@ struct Well
     double bhp_limit = 0.0;
     double rate_limit = 0.0;
     double guide = 0.0;      // share of a group target; defaults to q_ref
+    double efficiency = 1.0; // WEFAC as the network sees it
 };
 
 class NetworkCase
@@ -447,6 +448,7 @@ public:
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
             sw.guide = w.guide > 0.0 ? w.guide : w.q_ref;
+            sw.efficiency = w.efficiency;
             sw.in_group = group_target_ > 0.0;
             s.addWell(sw);
         }
@@ -2830,6 +2832,178 @@ BOOST_AUTO_TEST_CASE(the_fallback_still_has_one_case_to_cover)
     BOOST_CHECK_EQUAL(plain, retried);
     BOOST_CHECK_LT(retried, n);
     BOOST_CHECK_EQUAL(cycling, n - retried);
+}
+
+
+// thp that does not hold a well back must not be the control it ends on.
+//
+// With the bhp limit above what the tubing needs at the node pressure, the bhp
+// limit binds. thpPotential() used to report exactly what the bhp limit allows,
+// which tied, and the tie went to thp -- whose row then settled the bhp below
+// the limit the deck set.
+BOOST_AUTO_TEST_CASE(production_thp_that_does_not_bind_leaves_the_well_on_bhp)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    ProductionCase c;
+    for (auto& w : c.wells()) {
+        w.bhp_limit = convert::from(150.0, bars);
+    }
+    auto system = c.system();
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    BOOST_REQUIRE(r.converged);
+    for (int w = 0; w < system.numWells(); ++w) {
+        const auto& well = system.wells()[w];
+        BOOST_TEST_MESSAGE(well.name << " [" << system.controlLetter(w) << "] oil "
+                           << convert::to(r.well_rate[w], cubic(meter) / day)
+                           << ", bhp limit allows "
+                           << convert::to(Sys::ipr(well, 1, well.bhp_limit), cubic(meter) / day));
+        BOOST_CHECK_EQUAL(system.controlLetter(w), 'B');
+        BOOST_CHECK_CLOSE(r.well_rate[w], Sys::ipr(well, 1, well.bhp_limit), 1e-6);
+    }
+}
+
+// Efficiency factors, lift gas and node sources all change what the branch
+// carries without changing what any well does. The check is the same for each:
+// the node pressure is the table's answer to the branch flow the terms imply,
+// and the wells' own rates are what they were without the term.
+BOOST_AUTO_TEST_CASE(what_enters_a_branch_besides_the_wells)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    const auto sm3d = cubic(meter) / day;
+
+    // Reference: nothing but the wells.
+    ProductionCase plain;
+    auto ref_system = plain.system();
+    const auto ref = NetworkSolve::solve(ref_system, ProductionCase::guess());
+    BOOST_REQUIRE(ref.converged);
+
+    auto nodePressureFromBranch = [&](const Sys& system, const std::array<double, 3>& q) {
+        return system.tableBhp(3, convert::from(80.0, bars), q, 0.0);
+    };
+
+    // Branch flow the wells deliver at a solution, from their bhp.
+    auto wellTriple = [&](const Sys& system, const NetworkSolve::Result<double>& r, const int w) {
+        // back out bhp from the oil rate, then the other phases from it
+        const auto& well = system.wells()[w];
+        const double bhp = (r.well_rate[w] - well.ipr_a[1]) / well.ipr_b[1];
+        return std::array<double, 3>{Sys::ipr(well, 0, bhp), Sys::ipr(well, 1, bhp), Sys::ipr(well, 2, bhp)};
+    };
+
+    // 1. Well efficiency 0.5 on both wells: the branch carries half, the node
+    //    pressure falls, the wells' own rates are whatever the new node
+    //    pressure gives them -- and the node pressure is consistent with the
+    //    halved branch.
+    {
+        ProductionCase c;
+        for (auto& w : c.wells()) {
+            w.efficiency = 0.5;
+        }
+        auto system = c.system();
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        std::array<double, 3> branch{};
+        for (int w = 0; w < system.numWells(); ++w) {
+            const auto q = wellTriple(system, r, w);
+            for (int ph = 0; ph < 3; ++ph) {
+                branch[ph] += 0.5 * q[ph];
+            }
+        }
+        BOOST_TEST_MESSAGE("efficiency 0.5: node " << convert::to(r.node_pressure[1], bars)
+                           << " bar against " << convert::to(ref.node_pressure[1], bars)
+                           << " with the wells at full weight");
+        BOOST_CHECK_LT(r.node_pressure[1], ref.node_pressure[1]);
+        BOOST_CHECK_CLOSE(r.node_pressure[1], nodePressureFromBranch(system, branch), 1e-2);
+    }
+
+    // 2. Lift gas on one well: only the gas stream in the branch grows.
+    {
+        ProductionCase c;
+        const double lift = convert::from(20000.0, sm3d);
+        c.wells()[0].lift_gas = lift;
+        auto system = c.system();
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        std::array<double, 3> branch{};
+        for (int w = 0; w < system.numWells(); ++w) {
+            const auto q = wellTriple(system, r, w);
+            for (int ph = 0; ph < 3; ++ph) {
+                branch[ph] += q[ph];
+            }
+        }
+        branch[2] += lift;
+        BOOST_TEST_MESSAGE("lift gas: node " << convert::to(r.node_pressure[1], bars) << " bar");
+        BOOST_CHECK_CLOSE(r.node_pressure[1], nodePressureFromBranch(system, branch), 1e-2);
+        // This table has one GFR point, so more gas cannot move its pressure.
+        // Check the stream itself: the branch's gas at the starting point is
+        // the wells' plus the lift, and start() is built the way residual() is.
+        const auto with = system.start(ProductionCase::guess());
+        const auto without = ref_system.start(ProductionCase::guess());
+        BOOST_CHECK_CLOSE(with[system.qIdx(1, 2)] - without[ref_system.qIdx(1, 2)], lift, 1e-9);
+    }
+
+    // 3. A satellite at the node: a constant triple with no well behind it.
+    {
+        ProductionCase c;
+        const std::array<double, 3> sat{convert::from(30.0, sm3d), convert::from(100.0, sm3d),
+                                        convert::from(8000.0, sm3d)};
+        auto system = c.system();
+        system.setNodeSource(1, sat);
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        std::array<double, 3> branch = sat;
+        for (int w = 0; w < system.numWells(); ++w) {
+            const auto q = wellTriple(system, r, w);
+            for (int ph = 0; ph < 3; ++ph) {
+                branch[ph] += q[ph];
+            }
+        }
+        BOOST_TEST_MESSAGE("satellite: node " << convert::to(r.node_pressure[1], bars) << " bar");
+        BOOST_CHECK_CLOSE(r.node_pressure[1], nodePressureFromBranch(system, branch), 1e-2);
+        BOOST_CHECK_GT(r.node_pressure[1], ref.node_pressure[1]);
+    }
+}
+
+// The same for an injection network: a well at half efficiency halves what the
+// branch carries, and the analytic Jacobian has to know it.
+BOOST_AUTO_TEST_CASE(injection_efficiency_enters_the_branch)
+{
+    auto c = gnetinjeGas();
+    for (auto& w : c.wells()) {
+        w.efficiency = 0.5;
+    }
+    c.finish();
+    auto system = c.system();
+    system.setAnalyticJacobian(true);
+
+    // A missed factor shows as a disagreement between the assembled Jacobian
+    // and the differenced one, on the balance rows.
+    const auto x = system.start(c.nodePressures(kStart));
+    const auto J = system.jacobian(x);
+    const auto r0 = system.residual(x);
+    double worst = 0.0;
+    for (int j = 0; j < system.size(); ++j) {
+        auto shifted = x;
+        const double h = 1e-3 * system.columnScale(j);
+        shifted[j] += h;
+        const auto rj = system.residual(shifted);
+        for (int i = 0; i < system.size(); ++i) {
+            worst = std::max(worst, std::abs(J(i, j) - (rj[i] - r0[i]) / h));
+        }
+    }
+    BOOST_TEST_MESSAGE("analytic vs differenced with efficiencies: largest difference " << worst);
+    BOOST_CHECK_LT(worst, 1e-3);
+
+    // And it still solves, to a lower node pressure than at full weight.
+    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+    BOOST_REQUIRE(r.converged);
+    auto full = gnetinjeGas();
+    full.finish();
+    auto full_system = full.system();
+    const auto rf = NetworkSolve::solve(full_system, full.nodePressures(kStart));
+    BOOST_REQUIRE(rf.converged);
+    BOOST_TEST_MESSAGE("M5S at half efficiency " << convert::to(r.node_pressure[1], bars)
+                       << " bar, at full " << convert::to(rf.node_pressure[1], bars));
+    BOOST_CHECK_GT(r.node_pressure[1], rf.node_pressure[1]);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

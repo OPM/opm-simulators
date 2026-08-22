@@ -24,6 +24,7 @@
 #include <opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+#include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
 
@@ -300,9 +301,14 @@ newtonNodePressures(const Network::ExtNetwork& network,
             }
             index[child] = static_cast<int>(order.size());
             order.push_back(child);
-            system.addNode(NetworkSolve::Node{
-                child, static_cast<int>(at),
-                branch.vfp_table().value_or(NetworkSolve::NoTable)});
+            NetworkSolve::Node node{child, static_cast<int>(at),
+                                    branch.vfp_table().value_or(NetworkSolve::NoTable)};
+            node.efficiency = network.node(child).efficiency();
+            system.addNode(std::move(node));
+            if (well_model_.schedule().getGroup(child, reportStepIdx).hasSatelliteInjection()) {
+                return giveUp(fmt::format("{} carries satellite injection, which arrives as a "
+                                          "rate rather than as wells", child));
+            }
         }
     }
 
@@ -326,7 +332,11 @@ newtonNodePressures(const Network::ExtNetwork& network,
         local.emplace(well->name(), well);
     }
 
-    struct Candidate { std::string name; int node; int vfp_table; Scalar bhp_limit, rate_limit; };
+    struct Candidate {
+        std::string name;
+        int node, vfp_table;
+        Scalar bhp_limit, rate_limit, efficiency;
+    };
     std::vector<Candidate> candidates;
     for (const auto& name : schedule.wellNames(reportStepIdx)) {
         const auto& well = schedule.getWell(name, reportStepIdx);
@@ -342,14 +352,16 @@ newtonNodePressures(const Network::ExtNetwork& network,
         const auto controls = well.injectionControls(summary_state);
         candidates.push_back({name, index.at(well.groupName()), controls.vfp_table_number,
                               static_cast<Scalar>(controls.bhp_limit),
-                              static_cast<Scalar>(controls.surface_rate)});
+                              static_cast<Scalar>(controls.surface_rate),
+                              static_cast<Scalar>(well.getEfficiencyFactor(/*network=*/true))});
     }
     if (candidates.empty()) {
         return giveUp("no injectors of this phase hang off it");
     }
 
-    // Per candidate: present, usable, ipr_a, ipr_b, current rate, on group.
-    constexpr int kEntries = 6;
+    // Per candidate: present, usable, ipr_a, ipr_b, current rate, on group,
+    // efficiency scaling.
+    constexpr int kEntries = 7;
     std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto it = local.find(candidates[i].name);
@@ -371,6 +383,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
         }
         e[4] = std::max(ws.surface_rates[phase_pos], Scalar{0});
         e[5] = (ws.injection_cmode == Well::InjectorCMode::GRUP) ? 1.0 : 0.0;
+        e[6] = ws.efficiency_scaling_factor;
     }
     well_model_.comm().sum(shared.data(), shared.size());
 
@@ -394,6 +407,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
         w.ipr_a = e[2];
         w.ipr_b = e[3];
         w.bhp_limit = candidate.bhp_limit;
+        w.efficiency = candidate.efficiency * e[6];
         const Scalar current = e[4];
         const bool on_group = e[5] > Scalar{0};
         w.q_start = current;
@@ -521,23 +535,12 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             }
             index[child] = static_cast<int>(order.size());
             order.push_back(child);
-            // Three things the relaxed computation models at a node and this
-            // system does not, each of which would otherwise change the branch
-            // flow silently and move the node pressure by a good few per cent.
             const auto& child_node = network.node(child);
             // A node given its own pressure part-way down the tree is a boundary
             // the extended network holds fixed; this system would compute it
             // from the branch table instead.
             if (child_node.terminal_pressure().has_value()) {
                 return giveUp(fmt::format("{} is a fixed-pressure node below the root", child));
-            }
-            if (child_node.add_gas_lift_gas()) {
-                return giveUp(fmt::format("{} adds gas lift, whose alq is the wells' own and "
-                                          "not the branch's", child));
-            }
-            if (schedule.getGroup(child, reportStepIdx).hasSatelliteProduction()) {
-                return giveUp(fmt::format("{} carries satellite production, which arrives as a "
-                                          "rate rather than as wells", child));
             }
             // A branch's alq is quoted in the units of its own table's alq type.
             Scalar alq = 0.0;
@@ -547,9 +550,28 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
                 alq = branch.alq_value(VFPProdTable::ALQDimension(table.getALQType(), units))
                           .value_or(0.0);
             }
-            system.addNode(NetworkSolve::Node{child, static_cast<int>(at),
-                                              branch.vfp_table().value_or(NetworkSolve::NoTable)},
-                           alq);
+            NetworkSolve::Node node{child, static_cast<int>(at),
+                                    branch.vfp_table().value_or(NetworkSolve::NoTable)};
+            node.efficiency = child_node.efficiency();
+            system.addNode(std::move(node), alq);
+
+            // Satellite production arrives as a rate with no well behind it.
+            // The group sum returns it *instead of* its wells, so its wells are
+            // left out below to match. Lift gas the node is told to add is the
+            // satellite's own here; each well's is carried on the well.
+            if (schedule.getGroup(child, reportStepIdx).hasSatelliteProduction()) {
+                using Rate = GSatProd::GSatProdGroupProp::Rate;
+                const auto& sat = schedule[reportStepIdx].gsatprod().get(
+                    child, well_model_.summaryState());
+                std::array<Scalar, Sys::NP> source{
+                    static_cast<Scalar>(sat.rate[Rate::Water]),
+                    static_cast<Scalar>(sat.rate[Rate::Oil]),
+                    static_cast<Scalar>(sat.rate[Rate::Gas])};
+                if (child_node.add_gas_lift_gas()) {
+                    source[2] += static_cast<Scalar>(sat.rate[Rate::GLift]);
+                }
+                system.setNodeSource(index.at(child), source);
+            }
         }
     }
 
@@ -577,7 +599,8 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     struct Candidate {
         std::string name;
         int node, vfp_table;
-        Scalar alq, bhp_limit, oil_rate_limit;
+        Scalar bhp_limit, oil_rate_limit, efficiency;
+        bool node_adds_lift_gas;
     };
     std::vector<Candidate> candidates;
     for (const auto& name : schedule.wellNames(reportStepIdx)) {
@@ -585,27 +608,32 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         if (!well.isProducer() || !well.predictionMode() || !index.count(well.groupName())) {
             continue;
         }
-        if (schedule[reportStepIdx].glo().has_well(name)) {
-            return giveUp(fmt::format("{} is on gas lift optimisation, so its alq is not the "
-                                      "one the deck gives", name));
+        if (schedule.getGroup(well.groupName(), reportStepIdx).hasSatelliteProduction()) {
+            continue;                 // the satellite rate stands in for its wells
         }
-        if (well.getEfficiencyFactor(/*network=*/true) != 1.0) {
-            return giveUp(fmt::format("{} has an efficiency factor, which scales its contribution "
-                                      "to the branch but not its own rate", name));
+        // A well under gas lift optimisation gets its alq from an optimiser
+        // that runs between network passes and reacts to the node pressures it
+        // saw. Taking the alq as a constant here is right within one solve, but
+        // the runs diverge from the relaxed update by 100 % and more over a
+        // schedule (GASLIFT-13/14), so until that coupling is understood the
+        // network is handed back.
+        if (schedule[reportStepIdx].glo().has_well(name)) {
+            return giveUp(fmt::format("{} is under gas lift optimisation", name));
         }
         const auto controls = well.productionControls(summary_state);
         candidates.push_back({name, index.at(well.groupName()), controls.vfp_table_number,
-                              static_cast<Scalar>(controls.alq_value),
                               static_cast<Scalar>(controls.bhp_limit),
-                              static_cast<Scalar>(controls.oil_rate)});
+                              static_cast<Scalar>(controls.oil_rate),
+                              static_cast<Scalar>(well.getEfficiencyFactor(/*network=*/true)),
+                              network.node(well.groupName()).add_gas_lift_gas()});
     }
     if (candidates.empty()) {
         return giveUp("no producers hang off it");
     }
 
     // Per candidate: present, usable, three ipr_a, three ipr_b, current oil
-    // rate, on group.
-    constexpr int kEntries = 10;
+    // rate, on group, efficiency scaling, alq.
+    constexpr int kEntries = 12;
     std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto it = local.find(candidates[i].name);
@@ -631,6 +659,12 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         }
         e[8] = std::max(-ws.surface_rates[pos[1]], Scalar{0});
         e[9] = (ws.production_cmode == Well::ProducerCMode::GRUP) ? 1.0 : 0.0;
+        e[10] = ws.efficiency_scaling_factor;
+        // The alq the well's own tubing table sees. Under WLIFTOPT the
+        // optimiser sets it, before the network runs, and the well model runs
+        // the network again when it changes -- so inside one solve it is a
+        // constant, whoever decided it.
+        e[11] = ws.alq_state.get();
     }
     well_model_.comm().sum(shared.data(), shared.size());
 
@@ -651,7 +685,11 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.name = candidate.name;
         w.node = candidate.node;
         w.vfp_table = candidate.vfp_table;
-        w.alq = candidate.alq;
+        w.alq = e[11];
+        w.efficiency = candidate.efficiency * e[10];
+        if (candidate.node_adds_lift_gas) {
+            w.lift_gas = e[11];
+        }
         for (int ph = 0; ph < Sys::NP; ++ph) {
             w.ipr_a[ph] = e[2 + ph];
             w.ipr_b[ph] = e[5 + ph];
