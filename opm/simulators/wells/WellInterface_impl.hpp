@@ -312,7 +312,10 @@ namespace Opm
 
         // The IPR b-coefficients are the surface-rate coefficients with
         // respect to the drawdown, sum_j Tw_j * mob_j / B_j, summed over the
-        // well's connections (crossflowing connections excluded).
+        // well's connections.  Note that StandardWell::updateIPR() skips
+        // crossflowing connections whereas MultisegmentWell::updateIPR()
+        // only logs them, so a multisegment producer with crossflow gets a
+        // slightly permissive limit.
         this->updateIPR(simulator, deferred_logger);
 
         auto phase_coeff = [this](const unsigned phase_idx) -> Scalar {
