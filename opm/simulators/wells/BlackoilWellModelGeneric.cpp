@@ -964,32 +964,35 @@ updateEclWellsConstraints(const int              timeStepIdx,
     this->wellUpdateLoop(sim_update.affected_wells.begin(),
                          sim_update.affected_wells.end(),
                          timeStepIdx,
-                         [this, &st]
-                         (const auto wellIdx, const auto& well)
-    {
-        auto& ws = this->wellState().well(wellIdx);
-        // whether the well was SHUT before applying the action
-        ws.was_shut_before_action_applied = (ws.status == WellStatus::SHUT);
+                         [this, &st, timeStepIdx](const auto wellIdx, const auto& well) {
+                             auto& ws = this->wellState().well(wellIdx);
+                             // whether the well was SHUT before applying the action
+                             ws.was_shut_before_action_applied = (ws.status == WellStatus::SHUT);
 
-        ws.updateStatus(well.getStatus());
-        ws.update_type_and_targets(well, st);
+                             ws.updateStatus(well.getStatus());
+                             ws.update_type_and_targets(well, st);
 
-        if (well.isProducer()) {
-            // New production controls also invalidate any THP limit the
-            // network has imposed on the well, matching the treatment of
-            // PRODUCTION_UPDATE events at report step initialization. A well
-            // that is still attached to a network node receives a fresh
-            // limit at the next network balance.
-            this->genNetwork_.eraseImposedThpLimit(well.name());
-            const auto genWell = std::find_if(
-                this->well_container_generic_.begin(),
-                this->well_container_generic_.end(),
-                [&wname = well.name()](const auto* w) { return w->name() == wname; });
-            if (genWell != this->well_container_generic_.end()) {
-                (*genWell)->setDynamicThpLimit(std::optional<Scalar> {});
-            }
-        }
-    });
+                             // New production controls also invalidate any THP limit the
+                             // network has imposed on the well, matching the treatment of
+                             // PRODUCTION_UPDATE events at report step initialization. Updates
+                             // that leave the production controls untouched (e.g. a pure
+                             // WELOPEN) keep the retained limit. A well that is still attached
+                             // to a network node receives a fresh limit at the next network
+                             // balance.
+                             if (well.isProducer()
+                                 && this->schedule_[timeStepIdx].wellgroup_events().hasEvent(
+                                     well.name(), ScheduleEvents::PRODUCTION_UPDATE)) {
+                                 this->genNetwork_.eraseImposedThpLimit(well.name());
+                                 const auto genWell
+                                     = std::find_if(this->well_container_generic_.begin(),
+                                                    this->well_container_generic_.end(),
+                                                    [&wname = well.name()](const auto* w) { return w->name() == wname;
+                                                    });
+                                 if (genWell != this->well_container_generic_.end()) {
+                                     (*genWell)->setDynamicThpLimit(std::optional<Scalar> {});
+                                 }
+                             }
+                         });
 }
 
 template<typename Scalar, typename IndexTraits>
