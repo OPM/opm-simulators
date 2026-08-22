@@ -788,6 +788,25 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     }
     system.finish();
 
+    // Everything the solve depends on. Inside a sub-loop the wells are frozen
+    // and this comes back unchanged, and re-solving it from a different guess
+    // is at best a repeat and at worst a different root.
+    std::vector<Scalar> inputs{terminal, group_target, static_cast<Scalar>(system.numWells())};
+    for (const auto& w : system.wells()) {
+        inputs.insert(inputs.end(), {static_cast<Scalar>(w.node), static_cast<Scalar>(w.vfp_table),
+                                     w.ipr_a[0], w.ipr_a[1], w.ipr_a[2], w.ipr_b[0], w.ipr_b[1], w.ipr_b[2],
+                                     w.bhp_limit, w.oil_rate_limit, w.guide, w.efficiency, w.vfp_dp,
+                                     w.alq, w.lift_gas, w.dead_above,
+                                     static_cast<Scalar>(w.pinned), static_cast<Scalar>(w.in_group)});
+    }
+    for (int n = 1; n <= system.numNodes(); ++n) {
+        inputs.insert(inputs.end(), {system.chokeTarget(n), system.nodes()[n].efficiency});
+    }
+    if (const auto it = last_production_solve_.find(root.name());
+        it != last_production_solve_.end() && it->second.inputs == inputs) {
+        return it->second.pressures;
+    }
+
     std::vector<Scalar> guess(order.size(), terminal);
     const auto& previous = this->nodePressures(details::NetworkDomain::Production);
     for (std::size_t n = 0; n < order.size(); ++n) {
@@ -805,12 +824,14 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
                                       ? std::string{}
                                       : fmt::format("; controls {}", result.control_trace)));
     }
-    OpmLog::debug(fmt::format("Network: solved the production network simultaneously at report "
-                              "step {} in {} iterations.", reportStepIdx, result.iterations));
+    OpmLog::debug(fmt::format("Network: solved the production network under {} simultaneously at "
+                              "report step {} in {} iterations.",
+                              root.name(), reportStepIdx, result.iterations));
     std::map<std::string, Scalar> pressures;
     for (std::size_t n = 0; n < order.size(); ++n) {
         pressures[order[n]] = result.node_pressure[n];
     }
+    last_production_solve_[root.name()] = SolvedTree{std::move(inputs), pressures};
     return pressures;
 }
 

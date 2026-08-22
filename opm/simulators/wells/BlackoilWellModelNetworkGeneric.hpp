@@ -335,6 +335,11 @@ protected:
     bool network_group_control_ = false;
     bool network_autochoke_ = false;
     std::map<std::string, Scalar> well_vfp_dp_;
+    /// Last production solve per tree root: the inputs it was built from and
+    /// what it gave. Inside a network sub-loop the wells are frozen, so the
+    /// same inputs come back sub-iteration after sub-iteration.
+    struct SolvedTree { std::vector<Scalar> inputs; std::map<std::string, Scalar> pressures; };
+    mutable std::map<std::string, SolvedTree> last_production_solve_;
     std::string network_dump_prefix_;
     mutable int network_dumps_written_ = 0;
 
