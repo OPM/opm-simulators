@@ -1,5 +1,6 @@
 /*
   Copyright 2020, 2023 Equinor AS.
+  Copyright 2026 SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -146,6 +147,10 @@ public:
             auto& props = m_distributed_fieldProps.m_doubleProps[m_doubleKeys[keyIdx]];
             props.data.resize(m_doubleMult[keyIdx] * numCells);
             props.value_status.resize(m_doubleMult[keyIdx] * numCells);
+            // The distributed field must report the same value multiplicity as
+            // the global one it was scattered from; numCells() and compress()
+            // read a multi-valued field as scalar otherwise.
+            props.kw_info.num_value_per_cell(m_doubleMult[keyIdx]);
         }
 
         // copy data for the persistent mao to the field properties
