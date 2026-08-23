@@ -32,10 +32,12 @@
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/wells/NetworkAndersonAcceleration.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
+#include <opm/simulators/wells/NetworkSystem.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -224,6 +226,17 @@ public:
     /// computed on the typed side, where the well's density lives.
     void setWellVfpDp(const std::string& well, const Scalar dp) { well_vfp_dp_[well] = dp; }
     bool networkAutochoke() const { return network_autochoke_; }
+    /// Answer the gas lift optimiser's trials from the network instead of
+    /// from a well solve at a fixed thp.
+    void useGasLiftNetworkResponse(const bool on) { gaslift_network_response_ = on; }
+    bool gasLiftNetworkResponse() const { return gaslift_network_response_; }
+
+    /// What a well would produce, and at what bhp, with its lift gas set to
+    /// alq -- with every node pressure responding. Water, oil, gas, bhp, all
+    /// SI and production positive; nullopt if the well is in no solved tree
+    /// or the trial does not converge.
+    std::optional<std::array<Scalar, 4>>
+    gasLiftTrial(const std::string& well, const Scalar alq) const;
 
     /// Write each network system that fails to converge, for replay in
     /// tests/test_networksolve.cpp. Empty disables it.
@@ -338,8 +351,14 @@ protected:
     /// Last production solve per tree root: the inputs it was built from and
     /// what it gave. Inside a network sub-loop the wells are frozen, so the
     /// same inputs come back sub-iteration after sub-iteration.
-    struct SolvedTree { std::vector<Scalar> inputs; std::map<std::string, Scalar> pressures; };
+    struct SolvedTree {
+        std::vector<Scalar> inputs;
+        std::map<std::string, Scalar> pressures;
+        std::vector<std::string> order;                     // node names by index
+        std::shared_ptr<const NetworkSolve::ProductionSystem<Scalar>> system;
+    };
     mutable std::map<std::string, SolvedTree> last_production_solve_;
+    bool gaslift_network_response_ = false;
     std::string network_dump_prefix_;
     mutable int network_dumps_written_ = 0;
 

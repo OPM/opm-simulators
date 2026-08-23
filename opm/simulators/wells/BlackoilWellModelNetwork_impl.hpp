@@ -170,6 +170,7 @@ update(const bool mandatory_network_balance,
         this->useAnalyticJacobian(well_model_.param().network_analytic_jacobian_);
         this->useNetworkGroupControl(well_model_.param().network_group_control_);
         this->useNetworkAutochoke(well_model_.param().network_autochoke_);
+        this->useGasLiftNetworkResponse(well_model_.param().gaslift_network_response_);
         this->dumpNetworkFailuresTo(well_model_.param().network_dump_failures_);
         if (solver_mode == "newton") {
             // The simultaneous solve needs every well's rate response to its own

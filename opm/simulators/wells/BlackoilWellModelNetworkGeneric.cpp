@@ -636,7 +636,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         std::string name;
         int node, vfp_table;
         Scalar bhp_limit, oil_rate_limit, efficiency;
-        bool node_adds_lift_gas, node_is_choke;
+        bool node_adds_lift_gas, node_is_choke, under_glo;
     };
     std::vector<Candidate> candidates;
     for (const auto& name : schedule.wellNames(reportStepIdx)) {
@@ -653,7 +653,8 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         // the runs diverge from the relaxed update by 100 % and more over a
         // schedule (GASLIFT-13/14), so until that coupling is understood the
         // network is handed back.
-        if (schedule[reportStepIdx].glo().has_well(name)) {
+        const bool under_glo = schedule[reportStepIdx].glo().has_well(name);
+        if (under_glo && !this->gaslift_network_response_) {
             return giveUp(fmt::format("{} is under gas lift optimisation", name));
         }
         const auto controls = well.productionControls(summary_state);
@@ -662,7 +663,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
                               static_cast<Scalar>(controls.oil_rate),
                               static_cast<Scalar>(well.getEfficiencyFactor(/*network=*/true)),
                               network.node(well.groupName()).add_gas_lift_gas(),
-                              network.node(well.groupName()).as_choke()});
+                              network.node(well.groupName()).as_choke(), under_glo});
     }
     if (candidates.empty()) {
         return giveUp("no producers hang off it");
@@ -730,6 +731,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.alq = e[11];
         w.vfp_dp = e[12];
         w.efficiency = candidate.efficiency * e[10];
+        w.node_adds_lift_gas = candidate.node_adds_lift_gas;
         if (candidate.node_adds_lift_gas) {
             w.lift_gas = e[11];
         }
@@ -740,7 +742,8 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.bhp_limit = candidate.bhp_limit;
         const Scalar current = e[8];
         const bool on_group = e[9] > Scalar{0};
-        if (candidate.node_is_choke && this->network_autochoke_) {
+        const bool free_for_gas_lift = candidate.under_glo && this->gaslift_network_response_;
+        if ((candidate.node_is_choke && this->network_autochoke_) || free_for_gas_lift) {
             // The choke decides these wells' rates through the node pressure;
             // pinning them at what they do now would leave it nothing to act
             // on. They keep only their own deck limits.
@@ -831,8 +834,54 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     for (std::size_t n = 0; n < order.size(); ++n) {
         pressures[order[n]] = result.node_pressure[n];
     }
-    last_production_solve_[root.name()] = SolvedTree{std::move(inputs), pressures};
+    last_production_solve_[root.name()] = SolvedTree{
+        std::move(inputs), pressures, order,
+        std::make_shared<const NetworkSolve::ProductionSystem<Scalar>>(system)};
     return pressures;
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<std::array<Scalar, 4>>
+BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+gasLiftTrial(const std::string& well, const Scalar alq) const
+{
+    for (const auto& [root, tree] : last_production_solve_) {
+        if (!tree.system) {
+            continue;
+        }
+        const int w = tree.system->wellIndex(well);
+        if (w < 0) {
+            continue;
+        }
+        // A copy with the trial alq, solved from where the tree was.
+        // The well keeps its limits here, so the network state the trial solves
+        // is one the field could actually be in; the potential is then read off
+        // at the node pressure that state gives. Freeing the well instead lets
+        // it flow at a rate it is never allowed, which moves the node pressure
+        // to somewhere it never sits and the optimiser then applies the limit on
+        // top of a potential taken at the wrong pressure.
+        auto trial = *tree.system;
+        trial.setWellAlq(w, alq);
+        std::vector<Scalar> guess(tree.order.size(), Scalar{0});
+        for (std::size_t n = 0; n < tree.order.size(); ++n) {
+            if (const auto it = tree.pressures.find(tree.order[n]); it != tree.pressures.end()) {
+                guess[n] = it->second;
+            }
+        }
+        const auto result = NetworkSolve::solve(trial, guess);
+        if (!result.converged) {
+            return std::nullopt;
+        }
+        const int node = trial.wells()[w].node;
+        const Scalar p_node = (node == 0) ? trial.terminalPressure() : result.node_pressure[node];
+        const auto potential = trial.potentialAt(w, p_node);
+        if (!potential.has_value()) {
+            return std::nullopt;
+        }
+        return std::array<Scalar, 4>{(*potential)[0], (*potential)[1], (*potential)[2],
+                                     (*potential)[3]};
+    }
+    return std::nullopt;
 }
 
 template<typename Scalar, typename IndexTraits>

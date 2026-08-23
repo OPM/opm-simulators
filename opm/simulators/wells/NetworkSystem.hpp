@@ -122,6 +122,9 @@ struct Result
     /// Iterations on which some well changed control. A solve that has to move
     /// the active set a few times is working; one that keeps moving it is not.
     int switches = 0;
+    /// Production only: every well's water/oil/gas and bhp at the solution.
+    std::vector<std::array<Scalar, 3>> well_phase_rates;
+    std::vector<Scalar> well_bhp;
 };
 
 /// Dense square system. The networks this solves have tens of unknowns, so
@@ -1047,6 +1050,9 @@ public:
         /// branch's gas stream, but it is not produced, so it is not in q. Zero
         /// unless the node is set to add it (NODEPROP item 4).
         Scalar lift_gas = 0.0;
+        /// Whether the node adds the well's lift gas to the stream, so a
+        /// change of alq is a change of lift_gas too.
+        bool node_adds_lift_gas = false;
     };
 
     ProductionSystem(const VFPProdProperties<Scalar>& props, const UnitSystem& units)
@@ -1115,6 +1121,7 @@ public:
     Scalar chokeTarget(const int node) const { return node_choke_target_[node]; }
     void addWell(Well w) { wells_.push_back(std::move(w)); }
     void setTerminalPressure(const Scalar p) { terminal_pressure_ = p; }
+    Scalar terminalPressure() const { return terminal_pressure_; }
     void setRateScale(const Scalar s) { rate_scale_ = s; }
     /// Oil rate the group above this network is asked for.
     void setGroupTarget(const Scalar target) { group_target_ = target; }
@@ -1574,6 +1581,71 @@ public:
         return p;
     }
 
+    /// Every phase of every well, and every well's bhp, at a state.
+    std::vector<std::array<Scalar, NP>> wellPhaseRates(const State& x) const
+    {
+        std::vector<std::array<Scalar, NP>> q(wells_.size());
+        for (int w = 0; w < numWells(); ++w) {
+            for (int ph = 0; ph < NP; ++ph) {
+                q[w][ph] = x[qwIdx(w, ph)];
+            }
+        }
+        return q;
+    }
+    State wellBhps(const State& x) const
+    {
+        State b(wells_.size());
+        for (int w = 0; w < numWells(); ++w) {
+            b[w] = x[bhpIdx(w)];
+        }
+        return b;
+    }
+    int wellIndex(const std::string& name) const
+    {
+        for (int w = 0; w < numWells(); ++w) {
+            if (wells_[w].name == name) {
+                return w;
+            }
+        }
+        return -1;
+    }
+    /// Give a well a different lift-gas rate -- a trial the optimiser asks
+    /// about. Its tubing sees the new alq; its node sees the gas if it adds it.
+    void setWellAlq(const int w, const Scalar alq)
+    {
+        wells_[w].alq = alq;
+        if (wells_[w].node_adds_lift_gas) {
+            wells_[w].lift_gas = alq;
+        }
+    }
+
+    /// What a well could flow at node pressure p, ignoring its own rate limit
+    /// and any group share: the crossing of its inflow with its tubing, as the
+    /// whole phase triple. The gas lift optimiser asks for this potential and
+    /// applies the limits itself. Empty when the tubing cannot lift there.
+    std::optional<std::array<Scalar, NP + 1>> potentialAt(const int w, const Scalar p) const
+    {
+        const auto& well = wells_[w];
+        if (!hasTubing(well) || !(well.ipr_b[1] < Scalar{0})) {
+            return {};
+        }
+        auto free_well = well;
+        free_well.oil_rate_limit = Scalar{0};
+        free_well.pinned = false;
+        free_well.dead_above = Scalar{0};
+        const Scalar q_oil = thpPotential(free_well, p);
+        if (!(q_oil > Scalar{0}) || q_oil == std::numeric_limits<Scalar>::max()) {
+            return {};
+        }
+        const Scalar bhp = (q_oil - well.ipr_a[1]) / well.ipr_b[1];
+        std::array<Scalar, NP + 1> out{};
+        for (int ph = 0; ph < NP; ++ph) {
+            out[ph] = std::max(ipr(well, ph, bhp), Scalar{0});
+        }
+        out[NP] = bhp;
+        return out;
+    }
+
     /// Oil rate per well, which is what a caller usually wants back.
     State wellRates(const State& x) const
     {
@@ -1765,8 +1837,13 @@ solve(Sys& system,
                     continue;
                 }
             }
-            return {true, it, system.pressures(x), system.wellRates(x), worst,
-                    false, false, {}, switches};
+            Result<Scalar> done{true, it, system.pressures(x), system.wellRates(x), worst,
+                                false, false, {}, switches};
+            if constexpr (requires { system.wellPhaseRates(x); system.wellBhps(x); }) {
+                done.well_phase_rates = system.wellPhaseRates(x);
+                done.well_bhp = system.wellBhps(x);
+            }
+            return done;
         }
         last = {false, it, {}, {}, worst, controls_moved, false, joined(), switches};
 

@@ -322,7 +322,10 @@ protected:
                                          bool bhp_is_limited,
                                          bool debug_output = true) const = 0;
 
-    std::optional<RatesAndBhp> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
+    /// What the well would do with this much lift gas. The base answer is a
+    /// well solve at the well's fixed thp; the typed class can answer from
+    /// the network instead.
+    virtual std::optional<RatesAndBhp> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const;
 
     void debugCheckNegativeGradient_(Scalar grad, Scalar alq, Scalar new_alq,
                                      Scalar oil_rate, Scalar new_oil_rate,

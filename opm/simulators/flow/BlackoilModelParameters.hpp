@@ -166,6 +166,7 @@ struct NetworkSolver { static constexpr auto value = "fixedpoint"; };
 struct NetworkAnalyticJacobian { static constexpr bool value = false; };
 struct NetworkGroupControl { static constexpr bool value = false; };
 struct NetworkAutochoke { static constexpr bool value = false; };
+struct GasLiftNetworkResponse { static constexpr bool value = false; };
 struct NetworkDumpFailures { static constexpr auto value = ""; };
 struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
@@ -400,6 +401,7 @@ public:
     /// Path prefix for writing network systems that fail to converge; empty off.
     std::string network_dump_failures_;
     bool network_autochoke_ = false;
+    bool gaslift_network_response_ = false;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.

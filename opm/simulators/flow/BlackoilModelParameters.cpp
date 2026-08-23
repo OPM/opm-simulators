@@ -125,6 +125,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
     network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
     network_autochoke_ = Parameters::Get<Parameters::NetworkAutochoke>();
+    gaslift_network_response_ = Parameters::Get<Parameters::GasLiftNetworkResponse>();
     network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
@@ -311,6 +312,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "becomes the group's common thp and is raised until the oil through the node meets "
          "the group's target, instead of the bracketing search over well solves "
          "(--network-solver=newton only).");
+    Parameters::Register<Parameters::GasLiftNetworkResponse>
+        ("Answer the gas lift optimiser's trial evaluations from the simultaneous network "
+         "solve -- the well's rates with every node pressure responding to its lift gas -- "
+         "instead of a well solve at a fixed thp (--network-solver=newton only).");
     Parameters::Register<Parameters::NetworkDumpFailures>
         ("Path prefix for writing out each network system that fails to converge, for replay in "
          "the standalone bench; empty disables it");
