@@ -131,7 +131,8 @@ public:
                                 Scalar& low, Scalar& high,
                                 std::optional<Scalar>& approximate_solution,
                                 const Scalar& limit,
-                                DeferredLogger& deferred_logger);
+                                DeferredLogger& deferred_logger,
+                                const int sample_number = 300);
 
   //! \brief Find limits using brute-force solver.
   static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,

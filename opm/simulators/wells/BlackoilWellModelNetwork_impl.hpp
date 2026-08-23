@@ -536,7 +536,8 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                                      high1,
                                                                      appr_sol,
                                                                      0.0,
-                                                                     local_deferredLogger);
+                                                                     local_deferredLogger,
+                                                                     well_model_.param().network_autochoke_bracket_samples_);
                 min_thp = low1;
                 max_thp = high1;
                 range_initial = {min_thp, max_thp};
@@ -559,7 +560,8 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                high,
                                                approximate_solution,
                                                tolerance1,
-                                               local_deferredLogger);
+                                               local_deferredLogger,
+                                               well_model_.param().network_autochoke_bracket_samples_);
 
                 if (approximate_solution.has_value()) {
                     autochoke_thp = *approximate_solution;
