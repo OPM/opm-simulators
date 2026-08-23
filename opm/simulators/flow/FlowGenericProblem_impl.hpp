@@ -81,9 +81,25 @@ FlowGenericProblem(const EclipseState& eclState,
     // 2. EQLDIMS item 2.  Default value from
     //    opm-common/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
 
-    numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>()
-        ? Parameters::Get<Parameters::NumPressurePointsEquil>()
-        : eclState.getTableManager().getEqldims().getNumDepthNodesP();
+    if (Parameters::IsSet<Parameters::NumPressurePointsEquil>()) {
+        numPressurePointsEquil_ = Parameters::Get<Parameters::NumPressurePointsEquil>();
+        if (numPressurePointsEquil_ < 1) {
+            throw std::invalid_argument {
+                fmt::format("--num-pressure-points-equil must be at least 1, "
+                            "but {} was given.", numPressurePointsEquil_)
+            };
+        }
+    }
+    else {
+        numPressurePointsEquil_ = eclState.getTableManager().getEqldims().getNumDepthNodesP();
+        if (numPressurePointsEquil_ < 1) {
+            throw std::invalid_argument {
+                fmt::format("EQLDIMS item 2, the number of depth nodes in the "
+                            "equilibration pressure tables, must be at least 1, "
+                            "but {} was given.", numPressurePointsEquil_)
+            };
+        }
+    }
 
     explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 }
