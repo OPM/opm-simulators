@@ -3411,6 +3411,22 @@ BOOST_AUTO_TEST_CASE(complementarity_shuts_dead_wells)
     }
 }
 
+// The default path's hole, pinned so a fix flips this test rather than
+// passing unnoticed: the active set gives a dead well (dead_above below the
+// node pressure, thp unavailable) bhp control and produces from it.
+BOOST_AUTO_TEST_CASE(the_active_set_still_produces_from_a_dead_well)
+{
+    ProductionCase c;
+    c.wells()[0].dead_above = convert::from(1.0, bars);
+    auto as = c.system(); as.setAnalyticJacobian(true);
+    const auto r = NetworkSolve::solve(as, ProductionCase::guess());
+    BOOST_REQUIRE(r.converged);
+    BOOST_TEST_MESSAGE("dead well on the active set: " << as.controlLetter(0) << " "
+                       << r.well_rate[0] * 86400 << " m3/d");
+    BOOST_CHECK_EQUAL(as.controlLetter(0), 'B');     // should one day be 'S'
+    BOOST_CHECK_GT(r.well_rate[0], 0.0);
+}
+
 // The four AUTOCHK dumps behind the 2026-08-23 fixes, kept under
 // tests/network_dumps. They need the model5 tables (OPM_VFP_INCLUDE); without
 // them the case reports and passes, like replay_production_failures.
