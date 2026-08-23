@@ -789,6 +789,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     if (!anything_to_decide) {
         return std::optional<std::map<std::string, Scalar>>{};
     }
+    system.setAnalyticJacobian(analytic_jacobian_);
     system.finish();
 
     // Everything the solve depends on. Inside a sub-loop the wells are frozen

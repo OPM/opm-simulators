@@ -3052,4 +3052,47 @@ BOOST_AUTO_TEST_CASE(an_autochoke_holds_the_target_or_opens)
     }
 }
 
+
+// The production Jacobian, assembled, against the differenced one -- on a plain
+// network, under a group target, and with a closed choke, since each adds rows
+// of its own. The rate derivatives come from differentiating the table lookup
+// itself; a missed chain-rule term or a sign shows here and nowhere else.
+BOOST_AUTO_TEST_CASE(production_analytic_jacobian_matches_differences)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+
+    auto check = [&](const char* what, Sys& system) {
+        system.setAnalyticJacobian(true);
+        const auto x0 = system.start(ProductionCase::guess());
+        // at the solution, so the active set the Jacobian is built on is the real one
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        BOOST_REQUIRE(r.converged);
+        auto x = x0;
+        for (int n = 1; n <= system.numNodes(); ++n) { x[system.pIdx(n)] = r.node_pressure[n]; }
+        system.updateControls(x);
+        const auto J = system.jacobian(x);
+        const auto r0 = system.residual(x);
+        double worst = 0.0, largest = 0.0;
+        for (int j = 0; j < system.size(); ++j) {
+            auto shifted = x;
+            const double h = 1e-4 * system.columnScale(j);
+            shifted[j] += h;
+            const auto rj = system.residual(shifted);
+            for (int i = 0; i < system.size(); ++i) {
+                const double fd = (rj[i] - r0[i]) / h;
+                worst = std::max(worst, std::abs(J(i, j) - fd));
+                largest = std::max(largest, std::abs(fd));
+            }
+        }
+        BOOST_TEST_MESSAGE(what << ": largest entry " << largest << ", largest difference " << worst);
+        BOOST_CHECK_LT(worst, 1e-3 * std::max(largest, 1.0));
+    };
+
+    { ProductionCase c; auto s = c.system(); check("plain", s); }
+    { ProductionCase c; c.setGroupTarget(0.6 * free_total); auto s = c.system(); check("group target", s); }
+    { ProductionCase c; auto s = c.system(); s.setChokeTarget(1, 0.5 * free_total); check("closed choke", s); }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 #include <algorithm>
 #include <array>
@@ -1698,7 +1699,130 @@ public:
 
     State limitStep(const State&, const State& dx) const { return dx; }
 
+    void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
+    bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+
+    /// A table lookup with its derivatives: the three rate derivatives by
+    /// automatic differentiation of the same lookup, the thp derivative by one
+    /// more lookup -- the table is piecewise linear in thp, so a small forward
+    /// difference inside an interval is the derivative.
+    struct Lookup { Scalar value; std::array<Scalar, NP> dq; Scalar dthp; };
+
+    Lookup tableLookup(const int table, const Scalar thp,
+                       const std::array<Scalar, NP>& q, const Scalar alq) const
+    {
+        using Eval = DenseAd::Evaluation<Scalar, NP>;
+        // production rates are negative to the table, as in tableBhp()
+        const Eval aqua    = Eval::createVariable(-q[0], 0);
+        const Eval liquid  = Eval::createVariable(-q[1], 1);
+        const Eval vapour  = Eval::createVariable(-q[2], 2);
+        const Eval bhp = props_->bhp(table, aqua, liquid, vapour, thp, alq,
+                                     Scalar{0}, Scalar{0}, /*use_expvfp=*/false);
+        Lookup out;
+        out.value = bhp.value();
+        for (int ph = 0; ph < NP; ++ph) {
+            out.dq[ph] = -bhp.derivative(ph);     // d/dq = -d/d(-q)
+        }
+        const Scalar h = Scalar{0.01} * unit::barsa;
+        out.dthp = (tableBhp(table, thp + h, q, alq) - out.value) / h;
+        return out;
+    }
+
+    DenseMatrix<Scalar> jacobian(const State& x) const
+    {
+        const int nodes = numNodes();
+        const int wells = numWells();
+        DenseMatrix<Scalar> J(size());
+        auto pressure = [&](const int n) { return n == 0 ? terminal_pressure_ : x[pIdx(n)]; };
+        auto branchRates = [&](const int n) {
+            std::array<Scalar, NP> q{};
+            for (int ph = 0; ph < NP; ++ph) { q[ph] = x[qIdx(n, ph)]; }
+            return q;
+        };
+        auto add = [&](const int row, const int col, const Scalar value, const Scalar scale) {
+            J(row, col) += value / scale;
+        };
+
+        for (int n = 1; n <= nodes; ++n) {
+            const auto& node = nodes_[n];
+            const int row = n - 1;
+            if (isChoke(n) && choked(n)) {
+                add(row, qIdx(n, 1), 1.0, rate_scale_);
+            } else {
+                add(row, pIdx(n), 1.0, pressure_scale_);
+                if (hasTable(node)) {
+                    const auto e = tableLookup(node.vfp_table, pressure(node.parent),
+                                               branchRates(n), branch_alq_[n]);
+                    if (node.parent != 0) {
+                        add(row, pIdx(node.parent), -e.dthp, pressure_scale_);
+                    }
+                    for (int ph = 0; ph < NP; ++ph) {
+                        add(row, qIdx(n, ph), -e.dq[ph], pressure_scale_);
+                    }
+                } else if (node.parent != 0) {
+                    add(row, pIdx(node.parent), -1.0, pressure_scale_);
+                }
+            }
+            for (int ph = 0; ph < NP; ++ph) {
+                const int balance = nodes + NP * (n - 1) + ph;
+                add(balance, qIdx(n, ph), 1.0, rate_scale_);
+                for (const int c : children_[n]) {
+                    add(balance, qIdx(c, ph), -nodes_[c].efficiency, rate_scale_);
+                }
+                for (const int w : wells_at_[n]) {
+                    add(balance, qwIdx(w, ph), -wells_[w].efficiency, rate_scale_);
+                }
+            }
+        }
+
+        const bool any_grup = std::find(controls_.begin(), controls_.end(), Control::Grup)
+                            != controls_.end();
+        for (int w = 0; w < wells; ++w) {
+            const auto& well = wells_[w];
+            for (int ph = 0; ph < NP; ++ph) {
+                const int ipr_row = 4 * nodes + NP * w + ph;
+                add(ipr_row, qwIdx(w, ph), 1.0, rate_scale_);
+                add(ipr_row, bhpIdx(w), -well.ipr_b[ph], rate_scale_);
+            }
+            const int row = 4 * nodes + NP * wells + w;
+            switch (controls_[w]) {
+            case Control::Thp: {
+                std::array<Scalar, NP> q{};
+                for (int ph = 0; ph < NP; ++ph) { q[ph] = x[qwIdx(w, ph)]; }
+                const auto e = tableLookup(well.vfp_table, pressure(well.node), q, well.alq);
+                add(row, bhpIdx(w), 1.0, pressure_scale_);
+                if (well.node != 0) {
+                    add(row, pIdx(well.node), -e.dthp, pressure_scale_);
+                }
+                for (int ph = 0; ph < NP; ++ph) {
+                    add(row, qwIdx(w, ph), -e.dq[ph], pressure_scale_);
+                }
+                break;
+            }
+            case Control::Bhp:
+                add(row, bhpIdx(w), 1.0, pressure_scale_);
+                break;
+            case Control::OilRate:
+                add(row, qwIdx(w, 1), 1.0, rate_scale_);
+                break;
+            case Control::Grup:
+                add(row, qwIdx(w, 1), 1.0, rate_scale_);
+                add(row, lambdaIdx(), -well.guide, rate_scale_);
+                break;
+            }
+            if (grouped() && any_grup && well.in_group) {
+                add(lambdaIdx(), qwIdx(w, 1), 1.0, rate_scale_);
+            }
+        }
+        if (!(grouped() && any_grup)) {
+            add(lambdaIdx(), lambdaIdx(), 1.0, rate_scale_);
+        }
+        return J;
+    }
+
 private:
+    bool analytic_jacobian_ = false;
+
     /// The multiplier an even guide-rate split would imply, which is what the
     /// row pins it to while nobody is on group control.
     Scalar lambda0() const
