@@ -2368,6 +2368,11 @@ namespace Opm {
         if (!is_final) {
             this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget=*/false);
             this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            // The master turns the rates just sent into fresh injection targets
+            // for the groups it controls through a derived GCONINJE mode, and
+            // sends them straight back.  See
+            // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
+            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;
