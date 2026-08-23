@@ -1099,10 +1099,41 @@ public:
             allow = std::min(allow, well.oil_rate_limit);
         }
         if (hasTubing(well)) {
-            const Scalar found = thpPotential(well, p);
+            const Scalar found = cachedThpPotential(well, p);
             allow = (found > Scalar{0}) ? std::min(allow, found) : Scalar{0};
         }
         return allow;
+    }
+
+    /// thpPotential() is a scan of the tubing table, and the choke's root-find
+    /// asks for it at dozens of pressures per well per control selection. The
+    /// answer is a smooth function of p away from the loading cliff, so keep it
+    /// on a grid and interpolate; anything within a hair of a grid point is the
+    /// grid point. Cleared whenever a well's data change (finish()).
+    Scalar cachedThpPotential(const Well& well, const Scalar p) const
+    {
+        const int w = static_cast<int>(&well - wells_.data());
+        auto& grid = potential_grid_[w];
+        constexpr Scalar step = Scalar{0.25} * unit::barsa;   // finer than any table feature
+        const long key = static_cast<long>(std::floor(p / step));
+        const auto lo = grid.find(key);
+        const auto hi = grid.find(key + 1);
+        const Scalar p_lo = key * step, p_hi = (key + 1) * step;
+        const Scalar v_lo = (lo != grid.end()) ? lo->second
+                          : grid.emplace(key, thpPotential(well, p_lo)).first->second;
+        const Scalar v_hi = (hi != grid.end()) ? hi->second
+                          : grid.emplace(key + 1, thpPotential(well, p_hi)).first->second;
+        // A cliff is not interpolated across: one side cannot lift or is
+        // unbounded, or the two differ by more than the tubing could over a
+        // quarter bar -- which is the stable crossing jumping along the hump.
+        // Those get the exact answer; the smooth stretches get the grid.
+        constexpr Scalar inf = std::numeric_limits<Scalar>::max();
+        if (!(v_lo > Scalar{0}) || !(v_hi > Scalar{0}) || v_lo == inf || v_hi == inf
+            || std::abs(v_hi - v_lo) > Scalar{0.05} * std::max(v_lo, v_hi)) {
+            return thpPotential(well, p);
+        }
+        const Scalar t = (p - p_lo) / step;
+        return v_lo + t * (v_hi - v_lo);
     }
 
     /// Oil the node would collect with its valve open at pressure p: the wells'
@@ -1151,6 +1182,7 @@ public:
             rate_scale_ = std::max(largest * Scalar{0.01},
                                    unit::convert::from(1.0, unit::cubic(unit::meter) / unit::day));
         }
+        potential_grid_.assign(wells_.size(), {});
         controls_.assign(wells_.size(), Control::Thp);
         for (std::size_t w = 0; w < wells_.size(); ++w) {
             if (!hasTubing(wells_[w])) {
@@ -1454,7 +1486,7 @@ public:
             // tubing crossing happens to be.
             if (hasTubing(well) && !well.pinned
                 && !(well.dead_above > Scalar{0} && p_node >= well.dead_above)) {
-                const Scalar found = thpPotential(well, p_node);
+                const Scalar found = cachedThpPotential(well, p_node);
                 if (found > Scalar{0}) {
                     thp[w] = found;
                 }
@@ -1613,6 +1645,7 @@ public:
     /// about. Its tubing sees the new alq; its node sees the gas if it adds it.
     void setWellAlq(const int w, const Scalar alq)
     {
+        potential_grid_[w].clear();
         wells_[w].alq = alq;
         if (wells_[w].node_adds_lift_gas) {
             wells_[w].lift_gas = alq;
@@ -1687,6 +1720,7 @@ private:
     std::vector<Scalar> node_choke_target_;
     mutable std::vector<char> node_choked_;
     std::vector<Scalar> node_choke_pressure_;
+    mutable std::vector<std::map<long, Scalar>> potential_grid_;
     std::vector<Well> wells_;
     std::vector<std::vector<int>> children_;
     std::vector<std::vector<int>> wells_at_;
