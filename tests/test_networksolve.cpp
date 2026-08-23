@@ -2837,16 +2837,17 @@ BOOST_AUTO_TEST_CASE(the_fallback_still_has_one_case_to_cover)
 
 // thp that does not hold a well back must not be the control it ends on.
 //
-// With the bhp limit above what the tubing needs at the node pressure, the bhp
-// limit binds. thpPotential() used to report exactly what the bhp limit allows,
-// which tied, and the tie went to thp -- whose row then settled the bhp below
-// the limit the deck set.
+// With the bhp limit above what the tubing needs at the node pressure (and
+// below shut-in, so the well still produces), the bhp limit binds.
+// thpPotential() used to report exactly what the bhp limit allows, which
+// tied, and the tie went to thp -- whose row then settled the bhp below the
+// limit the deck set.
 BOOST_AUTO_TEST_CASE(production_thp_that_does_not_bind_leaves_the_well_on_bhp)
 {
     using Sys = NetworkSolve::ProductionSystem<double>;
     ProductionCase c;
     for (auto& w : c.wells()) {
-        w.bhp_limit = convert::from(150.0, bars);
+        w.bhp_limit = convert::from(110.0, bars);
     }
     auto system = c.system();
     const auto r = NetworkSolve::solve(system, ProductionCase::guess());
@@ -3293,16 +3294,19 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
     const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
     BOOST_REQUIRE(free.converged);
 
-    ProductionCase plain_case, limited_case, choke_case, tie_case, bhp_case;
+    ProductionCase plain_case, limited_case, choke_case, open_case, tie_case, bhp_case, high_case;
     for (auto& w : limited_case.wells()) { w.oil_rate_limit = 0.4 * free.well_rate[0]; }
     tie_case.wells()[0].oil_rate_limit = free.well_rate[0];
-    for (auto& w : bhp_case.wells()) { w.bhp_limit = convert::from(150.0, bars); }
+    for (auto& w : bhp_case.wells()) { w.bhp_limit = convert::from(110.0, bars); }
+    for (auto& w : high_case.wells()) { w.bhp_limit = convert::from(150.0, bars); }   // above shut-in: nothing
     struct Shape { const char* what; std::function<Sys(void)> make; };
     const std::vector<Shape> shapes{
         {"plain",        [&] { return plain_case.system(); }},
         {"rate-limited", [&] { return limited_case.system(); }},
         {"bhp-limited",  [&] { return bhp_case.system(); }},
+        {"bhp above reservoir", [&] { return high_case.system(); }},
         {"closed choke", [&] { auto s = choke_case.system(); s.setChokeTarget(1, 0.5 * free_total); return s; }},
+        {"open choke",   [&] { auto s = open_case.system(); s.setChokeTarget(1, 2.0 * free_total); return s; }},
         {"on a tie",     [&] { return tie_case.system(); }},
     };
     for (const auto& shape : shapes) {
@@ -3315,12 +3319,16 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
             const auto ra = NetworkSolve::solve(as, guess);
             const auto rc = NetworkSolve::solve(cm, guess);
             if (rc.converged) { cm_its += rc.iterations; }
-            if (!rc.converged && std::string(shape.what) == "closed choke" && pf % 3 == 0) {
+            const bool choke_shape = std::string(shape.what) == "closed choke" || std::string(shape.what) == "open choke";
+            const bool disagree = ra.converged && rc.converged
+                && std::abs(ra.well_rate[0] - rc.well_rate[0]) > 1e-3 * std::abs(ra.well_rate[0]);
+            if (pf % 4 == 0 && (!rc.converged || disagree)) {
                 std::string rates;
                 for (std::size_t w = 0; w < rc.well_rate.size(); ++w) {
-                    rates += fmt::format(" {:.0f}", rc.well_rate[w] * 86400.0);
+                    rates += fmt::format(" {:.0f}({}, bhp {:.1f}/as {:.1f})", rc.well_rate[w] * 86400.0,
+                                         static_cast<int>(cm.control(static_cast<int>(w))), rc.well_bhp[w] * 1e-5, ra.well_bhp[w] * 1e-5);
                 }
-                BOOST_TEST_MESSAGE("    closed choke, start " << 50 + 30 * pf << " bar: cm FAILED after "
+                BOOST_TEST_MESSAGE("    " << shape.what << ", start " << 50 + 30 * pf << " bar: cm " << (rc.converged ? "ok after " : "FAILED after ")
                                    << rc.iterations << " it, residual " << rc.residual << ", choke "
                                    << (cm.choked(1) ? "CLOSED" : "OPEN") << " p " << rc.node_pressure[1] * 1e-5
                                    << ", rates" << rates << ", trace " << rc.control_trace
@@ -3345,6 +3353,24 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
         BOOST_CHECK_EQUAL(only_as, 0);
         BOOST_CHECK_EQUAL(agree, both);
     }
+}
+
+
+// The production step bounds, checked directly: a 1000 bar node step is cut to
+// 50, and a step that would take a node below an atmosphere stops at it.
+BOOST_AUTO_TEST_CASE(production_step_bounds)
+{
+    ProductionCase c;
+    auto system = c.system();
+    auto x = system.start(ProductionCase::guess());
+    std::vector<double> dx(system.size(), 0.0);
+    dx[system.pIdx(1)] = convert::from(1000.0, bars);
+    auto out = system.limitStep(x, dx);
+    BOOST_TEST_MESSAGE("1000 bar step -> " << convert::to(out[system.pIdx(1)], bars) << " bar");
+    BOOST_CHECK_LE(out[system.pIdx(1)], convert::from(50.0, bars) * 1.0001);
+    dx[system.pIdx(1)] = -x[system.pIdx(1)] - convert::from(5.0, bars);
+    out = system.limitStep(x, dx);
+    BOOST_CHECK_GE(x[system.pIdx(1)] + out[system.pIdx(1)], convert::from(1.0, bars) * 0.99);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
