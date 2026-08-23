@@ -1017,7 +1017,8 @@ public:
     using ScalarType = Scalar;
     static constexpr int NP = 3;   // water, oil, gas -- the order VFPPROD wants
 
-    enum class Control { Thp, Bhp, OilRate, Grup };
+    /// Tied: on its rate limit and its tubing at once -- see the residual.
+    enum class Control { Thp, Bhp, OilRate, Grup, Tied };
 
     struct Well
     {
@@ -1080,6 +1081,9 @@ public:
     /// that does not reach the target (the choke is open). Oil-rate targets
     /// only, for now.
     void setChokeTarget(const int node, const Scalar target) { node_choke_target_[node] = target; }
+    Scalar groupTarget() const { return group_target_; }
+    Scalar branchAlq(const int node) const { return branch_alq_[node]; }
+    const std::array<Scalar, NP>& nodeSource(const int node) const { return node_source_[node]; }
     bool isChoke(const int node) const { return node_choke_target_[node] > Scalar{0}; }
     bool choked(const int node) const { return node_choked_[node] != 0; }
     /// The pressure the last control selection placed a closed choke at.
@@ -1184,6 +1188,7 @@ public:
                                    unit::convert::from(1.0, unit::cubic(unit::meter) / unit::day));
         }
         potential_grid_.assign(wells_.size(), {});
+        recent_.assign(wells_.size(), {Control::Thp, Control::Thp});
         controls_.assign(wells_.size(), Control::Thp);
         for (std::size_t w = 0; w < wells_.size(); ++w) {
             if (!hasTubing(wells_[w])) {
@@ -1213,6 +1218,7 @@ public:
         case Control::Bhp:     return 'B';
         case Control::OilRate: return 'O';
         case Control::Grup:    return 'G';
+        case Control::Tied:    return 'C';
         }
         return '?';
     }
@@ -1409,6 +1415,19 @@ public:
             case Control::Grup:
                 control = (q[1] - well.guide * x[lambdaIdx()]) / rate_scale_;
                 break;
+            case Control::Tied: {
+                // The well is at its rate limit with the tubing only just
+                // passing it: rate slack a = limit - q and tubing slack
+                // b = bhp - tubing(p_node, q) are both non-negative and one of
+                // them is zero. Choosing which by the sign at the iterate is
+                // what flips; the Fischer-Burmeister function has the same
+                // zero set and is smooth everywhere but the origin.
+                const Scalar a = (well.oil_rate_limit - q[1]) / rate_scale_;
+                const Scalar b = (bhp - (tableBhp(well.vfp_table, pressure(well.node), q, well.alq)
+                                         - well.vfp_dp)) / pressure_scale_;
+                control = a + b - std::sqrt(a * a + b * b);
+                break;
+            }
             }
         }
 
@@ -1540,6 +1559,17 @@ public:
                 && current_allows <= smallest * (Scalar{1} + Scalar{1e-3})) {
                 wanted = controls_[w];
             }
+            if (controls_[w] == Control::Tied) {
+                wanted = Control::Tied;           // sticky: the row decides
+            } else if (analytic_jacobian_ && wanted != controls_[w] && wanted == recent_[w][0]
+                       && (wanted == Control::OilRate || controls_[w] == Control::OilRate)
+                       && well.oil_rate_limit > Scalar{0} && hasTubing(well)) {
+                // Only with the assembled Jacobian: the row is not smooth at
+                // the origin, and a difference that straddles the kink is not
+                // a derivative of anything.
+                wanted = Control::Tied;
+            }
+            recent_[w] = {recent_[w][1], controls_[w]};
             changed |= (wanted != controls_[w]);
             controls_[w] = wanted;
         }
@@ -1647,6 +1677,15 @@ public:
     void setWellAlq(const int w, const Scalar alq)
     {
         potential_grid_[w].clear();
+        // A different lift gas is a different tubing curve: whatever tie the
+        // well was on is gone with it, and a trial that inherits Control::Tied
+        // is asked for a rate on a curve that no longer passes it.
+        if (!controls_.empty() && controls_[w] == Control::Tied) {
+            controls_[w] = Control::Thp;
+        }
+        if (!recent_.empty()) {
+            recent_[w] = {Control::Thp, Control::Thp};
+        }
         wells_[w].alq = alq;
         if (wells_[w].node_adds_lift_gas) {
             wells_[w].lift_gas = alq;
@@ -1809,6 +1848,26 @@ public:
                 add(row, qwIdx(w, 1), 1.0, rate_scale_);
                 add(row, lambdaIdx(), -well.guide, rate_scale_);
                 break;
+            case Control::Tied: {
+                std::array<Scalar, NP> q{};
+                for (int ph = 0; ph < NP; ++ph) { q[ph] = x[qwIdx(w, ph)]; }
+                const auto e = tableLookup(well.vfp_table, pressure(well.node), q, well.alq);
+                const Scalar a = (well.oil_rate_limit - q[1]) / rate_scale_;
+                const Scalar b = (x[bhpIdx(w)] - (e.value - well.vfp_dp)) / pressure_scale_;
+                const Scalar norm = std::sqrt(a * a + b * b);
+                // at the origin the generalised Jacobian; (1 - 1/sqrt 2) on both
+                const Scalar da = (norm > Scalar{0}) ? Scalar{1} - a / norm : Scalar{1} - Scalar{1} / std::sqrt(Scalar{2});
+                const Scalar db = (norm > Scalar{0}) ? Scalar{1} - b / norm : Scalar{1} - Scalar{1} / std::sqrt(Scalar{2});
+                add(row, qwIdx(w, 1), -da, rate_scale_);
+                add(row, bhpIdx(w), db, pressure_scale_);
+                if (well.node != 0) {
+                    add(row, pIdx(well.node), -db * e.dthp, pressure_scale_);
+                }
+                for (int ph = 0; ph < NP; ++ph) {
+                    add(row, qwIdx(w, ph), -db * e.dq[ph], pressure_scale_);
+                }
+                break;
+            }
             }
             if (grouped() && any_grup && well.in_group) {
                 add(lambdaIdx(), qwIdx(w, 1), 1.0, rate_scale_);
@@ -1845,6 +1904,10 @@ private:
     mutable std::vector<char> node_choked_;
     std::vector<Scalar> node_choke_pressure_;
     mutable std::vector<std::map<long, Scalar>> potential_grid_;
+    /// The last two controls each well was on. A well that returns to the
+    /// control it left two selections ago, across its rate limit, is on a tie
+    /// and goes to Control::Tied for the rest of the solve.
+    std::vector<std::array<Control, 2>> recent_;
     std::vector<Well> wells_;
     std::vector<std::vector<int>> children_;
     std::vector<std::vector<int>> wells_at_;
@@ -1855,6 +1918,71 @@ private:
     Scalar rate_scale_ = 0.0;
     Scalar pressure_scale_ = unit::barsa;
 };
+
+/// Write a production system and its starting pressures, for replay in the
+/// bench against the same tables. Everything the solve depends on is here.
+template<class Scalar>
+void write(const ProductionSystem<Scalar>& system, const std::vector<Scalar>& guess, std::ostream& os)
+{
+    os.precision(17);
+    os << "production\n"
+       << "terminal " << system.terminalPressure() << '\n'
+       << "group_target " << system.groupTarget() << '\n'
+       << "analytic_jacobian " << system.usesAnalyticJacobian() << '\n';
+    for (int n = 0; n < static_cast<int>(system.nodes().size()); ++n) {
+        const auto& node = system.nodes()[n];
+        const auto src = system.nodeSource(n);
+        os << "node " << node.name << ' ' << node.parent << ' ' << node.vfp_table << ' '
+           << node.efficiency << ' ' << system.branchAlq(n) << ' ' << src[0] << ' ' << src[1] << ' '
+           << src[2] << ' ' << system.chokeTarget(n) << '\n';
+    }
+    for (const auto& w : system.wells()) {
+        os << "well " << w.name << ' ' << w.node << ' ' << w.vfp_table << ' ' << w.alq << ' '
+           << w.ipr_a[0] << ' ' << w.ipr_a[1] << ' ' << w.ipr_a[2] << ' '
+           << w.ipr_b[0] << ' ' << w.ipr_b[1] << ' ' << w.ipr_b[2] << ' '
+           << w.bhp_limit << ' ' << w.oil_rate_limit << ' ' << w.in_group << ' ' << w.guide << ' '
+           << w.efficiency << ' ' << w.vfp_dp << ' ' << w.pinned << ' ' << w.dead_above << ' '
+           << w.lift_gas << ' ' << w.node_adds_lift_gas << '\n';
+    }
+    os << "guess";
+    for (const auto p : guess) { os << ' ' << p; }
+    os << '\n';
+}
+
+template<class Scalar>
+std::pair<ProductionSystem<Scalar>, std::vector<Scalar>>
+readProduction(std::istream& is, const VFPProdProperties<Scalar>& props, const UnitSystem& units)
+{
+    ProductionSystem<Scalar> system(props, units);
+    std::vector<Scalar> guess;
+    std::string line;
+    while (std::getline(is, line)) {
+        std::istringstream in(line);
+        std::string tag;
+        if (!(in >> tag)) { continue; }
+        if (tag == "terminal") { Scalar v; in >> v; system.setTerminalPressure(v); }
+        else if (tag == "group_target") { Scalar v; in >> v; system.setGroupTarget(v); }
+        else if (tag == "analytic_jacobian") { int v; in >> v; system.setAnalyticJacobian(v != 0); }
+        else if (tag == "node") {
+            Node n; Scalar alq, s0, s1, s2, choke;
+            in >> n.name >> n.parent >> n.vfp_table >> n.efficiency >> alq >> s0 >> s1 >> s2 >> choke;
+            system.addNode(n, alq);
+            const int idx = static_cast<int>(system.nodes().size()) - 1;
+            system.setNodeSource(idx, {s0, s1, s2});
+            if (choke > Scalar{0}) { system.setChokeTarget(idx, choke); }
+        } else if (tag == "well") {
+            typename ProductionSystem<Scalar>::Well w; int in_group, pinned, adds;
+            in >> w.name >> w.node >> w.vfp_table >> w.alq
+               >> w.ipr_a[0] >> w.ipr_a[1] >> w.ipr_a[2] >> w.ipr_b[0] >> w.ipr_b[1] >> w.ipr_b[2]
+               >> w.bhp_limit >> w.oil_rate_limit >> in_group >> w.guide >> w.efficiency >> w.vfp_dp
+               >> pinned >> w.dead_above >> w.lift_gas >> adds;
+            w.in_group = in_group != 0; w.pinned = pinned != 0; w.node_adds_lift_gas = adds != 0;
+            system.addWell(std::move(w));
+        } else if (tag == "guess") { Scalar v; while (in >> v) { guess.push_back(v); } }
+    }
+    system.finish();
+    return {std::move(system), std::move(guess)};
+}
 
 /// Take the Newton step as it comes. This is what the full system wants: it has
 /// no kinks within an active set, so there is nothing for a globalisation to fix.

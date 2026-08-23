@@ -821,6 +821,19 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     }
 
     const auto result = NetworkSolve::solve(system, guess);
+    // OPM_NETWORK_DUMP_ALL=N writes the first N solved systems too, not only
+    // the failures: a converged answer can still be the wrong root, and that
+    // is only visible by replaying the same system both ways in the bench.
+    static const int dump_all = [] {
+        const char* v = std::getenv("OPM_NETWORK_DUMP_ALL");
+        return v ? std::atoi(v) : 0;
+    }();
+    if (!this->network_dump_prefix_.empty()
+        && (!result.converged || this->network_dumps_written_ < dump_all)) {
+        std::ofstream out(fmt::format("{}_prod_{}.txt", this->network_dump_prefix_,
+                                      this->network_dumps_written_++));
+        if (out) { NetworkSolve::write(system, guess, out); }
+    }
     if (!result.converged) {
         return giveUp(fmt::format("it did not converge in {} iterations; residual {:.3g}{}",
                                   result.iterations - 1, result.residual,
@@ -871,6 +884,15 @@ gasLiftTrial(const std::string& well, const Scalar alq) const
         }
         const auto result = NetworkSolve::solve(trial, guess);
         if (!result.converged) {
+            // A failed trial falls back to the well-solve oracle silently, which
+            // changes the optimiser's path without a trace; leave one.
+            if (!this->network_dump_prefix_.empty()) {
+                std::ofstream out(fmt::format("{}_trial_{}.txt", this->network_dump_prefix_,
+                                              this->network_dumps_written_++));
+                if (out) { NetworkSolve::write(trial, guess, out); }
+            }
+            OpmLog::debug(fmt::format("Network: gas lift trial for {} at alq {:.4g} did not converge; "
+                                      "the well solve answers it", well, alq * 86400.0));
             return std::nullopt;
         }
         const int node = trial.wells()[w].node;

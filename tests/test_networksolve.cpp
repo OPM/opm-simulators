@@ -3095,4 +3095,159 @@ BOOST_AUTO_TEST_CASE(production_analytic_jacobian_matches_differences)
     { ProductionCase c; auto s = c.system(); s.setChokeTarget(1, 0.5 * free_total); check("closed choke", s); }
 }
 
+
+// A well placed exactly where its tubing passes its own rate limit satisfies
+// both rows, and an active set that picks one by the sign at the iterate flips
+// between them. The tie goes to a Fischer-Burmeister row instead; it has to
+// converge, land on the limit, and leave the tubing slack non-negative.
+BOOST_AUTO_TEST_CASE(a_well_on_a_tie_converges)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    const auto sm3d = cubic(meter) / day;
+    ProductionCase free_case;
+    auto free_system = free_case.system();
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    BOOST_REQUIRE(free.converged);
+
+    // the limit is the rate the well freely produces: the tie, to the digit
+    ProductionCase c;
+    c.wells()[0].oil_rate_limit = free.well_rate[0];
+    auto system = c.system();
+    system.setAnalyticJacobian(true);
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    BOOST_TEST_MESSAGE("tied well: " << (r.converged ? "converged in " : "FAILED after ")
+                       << r.iterations << " iterations, " << r.switches << " switches, control '"
+                       << system.controlLetter(0) << "', oil " << convert::to(r.well_rate[0], sm3d)
+                       << " against limit " << convert::to(free.well_rate[0], sm3d));
+    BOOST_CHECK(r.converged);
+    BOOST_CHECK_LE(r.well_rate[0], free.well_rate[0] * (1.0 + 1e-3));
+    BOOST_CHECK_CLOSE(r.well_rate[0], free.well_rate[0], 0.5);
+}
+
+
+// Do the assembled and the differenced Jacobian reach the same solution?
+//
+// Not "do both converge" -- the same node pressures and well rates, from the
+// same start, over a grid of starting pressures, on every production system
+// shape there is: plain, under a group target, with a closed choke, and with
+// a well placed on its rate-limit tie. Where they part, one of them has found
+// another root, and the simulator cannot tell which.
+BOOST_AUTO_TEST_CASE(production_jacobians_reach_the_same_solution)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+    auto free_system = base.system();
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    BOOST_REQUIRE(free.converged);
+
+    // The cases own the tables the systems point at, so they live here, not
+    // inside the lambdas that build systems from them.
+    ProductionCase plain_case, group_case, choke_case, tie_case;
+    group_case.setGroupTarget(0.6 * free_total);
+    tie_case.wells()[0].oil_rate_limit = free.well_rate[0];
+    struct Shape { const char* what; std::function<Sys(void)> make; };
+    const std::vector<Shape> shapes{
+        {"plain",        [&] { return plain_case.system(); }},
+        {"group target", [&] { return group_case.system(); }},
+        {"closed choke", [&] { auto s = choke_case.system(); s.setChokeTarget(1, 0.5 * free_total); return s; }},
+        {"on a tie",     [&] { return tie_case.system(); }},
+    };
+
+    for (const auto& shape : shapes) {
+        int both = 0, agree = 0, only_fd = 0, only_an = 0, neither = 0;
+        double worst_p = 0.0, worst_q = 0.0;
+        for (int pf = 0; pf < 14; ++pf) {
+            const std::vector<double> guess{convert::from(80.0, bars), convert::from(50.0 + 30.0 * pf, bars)};
+            auto fd = shape.make(); fd.setAnalyticJacobian(false);
+            auto an = shape.make(); an.setAnalyticJacobian(true);
+            const auto rf = NetworkSolve::solve(fd, guess);
+            const auto ra = NetworkSolve::solve(an, guess);
+            if (rf.converged && ra.converged) {
+                ++both;
+                double dp = 0.0, dq = 0.0;
+                for (std::size_t n = 0; n < rf.node_pressure.size(); ++n) {
+                    dp = std::max(dp, std::abs(rf.node_pressure[n] - ra.node_pressure[n]));
+                }
+                for (std::size_t w = 0; w < rf.well_rate.size(); ++w) {
+                    dq = std::max(dq, std::abs(rf.well_rate[w] - ra.well_rate[w])
+                                      / std::max(std::abs(rf.well_rate[w]), 1e-12));
+                }
+                worst_p = std::max(worst_p, dp);
+                worst_q = std::max(worst_q, dq);
+                if (dp < convert::from(0.05, bars) && dq < 1e-3) { ++agree; }
+            } else if (rf.converged) { ++only_fd; }
+            else if (ra.converged) { ++only_an; }
+            else { ++neither; }
+        }
+        BOOST_TEST_MESSAGE(std::setw(13) << shape.what << ": both " << both << "/14, agree " << agree
+                           << ", only differenced " << only_fd << ", only analytic " << only_an
+                           << ", neither " << neither << "; worst gap " << convert::to(worst_p, bars)
+                           << " bar, " << 100 * worst_q << " % rate");
+        BOOST_CHECK_EQUAL(agree, both);
+        BOOST_CHECK_EQUAL(only_fd + only_an, 0);
+    }
+}
+
+
+// Replay production systems the simulator wrote out (--network-dump-failures),
+// against the MODEL5 tables. OPM_NETWORK_DUMP_PROD names the directory,
+// OPM_VFP_INCLUDE the directory holding well_vfp.ecl and flowl_{b,c}_vfp.ecl.
+// Each system is solved with both Jacobians; this is where a failure seen in
+// the simulator becomes a millisecond of work.
+BOOST_AUTO_TEST_CASE(replay_production_failures)
+{
+    const char* dir = std::getenv("OPM_NETWORK_DUMP_PROD");
+    const char* inc = std::getenv("OPM_VFP_INCLUDE");
+    if (dir == nullptr || inc == nullptr || !std::filesystem::is_directory(dir)) {
+        BOOST_TEST_MESSAGE("OPM_NETWORK_DUMP_PROD / OPM_VFP_INCLUDE not set, nothing to replay");
+        return;
+    }
+    std::deque<VFPProdTable> tables;
+    VFPProdProperties<double> props;
+    const UnitSystem units{};
+    for (const char* name : {"well_vfp.ecl", "flowl_b_vfp.ecl", "flowl_c_vfp.ecl"}) {
+        const auto path = std::filesystem::path(inc) / name;
+        if (!std::filesystem::exists(path)) { continue; }
+        const auto deck = Parser{}.parseFile(path.string());
+        for (const auto& kw : deck.getKeywordList("VFPPROD")) {
+            tables.emplace_back(*kw, /*gaslift_opt_active=*/true, units);
+            props.addTable(tables.back());
+        }
+    }
+    BOOST_TEST_MESSAGE("tables loaded: " << tables.size());
+
+    std::vector<std::filesystem::path> files;
+    for (const auto& e : std::filesystem::directory_iterator(dir)) {
+        if (e.path().extension() == ".txt") { files.push_back(e.path()); }
+    }
+    std::sort(files.begin(), files.end());
+    int fd_ok = 0, an_ok = 0, agree = 0;
+    for (const auto& file : files) {
+        std::ifstream in(file);
+        std::string head; std::getline(in, head);
+        if (head != "production") { continue; }
+        auto [fd, guess] = NetworkSolve::readProduction<double>(in, props, units);
+        auto an = fd; fd.setAnalyticJacobian(false); an.setAnalyticJacobian(true);
+        const auto rf = NetworkSolve::solve(fd, guess);
+        const auto ra = NetworkSolve::solve(an, guess);
+        fd_ok += rf.converged; an_ok += ra.converged;
+        double gap = 0.0;
+        if (rf.converged && ra.converged) {
+            for (std::size_t n = 0; n < rf.node_pressure.size(); ++n) {
+                gap = std::max(gap, std::abs(rf.node_pressure[n] - ra.node_pressure[n]));
+            }
+            agree += (gap < convert::from(0.05, bars));
+        }
+        BOOST_TEST_MESSAGE("  " << file.filename().string()
+                           << ": differenced " << (rf.converged ? "ok" : "FAILED") << " (" << rf.iterations << " it)"
+                           << ", analytic " << (ra.converged ? "ok" : "FAILED") << " (" << ra.iterations << " it)"
+                           << (rf.converged && ra.converged ? fmt::format(", gap {:.3g} bar", convert::to(gap, bars)) : "")
+                           << (rf.control_trace.empty() ? "" : "  fd trace " + rf.control_trace)
+                           << (ra.control_trace.empty() ? "" : "  an trace " + ra.control_trace));
+    }
+    BOOST_TEST_MESSAGE("replayed " << files.size() << ": differenced ok " << fd_ok << ", analytic ok "
+                       << an_ok << ", both ok and agreeing " << agree);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
