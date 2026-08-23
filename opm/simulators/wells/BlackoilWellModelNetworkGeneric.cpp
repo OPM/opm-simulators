@@ -742,6 +742,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         w.bhp_limit = candidate.bhp_limit;
         const Scalar current = e[8];
         const bool on_group = e[9] > Scalar{0};
+        w.q_start = current;
         const bool free_for_gas_lift = candidate.under_glo && this->gaslift_network_response_;
         if ((candidate.node_is_choke && this->network_autochoke_) || free_for_gas_lift) {
             // The choke decides these wells' rates through the node pressure;
@@ -790,6 +791,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         return std::optional<std::map<std::string, Scalar>>{};
     }
     system.setAnalyticJacobian(analytic_jacobian_);
+    system.setComplementarity(network_complementarity_);
     system.finish();
 
     // Everything the solve depends on. Inside a sub-loop the wells are frozen

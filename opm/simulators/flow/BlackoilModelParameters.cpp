@@ -126,6 +126,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
     network_autochoke_ = Parameters::Get<Parameters::NetworkAutochoke>();
     network_autochoke_bracket_samples_ = Parameters::Get<Parameters::NetworkAutochokeBracketSamples>();
+    network_complementarity_ = Parameters::Get<Parameters::NetworkComplementarity>();
     gaslift_network_response_ = Parameters::Get<Parameters::GasLiftNetworkResponse>();
     network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
@@ -317,6 +318,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Samples the legacy autochoke search takes across its bracket before the root find; each "
          "sample solves every well in the group. 300 is the historical value; a dozen finds the "
          "same root for a fraction of the well solves.");
+    Parameters::Register<Parameters::NetworkComplementarity>
+        ("Close each production well's own limits -- rate, tubing, bhp -- with one complementarity "
+         "row in the simultaneous network solve instead of an active set, so nothing switches "
+         "(--network-solver=newton with --network-analytic-jacobian=true).");
     Parameters::Register<Parameters::GasLiftNetworkResponse>
         ("Answer the gas lift optimiser's trial evaluations from the simultaneous network "
          "solve -- the well's rates with every node pressure responding to its lift gas -- "

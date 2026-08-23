@@ -167,6 +167,7 @@ struct NetworkAnalyticJacobian { static constexpr bool value = false; };
 struct NetworkGroupControl { static constexpr bool value = false; };
 struct NetworkAutochoke { static constexpr bool value = false; };
 struct NetworkAutochokeBracketSamples { static constexpr int value = 300; };
+struct NetworkComplementarity { static constexpr bool value = false; };
 struct GasLiftNetworkResponse { static constexpr bool value = false; };
 struct NetworkDumpFailures { static constexpr auto value = ""; };
 struct NetworkWellProxyMaxIterations { static constexpr int value = 50; };
@@ -403,6 +404,7 @@ public:
     std::string network_dump_failures_;
     bool network_autochoke_ = false;
     int network_autochoke_bracket_samples_ = 300;
+    bool network_complementarity_ = false;
     bool gaslift_network_response_ = false;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network

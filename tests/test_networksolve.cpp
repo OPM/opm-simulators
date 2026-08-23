@@ -3222,32 +3222,129 @@ BOOST_AUTO_TEST_CASE(replay_production_failures)
         if (e.path().extension() == ".txt") { files.push_back(e.path()); }
     }
     std::sort(files.begin(), files.end());
-    int fd_ok = 0, an_ok = 0, agree = 0;
+    int fd_ok = 0, an_ok = 0, agree = 0, cm_ok = 0, cm_agree = 0;
     for (const auto& file : files) {
         std::ifstream in(file);
         std::string head; std::getline(in, head);
         if (head != "production") { continue; }
         auto [fd, guess] = NetworkSolve::readProduction<double>(in, props, units);
         auto an = fd; fd.setAnalyticJacobian(false); an.setAnalyticJacobian(true);
-        const auto rf = NetworkSolve::solve(fd, guess);
-        const auto ra = NetworkSolve::solve(an, guess);
-        fd_ok += rf.converged; an_ok += ra.converged;
-        double gap = 0.0;
+        auto cm = an; cm.setComplementarity(true);
+        // OPM_NETWORK_MAX_IT raises the iteration cap, to tell "slow" from "stuck".
+        const int max_it = std::getenv("OPM_NETWORK_MAX_IT") ? std::atoi(std::getenv("OPM_NETWORK_MAX_IT")) : 50;
+        const auto rf = NetworkSolve::solve(fd, guess, 1e-2, max_it);
+        const auto ra = NetworkSolve::solve(an, guess, 1e-2, max_it);
+        const bool cm_ls = std::getenv("OPM_NETWORK_CM_LINESEARCH") != nullptr;
+        const auto rc = cm_ls ? NetworkSolve::solve(cm, guess, 1e-2, max_it, NetworkSolve::LineSearch{})
+                              : NetworkSolve::solve(cm, guess, 1e-2, max_it);
+        fd_ok += rf.converged; an_ok += ra.converged; cm_ok += rc.converged;
+        double gap = 0.0, cgap = 0.0;
         if (rf.converged && ra.converged) {
             for (std::size_t n = 0; n < rf.node_pressure.size(); ++n) {
                 gap = std::max(gap, std::abs(rf.node_pressure[n] - ra.node_pressure[n]));
             }
             agree += (gap < convert::from(0.05, bars));
         }
+        std::string where;
+        if (ra.converged && rc.converged) {
+            for (std::size_t n = 0; n < ra.node_pressure.size(); ++n) {
+                cgap = std::max(cgap, std::abs(ra.node_pressure[n] - rc.node_pressure[n]));
+            }
+            cm_agree += (cgap < convert::from(0.05, bars));
+            if (cgap >= convert::from(0.05, bars)) {
+                for (int n = 1; n <= an.numNodes(); ++n) {
+                    if (an.isChoke(n)) {
+                        const int up = an.nodes()[n].parent;
+                        where += fmt::format(" choke {} an:{} p {:.2f} (up {:.2f}) cm:{} p {:.2f}", an.nodes()[n].name,
+                                             an.choked(n) ? "CLOSED" : "OPEN", ra.node_pressure[n] * 1e-5,
+                                             (up == 0 ? an.terminalPressure() : ra.node_pressure[up]) * 1e-5,
+                                             cm.choked(n) ? "CLOSED" : "OPEN", rc.node_pressure[n] * 1e-5);
+                    }
+                }
+                for (int w = 0; w < an.numWells(); ++w) {
+                    where += fmt::format(" {}:{}{:.0f}/{}{:.0f}", an.wells()[w].name, an.controlLetter(w),
+                                         ra.well_rate[w] * 86400.0, cm.controlLetter(w), rc.well_rate[w] * 86400.0);
+                }
+            }
+        }
         BOOST_TEST_MESSAGE("  " << file.filename().string()
                            << ": differenced " << (rf.converged ? "ok" : "FAILED") << " (" << rf.iterations << " it)"
                            << ", analytic " << (ra.converged ? "ok" : "FAILED") << " (" << ra.iterations << " it)"
-                           << (rf.converged && ra.converged ? fmt::format(", gap {:.3g} bar", convert::to(gap, bars)) : "")
-                           << (rf.control_trace.empty() ? "" : "  fd trace " + rf.control_trace)
-                           << (ra.control_trace.empty() ? "" : "  an trace " + ra.control_trace));
+                           << ", complementarity " << (rc.converged ? "ok" : "FAILED") << " (" << rc.iterations << " it)"
+                           << (ra.converged && rc.converged ? fmt::format(", gap an/cm {:.3g} bar", convert::to(cgap, bars)) + where : "")
+                           << (rc.converged ? "" : fmt::format("  cm residual {:.3g}", rc.residual)
+                                               + (rc.control_trace.empty() ? "" : "  cm trace " + rc.control_trace)));
     }
     BOOST_TEST_MESSAGE("replayed " << files.size() << ": differenced ok " << fd_ok << ", analytic ok "
-                       << an_ok << ", both ok and agreeing " << agree);
+                       << an_ok << ", both ok and agreeing " << agree << "; complementarity ok " << cm_ok
+                       << ", agreeing with analytic " << cm_agree);
+}
+
+
+// One complementarity row per well instead of an active set: on every shape,
+// it must converge, and where the active set converges too the two must agree.
+BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    const auto sm3d = cubic(meter) / day;
+    ProductionCase base;
+    const double free_total = base.freeTotal();
+    auto free_system = base.system();
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    BOOST_REQUIRE(free.converged);
+
+    ProductionCase plain_case, limited_case, choke_case, tie_case, bhp_case;
+    for (auto& w : limited_case.wells()) { w.oil_rate_limit = 0.4 * free.well_rate[0]; }
+    tie_case.wells()[0].oil_rate_limit = free.well_rate[0];
+    for (auto& w : bhp_case.wells()) { w.bhp_limit = convert::from(150.0, bars); }
+    struct Shape { const char* what; std::function<Sys(void)> make; };
+    const std::vector<Shape> shapes{
+        {"plain",        [&] { return plain_case.system(); }},
+        {"rate-limited", [&] { return limited_case.system(); }},
+        {"bhp-limited",  [&] { return bhp_case.system(); }},
+        {"closed choke", [&] { auto s = choke_case.system(); s.setChokeTarget(1, 0.5 * free_total); return s; }},
+        {"on a tie",     [&] { return tie_case.system(); }},
+    };
+    for (const auto& shape : shapes) {
+        int both = 0, agree = 0, only_as = 0, only_cm = 0, cm_its = 0;
+        double worst = 0.0;
+        for (int pf = 0; pf < 14; ++pf) {
+            const std::vector<double> guess{convert::from(80.0, bars), convert::from(50.0 + 30.0 * pf, bars)};
+            auto as = shape.make(); as.setAnalyticJacobian(true);
+            auto cm = shape.make(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
+            const auto ra = NetworkSolve::solve(as, guess);
+            const auto rc = NetworkSolve::solve(cm, guess);
+            if (rc.converged) { cm_its += rc.iterations; }
+            if (!rc.converged && std::string(shape.what) == "closed choke" && pf % 3 == 0) {
+                std::string rates;
+                for (std::size_t w = 0; w < rc.well_rate.size(); ++w) {
+                    rates += fmt::format(" {:.0f}", rc.well_rate[w] * 86400.0);
+                }
+                BOOST_TEST_MESSAGE("    closed choke, start " << 50 + 30 * pf << " bar: cm FAILED after "
+                                   << rc.iterations << " it, residual " << rc.residual << ", choke "
+                                   << (cm.choked(1) ? "CLOSED" : "OPEN") << " p " << rc.node_pressure[1] * 1e-5
+                                   << ", rates" << rates << ", trace " << rc.control_trace
+                                   << " | active set: p " << ra.node_pressure[1] * 1e-5 << " rates "
+                                   << ra.well_rate[0] * 86400.0 << " " << ra.well_rate[1] * 86400.0);
+            }
+            if (ra.converged && rc.converged) {
+                ++both;
+                double d = 0.0;
+                for (std::size_t w = 0; w < ra.well_rate.size(); ++w) {
+                    d = std::max(d, std::abs(ra.well_rate[w] - rc.well_rate[w]) / std::max(std::abs(ra.well_rate[w]), 1e-12));
+                }
+                worst = std::max(worst, d);
+                agree += (d < 1e-3);
+            } else if (ra.converged) { ++only_as; }
+            else if (rc.converged) { ++only_cm; }
+        }
+        BOOST_TEST_MESSAGE(std::setw(13) << shape.what << ": both " << both << "/14, agree " << agree
+                           << ", only active-set " << only_as << ", only complementarity " << only_cm
+                           << ", worst rate gap " << 100 * worst << " %, complementarity mean its "
+                           << (both + only_cm > 0 ? cm_its / (both + only_cm) : 0));
+        BOOST_CHECK_EQUAL(only_as, 0);
+        BOOST_CHECK_EQUAL(agree, both);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

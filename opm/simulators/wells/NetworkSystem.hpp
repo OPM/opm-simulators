@@ -766,6 +766,7 @@ public:
     void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
     bool usesAnalyticJacobian() const { return analytic_jacobian_; }
 
+
     /// Take a well's group share from the iterate's multiplier instead of
     /// resolving the split. This is the rule that cycles, kept so the bench can
     /// measure the two on the same systems; nothing should turn it on.
@@ -1018,7 +1019,8 @@ public:
     static constexpr int NP = 3;   // water, oil, gas -- the order VFPPROD wants
 
     /// Tied: on its rate limit and its tubing at once -- see the residual.
-    enum class Control { Thp, Bhp, OilRate, Grup, Tied };
+    /// Cmpl: all three of a well's own limits as one complementarity row.
+    enum class Control { Thp, Bhp, OilRate, Grup, Tied, Cmpl };
 
     struct Well
     {
@@ -1052,6 +1054,10 @@ public:
         /// branch's gas stream, but it is not produced, so it is not in q. Zero
         /// unless the node is set to add it (NODEPROP item 4).
         Scalar lift_gas = 0.0;
+        /// The oil rate the well model has now. A tubing table with a loading
+        /// hump gives a well two branches, dead and flowing, and which one the
+        /// solve lands on depends on where it starts; this says which it is on.
+        Scalar q_start = 0.0;
         /// Whether the node adds the well's lift gas to the stream, so a
         /// change of alq is a change of lift_gas too.
         bool node_adds_lift_gas = false;
@@ -1189,6 +1195,8 @@ public:
         }
         potential_grid_.assign(wells_.size(), {});
         recent_.assign(wells_.size(), {Control::Thp, Control::Thp});
+        cmpl_.assign(wells_.size(), 0);
+        cmpl_decided_ = false;
         controls_.assign(wells_.size(), Control::Thp);
         for (std::size_t w = 0; w < wells_.size(); ++w) {
             if (!hasTubing(wells_[w])) {
@@ -1219,6 +1227,7 @@ public:
         case Control::OilRate: return 'O';
         case Control::Grup:    return 'G';
         case Control::Tied:    return 'C';
+        case Control::Cmpl:    return 'M';
         }
         return '?';
     }
@@ -1415,6 +1424,23 @@ public:
             case Control::Grup:
                 control = (q[1] - well.guide * x[lambdaIdx()]) / rate_scale_;
                 break;
+            case Control::Cmpl: {
+                // q in [0, limit] against the tubing slack b and the bhp slack c:
+                // q = 0 when the tubing needs more than the reservoir gives
+                // (inner < 0), q = limit when both slacks are positive, and
+                // inner = 0 -- the tubing or the bhp limit binding -- between.
+                // The lookup is at max(q, 0): below zero it means nothing.
+                std::array<Scalar, NP> qp{};
+                for (int ph = 0; ph < NP; ++ph) { qp[ph] = std::max(q[ph], Scalar{0}); }
+                const Scalar a = (well.oil_rate_limit > Scalar{0})
+                    ? (well.oil_rate_limit - q[1]) / rate_scale_ : Scalar{1e6};
+                const Scalar b = (bhp - (tableBhp(well.vfp_table, pressure(well.node), qp, well.alq)
+                                         - well.vfp_dp)) / pressure_scale_;
+                const Scalar c = (bhp - well.bhp_limit) / pressure_scale_;
+                const Scalar inner = fb(fb(a, b), c);
+                control = fb(q[1] / rate_scale_, -inner);
+                break;
+            }
             case Control::Tied: {
                 // The well is at its rate limit with the tubing only just
                 // passing it: rate slack a = limit - q and tubing slack
@@ -1559,7 +1585,23 @@ public:
                 && current_allows <= smallest * (Scalar{1} + Scalar{1e-3})) {
                 wanted = controls_[w];
             }
-            if (controls_[w] == Control::Tied) {
+            if (complementarity_ && analytic_jacobian_) {
+                // Decided once per solve, from the starting point, and kept:
+                // deciding it from the iterate makes the well switch between
+                // the row and the active set as the node pressure moves, which
+                // is the switching the row exists to remove. A well that turns
+                // out unable to lift leaves the row unsatisfied and the solve
+                // is handed back, honestly, rather than re-decided mid-way.
+                if (!cmpl_decided_) {
+                    const bool dead = well.dead_above > Scalar{0}
+                        && ((well.node == 0 ? terminal_pressure_ : x[pIdx(well.node)]) >= well.dead_above);
+                    cmpl_[w] = hasTubing(well) && !well.pinned && !dead
+                        && !(grouped() && well.in_group) && thp[w] < unbounded;
+                }
+            }
+            if (complementarity_ && analytic_jacobian_ && cmpl_[w]) {
+                wanted = Control::Cmpl;           // the row decides; nothing to switch
+            } else if (controls_[w] == Control::Tied) {
                 wanted = Control::Tied;           // sticky: the row decides
             } else if (analytic_jacobian_ && wanted != controls_[w] && wanted == recent_[w][0]
                        && (wanted == Control::OilRate || controls_[w] == Control::OilRate)
@@ -1573,6 +1615,7 @@ public:
             changed |= (wanted != controls_[w]);
             controls_[w] = wanted;
         }
+        cmpl_decided_ = true;
         return changed;
     }
 
@@ -1595,6 +1638,8 @@ public:
             }
             if (well.pinned) {
                 q_oil = well.oil_rate_limit;
+            } else if (complementarity_ && well.q_start > Scalar{0}) {
+                q_oil = well.q_start;
             } else if (hasTubing(well)) {
                 const Scalar p = node_pressure[well.node];
                 const Scalar found = thpPotential(well, p);
@@ -1736,10 +1781,63 @@ public:
         return is_pressure ? pressure_scale_ : rate_scale_;
     }
 
-    State limitStep(const State&, const State& dx) const { return dx; }
+    /// Bounds by projection, as the injection system has: no node pressure
+    /// below an atmosphere, no well bhp below its limit, and no single step
+    /// of more than 50 bar on any pressure. The active-set rows are linear
+    /// enough in the pressures to do without; the complementarity row is not,
+    /// and its first full step from a poor start ran a choke node to minus
+    /// three thousand bar.
+    State limitStep(const State& x, const State& dx) const
+    {
+        Scalar alpha = Scalar{1};
+        const Scalar floor = unit::atm;
+        const Scalar cap = Scalar{50} * unit::barsa;
+        for (int n = 1; n <= numNodes(); ++n) {
+            const Scalar d = dx[pIdx(n)];
+            if (std::abs(d) > cap) { alpha = std::min(alpha, cap / std::abs(d)); }
+            if (d < Scalar{0} && x[pIdx(n)] + alpha * d < floor) {
+                alpha = std::min(alpha, (x[pIdx(n)] - floor) / (-d));
+            }
+        }
+        for (int w = 0; w < numWells(); ++w) {
+            const Scalar d = dx[bhpIdx(w)];
+            if (std::abs(d) > cap) { alpha = std::min(alpha, cap / std::abs(d)); }
+            const Scalar lower = std::max(wells_[w].bhp_limit, floor);
+            if (d < Scalar{0} && x[bhpIdx(w)] + alpha * d < lower && x[bhpIdx(w)] > lower) {
+                alpha = std::min(alpha, (x[bhpIdx(w)] - lower) / (-d));
+            }
+        }
+        alpha = std::max(alpha, Scalar{1e-3});
+        State out(dx.size());
+        for (std::size_t i = 0; i < dx.size(); ++i) { out[i] = alpha * dx[i]; }
+        return out;
+    }
 
     void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
     bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+
+    /// Close every well that has its own limits to choose between with one
+    /// complementarity row instead of an active set: of the rate slack
+    /// limit - q, the tubing slack bhp - tubing(p, q) and the bhp slack
+    /// bhp - bhp_limit, all are non-negative and at least one is zero.
+    /// psi = fb(fb(a, b), c) with fb(u, v) = u + v - sqrt(u^2 + v^2) has exactly
+    /// that zero set and is smooth away from the origin, so there is nothing to
+    /// switch and nothing to flip -- two wells on ties at once included. Needs
+    /// the assembled Jacobian. Pinned, group-held and dead wells keep their rows.
+    void setComplementarity(const bool on) { complementarity_ = on; }
+    bool usesComplementarity() const { return complementarity_; }
+
+    static Scalar fb(const Scalar u, const Scalar v) { return u + v - std::sqrt(u * u + v * v); }
+    /// d fb / du and d fb / dv; the generalised derivative at the origin.
+    static std::array<Scalar, 2> dfb(const Scalar u, const Scalar v)
+    {
+        const Scalar n = std::sqrt(u * u + v * v);
+        if (!(n > Scalar{0})) {
+            const Scalar g = Scalar{1} - Scalar{1} / std::sqrt(Scalar{2});
+            return {g, g};
+        }
+        return {Scalar{1} - u / n, Scalar{1} - v / n};
+    }
 
     /// A table lookup with its derivatives: the three rate derivatives by
     /// automatic differentiation of the same lookup, the thp derivative by one
@@ -1848,6 +1946,29 @@ public:
                 add(row, qwIdx(w, 1), 1.0, rate_scale_);
                 add(row, lambdaIdx(), -well.guide, rate_scale_);
                 break;
+            case Control::Cmpl: {
+                std::array<Scalar, NP> q{}, qp{};
+                for (int ph = 0; ph < NP; ++ph) { q[ph] = x[qwIdx(w, ph)]; qp[ph] = std::max(q[ph], Scalar{0}); }
+                const auto e = tableLookup(well.vfp_table, pressure(well.node), qp, well.alq);
+                const bool has_rate = well.oil_rate_limit > Scalar{0};
+                const Scalar a = has_rate ? (well.oil_rate_limit - q[1]) / rate_scale_ : Scalar{1e6};
+                const Scalar b = (x[bhpIdx(w)] - (e.value - well.vfp_dp)) / pressure_scale_;
+                const Scalar c = (x[bhpIdx(w)] - well.bhp_limit) / pressure_scale_;
+                const Scalar inner = fb(fb(a, b), c);
+                const auto g_ab = dfb(a, b);                 // d fb(a,b) / da, db
+                const auto g_oc = dfb(fb(a, b), c);          // d inner / d fb(a,b), dc
+                const auto g_out = dfb(q[1] / rate_scale_, -inner);   // d psi / dq, d(-inner)
+                const Scalar k = -g_out[1];                  // d psi / d inner
+                const Scalar da = k * g_oc[0] * g_ab[0], db = k * g_oc[0] * g_ab[1], dc = k * g_oc[1];
+                add(row, qwIdx(w, 1), g_out[0], rate_scale_);
+                if (has_rate) { add(row, qwIdx(w, 1), -da, rate_scale_); }
+                add(row, bhpIdx(w), db + dc, pressure_scale_);
+                if (well.node != 0) { add(row, pIdx(well.node), -db * e.dthp, pressure_scale_); }
+                for (int ph = 0; ph < NP; ++ph) {
+                    if (q[ph] > Scalar{0}) { add(row, qwIdx(w, ph), -db * e.dq[ph], pressure_scale_); }
+                }
+                break;
+            }
             case Control::Tied: {
                 std::array<Scalar, NP> q{};
                 for (int ph = 0; ph < NP; ++ph) { q[ph] = x[qwIdx(w, ph)]; }
@@ -1881,6 +2002,7 @@ public:
 
 private:
     bool analytic_jacobian_ = false;
+    bool complementarity_ = false;
 
     /// The multiplier an even guide-rate split would imply, which is what the
     /// row pins it to while nobody is on group control.
@@ -1908,6 +2030,8 @@ private:
     /// control it left two selections ago, across its rate limit, is on a tie
     /// and goes to Control::Tied for the rest of the solve.
     std::vector<std::array<Control, 2>> recent_;
+    std::vector<char> cmpl_;            // on the complementarity row this solve
+    bool cmpl_decided_ = false;
     std::vector<Well> wells_;
     std::vector<std::vector<int>> children_;
     std::vector<std::vector<int>> wells_at_;
@@ -1942,7 +2066,7 @@ void write(const ProductionSystem<Scalar>& system, const std::vector<Scalar>& gu
            << w.ipr_b[0] << ' ' << w.ipr_b[1] << ' ' << w.ipr_b[2] << ' '
            << w.bhp_limit << ' ' << w.oil_rate_limit << ' ' << w.in_group << ' ' << w.guide << ' '
            << w.efficiency << ' ' << w.vfp_dp << ' ' << w.pinned << ' ' << w.dead_above << ' '
-           << w.lift_gas << ' ' << w.node_adds_lift_gas << '\n';
+           << w.lift_gas << ' ' << w.node_adds_lift_gas << ' ' << w.q_start << '\n';
     }
     os << "guess";
     for (const auto p : guess) { os << ' ' << p; }
@@ -1977,6 +2101,7 @@ readProduction(std::istream& is, const VFPProdProperties<Scalar>& props, const U
                >> w.bhp_limit >> w.oil_rate_limit >> in_group >> w.guide >> w.efficiency >> w.vfp_dp
                >> pinned >> w.dead_above >> w.lift_gas >> adds;
             w.in_group = in_group != 0; w.pinned = pinned != 0; w.node_adds_lift_gas = adds != 0;
+            in >> w.q_start;             // older dumps: stays 0
             system.addWell(std::move(w));
         } else if (tag == "guess") { Scalar v; while (in >> v) { guess.push_back(v); } }
     }

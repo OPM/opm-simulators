@@ -222,6 +222,7 @@ public:
     /// than taking each group-controlled well's rate as fixed.
     void useNetworkGroupControl(const bool on) { network_group_control_ = on; }
     void useNetworkAutochoke(const bool on) { network_autochoke_ = on; }
+    void useNetworkComplementarity(const bool on) { network_complementarity_ = on; }
     /// Per local well, the hydrostatic correction its tubing table needs;
     /// computed on the typed side, where the well's density lives.
     void setWellVfpDp(const std::string& well, const Scalar dp) { well_vfp_dp_[well] = dp; }
@@ -347,6 +348,7 @@ protected:
     bool analytic_jacobian_ = false;
     bool network_group_control_ = false;
     bool network_autochoke_ = false;
+    bool network_complementarity_ = false;
     std::map<std::string, Scalar> well_vfp_dp_;
     /// Last production solve per tree root: the inputs it was built from and
     /// what it gave. Inside a network sub-loop the wells are frozen, so the
