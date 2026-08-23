@@ -1059,6 +1059,9 @@ public:
         /// hump gives a well two branches, dead and flowing, and which one the
         /// solve lands on depends on where it starts; this says which it is on.
         Scalar q_start = 0.0;
+        /// Shut by the adapter: no inflow performance, or shut by the network
+        /// earlier in this step. No IPR; the rows hold q = 0, bhp = limit.
+        bool shut = false;
         /// Whether the node adds the well's lift gas to the stream, so a
         /// change of alq is a change of lift_gas too.
         bool node_adds_lift_gas = false;
@@ -1513,7 +1516,8 @@ public:
                 break;
             }
             case Control::Shut:
-                control = q[1] / rate_scale_;
+                control = (well.ipr_b[1] < Scalar{0}) ? q[1] / rate_scale_
+                                                      : (bhp - well.bhp_limit) / pressure_scale_;
                 break;
             case Control::Tied: {
                 // The well is at its rate limit with the tubing only just
@@ -1686,7 +1690,8 @@ public:
                     // it on bhp or rate control and produce through tubing
                     // that cannot lift (three dead wells at 2500 m3/d each
                     // under a 6000 choke target: dump_prod_1112).
-                    cmpl_[w] = hasTubing(well) && !well.pinned && !(grouped() && well.in_group)
+                    cmpl_[w] = well.shut ? 2
+                        : hasTubing(well) && !well.pinned && !(grouped() && well.in_group)
                         ? (dead ? 2 : 1) : 0;
                 }
             }
@@ -2157,7 +2162,8 @@ public:
                 break;
             }
             case Control::Shut:
-                add(row, qwIdx(w, 1), 1.0, rate_scale_);
+                if (well.ipr_b[1] < Scalar{0}) { add(row, qwIdx(w, 1), 1.0, rate_scale_); }
+                else { add(row, bhpIdx(w), 1.0, pressure_scale_); }
                 break;
             case Control::Tied: {
                 std::array<Scalar, NP> q{};
@@ -2261,7 +2267,7 @@ void write(const ProductionSystem<Scalar>& system, const std::vector<Scalar>& gu
            << w.ipr_b[0] << ' ' << w.ipr_b[1] << ' ' << w.ipr_b[2] << ' '
            << w.bhp_limit << ' ' << w.oil_rate_limit << ' ' << w.in_group << ' ' << w.guide << ' '
            << w.efficiency << ' ' << w.vfp_dp << ' ' << w.pinned << ' ' << w.dead_above << ' '
-           << w.lift_gas << ' ' << w.node_adds_lift_gas << ' ' << w.q_start << '\n';
+           << w.lift_gas << ' ' << w.node_adds_lift_gas << ' ' << w.q_start << ' ' << w.shut << '\n';
     }
     os << "guess";
     for (const auto p : guess) { os << ' ' << p; }
@@ -2297,6 +2303,7 @@ readProduction(std::istream& is, const VFPProdProperties<Scalar>& props, const U
                >> pinned >> w.dead_above >> w.lift_gas >> adds;
             w.in_group = in_group != 0; w.pinned = pinned != 0; w.node_adds_lift_gas = adds != 0;
             in >> w.q_start;             // older dumps: stays 0
+            int shut = 0; in >> shut; w.shut = shut != 0;
             system.addWell(std::move(w));
         } else if (tag == "guess") { Scalar v; while (in >> v) { guess.push_back(v); } }
     }

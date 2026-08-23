@@ -360,6 +360,24 @@ protected:
         std::shared_ptr<const NetworkSolve::ProductionSystem<Scalar>> system;
     };
     mutable std::map<std::string, SolvedTree> last_production_solve_;
+    /// Wells the complementarity solve shut earlier in this report step. A
+    /// dying well the network shuts, the well model stops, and the pressure
+    /// it leaves behind re-opens -- 581 stops on one well in one run.
+    mutable std::set<std::string> network_shut_;
+    double network_shut_time_ = -1.0, network_shut_dt_ = -1.0;
+public:
+    /// Called at each network balance; a new time step forgets the shuts.
+    /// A report step was too long: wells shut on an early iterate stayed
+    /// shut for weeks and the step chopped (27 -> 88 time steps).
+    void noteNetworkTimeStep(const double time, const double dt)
+    {
+        if (time != network_shut_time_ || dt != network_shut_dt_) {
+            network_shut_.clear();
+            network_shut_time_ = time;
+            network_shut_dt_ = dt;
+        }
+    }
+private:
     bool gaslift_network_response_ = false;
     std::string network_dump_prefix_;
     mutable int network_dumps_written_ = 0;

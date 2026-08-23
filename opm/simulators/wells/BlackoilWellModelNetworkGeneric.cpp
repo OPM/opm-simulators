@@ -714,17 +714,37 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     // From here every rank works from the same numbers, so every decision below
     // -- including giving up -- is reached by all of them.
     Scalar group_target = 0.0;
+    const bool shut_rows = this->network_complementarity_ && this->analytic_jacobian_;
     const bool use_group_target = this->network_group_control_;
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const Scalar* e = &shared[i * kEntries];
         if (e[0] <= Scalar{0}) {
             continue;                 // open on no rank; not part of the network
         }
-        if (e[1] <= Scalar{0}) {
-            return giveUp(fmt::format("{} has no usable inflow performance", candidates[i].name));
-        }
         const auto& candidate = candidates[i];
         typename Sys::Well w;
+        if (e[1] <= Scalar{0}) {
+            if (!shut_rows) {
+                return giveUp(fmt::format("{} has no usable inflow performance", candidate.name));
+            }
+            // No inflow performance: the well model has it at zero rate. It
+            // is shut in the system rather than the system refused.
+            w.name = candidate.name;
+            w.node = candidate.node;
+            w.vfp_table = candidate.vfp_table;
+            w.bhp_limit = candidate.bhp_limit;
+            w.efficiency = candidate.efficiency * e[10];
+            w.shut = true;
+            system.addWell(std::move(w));
+            continue;
+        }
+        // Carrying a shut across the well model's iterations made the step
+        // chop on both decks (the well model re-opens what the network holds
+        // shut); kept behind OPM_NETWORK_CARRY_SHUT for the record.
+        static const bool carry = std::getenv("OPM_NETWORK_CARRY_SHUT") != nullptr;
+        if (shut_rows && carry && this->network_shut_.count(candidate.name)) {
+            w.shut = true;
+        }
         w.name = candidate.name;
         w.node = candidate.node;
         w.vfp_table = candidate.vfp_table;
@@ -849,6 +869,11 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     std::map<std::string, Scalar> pressures;
     for (std::size_t n = 0; n < order.size(); ++n) {
         pressures[order[n]] = result.node_pressure[n];
+    }
+    for (int w = 0; w < system.numWells(); ++w) {
+        if (system.control(w) == NetworkSolve::ProductionSystem<Scalar>::Control::Shut) {
+            this->network_shut_.insert(system.wells()[w].name);
+        }
     }
     last_production_solve_[root.name()] = SolvedTree{
         std::move(inputs), pressures, order,

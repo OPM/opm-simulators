@@ -109,6 +109,7 @@ update(const bool mandatory_network_balance,
     if (this->shouldBalance(episodeIdx) || mandatory_network_balance) {
         OPM_TIMEBLOCK(BalanceNetwork);
         const double dt = well_model_.simulator().timeStepSize();
+        this->noteNetworkTimeStep(well_model_.simulator().time(), dt);
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
         const bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
         const int max_number_of_sub_iterations =

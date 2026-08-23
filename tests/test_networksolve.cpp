@@ -3358,6 +3358,96 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
 
 // The production step bounds, checked directly: a 1000 bar node step is cut to
 // 50, and a step that would take a node below an atmosphere stops at it.
+// A well the well model has at zero rate above some node pressure -- the
+// adapter's dead_above -- must not be produced from. The active set hands it
+// to bhp control and reports 2500 m3/d through tubing that cannot lift
+// (dump_prod_1112: three of them under a 6000 choke target); the
+// complementarity shuts it. Both shapes from the dumps, on the bench tables.
+BOOST_AUTO_TEST_CASE(complementarity_shuts_dead_wells)
+{
+    using Sys = NetworkSolve::ProductionSystem<double>;
+    ProductionCase plain_case;
+    auto plain = plain_case.system(); plain.setAnalyticJacobian(true);
+    const auto free = NetworkSolve::solve(plain, ProductionCase::guess());
+    BOOST_REQUIRE(free.converged);
+    const double p_free = free.node_pressure[1];
+
+    // One dying well: dead just below where the node settles with it alive.
+    {
+        ProductionCase c;
+        c.wells()[0].dead_above = p_free - convert::from(0.5, bars);
+        auto cm = c.system(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
+        auto as = c.system(); as.setAnalyticJacobian(true);
+        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess());
+        const auto ra = NetworkSolve::solve(as, ProductionCase::guess());
+        BOOST_REQUIRE(rc.converged);
+        BOOST_TEST_MESSAGE("dying well: cm " << cm.controlLetter(0) << " " << rc.well_rate[0] * 86400
+                           << " m3/d at node " << rc.node_pressure[1] * 1e-5 << " bar; active set "
+                           << (ra.converged ? as.controlLetter(0) : '?') << " "
+                           << (ra.converged ? ra.well_rate[0] * 86400 : 0.0) << " m3/d");
+        BOOST_CHECK_EQUAL(cm.controlLetter(0), 'S');
+        BOOST_CHECK_SMALL(rc.well_rate[0], 1e-12);
+        BOOST_CHECK_GT(rc.well_rate[1], 0.0);
+        // The other well alone leaves the node below where well 0 died --
+        // the no-fixed-point shape; the shut has to stick.
+        BOOST_CHECK_LT(rc.node_pressure[1], c.wells()[0].dead_above);
+    }
+    // A choke over wells that are all dead: nothing to throttle, valve open,
+    // no flow. The row must not chase a target nothing can meet.
+    {
+        ProductionCase c;
+        for (auto& w : c.wells()) { w.dead_above = convert::from(1.0, bars); }
+        auto cm = c.system(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
+        cm.setChokeTarget(1, 0.5 * free.well_rate[0]);
+        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess());
+        BOOST_REQUIRE(rc.converged);
+        for (int w = 0; w < cm.numWells(); ++w) {
+            BOOST_CHECK_EQUAL(cm.controlLetter(w), 'S');
+            BOOST_CHECK_SMALL(rc.well_rate[w], 1e-12);
+        }
+        BOOST_CHECK_LT(rc.iterations, 10);
+        BOOST_TEST_MESSAGE("choke over dead wells: " << rc.iterations << " it, node "
+                           << rc.node_pressure[1] * 1e-5 << " bar");
+    }
+}
+
+// The four AUTOCHK dumps behind the 2026-08-23 fixes, kept under
+// tests/network_dumps. They need the model5 tables (OPM_VFP_INCLUDE); without
+// them the case reports and passes, like replay_production_failures.
+BOOST_AUTO_TEST_CASE(the_dumps_behind_the_complementarity_fixes_converge)
+{
+    const char* inc = std::getenv("OPM_VFP_INCLUDE");
+    if (inc == nullptr) {
+        BOOST_TEST_MESSAGE("OPM_VFP_INCLUDE not set; dumps not replayed");
+        return;
+    }
+    std::deque<VFPProdTable> tables;
+    VFPProdProperties<double> props;
+    const UnitSystem units{};
+    for (const char* name : {"well_vfp.ecl", "flowl_b_vfp.ecl", "flowl_c_vfp.ecl"}) {
+        const auto deck = Parser{}.parseFile((std::filesystem::path(inc) / name).string());
+        for (const auto& kw : deck.getKeywordList("VFPPROD")) {
+            tables.emplace_back(*kw, true, units);
+            props.addTable(tables.back());
+        }
+    }
+    const auto dir = std::filesystem::path(__FILE__).parent_path() / "network_dumps";
+    for (const char* name : {"autochk_prod_992.txt", "autochk_prod_1112.txt", "autochk_prod_0.txt", "autochk_prod_302.txt"}) {
+        std::ifstream in(dir / name);
+        BOOST_REQUIRE(in);
+        std::string head; std::getline(in, head);
+        auto [system, guess] = NetworkSolve::readProduction<double>(in, props, units);
+        system.setAnalyticJacobian(true); system.setComplementarity(true);
+        const auto r = NetworkSolve::solve(system, guess, 1e-2, 50);
+        std::string controls;
+        for (int w = 0; w < system.numWells(); ++w) { controls += system.controlLetter(w); }
+        BOOST_TEST_MESSAGE(name << ": " << (r.converged ? "ok" : "FAILED") << " in " << r.iterations
+                           << " it, controls " << controls);
+        BOOST_CHECK(r.converged);
+        BOOST_CHECK_LT(r.iterations, 12);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(production_step_bounds)
 {
     ProductionCase c;
