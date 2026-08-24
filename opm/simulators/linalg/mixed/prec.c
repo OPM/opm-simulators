@@ -325,218 +325,7 @@ void mat3_vfms(double *C, double const *A, double const *B)
     }
 }
 
-void prec_dilu_factorize2(prec_t *P, bsr_matrix *A)
-{
-    int nrows = A->nrows;
-    int b     = A->b;
-    int bb    = b*b;
-
-    bsr_matrix *L=P->L;
-    bsr_matrix *D=P->D;
-    bsr_matrix *U=P->U;
-
-    // Splitting values of A into L, D, and U, respectively
-    int kU=0;
-    for(int i=0;i<nrows;i++)
-    {
-        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
-        {
-            int j=A->colidx[k];
-            if(j<i)       // struct-transpose of L
-            {
-                int kL = L->rowptr[j];
-                vec_copy4(L->dbl + bb*kL, A->dbl + bb*k);
-                L->rowptr[j]++;
-            }
-            else if(j==i) // struct-copy of D
-            {
-                vec_copy4(D->dbl + bb*i, A->dbl + bb*k);
-            }
-            else if(j>i) // struct-copy of U
-            {
-                vec_copy4(U->dbl + bb*kU, A->dbl + bb*k);
-                kU++;
-            }
-        }
-    }
-    // reset rowptr of L
-    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
-    L->rowptr[0]=0;
-
-    // Factorizing
-    double scale[4]; //hard-coded to 2x2 blocks
-    for(int i=0;i<A->nrows;i++)
-    {
-        mat2_inv(scale,D->dbl+i*bb);
-        vec_copy4(D->dbl+bb*i, scale); //store inverse instead to simplify application
-        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
-        {
-            //scale column i of L
-            mat2_rmul(L->dbl+k*bb,scale);
-
-            //update diagonal of U
-            int j=L->colidx[k];
-            mat2_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
-
-            //scale row i of U
-            mat2_lmul(scale,U->dbl+k*bb);
-
-            //NOT IMPLEMENTED!
-            for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
-            {
-                if(L->colidx[m]==j)
-                {
-                    printf("ILU OFF_DIAGONALS NOT IMPLEMENTED!\n");
-                    printf("(%d,%d)",m,j);
-                    getchar();
-                }
-            }
-        }
-    }
-}
-
-
-void prec_dilu_factorize(prec_t *P, bsr_matrix *A)
-{
-    int nrows = A->nrows;
-    int b     = A->b;
-    int bb    = b*b;
-
-    bsr_matrix *L=P->L;
-    bsr_matrix *D=P->D;
-    bsr_matrix *U=P->U;
-
-    // Splitting values of A into L, D, and U, respectively
-    int kU=0;
-    for(int i=0;i<nrows;i++)
-    {
-        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
-        {
-            int j=A->colidx[k];
-            if(j<i)       // struct-transpose of L
-            {
-                int kL = L->rowptr[j];
-                vec_copy9(L->dbl + bb*kL, A->dbl + bb*k);
-                L->rowptr[j]++;
-            }
-            else if(j==i) // struct-copy of D
-            {
-                vec_copy9(D->dbl + bb*i, A->dbl + bb*k);
-            }
-            else if(j>i) // struct-copy of U
-            {
-                vec_copy9(U->dbl + bb*kU, A->dbl + bb*k);
-                kU++;
-            }
-        }
-    }
-    // reset rowptr of L
-    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
-    L->rowptr[0]=0;
-
-    // Factorizing
-    double scale[9]; //hard-coded to 3x3 blocks for now
-    for(int i=0;i<A->nrows;i++)
-    {
-        mat3_inv(scale,D->dbl+i*bb);
-        vec_copy9(D->dbl+bb*i, scale); //store inverse instead to simplify application
-        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
-        {
-            //scale column i of L
-            mat3_rmul(L->dbl+k*bb,scale);
-
-            //update diagonal of U
-            int j=L->colidx[k];
-            mat3_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
-
-            //scale row i of U
-            mat3_lmul(scale,U->dbl+k*bb);
-
-            //NOT IMPLEMENTED!
-            for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
-            {
-                if(L->colidx[m]==j)
-                {
-                    printf("ILU OFF_DIAGONALS NOT IMPLEMENTED!\n");
-                    printf("(%d,%d)",m,j);
-                    getchar();
-                }
-            }
-        }
-    }
-}
-
-void prec_dilu_factorize4(prec_t *P, bsr_matrix *A)
-{
-    int nrows = A->nrows;
-    int b     = A->b;
-    int bb    = b*b;
-
-    bsr_matrix *L=P->L;
-    bsr_matrix *D=P->D;
-    bsr_matrix *U=P->U;
-
-    // Splitting values of A into L, D, and U, respectively
-    int kU=0;
-    for(int i=0;i<nrows;i++)
-    {
-        for (int k=A->rowptr[i];k<A->rowptr[i+1];k++)
-        {
-            int j=A->colidx[k];
-            if(j<i)       // struct-transpose of L
-            {
-                int kL = L->rowptr[j];
-                vec_copy16(L->dbl + bb*kL, A->dbl + bb*k);
-                L->rowptr[j]++;
-            }
-            else if(j==i) // struct-copy of D
-            {
-                vec_copy16(D->dbl + bb*i, A->dbl + bb*k);
-            }
-            else if(j>i) // struct-copy of U
-            {
-                vec_copy16(U->dbl + bb*kU, A->dbl + bb*k);
-                kU++;
-            }
-        }
-    }
-    // reset rowptr of L
-    for(int i=nrows;i>0;i--) L->rowptr[i]=L->rowptr[i-1];
-    L->rowptr[0]=0;
-
-    // Factorizing
-    double scale[16]; //hard-coded to 4x4 blocks
-    for(int i=0;i<A->nrows;i++)
-    {
-        mat4_vinv(scale,D->dbl+i*bb);
-        vec_copy16(D->dbl+bb*i, scale); //store inverse instead to simplify application
-        for(int k=L->rowptr[i];k<L->rowptr[i+1];k++)
-        {
-            //scale column i of L
-            mat4_rmul(L->dbl+k*bb,scale);
-
-            //update diagonal of U
-            int j=L->colidx[k];
-            mat4_vfms(D->dbl+j*bb,L->dbl+k*bb,U->dbl+k*bb);
-
-            //scale row i of U
-            mat4_lmul(scale,U->dbl+k*bb);
-
-            //NOT IMPLEMENTED!
-            for(int m=L->rowptr[j];m<L->rowptr[j+1];m++)
-            {
-                if(L->colidx[m]==j)
-                {
-                    printf("ILU OFF_DIAGONALS NOT IMPLEMENTED!\n");
-                    printf("(%d,%d)",m,j);
-                    getchar();
-                }
-            }
-        }
-    }
-}
-
-void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A)
+void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A, bool use_dilu)
 {
     int nrows = A->nrows;
     int b     = A->b;
@@ -576,7 +365,7 @@ void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A)
 
     // Factorizing
     int idx=0;
-    int next = P->offsets[idx][0];
+    int next = use_dilu ? A->nnz : P->offsets[idx][0];
     double scale[4]; //hard-coded to 2x2 blocks
     for(int i=0;i<A->nrows;i++)
     {
@@ -615,7 +404,7 @@ void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A)
     }
 }
 
-void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
+void prec_ilu0_factorize3(prec_t *P, bsr_matrix *A, bool use_dilu)
 {
     int nrows = A->nrows;
     int b     = A->b;
@@ -655,7 +444,7 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
 
     // Factorizing
     int idx=0;
-    int next = P->offsets[idx][0];
+    int next = use_dilu ? A->nnz : P->offsets[idx][0];
     double scale[9]; //hard-coded to 3x3 blocks for now
     for(int i=0;i<A->nrows;i++)
     {
@@ -694,7 +483,7 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A)
     }
 }
 
-void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
+void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A, bool use_dilu)
 {
 
     int nrows = A->nrows;
@@ -735,7 +524,7 @@ void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A)
 
     // Factorizing
     int idx=0;
-    int next = P->offsets[idx][0];
+    int next = use_dilu ? A->nnz : P->offsets[idx][0];
     double scale[16] __attribute__((aligned(64))); //hard-coded to 4x4 blocks
     for(int i=0;i<A->nrows;i++)
     {

@@ -171,9 +171,9 @@ update ()
     }
 
     if      constexpr(N==1){OPM_THROW(std::invalid_argument, "MixedMatrixPreconditioner::update does not support block size == 1!\n");}
-    else if constexpr(N==2) use_dilu_ ? prec_dilu_factorize2(prec_, mixed_matrix_) : prec_ilu0_factorize2(prec_, mixed_matrix_);
-    else if constexpr(N==3) use_dilu_ ? prec_dilu_factorize(prec_, mixed_matrix_) : prec_ilu0_factorize(prec_, mixed_matrix_);
-    else if constexpr(N==4) use_dilu_ ? prec_dilu_factorize4(prec_, mixed_matrix_) : prec_ilu0_factorize4(prec_, mixed_matrix_);
+    else if constexpr(N==2) prec_ilu0_factorize2(prec_, mixed_matrix_, use_dilu_);
+    else if constexpr(N==3) prec_ilu0_factorize3(prec_, mixed_matrix_, use_dilu_);
+    else if constexpr(N==4) prec_ilu0_factorize4(prec_, mixed_matrix_, use_dilu_);
     else
     {
         bsr_matrix const *A = mixed_matrix_;

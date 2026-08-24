@@ -119,7 +119,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
+    prec_ilu0_factorize3(P,A,mem->use_dilu); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
@@ -182,7 +182,7 @@ int bslv_pbicgstab4m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    mem->use_dilu ? prec_dilu_factorize4(P,A) : prec_ilu0_factorize4(P,A); // choose dilu or ilu0
+    prec_ilu0_factorize4(P,A,mem->use_dilu); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
@@ -246,7 +246,7 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    mem->use_dilu ? prec_dilu_factorize(P,A) : prec_ilu0_factorize(P,A); // choose dilu or ilu0
+    prec_ilu0_factorize3(P,A,mem->use_dilu); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
