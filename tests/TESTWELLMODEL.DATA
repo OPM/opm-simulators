@@ -58,6 +58,20 @@ WCONPROD
     'PROD1' 'OPEN' 'GRAT' 2* 50000. /
 /
 
+-- Item 3 defaulted, so the target phase follows the WELSPECS preferred
+-- phase of PROD1, which is oil and hence maps to the liquid rate.
+WELDRAW
+    'PROD1' 5.0 2* AVG /
+/
+
+TSTEP
+10 /
+
+-- The same well with the gas rate selected explicitly.
+WELDRAW
+    'PROD1' 5.0 GAS 1* AVG /
+/
+
 TSTEP
 10 /
 

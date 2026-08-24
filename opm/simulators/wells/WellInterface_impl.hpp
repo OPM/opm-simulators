@@ -312,7 +312,11 @@ namespace Opm
 
         // The IPR b-coefficients are the surface-rate coefficients with
         // respect to the drawdown, sum_j Tw_j * mob_j / B_j, summed over the
-        // well's connections (crossflowing connections excluded).
+        // well's connections.  A standard well leaves crossflowing
+        // connections out of that sum while a multisegment well does not, so
+        // the cap of a multisegment well with crossflow is the more lenient
+        // of the two.  The terms are non-negative either way, so this cannot
+        // change the sign of the sum below.
         this->updateIPR(simulator, deferred_logger);
 
         auto phase_coeff = [this](const unsigned phase_idx) -> Scalar {
@@ -338,10 +342,11 @@ namespace Opm
         }
 
         if (!(coeff > 0.0)) {
-            // The target phase cannot flow at any drawdown (phase inactive,
-            // zero mobility, or all connections crossflowing).  Imposing
-            // Qmax = 0 would silently stop the well, so treat the limit as
-            // inactive instead.
+            // The target phase cannot flow at any drawdown, because it is
+            // inactive, because it has no mobility in any connection, or,
+            // for a standard well, because every connection is crossflowing
+            // and hence left out of the sum.  Imposing Qmax = 0 would
+            // silently stop the well, so treat the limit as inactive.
             deferred_logger.warning("WELDRAW_NO_TARGET_PHASE_MOBILITY",
                 fmt::format("Well {}: the WELDRAW target phase ({}) has no "
                             "producible mobility; the drawdown limit is ignored.",
