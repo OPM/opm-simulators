@@ -2758,6 +2758,25 @@ add_test_compareECLFiles(
     --enable-tuning=true
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    wconprod_13
+  FILENAME
+    WCONPROD-13
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wconprod
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(
     CASENAME
