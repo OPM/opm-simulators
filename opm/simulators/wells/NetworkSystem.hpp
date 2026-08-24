@@ -2371,18 +2371,28 @@ auto systemJacobian(const Sys& system, const State& x)
     }
 }
 
+/// Convergence settings for solve().
+template<class Scalar>
+struct Parameters
+{
+    /// Max norm of the scaled residual at which the system is converged.
+    Scalar tolerance = 1e-2;
+    int max_iterations = 50;
+};
+
 /// Solve an InjectionSystem or a ProductionSystem by Newton-Raphson, choosing
 /// each well's control by an active set as it goes. Takes the node pressures to
 /// start from; returns the converged pressures and rates, or a Result with
 /// converged false and the reason it stopped.
-template<class Sys, class Globalisation = FullStep>
+template<class Sys, class Globalisation>
 Result<typename Sys::ScalarType>
 solve(Sys& system,
       const std::vector<typename Sys::ScalarType>& node_pressure_guess,
-      const typename Sys::ScalarType tolerance = 1e-2,
-      const int max_iterations = 50,
-      Globalisation globalisation = {})
+      const Parameters<typename Sys::ScalarType> params,
+      Globalisation globalisation)
 {
+    const auto tolerance = params.tolerance;
+    const int max_iterations = params.max_iterations;
     using Scalar = typename Sys::ScalarType;
     auto x = system.start(node_pressure_guess);
     const int n = system.size();
@@ -2499,6 +2509,16 @@ solve(Sys& system,
     last.node_pressure = system.pressures(x);
     last.well_rate = system.wellRates(x);
     return last;
+}
+
+/// Solve with the standard settings and a full Newton step -- what every caller
+/// outside the bench wants.
+template<class Sys>
+Result<typename Sys::ScalarType>
+solve(Sys& system, const std::vector<typename Sys::ScalarType>& node_pressure_guess)
+{
+    return solve(system, node_pressure_guess,
+                 Parameters<typename Sys::ScalarType>{}, FullStep{});
 }
 
 } // namespace Opm::NetworkSolve

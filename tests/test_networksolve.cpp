@@ -2787,7 +2787,7 @@ BOOST_AUTO_TEST_CASE(the_fallback_still_has_one_case_to_cover)
             }
             auto again = c.system();
             const auto second =
-                NetworkSolve::solve(again, guess, 1e-2, 50, NetworkSolve::LineSearch{});
+                NetworkSolve::solve(again, guess, {1e-2, 50}, NetworkSolve::LineSearch{});
             if (second.converged) {
                 ++retried;
             } else if (second.switches > second.iterations / 4) {
@@ -3216,11 +3216,11 @@ BOOST_AUTO_TEST_CASE(replay_production_failures)
         auto cm = an; cm.setComplementarity(true);
         // OPM_NETWORK_MAX_IT raises the iteration cap, to tell "slow" from "stuck".
         const int max_it = std::getenv("OPM_NETWORK_MAX_IT") ? std::atoi(std::getenv("OPM_NETWORK_MAX_IT")) : 50;
-        const auto rf = NetworkSolve::solve(fd, guess, 1e-2, max_it);
-        const auto ra = NetworkSolve::solve(an, guess, 1e-2, max_it);
+        const auto rf = NetworkSolve::solve(fd, guess, {1e-2, max_it}, NetworkSolve::FullStep{});
+        const auto ra = NetworkSolve::solve(an, guess, {1e-2, max_it}, NetworkSolve::FullStep{});
         const bool cm_ls = std::getenv("OPM_NETWORK_CM_LINESEARCH") != nullptr;
-        const auto rc = cm_ls ? NetworkSolve::solve(cm, guess, 1e-2, max_it, NetworkSolve::LineSearch{})
-                              : NetworkSolve::solve(cm, guess, 1e-2, max_it);
+        const auto rc = cm_ls ? NetworkSolve::solve(cm, guess, {1e-2, max_it}, NetworkSolve::LineSearch{})
+                              : NetworkSolve::solve(cm, guess, {1e-2, max_it}, NetworkSolve::FullStep{});
         fd_ok += rf.converged; an_ok += ra.converged; cm_ok += rc.converged;
         double gap = 0.0, cgap = 0.0;
         if (rf.converged && ra.converged) {
@@ -3437,7 +3437,7 @@ BOOST_AUTO_TEST_CASE(the_dumps_behind_the_complementarity_fixes_converge)
         std::string head; std::getline(in, head);
         auto [system, guess] = NetworkSolve::readProduction<double>(in, props, units);
         system.setAnalyticJacobian(true); system.setComplementarity(true);
-        const auto r = NetworkSolve::solve(system, guess, 1e-2, 50);
+        const auto r = NetworkSolve::solve(system, guess, {1e-2, 50}, NetworkSolve::FullStep{});
         std::string controls;
         for (int w = 0; w < system.numWells(); ++w) { controls += system.controlLetter(w); }
         BOOST_TEST_MESSAGE(name << ": " << (r.converged ? "ok" : "FAILED") << " in " << r.iterations
