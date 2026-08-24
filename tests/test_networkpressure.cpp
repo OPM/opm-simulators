@@ -245,24 +245,13 @@ struct MockWellModel
             }
 
             bool has_production_rates(const std::string) const { return true; }
-            bool has_network_leaf_node_injection_rates(const std::string, Phase) const { return true; }
             bool has_network_leaf_node_production_rates(const std::string) const { return true; }
-            std::vector<double> network_leaf_node_injection_rates(const std::string, const Phase phase) const
-            {
-                auto r = injection_rates_sm3_day;
-                // Only the network's own phase is injected into it.
-                if (phase == Phase::GAS) {
-                    r[0] = 0.0;
-                } else if (phase == Phase::WATER) {
-                    r[2] = 0.0;
-                }
-                return toSI(r);
-            }
-            // Phase-less lookups (no such network) get no rate.
-            bool has_network_leaf_node_injection_rates(const std::string) const { return false; }
+            // Every phase's injection rate at the leaf; the VFP table picks the one
+            // its FLO type names, so it is not masked per network here.
+            bool has_network_leaf_node_injection_rates(const std::string) const { return true; }
             std::vector<double> network_leaf_node_injection_rates(const std::string) const
             {
-                return {0.0, 0.0, 0.0};
+                return toSI(injection_rates_sm3_day);
             }
             std::vector<double> network_leaf_node_production_rates(const std::string) const
             {

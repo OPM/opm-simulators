@@ -41,7 +41,7 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
 {
     GroupState result(3);
     result.m_production_rates = {{"test1", {1.0, 2.0}}};
-    result.m_network_leaf_node_injection_rates={{{Phase::GAS, "test1"}, {44.0, 20}}};
+    result.m_network_leaf_node_injection_rates={{"test1", {44.0, 20}}};
     result.m_network_leaf_node_production_rates={{"test1", {1.0, 20}}};
     result.production_controls = {{"test2", Group::ProductionCMode::LRAT}};
     result.prod_red_rates = {{"test3", {3.0, 4.0, 5.0}}};
@@ -103,21 +103,19 @@ void GroupState<Scalar>::update_production_rates(const std::string& gname,
 }
 
 template<class Scalar>
-bool GroupState<Scalar>::has_network_leaf_node_injection_rates(const std::string& gname,
-                                                               const Phase phase) const
+bool GroupState<Scalar>::has_network_leaf_node_injection_rates(const std::string& gname) const
 {
-    return this->m_network_leaf_node_injection_rates.count({phase, gname}) > 0;
+    return this->m_network_leaf_node_injection_rates.count(gname) > 0;
 }
 
 template<class Scalar>
 void GroupState<Scalar>::update_network_leaf_node_injection_rates(const std::string& gname,
-                                                                  const Phase phase,
                                                                   const std::vector<Scalar>& rates)
 {
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
-    this->m_network_leaf_node_injection_rates[{phase, gname}] = rates;
+    this->m_network_leaf_node_injection_rates[gname] = rates;
 }
 
 template<class Scalar>
@@ -164,10 +162,9 @@ void GroupState<Scalar>::update_prev_production_rates(const std::string& gname,
 
 template<class Scalar>
 const std::vector<Scalar>&
-GroupState<Scalar>::network_leaf_node_injection_rates(const std::string& gname,
-                                                      const Phase phase) const
+GroupState<Scalar>::network_leaf_node_injection_rates(const std::string& gname) const
 {
-    auto group_iter = this->m_network_leaf_node_injection_rates.find({phase, gname});
+    auto group_iter = this->m_network_leaf_node_injection_rates.find(gname);
     if (group_iter == this->m_network_leaf_node_injection_rates.end())
         throw std::logic_error("No such group: " + gname);
 

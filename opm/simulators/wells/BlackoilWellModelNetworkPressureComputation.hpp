@@ -167,20 +167,18 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     template <class GroupState>
     static bool hasLeafNodeRate(const GroupState& group_state,
                                 const std::string& node,
-                                const std::optional<Phase>& injection_phase)
+                                const std::optional<Phase>&)
     {
-        assert(injection_phase.has_value());
-        return group_state.has_network_leaf_node_injection_rates(node, *injection_phase);
+        return group_state.has_network_leaf_node_injection_rates(node);
     }
 
     template <class GroupState>
     static const std::vector<Scalar>
     leafNodeRate(const GroupState& group_state,
                  const std::string& node,
-                 const std::optional<Phase>& injection_phase)
+                 const std::optional<Phase>&)
     {
-        assert(injection_phase.has_value());
-        return group_state.network_leaf_node_injection_rates(node, *injection_phase);
+        return group_state.network_leaf_node_injection_rates(node);
     }
 
     template<typename Branch>

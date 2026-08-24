@@ -1304,7 +1304,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateNetworkLeafNodeRates()
                     }
                 }
                 if (is_injector) {
-                    this->groupState().update_network_leaf_node_injection_rates(group_name, *injection_phase, network_rates);
+                    this->groupState().update_network_leaf_node_injection_rates(group_name, network_rates);
                 } else {
                     this->groupState().update_network_leaf_node_production_rates(group_name, network_rates);
                 }
