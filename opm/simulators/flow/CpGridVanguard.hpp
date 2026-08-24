@@ -27,6 +27,8 @@
 #ifndef OPM_CPGRID_VANGUARD_HPP
 #define OPM_CPGRID_VANGUARD_HPP
 
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -40,6 +42,7 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -236,6 +239,18 @@ public:
     void loadBalance()
     {
 #if HAVE_MPI
+        // Dual-continuum runs are supported in serial only.  The check is collective -- the
+        // RUNSPEC flags are distributed to every rank -- and it is raised before load balancing
+        // so the run stops with a diagnosable message instead of failing later inside the
+        // partitioner.
+        if (this->eclState().runspec().dualPorosity() && this->comm().size() > 1) {
+            const std::string msg =
+                "Dual-continuum runs (DUALPORO/DUALPERM) are supported in serial only. "
+                "Rerun on a single process.";
+            OpmLog::error(msg);
+            OPM_THROW(std::runtime_error, msg);
+        }
+
         if (const auto& extPFile = this->externalPartitionFile();
             !extPFile.empty() && (extPFile != "none"))
         {

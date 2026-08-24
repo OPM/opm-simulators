@@ -231,6 +231,8 @@ private:
     /// Returns true if either of the two connected cells belongs to a numerical aquifer.
     bool isNumAquConn_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
 
+    bool isDualPorosityTwin_(const std::size_t cartIdx1, const std::size_t cartIdx2) const;
+
     /// Create LevelCartesianIndexMapper.
     ///
     /// For CpGrid, the LevelCartesianIndexMapper constructor takes the grid
