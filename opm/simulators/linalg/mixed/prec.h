@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include "bsr.h"
+#include <stdbool.h>
 
 /*!
  * @brief Preconditioner struct.
@@ -73,9 +74,9 @@ void prec_dilu_factorize4(prec_t *P, bsr_matrix *A);
  * @param P Pointer preconditioner object.
  * @param A Pointer to bsr matrix.
  */
-void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A);
-void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
-void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A);
+void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A, bool use_dilu);
+void prec_ilu0_factorize3(prec_t *P, bsr_matrix *A, bool use_dilu);
+void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A, bool use_dilu);
 
 /**
  * @brief Preconditioner application in mixed-precision.
