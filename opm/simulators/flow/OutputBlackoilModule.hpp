@@ -175,6 +175,12 @@ public:
         , simulator_(simulator)
         , collectOnIORank_(collectOnIORank)
     {
+        // The region arrays arrive on the (unrefined) input grid, but everything
+        // downstream indexes them by leaf cell.  With an LGR the leaf has more
+        // cells, so map each onto it here - a refined cell inherits its parent's
+        // region - before anything looks at them.  Identity without LGRs.
+        this->mapRegionsOntoLeaf_();
+
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
         }
@@ -228,7 +234,7 @@ public:
             rset.push_back("PVTNUM");
 
             // RegionPhasePoreVolAverage indexes by leaf cell.  The FIP entries of
-            // regions_ are already on the leaf (createLocalRegion_ maps them), so
+            // regions_ are already on the leaf (mapRegionsOntoLeaf_ does that), so
             // serve those directly.  PVTNUM is not an FIP region and is deliberately
             // kept out of regions_, so it needs its own leaf-mapped copy - with LGRs
             // a refined cell inherits its parent's PVTNUM; identity without.
@@ -907,27 +913,36 @@ private:
         }
     }
 
+    /// \brief Put every region array on the leaf grid.
+    ///
+    /// Called once, before the arrays are used.  A refined cell inherits its
+    /// parent's region; without LGRs this is the identity.
+    void mapRegionsOntoLeaf_()
+    {
+        const LookUpData<Grid, GridView> lookUpData(simulator_.gridView());
+        const auto numLeaf = simulator_.gridView().size(0);
+
+        std::vector<int> onLeaf(numLeaf, 0);
+        for (auto& [name, region] : this->regions_) {
+            std::size_t elemIdx = 0;
+            for (const auto& elem : elements(simulator_.gridView())) {
+                onLeaf[elemIdx++] = lookUpData(elem, region);
+            }
+
+            region = onLeaf;
+        }
+    }
+
     void createLocalRegion_(std::vector<int>& region)
     {
-        // The array arrives on the (unrefined) input grid, but the FIP/field sums
-        // run over the leaf.  With LGRs the leaf has more cells, so it must be
-        // MAPPED - a refined cell inherits its parent's region - not merely
-        // resize()d, which zero-padded the refined cells into region 0 and dropped
-        // them from the sums.  LookUpData is the identity without LGRs.
-        const LookUpData<Grid, GridView> lookUpData(simulator_.gridView());
-
-        std::vector<int> onLeaf(simulator_.gridView().size(0), 0);
         std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
-            // Non-interior (overlap/ghost) cells stay out of the region sums.
-            if (elem.partitionType() == Dune::InteriorEntity) {
-                onLeaf[elemIdx] = lookUpData(elem, region);
+            if (elem.partitionType() != Dune::InteriorEntity) {
+                region[elemIdx] = 0;
             }
 
             ++elemIdx;
         }
-
-        region = std::move(onLeaf);
     }
 
     template <typename FluidState>
