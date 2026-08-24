@@ -211,7 +211,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
-    this->restoreMasterGroupControlsFromSchedule_();
     // Reset effective-GCW entries from the previous sync step to GCW=1 before
     // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
     // Phase 2 cap) repopulate the 0-entries for this step.
@@ -406,9 +405,7 @@ capAndRedistributeProductionTargets_(
     // Step 4: switch ALL master groups to individual control with their
     // allocated targets. I.e. the master completes its own time step, assuming
     // that the production and injection rates of the slave groups remain constant
-    // over the time step. The controls are reset from schedule at the start of the
-    // next sync step (before Phase 1, see calculateMasterGroupConstraintsAndSendToSlaves()
-    // above) so guide rate distribution works correctly.
+    // over the time step.
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
         for (auto& pc : all_production_constraints[slave_idx]) {
@@ -496,43 +493,6 @@ potentialForProductionCmode_(
                            potentials[RcPhase::Oil] + potentials[RcPhase::Water]);
     default:
         return -1;  // No capping for RESV, FLD, NONE, etc.
-    }
-}
-
-// Restore master groups' control modes to their original GCONPROD values
-// (from the Schedule) so they participate correctly in guide rate
-// distribution during Phase 1 (see calculateMasterGroupConstraintsAndSendToSlaves()).
-// The previous sync step's final step may have switched them to individual control.
-//
-// Reading from the Schedule (rather than caching the pre-sync mode) is
-// intentional:
-//   - Master group control modes are treated as read-only outside the
-//     constraint calculation invoked from sendMasterGroupConstraintsToSlaves()
-//     at BlackoilWellModel_impl.hpp:555 (see also the master-group guard at
-//     the top of BlackoilWellModel::updateGroupControls).
-//   - Modes are only changed inside calculateMasterGroupConstraintsAndSendToSlaves(),
-//     which runs once per sync step.  A sync step may be shorter than a
-//     report step, so multiple sync steps can occur within the same report
-//     step.
-//   - The Schedule's cmode is constant within a report step, so reading it
-//     here is equivalent to restoring to the pre-sync state for any sync
-//     step within the report step.  At a report-step boundary, a new
-//     GCONPROD record is picked up automatically.
-template <class Scalar, class IndexTraits>
-void
-RescoupConstraintsCalculator<Scalar, IndexTraits>::
-restoreMasterGroupControlsFromSchedule_()
-{
-    auto& rescoup_master = this->reservoir_coupling_master_;
-    const auto num_slaves = rescoup_master.numSlaves();
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
-        for (const auto& group_name : master_groups) {
-            const auto& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-            const auto original_cmode = group.productionProperties().cmode;
-            this->group_state_helper_.groupState().production_control(
-                group_name, original_cmode);
-        }
     }
 }
 
