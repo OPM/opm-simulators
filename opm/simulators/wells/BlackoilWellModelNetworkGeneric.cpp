@@ -378,7 +378,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
             && ws.implicit_ipr_b[phase_pos] > Scalar{0}) {
             e[1] = 1.0;
             // The well state stores the linearisation as q = b*bhp - a.
-            e[2] = -ws.implicit_ipr_a[phase_pos];
+            e[2] = ws.implicit_ipr_a[phase_pos];
             e[3] = ws.implicit_ipr_b[phase_pos];
         }
         e[4] = std::max(ws.surface_rates[phase_pos], Scalar{0});

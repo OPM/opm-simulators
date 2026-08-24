@@ -76,8 +76,8 @@ struct Well
     std::string name;
     int node = 0;
     int vfp_table = 0;
-    /// Inflow performance, q = ipr_a + ipr_b * bhp. The simulator's implicit
-    /// IPR stores it as q = b*bhp - a, so ipr_a is the negated one.
+    /// Inflow performance in the simulator's convention, q = ipr_b * bhp - ipr_a
+    /// (WellState's implicit_ipr_a / implicit_ipr_b).
     Scalar ipr_a = 0.0;
     Scalar ipr_b = 0.0;
     Scalar bhp_limit = 0.0;
@@ -359,7 +359,7 @@ public:
     /// Below this a table lookup has not answered, it has run out of table.
     static constexpr Scalar kTableFloor = unit::barsa;
 
-    static Scalar ipr(const Well<Scalar>& w, const Scalar bhp) { return w.ipr_a + w.ipr_b * bhp; }
+    static Scalar ipr(const Well<Scalar>& w, const Scalar bhp) { return w.ipr_b * bhp - w.ipr_a; }
 
     /// Clamp table lookups to the axes, as the fixed-point pressure computation
     /// does. Leave this off for a Newton: outside the box the residual then goes

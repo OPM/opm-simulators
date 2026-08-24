@@ -442,7 +442,7 @@ public:
             sw.node = w.node;
             sw.vfp_table = w.vfp_table;
             // q = q_ref + dq_dbhp*(bhp - bhp_ref) as q = a + b*bhp.
-            sw.ipr_a = w.q_ref - w.dq_dbhp * w.bhp_ref;
+            sw.ipr_a = w.dq_dbhp * w.bhp_ref - w.q_ref;
             sw.ipr_b = w.dq_dbhp;
             sw.bhp_limit = w.bhp_limit;
             sw.rate_limit = w.rate_limit;
@@ -2292,7 +2292,7 @@ BOOST_AUTO_TEST_CASE(trace_one_dumped_system)
                 << "  p_node " << std::setw(7) << p * toBar
                 << "  q "      << std::setw(9) << x[system.qwIdx(w)] * perDay
                 << " | allows: thp " << std::setw(9) << system.thpPotential(well, p) * perDay
-                << "  bhp "          << std::setw(9) << (well.ipr_a + well.ipr_b * well.bhp_limit) * perDay
+                << "  bhp "          << std::setw(9) << (well.ipr_b * well.bhp_limit - well.ipr_a) * perDay
                 << "  rate "         << std::setw(9) << well.rate_limit * perDay
                 << "  grup "         << std::setw(9) << well.guide * lambda * perDay
                 << "  (guide " << std::setw(9) << well.guide * perDay << ")";
@@ -2709,10 +2709,10 @@ node M5S 0 3
 node G1 1 9999
 node M5N 1 2
 node F1 3 9999
-well F-1H 4 1 -39469 0.0013367 4.25e+07 11.5741 11.5741 4.96921 1
-well F-2H 4 1 -85174 0.00288533 4.25e+07 11.5741 11.5741 4.97161 1
-well G-3H 2 1 -69029.9 0.00233706 4.25e+07 11.5741 11.5741 4.19187 1
-well G-4H 2 1 -76010.4 0.00257402 4.25e+07 11.5741 11.5741 4.19211 1
+well F-1H 4 1 39469 0.0013367 4.25e+07 11.5741 11.5741 4.96921 1
+well F-2H 4 1 85174 0.00288533 4.25e+07 11.5741 11.5741 4.97161 1
+well G-3H 2 1 69029.9 0.00233706 4.25e+07 11.5741 11.5741 4.19187 1
+well G-4H 2 1 76010.4 0.00257402 4.25e+07 11.5741 11.5741 4.19211 1
 guess 3.4e+07 4.50559e+07 4.50559e+07 4.994e+07 4.994e+07
 )";
 
