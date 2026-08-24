@@ -1616,6 +1616,26 @@ protected:
     }
 
 protected:
+    /*!
+     * \brief Set the gravity vector from the run's configuration.
+     *
+     * Gravity is switched off by the NOGRAV keyword from Frontsim or by
+     * setting EnableGravity to false, else the standard value of the gravity
+     * constant at sea level on earth is used.  The vertical component is
+     * positive, which is the magnitude the equilibration expects.
+     */
+    void initGravity_(const EclipseState& eclState)
+    {
+        this->gravity_ = 0.0;
+
+        if (Parameters::Get<Parameters::EnableGravity>() &&
+            eclState.getInitConfig().hasGravity())
+        {
+            // unit::gravity is 9.80665 m^2/s--i.e., standard measure at Tellus equator.
+            this->gravity_[dim - 1] = unit::gravity;
+        }
+    }
+
     struct PffDofData_
     {
         ConditionalStorage<enableFullyImplicitThermal, Scalar> thermalHalfTransIn;

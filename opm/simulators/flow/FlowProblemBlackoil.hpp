@@ -376,16 +376,7 @@ public:
         simulator.setEpisodeIndex(-1);
         simulator.setEpisodeLength(0.0);
 
-        // the "NOGRAV" keyword from Frontsim or setting the EnableGravity to false
-        // disables gravity, else the standard value of the gravity constant at sea level
-        // on earth is used
-        this->gravity_ = 0.0;
-        if (Parameters::Get<Parameters::EnableGravity>() &&
-            eclState.getInitConfig().hasGravity())
-        {
-            // unit::gravity is 9.80665 m^2/s--i.e., standard measure at Tellus equator.
-            this->gravity_[dim - 1] = unit::gravity;
-        }
+        this->initGravity_(eclState);
 
         if (this->enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
