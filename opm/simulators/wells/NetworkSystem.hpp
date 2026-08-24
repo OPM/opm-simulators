@@ -27,6 +27,10 @@
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <dune/common/dynmatrix.hh>
+#include <dune/common/dynvector.hh>
+#include <dune/common/fmatrix.hh>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -128,59 +132,37 @@ struct Result
     std::vector<Scalar> well_bhp;
 };
 
-/// Dense square system. The networks this solves have tens of unknowns, so
-/// Gaussian elimination with partial pivoting is the whole story.
+/// Dense square system, solved by Dune. The networks this solves have tens of
+/// unknowns, so a dense direct solve is the whole story. Wrapped only to keep
+/// (i,j) indexing and to answer "singular" with false instead of an exception --
+/// the caller hands the network back to the relaxed update rather than throwing
+/// out of the well model.
 template<class Scalar>
 class DenseMatrix
 {
 public:
-    explicit DenseMatrix(const int n) : n_(n), a_(n * n, 0.0) {}
+    explicit DenseMatrix(const int n) : a_(n, n, Scalar{0}) {}
 
-    Scalar& operator()(const int i, const int j) { return a_[i * n_ + j]; }
-    Scalar operator()(const int i, const int j) const { return a_[i * n_ + j]; }
+    Scalar& operator()(const int i, const int j) { return a_[i][j]; }
+    Scalar operator()(const int i, const int j) const { return a_[i][j]; }
 
     /// Solves A y = b. False if A is singular to working precision.
-    bool solve(std::vector<Scalar> b, std::vector<Scalar>& y) const
+    bool solve(const std::vector<Scalar>& b, std::vector<Scalar>& y) const
     {
-        auto a = a_;
-        y.assign(n_, 0.0);
-        for (int k = 0; k < n_; ++k) {
-            int pivot = k;
-            for (int i = k + 1; i < n_; ++i) {
-                if (std::abs(a[i * n_ + k]) > std::abs(a[pivot * n_ + k])) {
-                    pivot = i;
-                }
-            }
-            if (std::abs(a[pivot * n_ + k]) < 1e-300) {
-                return false;
-            }
-            if (pivot != k) {
-                for (int j = 0; j < n_; ++j) {
-                    std::swap(a[k * n_ + j], a[pivot * n_ + j]);
-                }
-                std::swap(b[k], b[pivot]);
-            }
-            for (int i = k + 1; i < n_; ++i) {
-                const Scalar f = a[i * n_ + k] / a[k * n_ + k];
-                for (int j = k; j < n_; ++j) {
-                    a[i * n_ + j] -= f * a[k * n_ + j];
-                }
-                b[i] -= f * b[k];
-            }
+        const auto n = a_.N();
+        Dune::DynamicVector<Scalar> rhs(n), x(n, Scalar{0});
+        std::copy(b.begin(), b.end(), rhs.begin());
+        try {
+            a_.solve(x, rhs);
+        } catch (const Dune::FMatrixError&) {
+            return false;
         }
-        for (int i = n_ - 1; i >= 0; --i) {
-            Scalar sum = b[i];
-            for (int j = i + 1; j < n_; ++j) {
-                sum -= a[i * n_ + j] * y[j];
-            }
-            y[i] = sum / a[i * n_ + i];
-        }
+        y.assign(x.begin(), x.end());
         return true;
     }
 
 private:
-    int n_;
-    std::vector<Scalar> a_;
+    Dune::DynamicMatrix<Scalar> a_;
 };
 /// Divide a group target by guide rate, take out the wells whose own limits keep
 /// them below their share, and re-divide the rest among those that can take it.
