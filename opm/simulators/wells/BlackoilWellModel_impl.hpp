@@ -174,7 +174,10 @@ namespace Opm {
         // add the eWoms auxiliary module for the wells to the list
         simulator_.model().addAuxiliaryModule(this);
 
-        is_cell_perforated_.resize(local_num_cells_, false);
+        // Indexed by DOF index in computeTotalRatesForDof(), which the linearizer calls
+        // for every DOF of the model -- including those contributed by auxiliary
+        // modules -- so it has to span the whole DOF range, not just the grid cells.
+        is_cell_perforated_.resize(simulator_.model().numTotalDof(), false);
     }
 
 
@@ -1510,7 +1513,10 @@ namespace Opm {
                              const bool use_well_weights) const
     {
         int nw = this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
+        // The well rows sit behind every reservoir row of the pressure system, auxiliary
+        // ones included -- which is how the wells themselves index them, from the size of
+        // the weight vector (StandardWellEquations::extractCPRPressureMatrix).
+        int rdofs = simulator_.model().numTotalDof();
         for ( int i = 0; i < nw; i++ ) {
             int wdof = rdofs + i;
             jacobian[wdof][wdof] = 1.0;// better scaling ?
@@ -1560,7 +1566,12 @@ namespace Opm {
     addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
         int nw =  this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
+        // Same numbering as addWellPressureEquations(): behind every reservoir row,
+        // auxiliary ones included.  Placing the well rows at the grid row count instead
+        // would have them land on top of the auxiliary rows, which is not merely a wrong
+        // value -- the extra columns break the assumption that the coarse pressure matrix
+        // has the fine matrix's sparsity pattern row for row.
+        int rdofs = simulator_.model().numTotalDof();
         const auto wellconnections = this->getMaxWellConnections();
         for (int i = 0; i < nw; ++i) {
             int wdof = rdofs + i;

@@ -1022,6 +1022,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowGenericProblem_impl.hpp
   opm/simulators/flow/FlowGenericVanguard.hpp
   opm/simulators/flow/FlowMain.hpp
+  opm/simulators/flow/FlowAuxCellModule.hpp
   opm/simulators/flow/FlowProblem.hpp
   opm/simulators/flow/FlowProblemBlackoil.hpp
   opm/simulators/flow/FlowProblemBlackoilProperties.hpp
@@ -1097,6 +1098,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferGridUtils.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferNumerical.hpp
+  opm/simulators/aquifers/AquiferNumericalAux.hpp
+  opm/simulators/aquifers/NumericalAquiferAuxCells.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/aquifers/SupportsFaceTag.hpp

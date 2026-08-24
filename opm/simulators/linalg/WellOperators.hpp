@@ -33,6 +33,8 @@
 #include <dune/istl/paamg/smoother.hh>
 
 #include <cstddef>
+#include <vector>
+#include <utility>
 
 namespace Opm {
 
@@ -315,22 +317,53 @@ public:
             Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
     }
 
-    //! constructor: just store a reference to a matrix
+    /*!
+     * \brief Constructor for the ordinary case: the owned rows are the first ones.
+     */
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const LinearOperatorExtra<X, Y>& wellOper,
                                      const std::size_t interiorSize )
-        : A_( A ), wellOper_( wellOper ), interiorSize_(interiorSize)
+        : WellModelGhostLastMatrixAdapter(A, wellOper, {{0, interiorSize}}, A.N())
+    {}
+
+    /*!
+     * \brief Constructor taking the owned rows as a list of bands.
+     *
+     * The rows this rank owns need not be a prefix of the matrix.  Degrees of freedom
+     * that have no grid cell -- a numerical aquifer or a fracture represented outside
+     * the grid -- are appended after the grid rows, which puts them behind the ghost
+     * rows; and a grid that gains or loses cells during the run cannot keep its owned
+     * rows at the front without renumbering.
+     *
+     * Describing the owned rows explicitly is what keeps this operator honest in either
+     * case.  With a single band it is exactly the prefix it always was.
+     *
+     * \param ownedRowBands Half-open [begin, end) ranges of rows this rank owns, in
+     *        increasing order and not overlapping.
+     * \param numRows Total number of rows; everything outside the bands is projected out.
+     */
+    WellModelGhostLastMatrixAdapter (const M& A,
+                                     const LinearOperatorExtra<X, Y>& wellOper,
+                                     std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands,
+                                     const std::size_t numRows)
+        : A_( A )
+        , wellOper_( wellOper )
+        , ownedRowBands_(std::move(ownedRowBands))
+        , numRows_(numRows)
+        , interiorSize_(ownedRowBands_.empty() ? 0 : ownedRowBands_.front().second)
     {}
 
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (auto row = A_.begin() + first; row.index() < last; ++row)
+            {
+                y[row.index()]=0;
+                auto endc = (*row).end();
+                for (auto col = (*row).begin(); col != endc; ++col)
+                    (*col).umv(x[col.index()], y[row.index()]);
+            }
         }
 
         // add well model modification to y
@@ -343,11 +376,13 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (auto row = A_.begin() + first; row.index() < last; ++row)
+            {
+                auto endc = (*row).end();
+                for (auto col = (*row).begin(); col != endc; ++col)
+                    (*col).usmv(alpha, x[col.index()], y[row.index()]);
+            }
         }
         // add scaled well model modification to y
         wellOper_.applyscaleadd(alpha, x, y);
@@ -377,15 +412,30 @@ public:
     }
 
 protected:
+    //! Zero every row this rank does not own, i.e. the gaps between the owned bands.
     void ghostLastProject(Y& y) const
     {
-        std::size_t end = y.size();
-        for (std::size_t i = interiorSize_; i < end; ++i)
+        const std::size_t end = std::min(numRows_, y.size());
+
+        std::size_t next = 0;
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (std::size_t i = next; i < std::min(first, end); ++i) {
+                y[i] = 0;
+            }
+
+            next = last;
+        }
+
+        for (std::size_t i = next; i < end; ++i) {
             y[i] = 0;
+        }
     }
 
     const matrix_type& A_ ;
     const LinearOperatorExtra<X, Y>& wellOper_;
+    std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands_;
+    std::size_t numRows_;
+    //! First band's end, kept for the derived operators which still reason about a prefix.
     std::size_t interiorSize_;
 };
 

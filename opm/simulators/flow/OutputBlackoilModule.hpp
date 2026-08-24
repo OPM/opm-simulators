@@ -254,6 +254,8 @@ public:
         }
 
         const auto& problem = this->simulator_.problem();
+        const auto& model = this->simulator_.model();
+        const auto auxDofCount = model.numTotalDof() - model.numGridDof();
 
         this->doAllocBuffers(bufferSize,
                              reportStepNum,
@@ -261,7 +263,33 @@ public:
                              log,
                              isRestart,
                              &problem.materialLawManager()->hysteresisConfig(),
-                             problem.eclWriter().getOutputNnc().front().size());
+                             problem.eclWriter().getOutputNnc().front().size(),
+                             /*rstKeywords=*/{},
+                             auxDofCount);
+
+        if (auxDofCount > 0) {
+            this->extendRegionsForAuxiliaryDofs(this->auxCellHostCartesianIndices_());
+        }
+    }
+
+    /*!
+     * \brief The input-grid cell each auxiliary degree of freedom takes its regions from.
+     *
+     * In auxiliary-DOF order, so that it lines up with the tail of the per-DOF buffers.
+     */
+    std::vector<int> auxCellHostCartesianIndices_() const
+    {
+        const auto& model = this->simulator_.model();
+        std::vector<int> hosts(model.numTotalDof() - model.numGridDof(), -1);
+
+        for (const auto& module : this->simulator_.problem().auxCellModules()) {
+            for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                const auto globalIdx = static_cast<std::size_t>(module->localToGlobalDof(localIdx));
+                hosts[globalIdx - model.numGridDof()] = module->hostCartesianIndex(localIdx);
+            }
+        }
+
+        return hosts;
     }
 
     //! \brief Setup list of active element-level data extractors

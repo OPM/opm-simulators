@@ -22,6 +22,8 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquiferMode.hpp>
+
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <filesystem>
@@ -100,7 +102,8 @@ void readDeck(Parallel::Communication         comm,
               bool                            checkDeck,
               bool                            keepKeywords,
               const std::optional<int>&       outputInterval,
-              bool                            slaveMode);
+              bool                            slaveMode,
+              NumericalAquiferMode            aquiferMode = NumericalAquiferMode::GridCells);
 
 void verifyValidCellGeometry(Parallel::Communication comm,
                              const EclipseState&     eclipseState);

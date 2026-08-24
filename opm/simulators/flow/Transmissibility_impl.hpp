@@ -125,6 +125,20 @@ transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+setTransmissibility(unsigned elemIdx1, unsigned elemIdx2, Scalar value)
+{
+    trans_[details::isId(elemIdx1, elemIdx2)] = value;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+setThermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx, Scalar value)
+{
+    thermalHalfTrans_[details::directionalIsId(insideElemIdx, outsideElemIdx)] = value;
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 {

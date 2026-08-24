@@ -845,6 +845,20 @@ private:
 
                 this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
             }
+
+            // Degrees of freedom introduced by an auxiliary module hold real fluid in a
+            // real pore volume, so they belong in the field and region totals just as the
+            // grid cells do -- and they have to be, for those totals to stay comparable
+            // with a run that represents the same thing inside the grid.  They are
+            // reached by index here exactly as the grid cells are; what they are not part
+            // of is the per-cell output, which stops at the grid.
+            const auto& model = simulator_.model();
+            for (unsigned dofIdx = model.numGridDof(); dofIdx < model.numTotalDof(); ++dofIdx) {
+                const auto& intQuants = *model.cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
+
+                this->outputModule_->updateFluidInPlace(dofIdx, intQuants,
+                                                        model.dofTotalVolume(dofIdx));
+            }
         }
 
         this->outputModule_->validateLocalData();

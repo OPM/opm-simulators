@@ -455,6 +455,12 @@ void FlowGenericVanguard::registerParameters_()
          "enable restart of OPM simulators from these files");
     Parameters::Register<Parameters::IgnoreKeywords>
         ("List of Eclipse keywords which should be ignored. As a ':' separated string.");
+    Parameters::Register<Parameters::NumericalAquiferMode>
+        ("How numerical aquifers are represented. Available options are "
+         "grid (each aquifer cell takes over the grid cell its AQUNUM record names) and "
+         "aux (the aquifers are kept out of the grid and represented as degrees of "
+         "freedom of their own, which leaves the grid as the deck describes it and "
+         "generates no non-neighbour connections)");
     Parameters::Register<Parameters::ParsingStrictness>
         ("Set strictness of parsing process. Available options are "
          "normal (stop for critical errors), "

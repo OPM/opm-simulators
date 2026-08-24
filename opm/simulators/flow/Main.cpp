@@ -330,6 +330,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const std::size_t numThreads,
                     const int output_param,
                     const bool slaveMode,
+                    const std::string& numericalAquiferMode,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -350,6 +351,19 @@ void Main::readDeck(const std::string& deckFilename,
     if (output_param >= 0)
         outputInterval = output_param;
 
+    // How the numerical aquifers of the deck are to be represented.  This has to be
+    // decided before the EclipseState is built, because taking over a grid cell reshapes
+    // the grid and the field properties as the state is constructed.
+    auto aquiferMode = NumericalAquiferMode::GridCells;
+    if (numericalAquiferMode == "aux") {
+        aquiferMode = NumericalAquiferMode::AuxiliaryCells;
+    }
+    else if (numericalAquiferMode != "grid") {
+        OPM_THROW(std::runtime_error,
+                  "Unknown numerical aquifer mode '" + numericalAquiferMode +
+                  "'; valid choices are 'grid' and 'aux'");
+    }
+
     Opm::readDeck(FlowGenericVanguard::comm(),
                   deckFilename,
                   eclipseState_,
@@ -366,7 +380,8 @@ void Main::readDeck(const std::string& deckFilename,
                   outputCout_,
                   keepKeywords,
                   outputInterval,
-                  slaveMode);
+                  slaveMode,
+                  aquiferMode);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);
 
