@@ -427,9 +427,9 @@ public:
     /// The library system this case describes: the same object the simulator
     /// assembles, differing only in where the wells' inflow performance came
     /// from. Here it is a linearisation about the reference operating point.
-    NetworkSolve::System<double> system() const
+    NetworkSolve::InjectionSystem<double> system() const
     {
-        NetworkSolve::System<double> s(props_, fluid_ == Fluid::Gas ? Phase::GAS : Phase::WATER);
+        NetworkSolve::InjectionSystem<double> s(props_, fluid_ == Fluid::Gas ? Phase::GAS : Phase::WATER);
         s.setTerminalPressure(terminal_pressure_);
         s.setGroupTarget(group_target_);
         s.setClampToAxes(clamp_to_axes_);
@@ -456,7 +456,7 @@ public:
     }
 
     /// Rebuild a system written by the simulator, against this case's tables.
-    std::pair<NetworkSolve::System<double>, std::vector<double>>
+    std::pair<NetworkSolve::InjectionSystem<double>, std::vector<double>>
     systemFromDump(std::istream& is) const
     {
         return NetworkSolve::read<double>(is, props_);
@@ -914,8 +914,8 @@ public:
     void setGuidesFromPotential(const bool on) { system_.setGuidesFromPotential(on); }
     void dropLastFromGroup() { system_.dropLastFromGroup(); }
     State wellRates(const State& x) const { return system_.wellRates(x); }
-    const NetworkSolve::System<double>& system() const { return system_; }
-    NetworkSolve::System<double>& system() { return system_; }
+    const NetworkSolve::InjectionSystem<double>& system() const { return system_; }
+    NetworkSolve::InjectionSystem<double>& system() { return system_; }
 
     /// The bench starts both formulations from the same applied node pressures.
     State start(const State& applied) const
@@ -946,7 +946,7 @@ private:
         return p;
     }
 
-    NetworkSolve::System<double> system_;
+    NetworkSolve::InjectionSystem<double> system_;
     std::vector<int> solved_;
     double terminal_ = 0.0;
     bool enforce_bounds_ = false;
@@ -1953,7 +1953,7 @@ BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
         BOOST_TEST_MESSAGE("  " << system.wells()[w].name
                            << "  q " << convert::to(r.well_rate[w], sm3d)
                            << "  bhp cap " << convert::to(
-                                  NetworkSolve::System<double>::ipr(system.wells()[w],
+                                  NetworkSolve::InjectionSystem<double>::ipr(system.wells()[w],
                                                                    system.wells()[w].bhp_limit), sm3d));
     }
 
@@ -1974,7 +1974,7 @@ BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
         for (int w = 0; w < system.numWells(); ++w) {
             const auto& well = system.wells()[w];
             const double cap = std::min({system.thpPotential(well, r.node_pressure[well.node]),
-                                         NetworkSolve::System<double>::ipr(well, well.bhp_limit),
+                                         NetworkSolve::InjectionSystem<double>::ipr(well, well.bhp_limit),
                                          well.rate_limit});
             BOOST_CHECK_LE(convert::to(r.well_rate[w], sm3d), convert::to(cap, sm3d) * 1.001);
         }
@@ -2073,7 +2073,7 @@ BOOST_AUTO_TEST_CASE(group_equations_match_the_rule_based_allocation)
     // each well by what it can actually take, share the target by guide rate,
     // and whenever a share exceeds a cap, fix that well there, drop it from the
     // pool and share the remainder among the rest.
-    auto ruleBased = [&](const NetworkSolve::System<double>& system,
+    auto ruleBased = [&](const NetworkSolve::InjectionSystem<double>& system,
                          const std::vector<double>& node_pressure,
                          const double target) {
         const auto& wells = system.wells();
@@ -2083,7 +2083,7 @@ BOOST_AUTO_TEST_CASE(group_equations_match_the_rule_based_allocation)
         for (int w = 0; w < n; ++w) {
             const double p = node_pressure[wells[w].node];
             cap[w] = std::min({system.thpPotential(wells[w], p), wells[w].rate_limit,
-                               NetworkSolve::System<double>::ipr(wells[w], wells[w].bhp_limit)});
+                               NetworkSolve::InjectionSystem<double>::ipr(wells[w], wells[w].bhp_limit)});
         }
         double remaining = target;
         for (int pass = 0; pass <= n; ++pass) {

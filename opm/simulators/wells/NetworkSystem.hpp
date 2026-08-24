@@ -222,14 +222,21 @@ std::vector<Scalar> shareByGuide(const std::vector<Scalar>& guide,
 }
 
 
+/// An injection network solved as one system: the pressure of every non-terminal
+/// node, the rate through every node's parent branch, and each well's rate and
+/// bhp, with a group multiplier when a target is active. The equations are the
+/// branch pressure drop from the VFPINJ table, the node mass balance, the well's
+/// inflow performance, whichever of thp/bhp/rate/group closes the well, and the
+/// group total. The counterpart for a production network is ProductionSystem;
+/// the two differ in what a rate is -- one number here, three phases there.
 template<class Scalar>
-class System
+class InjectionSystem
 {
 public:
     using State = std::vector<Scalar>;
     using ScalarType = Scalar;
 
-    System(const VFPInjProperties<Scalar>& props, const Phase phase)
+    InjectionSystem(const VFPInjProperties<Scalar>& props, const Phase phase)
         : props_(&props), phase_(phase)
     {}
 
@@ -873,7 +880,7 @@ private:
 /// Write everything the solve works from, so a failure can be replayed offline.
 /// The VFP tables are not included -- the reader supplies them from the deck.
 template<class Scalar>
-void write(const System<Scalar>& system, const std::vector<Scalar>& guess, std::ostream& os)
+void write(const InjectionSystem<Scalar>& system, const std::vector<Scalar>& guess, std::ostream& os)
 {
     os << "phase " << (system.phase() == Phase::GAS ? "GAS" : "WATER") << '\n'
        << "terminal " << system.terminalPressure() << '\n'
@@ -900,7 +907,7 @@ void write(const System<Scalar>& system, const std::vector<Scalar>& guess, std::
 /// Rebuild a written system against tables the caller already has. Returns the
 /// system and the starting pressures it was given.
 template<class Scalar>
-std::pair<System<Scalar>, std::vector<Scalar>>
+std::pair<InjectionSystem<Scalar>, std::vector<Scalar>>
 read(std::istream& is, const VFPInjProperties<Scalar>& props)
 {
     std::string tag;
@@ -955,7 +962,7 @@ read(std::istream& is, const VFPInjProperties<Scalar>& props)
         }
     }
 
-    System<Scalar> system(props, phase);
+    InjectionSystem<Scalar> system(props, phase);
     system.setTerminalPressure(terminal);
     system.setGroupTarget(target);
     system.setGuidesFromPotential(guides_from_potential);
@@ -2364,9 +2371,10 @@ auto systemJacobian(const Sys& system, const State& x)
     }
 }
 
-/// Solve any of the systems in this file. They differ in what a rate is -- one
-/// number for an injection network, three for a production one -- but not in how
-/// the Newton, the active set or the bounds work.
+/// Solve an InjectionSystem or a ProductionSystem by Newton-Raphson, choosing
+/// each well's control by an active set as it goes. Takes the node pressures to
+/// start from; returns the converged pressures and rates, or a Result with
+/// converged false and the reason it stopped.
 template<class Sys, class Globalisation = FullStep>
 Result<typename Sys::ScalarType>
 solve(Sys& system,
@@ -2388,10 +2396,13 @@ solve(Sys& system,
         return out;
     };
 
-    // Guide rates are explicit: the simulator sets them once per timestep, and
-    // this follows that. Refreshing them inside the Newton makes each well's
-    // share a moving target while its rate is chasing it, and the active set
-    // then cycles between group and thp control instead of settling.
+    // Only does anything when the network places a group's split itself
+    // (--network-group-control): the share is then each well's own potential at
+    // the node pressure, which is not known until the starting pressures are.
+    // OPM's guide rates are untouched and are not what this reads -- they stay
+    // the simulator's, set once per timestep. Once here and not inside the
+    // Newton, or each well's share moves while its rate is chasing it and the
+    // active set cycles between group and thp control instead of settling.
     if constexpr (requires { system.refreshGuides(x); }) {
         system.refreshGuides(x);
     }
@@ -2424,7 +2435,9 @@ solve(Sys& system,
             // is moving, and a capped allowance ties with it. Now that the
             // iterate is not transient, drop the cap and carry on from here;
             // whoever is over the line goes on rate control and the rest take
-            // it up. Once round only.
+            // it up. The `enforcing` flag below is what keeps this to one pass,
+            // so a well that is still over the line afterwards converges as it
+            // is rather than dropping the cap again.
             if constexpr (requires { system.setEnforceRateLimits(true); }) {
                 if (!enforcing && system.rateLimitsViolated(x)) {
                     system.setEnforceRateLimits(true);

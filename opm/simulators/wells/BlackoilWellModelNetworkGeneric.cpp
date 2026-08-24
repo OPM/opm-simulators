@@ -285,7 +285,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
     }
     const Scalar terminal = *root.terminal_pressure();
 
-    NetworkSolve::System<Scalar> system(*well_model_.getVFPProperties().getInj(), injection_phase);
+    NetworkSolve::InjectionSystem<Scalar> system(*well_model_.getVFPProperties().getInj(), injection_phase);
     system.setTerminalPressure(terminal);
 
     // Nodes, parents before children.
