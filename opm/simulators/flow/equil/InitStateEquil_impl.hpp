@@ -323,6 +323,11 @@ RK4IVP<Scalar,RHS>::RK4IVP(const RHS& f,
     : N_(N)
     , span_(span)
 {
+    // stepsize() divides by N_ and operator() evaluates interval N_ - 1.  A
+    // non-positive sample count is rejected when the value is loaded in
+    // FlowGenericProblem, where its source is known.
+    assert(N >= 1);
+
     const Scalar h = stepsize();
     const Scalar h2 = h / 2;
     const Scalar h6 = h / 6;
