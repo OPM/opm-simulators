@@ -72,7 +72,6 @@ protected:
     bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
     BlackoilWellModel<TypeTag>& well_model_;
-    std::map<std::string, Scalar> well_group_thp_calc_;
 };
 
 } // namespace Opm
