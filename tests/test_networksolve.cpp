@@ -69,7 +69,6 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
-#include <opm/simulators/wells/NetworkAndersonAcceleration.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
 
 #include <algorithm>
@@ -1049,20 +1048,6 @@ Result bracketing(const EliminatedProblem& problem, State p, const double omega)
     return {false, kMaxIter + 1, p};
 }
 
-Result anderson(const EliminatedProblem& problem, State x, const int depth)
-{
-    NetworkAndersonAccelerator<double> accelerator;
-    accelerator.setDepth(depth);
-    for (int it = 1; it <= kMaxIter; ++it) {
-        const auto g = problem.G(x);
-        if (normMax(g - x) < kTol * kPressureScale) {
-            return {true, it, x};
-        }
-        x = accelerator.next(x, g);
-    }
-    return {false, kMaxIter + 1, x};
-}
-
 // --- Newton ------------------------------------------------------------------
 
 /// Dense square system, small enough that Gaussian elimination with partial
@@ -1555,7 +1540,6 @@ BOOST_AUTO_TEST_CASE(method_comparison)
 
     const auto fixed_point = damped(eliminated, kStart, 0.1);
     const auto bracket = bracketing(eliminated, kStart, 0.1);
-    const auto acc = anderson(eliminated, kStart, 4);
     const auto full_step = newton(eliminated, kStart, FullStep{});
     const auto capped = newton(eliminated, kStart, CappedStep{});
     const auto search = newton(eliminated, kStart, LineSearch{});
@@ -1564,7 +1548,6 @@ BOOST_AUTO_TEST_CASE(method_comparison)
 
     report("damped (omega 0.1)", fixed_point);
     report("bracketing (shipped)", bracket);
-    report("anderson (depth 4)", acc);
     report(FullStep::name, full_step);
     report(CappedStep::name, capped);
     report(LineSearch::name, search);

@@ -30,7 +30,6 @@
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
-#include <opm/simulators/wells/NetworkAndersonAcceleration.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
 #include <opm/simulators/wells/NetworkSystem.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -155,17 +154,13 @@ public:
                            const Scalar damping_factor,
                            const Scalar update_upper_bound,
                            const bool use_secant = false,
-                           const bool secant_for_production = false,
-                           const int anderson_depth = 0);
+                           const bool secant_for_production = false);
 
     /// Forget the secant history; call at the start of every time step.
     void beginTimeStep()
     {
         for (auto& u : pressure_updaters_) {
             u.clear();
-        }
-        for (auto& a : pressure_accelerators_) {
-            a.clear();
         }
     }
 
@@ -388,9 +383,6 @@ private:
     // Per node: state of the bracketing/secant pressure update. Not serialized.
     std::array<std::map<std::string, NodePressureUpdater<Scalar>>,
                details::domainIndex(details::NetworkDomain::Count)> pressure_updaters_;
-    // Optional whole-vector acceleration, one per domain (off by default).
-    std::array<NetworkAndersonAccelerator<Scalar>,
-               details::domainIndex(details::NetworkDomain::Count)> pressure_accelerators_;
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations

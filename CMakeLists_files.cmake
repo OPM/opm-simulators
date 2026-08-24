@@ -1239,7 +1239,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelNetwork_impl.hpp
   opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp
   opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp
-  opm/simulators/wells/NetworkAndersonAcceleration.hpp
   opm/simulators/wells/NetworkNodePressureUpdater.hpp
   opm/simulators/wells/NetworkSystem.hpp
   opm/simulators/wells/BlackoilWellModelNldd.hpp

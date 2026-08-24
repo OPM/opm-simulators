@@ -941,8 +941,7 @@ updatePressures(const int reportStepIdx,
                 const Scalar damping_factor,
                 const Scalar upper_update_bound,
                 const bool use_secant,
-                const bool secant_for_production,
-                const int anderson_depth)
+                const bool secant_for_production)
 {
     OPM_TIMEFUNCTION();
     if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
@@ -1094,40 +1093,6 @@ updatePressures(const int reportStepIdx,
                                             "treating them as too high.",
                                             fmt::join(invalid, ", "), reportStepIdx + 1));
             }
-        }
-
-        if (!previous_domain_pressures.empty() && anderson_depth > 0 && invalid.empty()) {
-            // Anderson acceleration of the whole pressure vector of this network. It sees
-            // the coupling between nodes that the per-node update below cannot; it is only
-            // used when every node has a valid pressure, and is off by default.
-            auto& accel = this->pressure_accelerators_[details::domainIndex(network.domain)];
-            accel.setDepth(static_cast<std::size_t>(anderson_depth));
-            std::vector<Scalar> x, gx;
-            x.reserve(domain_pressures.size());
-            gx.reserve(domain_pressures.size());
-            bool complete = true;
-            for (const auto& [name, computed_pressure] : domain_pressures) {
-                const auto prev = previous_domain_pressures.find(name);
-                if (prev == previous_domain_pressures.end()) {
-                    complete = false;
-                    break;
-                }
-                x.push_back(prev->second);
-                gx.push_back(computed_pressure);
-            }
-            if (complete) {
-                for (std::size_t i = 0; i < x.size(); ++i) {
-                    network_imbalance = std::max(network_imbalance, std::abs(gx[i] - x[i]));
-                }
-                const auto next = accel.next(x, gx);
-                std::size_t i = 0;
-                for (auto& [name, computed_pressure] : domain_pressures) {
-                    (void) name;
-                    computed_pressure = next[i++];
-                }
-                continue;
-            }
-            accel.clear();
         }
 
         if (!previous_domain_pressures.empty()) {
