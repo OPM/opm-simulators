@@ -47,7 +47,9 @@
 #include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/GridDims.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Tabdims.hpp>
 
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
@@ -147,8 +149,8 @@ namespace {
         // optional<EclipseGrid> is too expensive however since doing so
         // will create a copy of the grid inside the optional<>.
         const auto rst_state = Opm::RestartIO::RstState::
-            load(std::move(rst_view),
-                 eclipseState.runspec(), parser,
+            load(std::move(rst_view), parser,
+                 static_cast<int>(eclipseState.runspec().tabdims().getNumPVTTables()),
                  &eclipseState.getInputGrid());
 
         eclipseState.loadRestartAquifers(rst_state.aquifers);
