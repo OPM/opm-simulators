@@ -69,7 +69,8 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
-#include <opm/simulators/wells/NetworkSystem.hpp>
+#include <opm/simulators/wells/NetworkInjectionSystem.hpp>
+#include <opm/simulators/wells/NetworkProductionSystem.hpp>
 
 #include <algorithm>
 #include <array>
