@@ -206,14 +206,14 @@ public:
     template <int BlockDimension>
     void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
     {
-        // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
-        if (m_numberOfElements != bvector.size()) {
+        if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. GpuBuffer has size {}, \n"
-                                  "however, BlockVector has N() = {}, and size = {}.",
-                                  m_numberOfElements,
-                                  bvector.N(),
-                                  bvector.size()));
+                fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
+                    "has has dim() = {} (N() = {}, and size() = {}).",
+                    m_numberOfElements,
+                    bvector.dim(),
+                    bvector.N(),
+                    bvector.size()));
         }
         const auto dataPointer = static_cast<const T*>(&(bvector[0][0]));
         copyFromHost(dataPointer, m_numberOfElements);
@@ -229,12 +229,12 @@ public:
     template <int BlockDimension>
     void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector) const
     {
-        // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
-        if (m_numberOfElements != bvector.size()) {
+        if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
-                                  "has has N() = {}, and size() = {}.",
+                                  "has has dim() = {} (N() = {}, and size() = {}).",
                                   m_numberOfElements,
+                                  bvector.dim(),
                                   bvector.N(),
                                   bvector.size()));
         }

@@ -99,24 +99,24 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostStdVector)
 BOOST_AUTO_TEST_CASE(TestCopyFromBvector)
 {
     auto blockVector = Dune::BlockVector<Dune::FieldVector<double, 2>> {{{42, 43}, {44, 45}, {46, 47}}};
-    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(blockVector.size());
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(blockVector.dim());
     bufferOnGPU.copyFromHost(blockVector);
-    std::vector<double> hostBuffer(bufferOnGPU.size());
-    bufferOnGPU.copyToHost(hostBuffer.data(), hostBuffer.size());
+    std::vector<double> hostBuffer(blockVector.dim());
+    bufferOnGPU.copyToHost(hostBuffer);
 
     BOOST_CHECK_EQUAL_COLLECTIONS(
-        hostBuffer.begin(), hostBuffer.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.size());
+        hostBuffer.begin(), hostBuffer.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.dim());
 }
 
-// BOOST_AUTO_TEST_CASE(TestCopyToBvector)
-// {
-//     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};
-//     auto blockVector = Dune::BlockVector<Dune::FieldVector<double, 3>>(3);
-//     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
-//     bufferOnGPU.copyToHost(blockVector);
+BOOST_AUTO_TEST_CASE(TestCopyToBvector)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};
+    auto blockVector = Dune::BlockVector<Dune::FieldVector<double, 3>>(3);
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
+    bufferOnGPU.copyToHost(blockVector);
 
-//     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.size());
-// }
+    BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.dim());
+}
 
 BOOST_AUTO_TEST_CASE(TestDataPointer)
 {
