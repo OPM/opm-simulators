@@ -26,7 +26,7 @@ class MixedSolver : public InverseOperator<X,X>
         int b     = A[0][0].N();
 
         // verify that block size is 3x3 or 4x4
-        if (b<3 || b>4) {OPM_THROW(std::logic_error, "Legacy mixed precision only supports 3x3 and 4x4 blocks.");}
+        if (b<2 || b>4) {OPM_THROW(std::logic_error, "Legacy mixed precision only supports 3x3 and 4x4 blocks.");}
 
         // create jacobian matrix object and allocate various arrays
         jacobian_ = bsr_alloc();
@@ -79,9 +79,7 @@ class MixedSolver : public InverseOperator<X,X>
         bsr_downcast(jacobian_);
 
         // solve linear system
-        int count = 0;
-             if constexpr(N==3) count = bslv_pbicgstab3m(mem_, jacobian_, &b[0][0], &x[0][0]);
-        else if constexpr(N==4) count = bslv_pbicgstab4m(mem_, jacobian_, &b[0][0], &x[0][0]);
+        int count = bslv_pbicgstabm(mem_, jacobian_, &b[0][0], &x[0][0]);
 
         // return convergence information
         res.converged  = (mem_->e[count] < mem_->tol);

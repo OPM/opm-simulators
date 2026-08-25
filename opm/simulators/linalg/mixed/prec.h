@@ -59,17 +59,7 @@ void prec_init(prec_t *P, bsr_matrix const *A);
 int  prec_analyze(bsr_matrix *M, int (*offsets)[3]);
 
 /**
- * @brief DILU factorization.
- *
- * @param P Pointer preconditioner object.
- * @param A Pointer to bsr matrix.
- */
-void prec_dilu_factorize2(prec_t *P, bsr_matrix *A);
-void prec_dilu_factorize(prec_t *P, bsr_matrix *A);
-void prec_dilu_factorize4(prec_t *P, bsr_matrix *A);
-
-/**
- * @brief ILU0 factorization.
+ * @brief ILU0/DILU factorization.
  *
  * @param P Pointer preconditioner object.
  * @param A Pointer to bsr matrix.
