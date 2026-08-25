@@ -2371,13 +2371,13 @@ auto systemJacobian(const Sys& system, const State& x)
     }
 }
 
-/// Convergence settings for solve().
+/// Convergence settings for solve(). No defaults: a caller states what it wants.
 template<class Scalar>
 struct Parameters
 {
     /// Max norm of the scaled residual at which the system is converged.
-    Scalar tolerance = 1e-2;
-    int max_iterations = 50;
+    Scalar tolerance;
+    int max_iterations;
 };
 
 /// Solve an InjectionSystem or a ProductionSystem by Newton-Raphson, choosing
@@ -2510,16 +2510,6 @@ solve(Sys& system,
     last.node_pressure = system.pressures(x);
     last.well_rate = system.wellRates(x);
     return last;
-}
-
-/// Solve with the standard settings and a full Newton step -- what every caller
-/// outside the bench wants.
-template<class Sys>
-Result<typename Sys::ScalarType>
-solve(Sys& system, const std::vector<typename Sys::ScalarType>& node_pressure_guess)
-{
-    return solve(system, node_pressure_guess,
-                 Parameters<typename Sys::ScalarType>{}, FullStep{});
 }
 
 } // namespace Opm::NetworkSolve

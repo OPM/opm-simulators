@@ -94,6 +94,9 @@ using namespace Opm::unit;
 
 namespace {
 
+/// The settings every bench case uses unless it is varying them on purpose.
+constexpr NetworkSolve::Parameters<double> kParams{1e-2, 50};
+
 // VFPINJ 1 (wells), from opm-tests/network/include/vfp_gi_wells.inc.
 const std::string vfp_well = R"(
 VFPINJ
@@ -1893,7 +1896,7 @@ BOOST_AUTO_TEST_CASE(replay_simulator_failures)
     for (const auto& file : files) {
         std::ifstream in(file);
         auto [system, guess] = gas.systemFromDump(in);
-        const auto r = NetworkSolve::solve(system, guess);
+        const auto r = NetworkSolve::solve(system, guess, kParams, NetworkSolve::FullStep{});
         solved += r.converged ? 1 : 0;
         BOOST_TEST_MESSAGE("  " << file.filename().string() << ": "
                            << (r.converged ? "converged in " : "FAILED after ")
@@ -1940,7 +1943,7 @@ BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
     c.finish();
 
     auto system = c.system();
-    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart), kParams, NetworkSolve::FullStep{});
     std::string ended;
     for (int w = 0; w < system.numWells(); ++w) {
         ended += system.controlLetter(w);
@@ -2039,7 +2042,7 @@ BOOST_AUTO_TEST_CASE(production_network_prototype)
                        << ", wells " << system.numWells() << ")");
 
     const std::vector<double> guess{convert::from(80.0, bars), convert::from(90.0, bars)};
-    const auto r = NetworkSolve::solve(system, guess);
+    const auto r = NetworkSolve::solve(system, guess, kParams, NetworkSolve::FullStep{});
     BOOST_TEST_MESSAGE((r.converged ? "converged in " : "FAILED after ") << r.iterations
                        << " iterations, residual " << r.residual
                        << (r.control_trace.empty() ? "" : "  controls " + r.control_trace));
@@ -2121,7 +2124,7 @@ BOOST_AUTO_TEST_CASE(group_equations_match_the_rule_based_allocation)
     auto compare = [&](const char* what, NetworkCase& c, const double target,
                        const bool required) {
         auto system = c.system();
-        const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+        const auto r = NetworkSolve::solve(system, c.nodePressures(kStart), kParams, NetworkSolve::FullStep{});
         if (!r.converged) {
             BOOST_TEST_MESSAGE(what << ": the solve does not converge, so the equations cannot "
                                "be compared here yet");
@@ -2348,7 +2351,7 @@ BOOST_AUTO_TEST_CASE(a_rate_limited_well_stays_under_its_limit)
     c.finish();
 
     auto system = c.system();
-    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(r.converged);
     BOOST_TEST_MESSAGE("rate-limited well: q " << convert::to(r.well_rate[0], sm3d)
                        << " against a limit of " << convert::to(limit, sm3d)
@@ -2417,7 +2420,7 @@ public:
         ProductionCase open(*this);
         open.target_ = 0.0;
         auto s = open.system();
-        const auto r = NetworkSolve::solve(s, guess());
+        const auto r = NetworkSolve::solve(s, guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         return r.well_rate[0] + r.well_rate[1];
     }
@@ -2448,7 +2451,7 @@ BOOST_AUTO_TEST_CASE(production_group_target_is_an_equation)
     c.setGroupTarget(target);
 
     auto system = c.system();
-    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_TEST_MESSAGE("production group: " << (r.converged ? "converged in " : "FAILED after ")
                        << r.iterations << " iterations, residual " << r.residual);
     BOOST_REQUIRE(r.converged);
@@ -2526,7 +2529,7 @@ BOOST_AUTO_TEST_CASE(production_equations_match_the_rule_based_allocation)
         ProductionCase c;
         c.setGroupTarget(fraction * free_total);
         auto system = c.system();
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         if (!r.converged) {
             BOOST_TEST_MESSAGE("fraction " << fraction << ": does not converge");
             BOOST_CHECK(false);
@@ -2583,7 +2586,7 @@ BOOST_AUTO_TEST_CASE(production_control_rule_basin)
             c.setGroupTarget(cfg.fraction * free_total);
             auto system = c.system();
             const auto r = NetworkSolve::solve(
-                system, std::vector<double>{convert::from(80.0, bars), p});
+                system, std::vector<double>{convert::from(80.0, bars), p}, kParams, NetworkSolve::FullStep{});
             ++total;
             if (r.converged) {
                 ++solved;
@@ -2643,7 +2646,7 @@ BOOST_AUTO_TEST_CASE(resolving_the_split_flips_less)
             // nodePressures() spreads the two applied pressures over the whole
             // tree; System::start() wants one per node, and handing it the bare
             // pair reads past the end of it.
-            const auto r = NetworkSolve::solve(system, c.nodePressures(start));
+            const auto r = NetworkSolve::solve(system, c.nodePressures(start), kParams, NetworkSolve::FullStep{});
             t.switches += r.switches;
             if (r.converged) {
                 ++t.solved;
@@ -2721,7 +2724,7 @@ guess 3.4e+07 4.50559e+07 4.50559e+07 4.994e+07 4.994e+07
         std::istringstream in(dump);
         auto [system, guess] = gas.systemFromDump(in);
         system.setGroupShareFromMultiplier(from_multiplier);
-        return NetworkSolve::solve(system, guess);
+        return NetworkSolve::solve(system, guess, kParams, NetworkSolve::FullStep{});
     };
 
     const auto from_lambda = solve(true);
@@ -2779,7 +2782,7 @@ BOOST_AUTO_TEST_CASE(the_fallback_still_has_one_case_to_cover)
 
             auto system = c.system();
             const auto guess = c.nodePressures(start);
-            const auto first = NetworkSolve::solve(system, guess);
+            const auto first = NetworkSolve::solve(system, guess, kParams, NetworkSolve::FullStep{});
             if (first.converged) {
                 ++plain;
                 ++retried;
@@ -2833,7 +2836,7 @@ BOOST_AUTO_TEST_CASE(production_thp_that_does_not_bind_leaves_the_well_on_bhp)
         w.bhp_limit = convert::from(110.0, bars);
     }
     auto system = c.system();
-    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(r.converged);
     for (int w = 0; w < system.numWells(); ++w) {
         const auto& well = system.wells()[w];
@@ -2858,7 +2861,7 @@ BOOST_AUTO_TEST_CASE(what_enters_a_branch_besides_the_wells)
     // Reference: nothing but the wells.
     ProductionCase plain;
     auto ref_system = plain.system();
-    const auto ref = NetworkSolve::solve(ref_system, ProductionCase::guess());
+    const auto ref = NetworkSolve::solve(ref_system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(ref.converged);
 
     auto nodePressureFromBranch = [&](const Sys& system, const std::array<double, 3>& q) {
@@ -2883,7 +2886,7 @@ BOOST_AUTO_TEST_CASE(what_enters_a_branch_besides_the_wells)
             w.efficiency = 0.5;
         }
         auto system = c.system();
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         std::array<double, 3> branch{};
         for (int w = 0; w < system.numWells(); ++w) {
@@ -2905,7 +2908,7 @@ BOOST_AUTO_TEST_CASE(what_enters_a_branch_besides_the_wells)
         const double lift = convert::from(20000.0, sm3d);
         c.wells()[0].lift_gas = lift;
         auto system = c.system();
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         std::array<double, 3> branch{};
         for (int w = 0; w < system.numWells(); ++w) {
@@ -2932,7 +2935,7 @@ BOOST_AUTO_TEST_CASE(what_enters_a_branch_besides_the_wells)
                                         convert::from(8000.0, sm3d)};
         auto system = c.system();
         system.setNodeSource(1, sat);
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         std::array<double, 3> branch = sat;
         for (int w = 0; w < system.numWells(); ++w) {
@@ -2978,12 +2981,12 @@ BOOST_AUTO_TEST_CASE(injection_efficiency_enters_the_branch)
     BOOST_CHECK_LT(worst, 1e-3);
 
     // And it still solves, to a lower node pressure than at full weight.
-    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart));
+    const auto r = NetworkSolve::solve(system, c.nodePressures(kStart), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(r.converged);
     auto full = gnetinjeGas();
     full.finish();
     auto full_system = full.system();
-    const auto rf = NetworkSolve::solve(full_system, full.nodePressures(kStart));
+    const auto rf = NetworkSolve::solve(full_system, full.nodePressures(kStart), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(rf.converged);
     BOOST_TEST_MESSAGE("M5S at half efficiency " << convert::to(r.node_pressure[1], bars)
                        << " bar, at full " << convert::to(rf.node_pressure[1], bars));
@@ -3007,7 +3010,7 @@ BOOST_AUTO_TEST_CASE(an_autochoke_holds_the_target_or_opens)
         ProductionCase c;
         auto system = c.system();
         system.setChokeTarget(1, 0.5 * free_total);
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         const double total = r.well_rate[0] + r.well_rate[1];
         BOOST_TEST_MESSAGE("choked: node " << convert::to(r.node_pressure[1], bars)
@@ -3026,7 +3029,7 @@ BOOST_AUTO_TEST_CASE(an_autochoke_holds_the_target_or_opens)
         ProductionCase c;
         auto system = c.system();
         system.setChokeTarget(1, 2.0 * free_total);
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         const double total = r.well_rate[0] + r.well_rate[1];
         BOOST_TEST_MESSAGE("open: node " << convert::to(r.node_pressure[1], bars)
@@ -3051,7 +3054,7 @@ BOOST_AUTO_TEST_CASE(production_analytic_jacobian_matches_differences)
         system.setAnalyticJacobian(true);
         const auto x0 = system.start(ProductionCase::guess());
         // at the solution, so the active set the Jacobian is built on is the real one
-        const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+        const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(r.converged);
         auto x = x0;
         for (int n = 1; n <= system.numNodes(); ++n) { x[system.pIdx(n)] = r.node_pressure[n]; }
@@ -3090,7 +3093,7 @@ BOOST_AUTO_TEST_CASE(a_well_on_a_tie_converges)
     const auto sm3d = cubic(meter) / day;
     ProductionCase free_case;
     auto free_system = free_case.system();
-    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(free.converged);
 
     // the limit is the rate the well freely produces: the tie, to the digit
@@ -3098,7 +3101,7 @@ BOOST_AUTO_TEST_CASE(a_well_on_a_tie_converges)
     c.wells()[0].oil_rate_limit = free.well_rate[0];
     auto system = c.system();
     system.setAnalyticJacobian(true);
-    const auto r = NetworkSolve::solve(system, ProductionCase::guess());
+    const auto r = NetworkSolve::solve(system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_TEST_MESSAGE("tied well: " << (r.converged ? "converged in " : "FAILED after ")
                        << r.iterations << " iterations, " << r.switches << " switches, control '"
                        << system.controlLetter(0) << "', oil " << convert::to(r.well_rate[0], sm3d)
@@ -3122,7 +3125,7 @@ BOOST_AUTO_TEST_CASE(production_jacobians_reach_the_same_solution)
     ProductionCase base;
     const double free_total = base.freeTotal();
     auto free_system = base.system();
-    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(free.converged);
 
     // The cases own the tables the systems point at, so they live here, not
@@ -3145,8 +3148,8 @@ BOOST_AUTO_TEST_CASE(production_jacobians_reach_the_same_solution)
             const std::vector<double> guess{convert::from(80.0, bars), convert::from(50.0 + 30.0 * pf, bars)};
             auto fd = shape.make(); fd.setAnalyticJacobian(false);
             auto an = shape.make(); an.setAnalyticJacobian(true);
-            const auto rf = NetworkSolve::solve(fd, guess);
-            const auto ra = NetworkSolve::solve(an, guess);
+            const auto rf = NetworkSolve::solve(fd, guess, kParams, NetworkSolve::FullStep{});
+            const auto ra = NetworkSolve::solve(an, guess, kParams, NetworkSolve::FullStep{});
             if (rf.converged && ra.converged) {
                 ++both;
                 double dp = 0.0, dq = 0.0;
@@ -3274,7 +3277,7 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
     ProductionCase base;
     const double free_total = base.freeTotal();
     auto free_system = base.system();
-    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess());
+    const auto free = NetworkSolve::solve(free_system, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(free.converged);
 
     ProductionCase plain_case, limited_case, choke_case, open_case, tie_case, bhp_case, high_case;
@@ -3299,8 +3302,8 @@ BOOST_AUTO_TEST_CASE(complementarity_agrees_with_the_active_set)
             const std::vector<double> guess{convert::from(80.0, bars), convert::from(50.0 + 30.0 * pf, bars)};
             auto as = shape.make(); as.setAnalyticJacobian(true);
             auto cm = shape.make(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
-            const auto ra = NetworkSolve::solve(as, guess);
-            const auto rc = NetworkSolve::solve(cm, guess);
+            const auto ra = NetworkSolve::solve(as, guess, kParams, NetworkSolve::FullStep{});
+            const auto rc = NetworkSolve::solve(cm, guess, kParams, NetworkSolve::FullStep{});
             if (rc.converged) { cm_its += rc.iterations; }
             const bool choke_shape = std::string(shape.what) == "closed choke" || std::string(shape.what) == "open choke";
             const bool disagree = ra.converged && rc.converged
@@ -3351,7 +3354,7 @@ BOOST_AUTO_TEST_CASE(complementarity_shuts_dead_wells)
     using Sys = NetworkSolve::ProductionSystem<double>;
     ProductionCase plain_case;
     auto plain = plain_case.system(); plain.setAnalyticJacobian(true);
-    const auto free = NetworkSolve::solve(plain, ProductionCase::guess());
+    const auto free = NetworkSolve::solve(plain, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(free.converged);
     const double p_free = free.node_pressure[1];
 
@@ -3361,8 +3364,8 @@ BOOST_AUTO_TEST_CASE(complementarity_shuts_dead_wells)
         c.wells()[0].dead_above = p_free - convert::from(0.5, bars);
         auto cm = c.system(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
         auto as = c.system(); as.setAnalyticJacobian(true);
-        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess());
-        const auto ra = NetworkSolve::solve(as, ProductionCase::guess());
+        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
+        const auto ra = NetworkSolve::solve(as, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(rc.converged);
         BOOST_TEST_MESSAGE("dying well: cm " << cm.controlLetter(0) << " " << rc.well_rate[0] * 86400
                            << " m3/d at node " << rc.node_pressure[1] * 1e-5 << " bar; active set "
@@ -3382,7 +3385,7 @@ BOOST_AUTO_TEST_CASE(complementarity_shuts_dead_wells)
         for (auto& w : c.wells()) { w.dead_above = convert::from(1.0, bars); }
         auto cm = c.system(); cm.setAnalyticJacobian(true); cm.setComplementarity(true);
         cm.setChokeTarget(1, 0.5 * free.well_rate[0]);
-        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess());
+        const auto rc = NetworkSolve::solve(cm, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
         BOOST_REQUIRE(rc.converged);
         for (int w = 0; w < cm.numWells(); ++w) {
             BOOST_CHECK_EQUAL(cm.controlLetter(w), 'S');
@@ -3402,7 +3405,7 @@ BOOST_AUTO_TEST_CASE(the_active_set_still_produces_from_a_dead_well)
     ProductionCase c;
     c.wells()[0].dead_above = convert::from(1.0, bars);
     auto as = c.system(); as.setAnalyticJacobian(true);
-    const auto r = NetworkSolve::solve(as, ProductionCase::guess());
+    const auto r = NetworkSolve::solve(as, ProductionCase::guess(), kParams, NetworkSolve::FullStep{});
     BOOST_REQUIRE(r.converged);
     BOOST_TEST_MESSAGE("dead well on the active set: " << as.controlLetter(0) << " "
                        << r.well_rate[0] * 86400 << " m3/d");

@@ -105,6 +105,12 @@ namespace details {
     }
 } // namespace details
 
+/// What the simulator asks of a network solve. The tolerance is on the scaled
+/// residual, so it is dimensionless; 50 iterations is well past where a solve
+/// that is going to converge has, and past it the relaxed update takes over.
+template<class Scalar>
+constexpr NetworkSolve::Parameters<Scalar> kNetworkSolveParams{1e-2, 50};
+
 
 template<typename Scalar, typename IndexTraits>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
@@ -469,7 +475,7 @@ newtonNodePressures(const Network::ExtNetwork& network,
         }
     }
 
-    const auto result = NetworkSolve::solve(system, guess);
+    const auto result = NetworkSolve::solve(system, guess, kNetworkSolveParams<Scalar>, NetworkSolve::FullStep{});
     if (!result.converged && !this->network_dump_prefix_.empty()) {
         // Everything the solve worked from, so it can be replayed in the bench
         // against the same tables without a simulator.
@@ -842,7 +848,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         }
     }
 
-    const auto result = NetworkSolve::solve(system, guess);
+    const auto result = NetworkSolve::solve(system, guess, kNetworkSolveParams<Scalar>, NetworkSolve::FullStep{});
     // OPM_NETWORK_DUMP_ALL=N writes the first N solved systems too, not only
     // the failures: a converged answer can still be the wrong root, and that
     // is only visible by replaying the same system both ways in the bench.
@@ -909,7 +915,7 @@ gasLiftTrial(const std::string& well, const Scalar alq) const
                 guess[n] = it->second;
             }
         }
-        const auto result = NetworkSolve::solve(trial, guess);
+        const auto result = NetworkSolve::solve(trial, guess, kNetworkSolveParams<Scalar>, NetworkSolve::FullStep{});
         if (!result.converged) {
             // A failed trial falls back to the well-solve oracle silently, which
             // changes the optimiser's path without a trace; leave one.
