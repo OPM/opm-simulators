@@ -42,6 +42,8 @@
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/CompvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
 
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
@@ -70,6 +72,41 @@ namespace Details {
 
 /// Right-hand side of the hydrostatic ODE dp/ddepth = rho(depth, p) * g for a
 /// fluid whose density follows from the cubic equation of state at the given
+/// The hydrostatic gradient of the water phase, whose density comes from the
+/// water PVT rather than from the equation of state.
+template <class FluidSystem>
+class WaterDensityODE
+{
+public:
+    using Scalar = typename FluidSystem::Scalar;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
+    WaterDensityODE(const TabulatedFunction& tempVdTable,
+                    const CompositionalConfig::EOSType eosType,
+                    const Scalar normGrav)
+        : tempVdTable_(tempVdTable)
+        , eosType_(eosType)
+        , g_(normGrav)
+    {}
+
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const
+    {
+        CompositionalFluidState<Scalar, FluidSystem> fs;
+        fs.setTemperature(tempVdTable_.eval(depth, /*extrapolate=*/true));
+        fs.setPressure(FluidSystem::waterPhaseIdx, press);
+
+        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+
+        return FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx) * g_;
+    }
+
+private:
+    const TabulatedFunction& tempVdTable_;
+    CompositionalConfig::EOSType eosType_;
+    Scalar g_;
+};
+
 /// temperature and composition.  The EOS root (liquid or vapour) is selected
 /// by the phase index.
 template <class FluidSystem>
@@ -169,16 +206,10 @@ public:
         const auto& records = eclipseState.getInitConfig().getEquil();
         const auto& tables = eclipseState.getTableManager();
 
-        if (!tables.hasTables("ZMFVD")) {
-            // COMPVD is the other accepted way of giving the composition
-            // versus depth, but it is not supported here yet; name it so the
-            // message does not read as if ZMFVD were the only valid input.
-            const std::string msg = tables.hasTables("COMPVD")
-                ? "Equilibration of a compositional model with the composition versus "
-                  "depth from COMPVD is not supported; use ZMFVD instead."
-                : "Equilibration of a compositional model requires the composition "
-                  "versus depth from the ZMFVD keyword.";
-            OPM_THROW(std::runtime_error, msg);
+        if (!tables.hasTables("ZMFVD") && !tables.hasTables("COMPVD")) {
+            OPM_THROW(std::runtime_error,
+                      "Equilibration of a compositional model requires the composition "
+                      "versus depth from the ZMFVD or the COMPVD keyword.");
         }
 
         std::vector<Region> regions;
@@ -211,7 +242,9 @@ private:
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
     using ODE = Details::EosDensityODE<FluidSystem>;
+    using WaterODE = Details::WaterDensityODE<FluidSystem>;
     using PressFunc = EQUIL::Details::PressureFunction<Scalar, ODE>;
+    using WaterPressFunc = EQUIL::Details::PressureFunction<Scalar, WaterODE>;
 
     static constexpr int numComponents = FluidSystem::numComponents;
 
@@ -219,11 +252,18 @@ private:
     struct Region {
         int initType{1};                            // EQUIL item 10
         Scalar zgoc{};
+        /// The phase COMPVD states the composition belongs to, when the
+        /// composition came from COMPVD.  ZMFVD carries no such column.
+        std::optional<unsigned> statedPhaseIdx{};
         CompVec vaporComposition{};                 // gas above the contact (type 3)
         std::vector<TabulatedFunction> zmfVdTable;  // per-component ZMFVD
         TabulatedFunction tempVdTable;
         std::optional<PressFunc> oilPressure;
         std::optional<PressFunc> gasPressure;       // type 3 only
+
+        Scalar zwoc{};                              // water-oil contact
+        Scalar connateSw{};                         // water saturation above it
+        std::optional<WaterPressFunc> waterPressure;
     };
 
     static CompVec composition(const Region& reg, const Scalar depth)
@@ -240,6 +280,57 @@ private:
         }
         std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
         return z;
+    }
+
+    /// Fills the region's per-component composition interpolants from a
+    /// composition-versus-depth table.  ZMFVD and COMPVD differ in their extra
+    /// columns, not in the depth and mole-fraction ones this reads.
+    template <class Table>
+    void setupComposition(Region& reg, const Table& table) const
+    {
+        reg.zmfVdTable.resize(numComponents);
+
+        std::vector<Scalar> depths(table.getDepthColumn().begin(),
+                                   table.getDepthColumn().end());
+        // A single row means a depth-independent composition; the interpolant
+        // needs two sample points, so duplicate it onto an arbitrary interval.
+        const bool constantComposition = (depths.size() == 1);
+        if (constantComposition) {
+            depths.push_back(depths.front() + Scalar{1});
+        }
+
+        for (int c = 0; c < numComponents; ++c) {
+            const auto& col = table.getMoleFractionColumn(c);
+            std::vector<Scalar> values(col.begin(), col.end());
+            if (constantComposition) {
+                values.push_back(values.front());
+            }
+            reg.zmfVdTable[c].setXYContainers(depths, values);
+        }
+    }
+
+    /// The phase COMPVD assigns the composition to.  A table that names both
+    /// phases describes a column with a contact in it, which the single-phase
+    /// initialization cannot represent, so only a table agreeing on one phase
+    /// states one.
+    static std::optional<unsigned> statedPhase(const CompvdTable& compvd,
+                                               const std::size_t regionIdx)
+    {
+        const auto& flags = compvd.phaseFlags();
+        if (flags.empty()) {
+            return std::nullopt;
+        }
+
+        const auto first = flags.front();
+        if (std::ranges::any_of(flags, [first](const auto f) { return f != first; })) {
+            OpmLog::info(fmt::format("Equilibration region {}: COMPVD names both phases, "
+                                     "so the composition of each depth decides the phase.",
+                                     regionIdx + 1));
+            return std::nullopt;
+        }
+
+        return (first == CompvdTable::Phase::Vapor)
+            ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
     }
 
     /// Whether the ZMFVD composition differs between \p depthA and \p depthB.
@@ -279,23 +370,14 @@ private:
 
         reg.zgoc = record.gasOilContactDepth();
 
-        const auto& zmfvd = tables.getZmfvdTables().template getTable<ZmfvdTable>(regionIdx);
-        reg.zmfVdTable.resize(numComponents);
-        std::vector<Scalar> depths(zmfvd.getDepthColumn().begin(),
-                                   zmfvd.getDepthColumn().end());
-        // A single row means a depth-independent composition; the interpolant
-        // needs two sample points, so duplicate it onto an arbitrary interval.
-        const bool constantComposition = (depths.size() == 1);
-        if (constantComposition) {
-            depths.push_back(depths.front() + Scalar{1});
+        if (tables.hasTables("ZMFVD")) {
+            const auto& zmfvd = tables.getZmfvdTables().template getTable<ZmfvdTable>(regionIdx);
+            setupComposition(reg, zmfvd);
         }
-        for (int c = 0; c < numComponents; ++c) {
-            const auto& col = zmfvd.getMoleFractionColumn(c);
-            std::vector<Scalar> values(col.begin(), col.end());
-            if (constantComposition) {
-                values.push_back(values.front());
-            }
-            reg.zmfVdTable[c].setXYContainers(depths, values);
+        else {
+            const auto& compvd = tables.getCompvdTables().template getTable<CompvdTable>(regionIdx);
+            setupComposition(reg, compvd);
+            reg.statedPhaseIdx = statedPhase(compvd, regionIdx);
         }
 
         if (tables.hasTables("RTEMPVD")) {
@@ -329,27 +411,115 @@ private:
             span = {span[0] - Scalar{1}, span[1] + Scalar{1}};
         }
 
-        // The equilibration covers the hydrocarbon column only.
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            if (record.waterOilContactDepth() < span[1]) {
-                OPM_THROW(std::runtime_error,
-                          fmt::format("Compositional equilibration does not support a water "
-                                      "zone: the water-oil contact at {} m is above the "
-                                      "deepest cell centre at {} m of region {}.",
-                                      record.waterOilContactDepth(), span[1], regionIdx + 1));
-            }
-            OpmLog::info(fmt::format("Equilibration region {}: the water phase is "
-                                     "initialized with zero saturation.", regionIdx + 1));
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        if (waterActive) {
+            reg.zwoc = record.waterOilContactDepth();
+            reg.connateSw = connateWaterSaturation(tables, regionIdx);
+        }
+
+        // A datum below the water-oil contact states the pressure of the water
+        // rather than of the hydrocarbon: integrate the water from there and
+        // hand the hydrocarbon its pressure at the contact.  Otherwise the
+        // hydrocarbon is anchored at the datum and the water follows from the
+        // contact.
+        Scalar hcDatum = record.datumDepth();
+        Scalar hcPressure = record.datumDepthPressure();
+        const bool datumInWater = waterActive && (record.datumDepth() > reg.zwoc);
+
+        if (datumInWater) {
+            integrateWaterPressure(reg, span, gravity, numSamplePoints,
+                                   record.datumDepth(), record.datumDepthPressure());
+            hcDatum = reg.zwoc;
+            hcPressure = reg.waterPressure->value(reg.zwoc)
+                       + record.waterOilContactCapillaryPressure();
+            OpmLog::info(fmt::format("Equilibration region {}: the datum at {} m lies below the "
+                                     "water-oil contact at {} m, so it gives the water pressure; "
+                                     "the hydrocarbon pressure at the contact is {:.5} bar.",
+                                     regionIdx + 1, record.datumDepth(), reg.zwoc,
+                                     hcPressure / 1.0e5));
         }
 
         if (reg.initType == 1) {
-            setupSinglePhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
+            setupSinglePhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx,
+                                   hcDatum, hcPressure);
         }
         else {
             setupTwoPhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
         }
 
+        // With the datum in the hydrocarbon the water follows from the contact.
+        if (waterActive && !datumInWater) {
+            setupWaterZone(reg, record, tables, span, gravity, numSamplePoints, regionIdx);
+        }
+        else if (waterActive) {
+            OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact is at {} m, "
+                                     "with a connate water saturation of {} above it.",
+                                     regionIdx + 1, reg.zwoc, reg.connateSw));
+        }
+
         return reg;
+    }
+
+    /// The water phase of a region: connate above the water-oil contact, fully
+    /// water-saturated below it, with its own hydrostatic pressure.
+    ///
+    /// The water pressure is integrated from the contact rather than derived
+    /// from the hydrocarbon pressure: the two only agree there, and away from
+    /// it the water gradient is the steeper one.
+    void setupWaterZone(Region& reg,
+                        const EquilRecord& record,
+                        const TableManager& tables,
+                        const std::array<Scalar, 2>& span,
+                        const Scalar gravity,
+                        const int numSamplePoints,
+                        const std::size_t regionIdx) const
+    {
+        // The capillary pressure at the contact (EQUIL item 4) offsets the
+        // water pressure from the hydrocarbon pressure there.
+        if (!reg.oilPressure.has_value() && !reg.gasPressure.has_value()) {
+            return;
+        }
+        const auto& hcPressure = reg.oilPressure.has_value() ? reg.oilPressure : reg.gasPressure;
+        const Scalar pcow = record.waterOilContactCapillaryPressure();
+        const Scalar pContact = hcPressure->value(reg.zwoc) - pcow;
+
+        integrateWaterPressure(reg, span, gravity, numSamplePoints, reg.zwoc, pContact);
+
+        OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact is at {} m, "
+                                 "with a connate water saturation of {} above it.",
+                                 regionIdx + 1, reg.zwoc, reg.connateSw));
+    }
+
+    /// Integrates the water pressure over \p span from \p depth, where it is
+    /// \p pressure.
+    void integrateWaterPressure(Region& reg,
+                                const std::array<Scalar, 2>& span,
+                                const Scalar gravity,
+                                const int numSamplePoints,
+                                const Scalar depth,
+                                const Scalar pressure) const
+    {
+        const WaterODE ode(reg.tempVdTable, eosType_, gravity);
+        reg.waterPressure.emplace(ode,
+                                  typename WaterPressFunc::InitCond{depth, pressure},
+                                  numSamplePoints, span);
+    }
+
+    /// The smallest water saturation the saturation function defines, i.e. the
+    /// connate water left in the hydrocarbon column.
+    static Scalar connateWaterSaturation(const TableManager& tables,
+                                         const std::size_t regionIdx)
+    {
+        const auto& swfn = tables.getSwfnTables();
+        if (!swfn.empty()) {
+            const auto& table = swfn.template getTable<SwfnTable>(
+                std::min(regionIdx, swfn.size() - 1));
+            const auto& sw = table.getSwColumn();
+            if (sw.size() > 0) {
+                return sw.front();
+            }
+        }
+        return Scalar{0};
     }
 
     /// EQUIL item 10 type 1: ZMFVD is the total composition and the fluid is a
@@ -368,11 +538,14 @@ private:
                                 const std::array<Scalar, 2>& span,
                                 const Scalar gravity,
                                 const int numSamplePoints,
-                                const std::size_t regionIdx) const
+                                const std::size_t regionIdx,
+                                const Scalar datum,
+                                const Scalar datumPressure) const
     {
-        const Scalar datum = record.datumDepth();
-        const auto phaseIdx = (datum < reg.zgoc)
-            ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
+        // COMPVD states the phase its composition belongs to; without that the
+        // datum's side of the gas-oil contact decides the EOS root.
+        const auto phaseIdx = reg.statedPhaseIdx.value_or(
+            (datum < reg.zgoc) ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
 
         // Type 1 describes a continuous hydrocarbon phase, i.e. no gas-oil
         // contact in the region, and the whole column is integrated with the
@@ -406,7 +579,7 @@ private:
         const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
                       reg.tempVdTable, phaseIdx, eosType_, gravity);
         reg.oilPressure.emplace(ode,
-                                typename PressFunc::InitCond{datum, Scalar(record.datumDepthPressure())},
+                                typename PressFunc::InitCond{datum, datumPressure},
                                 numSamplePoints, span);
 
         OpmLog::info(fmt::format("Equilibration region {}: single phase, total "
@@ -503,9 +676,23 @@ private:
                 fs.setSaturation(phaseIdx, 0.0);
             }
         }
-        // Nominal single-phase saturation; the flash recomputes the phase split
-        // from the total composition, the pressure and the temperature.
-        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx, 1.0);
+
+        // Below the water-oil contact the pore space holds water alone; above
+        // it the hydrocarbon leaves room for the connate water only.
+        Scalar sWat = 0.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            sWat = (depth > reg.zwoc) ? Scalar{1} : reg.connateSw;
+            fs.setSaturation(FluidSystem::waterPhaseIdx, sWat);
+            if (reg.waterPressure.has_value()) {
+                fs.setPressure(FluidSystem::waterPhaseIdx, reg.waterPressure->value(depth));
+            }
+        }
+
+        // Nominal single-phase saturation for the hydrocarbon; the flash
+        // recomputes the phase split from the total composition, the pressure
+        // and the temperature.
+        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx,
+                         Scalar{1} - sWat);
 
         for (int c = 0; c < numComponents; ++c) {
             fs.setMoleFraction(c, z[c]);
