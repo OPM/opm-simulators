@@ -255,6 +255,10 @@ private:
         /// The phase COMPVD states the composition belongs to, when the
         /// composition came from COMPVD.  ZMFVD carries no such column.
         std::optional<unsigned> statedPhaseIdx{};
+        /// COMPVD naming both phases describes a gas zone over a liquid one,
+        /// each with its own composition and its own hydrostatic column.
+        bool twoZone{false};
+        std::vector<TabulatedFunction> vaporVdTable;
         CompVec vaporComposition{};                 // gas above the contact (type 3)
         std::vector<TabulatedFunction> zmfVdTable;  // per-component ZMFVD
         TabulatedFunction tempVdTable;
@@ -265,6 +269,23 @@ private:
         Scalar connateSw{};                         // water saturation above it
         std::optional<WaterPressFunc> waterPressure;
     };
+
+    /// The vapour-zone composition of a two-zone COMPVD region.
+    static CompVec vaporComposition(const Region& reg, const Scalar depth)
+    {
+        CompVec z{};
+        Scalar sum = 0.0;
+        for (int c = 0; c < numComponents; ++c) {
+            z[c] = std::max(Scalar{0}, reg.vaporVdTable[c].eval(depth, /*extrapolate=*/true));
+            sum += z[c];
+        }
+        if (!(sum > 0.0)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD vapour composition vanishes at depth {} m.", depth));
+        }
+        std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
+        return z;
+    }
 
     static CompVec composition(const Region& reg, const Scalar depth)
     {
@@ -306,6 +327,46 @@ private:
                 values.push_back(values.front());
             }
             reg.zmfVdTable[c].setXYContainers(depths, values);
+        }
+    }
+
+    /// Builds the per-component interpolants from the COMPVD rows carrying
+    /// \p phase.
+    static void setupCompositionFromRows(std::vector<TabulatedFunction>& table,
+                                         const CompvdTable& compvd,
+                                         const CompvdTable::Phase phase)
+    {
+        const auto& flags = compvd.phaseFlags();
+        const auto& depthCol = compvd.getDepthColumn();
+
+        std::vector<Scalar> depths;
+        for (std::size_t r = 0; r < flags.size(); ++r) {
+            if (flags[r] == phase) {
+                depths.push_back(depthCol[r]);
+            }
+        }
+        if (depths.empty()) {
+            OPM_THROW(std::runtime_error,
+                      "COMPVD names both phases but has no row for one of them.");
+        }
+        const bool single = (depths.size() == 1);
+        if (single) {
+            depths.push_back(depths.front() + Scalar{1});
+        }
+
+        table.resize(numComponents);
+        for (int c = 0; c < numComponents; ++c) {
+            const auto& col = compvd.getMoleFractionColumn(c);
+            std::vector<Scalar> values;
+            for (std::size_t r = 0; r < flags.size(); ++r) {
+                if (flags[r] == phase) {
+                    values.push_back(col[r]);
+                }
+            }
+            if (single) {
+                values.push_back(values.front());
+            }
+            table[c].setXYContainers(depths, values);
         }
     }
 
@@ -376,8 +437,17 @@ private:
         }
         else {
             const auto& compvd = tables.getCompvdTables().template getTable<CompvdTable>(regionIdx);
-            setupComposition(reg, compvd);
             reg.statedPhaseIdx = statedPhase(compvd, regionIdx);
+            if (reg.statedPhaseIdx.has_value()) {
+                setupComposition(reg, compvd);
+            }
+            else {
+                // Both phases named: the vapour rows describe the gas zone and
+                // the liquid rows the one below the contact.
+                reg.twoZone = true;
+                setupCompositionFromRows(reg.vaporVdTable, compvd, CompvdTable::Phase::Vapor);
+                setupCompositionFromRows(reg.zmfVdTable, compvd, CompvdTable::Phase::Liquid);
+            }
         }
 
         if (tables.hasTables("RTEMPVD")) {
@@ -582,6 +652,20 @@ private:
                                 typename PressFunc::InitCond{datum, datumPressure},
                                 numSamplePoints, span);
 
+        if (reg.twoZone) {
+            // The gas zone is its own hydrostatic column, continuous with the
+            // liquid one at the contact.
+            const ODE gasOde([&reg](const Scalar d) { return vaporComposition(reg, d); },
+                             reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+            reg.gasPressure.emplace(gasOde,
+                                    typename PressFunc::InitCond{reg.zgoc,
+                                                                 reg.oilPressure->value(reg.zgoc)},
+                                    numSamplePoints, span);
+            OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above the "
+                                     "contact at {} m and a liquid one below it.",
+                                     regionIdx + 1, reg.zgoc));
+        }
+
         OpmLog::info(fmt::format("Equilibration region {}: single phase, total "
                                  "composition specified (EQUIL item 10 is 1).",
                                  regionIdx + 1));
@@ -659,9 +743,11 @@ private:
 
     void assignCell(FluidState& fs, const Region& reg, const Scalar depth) const
     {
-        const bool inGasZone = (reg.initType == 3) && (depth < reg.zgoc);
+        const bool inGasZone = ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
 
-        const CompVec z = inGasZone ? reg.vaporComposition : composition(reg, depth);
+        const CompVec z = !inGasZone      ? composition(reg, depth)
+                        : reg.twoZone     ? vaporComposition(reg, depth)
+                                          : reg.vaporComposition;
         const auto& pressFunc = inGasZone ? reg.gasPressure : reg.oilPressure;
         if (!pressFunc.has_value()) {
             OPM_THROW(std::runtime_error,
@@ -691,6 +777,12 @@ private:
         // Nominal single-phase saturation for the hydrocarbon; the flash
         // recomputes the phase split from the total composition, the pressure
         // and the temperature.
+        //
+        // The phase is the one the EOS root describes, so the liquid zone of a
+        // two-zone region is labelled oil.  The reference simulator reports the
+        // hydrocarbon of a single-phase region as gas throughout, whatever its
+        // root, which is a reporting convention rather than a statement about
+        // the fluid; the saturations here name the phase that is present.
         fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx,
                          Scalar{1} - sWat);
 
