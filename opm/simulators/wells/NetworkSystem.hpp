@@ -2406,13 +2406,14 @@ solve(Sys& system,
         return out;
     };
 
-    // Only does anything when the network places a group's split itself
-    // (--network-group-control): the share is then each well's own potential at
-    // the node pressure, which is not known until the starting pressures are.
-    // OPM's guide rates are untouched and are not what this reads -- they stay
-    // the simulator's, set once per timestep. Once here and not inside the
-    // Newton, or each well's share moves while its rate is chasing it and the
-    // active set cycles between group and thp control instead of settling.
+    // Only under --network-group-control, where the network places the group's
+    // split itself: the share is each well's potential at the node pressure, so
+    // it cannot be known before the starting pressures. Explicit, like OPM's own
+    // guide rates, and for the same reason -- recomputing it every iteration
+    // makes each share a moving target while its rate chases it, and the active
+    // set cycles between group and thp control. Making it implicit (the share an
+    // unknown of the system) or iterating it to a fixed point in an outer loop
+    // are the ways past that; both are open.
     if constexpr (requires { system.refreshGuides(x); }) {
         system.refreshGuides(x);
     }
