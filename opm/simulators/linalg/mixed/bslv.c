@@ -70,6 +70,30 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
 
     mem->P = prec_alloc();
     prec_init(mem->P, A); // initialize structure of L,D,U components of P
+
+    // pick spmv, factorization, and apply functions according to block size
+    switch (A->b)
+    {
+        case 2:
+            mem->bsr_spmv       = bsr_vmspmv2;
+            mem->prec_factorize = prec_ilu0_factorize2;
+            mem->prec_apply     = prec_mapply2c;
+            break;
+        case 3:
+            mem->bsr_spmv       = bsr_vmspmv3;
+            mem->prec_factorize = prec_ilu0_factorize3;
+            mem->prec_apply     = prec_mapply3c;
+            break;
+        case 4:
+            mem->bsr_spmv       = bsr_vmspmv4;
+            mem->prec_factorize = prec_ilu0_factorize4;
+            mem->prec_apply     = prec_mapply4c;
+            break;
+        default:
+            mem->bsr_spmv       = NULL;
+            mem->prec_factorize = NULL;
+            mem->prec_apply     = NULL;
+    }
 }
 
 /**
@@ -101,7 +125,7 @@ double __attribute__((noinline)) vec_inner2(const double *a, const double *b, in
     return agg[0];
 }
 
-int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
+int bslv_pbicgstabm(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
 {
     double tol = mem->tol;
     int max_iter = mem->max_iter;
@@ -119,7 +143,7 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     double * restrict x_j = x;
 
     prec_t * restrict P = mem->P;
-    prec_ilu0_factorize3(P,A,mem->use_dilu); // choose dilu or ilu0
+    mem->prec_factorize(P,A,mem->use_dilu); // choose dilu or ilu0
     prec_downcast(P);
 
     vec_fill(x_j,0.0,n);
@@ -134,15 +158,15 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
     for(j=0;j<max_iter;j++)
     {
         // preconditioned sparse matrix vector product
-        prec_mapply3c(P,q_j);                                          //q_j=P.q_j;
-        bsr_vmspmv3(A,q_j,v_j);                                        //v_j= A.q_j
+        mem->prec_apply(P,q_j);                                          //q_j=P.q_j;
+        mem->bsr_spmv(A,q_j,v_j);                                        //v_j= A.q_j
 
         double alpha_j = rho_j/vec_inner2(r0,v_j,n);
         for (int k=0;k<n;k++) q_j[k] = s_j[k] = r_j[k]-alpha_j*v_j[k]; // r_j and s_j can overwrite each other
 
         // preconditioned sparse matrix vector product
-        prec_mapply3c(P,q_j);                                          //q_j=P.q_j;
-        bsr_vmspmv3(A,q_j,t_j);                                        //t_j= A.q_j
+        mem->prec_apply(P,q_j);                                          //q_j=P.q_j;
+        mem->bsr_spmv(A,q_j,t_j);                                        //t_j= A.q_j
 
         double w_j = vec_inner2(s_j,t_j,n)/vec_inner2(t_j,t_j,n);
         for (int k=0;k<n;k++) x_j[k] += alpha_j*p_j[k] + w_j*s_j[k];
@@ -159,74 +183,10 @@ int bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
         double beta_j = (alpha_j/w_j)*(rho_j/rho_0);
         for (int k=0;k<n;k++) q_j[k] = p_j[k] = r_j[k] + beta_j*(p_j[k] - w_j*v_j[k]);
     }
-    prec_mapply3c(P,x_j);                                           //x_j=P.x_j;
+    mem->prec_apply(P,x_j);                                           //x_j=P.x_j;
 
     return j == max_iter ? j : ++j;
 }
-
-int bslv_pbicgstab4m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
-{
-    double tol = mem->tol;
-    int max_iter = mem->max_iter;
-    int n = mem->n;
-
-    double * restrict e = mem->e;
-    const double *r0 = b;
-    //const double * restrict r0  = mem->dtmp[0]; //access randomly initialized one-dimensional shadow space
-    double * restrict p_j = mem->dtmp[1];
-    double * restrict q_j = mem->dtmp[2];
-    double * restrict r_j = mem->dtmp[3];
-    double * restrict s_j = mem->dtmp[4];
-    double * restrict t_j = mem->dtmp[5];
-    double * restrict v_j = mem->dtmp[6];
-    double * restrict x_j = x;
-
-    prec_t * restrict P = mem->P;
-    prec_ilu0_factorize4(P,A,mem->use_dilu); // choose dilu or ilu0
-    prec_downcast(P);
-
-    vec_fill(x_j,0.0,n);
-    vec_copy(r_j,b,n);
-    vec_copy(p_j,b,n);
-
-    vec_copy(q_j,p_j,n);
-    double norm_0 = sqrt(vec_inner2(r_j,r_j,n));
-
-    double rho_j = vec_inner2(r0,r_j,n);
-    int j;
-    for(j=0;j<max_iter;j++)
-    {
-        // preconditioned sparse matrix vector product
-        prec_mapply4c(P,q_j);                                          //q_j=P.q_j;
-        bsr_vmspmv4(A,q_j,v_j);                                        //v_j= A.q_j
-
-        double alpha_j = rho_j/vec_inner2(r0,v_j,n);
-        for (int k=0;k<n;k++) q_j[k] = s_j[k] = r_j[k]-alpha_j*v_j[k];       // r_j and s_j can overwrite each other
-
-        // preconditioned sparse matrix vector product
-        prec_mapply4c(P,q_j);                                          //q_j=P.q_j;
-        bsr_vmspmv4(A,q_j,t_j);                                        //t_j= A.q_j
-
-        double w_j = vec_inner2(s_j,t_j,n)/vec_inner2(t_j,t_j,n);
-        for (int k=0;k<n;k++) x_j[k] += alpha_j*p_j[k] + w_j*s_j[k];
-        for (int k=0;k<n;k++) r_j[k]  =         s_j[k] - w_j*t_j[k];
-
-        double norm_e = sqrt(vec_inner2(r_j,r_j,n));
-        e[j+1]=norm_e/norm_0;
-
-        if (norm_e<tol*norm_0) break;                               //convergence check
-
-        double rho_0 =rho_j;
-        rho_j=vec_inner2(r0,r_j,n);
-
-        double beta_j = (alpha_j/w_j)*(rho_j/rho_0);
-        for (int k=0;k<n;k++) q_j[k] = p_j[k] = r_j[k] + beta_j*(p_j[k] - w_j*v_j[k]);
-    }
-    prec_mapply4c(P,x_j);                                           //x_j=P.x_j;
-
-    return j == max_iter ? j : ++j;
-}
-
 
 int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x)
 {
@@ -290,9 +250,5 @@ int bslv_pbicgstab3d(bslv_memory *mem, bsr_matrix *A, const double *b, double *x
 
     return j == max_iter ? j : ++j;
 }
-
-
-
-
 
 
