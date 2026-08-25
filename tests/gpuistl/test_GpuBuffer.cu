@@ -69,12 +69,12 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructor)
     BOOST_CHECK_EQUAL_COLLECTIONS(buffer.begin(), buffer.end(), data.begin(), data.end());
 }
 
-// BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
-// {
-//     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-//     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
-//     BOOST_CHECK_THROW(Opm::gpuistl::GpuBuffer<double>(bufferOnGPU.data(), data.size()), std::invalid_argument);
-// }
+BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
+    BOOST_CHECK_THROW(Opm::gpuistl::GpuBuffer<double>(bufferOnGPU.data(), data.size()), std::invalid_argument);
+}
 
 BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 {
@@ -179,9 +179,6 @@ BOOST_AUTO_TEST_CASE(TestMoveAssignment)
 
 BOOST_AUTO_TEST_CASE(TestResizeGrowPreservesData)
 {
-    // Catches the bug where resize(newSize) with newSize > old size allocates only the old
-    // size, then claims size() == newSize. Using the full new capacity (copy in / copy out)
-    // should fail or corrupt if the allocation was too small.
     std::vector<double> data {{1, 2, 3, 4}};
     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data);
 
