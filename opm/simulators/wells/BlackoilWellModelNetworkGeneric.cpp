@@ -238,7 +238,11 @@ updatePressures(const int reportStepIdx,
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer() && well->wellEcl().predictionMode()) {
+        // The network cannot put a well without a VFP table under THP
+        // control, so no THP limit is imposed on such a well, while its
+        // rates still contribute to the network flows.
+        if (well->isProducer() && well->wellEcl().predictionMode()
+            && well->wellEcl().vfp_table_number() > 0) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
                 // The well belongs to a group with has a network pressure constraint,
@@ -328,8 +332,10 @@ void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 {
     // Extended networks defined by BRANPROP and NODEPROP currently apply only
-    // to producers.
-    if (!well.isProducer()) {
+    // to producers. The network cannot put a well without a VFP table under
+    // THP control, so no THP limit is imposed on or retained for such a well,
+    // while its rates still contribute to the network flows.
+    if (!well.isProducer() || well.wellEcl().vfp_table_number() <= 0) {
         return;
     }
     const auto it = this->node_pressures_.find(well.wellEcl().groupName());
