@@ -74,10 +74,8 @@ namespace Opm {
         static constexpr bool compositionSwitchEnabled =
             Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
-        // True when the segment fluid state stores a temperature (any thermal mode, not just
-        // the fully implicit one). Matches the fluid state's enableTemperature flag (see
-        // WellInterface::BlackOilFluidStateType); used to decide whether createFluidState()
-        // must set the temperature explicitly.
+        // True when the segment fluid state stores a temperature. This includes thermal modes
+        // without a fully implicit energy equation.
         static constexpr bool enable_temperature =
             Base::energyModuleType != EnergyModules::NoTemperature;
 
@@ -243,8 +241,9 @@ namespace Opm {
                              WellStateType& well_state,
                              const Scalar relaxation_factor = 1.0);
 
-        // computing the accumulation term for later use in well mass equations
-        void computeInitialSegmentFluids(const FSInfo& info, DeferredLogger& deferred_logger);
+        // Compute the initial fluid inventory for well mass equations. Requires an up-to-date
+        // segment fluid state (see updateSegmentFluidState()).
+        void computeInitialSegmentFluids();
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -349,9 +348,9 @@ namespace Opm {
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
-        EvalWell getSegmentSurfaceVolume(const int seg_idx,
-                                         const FSInfo& info,
-                                         DeferredLogger& deferred_logger) const;
+        // Compute segment surface volume from its cached volume ratio. Requires an up-to-date
+        // segment fluid state (see updateSegmentFluidState()).
+        EvalWell getSegmentSurfaceVolume(const int seg_idx) const;
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
@@ -394,7 +393,6 @@ namespace Opm {
         FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
 
         // this function can potentially be shared between multisegment wells and standard wells
-        // TODO: this function largely overlaps with calculatePhaseProperties(), some refactoring/unification should be done
         template <typename ValueType = EvalWell>
         SegmentFluidState<ValueType>
         createFluidState(const std::vector<ValueType>& fluid_composition,
