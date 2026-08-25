@@ -64,6 +64,11 @@ public:
         return 1.0;
     }
 
+    double dofCenterDepth(unsigned) const
+    {
+        return 0.0;
+    }
+
 private:
     MaterialLawParams materialLawParams_{};
 };

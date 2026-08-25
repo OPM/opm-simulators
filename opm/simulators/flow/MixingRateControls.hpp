@@ -117,7 +117,8 @@ public:
                 const Scalar gravity,
                 const Scalar permZ,
                 const Scalar distZ,
-                const int pvtRegionIdx)
+                const int pvtRegionIdx,
+                const Scalar depth)
     {
         const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
 
@@ -155,7 +156,8 @@ public:
                                          oilVaporizationControl.getMaxDRSDT(fs.pvtRegionIndex()),
                                          oilVaporizationControl.getPsi(fs.pvtRegionIndex()),
                                          oilVaporizationControl.getOmega(fs.pvtRegionIndex()),
-                                         fs.pvtRegionIndex());
+                                         fs.pvtRegionIndex(),
+                                         depth);
         }
 
         if (oilVaporizationControl.drsdtActive(pvtRegionIdx)) {
@@ -197,7 +199,8 @@ private:
                                 const Scalar Xhi,
                                 const Scalar Psi,
                                 const Scalar omegainn,
-                                const int pvtRegionIndex);
+                                const int pvtRegionIndex,
+                                const Scalar depth);
 
     std::vector<Scalar> lastRv_;
     std::vector<Scalar> maxDRv_;

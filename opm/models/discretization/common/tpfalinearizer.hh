@@ -548,6 +548,8 @@ private:
                                               faceDir,
                                               Vin,
                                               Vex,
+                                              zIn,
+                                              zEx,
                                               {},
                                               {},
                                               {},
