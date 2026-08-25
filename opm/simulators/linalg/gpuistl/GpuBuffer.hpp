@@ -262,7 +262,7 @@ public:
     }
 
     /**
-     * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer
+     * @brief copyToHost copies numberOfElements to the CPU memory dataPointer
      * @param dataPointer raw pointer to CPU memory
      * @param numberOfElements number of elements to copy
      * @note This does synchronous transfer.
