@@ -123,7 +123,7 @@ public:
         : props_(&props), units_(&units)
     {}
 
-    void addNode(Node n, const Scalar alq = 0.0)
+    void addNode(Node n, const Scalar alq)
     {
         nodes_.push_back(std::move(n));
         branch_alq_.push_back(alq);

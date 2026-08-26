@@ -154,8 +154,8 @@ public:
     Scalar updatePressures(const int reportStepIdx,
                            const Scalar damping_factor,
                            const Scalar update_upper_bound,
-                           const bool use_secant = false,
-                           const bool secant_for_production = false);
+                           const bool use_secant,
+                           const bool secant_for_production);
 
     /// Forget the secant history; call at the start of every time step.
     void beginTimeStep()

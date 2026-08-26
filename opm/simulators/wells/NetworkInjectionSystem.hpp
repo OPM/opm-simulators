@@ -298,7 +298,7 @@ public:
     /// solve() drops it once there is a converged point to enforce the limit
     /// from -- an iterate that is no longer transient.
     Scalar thpPotential(const Well<Scalar>& w, const Scalar p_node,
-                        const bool cap_by_rate_limit = true) const
+                        const bool cap_by_rate_limit) const
     {
         const auto& t = props_->getTable(w.vfp_table);
         const auto& axis = t.getFloAxis();
@@ -370,7 +370,7 @@ public:
         Scalar moved = 0.0;
         for (auto& w : wells_) {
             const Scalar p = (w.node == 0) ? terminal_pressure_ : x[pIdx(w.node)];
-            const Scalar potential = thpPotential(w, p);
+            const Scalar potential = thpPotential(w, p, /*cap_by_rate_limit=*/true);
             if (potential > Scalar{0}) {
                 moved = std::max(moved, std::abs(potential - w.guide) / std::max(w.guide, potential));
                 w.guide = potential;

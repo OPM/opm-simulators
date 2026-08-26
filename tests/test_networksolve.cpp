@@ -1977,7 +1977,7 @@ BOOST_AUTO_TEST_CASE(a_limited_well_does_not_break_the_group_total)
         BOOST_CHECK_LE(convert::to(total, sm3d), convert::to(target, sm3d) * 1.001);
         for (int w = 0; w < system.numWells(); ++w) {
             const auto& well = system.wells()[w];
-            const double cap = std::min({system.thpPotential(well, r.node_pressure[well.node]),
+            const double cap = std::min({system.thpPotential(well, r.node_pressure[well.node], /*cap_by_rate_limit=*/true),
                                          NetworkSolve::InjectionSystem<double>::ipr(well, well.bhp_limit),
                                          well.rate_limit});
             BOOST_CHECK_LE(convert::to(r.well_rate[w], sm3d), convert::to(cap, sm3d) * 1.001);
@@ -2015,8 +2015,8 @@ BOOST_AUTO_TEST_CASE(production_network_prototype)
 
     Sys system(props, units);
     system.setTerminalPressure(convert::from(80.0, bars));
-    system.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable});
-    system.addNode(NetworkSolve::Node{"PROD", 0, 3});
+    system.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable}, 0.0);
+    system.addNode(NetworkSolve::Node{"PROD", 0, 3}, 0.0);
 
     // Two producers, water-cut about 0.3, GOR near the table's single value.
     for (const auto& [name, productivity] : std::initializer_list<std::pair<const char*, double>>{
@@ -2086,7 +2086,7 @@ BOOST_AUTO_TEST_CASE(group_equations_match_the_rule_based_allocation)
         std::vector<bool> pooled(n, true);
         for (int w = 0; w < n; ++w) {
             const double p = node_pressure[wells[w].node];
-            cap[w] = std::min({system.thpPotential(wells[w], p), wells[w].rate_limit,
+            cap[w] = std::min({system.thpPotential(wells[w], p, /*cap_by_rate_limit=*/true), wells[w].rate_limit,
                                NetworkSolve::InjectionSystem<double>::ipr(wells[w], wells[w].bhp_limit)});
         }
         double remaining = target;
@@ -2295,7 +2295,7 @@ BOOST_AUTO_TEST_CASE(trace_one_dumped_system)
                 << " [" << system.controlLetter(w) << "]"
                 << "  p_node " << std::setw(7) << p * toBar
                 << "  q "      << std::setw(9) << x[system.qwIdx(w)] * perDay
-                << " | allows: thp " << std::setw(9) << system.thpPotential(well, p) * perDay
+                << " | allows: thp " << std::setw(9) << system.thpPotential(well, p, /*cap_by_rate_limit=*/true) * perDay
                 << "  bhp "          << std::setw(9) << (well.ipr_b * well.bhp_limit - well.ipr_a) * perDay
                 << "  rate "         << std::setw(9) << well.rate_limit * perDay
                 << "  grup "         << std::setw(9) << well.guide * lambda * perDay
@@ -2404,8 +2404,8 @@ public:
     {
         Sys s(props_, units_);
         s.setTerminalPressure(convert::from(80.0, bars));
-        s.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable});
-        s.addNode(NetworkSolve::Node{"PROD", 0, 3});
+        s.addNode(NetworkSolve::Node{"FIELD", -1, NetworkSolve::NoTable}, 0.0);
+        s.addNode(NetworkSolve::Node{"PROD", 0, 3}, 0.0);
         for (const auto& w : wells_) {
             s.addWell(w);
         }

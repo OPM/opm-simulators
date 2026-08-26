@@ -536,7 +536,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     // Nodes, parents before children.
     std::map<std::string, int> index;
     std::vector<std::string> order{root.name()};
-    system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable});
+    system.addNode(NetworkSolve::Node{order.front(), -1, NetworkSolve::NoTable}, Scalar{0});
     index[order.front()] = 0;
     for (std::size_t at = 0; at < order.size(); ++at) {
         for (const auto& branch : network.downtree_branches(order[at])) {
