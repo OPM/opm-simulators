@@ -440,11 +440,7 @@ void populateGroupNode(ProdGroupTreeNode<Scalar>& node,
             }
         }
         if (group.has_control(Group::ProductionCMode::LRAT)) {
-            // Skip degenerate LRAT == ORAT case (no water production): same guard as
-            // GroupStateHelper::checkGroupProductionConstraints.
-            if ((actionAllIsRate || action.liquid == Opm::Group::ExceedAction::RATE)
-                && controls.liquid_target != controls.oil_target)
-            {
+            if ((actionAllIsRate || action.liquid == Opm::Group::ExceedAction::RATE)) {
                 node.Limits[Well::ProducerCMode::LRAT] = controls.liquid_target;
             }
         }
@@ -2232,6 +2228,14 @@ bool runGroupTreeBalancer(BlackoilWellModelGeneric<Scalar, IndexTraits>& wellMod
                           const std::unordered_map<std::string, std::pair<int, Scalar>>& limits,
                           DeferredLogger& logger)
 {
+    // Make early return if limits is empty, which means no wells are active/has positive potentials.
+    if (limits.empty()) {
+        if (wellModel.comm().rank() == 0) {
+            logger.debug("ProdGroupTreeBalancer",
+                "runGroupTreeBalancer: no active wells/no wells with positive potentials, skipping balancing");
+        }
+        return true;
+    }
     OPM_TIMEFUNCTION();
 
     const auto t0 = std::chrono::steady_clock::now();

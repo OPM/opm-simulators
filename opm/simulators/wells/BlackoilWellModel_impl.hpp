@@ -2288,12 +2288,8 @@ namespace Opm {
                 well->estimateStrictestProductionLimitFromPotentials(
                     this->wellState(), this->summaryState(), deferred_logger);
 
-            if (!result.has_value()) {
-                // Well can't operate at the start of this step: don't include.
-                for (int p = 0; p < this->numPhases(); ++p)
-                    ws.surface_rates[p] = Scalar(0);
+            if (!result.has_value())
                 continue;
-            }
 
             localLimits[well->name()] = {static_cast<int>(result->first), result->second};
         }
@@ -2399,9 +2395,6 @@ namespace Opm {
                     this->wellState(), this->summaryState(), deferred_logger);
 
             if (!result.has_value()) {
-                well->stopWell();
-                for (int p = 0; p < this->numPhases(); ++p)
-                    ws.surface_rates[p] = Scalar(0);
                 continue;
             }
 
