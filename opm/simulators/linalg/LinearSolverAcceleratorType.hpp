@@ -52,7 +52,9 @@ toString(LinearSolverAcceleratorType type)
         return "cpu";
     default:
         OPM_THROW(std::runtime_error, "Unknown LinearSolverAcceleratorType");
+#if defined(__CUDACC__)
         __builtin_unreachable();
+#endif
     }
 }
 
@@ -75,7 +77,9 @@ linearSolverAcceleratorTypeFromString(const std::string& str)
         return LinearSolverAcceleratorType::CPU;
     } else {
         OPM_THROW(std::runtime_error, "Unknown LinearSolverAcceleratorType: " + str);
+#if defined(__CUDACC__)
         __builtin_unreachable();
+#endif
     }
 }
 
