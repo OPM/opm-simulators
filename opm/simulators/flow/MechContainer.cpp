@@ -78,9 +78,9 @@ allocate(const std::size_t bufferSize,
 template<class Scalar>
 void MechContainer<Scalar>::
 assignDelStress(const unsigned globalDofIdx,
-                const Dune::FieldVector<Scalar,6>& delStress)
+                const SymmTensor<Scalar>& delStress)
 {
-    this->delstress_.assign(globalDofIdx, VoigtContainer<Scalar>(delStress));
+    this->delstress_.assign(globalDofIdx, delStress);
 }
 
 template<class Scalar>
@@ -96,17 +96,17 @@ assignDisplacement(const unsigned globalDofIdx,
 template<class Scalar>
 void MechContainer<Scalar>::
 assignFracStress(const unsigned globalDofIdx,
-                 const Dune::FieldVector<Scalar,6>& fracStress)
+                 const SymmTensor<Scalar>& fracStress)
 {
-    this->fracstress_.assign(globalDofIdx, VoigtContainer<Scalar>(fracStress));
+    this->fracstress_.assign(globalDofIdx, fracStress);
 }
 
 template<class Scalar>
 void MechContainer<Scalar>::
 assignLinStress(const unsigned globalDofIdx,
-                const Dune::FieldVector<Scalar,6>& linStress)
+                const SymmTensor<Scalar>& linStress)
 {
-    this->linstress_.assign(globalDofIdx, VoigtContainer<Scalar>(linStress));
+    this->linstress_.assign(globalDofIdx, linStress);
 }
 
 template<class Scalar>
@@ -124,17 +124,17 @@ assignPotentialForces(const unsigned globalDofIdx,
 template<class Scalar>
 void MechContainer<Scalar>::
 assignStrain(const unsigned globalDofIdx,
-             const Dune::FieldVector<Scalar,6>& strain)
+             const SymmTensor<Scalar>& strain)
 {
-    this->strain_.assign(globalDofIdx, VoigtContainer<Scalar>(strain));
+    this->strain_.assign(globalDofIdx, strain);
 }
 
 template<class Scalar>
 void MechContainer<Scalar>::
 assignStress(const unsigned globalDofIdx,
-             const Dune::FieldVector<Scalar,6>& stress)
+             const SymmTensor<Scalar>& stress)
 {
-    this->stress_.assign(globalDofIdx, VoigtContainer<Scalar>(stress));
+    this->stress_.assign(globalDofIdx, stress);
 }
 
 template<class Scalar>

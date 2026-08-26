@@ -28,6 +28,8 @@
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/fvector.hh>
 
+#include <opm/common/utility/SymmTensor.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/models/io/baseoutputmodule.hh>
@@ -64,7 +66,7 @@ class VtkTpsaModule : public BaseOutputModule<TypeTag>
     using VectorBuffer = typename ParentType::VectorBuffer;
     using TensorBuffer = typename ParentType::TensorBuffer;
 
-    using SymTensor = Dune::FieldVector<Scalar, 6>;
+    using SymTensor = SymmTensor<Scalar>;
     using Tensor = Dune::DynamicMatrix<Scalar>;
 
 public:
@@ -279,14 +281,15 @@ private:
     static void setTensorFromVoigt_(Tensor& tensor, const SymTensor& symTensor)
     {
         // Diagonal terms
+        constexpr auto& ind = SymTensor::diag_indices;
         for (std::size_t i = 0; i < 3; ++i) {
-            tensor[i][i] = symTensor[i];
+            tensor[i][i] = symTensor[ind[i]];
         }
 
         // Off-diagonal terms
-        tensor[0][1] = symTensor[5];
-        tensor[0][2] = symTensor[4];
-        tensor[1][2] = symTensor[3];
+        tensor[0][1] = symTensor[VoigtIndex::XY];
+        tensor[0][2] = symTensor[VoigtIndex::XZ];
+        tensor[1][2] = symTensor[VoigtIndex::YZ];
         for (std::size_t i = 0; i < 3; ++i) {
             for (std::size_t j = 0; j < 3; ++j) {
                 if (i > j) {

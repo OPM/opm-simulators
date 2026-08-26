@@ -242,6 +242,17 @@ private:
     ///   activated slaves and gates the master's own iteration.
     bool masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const;
 
+    /// \brief Slave-side: true iff this slave's own deck put the named group
+    ///   into its own surface network as a fixed-pressure node.
+    ///
+    /// This is the condition under which a master-supplied node pressure may
+    /// be imposed on the group at all: the pressure is the fixed pressure of
+    /// the slave group's node in the *slave's* network, so the deck must have
+    /// declared such a node (GRUPNET item 2, or NODEPROP item 2 for an
+    /// extended network).  A slave that declares no network keeps its wells
+    /// on their WCONPROD THP limits.
+    bool slaveGroupIsFixedPressureNodeInOwnNetwork_(const std::string& group_name) const;
+
     BlackoilWellModel<TypeTag>& well_model_;
     BlackoilWellModelNetwork<TypeTag>& network_;
     Simulator& simulator_;

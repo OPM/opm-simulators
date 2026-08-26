@@ -21,14 +21,43 @@ add_test_compareECLFiles(
     spe1
 )
 
-add_test_compareECLFiles(CASENAME 1dcompositional
-                         FILENAME 1D_COMP
-                         SIMULATOR flowexp_comp
-                         DEV_SIMULATOR flowexp_comp3_2p
-                         REFERENCE_SIMULATOR flowexp_comp
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR compositional)
+add_test_compareECLFiles(
+  CASENAME
+    1dcompositional_flowexp_comp
+  FILENAME
+    1D_COMP
+  SIMULATOR
+    flowexp_comp
+  DEV_SIMULATOR
+    flowexp_comp3_2p
+  REFERENCE_SIMULATOR
+    flowexp_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    1dcompositional
+  FILENAME
+    1D_COMP
+  SIMULATOR
+    flow_comp
+  DEV_SIMULATOR
+    flow_comp3_2p
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional
+)
 
 add_test_compareECLFiles(
   CASENAME
@@ -1046,6 +1075,25 @@ add_test_compareECLFiles(
     flow
   DEV_SIMULATOR
     flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wecon_wtest
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wecon_item_14
+  FILENAME
+    WECON-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
   ABS_TOL
     ${abs_tol}
   REL_TOL
@@ -2754,6 +2802,25 @@ add_test_compareECLFiles(
     ${rel_tol}
   DIR
     cecon
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wconprod_13
+  FILENAME
+    WCONPROD-13
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wconprod
   TEST_ARGS
     --enable-tuning=true
 )

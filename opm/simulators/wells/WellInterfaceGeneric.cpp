@@ -346,14 +346,16 @@ updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                     WellTestState& wellTestState,
                     const UnitSystem& unit_system,
                     const std::time_t start_time,
-                    DeferredLogger& deferred_logger) const
+                    DeferredLogger& deferred_logger,
+                    std::string* closure_reason) const
 {
     const WellTest<Scalar, IndexTraits> well_test(*this);
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
         well_test.updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog,
                                               during_well_test, wellTestState,
-                                              zero_group_target, unit_system, start_time, deferred_logger);
+                                              zero_group_target, unit_system, start_time,
+                                              deferred_logger, closure_reason);
         well_test.updateWellTestStateCECON(ws, simulationTime, writeMessageToOPMLog, wellTestState,
                                            unit_system, start_time, deferred_logger);
     } else {

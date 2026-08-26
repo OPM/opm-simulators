@@ -135,7 +135,13 @@ public:
 
             Evaluation sumz = 0.0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                z[compIdx] = max(z[compIdx], 1e-8);
+                // Clamp only the value; preserve derivatives. Replacing the Evaluation with
+                // max() when the bound applies removes composition derivatives from a
+                // vanished component's conservation equation and makes the cell Jacobian
+                // block singular.
+                if (z[compIdx] < 1e-8) {
+                    z[compIdx].setValue(1e-8);
+                }
                 sumz += z[compIdx];
             }
             z /= sumz;

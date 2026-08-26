@@ -632,7 +632,7 @@ namespace Opm
                         unit_system.name(UnitSystem::measure::time),
                         economicLimitDateString(start_time, simulation_time));
 
-        deferred_logger.info(fmt::format(" well {} is being tested {}", this->name(), when));
+        deferred_logger.info(fmt::format("Well {} is being tested {}.", this->name(), when));
 
         GroupStateHelperType groupStateHelper_copy = groupStateHelper;
         WellStateType well_state_copy = well_state;
@@ -670,6 +670,21 @@ namespace Opm
         }
 
         WellTestState welltest_state_temp;
+        // Why a limit closed the well again. Empty when there is no reason to give.
+        std::string closure_reason;
+
+        // The test can fail to re-open the well at several points below, and they
+        // all report it through here. The outcome goes to the PRT; the reason only
+        // to the debug log, because a shut well is re-tested at every interval and
+        // this message recurs for as long as it stays shut.
+        auto notReopened = [this, &when, &deferred_logger](const std::string_view reason)
+        {
+            deferred_logger.info(
+                fmt::format("Well {} is not re-opened {}.", this->name(), when));
+            if (!reason.empty()) {
+                deferred_logger.debug(fmt::format("Because {}.", reason));
+            }
+        };
 
         bool testWell = true;
         // if a well is closed because all completions are closed, we need to check each completion
@@ -679,26 +694,21 @@ namespace Opm
             const std::size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
             bool converged = solveWellForTesting(simulator, groupStateHelper_copy, well_state_copy);
             if (!converged) {
-                const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
-                deferred_logger.debug(msg);
+                notReopened("the well equations could not be solved");
                 return;
             }
 
 
             updateWellOperability(simulator, well_state_copy, groupStateHelper_copy);
             if ( !this->isOperableAndSolvable() ) {
-                const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
-                deferred_logger.debug(msg);
+                notReopened("the well is not operable");
                 return;
             }
             std::vector<Scalar> potentials;
             try {
                 computeWellPotentials(simulator, well_state_copy, groupStateHelper_copy, potentials);
             } catch (const std::exception& e) {
-                const std::string msg = fmt::format("well {}: computeWellPotentials() "
-                                                    "failed during testing for re-opening: ",
-                                                    this->name(), e.what());
-                deferred_logger.info(msg);
+                notReopened(fmt::format("computing the well potentials failed: {}", e.what()));
                 return;
             }
             const int np = well_state_copy.numPhases();
@@ -714,7 +724,8 @@ namespace Opm
                                       welltest_state_temp,
                                       simulator.vanguard().eclState().getUnits(),
                                       simulator.vanguard().schedule().getStartTime(),
-                                      deferred_logger);
+                                      deferred_logger,
+                                      &closure_reason);
             this->closeCompletions(welltest_state_temp);
 
             // Stop testing if the well is closed or shut due to all completions shut
@@ -731,8 +742,10 @@ namespace Opm
         if (!welltest_state_temp.well_is_closed(this->name())) {
             well_test_state.open_well(this->name());
 
+            const std::string& sep = economicLimitMessageSeparator();
             deferred_logger.info(
-                fmt::format("well {} is re-opened {}", this->name(), when));
+                fmt::format("{}\nWell {} is re-opened {}.\n{}",
+                            sep, this->name(), when, sep));
 
             // also reopen completions
             for (const auto& completion : this->well_ecl_.getCompletions()) {
@@ -741,6 +754,10 @@ namespace Opm
             }
             well_state = well_state_copy;
             open_times.try_emplace(this->name(), well_test_state.lastTestTime(this->name()));
+        }
+        else {
+            // A limit closed the well again: discard the tested state, stay shut.
+            notReopened(closure_reason);
         }
     }
 

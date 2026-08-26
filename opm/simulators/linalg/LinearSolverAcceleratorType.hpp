@@ -52,6 +52,7 @@ toString(LinearSolverAcceleratorType type)
         return "cpu";
     default:
         OPM_THROW(std::runtime_error, "Unknown LinearSolverAcceleratorType");
+        __builtin_unreachable();
     }
 }
 
@@ -74,6 +75,7 @@ linearSolverAcceleratorTypeFromString(const std::string& str)
         return LinearSolverAcceleratorType::CPU;
     } else {
         OPM_THROW(std::runtime_error, "Unknown LinearSolverAcceleratorType: " + str);
+        __builtin_unreachable();
     }
 }
 

@@ -38,12 +38,13 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
-
+#include <cstddef>
 #include <map>
 #include <vector>
 
 namespace Opm {
 
+class RegionVariableCollection;
 class Schedule;
 struct NewtonIterationContext;
 
@@ -125,6 +126,11 @@ public:
     [[nodiscard]] WellTestState wellTestState() const {
          return WellTestState{};
     }
+
+    void reportIntervalConnectionOilProduction([[maybe_unused]] const double              dt,
+                                               [[maybe_unused]] const std::size_t         conn_opt_ix,
+                                               [[maybe_unused]] RegionVariableCollection& regVars) const
+    {}
 
     // using the solution x to recover the solution xw for wells and applying
     // xw to update Well State
