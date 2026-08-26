@@ -29,9 +29,16 @@
 
 namespace Opm {
 
-/// Per-node update of the applied network pressure towards the fixed point of
+/// Drives one network node's pressure towards the fixed point of
 /// r(P) = P_computed(P) - P, where P_computed is the pressure the network gives for
 /// the rates the wells produce/inject with P applied as their THP.
+///
+/// One of these per node, held by the caller in a map and stepped once per node per
+/// network sub-iteration: that is what "per-node" means here. Each node keeps its own
+/// bracket and moves on its own evidence, which is also the limitation -- the nodes
+/// are coupled through the wells below them, so a node's r changes when a sibling
+/// moves, and a bracket end has to be dropped when the new evidence contradicts it
+/// (below). Solving every node at once instead is what NetworkSolve::solve() does.
 ///
 /// The well response makes r a decreasing but strongly nonlinear function of P: flat
 /// while the wells are on group/rate control (r' = -1) and steep while they are on
