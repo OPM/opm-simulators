@@ -270,13 +270,23 @@ private:
         std::optional<WaterPressFunc> waterPressure;
     };
 
+    /// The composition-versus-depth tables are clamped outside their range
+    /// rather than extrapolated: a table states the composition where it was
+    /// measured, and continuing its slope beyond that invents a fluid.
+    static Scalar evalClamped(const TabulatedFunction& f, const Scalar depth)
+    {
+        const Scalar lo = f.xMin();
+        const Scalar hi = f.xMax();
+        return f.eval(std::clamp(depth, lo, hi), /*extrapolate=*/true);
+    }
+
     /// The vapour-zone composition of a two-zone COMPVD region.
     static CompVec vaporComposition(const Region& reg, const Scalar depth)
     {
         CompVec z{};
         Scalar sum = 0.0;
         for (int c = 0; c < numComponents; ++c) {
-            z[c] = std::max(Scalar{0}, reg.vaporVdTable[c].eval(depth, /*extrapolate=*/true));
+            z[c] = std::max(Scalar{0}, evalClamped(reg.vaporVdTable[c], depth));
             sum += z[c];
         }
         if (!(sum > 0.0)) {
@@ -292,7 +302,7 @@ private:
         CompVec z{};
         Scalar sum = 0.0;
         for (int c = 0; c < numComponents; ++c) {
-            z[c] = std::max(Scalar{0}, reg.zmfVdTable[c].eval(depth, /*extrapolate=*/true));
+            z[c] = std::max(Scalar{0}, evalClamped(reg.zmfVdTable[c], depth));
             sum += z[c];
         }
         if (!(sum > 0.0)) {
