@@ -1055,8 +1055,7 @@ updatePressures(const int reportStepIdx,
                                             *well_model_.getVFPProperties().getInj(),
                                             well_model_.schedule().getUnits(),
                                             reportStepIdx,
-                                            well_model_.comm(),
-                                            *injection_phase);
+                                            well_model_.comm());
             if (this->newton_solver_) {
                 // Solved simultaneously, the node pressures are already the fixed
                 // point, so the relaxation below sees no imbalance and stops. The
@@ -1383,8 +1382,7 @@ computePressures(const Network::ExtNetwork& network,
                  const VFPInjProperties<Scalar>& vfp_inj_props,
                  const UnitSystem& unit_system,
                  const int reportStepIdx,
-                 const Parallel::Communication& comm,
-                 const Phase injectionPhase) const
+                 const Parallel::Communication& comm) const
 {
     OPM_TIMEFUNCTION();
     if (!network.active()) {
@@ -1394,7 +1392,7 @@ computePressures(const Network::ExtNetwork& network,
     NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
                                VFPInjProperties<Scalar>>
         network_pressure_computation(
-            well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm, injectionPhase);
+            well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm);
 
     auto [node_pressures, branch_data] = network_pressure_computation.run();
     return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};

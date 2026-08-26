@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     auto unit_system = UnitSystem {};
     // Test using mock setup.
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(463.483, bars);
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::WATER);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(150.488, bars);
@@ -426,7 +426,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_rate_beyond_flow_axis)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     // Clamped to the axis end the table gives 0.0 -> no solution: the node is flagged and the
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_zero_cell_region)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     BOOST_CHECK(pressures.at("G1") >= unit::atm);
@@ -466,7 +466,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_thp_below_axis)
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
     NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
-        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm, Phase::GAS);
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
     const auto [pressures, branch_data] = comp.run();
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(68.834, bars), 1e-7);

@@ -262,8 +262,7 @@ protected:
                      const VFPInjProperties<Scalar>& vfp_inj_props,
                      const UnitSystem& unit_system,
                      const int reportStepIdx,
-                     const Parallel::Communication& comm,
-                     const Phase injectionPhase) const;
+                     const Parallel::Communication& comm) const;
 
     void updateActiveStateImpl(const Network::ExtNetwork& network);
 

@@ -109,8 +109,7 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
 
     template <class GroupState>
     static bool hasLeafNodeRate(const GroupState& group_state,
-                                const std::string& node,
-                                const std::optional<Phase>&)
+                                const std::string& node)
     {
         return group_state.has_network_leaf_node_production_rates(node);
     }
@@ -118,8 +117,7 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
     template <class GroupState>
     static const std::vector<Scalar>
     leafNodeRate(const GroupState& group_state,
-                 const std::string& node,
-                 const std::optional<Phase>&)
+                 const std::string& node)
     {
         return group_state.network_leaf_node_production_rates(node);
     }
@@ -166,8 +164,7 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
 
     template <class GroupState>
     static bool hasLeafNodeRate(const GroupState& group_state,
-                                const std::string& node,
-                                const std::optional<Phase>&)
+                                const std::string& node)
     {
         return group_state.has_network_leaf_node_injection_rates(node);
     }
@@ -175,8 +172,7 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     template <class GroupState>
     static const std::vector<Scalar>
     leafNodeRate(const GroupState& group_state,
-                 const std::string& node,
-                 const std::optional<Phase>&)
+                 const std::string& node)
     {
         return group_state.network_leaf_node_injection_rates(node);
     }
@@ -213,15 +209,13 @@ public:
                                const VfpProperties& vfp_props,
                                const UnitSystem& unit_system,
                                const int report_step_idx,
-                               const Communication& comm,
-                               const std::optional<Phase>& injection_phase = std::nullopt)
+                               const Communication& comm)
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
         , unit_system_(unit_system)
         , report_step_idx_(report_step_idx)
         , comm_(comm)
-        , injection_phase_(injection_phase)
     {
     }
 
@@ -312,14 +306,13 @@ private:
             // rate map rather than the production rate map (which is always empty for
             // pure injection groups, causing zero-rate pressure calculations).
             using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
-            if (!Calc::hasLeafNodeRate(well_model_.groupStateHelper().groupState(), node, injection_phase_)) {
+            if (!Calc::hasLeafNodeRate(well_model_.groupStateHelper().groupState(), node)) {
                 node_inflows[node] = zero_rates;
                 continue;
             }
 
             node_inflows[node] = Calc::leafNodeRate(well_model_.groupStateHelper().groupState(),
-                                                    node,
-                                                    injection_phase_);
+                                                    node);
             if (network_.node(node).add_gas_lift_gas()) {
                 addGasLiftGas(node, node_inflows[node]);
             }
@@ -484,7 +477,6 @@ private:
     const UnitSystem& unit_system_;
     const int report_step_idx_;
     const Communication& comm_;
-    const std::optional<Phase> injection_phase_;
     std::map<std::string, Scalar> node_pressures_;
     std::map<std::string, data::BranchData> branch_data_;
     std::set<std::string> invalid_nodes_;
