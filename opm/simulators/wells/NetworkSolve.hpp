@@ -106,6 +106,55 @@ public:
 private:
     Dune::DynamicMatrix<Scalar> a_;
 };
+/// What solve() needs of a network system. InjectionSystem and ProductionSystem
+/// implement it; what a rate is -- one number or three phases -- stays inside the
+/// implementation and never reaches the solver.
+template<class Scalar>
+class SystemBase
+{
+public:
+    using State = std::vector<Scalar>;
+    using ScalarType = Scalar;
+
+    virtual ~SystemBase() = default;
+
+    virtual int size() const = 0;
+    virtual int numWells() const = 0;
+    /// Magnitude of unknown i, for sizing a difference and scaling a residual.
+    virtual Scalar columnScale(const int i) const = 0;
+
+    /// The whole unknown vector to start from, given a guess at the node pressures.
+    virtual State start(const State& node_pressure) const = 0;
+    virtual State residual(const State& x) const = 0;
+    virtual DenseMatrix<Scalar> jacobian(const State& x) const = 0;
+    /// False when jacobian() is not assembled from the table derivatives, and the
+    /// solver should difference the residual instead.
+    virtual bool usesAnalyticJacobian() const = 0;
+
+    /// Pick each well's control from the iterate; true if any of them moved.
+    virtual bool updateControls(const State& x) = 0;
+    /// One letter per well, so a cycling active set can be read off the trace.
+    virtual char controlLetter(const int w) const = 0;
+
+    /// Shorten a Newton step so it stays where the tables are defined.
+    virtual State limitStep(const State& x, const State& dx) const = 0;
+
+    virtual State pressures(const State& x) const = 0;
+    virtual State wellRates(const State& x) const = 0;
+
+    /// Only an injection network places a group's split itself, and only it parks a
+    /// well above its own rate limit while the solve is still moving. The defaults
+    /// are what a system that does neither wants.
+    virtual Scalar refreshGuides(const State&) { return Scalar{0}; }
+    virtual void setEnforceRateLimits(const bool) {}
+    virtual bool rateLimitsViolated(const State&) const { return false; }
+
+    /// A production solve reports each well's phase split and bhp; an injection one
+    /// has a single rate per well and leaves these empty.
+    virtual std::vector<std::array<Scalar, 3>> wellPhaseRates(const State&) const { return {}; }
+    virtual State wellBhps(const State&) const { return {}; }
+};
+
 /// Divide a group target by guide rate, take out the wells whose own limits keep
 /// them below their share, and re-divide the rest among those that can take it.
 /// A well that is out gets no share at all, so its own control binds.
@@ -211,28 +260,6 @@ struct LineSearch
     }
 };
 
-/// Ask a system whether it assembles its own Jacobian, without requiring that
-/// every system knows how.
-template<class Sys>
-bool systemUsesAnalytic(const Sys& system)
-{
-    if constexpr (requires { system.usesAnalyticJacobian(); }) {
-        return system.usesAnalyticJacobian();
-    } else {
-        return false;
-    }
-}
-
-template<class Sys, class State>
-auto systemJacobian(const Sys& system, const State& x)
-{
-    if constexpr (requires { system.jacobian(x); }) {
-        return system.jacobian(x);
-    } else {
-        return DenseMatrix<typename Sys::ScalarType>(system.size());
-    }
-}
-
 /// Convergence settings for solve(). No defaults: a caller states what it wants.
 template<class Scalar>
 struct Parameters
@@ -276,9 +303,7 @@ solve(Sys& system,
     // set cycles between group and thp control. Making it implicit (the share an
     // unknown of the system) or iterating it to a fixed point in an outer loop
     // are the ways past that; both are open.
-    if constexpr (requires { system.refreshGuides(x); }) {
-        system.refreshGuides(x);
-    }
+    system.refreshGuides(x);
 
     int switches = 0;
     bool enforcing = false;
@@ -311,27 +336,23 @@ solve(Sys& system,
             // it up. The `enforcing` flag below is what keeps this to one pass,
             // so a well that is still over the line afterwards converges as it
             // is rather than dropping the cap again.
-            if constexpr (requires { system.setEnforceRateLimits(true); }) {
-                if (!enforcing && system.rateLimitsViolated(x)) {
-                    system.setEnforceRateLimits(true);
-                    enforcing = true;
-                    continue;
-                }
+            if (!enforcing && system.rateLimitsViolated(x)) {
+                system.setEnforceRateLimits(true);
+                enforcing = true;
+                continue;
             }
             Result<Scalar> done{true, it, system.pressures(x), system.wellRates(x), worst,
                                 false, false, {}, switches};
-            if constexpr (requires { system.wellPhaseRates(x); system.wellBhps(x); }) {
-                done.well_phase_rates = system.wellPhaseRates(x);
-                done.well_bhp = system.wellBhps(x);
-            }
+            done.well_phase_rates = system.wellPhaseRates(x);
+            done.well_bhp = system.wellBhps(x);
             return done;
         }
         last = {false, it, {}, {}, worst, controls_moved, false, joined(), switches};
 
         // A system that can hand over an assembled Jacobian does; the rest are
         // differenced. The production prototype has no analytic one yet.
-        DenseMatrix<Scalar> J = systemUsesAnalytic(system)
-            ? systemJacobian(system, x)
+        DenseMatrix<Scalar> J = system.usesAnalyticJacobian()
+            ? system.jacobian(x)
             : [&] {
                   DenseMatrix<Scalar> fd(n);
                   for (int j = 0; j < n; ++j) {

@@ -102,7 +102,7 @@ enum class Control { Thp, Bhp, Rate, Grup };
 /// group total. The counterpart for a production network is ProductionSystem;
 /// the two differ in what a rate is -- one number here, three phases there.
 template<class Scalar>
-class InjectionSystem
+class InjectionSystem : public SystemBase<Scalar>
 {
 public:
     using State = std::vector<Scalar>;
@@ -170,7 +170,7 @@ public:
     }
 
     int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
-    int numWells() const { return static_cast<int>(wells_.size()); }
+    int numWells() const override { return static_cast<int>(wells_.size()); }
     bool grouped() const { return group_target_ > 0.0; }
 
     std::vector<Scalar> guides() const
@@ -188,7 +188,7 @@ public:
                        [](const auto& w) { return static_cast<char>(w.in_group); });
         return in;
     }
-    int size() const { return 2 * numNodes() + 2 * numWells() + (grouped() ? 1 : 0); }
+    int size() const override { return 2 * numNodes() + 2 * numWells() + (grouped() ? 1 : 0); }
 
     Phase phase() const { return phase_; }
     Scalar terminalPressure() const { return terminal_pressure_; }
@@ -198,7 +198,7 @@ public:
     Control control(const int w) const { return controls_[w]; }
 
     /// One letter for the trace a failed solve reports.
-    char controlLetter(const int w) const
+    char controlLetter(const int w) const override
     {
         switch (controls_[w]) {
         case Control::Thp:  return 'T';
@@ -340,10 +340,10 @@ public:
     /// Stop capping thp's allowance with each well's rate limit, so a well whose
     /// tubing would carry more than it is allowed goes on rate control. Only
     /// safe from a converged iterate -- see thpPotential().
-    void setEnforceRateLimits(const bool on) { enforce_rate_limits_ = on; }
+    void setEnforceRateLimits(const bool on) override { enforce_rate_limits_ = on; }
 
     /// Any well come to rest above its own rate limit.
-    bool rateLimitsViolated(const State& x) const
+    bool rateLimitsViolated(const State& x) const override
     {
         for (int w = 0; w < numWells(); ++w) {
             if (wells_[w].rate_limit > Scalar{0}
@@ -362,7 +362,7 @@ public:
 
     /// Recompute the guides from the current iterate. Returns the largest
     /// relative change, so the caller can tell when they have settled.
-    Scalar refreshGuides(const State& x)
+    Scalar refreshGuides(const State& x) override
     {
         if (!guides_from_potential_ || !grouped()) {
             return Scalar{0};
@@ -383,7 +383,7 @@ public:
     /// the interpolation runs away, so this is the edge of the feasible set.
     Scalar maxFlow(const int table) const { return props_->getTable(table).getFloAxis().back(); }
 
-    State residual(const State& x) const
+    State residual(const State& x) const override
     {
         const int nodes = numNodes();
         const int wells = numWells();
@@ -473,7 +473,7 @@ public:
     /// makes the active set chatter and the Newton never terminates. Returns
     /// true if anything moved -- converging with a control still moving is not
     /// converged.
-    bool updateControls(const State& x)
+    bool updateControls(const State& x) override
     {
         const int n = numWells();
 
@@ -529,7 +529,7 @@ public:
     }
 
     /// A starting point derived from a guess at every node's pressure.
-    State start(const State& node_pressure) const
+    State start(const State& node_pressure) const override
     {
         State x(size(), 0.0);
         std::vector<Scalar> well_rate(numWells());
@@ -567,7 +567,7 @@ public:
     }
 
     /// Rate of every well, in the order they were added.
-    State wellRates(const State& x) const
+    State wellRates(const State& x) const override
     {
         State q(wells_.size());
         for (int w = 0; w < numWells(); ++w) {
@@ -577,7 +577,7 @@ public:
     }
 
     /// Pressure at every node, terminal included.
-    State pressures(const State& x) const
+    State pressures(const State& x) const override
     {
         State p(nodes_.size(), terminal_pressure_);
         for (int n = 1; n <= numNodes(); ++n) {
@@ -588,7 +588,7 @@ public:
 
     /// Natural magnitude of unknown i, so one step cap or trust radius can apply
     /// to a vector holding both pressures and rates.
-    Scalar columnScale(const int i) const
+    Scalar columnScale(const int i) const override
     {
         const bool is_pressure = (i < numNodes()) || (i >= bhpIdx(0) && i < lambdaIdx());
         return is_pressure ? pressure_scale_ : rate_scale_;
@@ -599,7 +599,7 @@ public:
     /// binding rate should not throttle the pressure updates too. Only the
     /// branch flows: a well's own rate limit already has a control equation, and
     /// bounding it would stop that control ever activating.
-    State limitStep(const State& x, const State& dx) const
+    State limitStep(const State& x, const State& dx) const override
     {
         State limited = dx;
         for (int n = 1; n <= numNodes(); ++n) {
@@ -625,7 +625,7 @@ public:
     /// the residual. Everything but the two branch/tubing lookups is constant,
     /// so this is n+1 residual evaluations replaced by one pass.
     void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
-    bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+    bool usesAnalyticJacobian() const override { return analytic_jacobian_; }
 
 
     /// Take a well's group share from the iterate's multiplier instead of
@@ -634,7 +634,7 @@ public:
     void setGroupShareFromMultiplier(const bool on) { share_from_multiplier_ = on; }
 
     /// The Jacobian of residual() at x, entry by entry.
-    DenseMatrix<Scalar> jacobian(const State& x) const
+    DenseMatrix<Scalar> jacobian(const State& x) const override
     {
         const int nodes = numNodes();
         const int wells = numWells();

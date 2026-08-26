@@ -63,7 +63,7 @@ namespace Opm::NetworkSolve {
 // targets are not handled, and re-routing (BRANPROP changing the tree) is not
 // modelled -- the tree is taken as given.
 template<class Scalar>
-class ProductionSystem
+class ProductionSystem : public SystemBase<Scalar>
 {
 public:
     using State = std::vector<Scalar>;
@@ -305,14 +305,14 @@ public:
     }
 
     int numNodes() const { return static_cast<int>(nodes_.size()) - 1; }
-    int numWells() const { return static_cast<int>(wells_.size()); }
-    int size() const { return 4 * numNodes() + 4 * numWells() + 1; }
+    int numWells() const override { return static_cast<int>(wells_.size()); }
+    int size() const override { return 4 * numNodes() + 4 * numWells() + 1; }
 
     const std::vector<Node>& nodes() const { return nodes_; }
     const std::vector<Well>& wells() const { return wells_; }
     Control control(const int w) const { return controls_[w]; }
 
-    char controlLetter(const int w) const
+    char controlLetter(const int w) const override
     {
         switch (controls_[w]) {
         case Control::Thp:     return 'T';
@@ -463,7 +463,7 @@ public:
         return in;
     }
 
-    State residual(const State& x) const
+    State residual(const State& x) const override
     {
         const int nodes = numNodes();
         const int wells = numWells();
@@ -604,7 +604,7 @@ public:
     /// Nothing here reads the iterate's rates, bhp or multiplier: mid-Newton
     /// those are not a consistent well state, on rate control q *is* the limit,
     /// and the multiplier is defined by the very active set being chosen here.
-    bool updateControls(const State& x)
+    bool updateControls(const State& x) override
     {
         const int n = numWells();
         constexpr Scalar unbounded = std::numeric_limits<Scalar>::max();
@@ -772,7 +772,7 @@ public:
         return changed;
     }
 
-    State start(const State& node_pressure) const
+    State start(const State& node_pressure) const override
     {
         State x(size(), 0.0);
         for (int n = 1; n <= numNodes(); ++n) {
@@ -833,7 +833,7 @@ public:
         return x;
     }
 
-    State pressures(const State& x) const
+    State pressures(const State& x) const override
     {
         State p(nodes_.size(), terminal_pressure_);
         for (int n = 1; n <= numNodes(); ++n) {
@@ -843,7 +843,7 @@ public:
     }
 
     /// Every phase of every well, and every well's bhp, at a state.
-    std::vector<std::array<Scalar, NP>> wellPhaseRates(const State& x) const
+    std::vector<std::array<Scalar, NP>> wellPhaseRates(const State& x) const override
     {
         std::vector<std::array<Scalar, NP>> q(wells_.size());
         for (int w = 0; w < numWells(); ++w) {
@@ -853,7 +853,7 @@ public:
         }
         return q;
     }
-    State wellBhps(const State& x) const
+    State wellBhps(const State& x) const override
     {
         State b(wells_.size());
         for (int w = 0; w < numWells(); ++w) {
@@ -918,7 +918,7 @@ public:
     }
 
     /// Oil rate per well, which is what a caller usually wants back.
-    State wellRates(const State& x) const
+    State wellRates(const State& x) const override
     {
         State q(wells_.size());
         for (int w = 0; w < numWells(); ++w) {
@@ -927,7 +927,7 @@ public:
         return q;
     }
 
-    Scalar columnScale(const int i) const
+    Scalar columnScale(const int i) const override
     {
         const bool is_pressure = (i < numNodes())
                               || (i >= bhpIdx(0) && i < lambdaIdx());
@@ -940,7 +940,7 @@ public:
     /// enough in the pressures to do without; the complementarity row is not,
     /// and its first full step from a poor start ran a choke node to minus
     /// three thousand bar.
-    State limitStep(const State& x, const State& dx) const
+    State limitStep(const State& x, const State& dx) const override
     {
         Scalar alpha = Scalar{1};
         const Scalar floor = unit::atm;
@@ -1039,7 +1039,7 @@ public:
     }
 
     void setAnalyticJacobian(const bool on) { analytic_jacobian_ = on; }
-    bool usesAnalyticJacobian() const { return analytic_jacobian_; }
+    bool usesAnalyticJacobian() const override { return analytic_jacobian_; }
 
     /// Close every well that has its own limits to choose between with one
     /// complementarity row instead of an active set: of the rate slack
@@ -1090,7 +1090,7 @@ public:
         return out;
     }
 
-    DenseMatrix<Scalar> jacobian(const State& x) const
+    DenseMatrix<Scalar> jacobian(const State& x) const override
     {
         const int nodes = numNodes();
         const int wells = numWells();
