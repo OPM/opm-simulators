@@ -66,6 +66,7 @@ public:
     //! \param unit_system Unit system to use
     //! \param start_time Starting time
     //! \param deferred_logger Deferred logging helper
+    //! \param closure_reason If given, reason for closure is stored here
     void updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
