@@ -180,6 +180,12 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
     GuideRate::RateVector production_rates = this->groupStateHelper_.getProductionGroupRateVector(group_name);
+    // Correct the sum for wells that have not been solved yet; see
+    // unsolvedNewWellProductionRates_().
+    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/false);
+    production_rates.oil_rat -= unsolved[ReservoirCoupling::Phase::Oil];
+    production_rates.gas_rat -= unsolved[ReservoirCoupling::Phase::Gas];
+    production_rates.wat_rat -= unsolved[ReservoirCoupling::Phase::Water];
     // NOTE: GuideRate::RateVector is a vector of doubles, so we need to convert it to Scalar
     // TODO: Fix GuideRate::RateVector to be a vector of Scalars instead of doubles
     return ProductionRates{production_rates};
@@ -222,10 +228,14 @@ collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const
     oil_rate = this->comm().sum(oil_rate);
     gas_rate = this->comm().sum(gas_rate);
     water_rate = this->comm().sum(water_rate);
+    // Correct the sums for wells that have not been solved yet; see
+    // unsolvedNewWellProductionRates_().  The master uses these rates as the
+    // flow of its network's leaf nodes.
+    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/true);
     ProductionRates network_rates;
-    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
-    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
-    network_rates[ReservoirCoupling::Phase::Water] = water_rate;
+    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate - unsolved[ReservoirCoupling::Phase::Oil];
+    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate - unsolved[ReservoirCoupling::Phase::Gas];
+    network_rates[ReservoirCoupling::Phase::Water] = water_rate - unsolved[ReservoirCoupling::Phase::Water];
     return network_rates;
 }
 
@@ -380,6 +390,54 @@ sendSlaveGroupInjectionDataToMaster_() const
         injection_data.emplace_back(this->collectSlaveGroupInjectionData_(group_idx));
     }
     rescoup_slave.sendInjectionDataToMaster(injection_data);
+}
+
+// A well that opens in this report step is put on its WCONPROD target by
+// updateWellStateWithTarget() before the sync step's well solve runs, so on the
+// send that precedes that solve the well state holds a target, not a solved
+// rate.  Shipping it to the master would report a target as achieved
+// production: the master folds the slave group rates into the field's
+// reinjection base, so a multi-million sm3/day gas target arriving that way
+// inflates the reinjection target and pushes the injectors onto their own rate
+// limits.  Leave such a well out of the sums until it has been solved; from the
+// post-solve send onwards its real rates are included.
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+unsolvedNewWellProductionRates_(const std::string& group_name, bool network) const
+{
+    ProductionRates rates;
+    if (this->reservoir_coupling_slave_.wellsSolvedThisSyncStep()) {
+        return rates;
+    }
+    const auto report_step = this->groupStateHelper_.reportStepIdx();
+    const auto& schedule = this->groupStateHelper_.schedule();
+    const auto& group = schedule.getGroup(group_name, report_step);
+    const auto& events = schedule[report_step].wellgroup_events();
+    // Mirror sumWellPhaseRates(): a slave group may hold no wells of its own, so
+    // descend into child groups, applying each child's efficiency factor.
+    for (const auto& child_name : group.groups()) {
+        const auto& child = schedule.getGroup(child_name, report_step);
+        const auto child_rates = this->unsolvedNewWellProductionRates_(child_name, network);
+        const auto gefac = child.getGroupEfficiencyFactor(network);
+        for (const auto phase : {ReservoirCoupling::Phase::Oil,
+                                 ReservoirCoupling::Phase::Gas,
+                                 ReservoirCoupling::Phase::Water}) {
+            rates[phase] += gefac * child_rates[phase];
+        }
+    }
+    for (const auto& wname : group.wells()) {
+        if (!events.hasEvent(wname, ScheduleEvents::NEW_WELL)) {
+            continue;
+        }
+        const auto& well = schedule.getWell(wname, report_step);
+        const auto efficiency = well.getEfficiencyFactor(network);
+        const auto well_rates = this->groupStateHelper_.getWellRateVector(wname);
+        rates[ReservoirCoupling::Phase::Oil] += efficiency * well_rates.oil_rat;
+        rates[ReservoirCoupling::Phase::Gas] += efficiency * well_rates.gas_rat;
+        rates[ReservoirCoupling::Phase::Water] += efficiency * well_rates.wat_rat;
+    }
+    return rates;
 }
 
 

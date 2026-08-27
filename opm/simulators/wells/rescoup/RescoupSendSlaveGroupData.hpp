@@ -144,6 +144,20 @@ private:
     /// via MPI communication through the ReservoirCouplingSlave.
     void sendSlaveGroupInjectionDataToMaster_() const;
 
+    /// @brief The part of a group's surface production rates that comes from
+    ///   wells which open in this report step but have not been solved yet
+    /// @param group_name Name of the slave group; the walk descends into child
+    ///   groups, so a slave group that holds no wells of its own is handled too
+    /// @param network True to use the network efficiency factors (GEFAC/WEFAC
+    ///   item 3), matching the `network` argument of the rate sum being
+    ///   corrected
+    /// @return Rates to subtract, all zero once the wells have been solved
+    /// @note Before this sync step's well solve, such a well contributes the
+    ///       rates updateWellStateWithTarget() derived from its WCONPROD
+    ///       target rather than rates from a solve.  Reporting those to the
+    ///       master states a target as achieved production; see the call sites.
+    ProductionRates unsolvedNewWellProductionRates_(const std::string& group_name, bool network) const;
+
     /// Reference to the GroupStateHelper for group state management
     const GroupStateHelperType& groupStateHelper_;
 
