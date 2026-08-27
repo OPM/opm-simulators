@@ -393,6 +393,8 @@ init(const std::vector<Scalar>& cellPressures,
 
             // Preserve the retained limit across time steps and shut periods
             // unless the schedule explicitly re-specifies THP or VFP controls.
+            // ACTIONX raises no event here, it is handled from
+            // thp_respecified_wells in BlackoilWellModelGeneric::updateEclWells().
             if (prev_well.network_thp_limit.has_value() &&
                 new_well.producer == prev_well.producer && new_well.producer &&
                 !new_well.events.hasEvent(ScheduleEvents::WELL_THP_UPDATE))

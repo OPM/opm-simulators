@@ -245,7 +245,7 @@ updatePressures(const int reportStepIdx,
             && well->wellEcl().vfp_table_number() > 0) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
-                // The well belongs to a group with has a network pressure constraint,
+                // The well belongs to a group that has a network pressure constraint;
                 // set the dynamic THP constraint of the well accordingly.
                 this->imposeWellThpLimit(*well, it->second);
                 SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
@@ -319,8 +319,23 @@ assignNodeAndBranchValues(std::map<std::string, data::NodeData>& nodevalues,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-initialize(const int /*report_step*/)
+initialize(const int report_step)
 {
+    // Discard pressures for nodes that are absent from the current network.
+    // Retained per-well limits are kept because they can outlive the network.
+    const auto& network = well_model_.schedule()[report_step].network();
+    if (!network.active()) {
+        this->node_pressures_.clear();
+        this->last_valid_node_pressures_.clear();
+    }
+    else {
+        const auto is_stale = [&network](const auto& node_pressure)
+        { return !network.has_node(node_pressure.first); };
+
+        std::erase_if(this->node_pressures_, is_stale);
+        std::erase_if(this->last_valid_node_pressures_, is_stale);
+    }
+
     // Retained THP limits can outlive network activity, so initialize every well.
     for (auto& well : well_model_.genericWells()) {
         initializeWell(*well);
