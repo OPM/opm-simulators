@@ -187,16 +187,6 @@ private:
         const ReservoirCoupling::Potentials<Scalar>& potentials,
         Group::ProductionCMode cmode) const;
 
-    /// @brief Pre-phase: restore each master group's `production_control`
-    ///   cmode to its Schedule-defined GCONPROD value.
-    /// @details The previous sync step's Phase 2 finalize switched these
-    ///   to individual control; this restore lets the upcoming
-    ///   distribution see the user-specified cmode.  Reads from the
-    ///   Schedule directly (rather than caching the pre-sync state) so
-    ///   new GCONPROD records at report-step boundaries are picked up
-    ///   automatically.
-    void restoreMasterGroupControlsFromSchedule_();
-
     /// @brief Phase 3: send the computed constraints for one slave to
     ///   that slave over MPI.
     /// @details The underlying MPI sends in
