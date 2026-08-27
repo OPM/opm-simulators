@@ -707,7 +707,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     // Per candidate: present, usable, three ipr_a, three ipr_b, current oil
     // rate, on group, efficiency scaling, alq, tubing-table correction,
     // current thp.
-    constexpr int kEntries = 14;
+    constexpr int kEntries = 15;
     std::vector<Scalar> shared(candidates.size() * kEntries, 0.0);
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto it = local.find(candidates[i].name);
@@ -743,6 +743,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             e[12] = dp->second;
         }
         e[13] = ws.thp;
+        e[14] = static_cast<Scalar>(ws.production_cmode);
     }
     well_model_.comm().sum(shared.data(), shared.size());
 
@@ -751,6 +752,22 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
     Scalar group_target = 0.0;
     const bool shut_rows = this->network_complementarity_ && this->analytic_jacobian_;
     const bool use_group_target = this->network_group_control_;
+    std::map<int, int> pinned_cmode;   // why the pinned wells were pinned
+    // Does anything already give the solve something to place? If not, the
+    // tree would be declined, and a well on thp control is then worth freeing:
+    // its thp is the node pressure, so the network can place it after all.
+    // Only as a last resort -- where wells are already free, moving the rest
+    // off the operating point the well solve agreed on costs more well solves
+    // than it saves (AUTOCHK: 4603 -> 10446).
+    const bool free_thp_wells = std::none_of(
+        candidates.begin(), candidates.end(),
+        [&, i = 0](const auto& c) mutable {
+            const Scalar* e = &shared[i++ * kEntries];
+            if (e[0] <= Scalar{0}) { return false; }
+            return (c.node_is_choke && this->network_autochoke_)
+                || (c.under_glo && this->gaslift_network_response_)
+                || (e[9] > Scalar{0} && use_group_target);
+        });
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const Scalar* e = &shared[i * kEntries];
         if (e[0] <= Scalar{0}) {
@@ -818,6 +835,15 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             w.in_group = true;
             w.oil_rate_limit = candidate.oil_rate_limit;
             w.guide = current;
+        } else if (free_thp_wells && candidate.vfp_table > 0
+                   && static_cast<Well::ProducerCMode>(e[14]) == Well::ProducerCMode::THP) {
+            // A well on thp control under a network node is the one the solve
+            // exists to place: its thp *is* the node pressure. Pinning it at
+            // the rate it already has left nothing to solve, which is why
+            // --network-solver=newton declined these trees outright -- the
+            // whole NETWORK-01 family among them.
+            w.oil_rate_limit = candidate.oil_rate_limit;
+            w.guide = std::max(current, candidate.oil_rate_limit);
         } else {
             // Otherwise the well is held where it already is. Re-deriving it
             // from the deck's WCONPROD limit would overwrite an operating point
@@ -826,6 +852,7 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
             w.oil_rate_limit = current;
             w.guide = current;
             w.pinned = true;          // a source; not offered thp
+            ++pinned_cmode[static_cast<int>(e[14])];
         }
         if (!(current > Scalar{0}) && !w.in_group && !candidate.node_is_choke) {
             continue;                 // producing nothing; not part of the network
@@ -843,6 +870,17 @@ newtonProductionNodePressures(const Network::ExtNetwork& network,
         || std::any_of(system.wells().begin(), system.wells().end(),
                        [](const auto& w) { return !w.pinned; });
     if (!anything_to_decide) {
+        std::string modes;
+        for (const auto& [cmode, n] : pinned_cmode) {
+            modes += fmt::format("{}{} on {}", modes.empty() ? "" : ", ", n,
+                                 WellProducerCMode2String(static_cast<Well::ProducerCMode>(cmode)));
+        }
+        OpmLog::debug(fmt::format("Network: nothing to place under {} at report step {}: all {} "
+                                  "producers are pinned at the rate they already have ({}). "
+                                  "Only wells the network can move -- on group control with "
+                                  "--network-group-control, under an autochoke, or under gas lift "
+                                  "-- give it something to solve. Using the relaxed evaluation.",
+                                  root.name(), reportStepIdx, system.numWells(), modes));
         return std::optional<std::map<std::string, Scalar>>{};
     }
     system.setAnalyticJacobian(analytic_jacobian_);
