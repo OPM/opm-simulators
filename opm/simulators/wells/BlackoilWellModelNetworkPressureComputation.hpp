@@ -30,7 +30,7 @@
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
+#include <opm/simulators/wells/network/NetworkNodePressureUpdater.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>

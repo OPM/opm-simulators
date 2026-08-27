@@ -19,7 +19,7 @@
 #ifndef OPM_NETWORK_PRODUCTION_SYSTEM_HEADER_INCLUDED
 #define OPM_NETWORK_PRODUCTION_SYSTEM_HEADER_INCLUDED
 
-#include <opm/simulators/wells/NetworkSolve.hpp>
+#include <opm/simulators/wells/network/NetworkSolve.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
 

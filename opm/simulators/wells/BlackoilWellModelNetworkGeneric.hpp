@@ -30,9 +30,9 @@
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
-#include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
-#include <opm/simulators/wells/NetworkInjectionSystem.hpp>
-#include <opm/simulators/wells/NetworkProductionSystem.hpp>
+#include <opm/simulators/wells/network/NetworkNodePressureUpdater.hpp>
+#include <opm/simulators/wells/network/NetworkInjectionSystem.hpp>
+#include <opm/simulators/wells/network/NetworkProductionSystem.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>

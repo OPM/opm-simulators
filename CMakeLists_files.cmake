@@ -1239,10 +1239,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelNetwork_impl.hpp
   opm/simulators/wells/BlackoilWellModelNetworkGeneric.hpp
   opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp
-  opm/simulators/wells/NetworkInjectionSystem.hpp
-  opm/simulators/wells/NetworkNodePressureUpdater.hpp
-  opm/simulators/wells/NetworkProductionSystem.hpp
-  opm/simulators/wells/NetworkSolve.hpp
   opm/simulators/wells/BlackoilWellModelNldd.hpp
   opm/simulators/wells/BlackoilWellModelNldd_impl.hpp
   opm/simulators/wells/BlackoilWellModelRescoup.hpp
@@ -1320,6 +1316,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WellTracerRate.hpp
   opm/simulators/wells/WGState.hpp
+  opm/simulators/wells/network/NetworkInjectionSystem.hpp
+  opm/simulators/wells/network/NetworkNodePressureUpdater.hpp
+  opm/simulators/wells/network/NetworkProductionSystem.hpp
+  opm/simulators/wells/network/NetworkSolve.hpp
   opm/simulators/wells/rescoup/RescoupProxy.hpp
 )
 if (USE_GPU_BRIDGE)

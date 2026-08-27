@@ -23,7 +23,7 @@
 #define BOOST_TEST_MODULE NetworkPressureTests
 
 #include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
-#include <opm/simulators/wells/NetworkNodePressureUpdater.hpp>
+#include <opm/simulators/wells/network/NetworkNodePressureUpdater.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>

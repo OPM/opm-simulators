@@ -26,8 +26,8 @@
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
-#include <opm/simulators/wells/NetworkInjectionSystem.hpp>
-#include <opm/simulators/wells/NetworkProductionSystem.hpp>
+#include <opm/simulators/wells/network/NetworkInjectionSystem.hpp>
+#include <opm/simulators/wells/network/NetworkProductionSystem.hpp>
 
 #include <fstream>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
