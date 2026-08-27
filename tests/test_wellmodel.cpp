@@ -168,6 +168,80 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     BOOST_CHECK_THROW( StandardWell( well, pinfo, -1, param, *rateConverter, 0, 3, 3, 0, pdata), std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(WeldrawRateLimit) {
+    const SetupTest setup_test;
+    const auto& st = *setup_test.summaryState;
+    using PMode = Opm::Well::ProducerCMode;
+
+    // PROD1 at report step 0 has item 3 defaulted, so the limit applies to
+    // the liquid rate; at report step 1 it selects the gas rate.
+    const auto liq_well = setup_test.schedule->getWell("PROD1", 0);
+    const auto gas_well = setup_test.schedule->getWell("PROD1", 1);
+
+    BOOST_CHECK(liq_well.getWELDRAW().active());
+    BOOST_CHECK(gas_well.getWELDRAW().active());
+
+    // Without a rate in the well state the controls are left alone.
+    {
+        auto controls = liq_well.productionControls(st);
+        StandardWell::applyWeldrawRateLimit(liq_well, std::nullopt, controls);
+        BOOST_CHECK(! controls.hasControl(PMode::LRAT));
+    }
+
+    // The well is on GRAT from WCONPROD and has no liquid rate target, so a
+    // liquid drawdown limit introduces one.
+    {
+        auto controls = liq_well.productionControls(st);
+        BOOST_CHECK(! controls.hasControl(PMode::LRAT));
+
+        StandardWell::applyWeldrawRateLimit(liq_well, 1234.0, controls);
+
+        BOOST_CHECK(controls.hasControl(PMode::LRAT));
+        BOOST_CHECK_CLOSE(controls.liquid_rate, 1234.0, 1.0e-10);
+    }
+
+    // A target of the well's own which is tighter than the limit stands.
+    {
+        auto controls = liq_well.productionControls(st);
+        controls.liquid_rate = 100.0;
+        controls.addControl(PMode::LRAT);
+
+        StandardWell::applyWeldrawRateLimit(liq_well, 1234.0, controls);
+
+        BOOST_CHECK_CLOSE(controls.liquid_rate, 100.0, 1.0e-10);
+    }
+
+    // A target of the well's own which is looser than the limit gives way.
+    {
+        auto controls = liq_well.productionControls(st);
+        controls.liquid_rate = 5000.0;
+        controls.addControl(PMode::LRAT);
+
+        StandardWell::applyWeldrawRateLimit(liq_well, 1234.0, controls);
+
+        BOOST_CHECK_CLOSE(controls.liquid_rate, 1234.0, 1.0e-10);
+    }
+
+    // With a gas target phase the limit acts on the gas rate instead, and
+    // the same ordering against the well's own target applies.  WCONPROD
+    // already puts this well on a gas rate target.
+    {
+        auto controls = gas_well.productionControls(st);
+        BOOST_CHECK(controls.hasControl(PMode::GRAT));
+
+        const auto own_target = controls.gas_rate;
+
+        auto tighter = controls;
+        StandardWell::applyWeldrawRateLimit(gas_well, 0.5 * own_target, tighter);
+        BOOST_CHECK_CLOSE(tighter.gas_rate, 0.5 * own_target, 1.0e-10);
+        BOOST_CHECK(! tighter.hasControl(PMode::LRAT));
+
+        auto looser = controls;
+        StandardWell::applyWeldrawRateLimit(gas_well, 2.0 * own_target, looser);
+        BOOST_CHECK_CLOSE(looser.gas_rate, own_target, 1.0e-10);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     const SetupTest setup_test;
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);

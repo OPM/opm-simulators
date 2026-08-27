@@ -223,9 +223,13 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                     auto& ws = well_state.well(well_name);
                     if (group.hasWell(well_name)) {
                         well->setDynamicThpLimit(group_thp);
-                        const Well& well_ecl = well_model_.eclWells()[well->indexOfWell()];
                         const auto inj_controls = Well::InjectionControls(0);
-                        const auto prod_controls = well_ecl.productionControls(summary_state);
+                        // The well equations are solved here to find the group
+                        // THP, so the controls must carry the drawdown limit;
+                        // callers that pass controls explicitly are required to
+                        // have applied it.
+                        const auto prod_controls =
+                            well->productionControlsWithWeldraw(summary_state, ws);
                         well->iterateWellEqWithSwitching(well_model_.simulator(),
                                                          dt,
                                                          inj_controls,

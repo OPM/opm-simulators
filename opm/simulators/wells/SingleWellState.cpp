@@ -74,6 +74,8 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
     SingleWellState<Scalar, IndexTraits> result("testing", pinfo, PhaseUsageInfo<IndexTraits>{},
                                                 true, 1.0, {}, 2.0);
     result.perf_data = PerfData<Scalar>::serializationTestObject();
+    result.weldraw_max_rate = 3.0;
+    result.weldraw_cmode = WellProducerCMode::LRAT;
 
     return result;
 }
@@ -417,7 +419,9 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->group_target == rhs.group_target &&
            this->group_target_fallback == rhs.group_target_fallback &&
            this->use_group_target_fallback == rhs.use_group_target_fallback &&
-           this->was_shut_before_action_applied == rhs.was_shut_before_action_applied;
+           this->was_shut_before_action_applied == rhs.was_shut_before_action_applied &&
+           this->weldraw_max_rate == rhs.weldraw_max_rate &&
+           this->weldraw_cmode == rhs.weldraw_cmode;
 }
 
 template class SingleWellState<double, BlackOilDefaultFluidSystemIndices>;

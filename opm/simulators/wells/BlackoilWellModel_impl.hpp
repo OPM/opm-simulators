@@ -1688,6 +1688,24 @@ namespace Opm {
         }
         const int episodeIdx = simulator_.episodeIndex();
         const auto& comm = simulator_.vanguard().grid().comm();
+
+        // Convert WELDRAW drawdown limits into maximum production rates.
+        // Like the rate targets of wells under group control, these are
+        // only updated during the first NUPCOL iterations of each timestep
+        // and kept frozen for the remaining iterations.
+        {
+            const auto nupcol = this->schedule()[episodeIdx].nupcol();
+            const auto& iter_ctx = simulator_.problem().iterationContext();
+            if (iter_ctx.withinNupcol(nupcol)) {
+                OPM_BEGIN_PARALLEL_TRY_CATCH()
+                    for (const auto& well : well_container_) {
+                        well->updateWeldrawMaxRate(simulator_, this->wellState(), deferred_logger);
+                    }
+                OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating WELDRAW rate limits failed: ",
+                                           simulator_.gridView().comm());
+            }
+        }
+
         size_t iter = 0;
         bool changed_well_group = false;
         const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);

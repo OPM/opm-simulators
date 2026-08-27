@@ -671,7 +671,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"WECONT", {true, std::nullopt}},
         {"WELCNTL", {true, std::nullopt}},
         {"WELDEBUG", {true, std::nullopt}},
-        {"WELDRAW", {true, std::nullopt}},
         {"WELEVNT", {true, std::nullopt}},
         {"WELLSTRE", {false, std::nullopt}},
         {"WELMOVEL", {true, std::nullopt}},

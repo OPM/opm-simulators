@@ -1106,6 +1106,63 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    weldraw_01
+  FILENAME
+    WELDRAW-01
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    weldraw
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    weldraw_01_msw
+  FILENAME
+    WELDRAW-01-MSW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    weldraw
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    weldraw_02_gas
+  FILENAME
+    WELDRAW-02-GAS
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    weldraw
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
     gconinje_resv_gas_01
   FILENAME
     GCONINJE_RESV_GAS-01

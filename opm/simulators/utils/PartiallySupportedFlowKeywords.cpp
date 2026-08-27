@@ -280,6 +280,13 @@ partiallySupported()
             },
          },
          {
+            "WELDRAW",
+            {
+               {4,{true, allow_values<std::string> {"NO"}, "WELDRAW(USE_LIMIT): use of the drawdown limit in the well potential calculation is not supported"}}, // USE_LIMIT
+               {5,{true, allow_values<std::string> {"AVG"}, "WELDRAW(GRID_BLOCKS): only the AVG (PI-weighted average drawdown) option is supported"}}, // GRID_BLOCKS
+            },
+         },
+         {
             "WELSPECS",
             {
                {8,{true, allow_values<std::string> {"STD", "NO"}, "WELSPECS(WELNETWK): only the STD and NO options are supported"}}, // INFLOW_EQ
