@@ -280,9 +280,25 @@ public:
                 solveTimer_.start();
                 auto& residual = linearizer.residual();
                 const auto& jacobian = linearizer.jacobian();
-                linearSolver_.prepare(jacobian, residual);
-                linearSolver_.setResidual(residual);
-                linearSolver_.getResidual(residual);
+                if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+                    if constexpr (requires {
+                                      linearSolver_.prepare(linearizer.gpuJacobian(),
+                                                            linearizer.flattenedGpuResidual());
+                                  }) {
+                        auto& gpuResidual = linearizer.flattenedGpuResidual();
+                        linearSolver_.prepare(linearizer.gpuJacobian(), gpuResidual);
+                        linearSolver_.getResidual(gpuResidual);
+                        linearSolver_.getResidual(residual);
+                    } else {
+                        linearSolver_.prepare(jacobian, residual);
+                        linearSolver_.setResidual(residual);
+                        linearSolver_.getResidual(residual);
+                    }
+                } else {
+                    linearSolver_.prepare(jacobian, residual);
+                    linearSolver_.setResidual(residual);
+                    linearSolver_.getResidual(residual);
+                }
                 solveTimer_.stop();
 
                 // The preSolve_() method usually computes the errors, but it can do
