@@ -327,7 +327,7 @@ protected:
     /// Node pressures from the simultaneous solve, or nullopt if it did not
     /// converge -- in which case the caller keeps the fixed-point result.
     std::optional<std::map<std::string, Scalar>>
-    newtonNodePressures(const Network::ExtNetwork& network,
+    newtonInjectionNodePressures(const Network::ExtNetwork& network,
                         const Phase injection_phase,
                         const int reportStepIdx,
                         const Network::Node& root) const;

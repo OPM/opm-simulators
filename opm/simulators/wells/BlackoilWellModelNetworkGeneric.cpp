@@ -113,6 +113,34 @@ template<class Scalar>
 constexpr NetworkSolve::Parameters<Scalar> kNetworkSolveParams{1e-2, 50};
 
 
+namespace {
+    /// A simultaneous solve replaces node pressures that computePressures() derived
+    /// by walking the tree, so every branch below a moved node has a pressure drop
+    /// belonging to the pressures it no longer has. Recompute those; the rates are
+    /// left alone, since the solve does not write rates back to the group state and
+    /// everything else reports the group's.
+    template<class Scalar>
+    void refreshBranchPressureDrops(const Network::ExtNetwork& network,
+                                    const std::set<std::string>& solved,
+                                    const std::map<std::string, Scalar>& node_pressures,
+                                    std::map<std::string, data::BranchData>& branch_data)
+    {
+        for (const auto& node : solved) {
+            const auto branch = network.uptree_branch(node);
+            if (!branch) {
+                continue;   // a root: its placeholder drop stays zero
+            }
+            const auto down = node_pressures.find(node);
+            const auto up = node_pressures.find(branch->uptree_node());
+            const auto entry = branch_data.find(node);
+            if (down != node_pressures.end() && up != node_pressures.end()
+                && entry != branch_data.end()) {
+                entry->second.pressure_drop = down->second - up->second;
+            }
+        }
+    }
+}
+
 template<typename Scalar, typename IndexTraits>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 BlackoilWellModelNetworkGeneric(BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model)
@@ -270,7 +298,7 @@ willBalanceOnNextIteration(const int reportStepIdx) const
 template<typename Scalar, typename IndexTraits>
 std::optional<std::map<std::string, Scalar>>
 BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
-newtonNodePressures(const Network::ExtNetwork& network,
+newtonInjectionNodePressures(const Network::ExtNetwork& network,
                     const Phase injection_phase,
                     const int reportStepIdx,
                     const Network::Node& root) const
@@ -1062,7 +1090,7 @@ updatePressures(const int reportStepIdx,
                 // branch data from the evaluation above is kept for the output.
                 // Several roots means a forest of independent trees; solve each.
                 for (const auto& tree : network.network.get().roots()) {
-                    if (auto solved = this->newtonNodePressures(
+                    if (auto solved = this->newtonInjectionNodePressures(
                             network.network.get(), *injection_phase, reportStepIdx, tree.get())) {
                         for (const auto& [name, pressure] : *solved) {
                             result.node_pressures[name] = pressure;
@@ -1159,6 +1187,18 @@ updatePressures(const int reportStepIdx,
                 network_imbalance = std::abs(pressure);
             }
         }
+    }
+    // The relaxed update above moves the stored node pressures after
+    // computePressures() derived the branch data, so a branch below a node the
+    // simultaneous solve placed reports a drop belonging to pressures the node no
+    // longer has. Recompute those. Nodes the solve did not place are left alone:
+    // the same drift exists there and on the default path, and correcting it would
+    // change GPRB on every network deck.
+    for (const auto& network : details::activeNetworks(well_model_.schedule(), reportStepIdx)) {
+        refreshBranchPressureDrops(network.network.get(),
+                                   solved_nodes[details::domainIndex(network.domain)],
+                                   this->nodePressures(network.domain),
+                                   this->branchData(network.domain));
     }
     this->syncLegacyProductionState_();
 
