@@ -25,15 +25,9 @@
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
-#if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/PinnedMemoryHolder.hpp>
-#else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
-#endif
 
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
@@ -53,8 +47,9 @@ namespace Opm::gpuistl
 *
 * \tparam TypeTag The type tag for the properties used in this solver.
 *
-* \note This solver takes CPU matrices and vectors, but uses GPU
-*       matrices and vectors internally for computations.
+* \note CPU matrices and vectors are still supported. GPU-resident matrices
+*       and vectors can be supplied through the overloads taking GPUMatrix
+*       and GPUVector.
 */
 template <class TypeTag>
 class ISTLSolverGPUISTL : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapter>,
@@ -209,6 +204,40 @@ public:
     }
 
     /**
+     * \brief Prepare the solver from GPU-resident matrix and residual data.
+     *
+     * This overload performs device-to-device copies and does not require a
+     * host representation of either argument.
+     */
+    void prepare(GPUMatrix& M, GPUVector& b)
+    {
+        if (!this->matrixPtr()) {
+            m_externalMatrix = &M;
+            const auto weightsCalculator = getWeightsCalculator();
+            m_gpuSolver = std::make_unique<SolverType>(
+                M, isParallel(), m_propertyTree, pressureIndex,
+                weightsCalculator, m_forceSerial, m_comm.get());
+        } else {
+            if (m_externalMatrix) { // If the matrix is externally owned we do not need to prepare anything
+                if (m_externalMatrix != &M) {
+                    OPM_THROW(std::logic_error,
+                              "GPU solver cannot switch the externally owned matrix after preparation");
+                }
+            } else {
+                OPM_THROW(std::logic_error, "Receiving a GPU matrix in prepare must use\n"
+                                            "externally owned matrix.");
+            }
+            m_gpuSolver->update();
+        }
+
+        if (!m_rhs) {
+            m_rhs = std::make_unique<GPUVector>(b);
+        } else {
+            *m_rhs = b;
+        }
+    }
+
+    /**
      * \copydoc AbstractISTLSolver::setResidual
      *
      * \note Unused in this implementation.
@@ -232,6 +261,15 @@ public:
             OPM_THROW(std::runtime_error, "m_rhs not initialized, prepare(matrix, rhs); needs to be called");
         }
         m_rhs->copyToHost(b);
+    }
+
+    /// Copy the current residual to GPU-resident storage.
+    void getResidual(GPUVector& b) const
+    {
+        if (!m_rhs) {
+            OPM_THROW(std::runtime_error, "m_rhs not initialized, prepare(matrix, rhs); needs to be called");
+        }
+        b = *m_rhs;
     }
 
     /**
@@ -259,7 +297,7 @@ public:
     {
         // TODO: Write matrix to disk if needed
         Dune::InverseOperatorResult result;
-        if (!m_matrix) {
+        if (!this->matrixPtr()) {
             OPM_THROW(std::runtime_error, "m_matrix not initialized, prepare(matrix, rhs); needs to be called");
         }
         if (!m_rhs) {
@@ -286,6 +324,24 @@ public:
 
         ++m_solveCount;
 
+        m_lastSeenIterations = result.iterations;
+        return checkConvergence(result);
+    }
+
+    /**
+     * \brief Solve using GPU-resident solution storage.
+     *
+     * Unlike the CPU overload, this leaves the solution on the device and
+     * avoids host-device transfers.
+     */
+    bool solve(GPUVector& x)
+    {
+        Dune::InverseOperatorResult result;
+        if (!this->matrixPtr() || !m_rhs || !m_gpuSolver) {
+            OPM_THROW(std::runtime_error, "prepare(matrix, rhs); needs to be called before solve()");
+        }
+        m_gpuSolver->apply(x, *m_rhs, result);
+        ++m_solveCount;
         m_lastSeenIterations = result.iterations;
         return checkConvergence(result);
     }
@@ -351,27 +407,27 @@ private:
             const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
             const auto weightsType = m_propertyTree.get("preconditioner.weight_type"s, "quasiimpes"s);
             if (weightsType == "quasiimpes") {
-                m_weights.emplace(m_matrix->N() * m_matrix->blockSize());
+                m_weights.emplace(this->matrixPtr()->N() * this->matrixPtr()->blockSize());
                 // Pre-compute diagonal indices once when setting up the calculator
-                auto diagonalIndices = Amg::precomputeDiagonalIndices(*m_matrix);
+                auto diagonalIndices = Amg::precomputeDiagonalIndices(*this->matrixPtr());
                 m_diagonalIndices.emplace(diagonalIndices);
 
                 if (transpose) {
                     weightsCalculator = [this]() -> GPUVector& {
                         Amg::getQuasiImpesWeights<real_type, true>(
-                            *m_matrix, pressureIndex, *m_weights, *m_diagonalIndices);
+                            *this->matrixPtr(), pressureIndex, *m_weights, *m_diagonalIndices);
                         return *m_weights;
                     };
                 } else {
                     weightsCalculator = [this]() -> GPUVector& {
                         Amg::getQuasiImpesWeights<real_type, false>(
-                            *m_matrix, pressureIndex, *m_weights, *m_diagonalIndices);
+                            *this->matrixPtr(), pressureIndex, *m_weights, *m_diagonalIndices);
                         return *m_weights;
                     };
                 }
             } else if (weightsType == "trueimpes") {
                 // Create CPU vector for the weights and initialize GPU vector
-                m_cpuWeights.resize(m_matrix->N());
+                m_cpuWeights.resize(this->matrixPtr()->N());
                 m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
                     const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
                 m_weights.emplace(m_cpuWeights);
@@ -393,7 +449,7 @@ private:
                 };
             } else if (weightsType == "trueimpesanalytic") {
                 // Create CPU vector for the weights and initialize GPU vector
-                m_cpuWeights.resize(m_matrix->N());
+                m_cpuWeights.resize(this->matrixPtr()->N());
                 m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
                     const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
                 m_weights.emplace(m_cpuWeights);
@@ -424,6 +480,7 @@ private:
 
     void updateMatrix(const Matrix& M)
     {
+        m_externalMatrix = nullptr;
         if (!m_matrix) {
             m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
             m_pinnedMatrixMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
@@ -437,6 +494,16 @@ private:
             m_matrix->updateNonzeroValues(M, true);
             m_gpuSolver->update();
         }
+    }
+
+    GPUMatrix* matrixPtr()
+    {
+        return m_externalMatrix ? m_externalMatrix : m_matrix.get();
+    }
+
+    const GPUMatrix* matrixPtr() const
+    {
+        return m_externalMatrix ? m_externalMatrix : m_matrix.get();
     }
 
     void updateRhs(const Vector& b)
@@ -463,6 +530,7 @@ private:
     int m_solveCount = 0;
 
     std::unique_ptr<GPUMatrix> m_matrix;
+    GPUMatrix* m_externalMatrix = nullptr;
 
     std::unique_ptr<SolverType> m_gpuSolver;
 

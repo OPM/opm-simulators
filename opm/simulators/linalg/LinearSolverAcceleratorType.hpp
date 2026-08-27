@@ -14,6 +14,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HPP
+#define OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HPP
+
 #include <algorithm>
 #include <stdexcept>
 #include <string>
@@ -89,3 +92,5 @@ linearSolverAcceleratorTypeFromCLI()
 }
 
 } // namespace Opm::Parameters
+
+#endif
