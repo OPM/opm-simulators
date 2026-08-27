@@ -71,12 +71,12 @@ public:
                                 const PrimaryVariables& primary_variables,
                                 DeferredLogger& deferred_logger);
 
-    //! \brief Update the cached volume ratio of a segment from its fluid state and composition.
+    //! \brief Volume ratio of a segment from its fluid state and composition.
     template<class FluidState>
-    void updateVolumeRatio(const int seg,
-                           const FluidState& fluid_state,
-                           const PrimaryVariables& primary_variables,
-                           DeferredLogger& deferred_logger);
+    EvalWell computeVolumeRatio(const int seg,
+                                const FluidState& fluid_state,
+                                const PrimaryVariables& primary_variables,
+                                DeferredLogger& deferred_logger) const;
 
     //! \brief Update upwinding segments.
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
@@ -142,7 +142,7 @@ public:
 
     //! \brief Segment volume ratio (reservoir volume per unit surface volume).
     //!
-    //! Updated by updateVolumeRatio() for reuse when computing the segment surface volume.
+    //! Set by computeFluidProperties(), like the other per-segment quantities.
     const EvalWell& volumeRatio(const int seg) const
     {
         return volume_ratios_[seg];
@@ -233,19 +233,19 @@ private:
     //! Reuses fluid-state PVT properties where they represent the requested composition, and
     //! evaluates the required saturated properties for single-phase cases.
     template<class FluidState>
-    void phaseState(const FluidState& fluid_state,
-                    const std::vector<EvalWell>& mix_s,
-                    PhaseState& state,
-                    DeferredLogger& deferred_logger) const;
+    void calculatePhaseState(const FluidState& fluid_state,
+                             const std::vector<EvalWell>& mix_s,
+                             PhaseState& state,
+                             DeferredLogger& deferred_logger) const;
 };
 
 template<typename FluidSystem, typename Indices>
 template<class FluidState>
 void MultisegmentWellSegments<FluidSystem,Indices>::
-phaseState(const FluidState& fluid_state,
-           const std::vector<EvalWell>& mix_s,
-           PhaseState& state,
-           DeferredLogger& deferred_logger) const
+calculatePhaseState(const FluidState& fluid_state,
+                    const std::vector<EvalWell>& mix_s,
+                    PhaseState& state,
+                    DeferredLogger& deferred_logger) const
 {
     const int pvt_region_index = well_.pvtRegionIdx();
 
@@ -342,11 +342,12 @@ phaseState(const FluidState& fluid_state,
 
 template<typename FluidSystem, typename Indices>
 template<class FluidState>
-void MultisegmentWellSegments<FluidSystem,Indices>::
-updateVolumeRatio(const int seg,
-                  const FluidState& fluid_state,
-                  const PrimaryVariables& primary_variables,
-                  DeferredLogger& deferred_logger)
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
+computeVolumeRatio(const int seg,
+                   const FluidState& fluid_state,
+                   const PrimaryVariables& primary_variables,
+                   DeferredLogger& deferred_logger) const
 {
     const int num_quantities = well_.numConservationQuantities();
     std::vector<EvalWell> mix_s(num_quantities, 0.0);
@@ -355,8 +356,8 @@ updateVolumeRatio(const int seg,
     }
 
     PhaseState state(num_quantities);
-    phaseState(fluid_state, mix_s, state, deferred_logger);
-    volume_ratios_[seg] = state.vol_ratio;
+    calculatePhaseState(fluid_state, mix_s, state, deferred_logger);
+    return state.vol_ratio;
 }
 
 template<typename FluidSystem, typename Indices>
@@ -396,7 +397,7 @@ computeFluidProperties(const std::vector<FluidState>& segment_fluid_states,
             mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg, comp_idx);
         }
 
-        phaseState(fs, mix_s, state, deferred_logger);
+        calculatePhaseState(fs, mix_s, state, deferred_logger);
         volume_ratios_[seg] = state.vol_ratio;
 
         std::ranges::fill(phase_densities_[seg], 0.0);

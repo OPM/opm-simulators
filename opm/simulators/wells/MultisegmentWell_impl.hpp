@@ -696,12 +696,18 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialSegmentFluids()
+    computeInitialSegmentInventory(DeferredLogger& deferred_logger)
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            const Scalar surface_volume = getSegmentSurfaceVolume(seg).value();
+            const EvalWell volume_ratio =
+                this->segments_.computeVolumeRatio(seg, segment_fluid_state_[seg],
+                                                   this->primary_variables_, deferred_logger);
+            const Scalar surface_volume = getSegmentSurfaceVolume(seg, volume_ratio).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
+            }
+            if constexpr (has_energy) {
+                segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
             }
         }
     }
@@ -764,14 +770,10 @@ namespace Opm
         updatePrimaryVariables(groupStateHelper);
         computePerfCellPressDiffs(simulator);
 
-        // Refresh the fluid state before computing the initial inventory, which reuses its
-        // cached segment volume ratio.
+        // Refresh the fluid state before computing the initial inventory.
         const auto info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
-        computeInitialSegmentFluids();
-        if constexpr (has_energy) {
-            computeInitialSegmentEnergy();
-        }
+        computeInitialSegmentInventory(deferred_logger);
     }
 
 
@@ -1947,7 +1949,9 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(seg);
+                // The ratios were refreshed by computeSegmentFluidProperties() above.
+                const EvalWell segment_surface_volume =
+                    getSegmentSurfaceVolume(seg, this->segments_.volumeRatio(seg));
 
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
@@ -2148,11 +2152,11 @@ namespace Opm
     template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
-    getSegmentSurfaceVolume(const int seg_idx) const
+    getSegmentSurfaceVolume(const int seg_idx,
+                            const EvalWell& volume_ratio) const
     {
-        // Reuse the volume ratio cached when the segment fluid state was rebuilt.
         const Scalar volume = this->wellEcl().getSegments()[seg_idx].volume();
-        return volume / this->segments_.volumeRatio(seg_idx);
+        return volume / volume_ratio;
     }
 
 
@@ -2763,15 +2767,6 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::computeInitialSegmentEnergy()
-    {
-        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_initial_energy_[seg] = computeSegmentEnergy<Scalar>(seg);
-        }
-    }
-
-    template <typename TypeTag>
-    void
     MultisegmentWell<TypeTag>::updateWellHeadCondition(const Simulator& simulator,
                                                        const Scalar first_perf_temperature,
                                                        const Scalar first_perf_salt_concentration,
@@ -2857,9 +2852,6 @@ namespace Opm
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             segment_fluid_state_[seg] = this->createSegmentFluidState(seg, info, deferred_logger);
-            // Cache the volume ratio for getSegmentSurfaceVolume().
-            this->segments_.updateVolumeRatio(seg, segment_fluid_state_[seg],
-                                              this->primary_variables_, deferred_logger);
         }
     }
 

@@ -241,9 +241,9 @@ namespace Opm {
                              WellStateType& well_state,
                              const Scalar relaxation_factor = 1.0);
 
-        // Compute the initial fluid inventory for well mass equations. Requires an up-to-date
+        // Compute the initial segment inventory for well equations. Requires an up-to-date
         // segment fluid state (see updateSegmentFluidState()).
-        void computeInitialSegmentFluids();
+        void computeInitialSegmentInventory(DeferredLogger& deferred_logger);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& simulator);
@@ -348,9 +348,9 @@ namespace Opm {
 
         void updateWaterThroughput(const double dt, WellStateType& well_state) const override;
 
-        // Compute segment surface volume from its cached volume ratio. Requires an up-to-date
-        // segment fluid state (see updateSegmentFluidState()).
-        EvalWell getSegmentSurfaceVolume(const int seg_idx) const;
+        // Compute segment surface volume from the given volume ratio.
+        EvalWell getSegmentSurfaceVolume(const int seg_idx,
+                                         const EvalWell& volume_ratio) const;
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
@@ -403,8 +403,6 @@ namespace Opm {
 
         SegmentFluidState<EvalWell>
         createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
-
-        void computeInitialSegmentEnergy();
 
         // assemble the energy equation contribution for a single perforation/connection
         void assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
