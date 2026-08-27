@@ -52,6 +52,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
@@ -122,6 +123,8 @@ TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(Inplace)
 namespace Opm { using PerfD = PerfData<double>; }
 TEST_FOR_TYPE_NAMED(PerfD, PerfData)
+namespace Opm { using Perf = PerforationData<double>; }
+TEST_FOR_TYPE_NAMED(Perf, PerforationData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 namespace Opm { using SegmState = SegmentState<double>; }

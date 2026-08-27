@@ -28,6 +28,10 @@ namespace Opm {
 template<class Scalar>
 struct PerforationData
 {
+  static PerforationData serializationTestObject();
+
+  bool operator==(const PerforationData&) const;
+
     int cell_index{};
     Scalar connection_transmissibility_factor{};
     Scalar connection_d_factor{};
@@ -49,6 +53,18 @@ struct PerforationData
     /// identified via globalCellIdxMap[active_idx] alone (which returns
     /// the level-0 ancestor's Cartesian, shared by all siblings).
     std::size_t global_index{};
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+      serializer(cell_index);
+      serializer(connection_transmissibility_factor);
+      serializer(connection_d_factor);
+      serializer(satnum_id);
+      serializer(ecl_index);
+      serializer(grid_id);
+      serializer(global_index);
+    }
 };
 
 template<class Scalar>
