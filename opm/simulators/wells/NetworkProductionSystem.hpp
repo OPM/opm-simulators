@@ -203,10 +203,12 @@ public:
         return v_lo + t * (v_hi - v_lo);
     }
 
-    /// Dead at this node pressure. Sticky only in the death direction: a well
-    /// seen alive at a lower pressure that loses its crossing as the pressure
-    /// rises stays shut for the solve (reviving it makes a system with no
-    /// fixed point). An iterate that merely starts too high is not a death.
+    /// Whether the well has no crossing at this node pressure, and so produces
+    /// nothing. Sticky in one direction only: a well seen alive lower down that
+    /// loses its crossing as the pressure rises stays shut for the solve. It has
+    /// to be -- shutting it lowers the node pressure, which revives it, which
+    /// raises the pressure again, and the system has no fixed point. A start
+    /// that is merely far too high is not a death.
     bool cmplDead(const int w, const Scalar p) const
     {
         if (cmpl_dead_[w]) { return true; }
@@ -348,15 +350,33 @@ public:
                            Scalar{0}, Scalar{0}, /*use_expvfp=*/false);
     }
 
-    /// The oil rate thp control allows at this node pressure. Searched in bhp
-    /// rather than in rate: the tubing lookup wants the whole triple, and the
-    /// inflow performance gives it from a bhp directly, so the fractions never
-    /// have to be guessed at. h(bhp) = bhp - tableBhp(...) rises with bhp, since
-    /// a higher bhp draws less and a smaller rate needs less lift.
     /// Whether thp control is even available: a well the deck gives no VFPPROD
     /// table has no tubing curve, so its rate does not answer to the node
     /// pressure and thp is not one of its controls.
     static bool hasTubing(const Well& w) { return w.vfp_table > 0; }
+
+    /// The oil rate thp control allows at this node pressure -- the *crossing*
+    /// of the well's inflow performance with its tubing curve. Zero means the
+    /// tubing cannot lift here at all; max() means thp does not bind.
+    ///
+    /// Searched in bhp rather than in rate, because the tubing lookup wants the
+    /// whole phase triple and the inflow performance gives it from a bhp
+    /// directly, so no fractions have to be guessed at.
+    ///
+    /// Two shapes to know about, both referred to elsewhere in this file:
+    ///   - the *crossing* is where h(bhp) = bhp - tableBhp(...) turns positive;
+    ///   - the *liquid-loading hump* makes h non-monotone. At low rates a tubing
+    ///     table needs more pressure than at moderate rates, so h can be negative
+    ///     at both ends of the bracket and positive between, with two crossings.
+    ///     Only the one where h turns positive with rising bhp is an operating
+    ///     point; the other is the loading point.
+    ///
+    /// TODO: this should not be a search. With constant phase fractions the IPR
+    /// is linear in FLO and the table piecewise-linear on its own flow axis, so
+    /// the crossing is exact per interval -- VFPHelpers::intersectWithIPR, which
+    /// estimateStableBhp already uses. That is ~21 lookups against this scan's
+    /// ~136, and exact: the scan's resolution is why cachedThpPotential() below
+    /// needs a jump guard.
 
     Scalar thpPotential(const Well& w, const Scalar p_node) const
     {
@@ -546,13 +566,14 @@ public:
                 control = (q[1] - well.guide * x[lambdaIdx()]) / rate_scale_;
                 break;
             case Control::Cmpl: {
-                // Rate slack a = limit - q, tubing slack b = bhp - tubing(p, q),
-                // bhp slack c = bhp - bhp_limit: all non-negative, one of them
-                // zero. Whether the tubing can lift at all at this node
-                // pressure is the scan's answer, not the local slack's: the
-                // slack is also negative on the dead side of the hump, where a
-                // well that can flow must not be left. q >= 0 is a bound, kept
-                // by limitStep(); the lookup is at max(q, 0).
+                // All three of the well's own limits as one row. a, b, c are
+                // the slacks on rate, tubing and bhp; at the solution each is
+                // >= 0 and at least one is 0, which is exactly fb()'s zero set.
+                // Nothing is selected here, so nothing can flip.
+                // Whether the tubing lifts at all is thpPotential()'s answer,
+                // not b's: b is negative below the liquid-loading hump too,
+                // where the well does flow. q >= 0 is kept by limitStep(), so
+                // the lookup takes max(q, 0).
                 if (cmplDead(w, pressure(well.node))) {
                     control = q[1] / rate_scale_;
                     break;
@@ -987,12 +1008,11 @@ public:
     State limitCmplRates(const State& x, const State& dx, const Scalar alpha) const
     {
         State d = dx;
-        // Complementarity wells: the row linearised on the dead side of the
-        // hump sends the rate the wrong way, and a tie between two slacks can
-        // throw it thousands of m3/d in one step. The oil step is capped at
-        // what the well has or could deliver, and a rate proposed at or
-        // below zero while the tubing can lift is re-seeded to the well's
-        // allowance -- the stable crossing, as the simulator's q_start does.
+        // Two ways a complementarity row proposes a useless oil step: below the
+        // liquid-loading hump it linearises to the wrong sign, and a near-tie
+        // between two slacks scales badly. So cap the step at what the well
+        // could actually deliver, and put a well pushed to zero back on its
+        // crossing rather than letting it leave the flowing branch.
         for (int w = 0; w < numWells(); ++w) {
             if (controls_[w] != Control::Cmpl) { continue; }
             const auto& well = wells_[w];
