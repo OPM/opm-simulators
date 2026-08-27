@@ -700,7 +700,7 @@ namespace Opm
     {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             const EvalWell volume_ratio =
-                this->segments_.computeVolumeRatio(seg, segment_fluid_state_[seg],
+                this->segments_.computeVolumeRatio(seg, segmentPvt(segment_fluid_state_[seg]),
                                                    this->primary_variables_, deferred_logger);
             const Scalar surface_volume = getSegmentSurfaceVolume(seg, volume_ratio).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
@@ -1148,9 +1148,43 @@ namespace Opm
         // properties, so both use consistent PVT data.
         const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
-        this->segments_.computeFluidProperties(this->segment_fluid_state_,
+
+        std::vector<SegmentPvt> segment_pvt(this->numberOfSegments());
+        for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            segment_pvt[seg] = segmentPvt(segment_fluid_state_[seg]);
+        }
+        this->segments_.computeFluidProperties(segment_pvt,
                                                this->primary_variables_,
                                                deferred_logger);
+    }
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::SegmentPvt
+    MultisegmentWell<TypeTag>::
+    segmentPvt(const SegmentFluidState<EvalWell>& fluid_state) const
+    {
+        // Pressure and temperature are the same for all phases in the wellbore, so pick any
+        // active one to read them from.
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const unsigned pressure_phase = waterActive ? FluidSystem::waterPhaseIdx
+                                       : oilActive ? FluidSystem::oilPhaseIdx
+                                                   : FluidSystem::gasPhaseIdx;
+
+        SegmentPvt pvt;
+        pvt.pressure = fluid_state.pressure(pressure_phase);
+        pvt.temperature = fluid_state.temperature(pressure_phase);
+        pvt.saltConcentration = fluid_state.saltConcentration();
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                pvt.invB[phaseIdx] = fluid_state.invB(phaseIdx);
+            }
+        }
+        if constexpr (compositionSwitchEnabled) {
+            pvt.Rs = fluid_state.Rs();
+            pvt.Rv = fluid_state.Rv();
+        }
+        return pvt;
     }
 
     template<typename TypeTag>

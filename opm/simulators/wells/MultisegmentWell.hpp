@@ -404,6 +404,12 @@ namespace Opm {
         SegmentFluidState<EvalWell>
         createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
 
+        // The segment fluid state type depends on the TypeTag, which MultisegmentWellSegments
+        // does not have. Extract the values it needs so its property calculations can stay in
+        // the .cpp file.
+        using SegmentPvt = typename MultisegmentWellSegments<FluidSystem, Indices>::SegmentPvt;
+        SegmentPvt segmentPvt(const SegmentFluidState<EvalWell>& fluid_state) const;
+
         // assemble the energy equation contribution for a single perforation/connection
         void assemblePerforationEnergyEq(const IntensiveQuantities& int_quants,
                                          const std::vector<EvalWell>& cq_s,
