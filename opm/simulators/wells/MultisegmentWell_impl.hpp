@@ -76,6 +76,7 @@ namespace Opm
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_conservation_quantities_, 0.0))
     , segment_initial_energy_(this->numberOfSegments(), 0.0)
     , segment_fluid_state_(this->numberOfSegments(), SegmentFluidState<EvalWell>{})
+    , segment_pvt_(this->numberOfSegments())
     {
         // not handling solvent or polymer for now with multisegment well
         if constexpr (has_solvent) {
@@ -1149,11 +1150,10 @@ namespace Opm
         const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
         updateSegmentFluidState(info, deferred_logger);
 
-        std::vector<SegmentPvt> segment_pvt(this->numberOfSegments());
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-            segment_pvt[seg] = segmentPvt(segment_fluid_state_[seg]);
+            segment_pvt_[seg] = segmentPvt(segment_fluid_state_[seg]);
         }
-        this->segments_.computeFluidProperties(segment_pvt,
+        this->segments_.computeFluidProperties(segment_pvt_,
                                                this->primary_variables_,
                                                deferred_logger);
     }

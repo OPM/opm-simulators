@@ -106,6 +106,11 @@ namespace Opm {
         template <typename ValueType>
         using SegmentFluidState = Base::template BlackOilFluidStateType<ValueType>;
 
+        // The segment fluid state type depends on the TypeTag, which MultisegmentWellSegments
+        // does not have. Extract the values it needs so its property calculations can stay in
+        // the .cpp file.
+        using SegmentPvt = typename MultisegmentWellSegments<FluidSystem, Indices>::SegmentPvt;
+
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
                          const int time_step,
@@ -226,6 +231,10 @@ namespace Opm {
 
         // segment fluid state
         std::vector<SegmentFluidState<EvalWell>> segment_fluid_state_;
+
+        // the values MultisegmentWellSegments needs from the segment fluid states, refilled
+        // from segment_fluid_state_ before the segment properties are computed
+        std::vector<SegmentPvt> segment_pvt_;
 
         // fluid state under the wellhead condition, it is used to calculate the enthalpy
         // under operation condition for energy injection
@@ -404,10 +413,6 @@ namespace Opm {
         SegmentFluidState<EvalWell>
         createSegmentFluidState(int seg, const FSInfo& info, DeferredLogger& deferred_logger) const;
 
-        // The segment fluid state type depends on the TypeTag, which MultisegmentWellSegments
-        // does not have. Extract the values it needs so its property calculations can stay in
-        // the .cpp file.
-        using SegmentPvt = typename MultisegmentWellSegments<FluidSystem, Indices>::SegmentPvt;
         SegmentPvt segmentPvt(const SegmentFluidState<EvalWell>& fluid_state) const;
 
         // assemble the energy equation contribution for a single perforation/connection
