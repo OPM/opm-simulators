@@ -99,6 +99,12 @@ namespace Opm
         static constexpr bool compositionSwitchEnabled =
             Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
+        // True when the fluid state stores a temperature. This includes thermal modes
+        // without a fully implicit energy equation, so it is weaker than has_energy and
+        // must be used when populating the temperature.
+        static constexpr bool enable_temperature =
+            Base::energyModuleType != EnergyModules::NoTemperature;
+
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
         // number of the well control equations
