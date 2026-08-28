@@ -2676,7 +2676,20 @@ namespace Opm
             fluid_state.setSolventDensity(solventInvB * solventRefDensity);
         }
 
-        const bool gas_water_mixing = both_water_gas && (has_disgas_in_water || has_watVapor);
+        // The gas-water and gas-oil mixing pairs below are solved as two independent 2x2
+        // systems, which is only consistent when at most one of them is active, since the
+        // gas component would otherwise take part in both. Following
+        // StandardWell::computePerfRate(), the gas-water pair is therefore only solved
+        // when both DISGASW and VAPWAT are active. The fluid system restricts that
+        // combination to the gas-water CO2STORE/H2STORE case, where the oil phase is
+        // absent (see BlackOilFluidSystem::initFromState()). Supporting all three phases
+        // at once would require solving the coupled 3x3 system instead.
+        const bool gas_water_mixing = both_water_gas
+            && has_disgas_in_water && has_watVapor
+            && FluidSystem::enableDissolvedGasInWater()
+            && FluidSystem::enableVaporizedWater();
+        assert(!(gas_water_mixing && both_oil_gas) &&
+               "three-phase mixing with both gas-water and gas-oil dissolution is not supported");
 
         std::vector<ValueType> volumes(FluidSystem::numPhases, zero_value);
         // total volume per 1 unit of surface volume
