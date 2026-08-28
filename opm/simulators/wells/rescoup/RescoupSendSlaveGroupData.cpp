@@ -181,11 +181,12 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
     const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
     GuideRate::RateVector production_rates = this->groupStateHelper_.getProductionGroupRateVector(group_name);
     // Correct the sum for wells that have not been solved yet; see
-    // unsolvedNewWellProductionRates_().
+    // unsolvedNewWellProductionRates_().  The group state rates read above have already
+    // been reduced across the ranks, so the rank-local correction is reduced to match.
     const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/false);
-    production_rates.oil_rat -= unsolved[ReservoirCoupling::Phase::Oil];
-    production_rates.gas_rat -= unsolved[ReservoirCoupling::Phase::Gas];
-    production_rates.wat_rat -= unsolved[ReservoirCoupling::Phase::Water];
+    production_rates.oil_rat -= this->comm().sum(unsolved[ReservoirCoupling::Phase::Oil]);
+    production_rates.gas_rat -= this->comm().sum(unsolved[ReservoirCoupling::Phase::Gas]);
+    production_rates.wat_rat -= this->comm().sum(unsolved[ReservoirCoupling::Phase::Water]);
     // NOTE: GuideRate::RateVector is a vector of doubles, so we need to convert it to Scalar
     // TODO: Fix GuideRate::RateVector to be a vector of Scalars instead of doubles
     return ProductionRates{production_rates};
@@ -224,18 +225,23 @@ collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const
             /*is_injector=*/false, /*network=*/true);
     }
 
+    // Correct the sums for wells that have not been solved yet; see
+    // unsolvedNewWellProductionRates_().  The master uses these rates as the flow of
+    // its network's leaf nodes.  The correction is rank-local, like the sums above, so
+    // it is applied before the reduction.
+    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/true);
+    oil_rate -= unsolved[ReservoirCoupling::Phase::Oil];
+    gas_rate -= unsolved[ReservoirCoupling::Phase::Gas];
+    water_rate -= unsolved[ReservoirCoupling::Phase::Water];
+
     // Sum across all MPI ranks since wells in a group may be owned by different ranks
     oil_rate = this->comm().sum(oil_rate);
     gas_rate = this->comm().sum(gas_rate);
     water_rate = this->comm().sum(water_rate);
-    // Correct the sums for wells that have not been solved yet; see
-    // unsolvedNewWellProductionRates_().  The master uses these rates as the
-    // flow of its network's leaf nodes.
-    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/true);
     ProductionRates network_rates;
-    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate - unsolved[ReservoirCoupling::Phase::Oil];
-    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate - unsolved[ReservoirCoupling::Phase::Gas];
-    network_rates[ReservoirCoupling::Phase::Water] = water_rate - unsolved[ReservoirCoupling::Phase::Water];
+    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
+    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
+    network_rates[ReservoirCoupling::Phase::Water] = water_rate;
     return network_rates;
 }
 
@@ -393,14 +399,20 @@ sendSlaveGroupInjectionDataToMaster_() const
 }
 
 // A well that opens in this report step is put on its WCONPROD target by
-// updateWellStateWithTarget() before the sync step's well solve runs, so on the
-// send that precedes that solve the well state holds a target, not a solved
+// SingleWellState::update_producer_targets() before the sync step's well solve runs,
+// so on the send that precedes that solve the well state holds a target, not a solved
 // rate.  Shipping it to the master would report a target as achieved
 // production: the master folds the slave group rates into the field's
 // reinjection base, so a multi-million sm3/day gas target arriving that way
 // inflates the reinjection target and pushes the injectors onto their own rate
 // limits.  Leave such a well out of the sums until it has been solved; from the
 // post-solve send onwards its real rates are included.
+//
+// The correction is built with GroupStateHelper::wellRateContributionToGroup(), the same
+// per-well step the sums themselves use, so it removes exactly what they added: only
+// producers, only wells this rank owns and that are not shut, with the same efficiency
+// factor and sign.  It is therefore rank-local, and each call site reduces it to match
+// whatever it is being subtracted from.
 template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
@@ -426,16 +438,24 @@ unsolvedNewWellProductionRates_(const std::string& group_name, bool network) con
             rates[phase] += gefac * child_rates[phase];
         }
     }
+    const auto& pu = this->phase_usage_;
     for (const auto& wname : group.wells()) {
         if (!events.hasEvent(wname, ScheduleEvents::NEW_WELL)) {
             continue;
         }
-        const auto& well = schedule.getWell(wname, report_step);
-        const auto efficiency = well.getEfficiencyFactor(network);
-        const auto well_rates = this->groupStateHelper_.getWellRateVector(wname);
-        rates[ReservoirCoupling::Phase::Oil] += efficiency * well_rates.oil_rat;
-        rates[ReservoirCoupling::Phase::Gas] += efficiency * well_rates.gas_rat;
-        rates[ReservoirCoupling::Phase::Water] += efficiency * well_rates.wat_rat;
+        // Ask for the well's share of the sum we are correcting, so the filters
+        // (producers only, present, owned by this rank, not shut), the efficiency
+        // factor and the sign are the ones that sum actually used.
+        auto contribution = [&](const auto canonical_phase_idx) {
+            return pu.phaseIsActive(canonical_phase_idx)
+                ? this->groupStateHelper_.wellRateContributionToGroup(
+                      wname, pu.canonicalToActivePhaseIdx(canonical_phase_idx),
+                      /*res_rates=*/false, /*is_injector=*/false, network)
+                : Scalar{0};
+        };
+        rates[ReservoirCoupling::Phase::Oil] += contribution(IndexTraits::oilPhaseIdx);
+        rates[ReservoirCoupling::Phase::Gas] += contribution(IndexTraits::gasPhaseIdx);
+        rates[ReservoirCoupling::Phase::Water] += contribution(IndexTraits::waterPhaseIdx);
     }
     return rates;
 }
