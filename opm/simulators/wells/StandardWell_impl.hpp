@@ -452,12 +452,17 @@ namespace Opm
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
-            // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
-            // since all the rates are under surface condition
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                const auto wellbore_surface_volume = wellbore_volume / wellbore_volume_ratio_;
+                // The wellbore volume is an in-situ volume, while the rates are under
+                // surface conditions, so it is converted with the volume ratio of the
+                // wellbore mixture. The ratio is used explicitly: its derivative enters
+                // as -V/ratio^2 * dratio, and with ratio down to ~0.01 for a gassy well
+                // that amplifies the Jacobian by three to four orders of magnitude and
+                // costs a large number of extra Newton iterations. Dropping it leaves
+                // the residual value, and hence the equation being solved, unchanged.
+                const auto wellbore_surface_volume = wellbore_volume / getValue(wellbore_volume_ratio_);
                 resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
                                 this->fluids_initial_[componentIdx]) * regularization_factor / dt;
             }
