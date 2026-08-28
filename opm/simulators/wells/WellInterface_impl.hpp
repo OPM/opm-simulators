@@ -2493,6 +2493,34 @@ namespace Opm
 
     }
 
+
+    template <typename TypeTag>
+    typename WellInterface<TypeTag>::FSInfo
+    WellInterface<TypeTag>::getFirstPerfCellConditions(const Simulator& simulator) const
+    {
+        FSInfo info{};
+
+        // If this process does not contain active perforations, this->well_cells_ is empty.
+        if (this->well_cells_.size() > 0) {
+            // The cell of the first perforation *on this process*. For a distributed well
+            // this is the first perforation of the well only on the process holding it;
+            // the broadcast below replaces the values on all the other processes.
+            const int cell_idx = this->well_cells_[0];
+            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+
+            info.temperature = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
+            info.saltConcentration = getValue(fs.saltConcentration());
+        }
+
+        // Broadcast from the process holding the first open connection of the well
+        // (ParallelWellInfo::communicateFirstPerforation), so that all processes use the
+        // conditions of the same cell.
+        return this->parallel_well_info_.communication().size() == 1
+            ? info
+            : this->parallel_well_info_.broadcastFirstPerforationValue(info);
+    }
+
 } // namespace Opm
 
 #endif

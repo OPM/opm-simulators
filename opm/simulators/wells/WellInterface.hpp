@@ -47,6 +47,7 @@ namespace Opm {
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
@@ -101,6 +102,9 @@ public:
     using WellStateType = WellState<Scalar, IndexTraits>;
     using SingleWellStateType = SingleWellState<Scalar, IndexTraits>;
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
+
+    //! \brief Temperature and salt concentration of the first perforated cell.
+    using FSInfo = FirstPerfCellConditions<Scalar>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -526,6 +530,10 @@ protected:
     Scalar computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
                                     const SingleWellStateType& ws) const;
+
+    //! \brief Temperature and salt concentration of the first perforated cell,
+    //! broadcast so that all processes of a distributed well get the values.
+    FSInfo getFirstPerfCellConditions(const Simulator& simulator) const;
 };
 
 } // namespace Opm
