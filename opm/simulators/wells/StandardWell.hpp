@@ -44,6 +44,7 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 
 namespace Opm
 {
@@ -70,7 +71,6 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-        using typename Base::FluidState;
         using typename Base::RateVector;
         using typename Base::GroupStateHelperType;
 
@@ -88,18 +88,25 @@ namespace Opm
         using PolymerModule =  BlackOilPolymerModule<TypeTag, has_polymer>;
         using typename Base::PressureMatrix;
 
-        // number of the conservation equations
-        static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
+        template <typename ValueType>
+        using FluidState = Base::template FluidState<ValueType>;
+
+        // number of the conservation equations (without the energy equation)
+        static constexpr int numWellConservationEq = StdWellEval::PrimaryVariables::numWellConservationEq;
         // number of the well control equations
-        static constexpr int numWellControlEq = 1;
+        static constexpr int numWellControlEq = StdWellEval::PrimaryVariables::numWellControlEq;
         // number of the well equations that will always be used
         // based on the solution strategy, there might be other well equations be introduced
-        static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
+        static constexpr int numStaticWellEq = StdWellEval::PrimaryVariables::numStaticWellEq;
 
         // the index for Bhp in primary variables and also the index of well control equation
         // they both will be the last one in their respective system.
         // TODO: we should have indices for the well equations and well primary variables separately
-        static constexpr int Bhp = numStaticWellEq - numWellControlEq;
+        static constexpr int Bhp = StdWellEval::PrimaryVariables::Bhp;
+
+        // the index for the temperature primary variable and the energy conservation equation,
+        // only used when the energy equation is solved fully implicitly
+        static constexpr int Temperature = StdWellEval::PrimaryVariables::Temperature;
 
         using StdWellEval::WQTotal;
 
@@ -384,6 +391,7 @@ namespace Opm
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& water_flux_s,
                                  EvalWell& cq_s_zfrac_effective,
+                                 EvalWell& cq_s_energy,
                                  DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
@@ -469,12 +477,82 @@ namespace Opm
                                 const SummaryState& summary_state) const;
 
     private:
-        Eval connectionRateEnergy(const std::vector<EvalWell>& cq_s,
-                                  const IntensiveQuantities& intQuants,
-                                  DeferredLogger& deferred_logger) const;
+        // Scales the well-side energy equation onto the mass-balance residual
+        // scale. Reuses the reservoir energy factor so both live on the same scale.
+        static constexpr Scalar energy_scaling_factor_ =
+            getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+
+        // compute the energy flux for a single perforation, with the full well
+        // derivatives. For injecting connections, the enthalpy and density of the
+        // wellbore fluid state are used, for producing connections, the ones of
+        // the reservoir cell.
+        EvalWell connectionRateEnergy(const std::vector<EvalWell>& cq_s,
+                                      const IntensiveQuantities& intQuants,
+                                      DeferredLogger& deferred_logger) const;
+
+        // convert the surface volume rates to the reservoir condition volume rate
+        // for the given phase, based on the given fluid state (either the wellbore
+        // fluid state carrying EvalWell values or a reservoir cell fluid state)
+        template <typename FluidStateT>
+        EvalWell surfaceToReservoirRate(const unsigned phaseIdx,
+                                        const FluidStateT& fs,
+                                        const std::vector<EvalWell>& surface_rates,
+                                        const std::string_view context,
+                                        DeferredLogger& deferred_logger) const;
+
+        // the energy carried by the well surface rates (out of the wellbore),
+        // based on the given fluid state (the wellhead fluid state for injectors,
+        // the wellbore fluid state for producers)
+        EvalWell wellOutflowEnergyRate(const FluidState<EvalWell>& fs,
+                                       DeferredLogger& deferred_logger) const;
+
+        // the energy contained in the wellbore, wellbore_volume * sum_p (u_p * S_p * rho_p)
+        template <typename ValueType>
+        ValueType computeWellboreEnergy() const;
+
+        // update the wellhead fluid state used for the enthalpy of injected fluid
+        void updateWellHeadCondition(const Simulator& simulator,
+                                     DeferredLogger& deferred_logger);
 
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
+
+        // this is an artificial wellbore volume to account for the fluid accumulation in the wellbore
+        // it is mostly helpful if the well is STOPPed or under zero rate target
+        static constexpr Scalar wellbore_volume = 0.1 * unit::cubic(unit::feet);
+
+        // the volume under surface conditions for different components in the wellbore
+        // at the beginning of the time step
+        std::vector<Scalar> fluids_initial_;
+
+        // fluid state representing the mixture in the wellbore, based on the
+        // well primary variables. it is used for the accumulation term of the
+        // well equations
+        FluidState<EvalWell> well_fluid_state_;
+
+        // the in-situ (wellbore condition) volume per unit surface volume of the
+        // wellbore mixture, consistent with well_fluid_state_
+        EvalWell wellbore_volume_ratio_{1.0};
+
+        // the energy contained in the wellbore at the beginning of the time step,
+        // only used when the energy equation is solved fully implicitly
+        Scalar wellbore_initial_energy_{0.0};
+
+        // fluid state under the wellhead condition, it is used to calculate the
+        // enthalpy of the injected fluid for the energy equation
+        FluidState<EvalWell> wellhead_fluid_state_;
+
+        // temperature and salt concentration of the first perforated cell,
+        // used as explicit quantities for the wellbore fluid state
+        typename Base::FSInfo first_perf_fs_info_{Scalar{288.71}, // 60 Fahrenheit
+                                                  Scalar{0.0}};
+
+        // computing the accumulation term for later use in conservation equations for wells
+        void computeInitialFluids();
+
+        // update well_fluid_state_ and wellbore_volume_ratio_ from the current
+        // primary variables
+        void updateWellFluidState();
     };
 
 }
