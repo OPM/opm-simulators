@@ -46,7 +46,9 @@ namespace Opm::gpuistl
  * @note this vector has no notion of block size. The user is responsible for allocating
  *       the correct number of primitives (double or floats)
  *
- * @note We only support vector sizes within the limits of int as this is the maximum size supported by CuBlas.
+ * @note Logical size is stored as \c size_t (via the wrapped GpuBuffer) but must be within the limits of
+ *       int due to restrictions of CuBlas. Dimensions outside that range are rejected with
+ *       \c std::invalid_argument. BLAS member functions convert the current dimension to \c int at call time.
  *
  * Example usage:
  *
@@ -92,8 +94,6 @@ public:
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
      *
-     * @note For now data.size() needs to be within the limits of int due to restrctions of CuBlas.
-     *
      * @param data the vector to copy from
      */
     explicit GpuVector(const std::vector<T>& data);
@@ -114,8 +114,6 @@ public:
      *
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
-     *
-     * @note For now bvector.dim() needs to be within the limits of int due to restrctions of CuBlas.
      *
      * @param bvector the vector to copy from
      */
@@ -143,8 +141,6 @@ public:
     /**
      * @brief GpuVector allocates new GPU memory of size numberOfElements * sizeof(T)
      *
-     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
-     *
      * @param numberOfElements number of T elements to allocate
      */
     explicit GpuVector(const size_t numberOfElements);
@@ -158,13 +154,11 @@ public:
      *
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
-     *
-     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      */
     GpuVector(const T* dataOnHost, const size_t numberOfElements);
 
     /**
-     * @brief ~GpuVector calls cudaFree
+     * @brief Default destructor; GPU memory is owned and released by the wrapped GpuBuffer.
      */
     virtual ~GpuVector() = default;
 
@@ -443,10 +437,10 @@ public:
     /**
      * @brief resize changes the size of the vector, preserving existing data if new size is larger
      * @param new_size the new number of elements
+     * @note \p new_size must be at least 1 and within the limits of int due to restrictions of CuBlas
      * @note If new_size is larger, existing data is preserved and new elements are uninitialized
      * @note If new_size is smaller, data is truncated
      * @note If new_size equals current size, no operation is performed
-     * @note For now new_size needs to be within the limits of int due to restrictions in cublas
      */
     void resize(size_t new_size);
 
@@ -510,6 +504,9 @@ private:
 
     void assertHasElements() const;
 
+    /**
+     * @brief Validates \p size for construction and resize (within the limits of int due to restrictions of CuBlas).
+     */
     static size_t checkedSize(size_t size);
 };
 
