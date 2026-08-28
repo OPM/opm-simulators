@@ -83,10 +83,21 @@ namespace Opm
         using Base::has_energy;
         using Base::has_bioeffects;
         using Base::has_micp;
+        using Base::has_watVapor;
+        using Base::has_disgas_in_water;
 
         using FoamModule = BlackOilFoamModule<TypeTag, has_foam>;
         using PolymerModule =  BlackOilPolymerModule<TypeTag, has_polymer>;
+        using SolventModule = BlackOilSolventModule<TypeTag, has_solvent>;
         using typename Base::PressureMatrix;
+
+        template <typename ValueType>
+        using WellboreFluidState = Base::template BlackOilFluidStateType<ValueType>;
+
+        // True when the composition switch primary variable is active, i.e. both oil and
+        // gas phases are present so that Rs/Rv are stored in the fluid state.
+        static constexpr bool compositionSwitchEnabled =
+            Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
@@ -475,6 +486,17 @@ namespace Opm
 
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
+
+        // Fluid state representing the mixture in the wellbore, together with the volume
+        // ratio, i.e. the in-situ (wellbore condition) volume per unit surface volume of
+        // the mixture. The volume ratio is not a property of the fluid state, so it is
+        // kept by the well itself.
+        template <typename ValueType>
+        std::pair<WellboreFluidState<ValueType>, ValueType>
+        createFluidState(const std::vector<ValueType>& fluid_composition,
+                         const ValueType& pressure,
+                         const ValueType& temperature,
+                         const Scalar saltConcentration = 0.0) const;
     };
 
 }
