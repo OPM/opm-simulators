@@ -99,7 +99,7 @@ struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
 //!          removes 5-7 orders of magnitude of condition number. Powers of two keep
 //!          x/s then *s exact. 1.0 disables the scaling.
 template<class Scalar>
-struct WellBhpScaling { static constexpr Scalar value = 1.0; };
+struct WellBhpScaling { static constexpr Scalar value = 8388608; };
 
 //! \brief Scaling of the well total-rate primary variable.
 //! \details Measures as already O(1), so 1.0 is the right default.
