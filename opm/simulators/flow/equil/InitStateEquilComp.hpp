@@ -763,7 +763,14 @@ private:
             OPM_THROW(std::runtime_error,
                       "Evaluating the equilibrated pressure of a region without cells.");
         }
-        const Scalar press = pressFunc->value(depth);
+
+        // Below the water-oil contact water is the only phase present, so the
+        // cell pressure follows the water column.  Taking it from the
+        // hydrocarbon function instead would carry the lighter hydrocarbon
+        // gradient into the water zone.
+        const bool inWaterZone = (depth > reg.zwoc) && reg.waterPressure.has_value();
+        const Scalar press = inWaterZone ? reg.waterPressure->value(depth)
+                                         : pressFunc->value(depth);
 
         fs.setTemperature(reg.tempVdTable.eval(depth, /*extrapolate=*/true));
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
