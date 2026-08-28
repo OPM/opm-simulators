@@ -34,6 +34,25 @@ namespace Opm {
 
 class Well;
 
+/// \brief Reservoir temperature and salt concentration of the first perforated cell.
+///
+/// Broadcast to all processes of a distributed well, since the process holding
+/// the first perforation is not necessarily the one needing the values.
+/// \tparam Scalar the simulator scalar type, i.e. double or float.
+template<class Scalar>
+struct FirstPerfCellConditions
+{
+    Scalar temperature{};
+    Scalar saltConcentration{};
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(temperature);
+        serializer(saltConcentration);
+    }
+};
+
 /// \brief Class to facilitate getting values associated with the above/below perforation
 ///
 template<class Scalar>

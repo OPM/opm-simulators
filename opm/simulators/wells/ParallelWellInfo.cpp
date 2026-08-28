@@ -847,9 +847,10 @@ template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterat
         broadcastFirstPerforationValue<int>(const int&) const;                      \
     template T ParallelWellInfo<T>::                                                \
         broadcastFirstPerforationValue<T>(const T&) const;                          \
-    template std::tuple<T, T>                                                       \
-    ParallelWellInfo<T>::broadcastFirstPerforationValue<std::tuple<T, T>>           \
-    (std::tuple<T, T> const&) const;                                                \
+    template FirstPerfCellConditions<T>                                          \
+    ParallelWellInfo<T>::                                                           \
+        broadcastFirstPerforationValue<FirstPerfCellConditions<T>>               \
+        (FirstPerfCellConditions<T> const&) const;                               \
     template void CommunicateAboveBelow<T>::                                        \
         partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const;                   \
     template bool operator<(const ParallelWellInfo<T>&,                             \

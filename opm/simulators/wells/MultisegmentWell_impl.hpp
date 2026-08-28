@@ -772,7 +772,7 @@ namespace Opm
         computePerfCellPressDiffs(simulator);
 
         // Refresh the fluid state before computing the initial inventory.
-        const auto info = this->getFirstPerforationFluidStateInfo(simulator);
+        const auto info = this->getFirstPerfCellConditions(simulator);
         updateSegmentFluidState(info, deferred_logger);
         computeInitialSegmentInventory(deferred_logger);
     }
@@ -1147,7 +1147,7 @@ namespace Opm
     {
         // Rebuild fluid states from the current primary variables before deriving segment
         // properties, so both use consistent PVT data.
-        const FSInfo info = this->getFirstPerforationFluidStateInfo(simulator);
+        const FSInfo info = this->getFirstPerfCellConditions(simulator);
         updateSegmentFluidState(info, deferred_logger);
 
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
@@ -1977,7 +1977,7 @@ namespace Opm
         // Needed to construct the injector wellhead fluid state.
         [[maybe_unused]] FSInfo info{};
         if constexpr (has_energy) {
-            info = this->getFirstPerforationFluidStateInfo(simulator);
+            info = this->getFirstPerfCellConditions(simulator);
         }
 
         for (int seg = 0; seg < nseg; ++seg) {
@@ -2023,8 +2023,8 @@ namespace Opm
                 if constexpr (has_energy) {
                     const bool top_injecting_segment = (seg == 0) && this->isInjector();
                     if (top_injecting_segment) {
-                        this->updateWellHeadCondition(simulator, std::get<0>(info),
-                                                      std::get<1>(info), deferred_logger);
+                        this->updateWellHeadCondition(simulator, info.temperature,
+                                                      info.saltConcentration, deferred_logger);
                     }
 
                     // Energy out toward the outlet, using the upwind segment fluid
@@ -2442,32 +2442,6 @@ namespace Opm
         this->primary_variables_.scaledWellFractions(scaled_fractions, deferred_logger);
     }
 
-    template <typename TypeTag>
-    typename MultisegmentWell<TypeTag>::FSInfo
-    MultisegmentWell<TypeTag>::
-    getFirstPerforationFluidStateInfo(const Simulator& simulator) const
-    {
-        Scalar fsTemperature = 0.0;
-        Scalar fsSaltConcentration = 0.0;
-
-        // If this process does not contain active perforations, this->well_cells_ is empty.
-        if (this->well_cells_.size() > 0) {
-            // We use the pvt region of first perforated cell, so we look for global index 0
-            // TODO: it should be a member of the WellInterface, initialized properly
-            const int cell_idx = this->well_cells_[0];
-            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-
-            fsTemperature = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
-            fsSaltConcentration = getValue(fs.saltConcentration());
-        }
-
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration);
-
-        // The following broadcast call is neccessary to ensure that processes that do *not* contain
-        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-        return this->parallel_well_info_.communication().size() == 1 ? info : this->parallel_well_info_.broadcastFirstPerforationValue(info);
-    }
 
     template <typename TypeTag>
     template <typename ValueType>
@@ -2639,9 +2613,9 @@ namespace Opm
                                                        DeferredLogger& deferred_logger) const
     {
         const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-        const Scalar firstPerfTemperature = std::get<0>(info);
+        const Scalar firstPerfTemperature = info.temperature;
         // Salt is not an MSW primary variable: use the constant first-perf value.
-        const EvalWell seg_salt_concentration = std::get<1>(info);
+        const EvalWell seg_salt_concentration = info.saltConcentration;
         const EvalWell seg_temperature = has_energy ? this->primary_variables_.getSegmentTemperature(seg) : firstPerfTemperature;
 
         // TODO: with the energy equation joins, the num_conservation_quantities will be challenged
