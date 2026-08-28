@@ -247,6 +247,9 @@ public:
             // at each node using VFP tables and rates.
             computeNodePressures(root_to_child_nodes, node_inflows);
 
+#ifdef OPM_NETWORK_PRESSURE_TRACE
+            // Off unless the macro is defined: this builds a string per node per
+            // sub-iteration per domain, whether or not the log keeps it.
             OpmLog::debug("Network pressure computation completed for root " + root.get().name() + ". Node pressures:");
             for (const auto& [node, pressure] : node_pressures_) {
                 OpmLog::debug("Network node " + node + " pressure: " + std::to_string(pressure/1e5) + " bar");
@@ -256,6 +259,7 @@ public:
                 OpmLog::debug("Network node " + node + " inflows: "
                     + std::to_string(inflows[0]*86400) + ", " + std::to_string(inflows[1]*86400) + ", " + std::to_string(inflows[2]*86400));
             }
+#endif
 
         }
 

@@ -24,6 +24,7 @@
 #define OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
 #include <opm/output/data/Groups.hpp>
 
@@ -65,6 +66,24 @@ namespace details {
         NetworkDomain domain;
         std::reference_wrapper<const Network::ExtNetwork> network;
     };
+
+    /// The network a well belongs to, or nullopt for a well that is in none of them.
+    template<class Well>
+    std::optional<NetworkDomain> domainForWell(const Well& well)
+    {
+        if (well.isProducer()) {
+            return NetworkDomain::Production;
+        }
+        if (well.isInjector()) {
+            if (well.wellEcl().injectorType() == InjectorType::GAS) {
+                return NetworkDomain::InjectionGas;
+            }
+            if (well.wellEcl().injectorType() == InjectorType::WATER) {
+                return NetworkDomain::InjectionWater;
+            }
+        }
+        return std::nullopt;
+    }
 
     /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
     bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);

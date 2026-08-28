@@ -145,16 +145,7 @@ update(const bool mandatory_network_balance,
                      continue;
                 }
 
-                std::optional<details::NetworkDomain> domain;
-                if (well->isProducer()) {
-                    domain = details::NetworkDomain::Production;
-                } else if (well->isInjector()) {
-                    if (well->wellEcl().injectorType() == InjectorType::GAS) {
-                        domain = details::NetworkDomain::InjectionGas;
-                    } else if (well->wellEcl().injectorType() == InjectorType::WATER) {
-                        domain = details::NetworkDomain::InjectionWater;
-                    }
-                }
+                const auto domain = details::domainForWell(*well);
 
                 if (!domain.has_value()) {
                     continue;
