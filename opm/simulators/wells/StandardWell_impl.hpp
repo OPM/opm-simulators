@@ -2658,6 +2658,12 @@ namespace Opm
         for (int ii = 0; ii < num_pri_vars; ++ii) {
             this->primary_variables_.setValue(ii, it[ii]);
         }
+        // well_fluid_state_ and wellbore_volume_ratio_ are derived from the primary
+        // variables and are used by the accumulation term in
+        // assembleWellEqWithoutIterationImpl(), which does not recompute them. NLDD
+        // restores primary variables through this setter when a domain solve fails, so
+        // refresh them here to avoid assembling with the discarded solution's values.
+        updateWellFluidState();
         return num_pri_vars;
     }
 
