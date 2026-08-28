@@ -425,6 +425,13 @@ unsolvedNewWellProductionRates_(const std::string& group_name, bool network) con
     const auto report_step = this->groupStateHelper_.reportStepIdx();
     const auto& schedule = this->groupStateHelper_.schedule();
     const auto& group = schedule.getGroup(group_name, report_step);
+    // NOTE: the live schedule events are read on purpose.  NEW_WELL is cleared after the
+    // first time step of the report step, so the correction applies only to the sync step
+    // in which the well opens; from the next one its rates come from a solve and belong
+    // in the sum.  Do not switch this to BlackoilWellModel::reportStepStartEvents(),
+    // which keeps the flag for the whole report step: wellsSolvedThisSyncStep() is
+    // cleared before the pre-solve send of *every* sync step, so a valid converged rate
+    // would then be subtracted on each of them.
     const auto& events = schedule[report_step].wellgroup_events();
     // Mirror sumWellPhaseRates(): a slave group may hold no wells of its own, so
     // descend into child groups, applying each child's efficiency factor.
