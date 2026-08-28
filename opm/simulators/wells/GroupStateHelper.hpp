@@ -517,6 +517,28 @@ public:
                                              bool is_injector,
                                              WellState<Scalar, IndexTraits>& well_state) const;
 
+    /// \brief The contribution of a single well to a group rate sum.
+    ///
+    /// Applies the filters, the efficiency factor and the sign convention that
+    /// sumWellPhaseRates() uses, so a caller that needs to add or remove one well's
+    /// share of such a sum stays consistent with it.  Returns zero when the well does
+    /// not contribute at all: not present in this rank's well state, not owned by this
+    /// rank (each well is counted once), of the wrong type for the sum, or shut.
+    ///
+    /// Being owner-filtered, the result is rank-local, exactly like sumWellPhaseRates();
+    /// a caller that compares it against an already-reduced quantity must reduce it too.
+    ///
+    /// \param well_name Name of the well
+    /// \param phase_pos Active phase index
+    /// \param res_rates Use reservoir rates instead of surface rates
+    /// \param is_injector Sum injectors rather than producers
+    /// \param network Use the network efficiency factors (GEFAC/WEFAC item 3)
+    Scalar wellRateContributionToGroup(const std::string& well_name,
+                                       const int phase_pos,
+                                       const bool res_rates,
+                                       const bool is_injector,
+                                       const bool network = false) const;
+
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar>
     worstOffendingWell(const Group& group,
