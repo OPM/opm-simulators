@@ -2550,7 +2550,6 @@ namespace Opm
             && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
 
         const ValueType zero_value {0.};
-        constexpr Scalar epsilon = std::numeric_limits<Scalar>::epsilon();
         // let us handle the dissolution first
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2569,7 +2568,7 @@ namespace Opm
                         // the fluid composition can be (slightly) negative due to numerical
                         // overshooting, we only apply the composition cap when the hosting
                         // component is present to avoid problematic rs values
-                        if (fluid_composition[activeCompIdx] > epsilon) {
+                        if (fluid_composition[activeCompIdx] > 0.0) {
                             const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(
                                 FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
                             const ValueType max_possible_rs
@@ -2586,10 +2585,13 @@ namespace Opm
             case FluidSystem::gasPhaseIdx: {
                 if constexpr (compositionSwitchEnabled) {
                     if (both_oil_gas) {
-                        // starting with saturated rv value
-                        ValueType rv = FluidSystem::saturatedVaporizationFactor(
+                        // Starting with the saturated rv value. Note that for the gas phase
+                        // saturatedDissolutionFactor() is the saturated *oil* vaporization
+                        // factor Rv (saturatedVaporizationFactor() would be the saturated
+                        // *water* vaporization factor Rvw, used for rvw below).
+                        ValueType rv = FluidSystem::saturatedDissolutionFactor(
                             fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-                        if (fluid_composition[activeCompIdx] > epsilon) {
+                        if (fluid_composition[activeCompIdx] > 0.0) {
                             const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(
                                 FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
                             const ValueType max_possible_rv
@@ -2606,7 +2608,7 @@ namespace Opm
                         // starting with saturated rvw value
                         ValueType rvw = FluidSystem::saturatedVaporizationFactor(
                             fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-                        if (fluid_composition[activeCompIdx] > epsilon) {
+                        if (fluid_composition[activeCompIdx] > 0.0) {
                             const unsigned waterCompIdx = FluidSystem::canonicalToActiveCompIdx(
                                 FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
                             const ValueType max_possible_rvw
@@ -2626,7 +2628,7 @@ namespace Opm
                         // starting with saturated rsw value
                         ValueType rsw = FluidSystem::saturatedDissolutionFactor(
                             fluid_state, phaseIdx, fluid_state.pvtRegionIndex());
-                        if (fluid_composition[activeCompIdx] > epsilon) {
+                        if (fluid_composition[activeCompIdx] > 0.0) {
                             const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(
                                 FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
                             const ValueType max_possible_rsw
