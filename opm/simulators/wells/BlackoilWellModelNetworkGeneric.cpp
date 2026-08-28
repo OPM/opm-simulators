@@ -1246,16 +1246,7 @@ updatePressures(const int reportStepIdx,
             continue;
         }
 
-        std::optional<details::NetworkDomain> domain;
-        if (well->isProducer()) {
-            domain = details::NetworkDomain::Production;
-        } else if (well->isInjector()) {
-            if (well->wellEcl().injectorType() == InjectorType::GAS) {
-                domain = details::NetworkDomain::InjectionGas;
-            } else if (well->wellEcl().injectorType() == InjectorType::WATER) {
-                domain = details::NetworkDomain::InjectionWater;
-            }
-        }
+        const auto domain = details::domainForWell(*well);
 
         if (!domain.has_value()) {
             continue;
@@ -1394,16 +1385,7 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 {
-    std::optional<details::NetworkDomain> domain;
-    if (well.isProducer()) {
-        domain = details::NetworkDomain::Production;
-    } else if (well.isInjector()) {
-        if (well.wellEcl().injectorType() == InjectorType::GAS) {
-            domain = details::NetworkDomain::InjectionGas;
-        } else if (well.wellEcl().injectorType() == InjectorType::WATER) {
-            domain = details::NetworkDomain::InjectionWater;
-        }
-    }
+    const auto domain = details::domainForWell(well);
 
     if (domain.has_value() && !this->nodePressures(*domain).empty()) {
         const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
@@ -1485,11 +1467,11 @@ operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const
         && this->node_pressures_ == rhs.node_pressures_
         && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
         && this->branch_data_ == rhs.branch_data_
-    && this->last_valid_branch_data_ == rhs.last_valid_branch_data_
-    && this->domain_node_pressures_ == rhs.domain_node_pressures_
-    && this->last_valid_domain_node_pressures_ == rhs.last_valid_domain_node_pressures_
-    && this->domain_branch_data_ == rhs.domain_branch_data_
-    && this->last_valid_domain_branch_data_ == rhs.last_valid_domain_branch_data_;
+        && this->last_valid_branch_data_ == rhs.last_valid_branch_data_
+        && this->domain_node_pressures_ == rhs.domain_node_pressures_
+        && this->last_valid_domain_node_pressures_ == rhs.last_valid_domain_node_pressures_
+        && this->domain_branch_data_ == rhs.domain_branch_data_
+        && this->last_valid_domain_branch_data_ == rhs.last_valid_domain_branch_data_;
 }
 
 template class BlackoilWellModelNetworkGeneric<double, BlackOilDefaultFluidSystemIndices>;
