@@ -139,25 +139,21 @@ public:
     static constexpr bool compositionSwitchEnabled =
         Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
-    // For the conversion between the surface volume rate and reservoir voidage rate
-    template <typename ValueType>
-    using FluidState = BlackOilFluidState<ValueType,
-                                          FluidSystem,
-                                          energyModuleType != EnergyModules::NoTemperature,
-                                          energyModuleType == EnergyModules::FullyImplicitThermal,
-                                          Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
-                                          has_watVapor,
-                                          has_brine,
-                                          has_saltPrecip,
-                                          has_disgas_in_water,
-                                          has_solvent,
-                                          Indices::numPhases>;
-
     template<class ValueType>
-    using BlackOilFluidStateType = FluidState<ValueType>;
+    using BlackOilFluidStateType = BlackOilFluidState<ValueType,
+                                                      FluidSystem,
+                                                      energyModuleType != EnergyModules::NoTemperature,
+                                                      energyModuleType == EnergyModules::FullyImplicitThermal,
+                                                      compositionSwitchEnabled,
+                                                      has_watVapor,
+                                                      has_brine,
+                                                      has_saltPrecip,
+                                                      has_disgas_in_water,
+                                                      has_solvent,
+                                                      Indices::numPhases>;
 
     // fluid state for the reservoir fluid
-    using ReservoirFluidState = FluidState<Eval>;
+    using ReservoirFluidState = BlackOilFluidStateType<Eval>;
 
     /// Constructor
     WellInterface(const Well& well,
@@ -553,7 +549,7 @@ protected:
     //! \note The volume ratio is not a property of the fluid state, so it is kept by
     //! the well itself. At the current stage, this is only used for well calculation.
     template <typename ValueType>
-    std::pair<FluidState<ValueType>, ValueType>
+    std::pair<BlackOilFluidStateType<ValueType>, ValueType>
     createFluidState(const std::vector<ValueType>& fluid_composition,
                      const ValueType& pressure,
                      const ValueType& temperature,

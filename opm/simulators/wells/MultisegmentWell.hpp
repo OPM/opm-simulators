@@ -54,7 +54,6 @@ namespace Opm {
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-        using typename Base::FluidState;
         using typename Base::WellStateType;
         using typename Base::GroupStateHelperType;
 

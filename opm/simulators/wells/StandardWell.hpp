@@ -88,7 +88,7 @@ namespace Opm
         using typename Base::PressureMatrix;
 
         template <typename ValueType>
-        using FluidState = Base::template FluidState<ValueType>;
+        using WellboreFluidState = Base::template BlackOilFluidStateType<ValueType>;
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
@@ -488,7 +488,7 @@ namespace Opm
         // fluid state representing the mixture in the wellbore, based on the
         // well primary variables. it is used for the accumulation term of the
         // well equations
-        FluidState<EvalWell> well_fluid_state_;
+        WellboreFluidState<EvalWell> well_fluid_state_;
 
         // the in-situ (wellbore condition) volume per unit surface volume of the
         // wellbore mixture, consistent with well_fluid_state_

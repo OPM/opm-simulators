@@ -2523,13 +2523,13 @@ namespace Opm
 
     template <typename TypeTag>
     template <typename ValueType>
-    std::pair<typename WellInterface<TypeTag>::template FluidState<ValueType>, ValueType>
+    std::pair<typename WellInterface<TypeTag>::template BlackOilFluidStateType<ValueType>, ValueType>
     WellInterface<TypeTag>::createFluidState(const std::vector<ValueType>& fluid_composition,
                                              const ValueType& pressure,
                                              const ValueType& temperature,
                                              const Scalar saltConcentration) const
     {
-        FluidState<ValueType> fluid_state;
+        BlackOilFluidStateType<ValueType> fluid_state;
         if constexpr (has_energy) {
             fluid_state.setTemperature(temperature);
         }
