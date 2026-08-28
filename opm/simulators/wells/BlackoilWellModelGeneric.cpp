@@ -335,6 +335,7 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool enable_dist
     this->wellState().clearWellRates();
     this->commitWGState();
     this->updateNupcolWGState();
+    this->deserialized_state_pending_ = true;
 }
 
 template<typename Scalar, typename IndexTraits>

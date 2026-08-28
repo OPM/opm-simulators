@@ -306,7 +306,7 @@ runStep(SimulatorTimer& timer)
     }
 
     // write the inital state at the report stage
-    if (timer.initialStep()) {
+    if (timer.initialStep() && !serializer_.shouldLoad()) {
         Dune::Timer perfTimer;
         perfTimer.start();
 
@@ -319,13 +319,6 @@ runStep(SimulatorTimer& timer)
         report_.success.output_write_time += perfTimer.stop();
     }
 
-    // Run a multiple steps of the solver depending on the time step control.
-    solverTimer_->start();
-
-    if (!solver_) {
-        solver_ = createSolver(wellModel_());
-    }
-
     simulator_.startNextEpisode(
         simulator_.startTime()
            + schedule().seconds(timer.currentStepNum()),
@@ -336,6 +329,14 @@ runStep(SimulatorTimer& timer)
         wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
         serializer_.loadState();
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        wellModel_().beginReportStep(timer.currentStepNum());
+    }
+
+    // Run a multiple steps of the solver depending on the time step control.
+    solverTimer_->start();
+
+    if (!solver_) {
+        solver_ = createSolver(wellModel_());
     }
 
     // Same position as the OPMRST restore above -- after the episode has been

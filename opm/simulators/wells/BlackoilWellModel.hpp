@@ -633,8 +633,11 @@ template<class Scalar> class WellContributions;
             /// \param[in] enableWellPIScaling Whether or not to enable WELPI
             ///   scaling.  Typically enabled (i.e., true) only at the start
             ///   of a report step.
+            /// \param[in] initializeWellState Whether or not to initialize well state.
+            ///   Typically true, false is used during serialized restart.
             void initializeLocalWellStructure(const int  reportStepIdx,
-                                              const bool enableWellPIScaling);
+                                              const bool enableWellPIScaling,
+                                              const bool initializeWellState);
 
             /// Initialize group control modes/constraints and group solution state.
             ///

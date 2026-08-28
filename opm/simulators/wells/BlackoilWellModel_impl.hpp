@@ -208,9 +208,12 @@ namespace Opm {
             (std::vector<int>(this->local_num_cells_, 0));
 
         {
-            // WELPI scaling runs at start of report step.
+            const bool initializeWellState = !this->deserialized_state_pending_;
             const auto enableWellPIScaling = true;
-            this->initializeLocalWellStructure(timeStepIdx, enableWellPIScaling);
+            this->initializeLocalWellStructure(timeStepIdx,
+                                               enableWellPIScaling,
+                                               initializeWellState);
+            this->deserialized_state_pending_ = false;
         }
 
         this->initializeGroupStructure(timeStepIdx);
@@ -248,7 +251,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     initializeLocalWellStructure(const int  reportStepIdx,
-                                 const bool enableWellPIScaling)
+                                 const bool enableWellPIScaling,
+                                 const bool initializeWellState)
     {
         auto logger_guard = this->groupStateHelper().pushLogger();
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
@@ -270,11 +274,13 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
-            this->initializeWellState(reportStepIdx);
+            if (initializeWellState) {
+                this->initializeWellPerfData();
+                this->initializeWellState(reportStepIdx);
+            }
             this->wbp_.initializeWBPCalculationService();
 
-            if (this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
+            if (initializeWellState && this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
                 this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState(), has_energy_);
             }
 
@@ -358,7 +364,7 @@ namespace Opm {
             // middle of a report step.
             const auto enableWellPIScaling = false;
 
-            this->initializeLocalWellStructure(reportStepIdx, enableWellPIScaling);
+            this->initializeLocalWellStructure(reportStepIdx, enableWellPIScaling, true);
             this->initializeGroupStructure(reportStepIdx);
 
             this->commitWGState();
