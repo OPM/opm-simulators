@@ -2659,8 +2659,22 @@ namespace Opm
             const Scalar solventRefDensity = SolventModule::solventReferenceDensity(pvtRegionIdx);
             if (SolventModule::isCO2Sol() || SolventModule::isH2Sol()) {
                 // compute and set dissolved solvent in water (rsSolw)
-                const auto rsSolw = SolventModule::solubilityLimit(pvtRegionIdx, temperature, pressure,
-                                                                    ValueType(saltConcentration));
+                ValueType rsSolw = SolventModule::solubilityLimit(pvtRegionIdx, temperature, pressure,
+                                                                  ValueType(saltConcentration));
+                // Only the solvent that is actually present can dissolve. Cap by the
+                // solvent to water surface volume ratio, mirroring the rs/rsw capping
+                // above, so the free solvent volume below stays non-negative.
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx =
+                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+                    if (fluid_composition[waterCompIdx] > 0.0) {
+                        const ValueType max_possible_rsSolw =
+                            std::max(fluid_composition[Indices::contiSolventEqIdx]
+                                         / fluid_composition[waterCompIdx],
+                                     zero_value);
+                        rsSolw = std::min(rsSolw, max_possible_rsSolw);
+                    }
+                }
                 fluid_state.setRsSolw(rsSolw);
 
                 // update water phase invB using brine PVT, matching solventPvtUpdate_()
@@ -2675,6 +2689,10 @@ namespace Opm
                         fluid_state.setInvB(FluidSystem::waterPhaseIdx, bw);
                     }
                 }
+            } else {
+                // Keep rsSolw defined for every fluid state that stores it, so the
+                // dissolved solvent below and any later use see a sized value.
+                fluid_state.setRsSolw(zero_value);
             }
             fluid_state.setSolventInvB(solventInvB);
             fluid_state.setSolventDensity(solventInvB * solventRefDensity);
@@ -2807,7 +2825,18 @@ namespace Opm
 
         [[maybe_unused]] ValueType solvent_volume {0.0};
         if constexpr (has_solvent) {
-            solvent_volume = fluid_composition[Indices::contiSolventEqIdx] / fluid_state.solventInvB();
+            // The solvent component holds the free solvent plus the solvent dissolved in
+            // water (see BlackOilSolventModule::addStorage()), so subtract the dissolved
+            // part before converting the remainder into a free solvent volume. Counting
+            // the whole component as free solvent would reconstruct
+            // "solvent + rsSolw * water" instead of the solvent that went in.
+            ValueType free_solvent = fluid_composition[Indices::contiSolventEqIdx];
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const unsigned waterCompIdx =
+                    FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+                free_solvent -= fluid_state.rsSolw() * fluid_composition[waterCompIdx];
+            }
+            solvent_volume = free_solvent / fluid_state.solventInvB();
             total_volume += solvent_volume;
         }
 
