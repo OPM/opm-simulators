@@ -40,13 +40,13 @@ GpuVector<T>::GpuVector(const std::vector<T>& data)
 
 template <class T>
 GpuVector<T>::GpuVector(const size_t numberOfElements)
-    : m_buffer(numberOfElements)
+    : m_buffer(checkedSize(numberOfElements))
 {
 }
 
 template <class T>
 GpuVector<T>::GpuVector(const T* dataOnHost, const size_t numberOfElements)
-    : m_buffer(dataOnHost, numberOfElements)
+    : m_buffer(dataOnHost, checkedSize(numberOfElements))
 {
 }
 
@@ -64,7 +64,6 @@ GpuVector<T>&
 GpuVector<T>::operator=(const GpuVector<T>& other)
 {
     //TODO-H: Call device-to-device copy
-
 
     // Only copy data if both vectors have elements and same size
     if (m_buffer.size() > 0 && other.m_buffer.size() > 0) {
@@ -109,7 +108,7 @@ template <typename T>
 void
 GpuVector<T>::resize(size_t new_size)
 {
-    m_buffer.resize(new_size);
+    m_buffer.resize(checkedSize(new_size));
 }
 
 template <typename T>
@@ -154,7 +153,13 @@ GpuVector<T>::assertHasElements() const
     }
 }
 
-
+template <typename T>
+size_t
+GpuVector<T>::checkedSize(size_t numberOfElements)
+{
+    (void)detail::to_int(numberOfElements);
+    return numberOfElements;
+}
 
 template <class T>
 GpuVector<T>&

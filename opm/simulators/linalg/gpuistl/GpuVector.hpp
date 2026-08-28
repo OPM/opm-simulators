@@ -46,6 +46,8 @@ namespace Opm::gpuistl
  * @note this vector has no notion of block size. The user is responsible for allocating
  *       the correct number of primitives (double or floats)
  *
+ * @note We only support vector sizes within the limits of int as this is the maximum size supported by CuBlas.
+ *
  * Example usage:
  *
  * @code{.cpp}
@@ -507,6 +509,8 @@ private:
     void assertSameSize(size_t size) const;
 
     void assertHasElements() const;
+
+    static size_t checkedSize(size_t size);
 };
 
 } // namespace Opm::gpuistl
