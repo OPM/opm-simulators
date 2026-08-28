@@ -73,10 +73,7 @@ namespace Opm {
         static constexpr bool compositionSwitchEnabled =
             Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
-        // True when the segment fluid state stores a temperature. This includes thermal modes
-        // without a fully implicit energy equation.
-        static constexpr bool enable_temperature =
-            Base::energyModuleType != EnergyModules::NoTemperature;
+        using Base::enable_temperature;
 
         // Scales the well-side energy equation onto the mass-balance residual
         // scale. Reuses the reservoir energy factor so both live on the same scale.

@@ -2530,7 +2530,11 @@ namespace Opm
                                              const Scalar saltConcentration) const
     {
         BlackOilFluidStateType<ValueType> fluid_state;
-        if constexpr (has_energy) {
+        if constexpr (enable_temperature) {
+            // Populate temperature for every fluid state that stores it, including thermal
+            // modes without a fully implicit energy equation. Guarding on has_energy would
+            // leave it default constructed for those modes, and the temperature dependent
+            // PVT correlations below would then operate on an unsized Evaluation.
             fluid_state.setTemperature(temperature);
         }
         if constexpr (has_brine) {

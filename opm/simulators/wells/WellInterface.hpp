@@ -139,6 +139,12 @@ public:
     static constexpr bool compositionSwitchEnabled =
         Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
+    // True when the fluid state stores a temperature. This includes thermal modes
+    // without a fully implicit energy equation, so it is weaker than has_energy and
+    // must be used when populating the temperature.
+    static constexpr bool enable_temperature =
+        energyModuleType != EnergyModules::NoTemperature;
+
     template<class ValueType>
     using BlackOilFluidStateType = BlackOilFluidState<ValueType,
                                                       FluidSystem,
