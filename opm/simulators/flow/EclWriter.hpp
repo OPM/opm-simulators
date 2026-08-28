@@ -212,7 +212,7 @@ public:
 
     void recordNewDynamicWellConns(const DynamicConns& newConns)
     {
-        if ((this->rank_ == 0) && (this->eclIO_ != nullptr)) {
+        if (this->collectOnIORank_.isIORank() && (this->eclIO_ != nullptr)) {
             this->eclIO_->recordNewDynamicWellConns(newConns);
         }
     }
