@@ -323,9 +323,7 @@ protected:
                            Parameters::Get<Parameters::ParsingStrictness>(),
                            Parameters::Get<Parameters::ActionParsingStrictness>(),
                            Parameters::Get<Parameters::InputSkipMode>(),
-                           // Geomechanics needs the full deck retained (fracture
-                           // seeds and mech keywords are read during the run).
-                           keepKeywords || getPropValue<PreTypeTag, Properties::EnableMech>(),
+                           keepKeywords,
                            getNumThreads(),
                            Parameters::Get<Parameters::EclOutputInterval>(),
                            Parameters::Get<Parameters::Slave>(),
