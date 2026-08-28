@@ -487,6 +487,34 @@ namespace Opm
         // density of the first perforation, might not be from this rank
         Scalar cachedRefDensity{0};
 
+        // this is an artificial wellbore volume to account for the fluid accumulation in the wellbore
+        // it is mostly helpful if the well is STOPPed or under zero rate target
+        static constexpr Scalar wellbore_volume = 0.1 * unit::cubic(unit::feet);
+
+        // the surface volume under surface conditions for different components at the beginning of the time step
+        std::vector<Scalar> fluids_initial_;
+
+        // fluid state representing the mixture in the wellbore, based on the
+        // well primary variables. it is used for the accumulation term of the
+        // well equations
+        WellboreFluidState<EvalWell> well_fluid_state_;
+
+        // the in-situ (wellbore condition) volume per unit surface volume of the
+        // wellbore mixture, consistent with well_fluid_state_
+        EvalWell wellbore_volume_ratio_{1.0};
+
+        // temperature and salt concentration of the first perforated cell,
+        // used as explicit quantities for the wellbore fluid state
+        typename Base::FSInfo first_perf_fs_info_{Scalar{288.71}, // 60 Fahrenheit
+                                                  Scalar{0.0}};
+
+        // computing the accumulation term for later use in conservation equations for wells
+        void computeInitialFluids();
+
+        // update well_fluid_state_ and wellbore_volume_ratio_ from the current
+        // primary variables
+        void updateWellFluidState();
+
         // Fluid state representing the mixture in the wellbore, together with the volume
         // ratio, i.e. the in-situ (wellbore condition) volume per unit surface volume of
         // the mixture. The volume ratio is not a property of the fluid state, so it is
