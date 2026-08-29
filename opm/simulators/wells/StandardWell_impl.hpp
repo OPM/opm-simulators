@@ -376,6 +376,12 @@ namespace Opm
     {
         auto& deferred_logger = groupStateHelper.deferredLogger();
 
+        // Refresh the wellbore fluid state so its consistency with the primary
+        // variables is guaranteed structurally, like the multisegment well does at
+        // the top of its assembly, instead of relying on every mutation site of the
+        // primary variables to remember to refresh it.
+        updateWellFluidState();
+
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
 
