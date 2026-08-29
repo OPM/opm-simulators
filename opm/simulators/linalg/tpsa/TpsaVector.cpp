@@ -37,8 +37,13 @@ namespace Opm::Linear
 //
 // TpsaVector<ScalarT>::EntryProxy implementation
 //
+// The conversion type is spelled out rather than left as EqVector: in an
+// out-of-line definition MSVC does not look the conversion-type-id up in the
+// enclosing class template's scope, and rejects the short form with
+// "C7753: ill-formed conversion-function-id". The qualified spelling means
+// the same thing to every compiler.
 template <class ScalarT>
-TpsaVector<ScalarT>::EntryProxy::operator EqVector() const
+TpsaVector<ScalarT>::EntryProxy::operator typename TpsaVector<ScalarT>::EqVector() const
 {
     EqVector res;
     for (std::size_t eqIdx = 0; eqIdx < numTpsaEq; ++eqIdx) {
