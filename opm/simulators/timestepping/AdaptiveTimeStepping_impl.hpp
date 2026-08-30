@@ -670,7 +670,7 @@ getRcMasterSyncStepLength_(double prev_step,
         //  dt_ to current_step_length.
     }
     current_step_length = reservoirCouplingMaster_().maybeChopSubStep(current_step_length, current_time);
-    auto num_active = reservoirCouplingMaster_().numActivatedSlaves();
+    auto num_active = reservoirCouplingMaster_().numCoupledSlaves();
     OpmLog::info(fmt::format(
         "\nChoosing next sync time{} between master and {} active slave {}: {:.2f} days",
         sync_at_report_steps ? " (RSYNC)" : "",

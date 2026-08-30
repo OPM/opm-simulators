@@ -115,10 +115,17 @@ public:
     /// @return Reference to the Schedule object containing timing and control information
     const Schedule& schedule() const { return this->master_.schedule(); }
 
-    /// @brief Check if a specific slave process has been activated
+    /// @brief Check if a specific slave process has reached the end of its own schedule
     /// @param index Index of the slave process
-    /// @return true if the slave is activated, false otherwise
-    bool slaveIsActivated(int index) const { return this->master_.slaveIsActivated(index); }
+    /// @return true if the slave has ended and disconnected, false otherwise
+    bool slaveHasEnded(int index) const { return this->master_.slaveHasEnded(index); }
+
+    /// @brief Check if a specific slave process currently takes part in the coupling
+    /// @details True only for a slave that has activated and has not ended. Use this before
+    ///   any message exchange with the slave.
+    /// @param index Index of the slave process
+    /// @return true if the slave is coupled, false otherwise
+    bool slaveIsCoupled(int index) const { return this->master_.slaveIsCoupled(index); }
 
     /// @brief Get the name of a specific slave process
     /// @param index Index of the slave process

@@ -140,7 +140,7 @@ receiveInjectionDataFromSlaves()
         }
         std::vector<SlaveGroupInjectionData> injection_data(num_slave_groups);
         if (this->comm().rank() == 0) {
-            if (this->slaveIsActivated(i)) {
+            if (this->slaveIsCoupled(i)) {
                 // NOTE: See comment about error handling at the top of this file.
                 auto MPI_INJECTION_DATA_TYPE = Dune::MPITraits<SlaveGroupInjectionData>::getType();
                 MPI_Recv(
@@ -158,8 +158,11 @@ receiveInjectionDataFromSlaves()
                 ));
             }
             else {
+                // Either the slave has not activated yet, or it has reached the end of its own
+                // schedule and left the coupling. In both cases the master continues with no
+                // injection from this slave.
                 this->logger().debug(fmt::format(
-                    "Slave {} has not activated yet, skipping injection data",
+                    "Slave {} is not coupled, skipping injection data",
                     this->slaveName(i)
                 ));
                 injection_data.assign(num_slave_groups, SlaveGroupInjectionData{}); // Set to zero injection data
@@ -193,7 +196,7 @@ receiveProductionDataFromSlaves()
         }
         std::vector<SlaveGroupProductionData> production_data(num_slave_groups);
         if (this->comm().rank() == 0) {
-            if (this->slaveIsActivated(i)) {
+            if (this->slaveIsCoupled(i)) {
                 // NOTE: See comment about error handling at the top of this file.
                 auto MPI_PRODUCTION_DATA_TYPE = Dune::MPITraits<SlaveGroupProductionData>::getType();
                 MPI_Recv(
@@ -211,8 +214,11 @@ receiveProductionDataFromSlaves()
                 ));
             }
             else {
+                // Either the slave has not activated yet, or it has reached the end of its own
+                // schedule and left the coupling. In both cases the master continues with no
+                // production from this slave.
                 this->logger().debug(fmt::format(
-                    "Slave {} has not activated yet, skipping production data",
+                    "Slave {} is not coupled, skipping production data",
                     this->slaveName(i)
                 ));
                 production_data.assign(num_slave_groups, SlaveGroupProductionData{}); // Set to zero production data

@@ -130,10 +130,16 @@ run(SimulatorTimer& timer)
         this->reservoirCouplingMaster_->sendTerminateAndDisconnect();
     }
     else if (this->reservoirCouplingSlave_ && !this->reservoirCouplingSlave_->terminated()) {
-        // TODO: Implement GECON item 8: stop master process when a slave finishes
+        // We got here by running out of report steps of our own. If the master is still
+        // running, notifyEndOfRunAndDisconnect() tells it so, and the master then continues
+        // with no flow from this slave.
+        //
+        // TODO: Implement GECON item 8, which lets a master deck ask for the opposite: stop
+        //   the master run when one of its slaves finishes, rather than continuing without it.
+        //
         // Only call if not already terminated via maybeReceiveTerminateSignalFromMaster()
         // (which happens when master finishes before slave reaches end of its loop)
-        this->reservoirCouplingSlave_->receiveTerminateAndDisconnect();
+        this->reservoirCouplingSlave_->notifyEndOfRunAndDisconnect();
     }
 #endif
 

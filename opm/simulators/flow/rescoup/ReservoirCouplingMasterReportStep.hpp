@@ -260,10 +260,12 @@ public:
     /// @return ReservoirCouplingGroupRates struct with per-group rates.
     data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
 
-    /// @brief Check if a specific slave process has been activated
+    /// @brief Check if a specific slave process currently takes part in the coupling
+    /// @details True only for a slave that has activated and has not ended. A slave that is
+    ///   not coupled sends no data, and its groups contribute zero rates.
     /// @param index Index of the slave process
-    /// @return true if the slave is activated, false otherwise
-    bool slaveIsActivated(int index) const { return this->master_.slaveIsActivated(index); }
+    /// @return true if the slave is coupled, false otherwise
+    bool slaveIsCoupled(int index) const { return this->master_.slaveIsCoupled(index); }
 
     /// @brief Get the name of a specific slave process
     /// @param index Index of the slave process

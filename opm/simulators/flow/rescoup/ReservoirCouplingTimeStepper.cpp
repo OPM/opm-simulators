@@ -70,6 +70,11 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
     // slave process will report or start during the timestep [step_start_date, step_end_date]
     // where suggested_timestep = step_end_date - step_start_date
     for (std::size_t i = 0; i < num_slaves; i++) {
+        if (this->slaveHasEnded(i)) {
+            // The slave has no further report steps, so there is nothing left to synchronize
+            // with. Its last reported date is stale and must not chop the master's timestep.
+            continue;
+        }
         double slave_start_date = this->slaveStartDate(i);
         double slave_activation_date = this->slaveActivationDate(i);
         double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
@@ -110,11 +115,12 @@ receiveNextReportDateFromSlaves()
     if (this->comm().rank() == 0) {
         this->logger().debug("Receiving next report dates from slave processes");
         for (unsigned int i = 0; i < num_slaves; i++) {
-            if (!this->slaveIsActivated(i)) {
-                // Set to zero to indicate that the slave has not activated yet
+            if (!this->slaveIsCoupled(i)) {
+                // Set to zero to indicate that the slave does not take part in the coupling:
+                // it has either not activated yet, or it has already ended.
                 this->slave_next_report_time_offsets_[i] = 0.0;
                 this->logger().debug(fmt::format(
-                    "Slave {} has not activated yet, setting next report date to 0.0",
+                    "Slave {} is not coupled, setting next report date to 0.0",
                     this->slaveName(i)));
                 continue;
             }
@@ -130,6 +136,14 @@ receiveNextReportDateFromSlaves()
                 MPI_STATUS_IGNORE
             );
             this->slave_next_report_time_offsets_[i] = slave_next_report_time_offset;
+            if (ReservoirCoupling::isSlaveEndOfRunSentinel(slave_next_report_time_offset)) {
+                // The slave has run out of report steps of its own. It is now waiting for the
+                // acknowledgement and the disconnect that markSlaveEndedAndDisconnect() below
+                // performs. Do not log a report date for it - there is none.
+                this->logger().debug(fmt::format(
+                    "Slave {} reported that its run has ended", this->slaveName(i)));
+                continue;
+            }
             this->logger().debug(fmt::format(
                 "Received next report date from {}: {} (offset from slave start)",
                 this->slaveName(i), ReservoirCoupling::formatDays(slave_next_report_time_offset)
@@ -140,6 +154,15 @@ receiveNextReportDateFromSlaves()
         this->slave_next_report_time_offsets_.data(), /*count=*/num_slaves, /*emitter_rank=*/0
     );
     this->logger().debug("Broadcasted slave next report dates to all ranks");
+    // Every rank derives "this slave has ended" from the broadcast sentinel, so no separate
+    // broadcast is needed. markSlaveEndedAndDisconnect() must run on all ranks because the
+    // MPI_Comm_disconnect() inside it is collective over the intercommunicator.
+    for (unsigned int i = 0; i < num_slaves; i++) {
+        if (ReservoirCoupling::isSlaveEndOfRunSentinel(this->slave_next_report_time_offsets_[i])) {
+            this->slave_next_report_time_offsets_[i] = 0.0;
+            this->master_.markSlaveEndedAndDisconnect(i);
+        }
+    }
 }
 
 template <class Scalar>
@@ -150,9 +173,9 @@ sendNextTimeStepToSlaves(double timestep)
     OPM_TIMEFUNCTION();
     if (this->comm().rank() == 0) {
         for (unsigned int slave_idx = 0; slave_idx < this->numSlaves(); slave_idx++) {
-            if (!this->slaveIsActivated(slave_idx)) {
+            if (!this->slaveIsCoupled(slave_idx)) {
                 this->logger().debug(fmt::format(
-                    "Slave {} has not activated yet, skipping sending next time step",
+                    "Slave {} is not coupled, skipping sending next time step",
                     this->slaveName(slave_idx)
                 ));
                 continue;
