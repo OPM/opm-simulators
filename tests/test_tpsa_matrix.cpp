@@ -79,11 +79,13 @@ struct Tolerance<double>
     static constexpr double percent = 1e-10;
 };
 
+#if FLOW_INSTANTIATE_FLOAT
 template <>
 struct Tolerance<float>
 {
     static constexpr float percent = 1e-3;
 };
+#endif
 
 /*!
  * \brief Tri-diagonal stencil, as produced by TpsaLinearizer for a 1-D grid.
