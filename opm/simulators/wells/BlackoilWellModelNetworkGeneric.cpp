@@ -78,21 +78,6 @@ namespace details {
         }
         return active_networks;
     }
-
-    std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain)
-    {
-        switch (domain) {
-        case NetworkDomain::InjectionGas:
-            return Phase::GAS;
-        case NetworkDomain::InjectionWater:
-            return Phase::WATER;
-        case NetworkDomain::Production:
-        case NetworkDomain::Count:
-            return std::nullopt;
-        }
-
-        return std::nullopt;
-    }
 } // namespace details
 
 
@@ -273,14 +258,11 @@ updatePressures(const int reportStepIdx,
                                             reportStepIdx,
                                             well_model_.comm());
         } else {
-            const auto injection_phase = details::injectionPhaseForDomain(network.domain);
-            assert(injection_phase.has_value());
             result = this->computePressures(network.network.get(),
                                             *well_model_.getVFPProperties().getInj(),
                                             well_model_.schedule().getUnits(),
                                             reportStepIdx,
-                                            well_model_.comm(),
-                                            *injection_phase);
+                                            well_model_.comm());
         }
         this->nodePressures(network.domain) = std::move(result.node_pressures);
         this->branchData(network.domain) = std::move(result.branch_data);
@@ -532,8 +514,7 @@ computePressures(const Network::ExtNetwork& network,
                  const VFPInjProperties<Scalar>& vfp_inj_props,
                  const UnitSystem& unit_system,
                  const int reportStepIdx,
-                 const Parallel::Communication& comm,
-                 const Phase injectionPhase) const
+                 const Parallel::Communication& comm) const
 {
     OPM_TIMEFUNCTION();
     if (!network.active()) {
@@ -543,7 +524,7 @@ computePressures(const Network::ExtNetwork& network,
     NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
                                VFPInjProperties<Scalar>>
         network_pressure_computation(
-            well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm, injectionPhase);
+            well_model_, network, vfp_inj_props, unit_system, reportStepIdx, comm);
 
     auto [node_pressures, branch_data] = network_pressure_computation.run();
     return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};

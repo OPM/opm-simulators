@@ -67,7 +67,8 @@ namespace details {
         std::reference_wrapper<const Network::ExtNetwork> network;
     };
 
-    /// The network a well belongs to, or nullopt for a well that is in none of them.
+    /// The network domain corresponding to a well's type
+    /// (producer, or injector and water/gas injection phase), or nullopt.
     template<class Well>
     std::optional<NetworkDomain> domainForWell(const Well& well)
     {
@@ -200,8 +201,7 @@ protected:
                      const VFPInjProperties<Scalar>& vfp_inj_props,
                      const UnitSystem& unit_system,
                      const int reportStepIdx,
-                     const Parallel::Communication& comm,
-                     const Phase injectionPhase) const;
+                     const Parallel::Communication& comm) const;
 
     void updateActiveStateImpl(const Network::ExtNetwork& network);
 
