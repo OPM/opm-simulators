@@ -194,6 +194,7 @@ prepareStep(const SimulatorTimerInterface& timer)
 
     if (lastStepFailed) {
         simulator_.problem().updateFailed();
+        simulator_.model().newtonMethod().eraseMatrix();
     }
     else {
         simulator_.problem().advanceTimeLevel();

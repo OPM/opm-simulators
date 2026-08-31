@@ -26,12 +26,10 @@
 #define ISTL_SOLVER_TPSA_HPP
 
 #include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/solver.hh>
 
 #include <opm/common/CriticalError.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
-#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
 #include <opm/models/utils/parametersystem.hpp>
@@ -39,58 +37,48 @@
 
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
-#include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/TPSALinearSolverParameters.hpp>
-#include <opm/simulators/linalg/tpsa/TpsaPreconditionerFactory.hpp>
-#include <opm/simulators/linalg/tpsa/TpsaTypes.hpp>
+#include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 
 #include <algorithm>
 #include <any>
 #include <cctype>
-#include <cstddef>
-#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include <fmt/format.h>
+
 
 namespace Opm {
 
 /*!
- * \brief Linear solver for the field-split TPSA system.
- *
- * The Jacobian handed in by TpsaLinearizer is a Linear::TpsaMatrix, which
- * already stores the system as the 19 sub-matrices of the five-field split
- * (see TpsaTypes.hpp), and the residual is a Linear::TpsaVector wrapping the
- * matching Dune::MultiTypeBlockVector.
- */
+* \brief Class for setting up ISTL linear solvers for TPSA
+*
+* Implements AbstractISTLSolver interface for TPSA linear solvers.
+*/
 template <class TypeTag>
-class ISTLSolverTPSA :
-    public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapterTPSA>,
-                              GetPropType<TypeTag, Properties::GlobalEqVectorTPSA> >
+class ISTLSolverTPSA : public AbstractISTLSolver<GetPropType<TypeTag, Properties::SparseMatrixAdapterTPSA>,
+                                                 GetPropType<TypeTag, Properties::GlobalEqVectorTPSA>>
 {
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapterTPSA>;
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVectorTPSA>;
-    using Matrix = typename SparseMatrixAdapter::IstlMatrix;
-    using MultiVector = Linear::TpsaMultiVector<Scalar>;
 
-    using SolverType = Dune::InverseOperator<MultiVector, MultiVector>;
-    using PrecondType = Dune::PreconditionerWithUpdate<MultiVector, MultiVector>;
+    using Matrix = typename SparseMatrixAdapter::IstlMatrix;
+
 
 #if HAVE_MPI
-    using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
+        using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-    using CommunicationType = Dune::Communication<int>;
+        using CommunicationType = Dune::Communication<int>;
 #endif
-
-    //! \brief No pressure equation to single out in the mechanics system.
-    static constexpr std::size_t pressureIndex = 0;
 
 public:
     /*!
@@ -98,12 +86,12 @@ public:
     *
     * \param simulator Simulator object
     */
-    explicit ISTLSolverTPSA(const Simulator& simulator)
+    ISTLSolverTPSA(const Simulator& simulator)
         : simulator_(simulator)
-          , solveCount_(0)
-          , iterations_(0)
-          , matrix_(nullptr)
-          , rhs_(nullptr)
+        , solveCount_(0)
+        , iterations_(0)
+        , matrix_(nullptr)
+        , rhs_(nullptr)
     {
         // Init parameters
         parameters_.init();
@@ -130,7 +118,7 @@ public:
 
         // Reset comm_ pointer
 #if HAVE_MPI
-        comm_.reset(new CommunicationType(simulator_.vanguard().grid().comm()));
+            comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
 #endif
 
         // Extract and copy parallel grid information
@@ -145,11 +133,12 @@ public:
         // Get info on overlapping rows
         ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
         std::vector<int> dummyInteriorRows;
-        detail::findOverlapAndInterior(simulator_.vanguard().grid(),
-                                       elemMapper,
-                                       overlapRows_,
-                                       dummyInteriorRows);
+        detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, dummyInteriorRows);
 
+        // Set number of interior cells in FlexibleSolverInfo
+        flexibleSolver_.interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), true);
+
+        // Print parameters to PRT/DBG logs.
         detail::printLinearSolverParameters(parameters_, prm_, simulator_.gridView().comm());
     }
 
@@ -159,39 +148,44 @@ public:
     * \param M System matrix
     * \param b Right-hand side vector
     */
-    void initPrepare(const SparseMatrixAdapter& M, Vector& b)
+    void initPrepare(const Matrix& M, Vector& b)
     {
-        if (matrix_ == nullptr) {
-            // The model reuses the same matrix object for the whole run; keep a
-            // pointer to it. The const_cast mirrors ISTLSolver: the solver has
-            // to be able to modify the assembled system (overlap rows).
-            matrix_ = const_cast<SparseMatrixAdapter*>(&M);
-        } else if (&M != matrix_) {
-            OPM_THROW(std::logic_error,
-                      "TPSA: Matrix objects are expected to be reused when reassembling!");
+        // Update matrix entries if it has not been initialized yet
+        const bool firstcall = (matrix_ == nullptr);
+        if (firstcall) {
+            // Model will not change the matrix object. Hence simply store a pointer to the original one with a deleter
+            // that does nothing.
+            // OBS: We need to be able to scale the linear system, hence const_cast
+            matrix_ = const_cast<Matrix*>(&M);
+        }
+        else {
+            // Pointers should not change; throw if the case
+            if (&M != matrix_) {
+                OPM_THROW(std::logic_error, "TPSA: Matrix objects are expected to be reused when reassembling!");
+            }
+
         }
 
         // Set right-hand side vector
         rhs_ = &b;
 
-        // Zero out the overlapping cells (not for the overlapping ILU variant,which handles them
-        // itself).
-        auto type = prm_.get<std::string>("preconditioner.type", "paroverilu0");
-        std::ranges::transform(type, type.begin(), ::tolower);
+        // Zero out the overlapping cells in matrix (not in ilu0 case)
+        std::string type = prm_.template get<std::string>("preconditioner.type", "paroverilu0");
+        std::transform(type.begin(), type.end(), type.begin(), ::tolower);
         if (isParallel() && type != "paroverilu0") {
-            matrix_->makeOverlapRowsInvalid(overlapRows_);
+            detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
         }
     }
 
     /*!
     * \copydoc AbstractISTLSolver::prepare
     */
-    void prepare(const SparseMatrixAdapter& M, Vector& b) override
+    void prepare(const Matrix& M, Vector& b) override
     {
-        OPM_TIMEBLOCK(istlSolverPrepare);
         try {
             initPrepare(M, b);
-            prepareSolver();
+
+            prepareFlexibleSolver();
         }
         OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR
             ("TPSA: Failure likely due to a faulty linear solver JSON specification. "
@@ -201,12 +195,38 @@ public:
     /*!
     * \copydoc AbstractISTLSolver::prepare
     */
-    void prepare(const Matrix& /*M*/, Vector& /*b*/) override
+    void prepare(const SparseMatrixAdapter& M, Vector& b) override
     {
-        // The five-field view is not enough to prepare the solve: the overlap
-        // handling needs the owning TpsaMatrix
-        OPM_THROW(std::logic_error,
-                  "TPSA: prepare() needs the TpsaMatrix itself, not just its field-split view");
+        prepare(M.istlMatrix(), b);
+    }
+
+    /*!
+    * \brief Prepare linear solver
+    *
+    * Create linear solver using FlexibleSolverInfo struct from ISTLSolver.hpp, or update preconditioner if solver has
+    * been created
+    */
+    void prepareFlexibleSolver()
+    {
+        // Create solver or just update preconditioner
+        if (!flexibleSolver_.solver_) {
+            // Dummy weights calculator
+            // TODO: TPSA specific weights calculation for AMG preconditioner
+            std::function<Vector()> weightCalculator;
+
+            // Create FlexibleSolver
+            flexibleSolver_.create(getMatrix(),
+                                   isParallel(),
+                                   prm_,
+                                   /*pressureIndex=*/0,
+                                   weightCalculator,
+                                   /*forceSerial_=*/false,
+                                   comm_.get());
+        }
+        else {
+            // Update preconditioner
+            flexibleSolver_.pre_->update();
+        }
     }
 
     /*!
@@ -214,15 +234,23 @@ public:
     */
     bool solve(Vector& x) override
     {
-        OPM_TIMEBLOCK(istlSolverSolve);
+        // Increase solver count
         ++solveCount_;
 
-        x = 0.0;
+        // Write system matrix if verbosity level is high
+        const int verbosity = prm_.get("verbosity", 0);
+        if (verbosity > 10) {
+            // simulator_ is only used to get names
+            Helper::writeSystem(simulator_,
+                                getMatrix(),
+                                *rhs_,
+                                comm_.get());
+        }
 
         // Solve linear system
         Dune::InverseOperatorResult result;
-        assert(solver_);
-        solver_->apply(x.istlVector(), rhs_->istlVector(), result);
+        assert(flexibleSolver_.solver_);
+        flexibleSolver_.solver_->apply(x, *rhs_, result);
 
         // Store no. linear iterations
         iterations_ = result.iterations;
@@ -247,14 +275,20 @@ public:
     */
     void eraseMatrix() override
     {
+        matrix_ = nullptr;
+        rhs_ = nullptr;
+        iterations_ = 0;
+        solveCount_ = 0;
+        flexibleSolver_.pre_ = nullptr;
+        flexibleSolver_.solver_.reset();
+        flexibleSolver_.op_.reset();
     }
 
     /*!
     * \copydoc AbstractISTLSolver::setActiveSolver
     */
     void setActiveSolver(int /*num*/) override
-    {
-    }
+    { }
 
     /*!
     * \copydoc AbstractISTLSolver::numAvailableSolvers
@@ -268,15 +302,13 @@ public:
     * \copydoc AbstractISTLSolver::setResidual
     */
     void setResidual(Vector& /*b*/) override
-    {
-    }
+    { }
 
     /*!
     * \copydoc AbstractISTLSolver::setMatrix
     */
     void setMatrix(const SparseMatrixAdapter& /*M*/) override
-    {
-    }
+    { }
 
     // ///
     // Public get functions
@@ -345,65 +377,29 @@ protected:
     // Protected get functions
     // ///
     /*!
-     * \brief Create the solver on the first call, refresh the preconditioner on
-     *        every later one.
-     */
-    void prepareSolver()
+    * \brief Get reference to system matrix object
+    *
+    * \returns Reference to matrix
+    */
+    Matrix& getMatrix()
     {
-        OPM_TIMEBLOCK(flexibleSolverPrepare);
-
-        if (solver_ == nullptr) {
-            OPM_TIMEBLOCK(flexibleSolverCreate);
-            createSolver();
-        } else {
-            OPM_TIMEBLOCK(flexibleSolverUpdate);
-            precond_->update();
+        if (!matrix_) {
+            OPM_THROW(std::runtime_error, "TPSA: System matrix \"M\" not defined!");
         }
+        return *matrix_;
     }
 
-
     /*!
-     * \brief Build the linear operator and the flexible solver for the TPSA system
-     *
-     * \warning matrix_ and comm_ must be set before calling this function. The
-     *          matrix is handed to the operator by reference, so it must outlive
-     *          the solver.
-     */
-    void createSolver()
+    * \brief Get reference to system matrix object
+    *
+    * \returns Reference to matrix
+    */
+    const Matrix& getMatrix() const
     {
-        // The mechanics system has no equation weights.
-        std::function<MultiVector()> weightCalculator;
-
-        Matrix& matrixView = matrix_->istlMatrix();
-
-        if (isParallel()) {
-#if HAVE_MPI
-            // All five fields live on the same dof partition, so they share the same
-            // communicator.
-            multiComm_ = std::make_unique<TpsaComm>(*comm_, *comm_, *comm_, *comm_, *comm_);
-
-            parOperator_ = std::make_unique<TpsaParOperator<Scalar> >(matrixView, *multiComm_);
-            parSolver_ = std::make_unique<
-                Dune::FlexibleSolver<TpsaParOperator<Scalar> > >(*parOperator_,
-                                                                 *multiComm_,
-                                                                 prm_,
-                                                                 weightCalculator,
-                                                                 pressureIndex);
-
-            solver_ = parSolver_.get();
-            precond_ = &parSolver_->preconditioner();
-#endif
-        } else {
-            seqOperator_ = std::make_unique<TpsaSeqOperator<Scalar> >(matrixView);
-            seqSolver_ = std::make_unique<
-                Dune::FlexibleSolver<TpsaSeqOperator<Scalar> > >(*seqOperator_,
-                                                                 prm_,
-                                                                 weightCalculator,
-                                                                 pressureIndex);
-
-            solver_ = seqSolver_.get();
-            precond_ = &seqSolver_->preconditioner();
+        if (!matrix_) {
+            OPM_THROW(std::runtime_error, "TPSA: System matrix \"M\" not defined!");
         }
+        return *matrix_;
     }
 
     const Simulator& simulator_;
@@ -411,30 +407,17 @@ protected:
     int solveCount_;
     int iterations_;
 
+    detail::FlexibleSolverInfo<Matrix, Vector, CommunicationType> flexibleSolver_;
     TpsaLinearSolverParameters parameters_;
     PropertyTree prm_;
 
-    SparseMatrixAdapter* matrix_;
+    Matrix* matrix_;
     Vector* rhs_;
 
     std::shared_ptr<CommunicationType> comm_;
     std::vector<int> overlapRows_;
-
-    // Serial solver components
-    std::unique_ptr<TpsaSeqOperator<Scalar> > seqOperator_;
-    std::unique_ptr<Dune::FlexibleSolver<TpsaSeqOperator<Scalar> > > seqSolver_;
-
-    // Parallel solver components
-#if HAVE_MPI
-    std::unique_ptr<TpsaComm> multiComm_;
-    std::unique_ptr<TpsaParOperator<Scalar> > parOperator_;
-    std::unique_ptr<Dune::FlexibleSolver<TpsaParOperator<Scalar> > > parSolver_;
-#endif
-
-    SolverType* solver_ = nullptr;
-    PrecondType* precond_ = nullptr;
 };
 
 }  // namespace Opm
 
-#endif // ISTL_SOLVER_TPSA_HPP
+#endif
