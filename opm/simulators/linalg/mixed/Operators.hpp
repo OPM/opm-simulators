@@ -137,8 +137,8 @@ public:
 protected:
 
     const M& A_ ;
-    const C& comm_ ;
     const LinearOperatorExtra<V, V>& wellOper_;
+    const C& comm_ ;
 
 private:
 
