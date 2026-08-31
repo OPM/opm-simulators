@@ -385,17 +385,24 @@ namespace {
             eclipseState = createEclipseState(comm, deck);
         }
 
+        // A fracture model reads its seeds out of the deck during the run, not
+        // only at setup, so a FRAC run has to retain the Schedule keywords
+        // whatever the general setting says.  Decided here rather than by the
+        // caller because it needs the parsed RUNSPEC.
+        const auto keepScheduleKeywords =
+            keepKeywords || eclipseState->runspec().frac();
+
         if (eclipseState->getInitConfig().restartRequested()) {
             loadObjectsFromRestart(deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
-                                   lowActionParsingStrictness, keepKeywords,
+                                   lowActionParsingStrictness, keepScheduleKeywords,
                                    *eclipseState, std::move(python),
                                    schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
             createNonRestartDynamicObjects(deck, *eclipseState, *parseContext,
-                                           lowActionParsingStrictness, keepKeywords,
+                                           lowActionParsingStrictness, keepScheduleKeywords,
                                            std::move(python),
                                            schedule, udqState, actionState, wtestState,
                                            errorGuard, slaveMode);
