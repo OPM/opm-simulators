@@ -72,7 +72,8 @@ namespace details {
         std::reference_wrapper<const Network::ExtNetwork> network;
     };
 
-    /// The network a well belongs to, or nullopt for a well that is in none of them.
+    /// The network domain corresponding to a well's type
+    /// (producer, or injector and water/gas injection phase), or nullopt.
     template<class Well>
     std::optional<NetworkDomain> domainForWell(const Well& well)
     {
@@ -89,9 +90,6 @@ namespace details {
         }
         return std::nullopt;
     }
-
-    /// The injected phase of an injection network domain, nullopt for the production one.
-    std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain);
 
     /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
     bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);

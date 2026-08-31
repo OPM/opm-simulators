@@ -89,21 +89,6 @@ namespace details {
         }
         return active_networks;
     }
-
-    std::optional<Phase> injectionPhaseForDomain(const NetworkDomain domain)
-    {
-        switch (domain) {
-        case NetworkDomain::InjectionGas:
-            return Phase::GAS;
-        case NetworkDomain::InjectionWater:
-            return Phase::WATER;
-        case NetworkDomain::Production:
-        case NetworkDomain::Count:
-            return std::nullopt;
-        }
-
-        return std::nullopt;
-    }
 } // namespace details
 
 /// What the simulator asks of a network solve. The tolerance is on the scaled
@@ -1115,8 +1100,6 @@ updatePressures(const int reportStepIdx,
                 }
             }
         } else {
-            const auto injection_phase = details::injectionPhaseForDomain(network.domain);
-            assert(injection_phase.has_value());
             result = this->computePressures(network.network.get(),
                                             *well_model_.getVFPProperties().getInj(),
                                             well_model_.schedule().getUnits(),
