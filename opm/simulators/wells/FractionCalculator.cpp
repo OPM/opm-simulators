@@ -97,7 +97,11 @@ localFraction(const std::string& name,
         const Scalar my_total_pot = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
         // if there are no wells on group-control, potential will still be zero
         if (my_total_pot == 0) {
-            return 1.0;
+            // No information at all to distribute the parent's target.  Share it
+            // equally between the active members: returning 1.0 here would hand
+            // the full group target to every single member and thus violate the
+            // group (GCONPROD) target by a factor equal to the number of members.
+            return Scalar(1.0) / num_active_groups;
         }
 
         return my_pot / my_total_pot;
@@ -173,6 +177,14 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
+        if (always_use_potentials) {
+            // Fall back to the well potentials. Without this, a well that has a
+            // GUIDERAT/WGRUPCON guide rate would keep returning that (zero)
+            // guide rate here, so the potential based fallback in
+            // localFraction() would be a no-op and every well would end up with
+            // a fraction of 1.0.
+            return guide_rate_->getPotential(name, target_);
+        }
         if (guide_rate_->has(name) || guide_rate_->hasPotentials(name)) {
             return guide_rate_->get(name, target_, this->groupStateHelper().getWellRateVector(name));
         }
