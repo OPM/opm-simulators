@@ -101,7 +101,7 @@ localFraction(const std::string& name,
             // equally between the active members: returning 1.0 here would hand
             // the full group target to every single member and thus violate the
             // group (GCONPROD) target by a factor equal to the number of members.
-            return Scalar(1.0) / num_active_groups;
+            return Scalar(1.0) / std::max(Scalar(1.0), Scalar(num_active_groups));
         }
 
         return my_pot / my_total_pot;
