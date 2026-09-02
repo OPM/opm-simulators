@@ -737,7 +737,8 @@ private:
     template <class RMap>
     void updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg);
 
-    void updateCellProps_(const GridView& gridView,
+    void updateCellProps_(const EclipseState& eclipseState,
+                          const GridView& gridView,
                           const NumericalAquifers& aquifer);
 
     void applyNumericalAquifers_(const GridView& gridView,

@@ -38,6 +38,7 @@
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
@@ -198,6 +199,16 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // whether only update the permeability related transmissibility
     const bool onlyTrans = (update_quantities == TransUpdateQuantities::Trans);
     const auto& cartDims = cartMapper_.cartesianDimensions();
+    const bool dualPorosity = eclState_.runspec().dualPorosity();
+    const bool dualPermeability = eclState_.runspec().dualPermeability();
+    // Twin classification is arithmetic on the global Cartesian index: the fracture half is
+    // the upper half of the index range.  Deriving it from the Cartesian dimensions keeps this
+    // rank-local -- EclipseState::getInputGrid() is available on the I/O rank only.
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartDims);
+    const auto isFractureCell = [matrixCellCount](const std::size_t cartIdx)
+    {
+        return cartIdx >= matrixCellCount;
+    };
     const auto& transMult = eclState_.getTransMult();
     const auto& comm = gridView_.comm();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
@@ -546,6 +557,22 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                            faceIdToDir(inside.faceIdx));
                 }
 
+                // Dual-continuum runs: the matrix and fracture halves never
+                // connect through grid faces (their coupling comes exclusively
+                // through the input NNCs).  Matrix-matrix faces carry flow
+                // only in dual-permeability runs; in single-permeability dual
+                // porosity the matrix half has no internal flow.
+                if (dualPorosity) {
+                    const bool insideFracture  = isFractureCell(inside.cartElemIdx);
+                    const bool outsideFracture = isFractureCell(outside.cartElemIdx);
+                    if (insideFracture != outsideFracture) {
+                        trans = 0.0;
+                    }
+                    else if (!insideFracture && !dualPermeability) {
+                        trans = 0.0;
+                    }
+                }
+
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
 
                 // update the "thermal half transmissibility" for the intersection
@@ -678,10 +705,46 @@ extractPermeability_()
 
         // for now we don't care about non-diagonal entries
 
+        this->applyDualPorosityPermScaling_([](const unsigned int i) { return i; });
     }
     else
         throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
                                "(The PERM{X,Y,Z} keywords are missing)");
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyDualPorosityPermScaling_(const std::function<unsigned int(unsigned int)>& map)
+{
+    // Dual porosity: the effective fracture permeability is scaled by the
+    // fracture porosity unless the run disables that scaling. Matrix cells
+    // are untouched, and so is the matrix-fracture coupling transmissibility
+    // (it is computed from the matrix permeability upstream and arrives here
+    // as an input NNC). The rule itself is Runspec's -- the well connection
+    // factors apply the same one, and spelling it out separately here is how
+    // the two last diverged.
+    if (!eclState_.runspec().fracturePermeabilityScalingActive())
+        return;
+
+    const auto& fp = eclState_.fieldProps();
+    const std::vector<double>& poroData = this->lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PORO");
+
+    // Classify twins from the Cartesian dimensions rather than from the input grid:
+    // the same arithmetic EclipseGrid uses, but available on every process. This file
+    // asked the question two different ways -- the face policy already derives it
+    // locally -- and the input-grid form is the pattern that broke every parallel run.
+    const std::size_t matrixCellCount =
+        EclipseGrid::matrixCellCount(cartMapper_.cartesianDimensions());
+
+    // The porosity must be read through the same element-to-input mapping
+    // the permeability extraction used, so reordered grids scale the right
+    // cells.
+    for (std::size_t elemIdx = 0; elemIdx < permeability_.size(); ++elemIdx) {
+        const auto inputDofIdx = map(static_cast<unsigned int>(elemIdx));
+        if (cartMapper_.cartesianIndex(elemIdx) >= matrixCellCount) {
+            permeability_[elemIdx] *= poroData[inputDofIdx];
+        }
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -725,6 +788,8 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
         }
 
         // for now we don't care about non-diagonal entries
+
+        this->applyDualPorosityPermScaling_(map);
     }
     else {
         throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
@@ -781,6 +846,16 @@ void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 removeNonCartesianTransmissibilities_(bool removeAll)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
+
+    // A dual-continuum coupling is a connection between a cell and its twin, exactly
+    // half the Cartesian index range apart. It is the physics of the run, not a sparse
+    // non-neighbour connection the deck happened to add, so it must survive both the
+    // threshold prune and a blanket removal: a tight matrix with a small shape factor
+    // produces a legitimately small transmissibility, and zeroing it would strand the
+    // matrix continuum silently while the run completed and the material balance closed.
+    const bool dualPorosity = eclState_.runspec().dualPorosity();
+    const std::size_t twinGap = EclipseGrid::matrixCellCount(cartDims);
+
     for (auto&& trans: trans_) {
         //either remove all NNC transmissibilities or those less than the threshold (by default 1e-6 in the deck's unit system)
         if (removeAll || trans.second < transmissibilityThreshold_) {
@@ -793,6 +868,11 @@ removeNonCartesianTransmissibilities_(bool removeAll)
             // When LGRs, all neighbors in the LGR are cartesian neighbours on the level grid representing the LGR.
             // When elements on the leaf grid view have the same parent cell, gc1 and gc2 coincide.
             if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] || gc2 - gc1 == 0) {
+                continue;
+            }
+
+            // the matrix-fracture coupling, kept for the reason above
+            if (dualPorosity && (static_cast<std::size_t>(gc2 - gc1) == twinGap)) {
                 continue;
             }
 
@@ -1191,6 +1271,24 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         }
 
         if (low == -1 || high == -1) {
+            // A dual-continuum coupling must never be silently discarded.  In a parallel run a
+            // cell missing from this rank's map is inactive OR owned by another rank, and both
+            // arrive here -- so this is the path by which a partition that separates a twin pair
+            // drops its coupling.  Measured on a 3x3x2 case: none split at two processes, at
+            // least four of nine at four processes.  Dual-continuum runs are refused before load
+            // balancing for exactly this reason; if that guard is ever lifted, this must be an
+            // error rather than a warning.
+            if (eclState_.runspec().dualPorosity()) {
+                const auto& cd = cartMapper_.cartesianDimensions();
+                const std::size_t half =
+                    (static_cast<std::size_t>(cd[0]) * cd[1] * cd[2]) / 2;
+                if ((c2 > c1 ? c2 - c1 : c1 - c2) == half) {
+                    OPM_THROW(std::runtime_error,
+                              "Dual-continuum coupling between cells " + std::to_string(c1) +
+                              " and " + std::to_string(c2) + " cannot be built: one of the two "
+                              "cells is inactive or not owned by this process.");
+                }
+            }
             // Discard the NNC if it is between active cell and inactive cell
             std::ostringstream sstr;
             sstr << "NNC between active and inactive cells ("

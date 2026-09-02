@@ -363,18 +363,31 @@ protected:
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
 
         const auto num_aqu_cells = this->allAquiferCells();
+        const bool dualPorosity = this->eclState().runspec().dualPorosity();
+        // Bind the input grid only when it is needed: it is available on the I/O rank only,
+        // so an unconditional binding would make every parallel run -- dual continuum or not --
+        // reach ParallelEclipseState::getInputGrid() and throw.  Dual-continuum runs are serial
+        // (see CpGridVanguard::loadBalance), so the guarded binding is always on rank 0.
+        const auto* inputGrid = dualPorosity ? &this->eclState().getInputGrid() : nullptr;
 
         for(const auto& element : elements(this->gridView())) {
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
+            const unsigned int global_index = cartesianIndex(elemIdx);
 
             if (!num_aqu_cells.empty()) {
-                const unsigned int global_index = cartesianIndex(elemIdx);
                 const auto search = num_aqu_cells.find(global_index);
                 if (search != num_aqu_cells.end()) {
                     // updating the cell depth using aquifer cell depth
                     cellCenterDepth_[elemIdx] = search->second->depth;
                 }
+            }
+
+            // Dual porosity: fracture cells are co-located with their matrix
+            // twins — the input grid carries the twin's depth (the geometric
+            // stacking of the fracture half is bookkeeping only).
+            if (dualPorosity && inputGrid->isFractureCell(global_index)) {
+                cellCenterDepth_[elemIdx] = inputGrid->getCellDepth(global_index);
             }
         }
     }
