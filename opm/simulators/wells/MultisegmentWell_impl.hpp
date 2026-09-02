@@ -1239,7 +1239,9 @@ namespace Opm
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
                                                                * this->segments_.local_perforation_depth_diff(local_perf_index);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
-            const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger);
+            const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press,
+                                                       simulator.vanguard().summaryState(),
+                                                       deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
