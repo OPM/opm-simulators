@@ -260,6 +260,42 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     this->group_state_helper_.groupState().communicate_rates(comm);
 }
 
+// Recompute the injection targets against the slave rates the master holds now
+// and ship them to the slaves, replacing the targets sent earlier in this sync
+// step.  See the declaration in the header for why this second send exists.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+recalculateInjectionTargetsAndSendToSlaves()
+{
+    // As in calculateMasterGroupConstraintsAndSendToSlaves(), the body must run
+    // on every rank of the master communicator: GroupConstraintCalculator relies
+    // on GroupStateHelper, which performs collective operations.  The MPI sends
+    // themselves are rank-0-only inside the send helpers.
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    GroupConstraintCalculator calculator{
+        this->well_model_,
+        this->group_state_helper_
+    };
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (!rescoup_master.slaveIsActivated(slave_idx)) {
+            continue;
+        }
+        auto injection_targets = this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
+        // An empty production-constraint list tells the slave that no production
+        // constraints follow; the ones it received earlier this sync step stay in
+        // force.
+        this->sendSlaveGroupConstraintsToSlave_(
+            rescoup_master, slave_idx, injection_targets, /*production_constraints=*/{}
+        );
+    }
+}
+
+// ----------------------------------------------------------------------
+// Private methods alphabetically for class RescoupConstraintsCalculator
+// ----------------------------------------------------------------------
+
 template <class Scalar, class IndexTraits>
 std::tuple<
   std::vector<typename RescoupConstraintsCalculator<Scalar, IndexTraits>::InjectionGroupTarget>,
@@ -268,34 +304,14 @@ std::tuple<
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
 calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupConstraintCalculator<Scalar, IndexTraits>& calculator) const
 {
-    std::vector<InjectionGroupTarget> injection_targets;
+    std::vector<InjectionGroupTarget> injection_targets =
+        this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
     std::vector<ProductionGroupConstraints> production_constraints;
     auto& rescoup_master = this->reservoir_coupling_master_;
-    static const std::array<ReservoirCoupling::Phase, 3> phases = {
-        ReservoirCoupling::Phase::Water, ReservoirCoupling::Phase::Oil, ReservoirCoupling::Phase::Gas
-    };
     const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
     for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
         const auto& group_name = master_groups[group_idx];
         const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-        if (group.isInjectionGroup()) {
-            for (ReservoirCoupling::Phase phase : phases) {
-                auto target_info = calculator.groupInjectionTarget(group, phase);
-                if (target_info.has_value()) {
-                    // Always send injection targets as RATE. The numeric value is
-                    // already a surface rate for all modes (RATE, REIN, RESV, VREP),
-                    // and the slave cannot evaluate derived modes (REIN, VREP, RESV)
-                    // because it lacks the master's schedule data (reinj_group,
-                    // voidage_group, GCONSUMP, resv_coeff, etc.).
-                    injection_targets.push_back(
-                        InjectionGroupTarget{
-                            group_idx, target_info->constraint,
-                            Group::InjectionCMode::RATE, phase
-                        }
-                    );
-                }
-            }
-        }
         if (group.isProductionGroup()) {
             auto constraints = calculator.groupProductionConstraints(group);
             if (constraints.has_value()) {
@@ -315,6 +331,43 @@ calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupConstraintCalculator
         }
     }
     return {injection_targets, production_constraints};
+}
+
+template <class Scalar, class IndexTraits>
+std::vector<typename RescoupConstraintsCalculator<Scalar, IndexTraits>::InjectionGroupTarget>
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateSlaveGroupInjectionTargets_(std::size_t slave_idx, GroupConstraintCalculator<Scalar, IndexTraits>& calculator) const
+{
+    std::vector<InjectionGroupTarget> injection_targets;
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    static const std::array<ReservoirCoupling::Phase, 3> phases = {
+        ReservoirCoupling::Phase::Water, ReservoirCoupling::Phase::Oil, ReservoirCoupling::Phase::Gas
+    };
+    const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+    for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
+        const auto& group_name = master_groups[group_idx];
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        if (!group.isInjectionGroup()) {
+            continue;
+        }
+        for (ReservoirCoupling::Phase phase : phases) {
+            auto target_info = calculator.groupInjectionTarget(group, phase);
+            if (target_info.has_value()) {
+                // Always send injection targets as RATE. The numeric value is
+                // already a surface rate for all modes (RATE, REIN, RESV, VREP),
+                // and the slave cannot evaluate derived modes (REIN, VREP, RESV)
+                // because it lacks the master's schedule data (reinj_group,
+                // voidage_group, GCONSUMP, resv_coeff, etc.).
+                injection_targets.push_back(
+                    InjectionGroupTarget{
+                        group_idx, target_info->constraint,
+                        Group::InjectionCMode::RATE, phase
+                    }
+                );
+            }
+        }
+    }
+    return injection_targets;
 }
 
 template <class Scalar, class IndexTraits>

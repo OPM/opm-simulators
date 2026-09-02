@@ -161,6 +161,10 @@ public:
     /// @details Delegates to ReservoirCouplingSlaveReportStep.
     void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
 
+    /// @brief Record whether the initial well solve for this sync step has run
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void setWellsSolvedThisSyncStep(bool value);
+
     const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
         return this->slave_group_order_.at(group_idx);
     }
@@ -187,10 +191,15 @@ public:
     /// MPI_Comm_disconnect() to complete - it is a collective operation.
     void receiveTerminateAndDisconnect();
 
+    /// @brief True once the initial well solve for this sync step has run
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    bool wellsSolvedThisSyncStep() const;
+
 private:
     void checkGrupSlavGroupNames_();
     std::pair<double, bool> getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const;
     bool historyMatchingMode_() const { return this->history_matching_mode_; }
+
     std::size_t numMasterGroups_() const { return this->slave_to_master_group_map_.size(); }
     //! \brief Receive the master's go-ahead after reporting our OK status.
     //!

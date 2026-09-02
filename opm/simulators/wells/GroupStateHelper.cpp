@@ -1155,39 +1155,8 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
     }
 
     for (const std::string& well_name : group.wells()) {
-        const auto well_index = this->wellState().index(well_name);
-        if (!well_index.has_value())
-            continue;
-
-        if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
-        {
-            continue;
-        }
-
-        const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_);
-        // only count producers or injectors
-        if ((well_ecl.isProducer() && is_injector) || (well_ecl.isInjector() && !is_injector))
-            continue;
-
-        const auto& ws = this->wellState().well(well_index.value());
-        if (ws.status == Opm::Well::Status::SHUT)
-            continue;
-
-        const Scalar factor = well_ecl.getEfficiencyFactor(network)
-            * this->wellState().well(well_index.value()).efficiency_scaling_factor;
-        if (res_rates) {
-            const auto& well_rates = ws.reservoir_rates;
-            if (is_injector)
-                rate += factor * well_rates[phase_pos];
-            else
-                rate -= factor * well_rates[phase_pos];
-        } else {
-            const auto& well_rates = ws.surface_rates;
-            if (is_injector)
-                rate += factor * well_rates[phase_pos];
-            else
-                rate -= factor * well_rates[phase_pos];
-        }
+        rate += this->wellRateContributionToGroup(
+            well_name, phase_pos, res_rates, is_injector, network);
     }
     return rate;
 }
@@ -1613,6 +1582,41 @@ GroupStateHelper<Scalar, IndexTraits>::updateWellRatesFromGroupTargetScale(
             }
         }
     }
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::wellRateContributionToGroup(const std::string& well_name,
+                                                                  const int phase_pos,
+                                                                  const bool res_rates,
+                                                                  const bool is_injector,
+                                                                  const bool network) const
+{
+    const auto well_index = this->wellState().index(well_name);
+    if (!well_index.has_value())
+        return 0.0;
+
+    if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
+    {
+        return 0.0;
+    }
+
+    const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_);
+    // only count producers or injectors
+    if ((well_ecl.isProducer() && is_injector) || (well_ecl.isInjector() && !is_injector))
+        return 0.0;
+
+    const auto& ws = this->wellState().well(well_index.value());
+    if (ws.status == Opm::Well::Status::SHUT)
+        return 0.0;
+
+    const Scalar factor = well_ecl.getEfficiencyFactor(network)
+        * ws.efficiency_scaling_factor;
+    const auto& well_rates = res_rates ? ws.reservoir_rates : ws.surface_rates;
+    // Production rates are negative in the well state; a group rate sum is a positive
+    // magnitude for both directions.
+    return is_injector ? factor * well_rates[phase_pos]
+                       : -factor * well_rates[phase_pos];
 }
 
 template <typename Scalar, typename IndexTraits>

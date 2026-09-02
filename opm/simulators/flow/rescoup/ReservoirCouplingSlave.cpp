@@ -460,6 +460,24 @@ markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
     this->report_step_data_->markSlaveGroupsInSchedule(schedule, report_step_idx);
 }
 
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+setWellsSolvedThisSyncStep(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setWellsSolvedThisSyncStep(value);
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+wellsSolvedThisSyncStep() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->wellsSolvedThisSyncStep();
+}
+
 // ------------------
 // Private methods
 // ------------------

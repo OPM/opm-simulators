@@ -267,6 +267,17 @@ public:
     /// @param cmode Production control mode dictated by the master
     void setMasterProductionTarget(const std::string& gname, const Scalar target, const Group::ProductionCMode cmode);
 
+    /// @brief Record whether the initial well solve for this sync step has run
+    /// @param value False before the solve, true after it
+    void setWellsSolvedThisSyncStep(bool value) { wells_solved_this_sync_step_ = value; }
+
+    /// @brief True once the initial well solve for this sync step has run
+    /// @details Before it, a well that opens in this report step still carries the
+    ///   rates SingleWellState::update_producer_targets() derived from its WCONPROD
+    ///   target, which must not be reported to the master as achieved production.
+    ///   See RescoupSendSlaveGroupData::unsolvedNewWellProductionRates_().
+    bool wellsSolvedThisSyncStep() const { return wells_solved_this_sync_step_; }
+
 
 private:
     /// @brief Generic helper method for sending data to the master process via MPI
@@ -301,6 +312,10 @@ private:
     // Used to control reservoir coupling synchronization of summary data sent from
     // the slave to the master process.
     bool is_last_substep_of_sync_timestep_{false};
+    // Flag to track whether the initial well solve of this sync timestep has run.
+    // Cleared before the pre-solve send of slave group data and set after the solve;
+    // see wellsSolvedThisSyncStep().
+    bool wells_solved_this_sync_step_{false};
 
     // Master-imposed targets and corresponding control modes, received from the master
     // process at the beginning of each sync timestep. Cleared and repopulated on every

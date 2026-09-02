@@ -476,6 +476,10 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (this->isReservoirCouplingSlave()) {
             if (this->reservoirCouplingSlave().isFirstSubstepOfSyncTimestep()) {
+                // The wells have not been solved for this sync step yet, so a well that
+                // opens in this report step still carries its WCONPROD target as its rate.
+                // See RescoupSendSlaveGroupData::collectSlaveGroupSurfaceProductionRates_().
+                this->reservoirCouplingSlave().setWellsSolvedThisSyncStep(false);
                 this->rescoupHelper_.sendSlaveGroupDataToMaster();
                 this->rescoupHelper_.receiveGroupConstraintsFromMaster();
                 this->rescoupHelper_.receiveCoupledNetworkActiveStatus();
@@ -538,6 +542,8 @@ namespace Opm {
 
 #ifdef RESERVOIR_COUPLING_ENABLED
         if (slave_needs_well_solution) {  // isReservoirCouplingSlave()
+            // The initial well solve above has run, so the well states now hold solved rates.
+            this->reservoirCouplingSlave().setWellsSolvedThisSyncStep(true);
             // Need to update group data based on new well solution.
             this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
             this->rescoupHelper_.sendSlaveGroupDataToMaster();
@@ -2380,6 +2386,11 @@ namespace Opm {
         if (!is_final) {
             this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget=*/false);
             this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            // The master turns the rates just sent into fresh injection targets
+            // for the groups it controls through a derived GCONINJE mode, and
+            // sends them straight back.  See
+            // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
+            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;

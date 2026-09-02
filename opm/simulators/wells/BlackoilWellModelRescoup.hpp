@@ -140,7 +140,9 @@ public:
     /// Blocking receive of the per-master-group production targets and
     /// injection limits computed by the master.  The received values are
     /// written into the slave's group state via the receiver helper.
-    /// Called from the slave's beginTimeStep first-substep handshake.
+    /// Called from the slave's beginTimeStep first-substep handshake, and
+    /// once per network iteration from maybeSendSlaveGroupFlowToMaster_(),
+    /// where the master sends injection targets only.
     void receiveGroupConstraintsFromMaster();
 
     /// \brief Receive master-computed network-leaf node pressures and
@@ -241,6 +243,22 @@ private:
     ///   network exchange; the (public) global version is the OR over all
     ///   activated slaves and gates the master's own iteration.
     bool masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const;
+
+    /// \brief Master-side: recompute the master's group state from the slave
+    ///   rates just received and send the resulting injection targets on.
+    ///
+    /// Called immediately after each non-final receiveSlaveGroupData() inside
+    /// the network iteration, so that a target derived from slave production
+    /// (GCONINJE REIN, SALE or VREP) keeps up with the production the slaves
+    /// report as the network iteration proceeds.  Its slave-side counterpart
+    /// is the receiveGroupConstraintsFromMaster() in
+    /// BlackoilWellModel::maybeSendSlaveGroupFlowToMaster_().
+    void refreshAndSendInjectionTargets_();
+
+    /// \brief Send injection targets to each activated slave, replacing the
+    ///   ones the slaves are currently holding.  Production constraints are
+    ///   not resent.  Only called by refreshAndSendInjectionTargets_().
+    void sendMasterGroupInjectionTargetsToSlaves_();
 
     /// \brief Slave-side: true iff this slave's own deck put the named group
     ///   into its own surface network as a fixed-pressure node.
