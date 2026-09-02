@@ -23,9 +23,14 @@
 
 #include <string>
 
+#include <opm/simulators/flow/KeywordValidation.hpp>
+#include <opm/simulators/flow/ValidationFunctions.hpp>
+#include <opm/simulators/utils/FullySupportedFlowKeywords.hpp>
+#include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
+#include <opm/simulators/utils/UnsupportedFlowKeywords.hpp>
+
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/simulators/flow/KeywordValidation.hpp>
 
 #define BOOST_TEST_MODULE KeywordValidatorTest
 
@@ -633,4 +638,74 @@ EQUIL
     BOOST_CHECK_EQUAL(errors.size(), 1);
     BOOST_CHECK(errors[0].item_number == 10);
     BOOST_CHECK(errors[0].item_value == "1");
+}
+
+
+namespace
+{
+
+// The validator built exactly as readDeckFile() builds it, so that the tests
+// below exercise the production tables rather than the synthetic ones above.
+KeywordValidator
+flowKeywordValidator()
+{
+    return KeywordValidator {
+        FlowKeywordValidation::unsupportedKeywords(),
+        SupportedKeywords {FlowKeywordValidation::partiallySupported<std::string>(),
+                           FlowKeywordValidation::partiallySupported<int>(),
+                           FlowKeywordValidation::partiallySupported<double>()},
+        SupportedKeywords {FlowKeywordValidation::fullySupported<std::string>(),
+                           FlowKeywordValidation::fullySupported<int>(),
+                           FlowKeywordValidation::fullySupported<double>()},
+        specialValidation()};
+}
+
+} // namespace
+
+
+BOOST_AUTO_TEST_CASE(compositional_keywords_are_not_flagged_as_unsupported)
+{
+    // These are consumed by the compositional simulator: COMPS and NCOMPS set
+    // the component count, and WELLSTRE/WINJGAS supply the injection stream
+    // composition. The production tables must not report them.
+    const auto keywords_string = std::string {R"(
+RUNSPEC
+COMPS
+  3 /
+PROPS
+NCOMPS
+  3 /
+SCHEDULE
+WELLSTRE
+  ISTR 1.0 0.0 0.0 /
+/
+WINJGAS
+  INJ STREAM ISTR /
+/
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto validator = flowKeywordValidator();
+    std::vector<ValidationError> errors;
+    for (const auto* name : {"COMPS", "NCOMPS", "WELLSTRE", "WINJGAS"}) {
+        validator.validateDeckKeyword(deck[name].back(), errors);
+    }
+    BOOST_CHECK(get_error_report(errors, true, true).empty());
+}
+
+
+BOOST_AUTO_TEST_CASE(winjgas_makeup_gas_and_stage_items_are_flagged)
+{
+    // The WINJGAS handler ignores MAKEUPGAS and STAGE, so supplying them
+    // explicitly must still be reported.
+    const auto keywords_string = std::string {R"(
+SCHEDULE
+WINJGAS
+  INJ STREAM ISTR GASA 2 /
+/
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto validator = flowKeywordValidator();
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(deck["WINJGAS"].back(), errors);
+    BOOST_CHECK_EQUAL(errors.size(), 2);
 }
