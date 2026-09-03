@@ -368,7 +368,6 @@ getSolverString(const FlowLinearSolverParameters& p)
     else
     {
         return {"bicgstab"};
-        //return {"mixed-bicgstab"};
     }
 }
 

@@ -1,9 +1,9 @@
 # Mixed-precision linear solvers
 This folder contains mixed-precision building blocks for Krylov subspace methods
 for block-sparse linear systems of equations with highly optimized implementations
-for select block-sizes. The mixed-precision  sparse matrix-vector multiplications
+for select block-sizes. The mixed-precision sparse matrix-vector multiplications
 (SPMV) and preconditioners (ILU0/DILU) are combined to provide ILU0/DILU and
-CPR+AMG preconditioned bicgstab algorithms. In the latter case, only the second
+CPR+AMG preconditioned BiCGSTAB algorithms. In the latter case, only the second
 stage of the CPR algorithm is performed in mixed-precision. Moreover, the algorithms
 leverage an improved scalar product implementation that takes advantage of the fact
 that for parallel runs all ghost cells are sorted after local cells.
@@ -13,7 +13,7 @@ size > 1. However, only block-sizes 2,3, and 4 benefit from hand-optimized imple
 and suboptimal performance is expected for other block sizes. To run the simulator with
 mixed-precision ILU0+BiCGSTAB, you can modify the wrapper script below to your liking
 ``` bash
-OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
+OMP_NUM_THREADS=1 mpirun -np 8 --map-by l3cache --bind-to core build/bin/flow \
     --matrix-add-well-contributions=true \
     --linear-solver=mixed-ilu0 \
     --linear-solver-reduction=1e-3 \
@@ -23,7 +23,7 @@ OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
 Similarly, a sample wrapper for running the simulator with mixed-precision CPR+AMG++BiCGSTAB
 is given by
 ``` bash
-OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
+OMP_NUM_THREADS=1 mpirun -np 8 --map-by l3cache --bind-to core build/bin/flow \
     --matrix-add-well-contributions=false \
     --linear-solver=mixed-cprw \
     --linear-solver-reduction=1e-3 \
@@ -33,7 +33,7 @@ OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
 Fine-tuning CPR+AMG can be done via a JSON specification file, e.g. by using the wrapper script
 below
 ```
-OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
+OMP_NUM_THREADS=1 mpirun -np 8 --map-by l3cache --bind-to core build/bin/flow \
     --linear-solver=../mixed-cprw.json \
     $@
 ```
@@ -88,10 +88,12 @@ and modifying the following `mixed-cprw.json` file to your liking
 
 The legacy mixed-precision implementation is still available. Unlike the current
 implementation, it does not leverage the ISTL-framework and consequently only works in serial.
-Moreover, only block sizes 3 and 4 are currently supported. To run the simulator with legacy
-mixed-precision ILU0+BiCGSTAB, you can modify the wrapper script below to your liking
+It is considered a developer option and is a little faster than the serial version of the
+ISTL-based algorithms documented above. Note that only block sizes 2, 3 and 4 are currently
+supported. To run the simulator with legacy mixed-precision ILU0+BiCGSTAB, you can modify the
+wrapper script below to your liking
 ``` bash
-OMP_NUM_THREADS=1 mpirun -np 1 --map-by numa --bind-to core build/bin/flow \
+OMP_NUM_THREADS=1 mpirun -np 1 --map-by l3cache --bind-to core build/bin/flow \
     --matrix-add-well-contributions=true \
     --linear-solver=legacy-mixed-ilu0 \
     --linear-solver-reduction=1e-3 \
