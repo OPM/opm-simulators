@@ -31,10 +31,6 @@
 #if HAVE_MPI
 #define RESERVOIR_COUPLING_ENABLED
 #endif
-#ifdef RESERVOIR_COUPLING_ENABLED
-#include <opm/simulators/flow/rescoup/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
-#endif
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -58,6 +54,13 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+namespace Opm {
+    template<class Scalar> class ReservoirCouplingMaster;
+    template<class Scalar> class ReservoirCouplingSlave;
+}
+#endif
 
 namespace Opm {
 
@@ -839,11 +842,11 @@ public:
     {
         return reservoirCouplingSlave_;
     }
-    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar> *reservoirCouplingMaster)
+    void setReservoirCouplingMaster(ReservoirCouplingMaster<Scalar>* reservoirCouplingMaster)
     {
         this->reservoirCouplingMaster_ = reservoirCouplingMaster;
     }
-    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar> *reservoirCouplingSlave)
+    void setReservoirCouplingSlave(ReservoirCouplingSlave<Scalar>* reservoirCouplingSlave)
     {
         this->reservoirCouplingSlave_ = reservoirCouplingSlave;
     }
@@ -966,8 +969,8 @@ private:
     bool truncateTimeStepToFloat_ = false;
 
 #ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster<Scalar> *reservoirCouplingMaster_ = nullptr;
-    ReservoirCouplingSlave<Scalar> *reservoirCouplingSlave_ = nullptr;
+    ReservoirCouplingMaster<Scalar>* reservoirCouplingMaster_ = nullptr;
+    ReservoirCouplingSlave<Scalar>* reservoirCouplingSlave_ = nullptr;
 #endif
 
 };
