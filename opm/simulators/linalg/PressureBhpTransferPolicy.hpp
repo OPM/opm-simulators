@@ -20,9 +20,16 @@
 
 #pragma once
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
+
+#include <dune/istl/matrixmarket.hh>
+
+#include <fstream>
+#include <string>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
@@ -199,13 +206,45 @@ namespace Opm
         if (prm_.get<bool>("add_wells")) {
             OPM_TIMEBLOCK(cprwAddWellEquation);
             assert(transpose == false); // not implemented
-            bool use_well_weights = prm_.get<bool>("use_well_weights");
-            fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_, use_well_weights);
+            const bool use_well_weights = prm_.get<bool>("use_well_weights");
+            // "contract_d" takes the coarse well diagonal from lambda' D(:,bhp)
+            // for every well; "auto" (the default) leaves the multisegment path
+            // on its historical row-sum diagonal. Standard wells contract D
+            // either way, so this only changes multisegment wells.
+            const auto diagonal = prm_.get<std::string>("well_coarse_diagonal", "auto");
+            if (diagonal != "auto" && diagonal != "contract_d") {
+                OPM_THROW(std::invalid_argument,
+                          "Unknown well_coarse_diagonal '" + diagonal +
+                          "'. Valid values are 'auto' and 'contract_d'.");
+            }
+            const bool contract_d_diagonal = (diagonal == "contract_d");
+            fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_,
+                                                  use_well_weights, contract_d_diagonal);
 #ifndef NDEBUG
             std::advance(rowCoarse, fineOperator.getNumberOfExtraEquations());
             assert(rowCoarse == coarseLevelMatrix_->end());
 #endif
 
+        }
+        dumpCoarseMatrix();
+    }
+
+    // verbosity above 10 writes the coarse system out, so that it can be
+    // compared entry by entry against another CPRW implementation.
+    void dumpCoarseMatrix() const
+    {
+        if (prm_.get<int>("verbosity", 0) <= 10) {
+            return;
+        }
+        static int counter = 0;
+        const int id = counter++;
+        std::ofstream out("cprw_coarse_" + std::to_string(id) + ".mm");
+        if (out) {
+            Dune::writeMatrixMarket(*coarseLevelMatrix_, out);
+        }
+        std::ofstream wout("cprw_weights_" + std::to_string(id) + ".mm");
+        if (wout) {
+            Dune::writeMatrixMarket(weights_, wout);
         }
     }
 

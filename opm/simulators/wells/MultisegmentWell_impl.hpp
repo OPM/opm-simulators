@@ -905,6 +905,7 @@ namespace Opm
                              const BVector& weights,
                              const int pressureVarIndex,
                              const bool use_well_weights,
+                             const bool contract_d_diagonal,
                              const WellStateType& well_state) const
     {
         if (this->number_of_local_perforations_ == 0) {
@@ -916,6 +917,7 @@ namespace Opm
                                                weights,
                                                pressureVarIndex,
                                                use_well_weights,
+                                               contract_d_diagonal,
                                                *this,
                                                this->SPres,
                                                well_state);

@@ -486,11 +486,15 @@ public:
 
   void pre(FineDomainType& x, FineRangeType& b)
   {
-    if (x.dim() != u_.dim()) {
-      u_.resize(x.dim());
-    }
-    if (b.dim() != rhs_.dim()) {
-      rhs_.resize(b.dim());
+    // A MultiTypeBlockVector has no resize(); apply() assigns to u_ and rhs_,
+    // which sizes them, so there is nothing to do for such a fine level.
+    if constexpr (requires { u_.resize(x.dim()); rhs_.resize(b.dim()); }) {
+      if (x.dim() != u_.dim()) {
+        u_.resize(x.dim());
+      }
+      if (b.dim() != rhs_.dim()) {
+        rhs_.resize(b.dim());
+      }
     }
     smoother_->pre(x,b);
   }
