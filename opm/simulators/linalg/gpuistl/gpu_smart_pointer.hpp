@@ -22,7 +22,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 
 /**
  * @file gpu_smart_pointer.hpp defines convenience classes and functions for using std::shared_ptr and std::unique_ptr

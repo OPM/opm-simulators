@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <random>
+#include <limits>
 
 BOOST_AUTO_TEST_CASE(TestDocumentedUsage)
 {
@@ -71,6 +72,14 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
     BOOST_CHECK_THROW(Opm::gpuistl::GpuVector<double>(vectorOnGPU.data(), data.size()), std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(TestConstructionRejectsSizeTooLargeForCuBlas)
+{
+    const auto tooLarge = static_cast<size_t>(std::numeric_limits<int>::max()) + size_t{1};
+    std::cout << "tooLarge: " << tooLarge << std::endl;
+    std::cout << "std::numeric_limits<int>::max(): " << std::numeric_limits<int>::max() << std::endl;
+    BOOST_CHECK_THROW(Opm::gpuistl::detail::to_int(tooLarge), std::invalid_argument);
+    BOOST_CHECK_THROW((Opm::gpuistl::GpuVector<double>(tooLarge)), std::invalid_argument);
+}
 
 BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 {

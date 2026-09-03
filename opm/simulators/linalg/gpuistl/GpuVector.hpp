@@ -18,6 +18,9 @@
 */
 #ifndef OPM_GPUVECTOR_HEADER_HPP
 #define OPM_GPUVECTOR_HEADER_HPP
+
+#include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 
@@ -34,7 +37,7 @@ namespace Opm::gpuistl
 {
 
 /**
- * @brief The GpuVector class is a simple (arithmetic) vector class for the GPU.
+ * @brief The GpuVector class is a simple (arithmetic) vector class for the GPU that wraps a GpuBuffer.
  *
  * @note we currently only support simple raw primitives for T (double, float and int)
  *
@@ -42,6 +45,10 @@ namespace Opm::gpuistl
  *
  * @note this vector has no notion of block size. The user is responsible for allocating
  *       the correct number of primitives (double or floats)
+ *
+ * @note Logical size is stored as \c size_t (via the wrapped GpuBuffer) but must be within the limits of
+ *       int due to restrictions of CuBlas. Dimensions outside that range are rejected with
+ *       \c std::invalid_argument. BLAS member functions convert the current dimension to \c int at call time.
  *
  * Example usage:
  *
@@ -87,8 +94,6 @@ public:
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
      *
-     * @note For now data.size() needs to be within the limits of int due to restrctions of CuBlas.
-     *
      * @param data the vector to copy from
      */
     explicit GpuVector(const std::vector<T>& data);
@@ -109,8 +114,6 @@ public:
      *
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
-     *
-     * @note For now bvector.dim() needs to be within the limits of int due to restrctions of CuBlas.
      *
      * @param bvector the vector to copy from
      */
@@ -133,12 +136,10 @@ public:
     /**
      * @brief GpuVector default constructor creates a zero-sized vector (no GPU memory allocated)
      */
-    GpuVector() : m_dataOnDevice(nullptr), m_numberOfElements(0), m_cuBlasHandle(detail::CuBlasHandle::getInstance()) {}
+    GpuVector() = default;
 
     /**
      * @brief GpuVector allocates new GPU memory of size numberOfElements * sizeof(T)
-     *
-     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      *
      * @param numberOfElements number of T elements to allocate
      */
@@ -153,15 +154,13 @@ public:
      *
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
-     *
-     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      */
     GpuVector(const T* dataOnHost, const size_t numberOfElements);
 
     /**
-     * @brief ~GpuVector calls cudaFree
+     * @brief Default destructor; GPU memory is owned and released by the wrapped GpuBuffer.
      */
-    virtual ~GpuVector();
+    virtual ~GpuVector() = default;
 
     /**
      * @return the raw pointer to the GPU data
@@ -183,17 +182,8 @@ public:
     template <int BlockDimension>
     void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
     {
-        // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
-        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
-            OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. GpuVector has size {}, \n"
-                                  "however, BlockVector has N() = {}, and dim = {}.",
-                                  m_numberOfElements,
-                                  bvector.N(),
-                                  bvector.dim()));
-        }
-        const auto dataPointer = static_cast<const T*>(&(bvector[0][0]));
-        copyFromHost(dataPointer, m_numberOfElements);
+        // TODO-H: Documentation says synchronous transfer, but implementation relies on GpuBuffer. Check!
+        m_buffer.copyFromHost(bvector);
     }
 
     /**
@@ -208,16 +198,16 @@ public:
     void copyFromHostAsync(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector, cudaStream_t stream = detail::DEFAULT_STREAM)
     {
         // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
-        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
+        if (dim() != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. GpuVector has size {}, \n"
                                   "however, BlockVector has N() = {}, and dim = {}.",
-                                  m_numberOfElements,
+                                  dim(),
                                   bvector.N(),
                                   bvector.dim()));
         }
         const auto dataPointer = static_cast<const T*>(&(bvector[0][0]));
-        copyFromHostAsync(dataPointer, m_numberOfElements, stream);
+        copyFromHostAsync(dataPointer, dim(), stream);
     }
 
     /**
@@ -230,17 +220,7 @@ public:
     template <int BlockDimension>
     void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector) const
     {
-        // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
-        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
-            OPM_THROW(std::runtime_error,
-                      fmt::format(fmt::runtime("Given incompatible vector size. GpuVector has size {},\n"
-                                               "however, the BlockVector has has N() = {}, and dim() = {}."),
-                                  m_numberOfElements,
-                                  bvector.N(),
-                                  bvector.dim()));
-        }
-        const auto dataPointer = static_cast<T*>(&(bvector[0][0]));
-        copyToHost(dataPointer, m_numberOfElements);
+        m_buffer.copyToHost(bvector);
     }
 
     /**
@@ -255,16 +235,16 @@ public:
     void copyToHostAsync(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector, cudaStream_t stream = detail::DEFAULT_STREAM) const
     {
         // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
-        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
+        if (dim() != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. GpuVector has size {},\n however, the BlockVector "
                                   "has has N() = {}, and dim() = {}.",
-                                  m_numberOfElements,
+                                  dim(),
                                   bvector.N(),
                                   bvector.dim()));
         }
         const auto dataPointer = static_cast<T*>(&(bvector[0][0]));
-        copyToHostAsync(dataPointer, m_numberOfElements, stream);
+        copyToHostAsync(dataPointer, dim(), stream);
     }
 
     /**
@@ -358,10 +338,10 @@ public:
      * @brief copyFromDeviceToDevice copies data from the GPU memory of other to this vector
      * @param other the vector to copy from
      */
-    void copyFromDeviceToDevice(const GpuVector<T>& other) const;
+    void copyFromDeviceToDevice(const GpuVector<T>& other);
 
     void prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
-    void syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
+    void syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet);
 
     /**
      * @brief operator *= multiplies every element by scalar
@@ -457,10 +437,10 @@ public:
     /**
      * @brief resize changes the size of the vector, preserving existing data if new size is larger
      * @param new_size the new number of elements
+     * @note \p new_size must be at least 1 and within the limits of int due to restrictions of CuBlas
      * @note If new_size is larger, existing data is preserved and new elements are uninitialized
      * @note If new_size is smaller, data is truncated
      * @note If new_size equals current size, no operation is performed
-     * @note For now new_size needs to be within the limits of int due to restrictions in cublas
      */
     void resize(size_t new_size);
 
@@ -516,17 +496,18 @@ public:
     }
 
 private:
-    T* m_dataOnDevice = nullptr;
-
-    // Note that we store this as int to make sure we are always cublas compatible.
-    // This gives the added benefit that a size_t to int conversion error occurs during construction.
-    int m_numberOfElements;
-    detail::CuBlasHandle& m_cuBlasHandle;
+    GpuBuffer<T> m_buffer;
+    detail::CuBlasHandle& m_cuBlasHandle = detail::CuBlasHandle::getInstance();
 
     void assertSameSize(const GpuVector<T>& other) const;
-    void assertSameSize(int size) const;
+    void assertSameSize(size_t size) const;
 
     void assertHasElements() const;
+
+    /**
+     * @brief Validates \p size for construction and resize (within the limits of int due to restrictions of CuBlas).
+     */
+    static size_t checkedSize(size_t size);
 };
 
 } // namespace Opm::gpuistl

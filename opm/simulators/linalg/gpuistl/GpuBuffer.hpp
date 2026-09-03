@@ -23,6 +23,7 @@
 #include <exception>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
@@ -162,6 +163,10 @@ public:
     GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
         : GpuBuffer(numberOfElements)
     {
+        if (!detail::isCPUPointer(dataOnHost)) {
+            OPM_THROW(std::invalid_argument, "dataOnHost is not a CPU pointer");
+        }
+
         OPM_GPU_SAFE_CALL(cudaMemcpy(
             m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
     }
@@ -201,14 +206,14 @@ public:
     template <int BlockDimension>
     void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
     {
-        // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
-        if (m_numberOfElements != bvector.size()) {
+        if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. GpuBuffer has size {}, \n"
-                                  "however, BlockVector has N() = {}, and size = {}.",
-                                  m_numberOfElements,
-                                  bvector.N(),
-                                  bvector.size()));
+                fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
+                    "has has dim() = {} (N() = {}, and size() = {}).",
+                    m_numberOfElements,
+                    bvector.dim(),
+                    bvector.N(),
+                    bvector.size()));
         }
         const auto dataPointer = static_cast<const T*>(&(bvector[0][0]));
         copyFromHost(dataPointer, m_numberOfElements);
@@ -224,12 +229,12 @@ public:
     template <int BlockDimension>
     void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector) const
     {
-        // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
-        if (m_numberOfElements != bvector.size()) {
+        if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
-                                  "has has N() = {}, and size() = {}.",
+                                  "has has dim() = {} (N() = {}, and size() = {}).",
                                   m_numberOfElements,
+                                  bvector.dim(),
                                   bvector.N(),
                                   bvector.size()));
         }
@@ -257,7 +262,7 @@ public:
     }
 
     /**
-     * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer
+     * @brief copyToHost copies numberOfElements to the CPU memory dataPointer
      * @param dataPointer raw pointer to CPU memory
      * @param numberOfElements number of elements to copy
      * @note This does synchronous transfer.
@@ -345,6 +350,11 @@ public:
             OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
         }
 
+        if (newSize == m_numberOfElements) {
+            return;
+        }
+
+
         if (m_numberOfElements == 0) {
             // We have no data, so we can just allocate new memory
             OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * newSize));
@@ -352,7 +362,7 @@ public:
         else {
             // Allocate memory for temporary buffer
             T* tmpBuffer = nullptr;
-            OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * m_numberOfElements));
+            OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * newSize));
 
             // Move the data from the old to the new buffer with truncation
             size_t sizeOfMove = std::min({m_numberOfElements, newSize});

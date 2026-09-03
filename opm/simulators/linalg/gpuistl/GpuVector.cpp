@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 
 namespace Opm::gpuistl
@@ -34,28 +34,20 @@ namespace Opm::gpuistl
 
 template <class T>
 GpuVector<T>::GpuVector(const std::vector<T>& data)
-    : GpuVector(data.data(), detail::to_int(data.size()))
+    : GpuVector(data.data(), data.size())
 {
 }
 
 template <class T>
 GpuVector<T>::GpuVector(const size_t numberOfElements)
-    : m_numberOfElements(detail::to_int(numberOfElements))
-    , m_cuBlasHandle(detail::CuBlasHandle::getInstance())
+    : m_buffer(checkedSize(numberOfElements))
 {
-    OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
 }
 
 template <class T>
 GpuVector<T>::GpuVector(const T* dataOnHost, const size_t numberOfElements)
-    : GpuVector(numberOfElements)
+    : m_buffer(dataOnHost, checkedSize(numberOfElements))
 {
-    if (detail::isGPUPointer(dataOnHost)) {
-        OPM_THROW(std::invalid_argument, "dataOnHost is a GPU pointer, use copy constructor instead");
-    }
-
-    OPM_GPU_SAFE_CALL(cudaMemcpy(
-        m_dataOnDevice, dataOnHost, detail::to_size_t(m_numberOfElements) * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -63,7 +55,7 @@ GpuVector<T>&
 GpuVector<T>::operator=(T scalar)
 {
     assertHasElements();
-    detail::setVectorValue(data(), detail::to_size_t(m_numberOfElements), scalar);
+    detail::setVectorValue(data(), dim(), scalar);
     return *this;
 }
 
@@ -71,12 +63,14 @@ template <class T>
 GpuVector<T>&
 GpuVector<T>::operator=(const GpuVector<T>& other)
 {
+    //TODO-H: Call device-to-device copy
+
     // Only copy data if both vectors have elements and same size
-    if (m_numberOfElements > 0 && other.m_numberOfElements > 0) {
+    if (m_buffer.size() > 0 && other.m_buffer.size() > 0) {
         assertSameSize(other);
-        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                      other.m_dataOnDevice,
-                                      detail::to_size_t(m_numberOfElements) * sizeof(T),
+        OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
+                                      other.data(),
+                                      dim() * sizeof(T),
                                       cudaMemcpyDeviceToDevice));
     }
     // If both are zero-sized, assignment is trivial (do nothing)
@@ -85,90 +79,43 @@ GpuVector<T>::operator=(const GpuVector<T>& other)
 
 template <class T>
 GpuVector<T>::GpuVector(const GpuVector<T>& other)
-    : GpuVector(other.m_numberOfElements)
+    : m_buffer(other.m_buffer)
 {
-    // Only copy data if both vectors have elements and same size
-    if (m_numberOfElements > 0) {
-        assertSameSize(other);
-        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                      other.m_dataOnDevice,
-                                      detail::to_size_t(m_numberOfElements) * sizeof(T),
-                                      cudaMemcpyDeviceToDevice));
-    }
-    // If other is zero-sized, assignment is trivial (do nothing)
-}
-
-template <class T>
-GpuVector<T>::~GpuVector()
-{
-    OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>
 const T*
 GpuVector<T>::data() const
 {
-    return m_dataOnDevice;
+    return m_buffer.data();
+}
+
+template <typename T>
+T*
+GpuVector<T>::data()
+{
+    return m_buffer.data();
 }
 
 template <typename T>
 typename GpuVector<T>::size_type
 GpuVector<T>::dim() const
 {
-    // Note that there is no way for m_numberOfElements to be non-positive,
-    // but for sanity we still use the safe conversion function here.
-    //
-    // We also doubt that this will lead to any performance penality, but should this prove
-    // to be false, this can be replaced by a simple cast to size_t
-    return detail::to_size_t(m_numberOfElements);
+    return m_buffer.size();
 }
 
 template <typename T>
 void
 GpuVector<T>::resize(size_t new_size)
 {
-    const int new_elements = detail::to_int(new_size);
-
-    if (new_elements == m_numberOfElements) {
-        return;
-    }
-
-    if (new_elements == 0) {
-        // Free existing memory and set to empty state
-        if (m_dataOnDevice != nullptr) {
-            OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
-            m_dataOnDevice = nullptr;
-        }
-        m_numberOfElements = 0;
-        return;
-    }
-
-    // Allocate new memory
-    T* new_data = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&new_data, sizeof(T) * new_size));
-
-    if (m_dataOnDevice != nullptr && m_numberOfElements > 0) {
-        // Copy existing data (up to the minimum of old and new size)
-        const size_t copy_elements = std::min(detail::to_size_t(m_numberOfElements), new_size);
-        if (copy_elements > 0) {
-            OPM_GPU_SAFE_CALL(cudaMemcpy(new_data, m_dataOnDevice,
-                                          sizeof(T) * copy_elements,
-                                          cudaMemcpyDeviceToDevice));
-        }
-
-        // Free old memory
-        OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
-    }
-
-    m_dataOnDevice = new_data;
-    m_numberOfElements = new_elements;
+    m_buffer.resize(checkedSize(new_size));
 }
 
 template <typename T>
 std::vector<T>
 GpuVector<T>::asStdVector() const
 {
-    std::vector<T> temporary(detail::to_size_t(m_numberOfElements));
+    std::vector<T> temporary(dim());
     copyToHost(temporary);
     return temporary;
 }
@@ -177,23 +124,23 @@ template <typename T>
 void
 GpuVector<T>::setZeroAtIndexSet(const GpuVector<int>& indexSet)
 {
-    detail::setZeroAtIndexSet(m_dataOnDevice, indexSet.dim(), indexSet.data());
+    detail::setZeroAtIndexSet(data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
 void
 GpuVector<T>::assertSameSize(const GpuVector<T>& x) const
 {
-    assertSameSize(x.m_numberOfElements);
+    assertSameSize(x.dim());
 }
 
 template <typename T>
 void
-GpuVector<T>::assertSameSize(int size) const
+GpuVector<T>::assertSameSize(size_t size) const
 {
-    if (size != m_numberOfElements) {
+    if (size != dim()) {
         OPM_THROW(std::invalid_argument,
-                  fmt::format("Given vector has {}, while we have {}.", size, m_numberOfElements));
+                  fmt::format("Given vector has {}, while we have {}.", size, dim()));
     }
 }
 
@@ -201,16 +148,17 @@ template <typename T>
 void
 GpuVector<T>::assertHasElements() const
 {
-    if (m_numberOfElements <= 0) {
+    if (dim() <= 0) {
         OPM_THROW(std::invalid_argument, "We have 0 elements");
     }
 }
 
 template <typename T>
-T*
-GpuVector<T>::data()
+size_t
+GpuVector<T>::checkedSize(size_t numberOfElements)
 {
-    return m_dataOnDevice;
+    (void)detail::to_int(numberOfElements);
+    return numberOfElements;
 }
 
 template <class T>
@@ -218,7 +166,7 @@ GpuVector<T>&
 GpuVector<T>::operator*=(const T& scalar)
 {
     assertHasElements();
-    OPM_CUBLAS_SAFE_CALL(detail::cublasScal(m_cuBlasHandle.get(), m_numberOfElements, &scalar, data(), 1));
+    OPM_CUBLAS_SAFE_CALL(detail::cublasScal(m_cuBlasHandle.get(), detail::to_int(dim()), &scalar, data(), 1));
     return *this;
 }
 
@@ -228,7 +176,7 @@ GpuVector<T>::axpy(T alpha, const GpuVector<T>& y)
 {
     assertHasElements();
     assertSameSize(y);
-    OPM_CUBLAS_SAFE_CALL(detail::cublasAxpy(m_cuBlasHandle.get(), m_numberOfElements, &alpha, y.data(), 1, data(), 1));
+    OPM_CUBLAS_SAFE_CALL(detail::cublasAxpy(m_cuBlasHandle.get(), detail::to_int(dim()), &alpha, y.data(), 1, data(), 1));
     return *this;
 }
 
@@ -240,7 +188,7 @@ GpuVector<T>::dot(const GpuVector<T>& other) const
     assertSameSize(other);
     T result = T(0);
     OPM_CUBLAS_SAFE_CALL(
-        detail::cublasDot(m_cuBlasHandle.get(), m_numberOfElements, data(), 1, other.data(), 1, &result));
+        detail::cublasDot(m_cuBlasHandle.get(), detail::to_int(dim()), data(), 1, other.data(), 1, &result));
     return result;
 }
 template <class T>
@@ -249,7 +197,7 @@ GpuVector<T>::two_norm() const
 {
     assertHasElements();
     T result = T(0);
-    OPM_CUBLAS_SAFE_CALL(detail::cublasNrm2(m_cuBlasHandle.get(), m_numberOfElements, data(), 1, &result));
+    OPM_CUBLAS_SAFE_CALL(detail::cublasNrm2(m_cuBlasHandle.get(), detail::to_int(dim()), data(), 1, &result));
     return result;
 }
 
@@ -257,7 +205,7 @@ template <typename T>
 T
 GpuVector<T>::dot(const GpuVector<T>& other, const GpuVector<int>& indexSet, GpuVector<T>& buffer) const
 {
-    return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::innerProductAtIndices(m_cuBlasHandle.get(), data(), other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
@@ -273,7 +221,7 @@ T
 GpuVector<T>::dot(const GpuVector<T>& other, const GpuVector<int>& indexSet) const
 {
     GpuVector<T> buffer(indexSet.dim());
-    return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::innerProductAtIndices(m_cuBlasHandle.get(), data(), other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
@@ -345,49 +293,49 @@ template <class T>
 void
 GpuVector<T>::copyToHostAsync(T* dataPointer, size_t numberOfElements, cudaStream_t stream) const
 {
-    assertSameSize(detail::to_int(numberOfElements));
+    assertSameSize(numberOfElements);
     // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
     OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }
 
 template <class T>
 void
-GpuVector<T>::copyFromHost(const std::vector<T>& data)
+GpuVector<T>::copyFromHost(const std::vector<T>& vectorOnHost)
 {
-    copyFromHost(data.data(), data.size());
+    copyFromHost(vectorOnHost.data(), vectorOnHost.size());
 }
 
 template <class T>
 void
-GpuVector<T>::copyFromHostAsync(const std::vector<T>& data, cudaStream_t stream)
+GpuVector<T>::copyFromHostAsync(const std::vector<T>& vectorOnHost, cudaStream_t stream)
 {
-    copyFromHostAsync(data.data(), data.size(), stream);
+    copyFromHostAsync(vectorOnHost.data(), vectorOnHost.size(), stream);
 }
 
 template <class T>
 void
-GpuVector<T>::copyToHost(std::vector<T>& data) const
+GpuVector<T>::copyToHost(std::vector<T>& vectorOnHost) const
 {
-    copyToHost(data.data(), data.size());
+    copyToHost(vectorOnHost.data(), vectorOnHost.size());
 }
 
 template <class T>
 void
-GpuVector<T>::copyToHostAsync(std::vector<T>& data, cudaStream_t stream) const
+GpuVector<T>::copyToHostAsync(std::vector<T>& vectorOnHost, cudaStream_t stream) const
 {
-    copyToHostAsync(data.data(), data.size(), stream);
+    copyToHostAsync(vectorOnHost.data(), vectorOnHost.size(), stream);
 }
 
 template <class T>
 void
-GpuVector<T>::copyFromDeviceToDevice(const GpuVector<T>& data) const
+GpuVector<T>::copyFromDeviceToDevice(const GpuVector<T>& other)
 {
     assertHasElements();
-    assertSameSize(data);
+    assertSameSize(other);
 
-    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                data.m_dataOnDevice,
-                                detail::to_size_t(m_numberOfElements) * sizeof(T),
+    OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
+                                other.data(),
+                                dim() * sizeof(T),
                                 cudaMemcpyDeviceToDevice));
 }
 
@@ -395,13 +343,13 @@ template <typename T>
 void
 GpuVector<T>::prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const
 {
-    return detail::prepareSendBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::prepareSendBuf(data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 template <typename T>
 void
-GpuVector<T>::syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const
+GpuVector<T>::syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet)
 {
-    return detail::syncFromRecvBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::syncFromRecvBuf(data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template class GpuVector<double>;
