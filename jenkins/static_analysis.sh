@@ -21,7 +21,7 @@ fi
 # Clone opm-common
 mkdir -p $WORKSPACE/deps/opm-common
 pushd $WORKSPACE/deps/opm-common
-repo_root=${OPM_REPO_ROOT:-https://github.com/OPM}
+repo_root=${OPM_REPO_ROOT:-git@github.com:OPM}
 git init .
 git remote add origin ${repo_root}/opm-common
 git fetch --depth 1 origin ${upstreamRev[opm-common]}:branch_to_build
