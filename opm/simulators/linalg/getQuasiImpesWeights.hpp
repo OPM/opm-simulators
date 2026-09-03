@@ -184,76 +184,134 @@ namespace Amg
         MatrixBlockType block_transpose;
         Dune::FieldVector<Evaluation, numEq> storage;
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        // Turn one degree of freedom's accumulation term into its weight.  Only the
+        // storage derivatives and the volume the storage is scaled by enter it.
+        const auto& vanguard = elemCtx.simulator().vanguard();
+        const auto weightFromStorage = [pressureVarIndex, &rhs, &block_transpose, &vanguard]
+            (const Dune::FieldVector<Evaluation, numEq>& stor,
+             const double storage_scale,
+             const unsigned globalDofIdx,
+             VectorBlockType& bw)
+        {
+            const double pressure_scale = 50e5;
+
+            // Build the transposed matrix directly to avoid separate transpose step
+            for (int ii = 0; ii < numEq; ++ii) {
+                for (int jj = 0; jj < numEq; ++jj) {
+                    block_transpose[jj][ii] = stor[ii].derivative(jj)/storage_scale;
+                    if (jj == pressureVarIndex) {
+                        block_transpose[jj][ii] *= pressure_scale;
+                    }
+                }
+            }
+            try {
+                block_transpose.solve(bw, rhs);
+            }
+            catch (const Dune::FMatrixError&) {
+                // Rank-deficient storage derivatives: no combination of the
+                // mass balances has a storage term that depends on pressure
+                // alone, so there is no weight vector to compute here.
+                //
+                // Deliberately no fallback value.  bw is indexed by equation
+                // while rhs is indexed by primary variable, so substituting rhs
+                // would put unit weight on whichever equation happens to share
+                // the pressure variable's index - an arbitrary choice that goes
+                // on to make the CPR pressure system itself singular.  Name the
+                // cell instead, so the cause can be found.
+                throw std::runtime_error {
+                    fmt::format("Singular storage matrix when forming the CPR "
+                                "pressure weights for cell {} (Cartesian index "
+                                "{}).  The storage derivatives of that cell are "
+                                "rank deficient, so the pressure equation cannot "
+                                "be formed there.",
+                                globalDofIdx,
+                                vanguard.cartesianIndex(globalDofIdx))
+                };
+            }
+
+            const double abs_max =
+                *std::ranges::max_element(bw,
+                                          [](double a, double b)
+                                          { return std::fabs(a) < std::fabs(b); });
+            // probably a scaling which could give approximately total compressibility would be better
+            bw /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+        };
+
+        const auto walkElements = [&]()
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
 #endif
-        for (const auto& chunk : element_chunks) {
-            const std::size_t thread_id = ThreadManager::threadId();
-            ElementContext localElemCtx(elemCtx.simulator());
+            for (const auto& chunk : element_chunks) {
+                const std::size_t thread_id = ThreadManager::threadId();
+                ElementContext localElemCtx(elemCtx.simulator());
 
-            for (const auto& elem : chunk) {
-                localElemCtx.updatePrimaryStencil(elem);
-                localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                for (const auto& elem : chunk) {
+                    localElemCtx.updatePrimaryStencil(elem);
+                    localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                model.localLinearizer(thread_id).localResidual().computeStorage(storage, localElemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
+                    model.localLinearizer(thread_id).localResidual().computeStorage(storage, localElemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
 
-                auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-                auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
+                    auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+                    auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
 
-                // Build the transposed matrix directly to avoid separate transpose step
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
-                        }
-                    }
+                    const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+                    weightFromStorage(storage,
+                                      scvVolume / localElemCtx.simulator().timeStepSize(),
+                                      index,
+                                      bweights);
+
+                    weights[index] = bweights;
                 }
-                try {
-                    block_transpose.solve(bweights, rhs);
+            }
+            OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        };
+
+        // As for the analytic weights: the accumulation term of a degree of freedom is a
+        // function of its own intensive quantities and its own volume, so no element is
+        // needed to form it.  Here it takes one thing more than those quantities by
+        // index -- a storage term computed from them alone, which the blackoil TPFA
+        // residual has and the element-by-element one does not.  Walk the elements when
+        // either is missing.
+        if constexpr (Model::formsStorageFromIntensiveQuantities) {
+            if (model.intensiveQuantityCacheEnabled()) {
+                const int numDof = static_cast<int>(model.numTotalDof());
+                const double dt = elemCtx.simulator().timeStepSize();
+
+                // computeStorage() in this form is a static member; any instance of the
+                // residual serves to name it.
+                const auto& localResidual =
+                    model.localLinearizer(ThreadManager::threadId()).localResidual();
+
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights, block_transpose, storage) if(enable_thread_parallel)
+#endif
+                for (int dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                    const auto& intQuants =
+                        model.intensiveQuantities(static_cast<unsigned>(dofIdx), /*timeIdx=*/0);
+
+                    localResidual.template computeStorage<Evaluation>(storage, intQuants);
+
+                    const double scvVolume =
+                        model.dofTotalVolume(dofIdx) * intQuants.extrusionFactor();
+
+                    weightFromStorage(storage, scvVolume / dt,
+                                      static_cast<unsigned>(dofIdx), bweights);
+                    weights[dofIdx] = bweights;
                 }
-                catch (const Dune::FMatrixError&) {
-                    // Rank-deficient storage derivatives: no combination of the
-                    // mass balances has a storage term that depends on pressure
-                    // alone, so there is no weight vector to compute here.
-                    //
-                    // Deliberately no fallback value.  bweights is indexed by
-                    // equation while rhs is indexed by primary variable, so
-                    // substituting rhs would put unit weight on whichever
-                    // equation happens to share the pressure variable's index -
-                    // an arbitrary choice that goes on to make the CPR pressure
-                    // system itself singular.  Name the cell instead, so the
-                    // cause can be found.
-                    const auto globalDofIdx =
-                        localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-                    throw std::runtime_error {
-                        fmt::format("Singular storage matrix when forming the CPR "
-                                    "pressure weights for cell {} (Cartesian index "
-                                    "{}).  The storage derivatives of that cell are "
-                                    "rank deficient, so the pressure equation cannot "
-                                    "be formed there.",
-                                    globalDofIdx,
-                                    localElemCtx.simulator().vanguard()
-                                        .cartesianIndex(globalDofIdx))
-                    };
-                }
-
-                const double abs_max =
-                    *std::ranges::max_element(bweights,
-                                              [](double a, double b)
-                                              { return std::fabs(a) < std::fabs(b); });
-                // probably a scaling which could give approximately total compressibility would be better
-                bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
-
-                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                weights[index] = bweights;
+                OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ",
+                                           elemCtx.simulator().vanguard().grid().comm());
+            }
+            else {
+                walkElements();
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        else {
+            walkElements();
+        }
     }
 
     template <class Vector, class ElementContext, class Model, class ElementChunksType>
@@ -284,65 +342,90 @@ namespace Amg
         const auto& solution = model.solution(/*timeIdx*/ 0);
         VectorBlockType bweights;
 
-        // Use OpenMP to parallelize over element chunks (runtime controlled via if clause)
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        // The weight of one degree of freedom.  It is a function of that degree of
+        // freedom's own fluid state and primary variables and of nothing else -- no
+        // neighbours, no geometry -- so it can be had by index as readily as by element.
+        const auto weightOf = [&solution]
+            (const auto& intQuants, const auto index, VectorBlockType& bw)
+        {
+            const auto& fs = intQuants.fluidState();
+
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                    FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
+                bw[activeCompIdx]
+                    = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
+            }
+
+            double denominator = 1.0;
+            double rs = Toolbox::template decay<double>(fs.Rs());
+            double rv = Toolbox::template decay<double>(fs.Rv());
+            const auto& priVars = solution[index];
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                rs = 0.0;
+            }
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                rv = 0.0;
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                    FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                bw[activeCompIdx] = Toolbox::template decay<LhsEval>(
+                    (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
+                    / denominator);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                    FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                bw[activeCompIdx] = Toolbox::template decay<LhsEval>(
+                    (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
+                    / denominator);
+            }
+        };
+
+        // Walking the degrees of freedom is what this wants to do -- it needs no element
+        // -- and it is possible exactly when their intensive quantities can be had by
+        // index.  Walk the elements when they cannot.
+        if (model.intensiveQuantityCacheEnabled()) {
+            const int numDof = static_cast<int>(model.numTotalDof());
+
 #ifdef _OPENMP
 #pragma omp parallel for private(bweights) if(enable_thread_parallel)
 #endif
-        for (const auto& chunk : element_chunks) {
-
-            // Each thread gets a unique copy of elemCtx
-            ElementContext localElemCtx(elemCtx.simulator());
-
-            for (const auto& elem : chunk) {
-                localElemCtx.updatePrimaryStencil(elem);
-                localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
-                    bweights[activeCompIdx]
-                        = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
-                }
-
-                double denominator = 1.0;
-                double rs = Toolbox::template decay<double>(fs.Rs());
-                double rv = Toolbox::template decay<double>(fs.Rv());
-                const auto& priVars = solution[index];
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                    rs = 0.0;
-                }
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    rv = 0.0;
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                    && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                        (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
-                        / denominator);
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                        (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
-                        / denominator);
-                }
-
-                weights[index] = bweights;
+            for (int dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                weightOf(model.intensiveQuantities(static_cast<unsigned>(dofIdx), /*timeIdx=*/0),
+                         dofIdx, bweights);
+                weights[dofIdx] = bweights;
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        else {
+            // Use OpenMP to parallelize over element chunks (runtime controlled via if clause)
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+#ifdef _OPENMP
+#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#endif
+            for (const auto& chunk : element_chunks) {
+
+                // Each thread gets a unique copy of elemCtx
+                ElementContext localElemCtx(elemCtx.simulator());
+
+                for (const auto& elem : chunk) {
+                    localElemCtx.updatePrimaryStencil(elem);
+                    localElemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                    const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    weightOf(localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0),
+                             index, bweights);
+                    weights[index] = bweights;
+                }
+            }
+            OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+        }
     }
 } // namespace Amg
 
