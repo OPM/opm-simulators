@@ -42,6 +42,7 @@
 #include <cstddef>
 #include <functional>
 #include <numbers>
+#include <tuple>
 
 #include <fmt/format.h>
 
@@ -63,6 +64,7 @@ namespace Opm
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_conservation_quantities, num_phases, index_of_well, perf_data)
     , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices>&>(*this))
     , regularize_(false)
+    , fluids_initial_(num_conservation_quantities)
     {
         assert(this->num_conservation_quantities_ == numWellConservationEq);
     }
@@ -374,9 +376,14 @@ namespace Opm
     {
         auto& deferred_logger = groupStateHelper.deferredLogger();
 
+        // Refresh the wellbore fluid state so its consistency with the primary
+        // variables is guaranteed structurally, like the multisegment well does at
+        // the top of its assembly, instead of relying on every mutation site of the
+        // primary variables to remember to refresh it.
+        updateWellFluidState();
+
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
-        const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
@@ -451,13 +458,19 @@ namespace Opm
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
-            // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
-            // since all the rates are under surface condition
             EvalWell resWell_loc(0.0);
             if (FluidSystem::numActivePhases() > 1) {
                 assert(dt > 0);
-                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) -
-                                this->F0_[componentIdx]) * volume / dt;
+                // The wellbore volume is an in-situ volume, while the rates are under
+                // surface conditions, so it is converted with the volume ratio of the
+                // wellbore mixture. The ratio is used explicitly: its derivative enters
+                // as -V/ratio^2 * dratio, and with ratio down to ~0.01 for a gassy well
+                // that amplifies the Jacobian by three to four orders of magnitude and
+                // costs a large number of extra Newton iterations. Dropping it leaves
+                // the residual value, and hence the equation being solved, unchanged.
+                const auto wellbore_surface_volume = wellbore_volume / getValue(wellbore_volume_ratio_);
+                resWell_loc += (this->primary_variables_.surfaceVolumeFraction(componentIdx) * wellbore_surface_volume -
+                                this->fluids_initial_[componentIdx]) * regularization_factor / dt;
             }
             resWell_loc -= this->primary_variables_.getQs(componentIdx) * this->well_efficiency_factor_;
             StandardWellAssemble<FluidSystem,Indices>(*this).
@@ -779,6 +792,7 @@ namespace Opm
         const bool isThermal = simulator.vanguard().eclState().getSimulationConfig().isThermal();
         const bool co2store = simulator.vanguard().eclState().runspec().co2Storage();
         Base::calculateReservoirRates( (isThermal || co2store), well_state.well(this->index_of_well_));
+        updateWellFluidState();
     }
 
 
@@ -1444,9 +1458,13 @@ namespace Opm
     calculateExplicitQuantities(const Simulator& simulator,
                                 const GroupStateHelperType& groupStateHelper)
     {
+        // the temperature and salt concentration of the first perforated cell are
+        // treated explicitly, so they are only updated at the beginning of the time step
+        first_perf_fs_info_ = this->getFirstPerfCellConditions(simulator);
+        // updatePrimaryVariables() also updates the wellbore fluid state
         updatePrimaryVariables(groupStateHelper);
         computeWellConnectionPressures(simulator, groupStateHelper);
-        this->computeAccumWell();
+        this->computeInitialFluids();
     }
 
 
@@ -1603,7 +1621,7 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(groupStateHelper_copy);
-        well_copy.computeAccumWell();
+        well_copy.computeInitialFluids();
 
         const double dt = simulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(
@@ -1890,6 +1908,9 @@ namespace Opm
         }
 
         this->primary_variables_.checkFinite(deferred_logger, "updating from well state");
+
+        // the wellbore fluid state needs to be consistent with the primary variables
+        updateWellFluidState();
     }
 
 
@@ -2648,6 +2669,12 @@ namespace Opm
         for (int ii = 0; ii < num_pri_vars; ++ii) {
             this->primary_variables_.setValue(ii, it[ii]);
         }
+        // well_fluid_state_ and wellbore_volume_ratio_ are derived from the primary
+        // variables and are used by the accumulation term in
+        // assembleWellEqWithoutIterationImpl(), which does not recompute them. NLDD
+        // restores primary variables through this setter when a domain solve fails, so
+        // refresh them here to avoid assembling with the discarded solution's values.
+        updateWellFluidState();
         return num_pri_vars;
     }
 
@@ -2761,6 +2788,36 @@ namespace Opm
         }
         return max_pressure;
     }
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeInitialFluids()
+    {
+        const Scalar wellbore_surface_volume = wellbore_volume / getValue(wellbore_volume_ratio_);
+        for (int eq_idx = 0; eq_idx < this->numConservationQuantities(); ++eq_idx) {
+            fluids_initial_[eq_idx] = wellbore_surface_volume * getValue(this->primary_variables_.surfaceVolumeFraction(eq_idx));
+        }
+    }
+
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::updateWellFluidState()
+    {
+        const EvalWell& pressure = this->primary_variables_.eval(Bhp);
+        // TODO: with the energy equation, the temperature will be a well primary variable
+        const EvalWell temperature{first_perf_fs_info_.temperature};
+
+        std::vector<EvalWell> fluid_fractions(this->numConservationQuantities(), 0.0);
+        for (int comp_idx = 0; comp_idx < this->numConservationQuantities(); ++comp_idx) {
+            fluid_fractions[comp_idx] = this->primary_variables_.surfaceVolumeFraction(comp_idx);
+        }
+
+        std::tie(well_fluid_state_, wellbore_volume_ratio_) =
+            Base::createFluidState(fluid_fractions, pressure, temperature, first_perf_fs_info_.saltConcentration);
+    }
+
 
 } // namespace Opm
 
