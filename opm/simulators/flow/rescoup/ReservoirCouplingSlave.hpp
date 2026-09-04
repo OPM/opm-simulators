@@ -180,16 +180,26 @@ public:
     /// @return true if terminate signal received and disconnect completed, false to continue.
     bool maybeReceiveTerminateSignalFromMaster();
 
-    /// @brief Receive terminate signal from master and disconnect the intercommunicator.
+    /// @brief Wind up the coupling after the slave has run out of report steps of its own.
     ///
-    /// This method must be called at the end of the simulation to cleanly shut down
-    /// the MPI intercommunicator created when the slave was spawned. It performs two steps:
-    /// 1. Receives a terminate signal from master (only on rank 0, then broadcast)
-    /// 2. Disconnects the intercommunicator (collective operation)
+    /// Called once, when the slave's own schedule is exhausted, to shut down the MPI
+    /// intercommunicator created when the slave was spawned. Two cases have to be told apart,
+    /// and the terminate signal from the master is what tells them apart:
     ///
-    /// Both master and slaves must call their respective disconnect methods for
+    /// 1. **The master finished too.** The signal is non-zero. Nothing more is expected of
+    ///    us; disconnect and return.
+    /// 2. **The master is still running.** The signal is zero ("keep going"), sent because
+    ///    the master has begun another sync step and expects a next report date from us.
+    ///    There is none, so we answer with ReservoirCoupling::slave_end_of_run_sentinel on
+    ///    the next-report-date channel. That tells the master our run has ended, and it
+    ///    replies with a terminate signal before joining the disconnect.
+    ///
+    /// Both master and slave must call their respective disconnect methods for
     /// MPI_Comm_disconnect() to complete - it is a collective operation.
-    void receiveTerminateAndDisconnect();
+    ///
+    /// @see ReservoirCouplingTimeStepper::receiveNextReportDateFromSlaves() and
+    ///   ReservoirCouplingMaster::markSlaveEndedAndDisconnect() for the master's half.
+    void notifyEndOfRunAndDisconnect();
 
     /// @brief True once the initial well solve for this sync step has run
     /// @details Delegates to ReservoirCouplingSlaveReportStep

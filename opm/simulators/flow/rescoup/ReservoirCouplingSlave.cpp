@@ -258,6 +258,71 @@ maybeReceiveTerminateSignalFromMaster()
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
+notifyEndOfRunAndDisconnect()
+{
+    // Step 1: read the master's signal (only on rank 0, then broadcast). A non-zero value
+    // means the master has finished as well and there is nothing left to tell it. A zero
+    // means "keep going": the master has started another sync step and is at this moment
+    // blocked waiting for a next report date from us.
+    int terminate_signal = 0;
+    if (this->comm_.rank() == 0) {
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            &terminate_signal,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+            this->slave_master_comm_,
+            MPI_STATUS_IGNORE
+        );
+    }
+    this->comm_.broadcast(&terminate_signal, /*count=*/1, /*emitter_rank=*/0);
+
+    if (terminate_signal == 0) {
+        // Step 2: the master is still running. We have no next report date to give it, so we
+        // answer with the end-of-run sentinel instead. That is what lets the master drop us
+        // from the coupling and carry on with no flow from this slave, rather than blocking
+        // on a report date that will never come.
+        this->logger_.info(
+            "Slave run has ended before the master run, notifying the master process");
+        if (this->comm_.rank() == 0) {
+            double end_of_run = ReservoirCoupling::slave_end_of_run_sentinel;
+            // NOTE: See comment about error handling at the top of this file.
+            MPI_Send(
+                &end_of_run,
+                /*count=*/1,
+                /*datatype=*/MPI_DOUBLE,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveNextReportDate),
+                this->slave_master_comm_
+            );
+            // Step 3: wait for the master to acknowledge before joining the disconnect. The
+            // acknowledgement is what guarantees the master has already recorded us as ended
+            // and will therefore call MPI_Comm_disconnect() on its side.
+            MPI_Recv(
+                &terminate_signal,
+                /*count=*/1,
+                /*datatype=*/MPI_INT,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+                this->slave_master_comm_,
+                MPI_STATUS_IGNORE
+            );
+        }
+        this->comm_.broadcast(&terminate_signal, /*count=*/1, /*emitter_rank=*/0);
+    }
+    this->logger_.info("Received terminate signal from master process");
+
+    // Disconnect the intercommunicator (collective operation - all ranks must participate)
+    MPI_Comm_disconnect(&this->slave_master_comm_);
+    this->terminated_ = true;
+    this->logger_.info("Disconnected intercommunicator with master process");
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
 receiveInjectionGroupTargetsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
@@ -333,34 +398,6 @@ receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
     this->report_step_data_->receiveProductionGroupConstraintsFromMaster(num_targets);
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
-receiveTerminateAndDisconnect()
-{
-    // Receive terminate signal from master (only on rank 0, then broadcast)
-    int terminate_signal = 0;
-    if (this->comm_.rank() == 0) {
-        // NOTE: See comment about error handling at the top of this file.
-        MPI_Recv(
-            &terminate_signal,
-            /*count=*/1,
-            /*datatype=*/MPI_INT,
-            /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
-            this->slave_master_comm_,
-            MPI_STATUS_IGNORE
-        );
-        this->logger_.info("Received terminate signal from master process");
-    }
-    this->comm_.broadcast(&terminate_signal, /*count=*/1, /*emitter_rank=*/0);
-
-    // Disconnect the intercommunicator (collective operation - all ranks must participate)
-    MPI_Comm_disconnect(&this->slave_master_comm_);
-    this->terminated_ = true;
-    this->logger_.info("Disconnected intercommunicator with master process");
 }
 
 template <class Scalar>

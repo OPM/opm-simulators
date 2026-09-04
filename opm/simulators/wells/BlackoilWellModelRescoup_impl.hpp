@@ -78,7 +78,7 @@ masterNetworkHasMasterGroupLeaves() const
     const auto& rcm = this->reservoirCouplingMaster();
     const auto num_slaves = rcm.numSlaves();
     for (std::size_t s = 0; s < num_slaves; ++s) {
-        if (!rcm.slaveIsActivated(s)) continue;
+        if (!rcm.slaveIsCoupled(s)) continue;
         if (this->masterNetworkHasMasterGroupLeavesForSlave_(s)) {
             return true;
         }
@@ -293,7 +293,7 @@ sendCoupledNetworkActiveStatus()
     const auto num_slaves = rescoup_master.numSlaves();
     bool any_connected = false;
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsActivated(slave_idx)) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
             const bool connected =
                 this->masterNetworkHasMasterGroupLeavesForSlave_(slave_idx);
             any_connected = any_connected || connected;
@@ -334,7 +334,7 @@ sendMasterGroupNodePressuresToSlaves(bool is_final)
     const auto& node_pressures = this->network_.nodePressures();
     const auto num_slaves = rescoup_master.numSlaves();
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (!rescoup_master.slaveIsActivated(slave_idx)) continue;
+        if (!rescoup_master.slaveIsCoupled(slave_idx)) continue;
         std::vector<typename ReservoirCoupling::MasterGroupNodePressure<Scalar>> pressures;
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
         for (std::size_t i = 0; i < master_groups.size(); ++i) {

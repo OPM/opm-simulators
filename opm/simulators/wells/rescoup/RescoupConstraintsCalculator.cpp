@@ -228,7 +228,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
     std::vector<std::vector<ProductionGroupConstraints>> all_production_constraints(num_slaves);
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsActivated(slave_idx)) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
             auto [inj, prod] = this->calculateSlaveGroupConstraints_(slave_idx, calculator);
             all_injection_targets[slave_idx] = std::move(inj);
             all_production_constraints[slave_idx] = std::move(prod);
@@ -242,7 +242,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
 
     // Phase 3: send to slaves.  The send functions are rank-0-only internally.
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsActivated(slave_idx)) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
             this->sendSlaveGroupConstraintsToSlave_(
                 rescoup_master, slave_idx,
                 all_injection_targets[slave_idx],
@@ -279,7 +279,7 @@ recalculateInjectionTargetsAndSendToSlaves()
     };
     const auto num_slaves = rescoup_master.numSlaves();
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (!rescoup_master.slaveIsActivated(slave_idx)) {
+        if (!rescoup_master.slaveIsCoupled(slave_idx)) {
             continue;
         }
         auto injection_targets = this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
@@ -476,20 +476,16 @@ capAndRedistributeProductionTargets_(
     this->updateGCWAndTargetReductions_();
 }
 
-// Switch the master groups associated with currently-inactive slaves to
+// Switch the master groups associated with currently-uncoupled slaves to
 // individual control so they are excluded from guide-rate distribution.
-// An inactive slave contributes zero rate and zero potential, so
+// An uncoupled slave contributes zero rate and zero potential, so
 // its master groups should not consume any share of the parent's target.
 //
-// TODO: A slave run can finish before the master. If the slave run finishes
-//   before the master run, the master run will continue without any production
-//   or injection from the slave (unless GECON item 8 is "YES"). The current
-//   `slaveIsActivated` flag transitions false→true on the activation
-//   handshake but never back to false, so finished slaves are still
-//   treated as contributing.  When finished-slave detection lands (a
-//   separate PR with the corresponding MPI-protocol changes), the test
-//   below should also cover finished slaves so they too are excluded from
-//   guide-rate distribution.
+// A slave is uncoupled either because it has not activated yet, or because it
+// has reached the end of its own schedule while the master run continues.
+//
+// TODO: Implement GECON item 8, which lets a master deck ask for the master run
+//   to stop when one of its slaves finishes, instead of continuing without it.
 template <class Scalar, class IndexTraits>
 void
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
@@ -503,7 +499,7 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
     // rate mode used here as a marker.
     const Group::ProductionCMode individual_cmode = Group::ProductionCMode::ORAT;
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (!rescoup_master.slaveIsActivated(slave_idx)) {
+        if (!rescoup_master.slaveIsCoupled(slave_idx)) {
             const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
             for (const auto& group_name : master_groups) {
                 this->group_state_helper_.groupState().production_control(

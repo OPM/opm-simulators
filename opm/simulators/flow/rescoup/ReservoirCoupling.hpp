@@ -160,6 +160,24 @@ enum class MessageTag : int {
     SlaveStatus,
 };
 
+/// @brief Sentinel sent by a slave on the MessageTag::SlaveNextReportDate channel to tell the
+///   master that the slave has reached the end of its own schedule and will not take any
+///   further report step.
+///
+/// @details A genuine next-report-date offset is measured from the slave's own simulation
+/// start and is therefore never negative, so a negative value is unambiguous.  Reusing the
+/// next-report-date channel rather than adding a new message tag means the master learns
+/// about the ended slave at the point where it is already blocked waiting for that slave,
+/// which is what avoids a deadlock.  See ReservoirCouplingSlave::notifyEndOfRunAndDisconnect()
+/// and ReservoirCouplingTimeStepper::receiveNextReportDateFromSlaves().
+inline constexpr double slave_end_of_run_sentinel = -1.0;
+
+/// @brief Whether a next-report-date offset received from a slave is the end-of-run sentinel.
+inline bool isSlaveEndOfRunSentinel(double next_report_time_offset)
+{
+    return next_report_time_offset < 0.0;
+}
+
 /// @brief Phase indices for reservoir coupling, we currently only support black-oil phases
 /// (oil, gas, and water).
 enum class Phase : std::size_t {

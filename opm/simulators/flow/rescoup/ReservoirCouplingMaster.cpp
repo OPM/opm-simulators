@@ -213,6 +213,45 @@ isMasterGroup(const std::string &group_name) const
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+markSlaveEndedAndDisconnect(int index)
+{
+    if (this->slave_ended_.size() < this->numSlavesStarted()) {
+        this->slave_ended_.resize(this->numSlavesStarted(), 0);
+    }
+    if (this->slave_ended_[index] != 0) {
+        return;  // Already recorded and disconnected
+    }
+    this->slave_ended_[index] = 1;
+    // Acknowledge the slave's end-of-run notice. The slave is blocked waiting for this
+    // signal before it joins the disconnect below, see
+    // ReservoirCouplingSlave::notifyEndOfRunAndDisconnect().
+    if (this->comm_.rank() == 0) {
+        int terminate_signal = 1;
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            &terminate_signal,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SlaveProcessTermination),
+            this->master_slave_comm_[index]
+        );
+    }
+    // MPI_Comm_disconnect() is collective over the intercommunicator: every master rank must
+    // call it, and it only completes once the slave has called it too. Afterwards the handle
+    // is MPI_COMM_NULL, so every later loop over slaves must skip this one - which it does,
+    // because slaveIsCoupled() is now false for it.
+    MPI_Comm_disconnect(&this->master_slave_comm_[index]);
+    this->logger_.info(fmt::format(
+        "Slave run {} has ended.\n"
+        "Master run will continue with no flow from this slave.",
+        this->slave_names_[index]
+    ));
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 maybeActivate(int report_step) {
     if (!this->activated()) {
         double start_date = this->schedule_.getStartTime();
@@ -260,12 +299,21 @@ maybeReceiveActivationHandshakeFromSlaves(double current_time)
     if (this->slave_activation_status_.empty()) {
         this->slave_activation_status_.resize(this->numSlavesStarted(), false);
     }
+    if (this->slave_ended_.empty()) {
+        this->slave_ended_.resize(this->numSlavesStarted(), 0);
+    }
 
     if (this->comm_.rank() == 0) {
         auto current_date = this->schedule_.getStartTime() + current_time;
         for (unsigned int i = 0; i < this->numSlavesStarted(); i++) {
             // Skip if already activated
             if (this->slaveIsActivated(i)) {
+                continue;
+            }
+            // A slave that ended without ever activating has no intercommunicator left to
+            // probe, and its activation date lies in the past, which would trip the assert
+            // below.
+            if (this->slaveHasEnded(i)) {
                 continue;
             }
             // Check if slave should activate during this timestep
@@ -323,11 +371,11 @@ numSlavesStarted() const
 template <class Scalar>
 std::size_t
 ReservoirCouplingMaster<Scalar>::
-numActivatedSlaves() const
+numCoupledSlaves() const
 {
     std::size_t count = 0;
     for (std::size_t i = 0; i < this->slave_activation_status_.size(); ++i) {
-        if (this->slave_activation_status_[i] != 0) {
+        if (this->slaveIsCoupled(static_cast<int>(i))) {
             ++count;
         }
     }
@@ -404,15 +452,19 @@ void
 ReservoirCouplingMaster<Scalar>::
 sendDontTerminateSignalToSlaves()
 {
-    // Send "don't terminate" signal (value=0) to the activated slaves.
+    // Send "don't terminate" signal (value=0) to the coupled slaves.
     // This is called at the start of each iteration in the master's substep loop.
-    // We send only to activated slaves: only an activated slave runs the coupled substep
+    // We send only to coupled slaves: only an activated slave runs the coupled substep
     // loop and is blocked at the terminate-signal receive point. A slave that has not yet
     // activated does not consume this channel, so sending to it would queue stale signals
     // that the slave later reads out of step when it does activate (e.g. a slave whose
     // activation date coincides with the master's last report step when the master schedule
     // is truncated by an END keyword). The final terminate signal is still sent to all
     // started slaves in sendTerminateAndDisconnect().
+    // NOTE: A slave that is about to end is still coupled at this point and does receive
+    // this signal - that is deliberate. It consumes the signal as the first step of
+    // ReservoirCouplingSlave::notifyEndOfRunAndDisconnect(), which is how the two sides stay
+    // in step while the slave reports that its run has ended.
     if (this->comm_.rank() == 0) {
         int terminate_signal = 0;
         // maybeReceiveActivationHandshakeFromSlaves() has resized the activation-status
@@ -420,7 +472,7 @@ sendDontTerminateSignalToSlaves()
         // once, so the vector covers all started slaves here.
         assert(this->slave_activation_status_.size() == this->numSlavesStarted());
         for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
-            if (!this->slaveIsActivated(i)) {
+            if (!this->slaveIsCoupled(i)) {
                 continue;
             }
             // NOTE: See comment about error handling at the top of this file.
@@ -506,9 +558,15 @@ sendTerminateAndDisconnect()
     // Step 1: Send terminate signal (value=1) to all spawned slaves (only from rank 0)
     // We send to all spawned slaves, not just activated ones, because even non-activated
     // slaves are running and waiting at the terminate signal receive point.
+    // Slaves that already ended are the exception: they have been acknowledged and
+    // disconnected in markSlaveEndedAndDisconnect(), and their MPI_Comm handle is now
+    // MPI_COMM_NULL.
     if (this->comm_.rank() == 0) {
         int terminate_signal = 1;
         for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+            if (this->slaveHasEnded(i)) {
+                continue;
+            }
             this->logger_.info(fmt::format(
                 "Sending terminate signal to slave process: {}", this->slave_names_[i]));
             // NOTE: See comment about error handling at the top of this file.
@@ -524,6 +582,9 @@ sendTerminateAndDisconnect()
     }
     // Step 2: Disconnect intercommunicators (collective operation - all ranks must participate)
     for (std::size_t i = 0; i < this->numSlavesStarted(); i++) {
+        if (this->slaveHasEnded(i)) {
+            continue;  // Already disconnected in markSlaveEndedAndDisconnect()
+        }
         MPI_Comm_disconnect(&this->master_slave_comm_[i]);
         if (this->comm_.rank() == 0) {
             this->logger_.info(fmt::format(
