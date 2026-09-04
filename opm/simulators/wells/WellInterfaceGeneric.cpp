@@ -24,6 +24,7 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
@@ -48,6 +49,8 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WellTest.hpp>
+
+#include <unordered_set>
 
 #include <fmt/format.h>
 
@@ -422,6 +425,9 @@ closeCompletions(const WellTestState& wellTestState)
         if (connection.state() == Connection::State::OPEN) {
             if (wellTestState.completion_is_closed(name(), connection.complnum())) {
                 this->well_index_[perfIdx] = 0.0;
+                if (!this->well_index_fracture_.empty()) {
+                    this->well_index_fracture_[perfIdx] = WellIndexFracture{};
+                }
             }
             perfIdx++;
         }
@@ -761,6 +767,45 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vecto
                 .push_back(this->saturation_table_number_.front());
 
             ++this->number_of_local_perforations_;
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void WellInterfaceGeneric<Scalar, IndexTraits>::
+addFracturePerforations(const std::vector<RuntimePerforation>& perfs)
+{
+    if (perfs.empty()) {
+        return;
+    }
+
+    if (this->well_index_fracture_.empty()) {
+        this->well_index_fracture_.resize(this->number_of_local_perforations_);
+    }
+
+    for (const auto& perf : perfs) {
+        const auto it = std::ranges::find(well_cells_, perf.cell);
+        if (it != this->well_cells_.end()) {
+            // Update the fracture contribution in place; assumes at most one
+            // fracture crosses a given cell.
+            const auto ind = std::distance(this->well_cells_.begin(), it);
+            auto& frac = this->well_index_fracture_[ind];
+            frac.ctf = perf.ctf;
+            frac.pressure = perf.pressure;
+            frac.ref_ctf = perf.ref_ctf;
+            frac.ref_pressure = perf.ref_pressure;
+        }
+        else {
+            // The fracture reached a cell that is not perforated by this
+            // well locally; the corresponding schedule connection has not
+            // (yet) been created.  Warn once per (well, cell).
+            static std::unordered_set<std::string> warned;
+            const auto key = fmt::format("{}:{}", this->name(), perf.cell);
+            if (warned.insert(key).second) {
+                OpmLog::info(fmt::format("Skipping fracture perforation for cell {} in well {}: "
+                                         "not present in the current local well structure",
+                                         perf.cell, this->name()));
+            }
         }
     }
 }

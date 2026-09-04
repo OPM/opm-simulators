@@ -2047,6 +2047,19 @@ namespace Opm
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
         }
 
+        // Contribution from dynamically created fracture perforations, if a
+        // fracture model has registered any (see addFracturePerforations();
+        // the container is empty otherwise and this is a no-op).
+        if (!this->well_index_fracture_.empty()) {
+            const auto frac_wi = this->well_index_fracture_[perf]
+                .wellIndex(ws.perf_data.pressure[perf]);
+            if (frac_wi > 0.0) {
+                for (auto& tw : Tw) {
+                    tw += frac_wi;
+                }
+            }
+        }
+
         if constexpr (! Indices::gasEnabled) {
             return;
         }
