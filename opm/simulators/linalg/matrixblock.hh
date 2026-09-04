@@ -34,6 +34,7 @@
 
 #include <opm/common/Exceptions.hpp>
 
+#include <algorithm>
 #include <limits>
 
 namespace Opm {
@@ -187,31 +188,55 @@ static inline K adjugateMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
            matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
 }
 
+//! max_i sum_j |a_ij * b_ji|, unchanged by a -> R*a*C for diagonal R and C.
+//! With b the adjugate of a this is the scale of the determinant; with b the
+//! inverse of a it is that scale divided by the determinant.
+template <template<class K> class Matrix, typename K>
+static inline K crossScale4(const Matrix<K>& a, const Matrix<K>& b)
+{
+    K rowSum[4];
+    for (int i = 0; i < 4; ++i) {
+        rowSum[i] = std::abs(a[i][0] * b[0][i]) + std::abs(a[i][1] * b[1][i])
+                  + std::abs(a[i][2] * b[2][i]) + std::abs(a[i][3] * b[3][i]);
+    }
+
+    return std::max(std::max(rowSum[0], rowSum[1]), std::max(rowSum[2], rowSum[3]));
+}
+
 //! invert 4x4 Matrix without changing the original matrix
 //!
 //! The cofactor expansion is used by default. It is branch free and roughly an
 //! order of magnitude faster than a pivoted LU at this size, which matters
 //! because every diagonal block of the ILU decomposition goes through here.
 //!
-//! Its determinant is however the product of the four column scales, so it
-//! underflows for blocks whose residuals are insensitive to some of the
-//! primary variables - a cell in which a phase is absent or immobile - even
-//! though those blocks are perfectly well invertible. Dividing the adjugate by
-//! such a determinant is unreliable, so fall back to Dune's invert(), which
-//! uses Gaussian elimination with partial pivoting and reports a matrix as
-//! singular only when a pivot is exactly zero. Block sizes 5 and above already
-//! use that routine.
+//! Its determinant is however the product of the four column scales, so an
+//! absolute threshold on it tests the units a block is written in rather than
+//! how close to singular it is. Compare it against its own scale instead, and
+//! fall back to Dune's invert() below that. Dune reports a matrix as singular
+//! only when a pivot is exactly zero, which a merely nearly dependent block
+//! does not produce, so the fallback result is checked by the same measure.
+//! Block sizes 5 and above already use that routine.
+//!
+//! The determinant is returned as the cofactors computed it, including after a
+//! fallback. No caller in tree reads it.
 template <template<class K> class Matrix, typename K>
 static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
 {
+    constexpr K singularLimit = K(1e-12);
+
     const K det = adjugateMatrix4<Matrix, K>(matrix, inverse);
 
-    if (std::abs(det) < 1e-40) {
+    // `inverse` still holds the adjugate. Negated, so a NaN determinant pivots.
+    if (!(std::abs(det) > singularLimit * crossScale4<Matrix, K>(matrix, inverse))) {
         inverse = matrix;
         try {
             inverse.invert();
         }
         catch (const Dune::FMatrixError&) {
+            inverse = std::numeric_limits<K>::quiet_NaN();
+            DUNE_THROW(Dune::MatrixBlockError, "Singular matrix block");
+        }
+        if (!(crossScale4<Matrix, K>(matrix, inverse) < K(1) / singularLimit)) {
             inverse = std::numeric_limits<K>::quiet_NaN();
             DUNE_THROW(Dune::MatrixBlockError, "Singular matrix block");
         }
