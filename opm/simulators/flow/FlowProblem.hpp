@@ -488,9 +488,11 @@ public:
             }
         }
 
-        // Drift compensation needs to be updated before calling the temperature equation
+        // For sequential implicit thermal: finalize TEMP solve,
+        // then refresh cached intensive quantities (temperature-dependent).
         if constexpr(energyModuleType == EnergyModules::SequentialImplicitThermal) {
             this->temperatureModel_.endTimeStep(wellModel_.wellState());
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
     }
 
