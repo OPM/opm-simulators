@@ -133,6 +133,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
 {
     Parameters::Register<Parameters::DbhpMaxRel<Scalar>>
         ("Maximum relative change of the bottom-hole pressure in a single iteration");
+    Parameters::Register<Parameters::WellBhpScaling<Scalar>>
+        ("Scaling of the well bhp primary variable (1 disables it, 8388608 equilibrates)");
+    Parameters::Register<Parameters::WellRateScaling<Scalar>>
+        ("Scaling of the well total-rate primary variable");
     Parameters::Register<Parameters::DwellFractionMax<Scalar>>
         ("Maximum absolute change of a well's volume fraction in a single iteration");
     Parameters::Register<Parameters::InjMultOscThreshold<Scalar>>

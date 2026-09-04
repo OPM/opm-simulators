@@ -154,6 +154,15 @@ public:
                              DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Scaling of well primary variable \p eqIdx, 1.0 unless configured.
+    static Scalar varScale(const int eqIdx);
+
+    //! \brief The physical increment for \p eqIdx from a solver-space update.
+    //! \details The only place solver-space quantities enter this class, see the
+    //!          note on value_ below.
+    Scalar physicalIncrement(const BVectorWell& dwells, const int eqIdx) const
+    { return varScale(eqIdx) * dwells[0][eqIdx]; }
+
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
 
@@ -170,6 +179,17 @@ private:
 
     //! \brief The values for the primary variables.
     //! \details Based on different solution strategies, the wells can have different primary variables.
+    //!
+    //! Units contract when scaling is enabled (varScale() != 1):
+    //!  - value_ is PHYSICAL, and so is everything exchanged with WellState.
+    //!  - The linear system's unknown is X = x/varScale, so dwells/xw arrive in
+    //!    X-space; physicalIncrement() is the only conversion, and the absolute
+    //!    limits in updateNewton() are therefore compared in physical units.
+    //!  - eval(i) has a physical value and derivative varScale(i), so B, C and D
+    //!    carry the scaled column while the residual rows stay physical.
+    //! An alternative is to store X here and multiply out in the accessors; that
+    //! keeps value_ and the solution in one space but moves the conversion to
+    //! every WellState exchange and every getter.
     std::vector<Scalar> value_;
 
     //! \brief The Evaluation for the well primary variables.
