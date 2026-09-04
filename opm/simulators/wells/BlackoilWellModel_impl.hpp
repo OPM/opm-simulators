@@ -602,10 +602,7 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
-            const auto& network = this->schedule()[timeStepIdx].network();
-            if (network.active()) {
-                this->network_.initializeWell(*well);
-            }
+            this->network_.initializeWell(*well);
             try {
                 using GLiftEclWells = typename GasLiftGroupInfo<Scalar, IndexTraits>::GLiftEclWells;
                 GLiftEclWells ecl_well_map;

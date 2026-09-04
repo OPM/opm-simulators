@@ -331,7 +331,10 @@ wellHasTHPConstraints(const SummaryState& summaryState) const
     }
 
     if (dynamic_thp_limit_) {
-        return true;
+        // An imposed limit cannot be evaluated without a VFP table. A THP
+        // limit from the deck is left alone, so that the missing table is
+        // still reported.
+        return this->wellEcl().vfp_table_number() > 0;
     }
 
     return WellBhpThpCalculator(*this).wellHasTHPConstraints(summaryState);

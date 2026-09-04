@@ -78,6 +78,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -241,6 +242,41 @@ initFromRestartFile(const RestartValue& restartValues,
                         handle_ms_well,
                         this->wellState(),
                         this->groupState());
+
+    // Reconstruct the retained network THP limit, which the restart file does
+    // not carry. A well is attached to the network when its group is a network
+    // node, and detached once it is not, for instance after WELSPECS moved it
+    // to a non-network group. Attached wells recover their limit from the
+    // restored node pressures; a detached well must recover it from itself: a
+    // THP-controlled well enforces its limit as ws.thp, so the restart THP is
+    // that limit, unless it matches the schedule limit. In that case the well
+    // runs on its own limit and seeding would freeze it against later (UDA)
+    // updates. A limit that was inactive when the restart was written, e.g. on
+    // a rate-controlled well, cannot be recovered. A well without a VFP table
+    // cannot be put under THP control, so nothing is reconstructed for it.
+    // The network.active() test asks whether the deck defines a network at
+    // all; without it a restart would put ordinary THP wells in network-free
+    // decks on the dynamic-THP-limit path.
+    if (const auto& network = this->schedule()[report_step].network(); network.active()) {
+        for (const auto& well : wells_ecl_) {
+            if (!well.isProducer() || !well.predictionMode() ||
+                well.vfp_table_number() <= 0 ||
+                network.has_node(well.groupName()))
+            {
+                continue;
+            }
+            auto& ws = this->wellState().well(well.name());
+            if (ws.production_cmode != Well::ProducerCMode::THP || !(ws.thp > 0.0)) {
+                continue;
+            }
+            const Scalar schedule_limit = well.productionControls(summaryState_).thp_limit;
+            // Relative tolerance for the unit round-trip through the restart file.
+            const Scalar tol = 1e-7 * std::max(std::abs(ws.thp), std::abs(schedule_limit));
+            if (std::abs(ws.thp - schedule_limit) > tol) {
+                ws.network_thp_limit = ws.thp;
+            }
+        }
+    }
 
     if (config.has_model()) {
         BlackoilWellModelRestart(*this).
@@ -910,6 +946,22 @@ updateEclWells(const int timeStepIdx,
                const SummaryState& st)
 {
     this->updateEclWellsConstraints(timeStepIdx, sim_update, st);
+
+    // Re-specifying THP or VFP controls in ACTIONX cancels a retained
+    // network-imposed limit, even if the value is unchanged. At a report step
+    // the same change arrives as WELL_THP_UPDATE and is handled in
+    // WellState::init().
+    for (const auto& wname : sim_update.thp_respecified_wells) {
+        if (const auto well_index = this->wellState().index(wname)) {
+            this->wellState().well(*well_index).network_thp_limit.reset();
+        }
+        auto well_it = std::ranges::find_if(this->well_container_generic_,
+                                            [&wname](const auto* well)
+                                            { return well->name() == wname; });
+        if (well_it != this->well_container_generic_.end()) {
+            (*well_it)->setDynamicThpLimit(std::nullopt);
+        }
+    }
 
     if (! sim_update.well_structure_changed &&
         ! this->wellStructureChangedDynamically_)

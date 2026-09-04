@@ -237,13 +237,16 @@ updatePressures(const int reportStepIdx,
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer() && well->wellEcl().predictionMode()) {
+        // The network cannot put a well without a VFP table under THP
+        // control, so no THP limit is imposed on such a well, while its
+        // rates still contribute to the network flows.
+        if (well->isProducer() && well->wellEcl().predictionMode()
+            && well->wellEcl().vfp_table_number() > 0) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
-                // The well belongs to a group with has a network pressure constraint,
+                // The well belongs to a group that has a network pressure constraint;
                 // set the dynamic THP constraint of the well accordingly.
-                const Scalar new_limit = it->second;
-                well->setDynamicThpLimit(new_limit);
+                this->imposeWellThpLimit(*well, it->second);
                 SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                 // TODO: not sure why the thp is NOT updated properly elsewhere
@@ -317,11 +320,24 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initialize(const int report_step)
 {
+    // Discard pressures for nodes that are absent from the current network.
+    // Retained per-well limits are kept because they can outlive the network.
     const auto& network = well_model_.schedule()[report_step].network();
-    if (network.active() && !node_pressures_.empty()) {
-        for (auto& well : well_model_.genericWells()) {
-            initializeWell(*well);
-        }
+    if (!network.active()) {
+        this->node_pressures_.clear();
+        this->last_valid_node_pressures_.clear();
+    }
+    else {
+        const auto is_stale = [&network](const auto& node_pressure)
+        { return !network.has_node(node_pressure.first); };
+
+        std::erase_if(this->node_pressures_, is_stale);
+        std::erase_if(this->last_valid_node_pressures_, is_stale);
+    }
+
+    // Retained THP limits can outlive network activity, so initialize every well.
+    for (auto& well : well_model_.genericWells()) {
+        initializeWell(*well);
     }
 }
 
@@ -329,17 +345,32 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 {
-    // Producers only, since we so far only support the
-    // "extended" network model (properties defined by
-    // BRANPROP and NODEPROP) which only applies to producers.
-    if (well.isProducer() && !node_pressures_.empty()) {
-        const auto it = this->node_pressures_.find(well.wellEcl().groupName());
-        if (it != this->node_pressures_.end()) {
-            // The well belongs to a group which has a network nodal pressure,
-            // set the dynamic THP constraint based on the network nodal pressure
-            well.setDynamicThpLimit(it->second);
+    // Extended networks defined by BRANPROP and NODEPROP currently apply only
+    // to producers. The network cannot put a well without a VFP table under
+    // THP control, so no THP limit is imposed on or retained for such a well,
+    // while its rates still contribute to the network flows.
+    if (!well.isProducer() || well.wellEcl().vfp_table_number() <= 0) {
+        return;
+    }
+    const auto it = this->node_pressures_.find(well.wellEcl().groupName());
+    if (it != this->node_pressures_.end()) {
+        // Apply and retain the network node pressure as the dynamic THP limit.
+        this->imposeWellThpLimit(well, it->second);
+    } else {
+        // Reapply a retained limit after network detachment or well reconstruction.
+        const auto& ws = well_model_.wellState().well(well.indexOfWell());
+        if (ws.network_thp_limit.has_value()) {
+            well.setDynamicThpLimit(*ws.network_thp_limit);
         }
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well, const Scalar limit)
+{
+    well.setDynamicThpLimit(limit);
+    well_model_.wellState().well(well.indexOfWell()).network_thp_limit = limit;
 }
 
 template <typename Scalar, typename IndexTraits>

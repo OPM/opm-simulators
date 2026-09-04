@@ -126,6 +126,11 @@ protected:
                      const int reportStepIdx,
                      const Parallel::Communication& comm) const;
 
+    //! \brief Apply a network THP limit and retain it across well
+    //! reconstruction or network detachment.
+    void imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well,
+                            const Scalar limit);
+
 
     bool active_{false};
     BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model_;

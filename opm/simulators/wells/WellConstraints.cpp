@@ -296,9 +296,12 @@ activeProductionConstraint(const SingleWellState<Scalar, IndexTraits>& ws,
     if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = well_.getTHPConstraint(summaryState);
         Scalar current_thp = ws.thp;
-        // For trivial group targets (for instance caused by NETV) we dont want to flip to THP control.
-        const bool dont_check = (currentControl == Well::ProducerCMode::GRUP && ws.trivial_group_target);
-        if (thp > current_thp && !dont_check) {
+        // Wells under a zero group rate target are handled before this check
+        // is reached: stoppedOrZeroRateTarget() in updateWellControl() and
+        // wellUnderZeroRateTarget() in the local-iteration switching both
+        // return early for them. The THP limit is checked unconditionally
+        // here.
+        if (thp > current_thp) {
             // If WVFPEXP item 4 is set to YES1 or YES2
             // switching to THP is prevented if the well will
             // produce at a higher rate with THP control

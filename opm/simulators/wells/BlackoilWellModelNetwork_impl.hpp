@@ -222,7 +222,11 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                     std::string well_name = well->name();
                     auto& ws = well_state.well(well_name);
                     if (group.hasWell(well_name)) {
-                        well->setDynamicThpLimit(group_thp);
+                        // A well without a VFP table cannot be put under THP
+                        // control, so the common THP is not imposed on it.
+                        if (well->wellEcl().vfp_table_number() > 0) {
+                            well->setDynamicThpLimit(group_thp);
+                        }
                         const auto inj_controls = Well::InjectionControls(0);
                         // The well equations are solved here to find the group
                         // THP, so the controls must carry the drawdown limit;
@@ -344,7 +348,10 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 if (well->isInjector() || !well->wellEcl().predictionMode())
                     continue;
 
-                if (group.hasWell(well_name)) {
+                // As above: a well without a VFP table cannot be put under THP
+                // control, so the auto-choke group THP is not imposed on it.
+                if (group.hasWell(well_name)
+                    && well->wellEcl().vfp_table_number() > 0) {
                     well->setDynamicThpLimit(well_group_thp);
                 }
                 const auto& ws = well_model_.wellState().well(well->indexOfWell());

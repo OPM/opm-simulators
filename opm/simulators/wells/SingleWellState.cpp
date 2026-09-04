@@ -53,7 +53,6 @@ SingleWellState(const std::string& name_,
     , reservoir_rates(pu.numActivePhases())
     , prev_surface_rates(pu.numActivePhases())
     , perf_data(perf_input.size(), !is_producer, pu.numActivePhases())
-    , trivial_group_target(false)
     , use_group_target_fallback(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
@@ -76,6 +75,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
     result.perf_data = PerfData<Scalar>::serializationTestObject();
     result.weldraw_max_rate = 3.0;
     result.weldraw_cmode = WellProducerCMode::LRAT;
+    result.network_thp_limit = 4.0;
 
     return result;
 }
@@ -396,6 +396,7 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->producer == rhs.producer &&
            this->bhp == rhs.bhp &&
            this->thp == rhs.thp &&
+           this->network_thp_limit == rhs.network_thp_limit &&
            this->pressure_first_connection == rhs.pressure_first_connection &&
            this->temperature == rhs.temperature &&
            this->phase_mixing_rates == rhs.phase_mixing_rates &&
@@ -409,7 +410,6 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->frac_rate == rhs.frac_rate &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
-           this->trivial_group_target == rhs.trivial_group_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&
            this->injection_cmode == rhs.injection_cmode &&

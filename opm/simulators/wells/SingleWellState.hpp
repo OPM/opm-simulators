@@ -65,6 +65,7 @@ public:
         serializer(producer);
         serializer(bhp);
         serializer(thp);
+        serializer(network_thp_limit);
         serializer(pressure_first_connection);
         serializer(temperature);
         serializer(energy_rate);
@@ -78,7 +79,6 @@ public:
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
         serializer(frac_rate);
-        serializer(trivial_group_target);
         serializer(segments);
         serializer(events);
         serializer(injection_cmode);
@@ -105,6 +105,9 @@ public:
     PhaseUsageInfo<IndexTraits> pu;
     Scalar bhp{0};
     Scalar thp{0};
+    // Network-imposed THP limit retained until the schedule re-specifies the
+    // well's THP limit or VFP table.
+    std::optional<Scalar> network_thp_limit;
     Scalar pressure_first_connection{0};
 
     // thermal related
@@ -158,7 +161,6 @@ public:
     std::vector<Scalar> prev_surface_rates;
     Scalar frac_rate{0.0};
     PerfData<Scalar> perf_data;
-    bool trivial_group_target;
     std::optional<GroupTarget> group_target;
     std::optional<GroupTarget> group_target_fallback;
     bool use_group_target_fallback;
