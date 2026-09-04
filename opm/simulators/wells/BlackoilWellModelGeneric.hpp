@@ -260,11 +260,13 @@ public:
         serializer(initial_step_);
         serializer(report_step_starts_);
         serializer(last_run_wellpi_);
+        serializer(well_perf_data_);
         serializer(local_shut_wells_);
         serializer(closed_this_step_);
         serializer(guideRate_);
         serializer(genNetwork_);
         serializer(prev_inj_multipliers_);
+        serializer(filter_cake_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
         serializer(nupcol_wgstate_);

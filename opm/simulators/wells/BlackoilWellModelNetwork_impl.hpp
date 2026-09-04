@@ -331,7 +331,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 }
             }
              if (autochoke_thp.has_value()) {
-                well_group_thp_calc_[nodeName] = autochoke_thp.value();
+                this->well_group_thp_calc_[nodeName] = autochoke_thp.value();
                 // Note: The node pressure of the auto-choke node is set
                 // to well_group_thp in computeNetworkPressures()
                 // and must be larger or equal to the pressure of the uptree node of its branch.

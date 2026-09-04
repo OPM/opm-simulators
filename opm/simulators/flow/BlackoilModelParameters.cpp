@@ -335,6 +335,40 @@ void BlackoilModelParameters<Scalar>::registerParameters()
 #endif
 }
 
+template<class Scalar>
+BlackoilModelParameters<Scalar>
+BlackoilModelParameters<Scalar>::serializationTestObject()
+{
+    BlackoilModelParameters result;
+    result.tolerance_cnv_ = 1.1;
+    result.tolerance_cnv_relaxed_ = 1.2;
+    result.tolerance_mb_ = 1.3;
+    result.tolerance_mb_relaxed_ = 1.4;
+    result.newton_max_iter_ = 15;
+    result.newton_min_iter_ = 2;
+    result.tolerance_max_dp_ = 1.5;
+    result.tolerance_max_ds_ = 1.6;
+    result.tolerance_max_drs_ = 1.7;
+    result.tolerance_max_drv_ = 1.8;
+    return result;
+}
+
+template<class Scalar>
+bool BlackoilModelParameters<Scalar>::
+operator==(const BlackoilModelParameters& other) const
+{
+    return tolerance_cnv_ == other.tolerance_cnv_ &&
+           tolerance_cnv_relaxed_ == other.tolerance_cnv_relaxed_ &&
+           tolerance_mb_ == other.tolerance_mb_ &&
+           tolerance_mb_relaxed_ == other.tolerance_mb_relaxed_ &&
+           newton_max_iter_ == other.newton_max_iter_ &&
+           newton_min_iter_ == other.newton_min_iter_ &&
+           tolerance_max_dp_ == other.tolerance_max_dp_ &&
+           tolerance_max_ds_ == other.tolerance_max_ds_ &&
+           tolerance_max_drs_ == other.tolerance_max_drs_ &&
+           tolerance_max_drv_ == other.tolerance_max_drv_;
+}
+
 template struct BlackoilModelParameters<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

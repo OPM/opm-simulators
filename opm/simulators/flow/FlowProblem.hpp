@@ -1279,10 +1279,12 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(static_cast<BaseType&>(*this));
+        serializer(first_step_);
         serializer(drift_);
         serializer(wellModel_);
         serializer(aquiferModel_);
         serializer(tracerModel_);
+        serializer(temperatureModel_);
         serializer(*materialLawManager_);
     }
 

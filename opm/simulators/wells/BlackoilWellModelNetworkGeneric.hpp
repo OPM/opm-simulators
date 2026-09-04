@@ -114,6 +114,7 @@ public:
         serializer(last_valid_node_pressures_);
         serializer(branch_data_);
         serializer(last_valid_branch_data_);
+        serializer(well_group_thp_calc_);
     }
 
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
@@ -138,6 +139,8 @@ protected:
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations
     std::map<std::string, data::BranchData> last_valid_branch_data_;
+    // Cached auto-choke THP values used when balancing network groups.
+    std::map<std::string, Scalar> well_group_thp_calc_;
 };
 
 } // namespace Opm

@@ -33,12 +33,16 @@
 #include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
+#include <opm/simulators/flow/TemperatureModel.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -48,8 +52,10 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/WellFilterCake.hpp>
 
 #define BOOST_TEST_MODULE TestRestartSerialization
 #define BOOST_TEST_NO_MAIN
@@ -64,7 +70,15 @@ namespace Opm::Properties {
     struct TestRestartTypeTag {
             using InheritsFrom = std::tuple<TestTypeTag>;
         };
+
+    struct TestSequentialTemperatureTypeTag {
+            using InheritsFrom = std::tuple<TestTypeTag>;
+        };
     }
+
+    template<class TypeTag>
+    struct EnergyModuleType<TypeTag, TTag::TestSequentialTemperatureTypeTag>
+    { static constexpr EnergyModules value = EnergyModules::SequentialImplicitThermal; };
 
     template<>
     struct LinearSolverBackend<TTag::TestRestartTypeTag, TTag::FlowIstlSolverParams> {
@@ -109,6 +123,8 @@ TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(Inplace)
 namespace Opm { using PerfD = PerfData<double>; }
 TEST_FOR_TYPE_NAMED(PerfD, PerfData)
+namespace Opm { using Perf = PerforationData<double>; }
+TEST_FOR_TYPE_NAMED(Perf, PerforationData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 namespace Opm { using SegmState = SegmentState<double>; }
@@ -127,6 +143,28 @@ TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeStepping3rdOrder, serializationTestObje
 
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
+
+namespace Opm { using BMP = BlackoilModelParameters<double>; }
+TEST_FOR_TYPE_NAMED(BMP, BlackoilModelParameters)
+namespace Opm { using WFC = WellFilterCake<double, BlackOilDefaultFluidSystemIndices>; }
+TEST_FOR_TYPE_NAMED(WFC, WellFilterCake)
+
+BOOST_AUTO_TEST_CASE(EnabledTemperatureModel)
+{
+    using TypeTag = Opm::Properties::TTag::TestSequentialTemperatureTypeTag;
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
+    Simulator simulator;
+    auto data_out = Opm::TemperatureModel<TypeTag>::serializationTestObject(simulator);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer serializer(packer);
+    serializer.pack(data_out);
+    const auto packedSize = serializer.position();
+    auto data_in = Opm::TemperatureModel<TypeTag>::serializationTestObject(simulator);
+    serializer.unpack(data_in);
+    BOOST_CHECK_EQUAL(packedSize, serializer.position());
+    BOOST_CHECK(data_out == data_in);
+}
 
 namespace Opm {
     struct DummyMaterial {
@@ -535,7 +573,7 @@ struct AquiferFixture {
         Parameters::Register<Parameters::NewtonMaxIterations>("The maximum number of Newton iterations per time step");
         Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
-        BlackoilModelParameters<double>::registerParameters();
+        Opm::BlackoilModelParameters<double>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true, false, true, 0);
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());

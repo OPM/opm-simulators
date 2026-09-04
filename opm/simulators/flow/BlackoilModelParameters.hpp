@@ -419,6 +419,27 @@ public:
     // If violated the nupcol wellstate is updated
     Scalar nupcol_group_rate_tolerance_;
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+      // Only dynamic state is serialized. Static configuration remains sourced
+      // from CLI/deck parameters and defaults on construction.
+      serializer(tolerance_cnv_);
+      serializer(tolerance_cnv_relaxed_);
+      serializer(tolerance_mb_);
+      serializer(tolerance_mb_relaxed_);
+      serializer(newton_max_iter_);
+      serializer(newton_min_iter_);
+      serializer(tolerance_max_dp_);
+      serializer(tolerance_max_ds_);
+      serializer(tolerance_max_drs_);
+      serializer(tolerance_max_drv_);
+    }
+
+    static BlackoilModelParameters serializationTestObject();
+
+    bool operator==(const BlackoilModelParameters& other) const;
+
     /// Construct from user parameters or defaults.
     BlackoilModelParameters();
 
