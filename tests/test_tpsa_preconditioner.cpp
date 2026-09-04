@@ -75,13 +75,14 @@ struct Tolerance<double>
     static constexpr double percent = 1e-8;
     static constexpr double abs = 1e-8;
 };
-
+#if FLOW_INSTANTIATE_FLOAT
 template <>
 struct Tolerance<float>
 {
     static constexpr float percent = 1e-2;
     static constexpr float abs = 1e-3f;
 };
+#endif
 
 /*!
  * \brief A single-cell TPSA matrix, small enough that the block-triangular sweep
