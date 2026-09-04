@@ -584,6 +584,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    aquct_02_gaswater
+  FILENAME
+    AQUCT-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    aquifers
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    aquct_03_onephase
+  FILENAME
+    AQUCT-03
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    aquifers
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    aquflux_03_gaswater
+  FILENAME
+    AQUFLUX-03
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    aquifers
+)
+
+add_test_compareECLFiles(
+  CASENAME
     spe3
   FILENAME
     SPE3CASE1
