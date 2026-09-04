@@ -43,6 +43,14 @@ namespace Opm {
 class SimulatorConvergenceOutput
 {
 public:
+    /// Ensure the output thread is joined even if the owning simulator's
+    /// normal shutdown path is bypassed, e.g. when an exception unwinds
+    /// the stack after a simulation failure.  endThread() is idempotent.
+    ~SimulatorConvergenceOutput()
+    {
+        this->endThread();
+    }
+
     /// Start convergence output thread.
     ///
     /// Thread starts only if explicitly requested in runtime user options.
