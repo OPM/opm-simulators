@@ -101,6 +101,14 @@ protected:
         return FluidSystem::waterPhaseIdx;
     }
 
+    // Component of the phase the aquifer feeds, as an ACTIVE index: callers use
+    // it to offset conti0EqIdx.
+    int compIdx_() const
+    {
+        return FluidSystem::activePhaseToActiveCompIdx(
+            FluidSystem::canonicalToActivePhaseIdx(this->phaseIdx_()));
+    }
+
     const int aquiferID_{};
     const Simulator& simulator_;
 };

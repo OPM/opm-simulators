@@ -140,7 +140,7 @@ public:
 
         this->connection_flux_[idx] = fw * this->connections_[idx].effective_facearea;
 
-        rates[BlackoilIndices::conti0EqIdx + compIdx_()]
+        rates[BlackoilIndices::conti0EqIdx + this->compIdx_()]
                 += this->connection_flux_[idx] / model.dofTotalVolume(cellIdx);
     }
 
@@ -202,15 +202,6 @@ private:
         return (tot_face_area > 0.0)
             ? connected_face_area / tot_face_area
             : 0.0;
-    }
-
-    // TODO: this is a function from AquiferAnalytical
-    int compIdx_() const
-    {
-        if (this->co2store_or_h2store_())
-            return FluidSystem::oilCompIdx;
-
-        return FluidSystem::waterCompIdx;
     }
 
     Scalar totalFluxRate() const
