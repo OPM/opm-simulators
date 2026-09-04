@@ -247,6 +247,19 @@ public:
     */
     void eraseMatrix() override
     {
+        matrix_ = nullptr;
+        rhs_ = nullptr;
+        iterations_ = 0;
+        solveCount_ = 0;
+        seqOperator_.reset();
+        seqSolver_.reset();
+#if HAVE_MPI
+        multiComm_.reset();
+        parOperator_.reset();
+        parSolver_.reset();
+#endif
+        solver_ = nullptr;
+        precond_ = nullptr;
     }
 
     /*!

@@ -362,34 +362,35 @@ public:
 
         const auto& matLawManager = simulator_.problem().materialLawManager();
 
-        typename Extractor::HysteresisParams hysterParams;
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
+            const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+
+            typename Extractor::HysteresisParams hysterParams;
+            if (matLawManager->enableHysteresis()) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    matLawManager->oilWaterHysteresisParams(hysterParams.somax,
+                                                            hysterParams.swmax,
+                                                            hysterParams.swmin,
+                                                            globalDofIdx);
+                }
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    matLawManager->gasOilHysteresisParams(hysterParams.sgmax,
+                                                          hysterParams.shmax,
+                                                          hysterParams.somin,
+                                                          globalDofIdx);
+                }
+            }
 
             const typename Extractor::Context ectx{
-                elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0),
+                globalDofIdx,
                 elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex(),
                 elemCtx.simulator().episodeIndex(),
                 fs,
                 intQuants,
                 hysterParams
             };
-
-            if (matLawManager->enableHysteresis()) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                    matLawManager->oilWaterHysteresisParams(hysterParams.somax,
-                                                            hysterParams.swmax,
-                                                            hysterParams.swmin,
-                                                            ectx.globalDofIdx);
-                }
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    matLawManager->gasOilHysteresisParams(hysterParams.sgmax,
-                                                          hysterParams.shmax,
-                                                          hysterParams.somin,
-                                                          ectx.globalDofIdx);
-                }
-            }
 
             Extractor::process(ectx, extractors_);
         }
