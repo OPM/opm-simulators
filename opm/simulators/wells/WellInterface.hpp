@@ -233,6 +233,9 @@ public:
                                        const GroupStateHelperType& groupStateHelper,
                                        std::vector<Scalar>& well_potentials) = 0;
 
+    /// Reference density used by the VFP/THP calculations.
+    Scalar refDensity() const { return this->getRefDensity(); }
+
     virtual void updateWellStateWithTarget(const Simulator& simulator,
                                            const GroupStateHelperType& groupStateHelper,
                                            WellStateType& well_state) const;

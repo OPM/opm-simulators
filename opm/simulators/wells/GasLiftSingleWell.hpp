@@ -64,6 +64,7 @@ private:
                           Scalar bhp,
                           bool debug_ouput = true) const override;
 
+    std::optional<RatesAndBhp> computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const override;
     RatesAndBhp computeWellRates_(Scalar bhp,
                                  bool bhp_is_limited,
                                  bool debug_output = true) const override;

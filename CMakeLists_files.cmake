@@ -493,6 +493,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_networkpressure.cpp
+  tests/test_networksolve.cpp
   tests/test_nonnc.cpp
   tests/test_norne_pvt.cpp
   tests/test_OilSatfuncConsistencyChecks.cpp
@@ -1321,6 +1322,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WellTracerRate.hpp
   opm/simulators/wells/WGState.hpp
+  opm/simulators/wells/network/NetworkInjectionSystem.hpp
+  opm/simulators/wells/network/NetworkNodePressureUpdater.hpp
+  opm/simulators/wells/network/NetworkProductionSystem.hpp
+  opm/simulators/wells/network/NetworkSolve.hpp
   opm/simulators/wells/rescoup/RescoupProxy.hpp
 )
 if (USE_GPU_BRIDGE)

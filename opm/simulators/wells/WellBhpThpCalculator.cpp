@@ -1025,12 +1025,12 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                            Scalar& low, Scalar& high,
                            std::optional<Scalar>& approximate_solution,
                            const Scalar& limit,
-                           DeferredLogger& deferred_logger)
+                           DeferredLogger& deferred_logger,
+                           const int sample_number)
 {
     bool bracket_found = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 300;
     const Scalar interval = (high - low) / sample_number;
     Scalar eq_low = eq(low);
     Scalar eq_high = 0.0;

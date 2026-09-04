@@ -116,6 +116,15 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     rc_network_loose_coupling_ = Parameters::Get<Parameters::RcNetworkLooseCoupling>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
+    network_pressure_update_secant_ = Parameters::Get<Parameters::NetworkPressureUpdateSecant>();
+    network_solver_ = Parameters::Get<Parameters::NetworkSolver>();
+    network_analytic_jacobian_ = Parameters::Get<Parameters::NetworkAnalyticJacobian>();
+    network_group_control_ = Parameters::Get<Parameters::NetworkGroupControl>();
+    network_autochoke_ = Parameters::Get<Parameters::NetworkAutochoke>();
+    network_autochoke_bracket_samples_ = Parameters::Get<Parameters::NetworkAutochokeBracketSamples>();
+    network_complementarity_ = Parameters::Get<Parameters::NetworkComplementarity>();
+    gaslift_network_response_ = Parameters::Get<Parameters::GasLiftNetworkResponse>();
+    network_dump_failures_ = Parameters::Get<Parameters::NetworkDumpFailures>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -276,6 +285,39 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkSolver>
+        ("How the injection networks are solved: fixedpoint relaxes the node pressures against "
+         "the wells, newton solves pressures and rates simultaneously and falls back to the "
+         "fixed point when it does not converge");
+    Parameters::Register<Parameters::NetworkAnalyticJacobian>
+        ("Assemble the network Jacobian from the VFP table derivatives instead of differencing "
+         "the residual (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkGroupControl>
+        ("Let the network hold a group's injection total and place the split itself, so a well "
+         "that hits its own limit is taken up by the others (--network-solver=newton only)");
+    Parameters::Register<Parameters::NetworkAutochoke>
+        ("Solve autochoke nodes inside the simultaneous network solve: the node pressure "
+         "becomes the group's common thp and is raised until the oil through the node meets "
+         "the group's target, instead of the bracketing search over well solves "
+         "(--network-solver=newton only).");
+    Parameters::Register<Parameters::NetworkAutochokeBracketSamples>
+        ("Samples the legacy autochoke search takes across its bracket before the root find; each "
+         "sample solves every well in the group. 300 is the historical value; a dozen finds the "
+         "same root for a fraction of the well solves.");
+    Parameters::Register<Parameters::NetworkComplementarity>
+        ("Close each production well's own limits -- rate, tubing, bhp -- with one complementarity "
+         "row in the simultaneous network solve instead of an active set, so nothing switches "
+         "(--network-solver=newton with --network-analytic-jacobian=true).");
+    Parameters::Register<Parameters::GasLiftNetworkResponse>
+        ("Answer the gas lift optimiser's trial evaluations from the simultaneous network "
+         "solve -- the well's rates with every node pressure responding to its lift gas -- "
+         "instead of a well solve at a fixed thp (--network-solver=newton only).");
+    Parameters::Register<Parameters::NetworkDumpFailures>
+        ("Path prefix for writing out each network system that fails to converge, for replay in "
+         "the standalone bench; empty disables it");
+    Parameters::Register<Parameters::NetworkPressureUpdateSecant>
+        ("Networks whose node pressures use the bracketing/secant update in the inner network "
+         "iterations instead of the damped update: injection, all or none");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>

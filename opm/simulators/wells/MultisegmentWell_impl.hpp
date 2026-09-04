@@ -1464,12 +1464,21 @@ namespace Opm
         //WellState well_state_copy = well_state;
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
-        prod_controls.addControl(Well::ProducerCMode::BHP);
-        prod_controls.bhp_limit = well_state.well(this->index_of_well_).bhp;
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
-        const auto cmode = ws.production_cmode;
-        ws.production_cmode = Well::ProducerCMode::BHP;
+        //  The rhs below picks out the control equation, so it has to be the bhp one for
+        //  either well type.
+        const auto prod_cmode = ws.production_cmode;
+        const auto inj_cmode = ws.injection_cmode;
+        if (this->isInjector()) {
+            inj_controls.addControl(Well::InjectorCMode::BHP);
+            inj_controls.bhp_limit = ws.bhp;
+            ws.injection_cmode = Well::InjectorCMode::BHP;
+        } else {
+            prod_controls.addControl(Well::ProducerCMode::BHP);
+            prod_controls.bhp_limit = ws.bhp;
+            ws.production_cmode = Well::ProducerCMode::BHP;
+        }
         const double dt = simulator.timeStepSize();
         assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls, well_state,
                                        /*solving_with_zero_rate=*/false);
@@ -1490,7 +1499,8 @@ namespace Opm
             ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
         }
         // reset cmode
-        ws.production_cmode = cmode;
+        ws.production_cmode = prod_cmode;
+        ws.injection_cmode = inj_cmode;
     }
 
     template<typename TypeTag>

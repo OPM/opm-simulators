@@ -228,7 +228,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GINODE", {true, std::nullopt}},
         {"GLIFTLIM", {true, std::nullopt}},
         {"GNETDP", {true, std::nullopt}},
-        {"GNETINJE", {true, std::nullopt}},
         {"GNETPUMP", {true, std::nullopt}},
         {"GRADGRUP", {true, std::nullopt}},
         {"GRADRESV", {true, std::nullopt}},

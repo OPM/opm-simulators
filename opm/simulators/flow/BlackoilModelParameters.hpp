@@ -158,6 +158,15 @@ template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
 template<class Scalar>
 struct NetworkMaxPressureUpdateInBars { static constexpr Scalar value = 5.0; };
+struct NetworkPressureUpdateSecant { static constexpr auto value = "injection"; };
+struct NetworkSolver { static constexpr auto value = "fixedpoint"; };
+struct NetworkAnalyticJacobian { static constexpr bool value = false; };
+struct NetworkGroupControl { static constexpr bool value = false; };
+struct NetworkAutochoke { static constexpr bool value = false; };
+struct NetworkAutochokeBracketSamples { static constexpr int value = 300; };
+struct NetworkComplementarity { static constexpr bool value = false; };
+struct GasLiftNetworkResponse { static constexpr bool value = false; };
+struct NetworkDumpFailures { static constexpr auto value = ""; };
 // Reservoir coupling: when false (default) the master exchanges node pressures
 // and slave rates with the slaves once per master inner network sub-iteration
 // (tight coupling).  When true, the exchange happens only once per master outer network
@@ -357,6 +366,28 @@ public:
 
     /// Maximum pressure update in the inner network pressure update iterations
     Scalar network_max_pressure_update_in_bars_;
+
+    /// Which networks use the bracketing/secant node-pressure update in the inner network
+    /// iterations instead of the damped one: "injection" (default), "all" or "none"
+    std::string network_pressure_update_secant_;
+
+    /// How the injection networks are solved: "fixedpoint" (default) relaxes the
+    /// node pressures against the wells; "newton" solves pressures and rates
+    /// simultaneously, falling back to the fixed point when it does not converge.
+    std::string network_solver_;
+
+    /// Assemble the network Jacobian from the VFP table derivatives.
+    bool network_analytic_jacobian_;
+
+    /// Let the network place the split of a group's injection total itself.
+    bool network_group_control_;
+
+    /// Path prefix for writing network systems that fail to converge; empty off.
+    std::string network_dump_failures_;
+    bool network_autochoke_ = false;
+    int network_autochoke_bracket_samples_ = 300;
+    bool network_complementarity_ = false;
+    bool gaslift_network_response_ = false;
 
     /// Reservoir coupling: use loose (per-outer-iteration) master/slave network
     /// coupling instead of the default tight (per-sub-iteration) coupling.

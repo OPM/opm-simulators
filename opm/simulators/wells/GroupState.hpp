@@ -55,7 +55,9 @@ public:
     void update_network_leaf_node_production_rates(const std::string& gname,
                                  const std::vector<Scalar>& rates);
     const std::vector<Scalar>& production_rates(const std::string& gname) const;
+    bool has_network_leaf_node_injection_rates(const std::string& gname) const;
     const std::vector<Scalar>& network_leaf_node_injection_rates(const std::string& gname) const;
+    bool has_network_leaf_node_production_rates(const std::string& gname) const;
     const std::vector<Scalar>& network_leaf_node_production_rates(const std::string& gname) const;
 
     void update_well_group_thp(const std::string& gname, const double& thp);
@@ -241,6 +243,7 @@ public:
 private:
     std::size_t num_phases{};
     std::map<std::string, std::vector<Scalar>> m_production_rates;
+    // Every phase's injection rate at the leaf, whichever injection network it is a leaf of.
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_injection_rates;
     std::map<std::string, std::vector<Scalar>> m_network_leaf_node_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;

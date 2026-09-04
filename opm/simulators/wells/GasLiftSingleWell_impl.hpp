@@ -24,6 +24,7 @@
 #ifndef OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #endif
 
 #include <opm/common/TimingMacros.hpp>
@@ -110,6 +111,26 @@ GasLiftSingleWell(WellInterface<TypeTag>& well,
 /****************************************
  * Private methods in alphabetical order
  ****************************************/
+
+template<typename TypeTag>
+std::optional<typename GasLiftSingleWell<TypeTag>::RatesAndBhp>
+GasLiftSingleWell<TypeTag>::
+computeWellRatesWithALQ_(Scalar alq, Scalar bhp) const
+{
+    // With the network answering, a trial is a re-solve of the linearised
+    // network with this well's lift gas changed: its rates and bhp with every
+    // node pressure responding, and no well solve. The optimiser's increments,
+    // weights, limits and redistribution are untouched.
+    const auto& network = this->simulator_.problem().wellModel().network();
+    if (network.gasLiftNetworkResponse()) {
+        if (const auto trial = network.gasLiftTrial(this->well_.name(), alq)) {
+            const auto [bhp_new, bhp_is_limited] = this->getBhpWithLimit_((*trial)[3]);
+            return RatesAndBhp{std::max((*trial)[1], Scalar{0}), std::max((*trial)[2], Scalar{0}),
+                               std::max((*trial)[0], Scalar{0}), bhp_new, bhp_is_limited};
+        }
+    }
+    return GasLiftSingleWellGeneric<Scalar, IndexTraits>::computeWellRatesWithALQ_(alq, bhp);
+}
 
 template<typename TypeTag>
 typename GasLiftSingleWell<TypeTag>::RatesAndBhp

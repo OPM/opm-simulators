@@ -378,6 +378,28 @@ add_multiple_tests(
     --local-well-solve-control-switching=true
 )
 
+set(_injection_network_tests
+  GNETINJE_GAS-01
+  GNETINJE_WAT-01
+)
+
+add_multiple_tests(
+  _injection_network_tests
+  ""
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    network
+  TEST_ARGS
+    --solver-max-time-step-in-days=1
+)
+
 add_test_compareECLFiles(
   CASENAME
     network_01_wtest

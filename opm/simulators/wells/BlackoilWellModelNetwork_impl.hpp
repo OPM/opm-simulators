@@ -27,6 +27,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_NETWORK_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelNetwork.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #endif
 
 #include <opm/common/TimingMacros.hpp>
@@ -40,6 +41,9 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <fmt/format.h>
+
+#include <algorithm>
+#include <optional>
 
 namespace Opm {
 
@@ -93,8 +97,7 @@ update(const bool mandatory_network_balance,
 {
     OPM_TIMEFUNCTION();
     const int episodeIdx = well_model_.simulator().episodeIndex();
-    const auto& network = well_model_.schedule()[episodeIdx].network();
-    if (!well_model_.wellsActive() && !network.active()) {
+    if (!well_model_.wellsActive() && !details::anyNetworkActive(well_model_.schedule(), episodeIdx)) {
         return {/*more_network_update=*/false, /*network_imbalance=*/0.0};
     }
 
@@ -106,6 +109,7 @@ update(const bool mandatory_network_balance,
     if (this->shouldBalance(episodeIdx) || mandatory_network_balance) {
         OPM_TIMEBLOCK(BalanceNetwork);
         const double dt = well_model_.simulator().timeStepSize();
+        this->noteNetworkTimeStep(well_model_.simulator().time(), dt);
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
         const bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
         const int max_number_of_sub_iterations =
@@ -114,12 +118,77 @@ update(const bool mandatory_network_balance,
             well_model_.param().network_pressure_update_damping_factor_;
         const Scalar network_max_pressure_update =
             well_model_.param().network_max_pressure_update_in_bars_ * unit::barsa;
+        const auto& secant_mode = well_model_.param().network_pressure_update_secant_;
+        if (secant_mode != "injection" && secant_mode != "all" && secant_mode != "none") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + secant_mode + "' for --network-pressure-update-secant; "
+                             "expected injection, all or none", deferred_logger);
+        }
+        const bool use_secant = secant_mode != "none";
+        const bool secant_production = secant_mode == "all";
+        // Only a deck with both a production and an injection network can have the
+        // producers re-solved here feed an injection group target in the same
+        // sub-iteration; nothing else pays for the extra group update.
+        const auto active_networks = details::activeNetworks(well_model_.schedule(), episodeIdx);
+        const auto has_domain = [&active_networks](const bool production)
+        {
+            return std::any_of(active_networks.begin(), active_networks.end(),
+                               [production](const auto& n)
+                               { return (n.domain == details::NetworkDomain::Production) == production; });
+        };
+        const bool refresh_group_data_between =
+            has_domain(/*production=*/true) && has_domain(/*production=*/false);
+        const auto& solver_mode = well_model_.param().network_solver_;
+        if (solver_mode != "fixedpoint" && solver_mode != "newton") {
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Invalid value '" + solver_mode + "' for --network-solver; "
+                             "expected fixedpoint or newton", deferred_logger);
+        }
+        this->useNewtonSolver(solver_mode == "newton");
+        this->useAnalyticJacobian(well_model_.param().network_analytic_jacobian_);
+        this->useNetworkGroupControl(well_model_.param().network_group_control_);
+        this->useNetworkAutochoke(well_model_.param().network_autochoke_);
+        this->useNetworkComplementarity(well_model_.param().network_complementarity_);
+        this->useGasLiftNetworkResponse(well_model_.param().gaslift_network_response_);
+        this->dumpNetworkFailuresTo(well_model_.param().network_dump_failures_);
+        if (solver_mode == "newton") {
+            // The simultaneous solve needs every well's rate response to its own
+            // bhp. That is the implicit IPR, which the well solve maintains only
+            // where its own control logic happens to need it -- never for
+            // injectors, and for producers only on some paths. Refresh it here
+            // for all of them, or a network solve arrives with a well it cannot
+            // linearise and hands the whole network back to the relaxed update.
+            for (const auto& well : well_model_) {
+                if (well->wellEcl().predictionMode()) {
+                    well->updateIPRImplicit(well_model_.simulator(),
+                                            well_model_.groupStateHelper(),
+                                            well_model_.wellState());
+                    // The tubing table's datum is not the well's reference
+                    // depth; the well's thp evaluation corrects for it and
+                    // the network system has to apply the same.
+                    const int table = well->wellEcl().vfp_table_number();
+                    Scalar dp = 0.0;
+                    if (table > 0) {
+                        const auto& vfp = well_model_.getVFPProperties();
+                        const Scalar datum = well->isInjector()
+                            ? vfp.getInj()->getTable(table).getDatumDepth()
+                            : vfp.getProd()->getTable(table).getDatumDepth();
+                        // wellhelpers::computeHydrostaticCorrection, inline.
+                        dp = well->refDensity() * well->gravity() * (datum - well->refDepth());
+                    }
+                    this->setWellVfpDp(well->name(), dp);
+                }
+            }
+        }
+
         bool more_network_sub_update = false;
         for (int i = 0; i < max_number_of_sub_iterations; i++) {
             const auto local_network_imbalance =
                 this->updatePressures(episodeIdx,
                                       network_pressure_update_damping_factor,
-                                      network_max_pressure_update);
+                                      network_max_pressure_update,
+                                      use_secant,
+                                      secant_production);
             network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = well_model_.schedule()[episodeIdx].network_balance();
             constexpr Scalar relaxation_factor = 10.0;
@@ -139,19 +208,35 @@ update(const bool mandatory_network_balance,
                 break;
             }
 
-            for (const auto& well : well_model_) {
-                if (well->isInjector() || !well->wellEcl().predictionMode()) {
-                     continue;
+            // Re-solve the producers before the injectors: an injection group target
+            // (GCONINJE VREP/REIN) is a function of the produced voidage, so the
+            // injectors must see this sub-iteration's production, not the previous
+            // one's. The intermediate group update is skipped when no injection
+            // network is active, which keeps production-only runs unchanged.
+            const auto resolve = [&](const bool injectors)
+            {
+                for (const auto& well : well_model_) {
+                    if (well->isInjector() != injectors || !well->wellEcl().predictionMode()) {
+                        continue;
+                    }
+                    const auto domain = details::domainForWell(*well);
+                    if (!domain.has_value()) {
+                        continue;
+                    }
+                    const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
+                    if (it != this->nodePressures(*domain).end()) {
+                        well->prepareWellBeforeAssembling(well_model_.simulator(),
+                                                          dt,
+                                                          well_model_.groupStateHelper(),
+                                                          well_model_.wellState());
+                    }
                 }
-
-                const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                if (it != this->node_pressures_.end()) {
-                    well->prepareWellBeforeAssembling(well_model_.simulator(),
-                                                      dt,
-                                                      well_model_.groupStateHelper(),
-                                                      well_model_.wellState());
-                }
+            };
+            resolve(/*injectors=*/false);
+            if (refresh_group_data_between) {
+                well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
             }
+            resolve(/*injectors=*/true);
             well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
         }
         more_network_update = more_network_sub_update || well_group_thp_updated;
@@ -166,11 +251,25 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 {
     OPM_TIMEFUNCTION();
     const int reportStepIdx = well_model_.simulator().episodeIndex();
+    // This function is only relevant for auto-choke groups, and
+    // therefore as of now only relevant for the production network.
+    // \TODO: If we later also want to support auto-choke groups in the
+    // injection network, we should change this function also.
     const auto& network = well_model_.schedule()[reportStepIdx].network();
     const auto& balance = well_model_.schedule()[reportStepIdx].network_balance();
     const Scalar thp_tolerance = balance.thp_tolerance();
 
     if (!network.active()) {
+        return false;
+    }
+
+    // With the simultaneous solve owning the choke nodes, the group thp is
+    // already in the group state and the search below would fight it. Read
+    // the parameters, not the flags: this runs before the flags are set on
+    // the first pass of a step, and one pass of the search is enough to
+    // register the group with a pressure nothing else will overwrite.
+    if (well_model_.param().network_solver_ == "newton"
+        && well_model_.param().network_autochoke_) {
         return false;
     }
 
@@ -206,11 +305,26 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 cmode_tmp = target.second;
             }
             using TargetCalculatorType =  GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
-            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, group};
+            // Built on the control decided on above, not the group state's:
+            // the state says NONE for a group under its limit, and the
+            // calculator asserts on NONE.
+            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, cmode_tmp};
             if (!fld_none)
             {
-                // Target is set for the autochoke group itself
-                target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
+                // Target is set for the autochoke group itself. Read it off the
+                // deck control decided on above -- the group *state* may say NONE
+                // when the group is under its limit, and asking the state for a
+                // target then throws (NETWORK_MODEL5_STDW_AUTOCHK, day 3.2). A
+                // group under its limit is simply a choke that ends up open.
+                switch (cmode_tmp) {
+                case Group::ProductionCMode::ORAT: target_tmp = ctrl.oil_target;    break;
+                case Group::ProductionCMode::WRAT: target_tmp = ctrl.water_target;  break;
+                case Group::ProductionCMode::GRAT: target_tmp = ctrl.gas_target;    break;
+                case Group::ProductionCMode::LRAT: target_tmp = ctrl.liquid_target; break;
+                case Group::ProductionCMode::RESV: target_tmp = ctrl.resv_target;   break;
+                default:
+                    target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
+                }
             }
 
             const Scalar orig_target = target_tmp;
@@ -248,7 +362,11 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 
             const auto upbranch = network.uptree_branch(nodeName);
             const auto it = this->node_pressures_.find((*upbranch).uptree_node());
-            const Scalar nodal_pressure = it->second;
+            // Empty on the first pass of a run; dereferencing end() here
+            // handed the group a garbage pressure.
+            const Scalar nodal_pressure = (it != this->node_pressures_.end())
+                ? it->second
+                : network.node(nodeName).terminal_pressure().value_or(Scalar{0});
             Scalar well_group_thp = nodal_pressure;
 
             std::optional<Scalar> autochoke_thp;
@@ -281,7 +399,8 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                                      high1,
                                                                      appr_sol,
                                                                      0.0,
-                                                                     local_deferredLogger);
+                                                                     local_deferredLogger,
+                                                                     well_model_.param().network_autochoke_bracket_samples_);
                 min_thp = low1;
                 max_thp = high1;
                 range_initial = {min_thp, max_thp};
@@ -304,7 +423,8 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                high,
                                                approximate_solution,
                                                tolerance1,
-                                               local_deferredLogger);
+                                               local_deferredLogger,
+                                               well_model_.param().network_autochoke_bracket_samples_);
 
                 if (approximate_solution.has_value()) {
                     autochoke_thp = *approximate_solution;
