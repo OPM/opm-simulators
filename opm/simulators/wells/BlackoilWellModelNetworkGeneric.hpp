@@ -24,14 +24,17 @@
 #define OPM_BLACKOILWELLMODEL_NETWORK_GENERIC_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <array>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 
 namespace Opm {
@@ -39,10 +42,59 @@ namespace Opm {
     class UnitSystem;
     template<class Scalar, class IndexTraits> class BlackoilWellModelGeneric;
     template<typename Scalar, typename IndexTraits> class WellInterfaceGeneric;
+    template<typename Scalar> class VFPInjProperties;
     template<typename Scalar> class VFPProdProperties;
 }
 
 namespace Opm {
+
+namespace details {
+
+    enum class NetworkDomain : std::size_t {
+        Production = 0,
+        InjectionGas,
+        InjectionWater,
+        Count
+    };
+
+    constexpr std::size_t domainIndex(const NetworkDomain domain)
+    {
+        return static_cast<std::size_t>(domain);
+    }
+
+    struct ActiveNetworkDescriptor {
+        NetworkDomain domain;
+        std::reference_wrapper<const Network::ExtNetwork> network;
+    };
+
+    /// The network domain corresponding to a well's type
+    /// (producer, or injector and water/gas injection phase), or nullopt.
+    template<class Well>
+    std::optional<NetworkDomain> domainForWell(const Well& well)
+    {
+        if (well.isProducer()) {
+            return NetworkDomain::Production;
+        }
+        if (well.isInjector()) {
+            if (well.wellEcl().injectorType() == InjectorType::GAS) {
+                return NetworkDomain::InjectionGas;
+            }
+            if (well.wellEcl().injectorType() == InjectorType::WATER) {
+                return NetworkDomain::InjectionWater;
+            }
+        }
+        return std::nullopt;
+    }
+
+    /// Helper to check if any network (production, gas injection, water injection) is active at a given time step.
+    bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);
+
+    /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
+    std::vector<ActiveNetworkDescriptor>
+    activeNetworks(const Schedule& schedule, const int timeStepIdx);
+
+} // namespace details
+
 
 /// Class for handling the blackoil well network model.
 template<typename Scalar, typename IndexTraits>
@@ -99,12 +151,16 @@ public:
     {
         this->last_valid_node_pressures_ = this->node_pressures_;
         this->last_valid_branch_data_ = this->branch_data_;
+        this->last_valid_domain_node_pressures_ = this->domain_node_pressures_;
+        this->last_valid_domain_branch_data_ = this->domain_branch_data_;
     }
 
     void resetState()
     {
         this->node_pressures_ = this->last_valid_node_pressures_;
         this->branch_data_ = this->last_valid_branch_data_;
+        this->domain_node_pressures_ = this->last_valid_domain_node_pressures_;
+        this->domain_branch_data_ = this->last_valid_domain_branch_data_;
     }
 
     template<class Serializer>
@@ -114,18 +170,87 @@ public:
         serializer(last_valid_node_pressures_);
         serializer(branch_data_);
         serializer(last_valid_branch_data_);
+        serializer(domain_node_pressures_);
+        serializer(last_valid_domain_node_pressures_);
+        serializer(domain_branch_data_);
+        serializer(last_valid_domain_branch_data_);
     }
 
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
-    std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>>
+    /// Result of one network pressure evaluation for one network (domain).
+    struct NetworkPressures
+    {
+        std::map<std::string, Scalar> node_pressures;
+        std::map<std::string, data::BranchData> branch_data;
+        // Nodes (and their descendants) whose VFP lookup has no solution; their
+        // node_pressures entries are placeholders and must not be used.
+        std::set<std::string> invalid_nodes;
+    };
+
+    NetworkPressures
     computePressures(const Network::ExtNetwork& network,
                      const VFPProdProperties<Scalar>& vfp_prod_props,
                      const UnitSystem& unit_system,
                      const int reportStepIdx,
                      const Parallel::Communication& comm) const;
 
+    NetworkPressures
+    computePressures(const Network::ExtNetwork& network,
+                     const VFPInjProperties<Scalar>& vfp_inj_props,
+                     const UnitSystem& unit_system,
+                     const int reportStepIdx,
+                     const Parallel::Communication& comm) const;
+
+    void updateActiveStateImpl(const Network::ExtNetwork& network);
+
+    static constexpr details::NetworkDomain productionNetworkDomain()
+    {
+        return details::NetworkDomain::Production;
+    }
+
+    const std::map<std::string, Scalar>& nodePressures(const details::NetworkDomain domain) const
+    {
+        return domain_node_pressures_[details::domainIndex(domain)];
+    }
+
+    std::map<std::string, Scalar>& nodePressures(const details::NetworkDomain domain)
+    {
+        return domain_node_pressures_[details::domainIndex(domain)];
+    }
+
+    const std::map<std::string, data::BranchData>& branchData(const details::NetworkDomain domain) const
+    {
+        return domain_branch_data_[details::domainIndex(domain)];
+    }
+
+    std::map<std::string, data::BranchData>& branchData(const details::NetworkDomain domain)
+    {
+        return domain_branch_data_[details::domainIndex(domain)];
+    }
+
+    const std::set<std::string>& invalidNodes(const details::NetworkDomain domain) const
+    {
+        return domain_invalid_nodes_[details::domainIndex(domain)];
+    }
+
+    std::set<std::string>& invalidNodes(const details::NetworkDomain domain)
+    {
+        return domain_invalid_nodes_[details::domainIndex(domain)];
+    }
+
+    void syncLegacyProductionState_()
+    {
+        this->node_pressures_ = this->nodePressures(productionNetworkDomain());
+        this->branch_data_ = this->branchData(productionNetworkDomain());
+    }
+
+    void syncProductionDomainState_()
+    {
+        this->nodePressures(productionNetworkDomain()) = this->node_pressures_;
+        this->branchData(productionNetworkDomain()) = this->branch_data_;
+    }
 
     bool active_{false};
     BlackoilWellModelGeneric<Scalar,IndexTraits>& well_model_;
@@ -134,10 +259,19 @@ protected:
     std::map<std::string, Scalar> node_pressures_;
     // Network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network)
     std::map<std::string, data::BranchData> branch_data_;
+    // Domain-scoped pressure state to avoid collisions between production and injection networks.
+    std::array<std::map<std::string, Scalar>, details::domainIndex(details::NetworkDomain::Count)> domain_node_pressures_;
+    std::array<std::map<std::string, data::BranchData>, details::domainIndex(details::NetworkDomain::Count)> domain_branch_data_;
+    // Nodes without a valid VFP solution in the last evaluation (per domain); not serialized,
+    // recomputed on every updatePressures().
+    std::array<std::set<std::string>, details::domainIndex(details::NetworkDomain::Count)> domain_invalid_nodes_;
+    int invalid_nodes_report_step_{-1};
     // Valid network pressures for output and initialization for safe restart after failed iterations
     std::map<std::string, Scalar> last_valid_node_pressures_;
     // Valid network branch pressure drops and flow rates for output (outlet branch for production network, inlet branch for injection network) for safe restart after failed iterations
     std::map<std::string, data::BranchData> last_valid_branch_data_;
+    std::array<std::map<std::string, Scalar>, details::domainIndex(details::NetworkDomain::Count)> last_valid_domain_node_pressures_;
+    std::array<std::map<std::string, data::BranchData>, details::domainIndex(details::NetworkDomain::Count)> last_valid_domain_branch_data_;
 };
 
 } // namespace Opm

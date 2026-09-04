@@ -44,6 +44,7 @@
 #include <filesystem>
 #include <memory>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <limits>
 #include <string>
@@ -228,20 +229,28 @@ struct MockWellModel
 
         struct MockGroupState
         {
+            // Leaf rates in Sm3/day, phase order water, oil, gas. Tests may override
+            // these before running the computation.
+            static inline std::vector<double> injection_rates_sm3_day {500.0, 0.0, 5000.0};
+            static inline std::vector<double> production_rates_sm3_day {500.0, 500.0, 5000.0};
+
+            static std::vector<double> toSI(const std::vector<double>& r)
+            {
+                std::vector<double> out(r.size());
+                std::ranges::transform(r, out.begin(), [](double v) { return convert::from(v, cubic(meter) / day); });
+                return out;
+            }
+
             bool has_production_rates(const std::string) const { return true; }
+            bool has_network_leaf_node_injection_rates(const std::string) const { return true; }
+            bool has_network_leaf_node_production_rates(const std::string) const { return true; }
             std::vector<double> network_leaf_node_injection_rates(const std::string) const
             {
-                // Phase order water, oil, gas.
-                return {convert::from(500.0, cubic(meter) / day),
-                        0.0,
-                        convert::from(5000.0, cubic(meter) / day)};
+                return toSI(injection_rates_sm3_day);
             }
             std::vector<double> network_leaf_node_production_rates(const std::string) const
             {
-                // Phase order water, oil, gas.
-                return {convert::from(500.0, cubic(meter) / day),
-                        convert::from(500.0, cubic(meter) / day),
-                        convert::from(5000.0, cubic(meter) / day)};
+                return toSI(production_rates_sm3_day);
             }
             Scalar well_group_thp(const std::string&) const { return convert::from(100.0, bars); }
         };
@@ -290,7 +299,7 @@ double terminalPressure(NetworkScenario scenario)
 
 struct NetworkSetup
 {
-    NetworkSetup(NetworkScenario scenario)
+    NetworkSetup(NetworkScenario scenario, std::optional<double> terminal_pressure_override = std::nullopt)
         : deck{Parser{}.parseString(inputString(scenario))}
     {
         // Set up VFP property objects.
@@ -306,8 +315,11 @@ struct NetworkSetup
         network.add_branch(Network::Branch{"M5S", "PLAT-A", 3, 0.0});
         network.add_branch(Network::Branch{"G1", "M5S", 9999, 0.0});
         Network::Node node{"PLAT-A"};
-        node.terminal_pressure(terminalPressure(scenario));
+        node.terminal_pressure(terminal_pressure_override.value_or(terminalPressure(scenario)));
         network.update_node(node);
+        // Restore the default leaf rates so tests do not leak state into each other.
+        MockWellModel::MockGroupStateHelper::MockGroupState::injection_rates_sm3_day = {500.0, 0.0, 5000.0};
+        MockWellModel::MockGroupStateHelper::MockGroupState::production_rates_sm3_day = {500.0, 500.0, 5000.0};
     }
 
     Deck deck;
@@ -332,7 +344,7 @@ BOOST_AUTO_TEST_CASE(gas_injection_pressure_computation)
     BOOST_CHECK_CLOSE(s.vfp_inj_props.bhp(3, 0.0, 0.0, gasrate, thp), expected_bhp, 1e-7);
     using Comm = Dune::Communication<int>;
 
-    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // NetworkPressureComputation stores const references to comm and unit system, hence
     // we need to make sure that their lifetime is longer than the constructor lasts
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
@@ -357,7 +369,7 @@ BOOST_AUTO_TEST_CASE(water_injection_pressure_computation)
 
     // Test using mock setup.
     using Comm = Dune::Communication<int>;
-    // NetworkPressureComputation stores const references to comm and unit system, hence 
+    // NetworkPressureComputation stores const references to comm and unit system, hence
     // we need to make sure that their lifetime is longer than the constructor lasts
     auto comm = Comm{};
     auto unit_system = UnitSystem {};
@@ -391,6 +403,69 @@ BOOST_AUTO_TEST_CASE(production_pressure_computation)
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(31.0, bars);
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);
+}
+
+// The tables below use zero-filled cells for (rate, THP) combinations the flow line
+// cannot deliver, and their axes do not cover every state the wells may be in during
+// network iterations. A network branch lookup must never extrapolate into that region
+// (it gives negative pressures) nor accept a zero-filled cell as a node pressure.
+
+BOOST_AUTO_TEST_CASE(gas_injection_rate_beyond_flow_axis)
+{
+    auto s = NetworkSetup{NetworkScenario::GasInjection};
+    // 2.5e6 Sm3/d is beyond the last flow-axis point (2.0e6); a linear extrapolation of the
+    // THP=350 row (..., 86.011, 0.000) gives a pressure of about -213 bar.
+    MockWellModel::MockGroupStateHelper::MockGroupState::injection_rates_sm3_day = {0.0, 0.0, 2.5e6};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
+    NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_REQUIRE(pressures.find("G1") != pressures.end());
+    // Clamped to the axis end the table gives 0.0 -> no solution: the node is flagged and the
+    // placeholder pressure is the upstream (terminal) pressure, never a negative value.
+    BOOST_CHECK(pressures.at("M5S") >= unit::atm);
+    BOOST_CHECK(pressures.at("G1") >= unit::atm);
+    BOOST_CHECK(comp.invalidNodes().count("M5S") == 1);
+    BOOST_CHECK(comp.invalidNodes().count("G1") == 1);
+}
+
+BOOST_AUTO_TEST_CASE(gas_injection_zero_cell_region)
+{
+    // At THP=100 bar the table is zero for rates >= 589394 Sm3/d.
+    auto s = NetworkSetup{NetworkScenario::GasInjection, convert::from(100.0, bars)};
+    MockWellModel::MockGroupStateHelper::MockGroupState::injection_rates_sm3_day = {0.0, 0.0, 6.0e5};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
+    NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_REQUIRE(pressures.find("G1") != pressures.end());
+    BOOST_CHECK(pressures.at("G1") >= unit::atm);
+    BOOST_CHECK(comp.invalidNodes().count("M5S") == 1);
+    BOOST_CHECK(comp.invalidNodes().count("G1") == 1);
+}
+
+BOOST_AUTO_TEST_CASE(gas_injection_thp_below_axis)
+{
+    // Terminal pressure 20 bar is below the first THP-axis point (50 bar). Extrapolating the
+    // first interval gives 68.834 - 0.6*(135.406 - 68.834) = 28.9 bar; clamping to the axis
+    // gives the THP=50 row value 68.834 bar.
+    auto s = NetworkSetup{NetworkScenario::GasInjection, convert::from(20.0, bars)};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem {};
+    NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_REQUIRE(pressures.find("G1") != pressures.end());
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(68.834, bars), 1e-7);
+    BOOST_CHECK(comp.invalidNodes().empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END() // NetworkPressureComputationTests

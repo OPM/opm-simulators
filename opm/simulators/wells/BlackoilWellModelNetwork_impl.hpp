@@ -41,6 +41,8 @@
 
 #include <fmt/format.h>
 
+#include <optional>
+
 namespace Opm {
 
 template<typename TypeTag>
@@ -93,8 +95,7 @@ update(const bool mandatory_network_balance,
 {
     OPM_TIMEFUNCTION();
     const int episodeIdx = well_model_.simulator().episodeIndex();
-    const auto& network = well_model_.schedule()[episodeIdx].network();
-    if (!well_model_.wellsActive() && !network.active()) {
+    if (!well_model_.wellsActive() && !details::anyNetworkActive(well_model_.schedule(), episodeIdx)) {
         return {/*more_network_update=*/false, /*network_imbalance=*/0.0};
     }
 
@@ -140,16 +141,41 @@ update(const bool mandatory_network_balance,
             }
 
             for (const auto& well : well_model_) {
-                if (well->isInjector() || !well->wellEcl().predictionMode()) {
+                if (!well->wellEcl().predictionMode()) {
                      continue;
                 }
 
-                const auto it = this->node_pressures_.find(well->wellEcl().groupName());
-                if (it != this->node_pressures_.end()) {
+                const auto domain = details::domainForWell(*well);
+
+                if (!domain.has_value()) {
+                    continue;
+                }
+
+                const auto it = this->nodePressures(*domain).find(well->wellEcl().groupName());
+                if (it != this->nodePressures(*domain).end()) {
                     well->prepareWellBeforeAssembling(well_model_.simulator(),
                                                       dt,
                                                       well_model_.groupStateHelper(),
                                                       well_model_.wellState());
+                    // Option B: after re-solving at the current network THP, update
+                    // ws.well_potentials for injection wells.  The rate_less_than_potential
+                    // check in WellConstraints::activeInjectionConstraint compares current
+                    // injection rates against ws.well_potentials to decide whether switching
+                    // to THP mode would increase or decrease injection.  The potentials are
+                    // normally computed once per timestep at the static WCONINJE THP and are
+                    // stale during network iterations.  Refreshing them here (from the rate
+                    // the well just solved to under the current network THP) makes the check
+                    // accurate for subsequent outer iterations.
+                    if (well->isInjector()) {
+                        auto& ws = well_model_.wellState().well(well->indexOfWell());
+                        if (ws.injection_cmode == Well::InjectorCMode::THP) {
+                            const int np = well_model_.numPhases();
+                            for (int p = 0; p < np; ++p) {
+                                ws.well_potentials[p] =
+                                    std::max(Scalar{0.0}, ws.surface_rates[p]);
+                            }
+                        }
+                    }
                 }
             }
             well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
@@ -166,6 +192,10 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 {
     OPM_TIMEFUNCTION();
     const int reportStepIdx = well_model_.simulator().episodeIndex();
+    // This function is only relevant for auto-choke groups, and
+    // therefore as of now only relevant for the production network.
+    // \TODO: If we later also want to support auto-choke groups in the
+    // injection network, we should change this function also.
     const auto& network = well_model_.schedule()[reportStepIdx].network();
     const auto& balance = well_model_.schedule()[reportStepIdx].network_balance();
     const Scalar thp_tolerance = balance.thp_tolerance();
