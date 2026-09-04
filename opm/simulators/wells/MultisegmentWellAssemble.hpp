@@ -129,9 +129,14 @@ public:
                             Equations& eqns) const;
 
     //! \brief Assemble equation for a perforation.
+    //! \details comp_idx is the index of the well equation, while
+    //! reservoir_eq_idx is the index of the corresponding reservoir equation
+    //! (for the coupling matrix C). They coincide for the mass conservation
+    //! equations, but can differ for the energy equation.
     void assemblePerforationEq(const int seg,
                                const int local_perf_index,
                                const int comp_idx,
+                               const int reservoir_eq_idx,
                                const EvalWell& cq_s_effective,
                                Equations& eqns) const;
 

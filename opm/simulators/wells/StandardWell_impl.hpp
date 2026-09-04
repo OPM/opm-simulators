@@ -415,6 +415,7 @@ namespace Opm
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assemblePerforationEq(cq_s_effective,
                                           componentIdx,
+                                          componentIdx,
                                           perf,
                                           this->primary_variables_.numWellEq(),
                                           this->linSys_);
