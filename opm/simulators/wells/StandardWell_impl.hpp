@@ -1238,9 +1238,9 @@ namespace Opm
         auto& deferred_logger = groupStateHelper.deferredLogger();
         Scalar tol_wells = this->param_.tolerance_wells_;
         // use stricter tolerance for stopped wells and wells under zero rate target control.
-        constexpr Scalar stopped_factor = 1.e-4;
+        const Scalar stopped_factor = this->param_.tolerance_wells_stopped_factor_;
         // use stricter tolerance for dynamic thp to ameliorate network convergence
-        constexpr Scalar dynamic_thp_factor = 1.e-1;
+        const Scalar dynamic_thp_factor = this->param_.tolerance_wells_dynamic_thp_factor_;
         if (this->stoppedOrZeroRateTarget(groupStateHelper)) {
             tol_wells = tol_wells*stopped_factor;
         } else if (this->getDynamicThpLimit()) {
@@ -1252,6 +1252,9 @@ namespace Opm
                                                                          B_avg,
                                                                          this->param_.max_residual_allowed_,
                                                                          tol_wells,
+                                                                         this->param_.tolerance_well_bhp_eq_,
+                                                                         this->param_.tolerance_well_thp_eq_,
+                                                                         this->param_.tolerance_well_grup_eq_,
                                                                          this->param_.relaxed_tolerance_flow_well_,
                                                                          relax_tolerance,
                                                                          this->wellIsStopped(),
@@ -2479,7 +2482,7 @@ namespace Opm
         // Always take a few (more than one) iterations after a switch before allowing a new switch
         // The optimal number here is subject to further investigation, but it has been observerved
         // that unless this number is >1, we may get stuck in a cycle
-        constexpr int min_its_after_switch = 4;
+        const int min_its_after_switch = this->param_.min_iter_after_switch_wells_;
         // We also want to restrict the number of status switches to avoid oscillation between STOP<->OPEN
         const int max_status_switch = this->param_.max_well_status_switch_inner_iter_;
         int its_since_last_switch = min_its_after_switch;
