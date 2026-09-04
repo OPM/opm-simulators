@@ -70,6 +70,7 @@ class TpsaLinearizer
 
     using ADVectorBlock = Dune::FieldVector<Evaluation, numEq>;
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
+    using BlockAddress = typename SparseMatrixAdapter::BlockAddress;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
 
     using StressInfoVector = Dune::FieldVector<Scalar, 3>;
@@ -386,7 +387,7 @@ private:
                         const auto scvfIdx = dofIdx - 1;
                         const auto& scvf = stencil.interiorFace(scvfIdx);
                         const Scalar area = scvf.area();
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{ neighborIdx, area, nullptr };
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{ neighborIdx, area, BlockAddress{} };
 
                         int faceId = scvf.dirId();
                         loc_stressinfo[dofIdx - 1] =
@@ -496,7 +497,7 @@ private:
 
                 // Loop over neighboring cells
                 short loc = 0;
-                for (const auto& nbInfo : nbInfos) {
+                for (auto& nbInfo : nbInfos) {
                     OPM_TIMEBLOCK_LOCAL(calculationForEachFaceTPSA, Subsystem::Assembly);
 
                     // Reset local residual and Jacobian
@@ -743,7 +744,7 @@ private:
     Simulator* simulatorPtr_{};
     LinearizationType linearizationType_{};
 
-    std::vector<MatrixBlock*> diagMatAddress_{};
+    std::vector<BlockAddress> diagMatAddress_{};
     std::unique_ptr<SparseMatrixAdapter> jacobian_{};
     GlobalEqVector residual_;
 
@@ -757,7 +758,7 @@ private:
     {
         unsigned int neighbor;
         double faceArea;
-        MatrixBlock* matBlockAddress;
+        BlockAddress matBlockAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_{};
 
