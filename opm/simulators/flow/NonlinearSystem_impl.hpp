@@ -81,7 +81,10 @@ updateSolution(const GlobalEqVector& dx)
 
     {
         OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
+        Dune::Timer propsTimer;
+        propsTimer.start();
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        props_update_time_ = propsTimer.stop();
     }
 
     if (shouldStore) {
