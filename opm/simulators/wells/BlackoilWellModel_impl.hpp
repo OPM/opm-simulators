@@ -46,6 +46,7 @@
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellFractureFlowSplit.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -270,7 +271,7 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
+            this->initializeWellPerfData(reportStepIdx);
             this->initializeWellState(reportStepIdx);
             this->wbp_.initializeWBPCalculationService();
 
@@ -679,6 +680,13 @@ namespace Opm {
         }
 
         if (Indices::waterEnabled) {
+            if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+                // Split injector connection flow between matrix and fracture
+                // for wells with registered fracture contributions.
+                updateWellFractureFlowSplit<FluidSystem, Scalar>(
+                    this->simulator_, this->well_container_,
+                    this->wellState(), this->nupcolWellState());
+            }
             this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
         }
 
