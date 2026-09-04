@@ -315,6 +315,12 @@ partiallySupported()
             },
          },
          {
+            "WINJGAS",
+            {
+               {4,{true, allow_values<std::string> {}, "WINJGAS(MAKEUPGAS): make-up gas stream is not supported and should be defaulted"}}, // MAKEUPGAS
+            },
+         },
+         {
             "WLIFTOPT",
             {
                {7,{true, allow_values<std::string> {"NO"}, "WLIFTOPT(OPTLIMIT): only the default NO option is supported"}}, // ALLOCATE_EXTRA_LIFT_GAS
@@ -720,6 +726,12 @@ partiallySupported()
                {18,{false, allow_values<double> {}, "WCONPROD(CALRATE): calorific rate not used and should be defaulted (1*)"}}, // E300_ITEM18
                {19,{true, allow_values<double> {}, "WCONPROD(COMBPROC): linearly combined rate not used and should be defaulted (1*)"}}, // E300_ITEM19
                {20,{false, allow_values<double> {}, "WCONPROD(NGL): natural gas liquid rate  is not used and should be defaulted (1*)"}}, // E300_ITEM20
+            },
+         },
+         {
+            "WINJGAS",
+            {
+               {5,{true, allow_values<double> {0}, "WINJGAS(STAGE): separator stage is not supported and should be defaulted"}}, // STAGE
             },
          },
          {
