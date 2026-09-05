@@ -33,6 +33,15 @@ struct bslv_memory
 
     // pointer to preconditioner
     prec_t *P;
+
+    // spmv function pointer
+    void (*bsr_spmv)(bsr_matrix *A, const double *x, double *y);
+
+    // ILU0/DILU factorization function pointer
+    void (*prec_factorize)(prec_t *P, bsr_matrix *A, bool use_dilu);
+
+    // ILU0/DILU apply function pointer
+    void (*prec_apply)(prec_t *P, double *x);
 }
 bslv_memory;
 
@@ -81,7 +90,7 @@ void bslv_init(bslv_memory *mem, double tol, int max_iter, bsr_matrix const *A, 
  *
  * @return Number of linear iterations.
  */
-int  bslv_pbicgstab3m(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
+int  bslv_pbicgstabm(bslv_memory *mem, bsr_matrix *A, const double *b, double *x);
 
 /**
  * @brief Preconditioned bicgstab in double-precision.

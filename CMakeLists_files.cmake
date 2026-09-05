@@ -281,6 +281,7 @@ list(APPEND PRIVATE_HEADER_FILES
 
 if (HAVE_AVX2_EXTENSION)
   set (AVX2_SOURCE_FILES
+    opm/simulators/linalg/mixed/dot.c
     opm/simulators/linalg/mixed/bsr.c
     opm/simulators/linalg/mixed/prec.c
     opm/simulators/linalg/mixed/bslv.c)

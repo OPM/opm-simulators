@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include "bsr.h"
+#include <stdbool.h>
 
 /*!
  * @brief Preconditioner struct.
@@ -58,20 +59,14 @@ void prec_init(prec_t *P, bsr_matrix const *A);
 int  prec_analyze(bsr_matrix *M, int (*offsets)[3]);
 
 /**
- * @brief DILU factorization.
+ * @brief ILU0/DILU factorization.
  *
  * @param P Pointer preconditioner object.
  * @param A Pointer to bsr matrix.
  */
-void prec_dilu_factorize(prec_t *P, bsr_matrix *A);
-
-/**
- * @brief ILU0 factorization.
- *
- * @param P Pointer preconditioner object.
- * @param A Pointer to bsr matrix.
- */
-void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
+void prec_ilu0_factorize2(prec_t *P, bsr_matrix *A, bool use_dilu);
+void prec_ilu0_factorize3(prec_t *P, bsr_matrix *A, bool use_dilu);
+void prec_ilu0_factorize4(prec_t *P, bsr_matrix *A, bool use_dilu);
 
 /**
  * @brief Preconditioner application in mixed-precision.
@@ -81,7 +76,9 @@ void prec_ilu0_factorize(prec_t *P, bsr_matrix *A);
  * @param P Pointer to preconditioner object.
  * @apram x Pointer to input/output vector
  */
+void prec_mapply2c(prec_t *P, double *x);
 void prec_mapply3c(prec_t *P, double *x);
+void prec_mapply4c(prec_t *P, double *x);
 
 /**
  * @brief Preconditioner applicationin double-precision.
