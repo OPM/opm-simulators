@@ -228,12 +228,13 @@ public:
         Scalar avgSmodulus = 0.0;
         const auto& gridView = this->gridView();
         ElementContext elemCtx(this->simulator());
+        unsigned numDof = 0;
         for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             avgSmodulus += this->shearModulus(elemIdx);
+            ++numDof;
         }
-        std::size_t numDof = this->model().numGridDof();
         const auto& comm = this->simulator().vanguard().grid().comm();
         avgSmodulus = comm.sum(avgSmodulus);
         Scalar numTotalDof = comm.sum(numDof);
@@ -263,6 +264,19 @@ public:
         if (this->nonTrivialBoundaryConditions()) {
             geoMechModel_.linearizer().updateBoundaryConditionData();
         }
+    }
+
+    /*!
+     * \brief Called by simulator at the end of each timestep
+     */
+    void endTimeStep() override
+    {
+        // Update info for mechanics output
+        // OBS: Must be done before ParentClass::endTimeStep!
+        geoMechModel().linearizer().updateStressInfo();
+
+        // Call parent class endTimeStep()
+        ParentType::endTimeStep();
     }
 
     /*!

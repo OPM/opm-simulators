@@ -49,13 +49,17 @@
 
 #include <algorithm>
 #include <any>
+#include <array>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -105,6 +109,10 @@ public:
           , matrix_(nullptr)
           , rhs_(nullptr)
     {
+        // Init. scaling factors
+        rowFactor_.fill(Scalar(1.0));
+        colFactor_.fill(Scalar(1.0));
+
         // Init parameters
         parameters_.init();
 
@@ -181,6 +189,10 @@ public:
         if (isParallel() && type != "paroverilu0") {
             matrix_->makeOverlapRowsInvalid(overlapRows_);
         }
+
+        // Scale linear system (the right-hand side is scaled in solve())
+        computeScalingFactors_();
+        matrix_->scaleFields(rowFactor_, colFactor_);
     }
 
     /*!
@@ -219,6 +231,9 @@ public:
 
         x = 0.0;
 
+        // Scale right-hand side before solve
+        rhs_->scaleFields(rowFactor_);
+
         // Solve linear system
         Dune::InverseOperatorResult result;
         assert(solver_);
@@ -226,6 +241,9 @@ public:
 
         // Store no. linear iterations
         iterations_ = result.iterations;
+
+        // x solves the scaled system, so recover the update of the original one
+        x.scaleFields(colFactor_);
 
         // Return result for convergence check (boolean)
         return checkConvergence(result);
@@ -331,6 +349,76 @@ protected:
     }
 
     /*!
+     * \brief Compute scaling factors for matrix and right-hand-side vector
+     */
+    void computeScalingFactors_()
+    {
+        rowFactor_.fill(Scalar(1.0));
+        colFactor_.fill(Scalar(1.0));
+
+        const auto& mode = parameters_.scale_linear_system_;
+        if (mode == "none") {
+            return;
+        }
+
+        if (mode != "eqweight" && mode != "user") {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("TPSA: \"{}\" is not a valid setting for "
+                                  "--tpsa-scale-linear-system. Use none, eqweight or user.",
+                                  mode));
+        }
+
+        // Helper array for eq. indices to matrix/vetor field indices
+        static constexpr std::array<unsigned, Linear::numTpsaFields> fieldEq {
+            0,
+            1,
+            2,
+            3 * Linear::numDispDofs,
+            3 * Linear::numDispDofs + Linear::numRotDofs
+        };
+
+        // eqweight and user applied in the same manner, see
+        // FlowProblemTPSA::computeAndSetEqWeights_()
+        if (mode == "eqweight") {
+            const auto& model = simulator_.problem().geoMechModel();
+            for (std::size_t fieldIdx = 0; fieldIdx < Linear::numTpsaFields; ++fieldIdx) {
+                rowFactor_[fieldIdx] = model.eqWeight(/*dofIdx=*/0, fieldEq[fieldIdx]);
+                colFactor_[fieldIdx] = rowFactor_[fieldIdx];
+            }
+        }
+        else {
+            const Scalar factor = userFactor_();
+            for (std::size_t fieldIdx = 0; fieldIdx < Linear::numTpsaFields; ++fieldIdx) {
+                rowFactor_[fieldIdx] = (fieldEq[fieldIdx] < 3 * Linear::numDispDofs)
+                    ? Scalar(1.0) / factor
+                    : factor;
+                colFactor_[fieldIdx] = rowFactor_[fieldIdx];
+            }
+        }
+    }
+
+    /*!
+     * \brief The factor of the "user" field scaling with some checks
+     *
+     * \returns Factor
+     */
+    Scalar userFactor_() const
+    {
+        const Scalar factor = parameters_.scale_linear_system_factor_;
+
+        // The solution of the scaled system is recovered by multiplying by these
+        // factors, so anything that cannot be inverted is a mistake, not a scaling.
+        if (!std::isfinite(factor) || factor <= Scalar(0.0)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("TPSA: --tpsa-scale-linear-system-factor must be finite "
+                                  "and positive, but {} was given",
+                                  factor));
+        }
+
+        return factor;
+    }
+
+    /*!
     * \brief Check for linear solver convergence
     *
     * \param result Linear solver result container
@@ -433,6 +521,10 @@ protected:
 
     SolverType* solver_ = nullptr;
     PrecondType* precond_ = nullptr;
+
+    // Row and column factors for scaling
+    std::array<Scalar, Linear::numTpsaFields> rowFactor_ {};
+    std::array<Scalar, Linear::numTpsaFields> colFactor_ {};
 };
 
 }  // namespace Opm
