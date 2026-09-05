@@ -27,7 +27,7 @@
 
 #include <dune/common/fvector.hh>
 
-#include <opm/input/eclipse/Schedule/BCProp.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/materialstates/MaterialStateTPSA.hpp>
@@ -213,7 +213,7 @@ public:
     }
 
     /*!
-    * \brief Calculate boundary conditions in TPSA formulation given by BCCON/BCPROP
+    * \brief Calculate boundary conditions in TPSA formulation given by BCCON/BCMECH
     *
     * \param bndryTerm Boundary term vector
     * \param materialState Material state container

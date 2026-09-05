@@ -29,7 +29,7 @@
 #define EWOMS_BLACK_OIL_LOCAL_TPFA_RESIDUAL_HH
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/input/eclipse/Schedule/BCProp.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
 
 #include <opm/material/common/ConditionalStorage.hpp>
 #include <opm/material/common/MathToolbox.hpp>

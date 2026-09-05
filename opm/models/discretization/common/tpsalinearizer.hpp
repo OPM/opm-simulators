@@ -31,7 +31,7 @@
 
 #include <opm/grid/utility/SparseTable.hpp>
 
-#include <opm/input/eclipse/Schedule/BCProp.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
 
 #include <opm/material/materialstates/MaterialStateTPSA.hpp>
 
