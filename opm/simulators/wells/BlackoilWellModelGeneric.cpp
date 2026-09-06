@@ -1281,6 +1281,64 @@ assignDynamicWellStatus(data::Wells& wsrpt) const
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+assignWellEvents(data::Wells& wsrpt) const
+{
+    this->loopOwnedWells([this, &wsrpt]
+                         ([[maybe_unused]] const auto wellID,
+                          const Well&                 well)
+    {
+        wsrpt[well.name()].events = this->well_perf_events_.events(well.name());
+    });
+}
+
+template<typename Scalar, typename IndexTraits>
+WellStatusSnapshot BlackoilWellModelGeneric<Scalar, IndexTraits>::
+wellStatusSnapshot() const
+{
+    auto snapshot = WellStatusSnapshot{};
+
+    const auto& wtestState = this->wellTestState();
+
+    for (const auto& well : this->wells_ecl_) {
+        if (!this->wellState().has(well.name())) {
+            continue;
+        }
+
+        auto& entry = snapshot.wells[well.name()];
+        entry.status = this->wellState().well(well.name()).status;
+
+        // A well closed by the economic or physical limit checks does not
+        // reach WellState until the next time step is set up, so consult
+        // WellTestState to see the closure in the step that makes it.
+        if ((entry.status == WellStatus::OPEN) &&
+            wtestState.well_is_closed(well.name()))
+        {
+            entry.status = well.getAutomaticShutIn()
+                ? WellStatus::SHUT
+                : WellStatus::STOP;
+        }
+
+        // Connection state is tracked independently of the well status: a
+        // well that is shut as a whole, e.g., by a 'WELL' workover, has not
+        // had any of its connections closed.
+        for (const auto& connection : well.getConnections()) {
+            const auto complnum = connection.complnum();
+
+            if ((connection.state() == Connection::State::OPEN) &&
+                !wtestState.completion_is_closed(well.name(), complnum))
+            {
+                entry.openCompletions.push_back(complnum);
+            }
+        }
+
+        std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
+    }
+
+    return snapshot;
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 assignShutConnections(data::Wells& wsrpt,
                       const int reportStepIndex) const
 {
@@ -2174,7 +2232,8 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->switched_prod_groups_ == rhs.switched_prod_groups_
         && this->switched_inj_groups_ == rhs.switched_inj_groups_
         && this->closed_offending_wells_ == rhs.closed_offending_wells_
-        && this->gen_gaslift_ == rhs.gen_gaslift_;
+        && this->gen_gaslift_ == rhs.gen_gaslift_
+        && this->well_perf_events_ == rhs.well_perf_events_;
 }
 
 

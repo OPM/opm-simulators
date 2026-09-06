@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
+#include <opm/simulators/wells/WellPerformanceEvents.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
@@ -274,6 +275,7 @@ public:
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
         serializer(gen_gaslift_);
+        serializer(well_perf_events_);
     }
 
     bool operator==(const BlackoilWellModelGeneric& rhs) const;
@@ -452,6 +454,19 @@ protected:
     /// values for \code data::Well::dynamicStatus \endcode.
     void assignDynamicWellStatus(data::Wells& wsrpt) const;
 
+    /// Assign well performance evaluation indicators (WPWE0 .. WPWE7) for
+    /// each well owned by current rank.
+    ///
+    /// \param[in,out] wsrpt Well solution object.  On exit, holds current
+    /// values for \code data::Well::events \endcode.
+    void assignWellEvents(data::Wells& wsrpt) const;
+
+    /// Dynamic open/shut status of the wells known to current rank.
+    ///
+    /// The deck status of each well and connection amended by the run time
+    /// decisions in WellState and WellTestState.
+    WellStatusSnapshot wellStatusSnapshot() const;
+
     /// Assign basic result quantities for shut connections of wells owned
     /// by current rank.
     ///
@@ -597,6 +612,8 @@ protected:
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
+
+    WellPerformanceEvents well_perf_events_;
 
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties<Scalar, IndexTraits>> vfp_properties_{};
