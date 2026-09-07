@@ -36,6 +36,8 @@
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
+#include <opm/grid/LookUpData.hh>
+
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
@@ -449,11 +451,15 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         // Zero-based equilibration region of every cell (EQLNUM, or region 0).
+        // EQLNUM is given on the unrefined input grid while the equilibration
+        // works on the leaf grid, so a refined cell takes its parent's region;
+        // without local refinement the mapping is the identity.
         std::vector<int> eqlnum(this->model().numGridDof(), 0);
         if (eclState.fieldProps().has_int("EQLNUM")) {
-            const auto& e = eclState.fieldProps().get_int("EQLNUM");
-            assert(e.size() == eqlnum.size());
-            std::ranges::transform(e, eqlnum.begin(), [](const int r) { return r - 1; });
+            const LookUpData<typename GridView::Grid, GridView>
+                lookUpData(vanguard.gridView());
+            eqlnum = lookUpData.template assignFieldPropsIntOnLeaf<int>(
+                eclState.fieldProps(), "EQLNUM", /*needsTranslation=*/true);
         }
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
