@@ -394,8 +394,13 @@ partiallySupported()
             "EQUIL",
             {
                {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(OIP_INIT): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
-               {10,{false, allow_values<int> {}, "EQUIL(COMP_INIT_TYPE): compositional option not used, should be defaulted"}}, // COMP_INIT_TYPE
-               {11,{false, allow_values<int> {}, "EQUIL(COMP_NOT_SET_SAT_PRESSURE): compositional option not used, should be defaulted"}}, // COMP_NOT_SET_SAT_PRESSURE
+               {10,{false, allow_values<int> {1, 3}, "EQUIL(COMP_INIT_TYPE): only types 1 "
+                                                           "(total composition) and 3 "
+                                                           "(liquid composition with a gas "
+                                                           "cap) are supported"}}, // COMP_INIT_TYPE
+               {11,{false, allow_values<int> {0, 1},
+                    "EQUIL(COMP_NOT_SET_SAT_PRESSURE): only 0 (reset when needed) and 1 "
+                    "(keep datum pressure) are supported"}}, // COMP_NOT_SET_SAT_PRESSURE
             },
          },
          {
