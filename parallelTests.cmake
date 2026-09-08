@@ -864,6 +864,26 @@ add_test_compare_parallel_simulation(
 
 add_test_compare_parallel_simulation(
   CASENAME
+    winjmult_udq_msw
+  FILENAME
+    WINJMULT_UDQ_MSW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    winjmult
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     winjdam_msw
   FILENAME
     WINJDAM_MSW

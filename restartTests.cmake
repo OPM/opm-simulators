@@ -279,6 +279,28 @@ add_test_compare_restarted_simulation(
     --enable-tuning=true
 )
 
+add_test_compare_restarted_simulation(
+  CASENAME
+    winjmult_udq_stdw
+  FILENAME
+    WINJMULT_UDQ_STDW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    1.0
+  REL_TOL
+    6.0e-3
+  RESTART_STEP
+    2
+  DIR
+    winjmult
+  TEST_ARGS
+    --enable-tuning=true
+    --sched-restart=true
+)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
