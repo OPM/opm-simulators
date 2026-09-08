@@ -60,10 +60,10 @@ namespace details {
     }
 
     /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
-    std::vector<ActiveNetworkDescriptor>
+    std::vector<NetworkDescriptor>
     activeNetworks(const Schedule& schedule, const int timeStepIdx)
     {
-        std::vector<ActiveNetworkDescriptor> active_networks;
+        std::vector<NetworkDescriptor> active_networks;
         const auto& sstate = schedule[timeStepIdx];
         if (sstate.network().active()) {
             active_networks.push_back({NetworkDomain::Production, std::cref(sstate.network())});
@@ -78,6 +78,24 @@ namespace details {
         }
         return active_networks;
     }
+
+    /// Helper to get all networks (production, gas injection, water injection) at a given time step,
+    /// whether active or not.
+    std::vector<NetworkDescriptor>
+    networks(const Schedule& schedule, const int timeStepIdx)
+    {
+        std::vector<NetworkDescriptor> nw;
+        const auto& sstate = schedule[timeStepIdx];
+        nw.push_back({NetworkDomain::Production, std::cref(sstate.network())});
+        if (sstate.injectionNetwork.get_ptr(Phase::GAS) != nullptr) {
+            nw.push_back({NetworkDomain::InjectionGas, std::cref(*sstate.injectionNetwork.get_ptr(Phase::GAS))});
+        }
+        if (sstate.injectionNetwork.get_ptr(Phase::WATER) != nullptr) {
+            nw.push_back({NetworkDomain::InjectionWater, std::cref(*sstate.injectionNetwork.get_ptr(Phase::WATER))});
+        }
+        return nw;
+    }
+
 } // namespace details
 
 
@@ -453,24 +471,24 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 initialize(const int report_step)
 {
-    const auto active_networks = details::activeNetworks(well_model_.schedule(), report_step));
-    for (const auto& [network, domain] : active_networks) {
+    const auto networks = details::networks(well_model_.schedule(), report_step);
+    for (const auto& [domain, network] : networks) {
         // Discard pressures for nodes that are absent from the current network.
         // Retained per-well limits are kept because they can outlive the network.
         auto& node_pressures = this->nodePressures(domain);
         auto& last_valid_node_pressures = this->last_valid_domain_node_pressures_[details::domainIndex(domain)];
-        if (!network.active()) {
+        if (!network.get().active()) {
             node_pressures.clear();
             last_valid_node_pressures.clear();
         }
         else {
             const auto is_stale = [&network](const auto& node_pressure)
-                { return !network.has_node(node_pressure.first); };
+                { return !network.get().has_node(node_pressure.first); };
 
             std::erase_if(node_pressures, is_stale);
             std::erase_if(last_valid_node_pressures, is_stale);
         }
-        if (network_desc.domain == NetworkDomain::Production) {
+        if (domain == details::NetworkDomain::Production) {
             this->syncLegacyProductionState_();
         }
     }

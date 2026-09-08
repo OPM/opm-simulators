@@ -62,7 +62,7 @@ namespace details {
         return static_cast<std::size_t>(domain);
     }
 
-    struct ActiveNetworkDescriptor {
+    struct NetworkDescriptor {
         NetworkDomain domain;
         std::reference_wrapper<const Network::ExtNetwork> network;
     };
@@ -90,8 +90,13 @@ namespace details {
     bool anyNetworkActive(const Schedule& schedule, const int timeStepIdx);
 
     /// Helper to get all active networks (production, gas injection, water injection) at a given time step.
-    std::vector<ActiveNetworkDescriptor>
+    std::vector<NetworkDescriptor>
     activeNetworks(const Schedule& schedule, const int timeStepIdx);
+
+    /// Helper to get all networks (production, gas injection, water injection) at a given time step,
+    /// whether active or not.
+    std::vector<NetworkDescriptor>
+    networks(const Schedule& schedule, const int timeStepIdx);
 
 } // namespace details
 
