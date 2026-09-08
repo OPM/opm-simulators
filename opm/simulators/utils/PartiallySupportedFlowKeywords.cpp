@@ -394,8 +394,8 @@ partiallySupported()
             "EQUIL",
             {
                {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(OIP_INIT): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
-               {10,{false, allow_values<int> {}, "EQUIL(COMP_INIT_TYPE): compositional option not used, should be defaulted"}}, // COMP_INIT_TYPE
-               {11,{false, allow_values<int> {}, "EQUIL(COMP_NOT_SET_SAT_PRESSURE): compositional option not used, should be defaulted"}}, // COMP_NOT_SET_SAT_PRESSURE
+               {10,{false, allow_values<int> {1, 3}, "EQUIL(COMP_INIT_TYPE): only the compositional initialization types 1 (continuous hydrocarbon phase) and 3 (liquid composition at the contact) are supported"}}, // COMP_INIT_TYPE
+               {11,{false, allow_values<int> {0, 1}, "EQUIL(COMP_NOT_SET_SAT_PRESSURE): only values 0 and 1 exist"}}, // COMP_NOT_SET_SAT_PRESSURE
             },
          },
          {

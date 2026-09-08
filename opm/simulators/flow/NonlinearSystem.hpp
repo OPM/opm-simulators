@@ -134,6 +134,11 @@ protected:
     virtual void storeSolutionUpdate(const GlobalEqVector&)
     {}
 
+    /// Hook between the Newton update and the recomputation of the intensive
+    /// quantities, e.g. for fetching updated ghost-cell values in parallel.
+    virtual void postSolutionUpdate()
+    {}
+
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
     template <class WellModelType>
