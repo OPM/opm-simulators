@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/RuntimePerforation.hpp>
+#include <opm/simulators/wells/WellIndexFracture.hpp>
 
 #include <ctime>
 #include <map>
@@ -260,6 +261,18 @@ public:
 
     void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
+    /// Record (or update in place) the fracture contribution to the
+    /// connection transmissibility of existing perforations.  Perforations
+    /// referring to cells that are not part of this well's local structure
+    /// are skipped with a (deduplicated) log message.  Storage is allocated
+    /// on first use; wells without fractures carry no extra state.
+    void addFracturePerforations(const std::vector<RuntimePerforation>& perfs);
+
+    /// Fracture contributions per local perforation; empty unless
+    /// addFracturePerforations() has been called.
+    const std::vector<WellIndexFracture>& wellIndexFracture() const
+    { return well_index_fracture_; }
+
 protected:
     bool getAllowCrossFlow() const;
 
@@ -391,6 +404,10 @@ protected:
 
     // well index for each perforation
     std::vector<Scalar> well_index_;
+
+    // fracture contribution to the well index per perforation; empty when no
+    // fracture model has registered contributions (see addFracturePerforations)
+    std::vector<WellIndexFracture> well_index_fracture_;
 
     // number of the perforations for this well on this process
     int number_of_local_perforations_;
