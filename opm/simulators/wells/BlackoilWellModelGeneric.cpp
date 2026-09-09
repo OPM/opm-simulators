@@ -1327,9 +1327,13 @@ wellStatusSnapshot() const
             {
                 entry.openCompletions.push_back(complnum);
             }
+            else if (wtestState.completion_closed_by_con_plus(well.name(), complnum)) {
+                entry.closedByConPlus.push_back(complnum);
+            }
         }
 
         std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
+        std::sort(entry.closedByConPlus.begin(), entry.closedByConPlus.end());
     }
 
     return snapshot;

@@ -832,7 +832,12 @@ closeOffendingCompletion(const int offending_completion,
     }
 
     for (const int completion : completions_to_close) {
-        well_test_state.close_completion(well_.name(), completion, simulation_time);
+        // A later +CON can include a completion already closed by CON.
+        // Preserve the original closure's time and cause in that case.
+        if (!well_test_state.completion_is_closed(well_.name(), completion)) {
+            well_test_state.close_completion(well_.name(), completion, simulation_time,
+                                             close_connections_below);
+        }
         closed_this_event.insert(completion);
     }
 

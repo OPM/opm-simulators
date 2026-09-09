@@ -43,13 +43,18 @@ struct WellStatusSnapshot {
         WellStatus status {WellStatus::SHUT};
 
         /// Completion numbers of the connections that are currently able to
-        /// flow.  Sorted ascending, which is the order in which the
-        /// connections appear along the wellbore.
+        /// flow.  Sorted numerically for set operations; completion numbers
+        /// need not follow the wellbore ordering used by +CON.
         std::vector<int> openCompletions {};
+
+        /// Sorted completion numbers currently closed by an actual +CON
+        /// workover, rather than merely configured with +CON limits.
+        std::vector<int> closedByConPlus {};
 
         bool operator==(const Entry& rhs) const
         {
-            return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions);
+            return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions)
+                && (this->closedByConPlus == rhs.closedByConPlus);
         }
 
         template <class Serializer>
@@ -57,6 +62,7 @@ struct WellStatusSnapshot {
         {
             serializer(status);
             serializer(openCompletions);
+            serializer(closedByConPlus);
         }
     };
 
@@ -72,12 +78,14 @@ struct WellStatusSnapshot {
 /// Accumulates the well and connection status changes that back the WPWE0 to
 /// WPWE7 summary vectors.
 ///
-/// Only the changes the simulator makes on its own are reported.  The
-/// tracker forms the event counters by comparing a snapshot of the dynamic
+/// Only automatic status and connection changes are reported.  The tracker
+/// forms those event counters by comparing a snapshot of the dynamic
 /// status taken at the start of a time step -- after the deck has been
 /// applied for the step -- against the status at the end of the step.  Deck
 /// driven changes (WELOPEN, COMPDAT, WCONPROD, ...) are therefore absorbed
 /// by the snapshot rather than reported, matching the reference simulator.
+/// Injector/producer conversions are tracked separately, including conversions
+/// requested through schedule keywords or ACTIONX.
 ///
 /// The counters cover a single time step -- they are discarded when the next
 /// one starts -- so a summary written after a step reports exactly the events
@@ -97,10 +105,11 @@ public:
     /// step, so that the deck driven changes are absorbed by the reference
     /// rather than reported as events.
     ///
-    /// \param[in] schedule Simulation schedule.
-    /// \param[in] reportStep Zero-based index of the current report step.
     /// Injector/producer switches (WPWE5, WPWE6) are checked on every step,
     /// including ACTIONX changes within a report step.
+    ///
+    /// \param[in] schedule Simulation schedule.
+    /// \param[in] reportStep Zero-based index of the current report step.
     /// \param[in] snapshot Dynamic status at the start of the time step.
     void beginTimeStep(const Schedule& schedule,
                        int reportStep,
@@ -120,10 +129,8 @@ public:
     /// Record the changes between the reference status and \p current, and
     /// adopt \p current as the new reference.
     ///
-    /// \param[in] schedule Simulation schedule.
-    /// \param[in] reportStep Zero-based index of the current report step.
     /// \param[in] current Dynamic status at the end of a successful time step.
-    void accumulate(const Schedule& schedule, int reportStep, WellStatusSnapshot current);
+    void accumulate(WellStatusSnapshot current);
 
     /// Event counters accumulated for \p wellName in the current time step.
     ///

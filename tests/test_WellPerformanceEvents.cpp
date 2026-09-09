@@ -163,7 +163,7 @@ BOOST_FIXTURE_TEST_CASE(NoChange, Setup)
     auto tracker = Opm::WellPerformanceEvents{};
 
     tracker.beginTimeStep(sched, 0, allOpen());
-    tracker.accumulate(sched, 0, allOpen());
+    tracker.accumulate(allOpen());
 
     for (const auto* well : { "P1", "P2", "P3", "I1" }) {
         BOOST_CHECK(noEvents(tracker.events(well)));
@@ -180,7 +180,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
 
     auto now = allOpen();
     now.wells["P1"].openCompletions = {1, 2, 3};
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     {
         const auto& ev = tracker.events("P1");
@@ -192,7 +192,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
 
     // Events accumulate within the time step.
     now.wells["P1"].openCompletions = {1, 2};
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
     BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
@@ -213,7 +213,7 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
 
     auto now = before;
     now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
     BOOST_CHECK_EQUAL(ev.connsClosed, 1);
@@ -230,7 +230,8 @@ BOOST_FIXTURE_TEST_CASE(ClosedToBottom_PlusCON, Setup)
 
     auto now = allOpen();
     now.wells["P2"].openCompletions = {1, 2};
-    tracker.accumulate(sched, 0, now);
+    now.wells["P2"].closedByConPlus = {3, 4};
+    tracker.accumulate(now);
 
     const auto& ev = tracker.events("P2");
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
@@ -246,11 +247,51 @@ BOOST_FIXTURE_TEST_CASE(ClosedToBottom_WECON, Setup)
 
     auto now = allOpen();
     now.wells["P3"].openCompletions = {1, 2, 3};
-    tracker.accumulate(sched, 0, now);
+    now.wells["P3"].closedByConPlus = {4};
+    tracker.accumulate(now);
 
     const auto& ev = tracker.events("P3");
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
     BOOST_CHECK_EQUAL(ev.connsClosed, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(MixedCONAndPlusCON, Setup)
+{
+    auto tracker = Opm::WellPerformanceEvents{};
+    tracker.beginTimeStep(sched, 0, allOpen());
+    auto now = allOpen();
+    now.wells["P2"].openCompletions = {1, 2};
+    // Completion 3 closed by CON and 4 by +CON in the same update.
+    now.wells["P2"].closedByConPlus = {4};
+    tracker.accumulate(now);
+    BOOST_CHECK_EQUAL(tracker.events("P2").connsClosed, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P2").closedToBottom, 1);
+}
+
+BOOST_FIXTURE_TEST_CASE(ActualWorkoverOverridesConfiguredLimits, Setup)
+{
+    auto tracker = Opm::WellPerformanceEvents{};
+    tracker.beginTimeStep(sched, 0, allOpen());
+    auto now = allOpen();
+    // An inactive CECON +CON setting must not override an actual CON closure.
+    now.wells["P2"].openCompletions = {1, 2, 3};
+    // Conversely, WECON +CON can close connections with CECON CON configured.
+    now.wells["P1"].openCompletions = {1, 2};
+    now.wells["P1"].closedByConPlus = {3, 4};
+    tracker.accumulate(now);
+    BOOST_CHECK_EQUAL(tracker.events("P2").connsClosed, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P2").closedToBottom, 0);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 0);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
+
+    tracker.commitTimeStep(sched, 0);
+    tracker.beginTimeStep(sched, 0, now);
+    now.wells["P1"].openCompletions = {1};
+    tracker.accumulate(now);
+    // Previously recorded +CON closures are not new events, and must not
+    // affect the count for this timestep's CON closure.
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
 }
 
 BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)
@@ -261,7 +302,7 @@ BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)
     auto now = allOpen();
     now.wells["P1"].status = Opm::WellStatus::SHUT;   // e.g., a WELL workover
     now.wells["P2"].status = Opm::WellStatus::STOP;
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     BOOST_CHECK_EQUAL(tracker.events("P1").shut, 1);
     BOOST_CHECK_EQUAL(tracker.events("P1").stopped, 0);
@@ -273,7 +314,7 @@ BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)
 
     // Staying shut is not a new event.
     tracker.beginTimeStep(sched, 0, now);
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
     BOOST_CHECK(noEvents(tracker.events("P1")));
     BOOST_CHECK(noEvents(tracker.events("P2")));
 }
@@ -291,7 +332,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsOpened, Setup)
     auto now = allOpen();
     now.wells["P2"].status = Opm::WellStatus::SHUT;
     now.wells["P3"].status = Opm::WellStatus::STOP;
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 2);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 0);
@@ -311,7 +352,7 @@ BOOST_FIXTURE_TEST_CASE(SynchroniseAbsorbsDeckChanges, Setup)
     now.wells["P2"].status = Opm::WellStatus::SHUT;
 
     tracker.synchronise(now);
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
 
     BOOST_CHECK(noEvents(tracker.events("P1")));
     BOOST_CHECK(noEvents(tracker.events("P2")));
@@ -324,7 +365,7 @@ BOOST_FIXTURE_TEST_CASE(BeginTimeStepResetsEvents, Setup)
 
     auto now = allOpen();
     now.wells["P1"].openCompletions = {1, 2, 3};
-    tracker.accumulate(sched, 0, now);
+    tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
 
     tracker.beginTimeStep(sched, 0, now);
@@ -343,7 +384,7 @@ BOOST_FIXTURE_TEST_CASE(UnknownWellSkipped, Setup)
 
     auto now = allOpen();
     now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
-    BOOST_CHECK_NO_THROW(tracker.accumulate(sched, 0, now));
+    BOOST_CHECK_NO_THROW(tracker.accumulate(now));
     BOOST_CHECK(noEvents(tracker.events("P1")));
 }
 
