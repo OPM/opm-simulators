@@ -135,6 +135,7 @@ TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
 namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::TestTypeTag>; }
+TEST_FOR_TYPE(WellPerformanceEvents)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObjectHardcoded)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
@@ -375,6 +376,7 @@ public:
         const auto controls = {Group::InjectionCMode::NONE, Group::InjectionCMode::RATE, Group::InjectionCMode::RATE };
         switched_inj_groups_ = {{"test4", {controls, {}, controls} }};
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
+        well_perf_events_ = WellPerformanceEvents::serializationTestObject();
     }
 
     void calcResvCoeff(const int, const int, const std::vector<double>&, std::vector<double>&) const override

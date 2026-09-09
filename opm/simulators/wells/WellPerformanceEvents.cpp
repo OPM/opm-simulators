@@ -141,7 +141,10 @@ WellPerformanceEvents::accumulate(const Schedule& schedule,
             continue;
         }
 
-        events.connsOpened += static_cast<int>(opened.size());
+        // WPWE1 only counts while the well is able to flow.
+        if ((now.status != WellStatus::SHUT) && (now.status != WellStatus::STOP)) {
+            events.connsOpened += static_cast<int>(opened.size());
+        }
 
         if (closed.empty()) {
             continue;
@@ -174,6 +177,20 @@ WellPerformanceEvents::accumulate(const Schedule& schedule,
     }
 
     this->previous_ = std::move(current);
+}
+
+WellPerformanceEvents
+WellPerformanceEvents::serializationTestObject()
+{
+    auto result = WellPerformanceEvents{};
+
+    result.events_["W1"] = data::WellEvents::serializationTestObject();
+    result.previous_.wells["W1"] = WellStatusSnapshot::Entry { WellStatus::OPEN, {1, 2, 3} };
+    result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {} };
+    result.injector_["W1"] = false;
+    result.injector_["W2"] = true;
+
+    return result;
 }
 
 const data::WellEvents&

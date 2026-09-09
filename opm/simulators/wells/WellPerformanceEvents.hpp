@@ -126,6 +126,8 @@ public:
     /// Returns a zeroed record for a well that has seen no events.
     const data::WellEvents& events(const std::string& wellName) const;
 
+    static WellPerformanceEvents serializationTestObject();
+
     bool operator==(const WellPerformanceEvents& rhs) const
     {
         return (this->events_ == rhs.events_) && (this->previous_.wells == rhs.previous_.wells)
