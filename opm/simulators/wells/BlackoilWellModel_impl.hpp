@@ -1004,9 +1004,7 @@ namespace Opm {
                 // something like wellTestState().hasWell(well_name)?
                 if (this->wellTestState().well_is_closed(well_name))
                 {
-                    if (well_ecl.getAutomaticShutIn() ||
-                        !well_ecl.getAllowCrossFlow() ||
-                        this->allConnectionsClosed(well_ecl))
+                    if (this->closedWellStatus(well_ecl) == WellStatus::SHUT)
                     {
                         this->wellState().shutWell(w);
                         this->well_close_times_.erase(well_name);

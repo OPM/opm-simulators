@@ -646,7 +646,9 @@ protected:
 
     BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
 
-    bool allConnectionsClosed(const Well& well_ecl) const;
+    /// Effective status of a well closed in WellTestState.  Shared by
+    /// timestep setup and the WPWE snapshot taken before the next setup.
+    WellStatus closedWellStatus(const Well& well_ecl) const;
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);

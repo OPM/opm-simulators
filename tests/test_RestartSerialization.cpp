@@ -31,6 +31,9 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
@@ -342,6 +345,8 @@ using PhaseUsage = Opm::PhaseUsageInfo<IndexTraits>;
 class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric<double, IndexTraits>
 {
 public:
+    using BlackoilWellModelGeneric<double, IndexTraits>::closedWellStatus;
+
     BlackoilWellModelGenericTest(Schedule& schedule,
                                  BlackoilWellModelGasLiftGeneric<double, IndexTraits>& gaslift,
                                  const SummaryState& summaryState,
@@ -449,6 +454,62 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for BlackoilWellModelGeneric");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized BlackoilWellModelGeneric differ");
+}
+
+BOOST_AUTO_TEST_CASE(ClosedWellStatusForWPWE)
+{
+    // Reuse the well-model fixture to check the policy used both for actual
+    // shut-in and for the WPWE snapshot before the next timestep is set up.
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 1 1 2 /
+OIL
+GRID
+DX
+ 2*100 /
+DY
+ 2*100 /
+DZ
+ 2*10 /
+TOPS
+ 2*1000 /
+PORO
+ 2*0.3 /
+PERMX
+ 2*100 /
+PERMY
+ 2*100 /
+PERMZ
+ 2*10 /
+SCHEDULE
+WELSPECS
+ 'W1' 'G1' 1 1 1* 'OIL' 2* 'STOP' 'YES' /
+/
+COMPDAT
+ 'W1' 1 1 1 2 'OPEN' 1* 1.0 0.2 /
+/
+)");
+    Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    Opm::SummaryState summary;
+    Opm::PhaseUsage phaseUsage;
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+    auto well = schedule.getWell("W1", 0);
+    auto& state = model.wellTestState();
+    state.close_well("W1", Opm::WellTestConfig::Reason::ECONOMIC, 1.0);
+
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::STOP);
+    state.close_completion("W1", 1, 1.0);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::STOP);
+    state.close_completion("W1", 2, 1.0);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
+
+    state.open_completions("W1");
+    well.updateCrossFlow(false);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>

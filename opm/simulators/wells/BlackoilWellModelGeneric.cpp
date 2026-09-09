@@ -1313,9 +1313,7 @@ wellStatusSnapshot() const
         if ((entry.status == WellStatus::OPEN) &&
             wtestState.well_is_closed(well.name()))
         {
-            entry.status = well.getAutomaticShutIn()
-                ? WellStatus::SHUT
-                : WellStatus::STOP;
+            entry.status = this->closedWellStatus(well);
         }
 
         // Connection state is tracked independently of the well status: a
@@ -2238,16 +2236,18 @@ operator==(const BlackoilWellModelGeneric& rhs) const
 
 
 template<typename Scalar, typename IndexTraits>
-bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
-allConnectionsClosed(const Well& well_ecl) const
+WellStatus BlackoilWellModelGeneric<Scalar, IndexTraits>::
+closedWellStatus(const Well& well_ecl) const
 {
-    return std::ranges::all_of(well_ecl.getConnections(),
-                               [this, &well_name = well_ecl.name()](const auto& connection)
-                               {
-                                   return connection.state() != Connection::State::OPEN
-                                       || this->wellTestState().completion_is_closed(well_name,
-                                                                                     connection.complnum());
-                               });
+    const bool allConnectionsClosed = std::ranges::all_of(
+        well_ecl.getConnections(),
+        [this, &well_name = well_ecl.name()](const auto& connection)
+        {
+            return connection.state() != Connection::State::OPEN
+                || this->wellTestState().completion_is_closed(well_name, connection.complnum());
+        });
+    return (well_ecl.getAutomaticShutIn() || !well_ecl.getAllowCrossFlow() || allConnectionsClosed)
+        ? WellStatus::SHUT : WellStatus::STOP;
 }
 
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;
