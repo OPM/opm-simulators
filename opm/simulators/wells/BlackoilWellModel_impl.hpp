@@ -751,6 +751,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         this->rescoupHelper_.rescoupSyncSummaryData();
 #endif
+        this->well_perf_events_.commitTimeStep(this->schedule(), reportStepIdx);
         this->commitWGState();
 
         //reporting output temperatures

@@ -108,6 +108,12 @@ public:
                        bool reportStepStarts,
                        WellStatusSnapshot snapshot);
 
+    /// Accept the injector/producer types after a successful time step.
+    /// Call before applying any ACTIONX changes for the next time step.
+    /// Failed attempts must not advance this baseline: beginTimeStep() will
+    /// then report the same conversion again when the step is retried.
+    void commitTimeStep(const Schedule& schedule, int reportStep);
+
     /// Adopt \p snapshot as the reference status without recording events.
     ///
     /// Used to step past the deck driven changes of a report step.
@@ -149,7 +155,7 @@ private:
     /// Status the wells had at the start of the current time step.
     WellStatusSnapshot previous_ {};
 
-    /// Injector/producer flag at the previous report step, by well name.
+    /// Injector/producer flag at the last accepted time step, by well name.
     std::map<std::string, bool> injector_ {};
 };
 

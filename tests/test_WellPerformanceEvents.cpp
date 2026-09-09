@@ -370,11 +370,31 @@ BOOST_FIXTURE_TEST_CASE(TypeSwitch, Setup)
     BOOST_CHECK(noEvents(tracker.events("P1")));
     BOOST_CHECK(noEvents(tracker.events("P2")));
 
+    tracker.commitTimeStep(sched, 1);
+
     // The switch is not repeated on the next time step of the same report
     // step, nor on a later report step without a change.
     tracker.beginTimeStep(sched, 1, false, allOpen());
     BOOST_CHECK(noEvents(tracker.events("I1")));
 
+    tracker.beginTimeStep(sched, 2, true, allOpen());
+    BOOST_CHECK(noEvents(tracker.events("I1")));
+    BOOST_CHECK(noEvents(tracker.events("P3")));
+}
+
+BOOST_FIXTURE_TEST_CASE(TypeSwitchSurvivesRetry, Setup)
+{
+    auto tracker = Opm::WellPerformanceEvents{};
+    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.commitTimeStep(sched, 0);
+
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        tracker.beginTimeStep(sched, 1, true, allOpen());
+        BOOST_CHECK_EQUAL(tracker.events("I1").injectorToProducer, 1);
+        BOOST_CHECK_EQUAL(tracker.events("P3").producerToInjector, 1);
+    }
+
+    tracker.commitTimeStep(sched, 1);
     tracker.beginTimeStep(sched, 2, true, allOpen());
     BOOST_CHECK(noEvents(tracker.events("I1")));
     BOOST_CHECK(noEvents(tracker.events("P3")));

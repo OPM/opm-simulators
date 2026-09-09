@@ -87,8 +87,14 @@ WellPerformanceEvents::beginTimeStep(const Schedule& schedule,
 
         auto& events = this->events_[wellName];
         (isInjector ? events.producerToInjector : events.injectorToProducer) = 1;
+    }
+}
 
-        pos->second = isInjector;
+void
+WellPerformanceEvents::commitTimeStep(const Schedule& schedule, const int reportStep)
+{
+    for (const auto& wellName : schedule.wellNames(reportStep)) {
+        this->injector_.insert_or_assign(wellName, schedule.getWell(wellName, reportStep).isInjector());
     }
 }
 
