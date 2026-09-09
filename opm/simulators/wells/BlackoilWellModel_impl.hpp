@@ -385,7 +385,6 @@ namespace Opm {
         const double simulationTime = simulator_.time();
 
         this->well_perf_events_.beginTimeStep(this->schedule(), reportStepIdx,
-                                              this->report_step_starts_,
                                               this->wellStatusSnapshot());
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();

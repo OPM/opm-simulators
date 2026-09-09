@@ -99,13 +99,11 @@ public:
     ///
     /// \param[in] schedule Simulation schedule.
     /// \param[in] reportStep Zero-based index of the current report step.
-    /// \param[in] reportStepStarts Whether this is the first time step of
-    /// \p reportStep.  The injector/producer switches (WPWE5, WPWE6) a
-    /// report step brings are recorded on its first step.
+    /// Injector/producer switches (WPWE5, WPWE6) are checked on every step,
+    /// including ACTIONX changes within a report step.
     /// \param[in] snapshot Dynamic status at the start of the time step.
     void beginTimeStep(const Schedule& schedule,
                        int reportStep,
-                       bool reportStepStarts,
                        WellStatusSnapshot snapshot);
 
     /// Accept the injector/producer types after a successful time step.

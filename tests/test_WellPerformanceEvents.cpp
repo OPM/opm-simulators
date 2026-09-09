@@ -32,12 +32,15 @@
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Action/Actions.hpp>
+#include <opm/input/eclipse/Schedule/Action/ActionX.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/output/data/Wells.hpp>
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -159,7 +162,7 @@ BOOST_FIXTURE_TEST_CASE(NoChange, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
 
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
     tracker.accumulate(sched, 0, allOpen());
 
     for (const auto* well : { "P1", "P2", "P3", "I1" }) {
@@ -173,7 +176,7 @@ BOOST_FIXTURE_TEST_CASE(NoChange, Setup)
 BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P1"].openCompletions = {1, 2, 3};
@@ -206,7 +209,7 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
 
     auto before = allOpen();
     before.wells["P1"].openCompletions = {1};
-    tracker.beginTimeStep(sched, 0, true, before);
+    tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
     now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
@@ -223,7 +226,7 @@ BOOST_FIXTURE_TEST_CASE(ClosedToBottom_PlusCON, Setup)
 {
     // A +CON workover is reported through WPWE3 alone.
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P2"].openCompletions = {1, 2};
@@ -239,7 +242,7 @@ BOOST_FIXTURE_TEST_CASE(ClosedToBottom_WECON, Setup)
 {
     // No CECON on P3: the well level WECON procedure (+CON) applies.
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P3"].openCompletions = {1, 2, 3};
@@ -253,7 +256,7 @@ BOOST_FIXTURE_TEST_CASE(ClosedToBottom_WECON, Setup)
 BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P1"].status = Opm::WellStatus::SHUT;   // e.g., a WELL workover
@@ -269,7 +272,7 @@ BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)
     BOOST_CHECK_EQUAL(tracker.events("P2").shut, 0);
 
     // Staying shut is not a new event.
-    tracker.beginTimeStep(sched, 0, false, now);
+    tracker.beginTimeStep(sched, 0, now);
     tracker.accumulate(sched, 0, now);
     BOOST_CHECK(noEvents(tracker.events("P1")));
     BOOST_CHECK(noEvents(tracker.events("P2")));
@@ -283,7 +286,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsOpened, Setup)
     before.wells["P1"].openCompletions = {1, 2};
     before.wells["P2"] = Entry { Opm::WellStatus::SHUT, {} };
     before.wells["P3"] = Entry { Opm::WellStatus::STOP, {} };
-    tracker.beginTimeStep(sched, 0, true, before);
+    tracker.beginTimeStep(sched, 0, before);
 
     auto now = allOpen();
     now.wells["P2"].status = Opm::WellStatus::SHUT;
@@ -301,7 +304,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsOpened, Setup)
 BOOST_FIXTURE_TEST_CASE(SynchroniseAbsorbsDeckChanges, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P1"].openCompletions = {1, 2};
@@ -317,14 +320,14 @@ BOOST_FIXTURE_TEST_CASE(SynchroniseAbsorbsDeckChanges, Setup)
 BOOST_FIXTURE_TEST_CASE(BeginTimeStepResetsEvents, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
     now.wells["P1"].openCompletions = {1, 2, 3};
     tracker.accumulate(sched, 0, now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
 
-    tracker.beginTimeStep(sched, 0, false, now);
+    tracker.beginTimeStep(sched, 0, now);
     BOOST_CHECK(noEvents(tracker.events("P1")));
 }
 
@@ -336,7 +339,7 @@ BOOST_FIXTURE_TEST_CASE(UnknownWellSkipped, Setup)
 
     auto before = allOpen();
     before.wells.erase("P1");
-    tracker.beginTimeStep(sched, 0, true, before);
+    tracker.beginTimeStep(sched, 0, before);
 
     auto now = allOpen();
     now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
@@ -349,17 +352,12 @@ BOOST_FIXTURE_TEST_CASE(TypeSwitch, Setup)
     auto tracker = Opm::WellPerformanceEvents{};
 
     // First sight of the wells: nothing to compare against.
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
     for (const auto* well : { "P1", "P2", "P3", "I1" }) {
         BOOST_CHECK(noEvents(tracker.events(well)));
     }
 
-    // Switches are recorded on the first time step of the report step only.
-    tracker.beginTimeStep(sched, 1, false, allOpen());
-    BOOST_CHECK(noEvents(tracker.events("I1")));
-    BOOST_CHECK(noEvents(tracker.events("P3")));
-
-    tracker.beginTimeStep(sched, 1, true, allOpen());
+    tracker.beginTimeStep(sched, 1, allOpen());
 
     BOOST_CHECK_EQUAL(tracker.events("I1").injectorToProducer, 1);
     BOOST_CHECK_EQUAL(tracker.events("I1").producerToInjector, 0);
@@ -374,10 +372,10 @@ BOOST_FIXTURE_TEST_CASE(TypeSwitch, Setup)
 
     // The switch is not repeated on the next time step of the same report
     // step, nor on a later report step without a change.
-    tracker.beginTimeStep(sched, 1, false, allOpen());
+    tracker.beginTimeStep(sched, 1, allOpen());
     BOOST_CHECK(noEvents(tracker.events("I1")));
 
-    tracker.beginTimeStep(sched, 2, true, allOpen());
+    tracker.beginTimeStep(sched, 2, allOpen());
     BOOST_CHECK(noEvents(tracker.events("I1")));
     BOOST_CHECK(noEvents(tracker.events("P3")));
 }
@@ -385,19 +383,62 @@ BOOST_FIXTURE_TEST_CASE(TypeSwitch, Setup)
 BOOST_FIXTURE_TEST_CASE(TypeSwitchSurvivesRetry, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, true, allOpen());
+    tracker.beginTimeStep(sched, 0, allOpen());
     tracker.commitTimeStep(sched, 0);
 
     for (int attempt = 0; attempt < 3; ++attempt) {
-        tracker.beginTimeStep(sched, 1, true, allOpen());
+        tracker.beginTimeStep(sched, 1, allOpen());
         BOOST_CHECK_EQUAL(tracker.events("I1").injectorToProducer, 1);
         BOOST_CHECK_EQUAL(tracker.events("P3").producerToInjector, 1);
     }
 
     tracker.commitTimeStep(sched, 1);
-    tracker.beginTimeStep(sched, 2, true, allOpen());
+    tracker.beginTimeStep(sched, 2, allOpen());
     BOOST_CHECK(noEvents(tracker.events("I1")));
     BOOST_CHECK(noEvents(tracker.events("P3")));
+}
+
+BOOST_AUTO_TEST_CASE(ActionTypeSwitchWithinReportStep)
+{
+    auto text = deckString();
+    text.insert(text.find("DATES"), R"(
+ACTIONX
+ 'CONVERT' 1 /
+ TIME > 1 /
+/
+WCONINJE
+ 'P1' 'WATER' 'OPEN' 'RATE' 100.0 1* 400.0 /
+/
+WCONPROD
+ 'I1' 'OPEN' 'ORAT' 100.0 4* 50.0 /
+/
+ENDACTIO
+)");
+    const auto deck = Opm::Parser{}.parseString(text);
+    const Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    auto tracker = Opm::WellPerformanceEvents{};
+    tracker.beginTimeStep(schedule, 0, allOpen());
+    tracker.commitTimeStep(schedule, 0);
+
+    const auto action = schedule[0].actions.get()["CONVERT"];
+    schedule.applyAction(0, action, Opm::Action::Result{true}.matches(),
+                         std::unordered_map<std::string, double>{}, true);
+    BOOST_REQUIRE(schedule.getWell("P1", 0).isInjector());
+    BOOST_REQUIRE(schedule.getWell("I1", 0).isProducer());
+
+    // Both the first attempt and its retry must see the ACTIONX conversion,
+    // without waiting for a new report interval.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        tracker.beginTimeStep(schedule, 0, allOpen());
+        BOOST_CHECK_EQUAL(tracker.events("P1").producerToInjector, 1);
+        BOOST_CHECK_EQUAL(tracker.events("I1").injectorToProducer, 1);
+    }
+
+    tracker.commitTimeStep(schedule, 0);
+    tracker.beginTimeStep(schedule, 0, allOpen());
+    BOOST_CHECK(noEvents(tracker.events("P1")));
+    BOOST_CHECK(noEvents(tracker.events("I1")));
 }
 
 BOOST_AUTO_TEST_CASE(SerializationTestObject)

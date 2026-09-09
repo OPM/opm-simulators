@@ -67,15 +67,10 @@ namespace Opm
 void
 WellPerformanceEvents::beginTimeStep(const Schedule& schedule,
                                      const int reportStep,
-                                     const bool reportStepStarts,
                                      WellStatusSnapshot snapshot)
 {
     this->events_.clear();
     this->previous_ = std::move(snapshot);
-
-    if (!reportStepStarts) {
-        return;
-    }
 
     for (const auto& wellName : schedule.wellNames(reportStep)) {
         const auto isInjector = schedule.getWell(wellName, reportStep).isInjector();
