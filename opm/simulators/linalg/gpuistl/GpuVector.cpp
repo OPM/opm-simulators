@@ -63,8 +63,6 @@ template <class T>
 GpuVector<T>&
 GpuVector<T>::operator=(const GpuVector<T>& other)
 {
-    //TODO-H: Call device-to-device copy
-
     // Only copy data if both vectors have elements and same size
     if (m_buffer.size() > 0 && other.m_buffer.size() > 0) {
         assertSameSize(other);
@@ -108,6 +106,10 @@ template <typename T>
 void
 GpuVector<T>::resize(size_t new_size)
 {
+    if (new_size == 0) {
+        m_buffer = GpuBuffer<T>{};
+        return;
+    }
     m_buffer.resize(checkedSize(new_size));
 }
 

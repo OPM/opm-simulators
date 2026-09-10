@@ -437,7 +437,7 @@ public:
     /**
      * @brief resize changes the size of the vector, preserving existing data if new size is larger
      * @param new_size the new number of elements
-     * @note \p new_size must be at least 1 and within the limits of int due to restrictions of CuBlas
+     * @note \p new_size must be within the limits of int due to restrictions of CuBlas
      * @note If new_size is larger, existing data is preserved and new elements are uninitialized
      * @note If new_size is smaller, data is truncated
      * @note If new_size equals current size, no operation is performed
