@@ -42,19 +42,29 @@ struct WellStatusSnapshot {
     struct Entry {
         WellStatus status {WellStatus::SHUT};
 
-        /// Completion numbers of the connections that are currently able to
-        /// flow.  Sorted numerically for set operations; completion numbers
-        /// need not follow the wellbore ordering used by +CON.
+        /// Completion number of every connection that is currently able to
+        /// flow, one entry per connection and sorted numerically for set
+        /// operations.  Completion numbers need not follow the wellbore
+        /// ordering used by +CON, and COMPLUMP may map several connections
+        /// onto one completion, so this is a multiset: the repeats are what
+        /// make WPWE1 and WPWE2 count connections rather than completions.
+        /// Do not deduplicate.
         std::vector<int> openCompletions {};
 
         /// Sorted completion numbers currently closed by an actual +CON
         /// workover, rather than merely configured with +CON limits.
         std::vector<int> closedByConPlus {};
 
+        /// True when no connection is able to flow and every one of them was
+        /// closed by a 'CON' workover -- the manual's first route to WPWE3.
+        /// Derived here because only the snapshot sees every connection.
+        bool closedToBottomByCon {false};
+
         bool operator==(const Entry& rhs) const
         {
             return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions)
-                && (this->closedByConPlus == rhs.closedByConPlus);
+                && (this->closedByConPlus == rhs.closedByConPlus)
+                && (this->closedToBottomByCon == rhs.closedToBottomByCon);
         }
 
         template <class Serializer>
@@ -63,10 +73,16 @@ struct WellStatusSnapshot {
             serializer(status);
             serializer(openCompletions);
             serializer(closedByConPlus);
+            serializer(closedToBottomByCon);
         }
     };
 
     std::map<std::string, Entry> wells {};
+
+    bool operator==(const WellStatusSnapshot& rhs) const
+    {
+        return this->wells == rhs.wells;
+    }
 
     template <class Serializer>
     void serializeOp(Serializer& serializer)
@@ -83,15 +99,16 @@ struct WellStatusSnapshot {
 /// status taken at the start of a time step -- after the deck has been
 /// applied for the step -- against the status at the end of the step.  Deck
 /// driven changes (WELOPEN, COMPDAT, WCONPROD, ...) are therefore absorbed
-/// by the snapshot rather than reported, matching the reference simulator.
-/// Injector/producer conversions are tracked separately, including conversions
-/// requested through schedule keywords or ACTIONX.
+/// by the snapshot rather than reported.  Injector/producer conversions are
+/// the exception, and are tracked whether they come from a schedule keyword
+/// or from ACTIONX, since they have no other source.  The manual states no
+/// such distinction; it has not been checked against a reference run.
 ///
 /// The counters cover a single time step -- they are discarded when the next
 /// one starts -- so a summary written after a step reports exactly the events
 /// of that step, which is what the WPWE indicators denote.  A well test that
-/// re-opens a well and immediately closes some of its connections again is a
-/// single decision, and is reported as the net change it produces.
+/// re-opens a well and the limit check that closes it again in the same step
+/// are both reported, rather than netted against each other.
 ///
 /// WPWE0, the drilled indicator, is always zero: it reports the wells a
 /// drilling queue brings on stream, and QDRILL is not supported by Flow.
@@ -141,7 +158,7 @@ public:
 
     bool operator==(const WellPerformanceEvents& rhs) const
     {
-        return (this->events_ == rhs.events_) && (this->previous_.wells == rhs.previous_.wells)
+        return (this->events_ == rhs.events_) && (this->previous_ == rhs.previous_)
             && (this->injector_ == rhs.injector_);
     }
 

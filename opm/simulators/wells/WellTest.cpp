@@ -831,12 +831,17 @@ closeOffendingCompletion(const int offending_completion,
         }
     }
 
+    // Both call sites reach here only for a CON or a +CON workover.
+    const auto workover = close_connections_below
+        ? WellTestState::EconWorkover::CONP
+        : WellTestState::EconWorkover::CON;
+
     for (const int completion : completions_to_close) {
         // A later +CON can include a completion already closed by CON.
         // Preserve the original closure's time and cause in that case.
         if (!well_test_state.completion_is_closed(well_.name(), completion)) {
             well_test_state.close_completion(well_.name(), completion, simulation_time,
-                                             close_connections_below);
+                                             workover);
         }
         closed_this_event.insert(completion);
     }

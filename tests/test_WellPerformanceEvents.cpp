@@ -212,7 +212,7 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
+    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, true };
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -220,6 +220,27 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
     BOOST_CHECK_EQUAL(ev.shut, 1);
     BOOST_CHECK_EQUAL(ev.stopped, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(LastConnectionClosedWithoutWorkover, Setup)
+{
+    // WPWE3's first route is restricted to CON workovers.  A well left with
+    // no flowing connection by anything else -- the deck, a whole well
+    // workover, a well test -- is not reported as closed to the bottom.
+    auto tracker = Opm::WellPerformanceEvents{};
+
+    auto before = allOpen();
+    before.wells["P1"].openCompletions = {1};
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, false };
+    tracker.accumulate(now);
+
+    const auto& ev = tracker.events("P1");
+    BOOST_CHECK_EQUAL(ev.connsClosed, 1);
+    BOOST_CHECK_EQUAL(ev.closedToBottom, 0);
+    BOOST_CHECK_EQUAL(ev.shut, 1);
 }
 
 BOOST_FIXTURE_TEST_CASE(ClosedToBottom_PlusCON, Setup)
@@ -266,6 +287,28 @@ BOOST_FIXTURE_TEST_CASE(MixedCONAndPlusCON, Setup)
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P2").connsClosed, 1);
     BOOST_CHECK_EQUAL(tracker.events("P2").closedToBottom, 1);
+}
+
+BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
+{
+    // COMPLUMP maps several connections onto one completion number, so a
+    // snapshot carries that number once per connection.  WPWE1 and WPWE2 count
+    // connections, so closing or opening a lumped completion must count every
+    // connection it carries rather than the completion itself.
+    auto tracker = Opm::WellPerformanceEvents{};
+
+    auto before = allOpen();
+    before.wells["P1"].openCompletions = {1, 1, 2, 2};
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    now.wells["P1"].openCompletions = {1, 1};
+    tracker.accumulate(now);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
+
+    tracker.beginTimeStep(sched, 0, now);
+    tracker.accumulate(before);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 2);
 }
 
 BOOST_FIXTURE_TEST_CASE(ActualWorkoverOverridesConfiguredLimits, Setup)

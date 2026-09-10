@@ -123,15 +123,13 @@ WellPerformanceEvents::accumulate(WellStatusSnapshot current)
                 return std::binary_search(now.closedByConPlus.begin(),
                                           now.closedByConPlus.end(), complnum);
             });
-        if (numConPlus > 0) {
-            events.closedToBottom = 1;
-        }
 
         events.connsClosed += static_cast<int>(closed.size()) - static_cast<int>(numConPlus);
 
-        // Closing the last connections that were able to flow leaves the well
-        // shut off at the bottom just as a '+CON' workover does.
-        if (now.openCompletions.empty()) {
+        // WPWE3 has two routes: a '+CON' workover, which closes to the bottom
+        // by construction, or a well left with no flowing connection because
+        // 'CON' workovers closed all of them.
+        if ((numConPlus > 0) || now.closedToBottomByCon) {
             events.closedToBottom = 1;
         }
     }
@@ -145,8 +143,8 @@ WellPerformanceEvents::serializationTestObject()
     auto result = WellPerformanceEvents{};
 
     result.events_["W1"] = data::WellEvents::serializationTestObject();
-    result.previous_.wells["W1"] = WellStatusSnapshot::Entry { WellStatus::OPEN, {1, 2, 3}, {4} };
-    result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {} };
+    result.previous_.wells["W1"] = WellStatusSnapshot::Entry { WellStatus::OPEN, {1, 2, 3}, {4}, false };
+    result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {}, {}, true };
     result.injector_["W1"] = false;
     result.injector_["W2"] = true;
 
