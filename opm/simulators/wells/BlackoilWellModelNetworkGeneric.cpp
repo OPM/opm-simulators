@@ -259,6 +259,11 @@ updatePressures(const int reportStepIdx,
                 const Scalar upper_update_bound)
 {
     OPM_TIMEFUNCTION();
+    for (auto& invalid_nodes : this->domain_invalid_nodes_) {
+        invalid_nodes.clear();
+    }
+    this->invalid_nodes_report_step_ = -1;
+
     if (!details::anyNetworkActive(well_model_.schedule(), reportStepIdx)) {
         return 0.0;
     }
@@ -367,7 +372,6 @@ updatePressures(const int reportStepIdx,
                 }
                 // The well belongs to a group that has a network pressure constraint;
                 // set the dynamic THP constraint of the well accordingly.
-                this->imposeWellThpLimit(*well, it->second);
                 if (well->isProducer()) {
                     // For producers the leaf-node pressure is the group wellhead THP;
                     // apply it directly as a dynamic THP constraint.
@@ -476,22 +480,33 @@ initialize(const int report_step)
         // Discard pressures for nodes that are absent from the current network.
         // Retained per-well limits are kept because they can outlive the network.
         auto& node_pressures = this->nodePressures(domain);
+        auto& branch_data = this->branchData(domain);
+        auto& invalid_nodes = this->invalidNodes(domain);
         auto& last_valid_node_pressures = this->last_valid_domain_node_pressures_[details::domainIndex(domain)];
+        auto& last_valid_branch_data = this->last_valid_domain_branch_data_[details::domainIndex(domain)];
+        invalid_nodes.clear();
         if (!network.get().active()) {
             node_pressures.clear();
+            branch_data.clear();
             last_valid_node_pressures.clear();
+            last_valid_branch_data.clear();
         }
         else {
             const auto is_stale = [&network](const auto& node_pressure)
                 { return !network.get().has_node(node_pressure.first); };
 
             std::erase_if(node_pressures, is_stale);
+            std::erase_if(branch_data, is_stale);
             std::erase_if(last_valid_node_pressures, is_stale);
+            std::erase_if(last_valid_branch_data, is_stale);
+            std::erase_if(invalid_nodes, [&network](const auto& node)
+                { return !network.get().has_node(node); });
         }
         if (domain == details::NetworkDomain::Production) {
             this->syncLegacyProductionState_();
         }
     }
+    this->invalid_nodes_report_step_ = -1;
 
     // Retained THP limits can outlive network activity, so initialize every well.
     for (auto& well : well_model_.genericWells()) {
@@ -513,21 +528,11 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
     const auto domain = details::domainForWell(well);
     if (domain.has_value() && !this->nodePressures(*domain).empty()) {
         const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
-        if (it != this->nodePressures(*domain).end()) {
-            // For producers, carry forward the previous step's converged network pressure
-            // so that prepareTimeStep() starts with the correct THP constraint.
-            // For injectors, do NOT set dynamic_thp_limit_ here.  Setting it before
-            // prepareTimeStep() causes solveWellEquation() to switch the injector to THP
-            // mode; the resulting rate change propagates through the Newton loop and
-            // produces large network imbalances that fail to converge in the allowed
-            // iterations.  The injection network THP is applied for the first time during
-            // the Newton loop via updatePressures(), where the stale-potential bypass in
-            // WellConstraints::activeInjectionConstraint ensures correct switching.
-            if (well.isProducer()) {
-                // Apply and retain the network node pressure as the dynamic THP limit.
-                this->imposeWellThpLimit(well, it->second);
-            }
-        } else {
+        if (it != this->nodePressures(*domain).end() && well.isProducer()) {
+            // Carry the converged production-network pressure into the next
+            // report step as the producer's starting THP constraint.
+            this->imposeWellThpLimit(well, it->second);
+        } else if (it == this->nodePressures(*domain).end()) {
             // Reapply a retained limit after network detachment or well reconstruction.
             const auto& ws = well_model_.wellState().well(well.indexOfWell());
             if (ws.network_thp_limit.has_value()) {

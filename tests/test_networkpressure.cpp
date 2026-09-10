@@ -406,6 +406,25 @@ BOOST_AUTO_TEST_CASE(production_pressure_computation)
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);
 }
 
+BOOST_AUTO_TEST_CASE(production_rate_beyond_flow_axis_is_extrapolated)
+{
+    auto s = NetworkSetup{NetworkScenario::Production};
+    // The last flow-axis value is 2000 Sm3/d. At 2500 Sm3/d and 20 bar
+    // THP, legacy linear extrapolation gives 45 bar; clamping gives 40 bar.
+    MockWellModel::MockGroupStateHelper::MockGroupState::production_rates_sm3_day =
+        {0.0, 2500.0, 0.0};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_REQUIRE(pressures.find("G1") != pressures.end());
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(45.0, bars), 1e-7);
+    BOOST_CHECK(comp.invalidNodes().empty());
+}
+
 // The tables below use zero-filled cells for (rate, THP) combinations the flow line
 // cannot deliver, and their axes do not cover every state the wells may be in during
 // network iterations. A network branch lookup must never extrapolate into that region
