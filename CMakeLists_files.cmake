@@ -1324,8 +1324,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellInterfaceGeneric.hpp
   opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
-  opm/simulators/wells/WellPerformanceEvents.hpp
   opm/simulators/wells/WellInterfaceIndices.hpp
+  opm/simulators/wells/WellPerformanceEvents.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
