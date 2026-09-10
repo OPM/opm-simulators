@@ -209,7 +209,7 @@ public:
         if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                 fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
-                    "has has dim() = {} (N() = {}, and size() = {}).",
+                    "has dim() = {} (N() = {}, and size() = {}).",
                     m_numberOfElements,
                     bvector.dim(),
                     bvector.N(),
@@ -232,7 +232,7 @@ public:
         if (m_numberOfElements != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
-                                  "has has dim() = {} (N() = {}, and size() = {}).",
+                                  "has dim() = {} (N() = {}, and size() = {}).",
                                   m_numberOfElements,
                                   bvector.dim(),
                                   bvector.N(),

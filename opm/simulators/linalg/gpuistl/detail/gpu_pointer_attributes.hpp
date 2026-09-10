@@ -1,6 +1,5 @@
 /*
   Copyright 2025 Equinor ASA
-  Copyright 2026 SINTEF AS
   This file is part of the Open Porous Media project (OPM).
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -82,7 +81,7 @@ isGPUPointer(const std::shared_ptr<T>& ptr)
 // Check if the pointer is a CPU pointer -----------------------------------------
 
 /**
- * @brief Checks whether the given pointer is associated with CPU device memory.
+ * @brief Checks whether the given pointer is associated with CPU host memory.
  *
  * This function retrieves CUDA pointer attributes for the provided pointer and
  * determines whether it references device memory. It returns true if the pointer

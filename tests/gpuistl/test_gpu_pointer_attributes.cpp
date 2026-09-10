@@ -18,11 +18,14 @@
 #define BOOST_TEST_MODULE TestGPUPointerAttributes
 
 #include <boost/test/unit_test.hpp>
+
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
-# include <cuda.h>
+#include <vector>
+#include <memory>
+
 BOOST_AUTO_TEST_CASE(TestGPUPointerAttributes)
 {
     using namespace Opm::gpuistl::detail;
