@@ -139,7 +139,10 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPProdProperties<Scala
         const Scalar alq = upbranch.alq_value(dimension).value_or(0.0);
 
         NetworkBranchPressure<Scalar> result;
-        result.clamped = detail::clampToTableAxes<Scalar, IndexTraits>(table, rates, up_press);
+        // Preserve the established production-network behaviour. Production VFP
+        // tables have historically been extrapolated outside their axes, and
+        // existing production cases rely on that when the result remains valid.
+        result.clamped = false;
         result.pressure = vfp_props.bhp(table_id,
                                         rates[IndexTraits::waterPhaseIdx],
                                         rates[IndexTraits::oilPhaseIdx],
