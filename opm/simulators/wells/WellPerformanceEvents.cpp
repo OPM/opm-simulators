@@ -38,16 +38,30 @@ WellPerformanceEvents::beginTimeStep(const Schedule& schedule,
     this->events_.clear();
     this->previous_ = std::move(snapshot);
 
+    if (! this->baseline_) {
+        // First step of a run or of a restart.  Adopt the wells that already
+        // exist rather than reporting every one of them as drilled.
+        this->commitTimeStep(schedule, reportStep);
+        this->baseline_ = true;
+        return;
+    }
+
     for (const auto& wellName : schedule.wellNames(reportStep)) {
         const auto isInjector = schedule.getWell(wellName, reportStep).isInjector();
+        const auto pos = this->injector_.find(wellName);
 
-        const auto [pos, inserted] = this->injector_.try_emplace(wellName, isInjector);
-        if (inserted || (pos->second == isInjector)) {
+        auto& events = this->events_[wellName];
+
+        if (pos == this->injector_.end()) {
+            // Flow supports no drilling queue, so a well entering the schedule
+            // through WELSPECS is the closest thing to the event WPWE0 denotes.
+            events.drilled = 1;
             continue;
         }
 
-        auto& events = this->events_[wellName];
-        (isInjector ? events.producerToInjector : events.injectorToProducer) = 1;
+        if (pos->second != isInjector) {
+            (isInjector ? events.producerToInjector : events.injectorToProducer) = 1;
+        }
     }
 }
 
@@ -147,6 +161,7 @@ WellPerformanceEvents::serializationTestObject()
     result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {}, {}, true };
     result.injector_["W1"] = false;
     result.injector_["W2"] = true;
+    result.baseline_ = true;
 
     return result;
 }

@@ -110,8 +110,10 @@ struct WellStatusSnapshot {
 /// re-opens a well and the limit check that closes it again in the same step
 /// are both reported, rather than netted against each other.
 ///
-/// WPWE0, the drilled indicator, is always zero: it reports the wells a
-/// drilling queue brings on stream, and QDRILL is not supported by Flow.
+/// WPWE0, the drilled indicator, reports a well the schedule introduces
+/// through WELSPECS during the run.  Flow supports no drilling queue, so that
+/// is the closest available reading of "drilled"; wells that already exist
+/// when the tracker starts are not reported.
 class WellPerformanceEvents
 {
 public:
@@ -159,7 +161,7 @@ public:
     bool operator==(const WellPerformanceEvents& rhs) const
     {
         return (this->events_ == rhs.events_) && (this->previous_ == rhs.previous_)
-            && (this->injector_ == rhs.injector_);
+            && (this->injector_ == rhs.injector_) && (this->baseline_ == rhs.baseline_);
     }
 
     template <class Serializer>
@@ -168,6 +170,7 @@ public:
         serializer(events_);
         serializer(previous_);
         serializer(injector_);
+        serializer(baseline_);
     }
 
 private:
@@ -178,7 +181,12 @@ private:
     WellStatusSnapshot previous_ {};
 
     /// Injector/producer flag at the last accepted time step, by well name.
+    /// Its keys are also the wells that existed then, which is how a well
+    /// entering the schedule later is recognised.
     std::map<std::string, bool> injector_ {};
+
+    /// Whether injector_ holds a reference set yet.
+    bool baseline_ {false};
 };
 
 } // namespace Opm

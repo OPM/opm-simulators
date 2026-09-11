@@ -63,7 +63,7 @@ METRIC
 START
  1 'JAN' 2020 /
 WELLDIMS
- 4 4 2 4 /
+ 5 4 2 5 /
 GRID
 DXV
  4*100.0 /
@@ -523,6 +523,50 @@ ENDACTIO
     tracker.beginTimeStep(schedule, 0, allOpen());
     BOOST_CHECK(noEvents(tracker.events("P1")));
     BOOST_CHECK(noEvents(tracker.events("I1")));
+}
+
+BOOST_AUTO_TEST_CASE(WellEnteringTheScheduleIsDrilled)
+{
+    // Flow has no drilling queue, so WPWE0 reports the wells WELSPECS brings
+    // into the schedule while the run is under way.
+    auto text = deckString();
+    text.insert(text.find("DATES\n 1 'MAR' 2020 /"), R"(
+WELSPECS
+ 'P4' 'G1' 1 1 1* 'OIL' /
+/
+COMPDAT
+ 'P4' 1 1 1 4 'OPEN' 1* 1* 0.2 /
+/
+WCONPROD
+ 'P4' 'OPEN' 'ORAT' 100.0 4* 50.0 /
+/
+)");
+    const auto deck = Opm::Parser{}.parseString(text);
+    const Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+
+    auto tracker = Opm::WellPerformanceEvents{};
+
+    // The wells that exist when the tracker starts are not drilled events.
+    tracker.beginTimeStep(schedule, 0, allOpen());
+    for (const auto* well : { "P1", "P2", "P3", "I1" }) {
+        BOOST_CHECK(noEvents(tracker.events(well)));
+    }
+    tracker.commitTimeStep(schedule, 0);
+
+    // P4 enters the schedule at the second report step.
+    tracker.beginTimeStep(schedule, 1, allOpen());
+    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P1").drilled, 0);
+
+    // A retry of that step must report it again, and only the accepted step
+    // may retire it.
+    tracker.beginTimeStep(schedule, 1, allOpen());
+    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 1);
+
+    tracker.commitTimeStep(schedule, 1);
+    tracker.beginTimeStep(schedule, 1, allOpen());
+    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 0);
 }
 
 BOOST_AUTO_TEST_CASE(SerializationTestObject)
