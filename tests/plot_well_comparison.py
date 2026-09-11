@@ -98,15 +98,25 @@ class WellComparisonManager:
         # - Normalize by inf-norm to get the same range in each graph, ie (0,1).
         # - Convert graphs to probability distributions (ie integral under curve should be 1).
         # - Use the wasserstein distance scaled by area under reference curve.
+        ref_curve_names = {key for key in ref_file.keys() if self._is_curve_key(key)}
+        sim_curve_names = {key for key in sim_file.keys() if self._is_curve_key(key)}
+        curve_names = ref_curve_names | sim_curve_names
+
         deviation = {}
-        for curve_name in ref_file.keys():
-            if not self._is_curve_key(curve_name):
+        curve_data = {}
+        for curve_name in sorted(curve_names):
+            try:
+                ref = ref_file[curve_name] if curve_name in ref_curve_names else None
+                sim = sim_file[curve_name] if curve_name in sim_curve_names else None
+            except Exception:
                 continue
 
-            try:
-                ref = ref_file[curve_name]
-                sim = sim_file[curve_name]
-            except Exception:
+            curve_data[curve_name] = (ref, sim)
+
+            if ref is None or sim is None:
+                values = sim if ref is None else ref
+                if self._has_nonzero_data(values):
+                    deviation[curve_name] = float('inf')
                 continue
 
             if len(ref) == 0 and len(sim) == 0:
@@ -142,47 +152,59 @@ class WellComparisonManager:
 
         plot_entries = []
         for curve_name in sorted(deviation, key=lambda x: deviation[x], reverse=True):
-            try:
-                ref = ref_file[curve_name]
-                sim = sim_file[curve_name]
-            except Exception:
-                continue
+            ref, sim = curve_data[curve_name]
+            series = []
+            legend = []
+            unit = None
 
-            if len(ref) == 0 or len(sim) == 0:
+            if ref is not None and len(ref) > 0:
+                unit = ref_file.units(curve_name)
+                legend.append(ref_name)
+                series.append(
+                    {
+                        'time': ref_time,
+                        'values': ref,
+                        'style': {
+                            'linestyle': 'dashed',
+                            'linewidth': 0.5,
+                            'marker': 'o',
+                            'markersize': 1.0,
+                        },
+                    }
+                )
+
+            if sim is not None and len(sim) > 0:
+                if unit is None:
+                    unit = sim_file.units(curve_name)
+                legend.append(sim_name)
+                series.append(
+                    {
+                        'time': sim_time,
+                        'values': sim,
+                        'style': {
+                            'linewidth': 0.5,
+                            'marker': 'x',
+                            'markersize': 1.0,
+                        },
+                    }
+                )
+
+            if not series:
                 continue
 
             plot_entries.append(
                 {
                     'name': curve_name,
-                    'unit': ref_file.units(curve_name),
-                    'legend': [ref_name, sim_name],
-                    'series': [
-                        {
-                            'time': ref_time,
-                            'values': ref,
-                            'style': {
-                                'linestyle': 'dashed',
-                                'linewidth': 0.5,
-                                'marker': 'o',
-                                'markersize': 1.0,
-                            },
-                        },
-                        {
-                            'time': sim_time,
-                            'values': sim,
-                            'style': {
-                                'linewidth': 0.5,
-                                'marker': 'x',
-                                'markersize': 1.0,
-                            },
-                        },
-                    ],
+                    'unit': unit,
+                    'legend': legend,
+                    'series': series,
                 }
             )
 
         self._write_pdf(test_name, plot_entries)
 
         # Deviation is infinite in the following cases:
+        # - A curve exists in only one of the files.
         # - One of the curves is empty and the other is not.
         # - One of the curves is zero and the other is not.
         #
