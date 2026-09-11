@@ -1,0 +1,10 @@
+FROM docker.io/openporousmedia/opmreleases@sha256:db8865d7c80440513c8c73df7ed385a3b7d2e055a0ef95f7662ec06ef6a6b3a9
+USER root
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    g++ ninja-build libopm-simulators-dev=2026.04-1~noble \
+    libopm-common-dev=2026.04-1~noble libopm-grid-dev=2026.04-1~noble \
+    libvulkan-dev mesa-vulkan-drivers vulkan-tools glslang-tools \
+    && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT []
+WORKDIR /workspace
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libhdf5-openmpi-dev && rm -rf /var/lib/apt/lists/*
