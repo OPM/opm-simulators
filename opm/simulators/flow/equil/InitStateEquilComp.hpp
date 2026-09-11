@@ -382,27 +382,17 @@ private:
         const auto phaseIdx = (datum < reg.zgoc)
             ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
 
-        // Integrate the column with the EOS root chosen from the datum side of
-        // the contact. If the contact lies inside the region, that root can be
-        // wrong on its far side; a two-phase column needs item 10 = 3.
-        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1])) {
-            if (compositionVariesBetween(reg, span[0], reg.zgoc) ||
-                compositionVariesBetween(reg, reg.zgoc, span[1])) {
-                OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
-                                            "at {} m lies inside a type-1 region. Pressure "
-                                            "is integrated with the EOS root selected at "
-                                            "the datum throughout the region; use EQUIL "
-                                            "item 10 = 3 for a two-phase column.",
-                                            regionIdx + 1, reg.zgoc));
-            }
-            else {
-                OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
-                                            "at {} m lies inside a type-1 region with constant "
-                                            "ZMFVD. Pressure is integrated with the EOS root "
-                                            "selected at the datum throughout the region; use "
-                                            "EQUIL item 10 = 3 for a two-phase column.",
-                                            regionIdx + 1, reg.zgoc));
-            }
+        // For type 1, a gas-oil contact inside the region requires COMPVD or
+        // ZMFVD variation across it so the flash can label the phases correctly.
+        // COMPVD is not supported here yet.
+        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1]) &&
+            !compositionVariesBetween(reg, span[0], reg.zgoc) &&
+            !compositionVariesBetween(reg, reg.zgoc, span[1])) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
+                                        "at {} m lies inside a type-1 region, but ZMFVD "
+                                        "does not vary across the contact. Compositional "
+                                        "variation is required for proper phase labeling.",
+                                        regionIdx + 1, reg.zgoc));
         }
 
         const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
