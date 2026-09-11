@@ -60,9 +60,8 @@ constexpr Scalar gravity = 9.80665;
 
 // A 1x1x20 vertical column from 2000 m to 2100 m in 5 m cells, filled with a
 // CO2/methane/decane mixture that grades from methane-rich at the top to
-// decane-rich at the bottom.  This is the geometry of the deck the
-// implementation was verified against, so the reference-simulator numbers
-// quoted below apply to it directly.
+// decane-rich at the bottom. This is the geometry used by the numeric
+// expectations below.
 std::string deckString(const std::string& equil,
                        const std::string& runspecExtra = "EQLDIMS\n/\n",
                        const std::string& regions = "",
@@ -187,8 +186,8 @@ BOOST_AUTO_TEST_CASE(ContinuousLiquidColumn)
         BOOST_CHECK_LT(rho, 800.0);
     }
 
-    // The reference simulator initializes this column to 149.666 barsa in the
-    // top cell and 154.694 barsa in the bottom one.
+    // The expected pressures are 149.666 barsa in the top cell and
+    // 154.694 barsa in the bottom one.
     BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.front().pressure(FluidSystem::oilPhaseIdx))
                                - 149.666 * barsa), 0.05 * barsa);
     BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.back().pressure(FluidSystem::oilPhaseIdx))
@@ -205,8 +204,8 @@ BOOST_AUTO_TEST_CASE(GasCapAboveContact)
     const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 /\n"));
     const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
 
-    // Independently computed saturation point of the contact liquid; the
-    // reference simulator puts it at 160.5601 barsa.
+    // Independently compute the saturation point of the contact liquid and
+    // check the expected value of 160.5601 barsa.
     const CompVec liquid = tableComposition(2050.0);
     Scalar psat = 0.0;
     CompVec vapor{};

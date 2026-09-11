@@ -150,14 +150,14 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
 
-    /// \param[in] eclipseState    Input state, provides EQUIL, ZMFVD, RTEMP(VD).
+    /// \param[in] inputState      Input state, provides EQUIL, ZMFVD, RTEMP(VD).
     /// \param[in] eosType         Equation of state used by the fluid system.
     /// \param[in] cellCenterDepth Depth of each cell centre.
     /// \param[in] eqlnum          Zero-based equilibration region of each cell.
     /// \param[in] comm            Communicator for parallel runs.
     /// \param[in] gravity         Norm of the gravity vector.
     /// \param[in] numSamplePoints Sample points in each pressure integration.
-    InitialStateComputer(const EclipseState& eclipseState,
+    InitialStateComputer(const EclipseState& inputState,
                          const CompositionalConfig::EOSType eosType,
                          const std::vector<Scalar>& cellCenterDepth,
                          const std::vector<int>& eqlnum,
@@ -166,8 +166,8 @@ public:
                          const int numSamplePoints)
         : eosType_(eosType)
     {
-        const auto& records = eclipseState.getInitConfig().getEquil();
-        const auto& tables = eclipseState.getTableManager();
+        const auto& records = inputState.getInitConfig().getEquil();
+        const auto& tables = inputState.getTableManager();
 
         if (!tables.hasTables("ZMFVD")) {
             // COMPVD is the other accepted way of giving the composition
