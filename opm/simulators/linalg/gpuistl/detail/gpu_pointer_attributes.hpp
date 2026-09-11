@@ -24,6 +24,38 @@
 namespace Opm::gpuistl::detail
 {
 
+namespace
+{
+    /**
+    * @brief Checks if the pointer is unregistered.
+    *
+    * @param status The error code returned by cudaPointerGetAttributes.
+    * @param attributes The attributes returned by cudaPointerGetAttributes.
+    * @return True if the pointer is unregistered, false otherwise.
+    *
+    * @note HIP may report unrecognized pointers with status InvalidValue instead of
+    *       success + MemoryTypeUnregistered.
+    */
+    inline bool
+    isMemoryTypeUnregistered(cudaError_t status, const cudaPointerAttributes& attributes)
+    {
+#if USE_HIP
+        // HIP may mirror CUDA < 11: unrecognized pointers return InvalidValue
+        // instead of success + MemoryTypeUnregistered.
+        if (status == cudaErrorInvalidValue) {
+            (void)cudaGetLastError(); // clear error, if any
+            return true;
+        }
+#endif
+
+        // Enumerator value 0 == Unregistered on CUDA 11+ / modern HIP.
+        // Do not name cudaMemoryTypeUnregistered: hipify-perl will not translate it.
+        return status == cudaSuccess
+            && attributes.type == static_cast<cudaMemoryType>(0);
+    }
+
+} // namespace
+
 /**
  * @brief Checks whether the given pointer is associated with GPU device memory.
  *
@@ -42,8 +74,15 @@ isGPUPointer(const T* ptr)
     if (ptr == nullptr) {
         return false;
     }
-    cudaPointerAttributes attributes;
-    OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
+
+    cudaPointerAttributes attributes{};
+    const cudaError_t status = cudaPointerGetAttributes(&attributes, ptr);
+
+    if (isMemoryTypeUnregistered(status, attributes)) {
+        return false;
+    }
+
+    OPM_GPU_SAFE_CALL(status);
     return attributes.type == cudaMemoryTypeDevice;
 }
 
@@ -84,7 +123,7 @@ isGPUPointer(const std::shared_ptr<T>& ptr)
  * @brief Checks whether the given pointer is associated with CPU host memory.
  *
  * This function retrieves CUDA pointer attributes for the provided pointer and
- * determines whether it references device memory. It returns true if the pointer
+ * determines whether it references host memory. It returns true if the pointer
  * corresponds to CPU memory; otherwise, it returns false.
  *
  * @note This does not prove that @p ptr is a valid CPU allocation. CUDA reports
@@ -103,9 +142,16 @@ isCPUPointer(const T* ptr)
     if (ptr == nullptr) {
         return false;
     }
-    cudaPointerAttributes attributes;
-    OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
-    return attributes.type == cudaMemoryTypeHost || attributes.type == cudaMemoryTypeUnregistered;
+
+    cudaPointerAttributes attributes{};
+    const cudaError_t status = cudaPointerGetAttributes(&attributes, ptr);
+
+    if (isMemoryTypeUnregistered(status, attributes)) {
+        return true;
+    }
+
+    OPM_GPU_SAFE_CALL(status);
+    return attributes.type == cudaMemoryTypeHost;
 }
 
 
