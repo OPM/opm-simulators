@@ -34,6 +34,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace Opm::EQUIL::Details {
