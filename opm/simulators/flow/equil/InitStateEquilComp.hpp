@@ -134,11 +134,13 @@ private:
  *
  * The supported initialization procedures (EQUIL item 10) are
  *  - type 1 (default): ZMFVD provides the total composition and the fluid is
- *    treated as a single phase throughout the column;
+ *    treated as a continuous hydrocarbon phase.  The subsequent flash assigns
+ *    the phase label; an in-reservoir contact requires composition variation
+ *    across the contact for correct phase labeling;
  *  - type 3: ZMFVD provides the liquid composition below the gas-oil contact.
- *    The contact acts as the datum, where the pressure is the saturation
- *    (bubble-point) pressure of the contact liquid unless EQUIL item 11
- *    requests the given datum pressure.  Above the contact the gas has the
+ *    The contact becomes the reference depth, where the pressure is the
+ *    saturation (bubble-point) pressure of the contact liquid unless EQUIL
+ *    item 11 retains the input pressure.  Above the contact the gas has the
  *    constant composition of the equilibrium vapour at the contact.
  */
 template <class FluidSystem>
@@ -408,11 +410,12 @@ private:
                                  regionIdx + 1));
     }
 
-    /// EQUIL item 10 type 3: ZMFVD is the liquid composition. If saturation-
-    /// pressure adjustment is enabled and the supplied pressure differs by one
-    /// atmosphere or more, use the saturation pressure at the contact. Item 11
-    /// = 1 always preserves the supplied pressure. The gas above the contact is
-    /// the equilibrium vapour of the contact liquid.
+    /// EQUIL item 10 type 3: ZMFVD is the liquid composition and the gas-oil
+    /// contact is used as the reference depth. If saturation-pressure
+    /// adjustment is enabled and the input pressure differs by one atmosphere
+    /// or more, use the saturation pressure at the contact. Item 11 = 1 always
+    /// preserves the input pressure. The gas above the contact is the
+    /// equilibrium vapour of the contact liquid.
     void setupTwoPhaseRegion(Region& reg,
                              const EquilRecord& record,
                              const std::array<Scalar, 2>& span,
@@ -420,11 +423,13 @@ private:
                              const int numSamplePoints,
                              const std::size_t regionIdx) const
     {
-        if (std::abs(record.datumDepth() - reg.zgoc) > 0.0) {
-            OpmLog::warning(fmt::format("Equilibration region {}: the datum depth {} m "
-                                        "must be at the gas-oil contact when EQUIL "
-                                        "item 10 is 3; using the contact depth {} m.",
-                                        regionIdx + 1, record.datumDepth(), reg.zgoc));
+        const Scalar inputReferenceDepth = record.datumDepth();
+        if (inputReferenceDepth != reg.zgoc) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the reference depth {} m "
+                                        "does not coincide with the gas-oil contact when "
+                                        "EQUIL item 10 is 3; resetting it to the contact "
+                                        "depth {} m.",
+                                        regionIdx + 1, inputReferenceDepth, reg.zgoc));
         }
 
         const CompVec liquid = composition(reg, reg.zgoc);
@@ -439,16 +444,16 @@ private:
         }
         reg.vaporComposition = vapor;
 
-        // The datum pressure should already equal the saturation pressure at
-        // the contact.  With EQUIL item 11 defaulted, the two are required to
-        // agree to within one atmosphere and the datum pressure is reset to the
-        // computed saturation pressure when they do not; item 11 = 1 keeps the
-        // given datum pressure whatever the outcome of that test.
+        // For type 3, the contact is the reference depth. With item 11
+        // defaulted, the input pressure must agree with the saturation pressure
+        // to within one atmosphere and is reset to the computed value otherwise.
+        // Item 11 = 1 retains the numeric input pressure at the contact regardless
+        // of that test; the result need not be an equilibrium system in that case.
         constexpr Scalar oneAtmosphere = 101325.0;
-        const Scalar pDatum = record.datumDepthPressure();
+        const Scalar inputPressure = record.datumDepthPressure();
         const bool resetToPsat = record.setToSaturationPressure()
-            && (std::abs(pDatum - psat) >= oneAtmosphere);
-        const Scalar pGoc = resetToPsat ? psat : pDatum;
+            && (std::abs(inputPressure - psat) >= oneAtmosphere);
+        const Scalar referencePressure = resetToPsat ? psat : inputPressure;
 
         OpmLog::info(fmt::format("Equilibration region {}: two phases, liquid composition "
                                  "specified (EQUIL item 10 is 3). The saturation pressure "
@@ -460,20 +465,21 @@ private:
                                         "differs from the saturation pressure {:.6g} bar at the "
                                         "gas-oil contact by one atmosphere or more; the "
                                         "saturation pressure is used instead.",
-                                        regionIdx + 1, pDatum / 1e5, psat / 1e5));
+                                        regionIdx + 1, inputPressure / 1e5, psat / 1e5));
         }
 
         const ODE oilOde([&reg](const Scalar depth) { return composition(reg, depth); },
                          reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
         reg.oilPressure.emplace(oilOde,
-                                typename PressFunc::InitCond{reg.zgoc, pGoc},
+                                typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, span);
 
         const ODE gasOde([vapor](const Scalar) { return vapor; },
                          reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
         const Scalar pcgoc = record.gasOilContactCapillaryPressure();
         reg.gasPressure.emplace(gasOde,
-                                typename PressFunc::InitCond{reg.zgoc, pGoc + pcgoc},
+                                typename PressFunc::InitCond{
+                                    reg.zgoc, referencePressure + pcgoc},
                                 numSamplePoints, span);
     }
 

@@ -257,9 +257,10 @@ BOOST_AUTO_TEST_CASE(GasCapAboveContact)
 
 BOOST_AUTO_TEST_CASE(GasCapKeepingDatumPressure)
 {
-    // As GasCapAboveContact, but EQUIL item 11 is 1: the datum pressure is
-    // kept at the contact instead of being replaced by the saturation
-    // pressure of the contact liquid.
+    // As GasCapAboveContact, but EQUIL item 11 is 1: the reference depth is
+    // reset from 2010 m to the contact while the numeric 150 bar input pressure
+    // is retained there. This intentionally need not be an equilibrium
+    // saturation pressure.
     const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 1 /\n"));
     const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
 
