@@ -293,6 +293,31 @@ BOOST_AUTO_TEST_CASE(NonzeroContactCapillaryPressureIsAnError)
     }
 }
 
+BOOST_AUTO_TEST_CASE(CompositionalEquilAccuracy)
+{
+    for (const int initType : std::array{1, 3}) {
+        for (const int accuracy : std::array{-20, -1, 0, 1, 20}) {
+            BOOST_TEST_CONTEXT("Type " << initType << ", accuracy " << accuracy) {
+                const EquilFixture fix(deckString(
+                    "EQUIL\n 2010 150 2300 0 2050 0 2* " + std::to_string(accuracy)
+                    + " " + std::to_string(initType) + " /\n"));
+                if (accuracy == 0) {
+                    BOOST_CHECK_NO_THROW(fix.compute(std::vector<int>(20, 0)));
+                }
+                else {
+                    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                          std::runtime_error,
+                                          [](const std::runtime_error& error) {
+                                              const std::string message = error.what();
+                                              return message.find("EQUIL item 9") != std::string::npos
+                                                  && message.find("region 1") != std::string::npos;
+                                          });
+                }
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(TwoIndependentRegions)
 {
     // Two equilibration regions splitting the column in half, each with its
