@@ -67,6 +67,13 @@ namespace Opm::EQUIL::Comp {
 
 namespace Details {
 
+/// ZMFVD and RTEMPVD use constant endpoint values outside the tabulated depths.
+template <class Scalar>
+Scalar evalDepthTable(const Tabulated1DFunction<Scalar>& table, const Scalar depth)
+{
+    return table.eval(std::clamp(depth, table.xMin(), table.xMax()));
+}
+
 /// Right-hand side of the hydrostatic ODE dp/ddepth = rho(depth, p) * g for a
 /// fluid whose density follows from the cubic equation of state at the given
 /// temperature and composition.  The EOS root (liquid or vapour) is selected
@@ -96,7 +103,7 @@ public:
                       const Scalar press) const
     {
         const CompVec z = composition_(depth);
-        const Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
+        const Scalar temp = evalDepthTable(tempVdTable_, depth);
 
         CompositionalFluidState<Scalar, FluidSystem> fs;
         fs.setTemperature(temp);
@@ -237,7 +244,7 @@ private:
         CompVec z{};
         Scalar sum = 0.0;
         for (int c = 0; c < numComponents; ++c) {
-            z[c] = std::max(Scalar{0}, reg.zmfVdTable[c].eval(depth, /*extrapolate=*/true));
+            z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.zmfVdTable[c], depth));
             sum += z[c];
         }
         if (!(sum > 0.0)) {
@@ -439,7 +446,7 @@ private:
         }
 
         const CompVec liquid = composition(reg, reg.zgoc);
-        const Scalar temp = reg.tempVdTable.eval(reg.zgoc, /*extrapolate=*/true);
+        const Scalar temp = Details::evalDepthTable(reg.tempVdTable, reg.zgoc);
         Scalar psat{};
         CompVec vapor{};
         if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
@@ -501,7 +508,7 @@ private:
         }
         const Scalar press = pressFunc->value(depth);
 
-        fs.setTemperature(reg.tempVdTable.eval(depth, /*extrapolate=*/true));
+        fs.setTemperature(Details::evalDepthTable(reg.tempVdTable, depth));
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
                 fs.setPressure(phaseIdx, press);
