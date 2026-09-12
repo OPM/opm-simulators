@@ -66,6 +66,9 @@ base_init(const std::vector<Well>& wells_ecl,
     for (auto w = 0*num_wells; w < num_wells; ++w) {
         const Well& well = wells_ecl[w];
         const auto& conn_data = well_connection_data[w];
+        if (conn_data.empty()) {
+            continue;
+        }
         initSingleWell(well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
     }
 

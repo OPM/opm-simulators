@@ -7,6 +7,25 @@ set(coarse_rel_tol_parallel 1e-2)
 
 add_test_compare_parallel_simulation(
   CASENAME
+    sshift_compositional
+  FILENAME
+    SIMPLE_COMP_SSHIFT
+  SIMULATOR
+    flow_comp
+  DEV_SIMULATOR
+    flow_comp3_2p
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-5
+  DIR
+    compositional
+  MPI_PROCS
+    2
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     spe1
   FILENAME
     SPE1CASE2
