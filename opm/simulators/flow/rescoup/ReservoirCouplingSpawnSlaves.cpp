@@ -26,6 +26,8 @@
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -481,12 +483,30 @@ spawnSlaveProcesses_()
         );
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
+        // Debugging aid: with --rescoup-spawn-wrapper=<path>, spawn that executable
+        // instead of the simulator and hand it the simulator path as its first argument,
+        // followed by the slave's own arguments. The wrapper decides how to start the
+        // simulator, for example under a debugger for one selected rank, and must keep
+        // running as the spawned process until the simulator exits, because the MPI
+        // runtime watches the process it started. The slaves receive the parameter too,
+        // as they receive every other one, and ignore it: they never spawn.
+        const std::string& spawn_wrapper = Parameters::Get<Parameters::RescoupSpawnWrapper>();
+        const char* spawn_command = flow_program_name;
+        std::vector<char*> wrapper_argv;
+        if (!spawn_wrapper.empty()) {
+            spawn_command = spawn_wrapper.c_str();
+            wrapper_argv.reserve(slave_argv.size() + 1);
+            wrapper_argv.push_back(flow_program_name);
+            wrapper_argv.insert(wrapper_argv.end(), slave_argv.begin(), slave_argv.end());
+            this->logger_.info(fmt::format(
+                "Spawning slave {} through wrapper {}", slave_name, spawn_wrapper));
+        }
         // TODO: We need to decide how to handle the output from the slave processes..
         //    As far as I can tell, open MPI does not support redirecting the output
         //    to a file, so we might need to implement a custom solution for this
         int spawn_result = MPI_Comm_spawn(
-            flow_program_name,
-            slave_argv.data(),
+            spawn_command,
+            wrapper_argv.empty() ? slave_argv.data() : wrapper_argv.data(),
             /*maxprocs=*/num_procs,
             /*info=*/MPI_INFO_NULL,
             /*root=*/0,  // Rank 0 spawns the slave processes
