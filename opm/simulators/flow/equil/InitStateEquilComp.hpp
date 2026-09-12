@@ -150,6 +150,8 @@ private:
  *    saturation (bubble-point) pressure of the contact liquid unless EQUIL
  *    item 11 retains the input pressure.  Above the contact the gas has the
  *    constant composition of the equilibrium vapour at the contact.
+ *
+ * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
  * a single pressure for all phases.
  */
@@ -298,6 +300,13 @@ private:
                                   "contact capillary pressure (EQUIL item 6); region {} "
                                   "specifies {} bar.",
                                   regionIdx + 1, record.gasOilContactCapillaryPressure() / 1e5));
+        }
+
+        if (const auto accuracy = record.initializationTargetAccuracy(); accuracy != 0) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Compositional equilibration only supports cell-centre "
+                                  "initialization (EQUIL item 9 = 0); region {} specifies {}.",
+                                  regionIdx + 1, accuracy));
         }
 
         reg.zgoc = record.gasOilContactDepth();
