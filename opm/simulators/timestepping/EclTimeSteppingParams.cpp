@@ -39,6 +39,12 @@ void registerEclTimeSteppingParameters()
          "synchronizes with its slaves at slave report-step boundaries. "
          "If false (default), the master synchronizes at every master actual time step. "
          "Has no effect in non-rescoup runs.");
+    Parameters::Register<Parameters::RescoupSpawnWrapper>
+        ("Developer flag for reservoir coupling.  If set, the master spawns this "
+         "executable instead of the simulator for each slave, passing the simulator "
+         "path as the first argument followed by the slave's own arguments, so that a "
+         "slave can be started under a debugger.  Has no effect in non-rescoup runs.");
+    Parameters::Hide<Parameters::RescoupSpawnWrapper>();
     Parameters::Register<Parameters::SolverGrowthFactor<Scalar>>
         ("The factor time steps are elongated after a successful substep");
     Parameters::Register<Parameters::SolverMaxGrowth<Scalar>>
