@@ -310,6 +310,18 @@ BOOST_AUTO_TEST_CASE(TwoIndependentRegions)
     BOOST_CHECK_GT(jump, 40.0 * barsa);
 }
 
+BOOST_AUTO_TEST_CASE(InvalidEqlnumFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    std::vector<int> eqlnum(20, 0);
+    const Opm::Parallel::Communication comm;
+    if (comm.rank() == 0) {
+        eqlnum.back() = 1;
+    }
+
+    BOOST_CHECK_THROW(fix.compute(eqlnum), std::runtime_error);
+}
+
 BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)
 {
     // A depth-independent reservoir temperature is a single-row RTEMPVD
