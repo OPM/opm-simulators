@@ -364,6 +364,78 @@ BOOST_AUTO_TEST_CASE(GradedTemperatureFromRtempvd)
     }
 }
 
+BOOST_AUTO_TEST_CASE(DepthTablesUseConstantEndpoints)
+{
+    // Extending the tables with constant endpoint values must leave both the
+    // cell states and the hydrostatic pressure integration unchanged. The
+    // datum and the outer cells lie outside the original table ranges.
+    for (const auto* keyword : std::array{"RTEMPVD", "TEMPVD"}) {
+        BOOST_TEST_CONTEXT(keyword) {
+            const EquilFixture narrow(deckString(
+                "EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2040 0 0.7 0.3\n 2060 0 0.3 0.7 /\n",
+                std::string(keyword) + "\n 2040 100\n 2060 120 /\n"));
+            const auto states = narrow.compute(std::vector<int>(20, 0)).fluidStates();
+
+            const EquilFixture padded(deckString(
+                "EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2000 0 0.7 0.3\n 2040 0 0.7 0.3\n"
+                " 2060 0 0.3 0.7\n 2100 0 0.3 0.7 /\n",
+                std::string(keyword) + "\n 2000 100\n 2040 100\n"
+                                       " 2060 120\n 2100 120 /\n"));
+            const auto expected = padded.compute(std::vector<int>(20, 0)).fluidStates();
+
+            for (std::size_t c = 0; c < states.size(); ++c) {
+                const Scalar t = std::clamp((narrow.depths[c] - 2040.0) / 20.0, 0.0, 1.0);
+                const CompVec z{0.0, 0.7 - 0.4 * t, 0.3 + 0.4 * t};
+                for (int comp = 0; comp < 3; ++comp) {
+                    BOOST_CHECK_SMALL(states[c].moleFraction(comp) - z[comp], 1e-10);
+                }
+                BOOST_CHECK_CLOSE(states[c].temperature(FluidSystem::oilPhaseIdx),
+                                  373.15 + 20.0 * t, 1e-10);
+                BOOST_CHECK_CLOSE(states[c].pressure(FluidSystem::oilPhaseIdx),
+                                  expected[c].pressure(FluidSystem::oilPhaseIdx), 1e-10);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(GasOilContactOutsideDepthTables)
+{
+    // The bubble point and equilibrium vapour must use the endpoint liquid
+    // composition and temperature when the contact is outside the tables.
+    for (const Scalar contact : std::array{2025.0, 2075.0}) {
+        BOOST_TEST_CONTEXT("Contact depth " << contact) {
+            EquilFixture fix(deckString(
+                "EQUIL\n 2010 150 2300 0 " + std::to_string(contact) + " 0 3* 3 /\n",
+                "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2040 0 0.7 0.3\n 2060 0 0.3 0.7 /\n",
+                "RTEMPVD\n 2040 100\n 2060 120 /\n"));
+            const bool aboveTable = contact < 2040.0;
+            const std::size_t contactCell = aboveTable ? 4 : 15;
+            fix.depths[contactCell] = contact;
+            const CompVec liquid = aboveTable ? CompVec{0.0, 0.7, 0.3}
+                                             : CompVec{0.0, 0.3, 0.7};
+            const Scalar temperature = aboveTable ? 373.15 : 393.15;
+            Scalar psat{};
+            CompVec vapor{};
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature,
+                                               fix.eclState.compositionalConfig().eosType(0),
+                                               psat, vapor));
+
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            BOOST_CHECK_CLOSE(states[contactCell].pressure(FluidSystem::oilPhaseIdx),
+                              psat, 1e-8);
+            BOOST_CHECK_CLOSE(states[contactCell].temperature(FluidSystem::oilPhaseIdx),
+                              temperature, 1e-10);
+            for (int comp = 0; comp < 3; ++comp) {
+                BOOST_CHECK_SMALL(states[contactCell].moleFraction(comp) - liquid[comp], 1e-10);
+                BOOST_CHECK_SMALL(states.front().moleFraction(comp) - vapor[comp], 1e-8);
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(MissingZmfvdIsAnError)
 {
     // The composition versus depth is the one piece of input the
