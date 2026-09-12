@@ -150,6 +150,8 @@ private:
  *    saturation (bubble-point) pressure of the contact liquid unless EQUIL
  *    item 11 retains the input pressure.  Above the contact the gas has the
  *    constant composition of the equilibrium vapour at the contact.
+ * Gas-oil contact capillary pressure must be zero: the downstream flash uses
+ * a single pressure for all phases.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -288,6 +290,14 @@ private:
                                   "not supported for region {}; only type 1 (total "
                                   "composition) and type 3 (liquid composition) are.",
                                   reg.initType, regionIdx + 1));
+        }
+
+        if (record.gasOilContactCapillaryPressure() != 0.0) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Compositional equilibration only supports zero gas-oil "
+                                  "contact capillary pressure (EQUIL item 6); region {} "
+                                  "specifies {} bar.",
+                                  regionIdx + 1, record.gasOilContactCapillaryPressure() / 1e5));
         }
 
         reg.zgoc = record.gasOilContactDepth();
@@ -489,10 +499,8 @@ private:
 
         const ODE gasOde([vapor](const Scalar) { return vapor; },
                          reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
-        const Scalar pcgoc = record.gasOilContactCapillaryPressure();
         reg.gasPressure.emplace(gasOde,
-                                typename PressFunc::InitCond{
-                                    reg.zgoc, referencePressure + pcgoc},
+                                typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, span);
     }
 
