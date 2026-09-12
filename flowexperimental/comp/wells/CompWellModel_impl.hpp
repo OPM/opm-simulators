@@ -126,13 +126,12 @@ void
 CompWellModel<TypeTag>::
 createWellContainer()
 {
-    // const auto& schedule = simulator_.vanguard().schedule();
-    const auto nw = wells_ecl_.size(); // not considering the parallel running yet
+    const auto nw = wells_ecl_.size();
     well_container_.clear();
     for (auto w = 0 * nw; w < nw; ++w) {
         const auto& well_name = wells_ecl_[w].name();
-        if (comp_well_states_.has(well_name)
-            && comp_well_states_[well_name].status == WellStatus::SHUT) {
+        if (!comp_well_states_.has(well_name)
+            || comp_well_states_[well_name].status == WellStatus::SHUT) {
             continue;
         }
 
@@ -155,9 +154,9 @@ void
 CompWellModel<TypeTag>::
 initWellConnectionData()
 {
-    // TODO: we need to consider the parallel running
-    // we can refer to the BlackoilWellModelGeneric::initializeWellPerfData()
-    well_connection_data_.resize(wells_ecl_.size());
+    // Rebuild the local perforation data because schedule events can change
+    // connections between report steps.
+    well_connection_data_.assign(wells_ecl_.size(), {});
 
     int well_index = 0;
     for (const auto& well : wells_ecl_) {
@@ -167,7 +166,7 @@ initWellConnectionData()
 
         well_connection_data.reserve(well_connections.size());
         for (const auto& connection : well_connections) {
-            const auto active_index =
+            const int active_index =
                     this->compressedIndexForInterior(connection.global_index());
 
             const auto connIsOpen =
@@ -246,7 +245,7 @@ initWellState()
 
 
 template <typename TypeTag>
-std::size_t
+int
 CompWellModel<TypeTag>::
 compressedIndexForInterior(std::size_t cartesian_cell_idx) const
 {
@@ -387,11 +386,11 @@ bool
 CompWellModel<TypeTag>::
 getWellConvergence() const
 {
-    bool converged = true;
+    int converged = 1;
     for (const auto& well : this->well_container_) {
         converged = converged && well->getConvergence();
     }
-    return converged;
+    return comm_.min(converged) == 1;
 }
 
 template <typename TypeTag>
