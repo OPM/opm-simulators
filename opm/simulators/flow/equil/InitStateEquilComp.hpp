@@ -45,6 +45,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
 
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <fmt/format.h>
@@ -181,6 +182,18 @@ public:
             OPM_THROW(std::runtime_error, msg);
         }
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (std::size_t cell = 0; cell < eqlnum.size(); ++cell) {
+            const auto region = eqlnum[cell];
+            if (region < 0 || std::cmp_greater_equal(region, records.size())) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cell {} has EQLNUM {} outside the {} "
+                                      "equilibration regions.",
+                                      cell, region + 1, records.size()));
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("Invalid EQLNUM: ", comm);
+
         std::vector<Region> regions;
         regions.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
@@ -190,14 +203,7 @@ public:
 
         fluidStates_.resize(cellCenterDepth.size());
         for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
-            const auto region = eqlnum[cell];
-            if (region < 0 || std::cmp_greater_equal(region, regions.size())) {
-                OPM_THROW(std::runtime_error,
-                          fmt::format("Cell {} has EQLNUM {} outside the {} "
-                                      "equilibration regions.",
-                                      cell, region + 1, regions.size()));
-            }
-            assignCell(fluidStates_[cell], regions[region], cellCenterDepth[cell]);
+            assignCell(fluidStates_[cell], regions[eqlnum[cell]], cellCenterDepth[cell]);
         }
     }
 
