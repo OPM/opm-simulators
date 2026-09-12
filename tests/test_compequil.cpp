@@ -154,11 +154,12 @@ Scalar impliedDensity(const Scalar pAbove, const Scalar pBelow)
 
 } // Anonymous namespace
 
-BOOST_AUTO_TEST_CASE(ContinuousLiquidColumn)
+BOOST_AUTO_TEST_CASE(Type1LiquidRootPressureIntegration)
 {
-    // EQUIL item 10 is 1 and the gas-oil contact sits at the top of the
-    // column, i.e. no free gas: a continuous liquid whose composition follows
-    // ZMFVD, integrated hydrostatically from the datum.
+    // Type 1 takes ZMFVD as the total composition. Since the datum lies below
+    // the gas-oil contact, the initializer uses the liquid EOS root to integrate
+    // pressure from the datum and marks oil as the nominal phase. The downstream
+    // flash may still split the mixture into oil and gas.
     const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
     const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
     BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
@@ -313,7 +314,7 @@ BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)
 {
     // A depth-independent reservoir temperature is a single-row RTEMPVD
     // table, which is as valid a way to state it as RTEMP. The column should
-    // reproduce the RTEMP case in ContinuousLiquidColumn.
+    // reproduce the RTEMP case in Type1LiquidRootPressureIntegration.
     const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n",
                                       "EQLDIMS\n/\n", "",
                                       "ZMFVD\n"
