@@ -501,9 +501,11 @@ spawnSlaveProcesses_()
             this->logger_.info(fmt::format(
                 "Spawning slave {} through wrapper {}", slave_name, spawn_wrapper));
         }
-        // TODO: We need to decide how to handle the output from the slave processes..
-        //    As far as I can tell, open MPI does not support redirecting the output
-        //    to a file, so we might need to implement a custom solution for this
+        // NOTE: The MPI runtime does not redirect the spawned processes' output. Each
+        //   slave rank does that itself, early in Main::initMPI(): it redirects its
+        //   stdout and stderr to <slave name>.<rank>.log, where <slave name> is the
+        //   value of the --slave-log-file argument given first in slave_argv above.
+        //   See Main::maybeRedirectReservoirCouplingSlaveOutput_().
         int spawn_result = MPI_Comm_spawn(
             spawn_command,
             wrapper_argv.empty() ? slave_argv.data() : wrapper_argv.data(),
