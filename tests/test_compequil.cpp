@@ -273,6 +273,26 @@ BOOST_AUTO_TEST_CASE(GasCapKeepingDatumPressure)
     BOOST_CHECK_CLOSE(states[19].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
 }
 
+BOOST_AUTO_TEST_CASE(NonzeroContactCapillaryPressureIsAnError)
+{
+    for (const int initType : std::array{1, 3}) {
+        for (const int capillaryPressure : std::array{-10, 10}) {
+            BOOST_TEST_CONTEXT("Type " << initType << ", PC_GOC " << capillaryPressure) {
+                const EquilFixture fix(deckString(
+                    "EQUIL\n 2010 150 2300 0 2050 " + std::to_string(capillaryPressure)
+                    + " 3* " + std::to_string(initType) + " /\n"));
+                BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                      std::runtime_error,
+                                      [](const std::runtime_error& error) {
+                                          const std::string message = error.what();
+                                          return message.find("EQUIL item 6") != std::string::npos
+                                              && message.find("region 1") != std::string::npos;
+                                      });
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(TwoIndependentRegions)
 {
     // Two equilibration regions splitting the column in half, each with its
