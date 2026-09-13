@@ -194,6 +194,11 @@ public:
         }
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
+        if (eqlnum.size() != cellCenterDepth.size()) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("EQLNUM contains {} entries for {} cell depths.",
+                                  eqlnum.size(), cellCenterDepth.size()));
+        }
         for (std::size_t cell = 0; cell < eqlnum.size(); ++cell) {
             const auto region = eqlnum[cell];
             if (region < 0 || std::cmp_greater_equal(region, records.size())) {
