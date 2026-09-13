@@ -132,7 +132,7 @@ initSingleProducer(const Well& well,
                                     conn_data,
                                     true) );
     ws.status = well.getStatus();
-    if (ws.status != WellStatus::SHUT && !conn_data.empty()) {
+    if (ws.status != WellStatus::SHUT) {
         ws.update_producer_targets(well, cell_mole_fractions, summary_state);
     }
 }
