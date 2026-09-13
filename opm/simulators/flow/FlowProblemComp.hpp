@@ -145,8 +145,6 @@ public:
             updated = true;
         };
 
-        finishTransmissibilities();
-
         if (enableEclOutput_) {
             // The output of TRANX, TRANY, TRANZ and NNC is on the whole grid: the
             // I/O rank needs the global transmissibilities when running in parallel.
@@ -156,6 +154,7 @@ public:
                 }
             }
             else {
+                finishTransmissibilities();
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
             }
             std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
@@ -164,6 +163,7 @@ public:
             eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
         }
         simulator.vanguard().releaseGlobalTransmissibilities();
+        finishTransmissibilities();
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();

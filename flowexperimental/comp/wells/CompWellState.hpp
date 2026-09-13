@@ -47,10 +47,11 @@ public:
 
     void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
-              const Scalar cell_temperature,
+              const std::vector<Scalar>& well_temperatures,
               const std::vector<std::vector<Scalar>>& cell_mole_fractions,
               const std::vector<std::vector<CompConnectionData> >& well_connection_data,
               const SummaryState& sumary_state,
+              const std::vector<bool>& locally_owned_wells,
               const CompWellState* prev_well_state = nullptr);
 
     const SingleWellState& operator[](const std::string& well_name) const;
@@ -75,14 +76,15 @@ private:
 
     void base_init(const std::vector<Well>& wells_ecl,
                    const std::vector<Scalar>& cell_pressures,
-                   const Scalar temperature,
+                   const std::vector<Scalar>& well_temperatures,
                    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<std::vector<CompConnectionData> >& well_connection_data,
-                   const SummaryState& summary_state);
+                   const SummaryState& summary_state,
+                   const std::vector<bool>& locally_owned_wells);
 
     void initSingleWell(const Well& well,
                         const std::vector<Scalar>& cell_pressures,
-                        const Scalar tempearture,
+                        const Scalar temperature,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const std::vector<CompConnectionData >& conn_data,
                         const SummaryState& summary_state);

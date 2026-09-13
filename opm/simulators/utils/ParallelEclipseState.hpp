@@ -136,6 +136,7 @@ protected:
     std::function<int(void)> m_activeSize; //!< active size function of the grid
     std::function<int(const int)> m_local2Global; //!< mapping from local to global cartesian indices
     std::unordered_map<std::string, Fieldprops::TranCalculator> m_tran; //!< calculators map
+    bool m_hasLgr{false}; //!< Whether the distributed grid contains local grid refinements
 };
 
 

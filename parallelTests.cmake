@@ -14,6 +14,8 @@ add_test_compare_parallel_simulation(
     flow_comp
   DEV_SIMULATOR
     flow_comp3_2p
+  # This compares serial and parallel runs of the same binary, so keep the
+  # tighter compositional tolerances rather than the general parallel values.
   ABS_TOL
     1e-3
   REL_TOL

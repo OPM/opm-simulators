@@ -131,7 +131,8 @@ createWellContainer()
     for (auto w = 0 * nw; w < nw; ++w) {
         const auto& well_name = wells_ecl_[w].name();
         if (!comp_well_states_.has(well_name)
-            || comp_well_states_[well_name].status == WellStatus::SHUT) {
+            || comp_well_states_[well_name].status == WellStatus::SHUT
+            || well_connection_data_[w].empty()) {
             continue;
         }
 
@@ -157,6 +158,11 @@ initWellConnectionData()
     // Rebuild the local perforation data because schedule events can change
     // connections between report steps.
     well_connection_data_.assign(wells_ecl_.size(), {});
+    // Serial runs retain states for all schedule wells. In parallel, a rank
+    // owns a well state if it owns any active connection, including a SHUT
+    // connection which may be opened by a later schedule event.
+    locally_owned_wells_.assign(wells_ecl_.size(), comm_.size() == 1);
+    local_well_reference_cells_.assign(wells_ecl_.size(), -1);
 
     int well_index = 0;
     for (const auto& well : wells_ecl_) {
@@ -172,7 +178,17 @@ initWellConnectionData()
             const auto connIsOpen =
                     connection.state() == Connection::State::OPEN;
 
-            if (connIsOpen && (active_index >= 0)) {
+            if (active_index >= 0) {
+                locally_owned_wells_[well_index] = true;
+                // Prefer the first open connection. For an all-SHUT well,
+                // retain the first active connection as a stable fallback.
+                if (local_well_reference_cells_[well_index] < 0
+                    || (connIsOpen && well_connection_data_[well_index].empty())) {
+                    local_well_reference_cells_[well_index] = active_index;
+                }
+            }
+
+            if (connIsOpen && active_index >= 0) {
                 auto& pd = well_connection_data_[well_index].emplace_back();
 
                 pd.cell_index = active_index;
@@ -181,6 +197,15 @@ initWellConnectionData()
                 pd.ecl_index = connection_index;
             }
             ++connection_index;
+        }
+
+        const int ranksWithConnections =
+            comm_.sum(locally_owned_wells_[well_index] ? 1 : 0);
+        if (ranksWithConnections > 1) {
+            throw std::runtime_error {
+                "Distributed compositional wells are not supported: well '" +
+                well.name() + "' has connections on multiple MPI ranks"
+            };
         }
         ++well_index;
     }
@@ -209,7 +234,7 @@ initWellState()
     auto cell_mole_fractions = std::vector<std::vector<Scalar>>(this->local_num_cells_,
                                            std::vector<Scalar>(FluidSystem::numComponents, Scalar{0.}));
 
-    auto cell_temperature = std::vector<Scalar>(this->local_num_cells_, Scalar{0.});
+    auto cell_temperatures = std::vector<Scalar>(this->local_num_cells_, Scalar{0.});
 
     auto elemCtx = ElementContext { this->simulator_ };
     const auto& gridView = this->simulator_.vanguard().gridView();
@@ -223,14 +248,28 @@ initWellState()
         const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
 
         cell_pressure[ix] = fs.pressure(pressIx).value();
-        // TODO: we are not simulating dynamic temperature, so all the phases and cells have the same temperature for now
-        cell_temperature[ix] = fs.temperature(0).value();
+        cell_temperatures[ix] = fs.temperature(0).value();
         for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx) {
             cell_mole_fractions[ix][compIdx] = fs.moleFraction(compIdx).value();
         }
     }
+
     OPM_END_PARALLEL_TRY_CATCH("ComposotionalWellModel::initializeWellState() failed: ",
                            this->simulator_.vanguard().grid().comm());
+
+    // A well uses the reservoir temperature at its first local open
+    // connection, or its first active connection if all are SHUT. Since
+    // distributed compositional wells are rejected above, this choice is
+    // stable across MPI partitioning. The fallback preserves serial behavior
+    // for schedule wells without an active connection.
+    auto well_temperatures = std::vector<Scalar>(
+        wells_ecl_.size(), cell_temperatures.empty() ? Scalar{0.} : cell_temperatures.front());
+    for (std::size_t wellIdx = 0; wellIdx < wells_ecl_.size(); ++wellIdx) {
+        const int cellIdx = local_well_reference_cells_[wellIdx];
+        if (cellIdx >= 0) {
+            well_temperatures[wellIdx] = cell_temperatures[cellIdx];
+        }
+    }
 
     // Start each report step from freshly initialized schedule state. Retry
     // recovery still comes from last_valid_comp_well_states_ via
@@ -238,8 +277,9 @@ initWellState()
     // prev_well_state here would carry dynamic state across report steps, but
     // that currently changes regression results, so we pass nullptr for now.
     this->comp_well_states_.init(this->wells_ecl_,
-                                 cell_pressure, cell_temperature[0], cell_mole_fractions, this->well_connection_data_,
+                                 cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_,
+                                 this->locally_owned_wells_,
                                  /*prev_well_state=*/nullptr);
 }
 

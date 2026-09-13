@@ -186,6 +186,8 @@ private:
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
      std::vector<std::vector<CompConnectionData> > well_connection_data_;
+     std::vector<bool> locally_owned_wells_;
+     std::vector<int> local_well_reference_cells_;
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
 
