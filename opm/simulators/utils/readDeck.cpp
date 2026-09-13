@@ -385,6 +385,13 @@ namespace {
             eclipseState = createEclipseState(comm, deck);
         }
 
+        const auto& runspec = eclipseState->runspec();
+        if (runspec.compositional() && !runspec.solutionMethodSpecified()) {
+            Opm::OpmLog::warning("No solution method was specified for this compositional case. "
+                                 "Flow uses and only supports the fully implicit method. Add FULLIMP "
+                                 "to make the intended method explicit.");
+        }
+
         // A fracture model reads its seeds out of the deck during the run, not
         // only at setup, so a FRAC run has to retain the Schedule keywords
         // whatever the general setting says.  Decided here rather than by the

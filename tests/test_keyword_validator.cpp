@@ -692,6 +692,26 @@ WINJGAS
     BOOST_CHECK(get_error_report(errors, true, true).empty());
 }
 
+BOOST_AUTO_TEST_CASE(compositional_solution_method_keywords)
+{
+    const auto validator = flowKeywordValidator();
+
+    for (const auto* method : {"AIM", "IMPES"}) {
+        const auto deck = Parser {}.parseString(std::string{"RUNSPEC\n"} + method + "\n");
+        std::vector<ValidationError> errors;
+        validator.validateDeckKeyword(deck[method].back(), errors);
+
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(!errors.front().critical);
+        BOOST_CHECK_EQUAL(*errors.front().user_message,
+                          "Flow only supports the fully implicit method and will use it instead");
+    }
+
+    const auto deck = Parser {}.parseString("RUNSPEC\nFULLIMP\n");
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(deck["FULLIMP"].back(), errors);
+    BOOST_CHECK(errors.empty());
+}
 
 BOOST_AUTO_TEST_CASE(winjgas_makeup_gas_and_stage_items_are_flagged)
 {
