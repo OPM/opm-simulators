@@ -38,7 +38,9 @@
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/partitionset.hh>
 #include <dune/common/parallel/mpihelper.hh>
+#include <algorithm>
 #include <numeric>
+#include <stdexcept>
 #include <unordered_map>
 #include <iostream>
 
@@ -89,6 +91,34 @@ public:
         Parallel::MpiSerializer ser(comm);
         ser.broadcast(Parallel::RootRank{0}, *this);
 
+        int hasMultiValuedIntField = 0;
+        if (comm.rank() == 0) {
+            const auto& globalProps = eclState.globalFieldProps();
+            hasMultiValuedIntField = std::any_of(
+                m_intKeys.begin(), m_intKeys.end(),
+                [&globalProps](const std::string& key) {
+                    return globalProps.get_int_field_data(key).numValuePerCell() > 1;
+                });
+        }
+        comm.broadcast(&hasMultiValuedIntField, 1, 0);
+        if (hasMultiValuedIntField) {
+            throw std::runtime_error {
+                "Distributing multi-valued integer field properties is not supported"
+            };
+        }
+
+        int hasLgr = (comm.rank() == 0) && (eclState.getLgrs().size() > 0);
+        comm.broadcast(&hasLgr, 1, 0);
+        m_distributed_fieldProps.m_hasLgr = hasLgr != 0;
+        const bool hasMultiValuedField =
+            std::any_of(m_doubleMult.begin(), m_doubleMult.end(),
+                        [](const std::size_t multiplicity) { return multiplicity > 1; });
+        if (hasLgr && hasMultiValuedField) {
+            throw std::runtime_error {
+                "Distributing multi-valued field properties with LGRs is not supported"
+            };
+        }
+
         m_no_data = m_intKeys.size() +
                     std::accumulate(m_doubleMult.begin(), m_doubleMult.end(), std::size_t{0});
 
@@ -135,7 +165,8 @@ public:
     ~PropsDataHandle()
     {
         // distributed grid is now correctly set up.
-        const std::size_t numCells = m_grid.size(0);
+        const auto& gridView = m_grid.levelGridView(0);
+        const std::size_t numCells = gridView.size(0);
         for (const auto& intKey : m_intKeys)
         {
             m_distributed_fieldProps.m_intProps[intKey].data.resize(numCells);
@@ -155,7 +186,6 @@ public:
 
         // copy data for the persistent mao to the field properties
         const auto& idSet = m_grid.localIdSet();
-        const auto& gridView = m_grid.levelGridView(0);
         using ElementMapper =
             Dune::MultipleCodimMultipleGeomTypeMapper<typename Grid::LevelGridView>;
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
