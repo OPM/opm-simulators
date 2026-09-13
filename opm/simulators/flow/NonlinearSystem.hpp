@@ -134,10 +134,10 @@ protected:
     virtual void storeSolutionUpdate(const GlobalEqVector&)
     {}
 
-    /// Hook between the Newton update and the recomputation of the intensive
-    /// quantities, e.g. for fetching updated ghost-cell values in parallel.
+    /// Fetch the updated ghost-cell primary variables from the owning
+    /// processes before the intensive quantities are recomputed.
     virtual void postSolutionUpdate()
-    {}
+    { simulator_.model().syncOverlap(); }
 
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
