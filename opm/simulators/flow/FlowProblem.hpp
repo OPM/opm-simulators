@@ -1299,6 +1299,96 @@ private:
     { return *static_cast<const Implementation *>(this); }
 
 protected:
+    void finishTransmissibilities_()
+    {
+        this->transmissibilities_.finishInit(
+            [&vg = this->simulator().vanguard()](const unsigned int index) {
+                return vg.gridIdxToEquilGridIdx(index);
+            });
+    }
+
+    template<class EclWriterType>
+    bool prepareTransmissibilityOutput_(EclWriterType& eclWriter,
+                                        const bool enableEclOutput)
+    {
+        auto& simulator = this->simulator();
+        bool localTransmissibilitiesFinished = false;
+
+        if (enableEclOutput) {
+            // The output of TRANX, TRANY, TRANZ and NNC is on the whole grid: the
+            // I/O rank needs the global transmissibilities when running in parallel.
+            if (simulator.vanguard().grid().comm().size() > 1) {
+                if (simulator.vanguard().grid().comm().rank() == 0) {
+                    eclWriter.setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                }
+            }
+            else {
+                this->finishTransmissibilities_();
+                localTransmissibilitiesFinished = true;
+                eclWriter.setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            }
+
+            std::function<unsigned int(unsigned int)> equilGridToGrid =
+                [&simulator](const unsigned int index) {
+                    return simulator.vanguard().gridEquilIdxToGridIdx(index);
+                };
+            eclWriter.extractOutputTransAndNNC(equilGridToGrid);
+        }
+
+        simulator.vanguard().releaseGlobalTransmissibilities();
+        return localTransmissibilitiesFinished;
+    }
+
+    void initializeSimulatorTime_()
+    {
+        auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& schedule = simulator.vanguard().schedule();
+
+        simulator.setStartTime(schedule.getStartTime());
+        simulator.setEndTime(schedule.simTime(schedule.size() - 1));
+
+        // We want the episode index to be the same as the report step index to make
+        // things simpler, so we have to set the episode index to -1 because it is
+        // incremented by endEpisode(). The size of the initial time step and
+        // length of the initial episode is set to zero for the same reason.
+        simulator.setEpisodeIndex(-1);
+        simulator.setEpisodeLength(0.0);
+
+        this->initGravity_(eclState);
+
+        if (this->enableTuning_) {
+            // If support for the TUNING keyword is enabled, get the initial time
+            // stepping parameters from it instead of from command line parameters.
+            const auto& tuning = schedule[0].tuning();
+            this->initialTimeStepSize_ = tuning.TSINIT.value_or(-1.0);
+            this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
+        }
+    }
+
+    void initializeModelProperties_()
+    {
+        auto& simulator = this->simulator();
+
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+        }
+
+        this->readRockParameters_(
+            simulator.vanguard().cellCenterDepths(),
+            [&simulator](const unsigned int index) {
+                std::array<int, dim> coords;
+                simulator.vanguard().cartesianCoordinate(index, coords);
+                std::ranges::transform(coords, coords.begin(),
+                                       [](const auto coordinate) { return coordinate + 1; });
+                return coords;
+            });
+
+        this->readMaterialParameters_();
+        this->readThermalParameters_();
+    }
+
     template<class UpdateFunc>
     void updateProperty_(const std::string& failureMsg,
                          UpdateFunc func)
