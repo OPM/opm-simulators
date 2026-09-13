@@ -195,6 +195,37 @@ BOOST_AUTO_TEST_CASE(Type1LiquidRootPressureIntegration)
                                - 154.694 * barsa), 0.05 * barsa);
 }
 
+BOOST_AUTO_TEST_CASE(Type1VapourRootPressureIntegration)
+{
+    // The contact is below the whole column, so type 1 must use the vapour
+    // root. At 10 bar and 100 C this mixture has distinct gas and liquid roots
+    // with densities around 40 and 494 kg/m^3, respectively. The pressure
+    // gradient therefore detects an incorrect choice of EOS root.
+    const EquilFixture fix(deckString("EQUIL\n 2012.5 10 2300 0 2200 0 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "ZMFVD\n 2000 0 0.5 0.5 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    // The datum coincides with the third cell centre.
+    BOOST_CHECK_CLOSE(states[2].pressure(FluidSystem::gasPhaseIdx), 10.0 * barsa, 1e-10);
+
+    const CompVec z{0.0, 0.5, 0.5};
+    for (const auto& fs : states) {
+        BOOST_CHECK_CLOSE(fs.temperature(FluidSystem::gasPhaseIdx), 373.15, 1e-10);
+        for (int comp = 0; comp < 3; ++comp) {
+            BOOST_CHECK_SMALL(fs.moleFraction(comp) - z[comp], 1e-10);
+        }
+    }
+
+    for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+        const Scalar rho = impliedDensity(states[c].pressure(FluidSystem::gasPhaseIdx),
+                                         states[c + 1].pressure(FluidSystem::gasPhaseIdx));
+        BOOST_CHECK_GT(rho, 30.0);
+        BOOST_CHECK_LT(rho, 60.0);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(GasCapAboveContact)
 {
     // EQUIL item 10 is 3: ZMFVD is the liquid composition and the gas-oil
@@ -365,6 +396,30 @@ BOOST_AUTO_TEST_CASE(InvalidEqlnumFailsOnAllRanks)
     }
 
     BOOST_CHECK_THROW(fix.compute(eqlnum), std::runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(MismatchedEqlnumSizeFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    const Opm::Parallel::Communication comm;
+    for (const std::size_t size : std::array<std::size_t, 3>{0, 19, 21}) {
+        BOOST_TEST_CONTEXT("EQLNUM size " << size) {
+            std::vector<int> eqlnum(fix.depths.size(), 0);
+            // Only rank 0 has inconsistent input, but every rank must throw
+            // before entering the region setup collectives or indexing cells.
+            if (comm.rank() == 0) {
+                eqlnum.resize(size);
+            }
+            BOOST_CHECK_EXCEPTION(fix.compute(eqlnum), std::runtime_error,
+                                  [&](const std::runtime_error& error) {
+                                      const std::string expected = "EQLNUM contains "
+                                          + std::to_string(size) + " entries for 20 cell depths";
+                                      return comm.rank() != 0
+                                          || std::string(error.what()).find(expected)
+                                              != std::string::npos;
+                                  });
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)

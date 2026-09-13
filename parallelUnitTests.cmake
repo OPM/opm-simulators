@@ -10,7 +10,7 @@ opm_add_test(test_compequil_invalid_eqlnum_np2
   DRIVER_ARGS
     -n 2
   TEST_ARGS
-    --run_test=InvalidEqlnumFailsOnAllRanks
+    --run_test=InvalidEqlnumFailsOnAllRanks,MismatchedEqlnumSizeFailsOnAllRanks
   PROCESSORS
     2
 )
