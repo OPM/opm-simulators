@@ -26,6 +26,33 @@ add_test_compare_parallel_simulation(
     2
 )
 
+if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL 2)
+  if(USE_DEV_SIMULATOR_IN_TESTS)
+    set(_split_well_simulator flow_comp3_2p)
+  else()
+    set(_split_well_simulator flow_comp)
+  endif()
+
+  add_test(
+    NAME
+      runSimulator/flow_comp_split_well_rejected
+    COMMAND
+      ${PROJECT_SOURCE_DIR}/tests/run-parallel-compositional-split-well.sh
+      ${MPIEXEC_EXECUTABLE}
+      ${MPIEXEC_NUMPROC_FLAG}
+      $<TARGET_FILE:${_split_well_simulator}>
+      ${OPM_TESTS_ROOT}/compositional/SIMPLE_COMP_SSHIFT.DATA
+      ${BASE_RESULT_PATH}/parallel/flow_comp+split_well_rejected
+  )
+  set_tests_properties(
+    runSimulator/flow_comp_split_well_rejected
+    PROPERTIES
+      PROCESSORS 2
+      TIMEOUT 30
+  )
+  unset(_split_well_simulator)
+endif()
+
 add_test_compare_parallel_simulation(
   CASENAME
     spe1
