@@ -406,7 +406,8 @@ public:
             countLocalInteriorCellsGridView(gridView);
 
         this->outputModule_->
-            allocBuffers(num_interior, 0, false, false, /*isRestart*/ false);
+            allocBuffers(num_interior, 0, false, false,
+                         /*forceRestartFieldAllocation=*/false);
 
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -639,7 +640,7 @@ public:
                                               0,
                                               /*isSubStep = */false,
                                               /*log = */      false,
-                                              /*isRestart = */true);
+                                              /*forceRestartFieldAllocation = */true);
 
             const auto restartSolution =
                 loadParallelRestartSolution(this->eclIO_.get(),
@@ -676,7 +677,7 @@ public:
                                               restartStepIdx,
                                               /*isSubStep = */false,
                                               /*log = */      false,
-                                              /*isRestart = */true);
+                                              /*forceRestartFieldAllocation = */true);
         }
 
         {
@@ -841,10 +842,17 @@ private:
 
         const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
+        const bool writeAllSolutions =
+            Parameters::Get<Parameters::EnableWriteAllSolutions>();
+
+        // EclipseIO writes restart output for every positive time-step index in
+        // write-all mode, independently of the schedule's BASIC/FREQ settings.
+        const bool forceRestartFieldAllocation =
+            writeAllSolutions && (simulator_.timeStepIndex() > 0);
         this->outputModule_->
             allocBuffers(num_interior, reportStepNum,
-                         isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>(),
-                         log, /*isRestart*/ false);
+                         isSubStep && !writeAllSolutions,
+                         log, forceRestartFieldAllocation);
 
         ElementContext elemCtx(simulator_);
 
@@ -863,8 +871,6 @@ private:
                 this->outputModule_->processElementBlockData(elemCtx);
             }
             this->outputModule_->clearExtractors();
-
-            this->outputModule_->accumulateDensityParallel();
         }
 
         {
@@ -881,10 +887,12 @@ private:
             }
         }
 
-        this->outputModule_->validateLocalData();
-
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",
                                    this->simulator_.vanguard().grid().comm());
+
+        // Propagate rank-local exceptions before entering output collectives.
+        this->outputModule_->accumulateDensityParallel();
+        this->outputModule_->validateLocalData();
     }
 
     void captureLocalFluxData()

@@ -23,11 +23,15 @@
 #include <config.h>
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+
+#include <opm/material/constraintsolvers/SaturationPressure.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/output/data/Solution.hpp>
 
 #include <algorithm>
+#include <optional>
 #include <tuple>
 
 #include <fmt/format.h>
@@ -37,7 +41,8 @@ namespace Opm {
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
 allocate(const unsigned bufferSize,
-         std::map<std::string, int>& rstKeywords)
+         std::map<std::string, int>& rstKeywords,
+         const RestartOutput restartOutput)
 {
     if (auto& zmf = rstKeywords["ZMF"]; zmf > 0) {
         this->allocated_ = true;
@@ -73,6 +78,17 @@ allocate(const unsigned bufferSize,
         this->allocated_ = true;
         pgas = 0;
         gasPressure_.resize(bufferSize, 0.0);
+    }
+
+    // A pass without restart output must not retain a PSAT buffer from the
+    // previous pass: its presence enables a nonlinear solve in every cell.
+    saturationPressure_.clear();
+    saturationPressureRequested_ = false;
+    if (auto& psat = rstKeywords["PSAT"]; psat > 0 && restartOutput == RestartOutput::Enabled) {
+        saturationPressureRequested_ = true;
+        psat = 0;
+        this->allocated_ = true;
+        saturationPressure_.resize(bufferSize, 0.0);
     }
 
     if (auto& vmf = rstKeywords["VMF"]; vmf > 0) {
@@ -142,6 +158,16 @@ assignPhasePressures(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
+assignSaturationPressure(const unsigned globalDofIdx,
+                         const Scalar psat)
+{
+    if (!saturationPressure_.empty()) {
+        saturationPressure_[globalDofIdx] = psat;
+    }
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
 assignVaporFraction(const unsigned globalDofIdx,
                     const Scalar vmf)
 {
@@ -205,6 +231,7 @@ outputRestart(data::Solution& sol,
 
     entries.emplace_back("POIL", UnitSystem::measure::pressure, oilPressure_);
     entries.emplace_back("PGAS", UnitSystem::measure::pressure, gasPressure_);
+    entries.emplace_back("PSAT", UnitSystem::measure::pressure, saturationPressure_);
     entries.emplace_back("VMF", UnitSystem::measure::identity, vaporFraction_);
 
     std::ranges::for_each(entries,
@@ -212,6 +239,38 @@ outputRestart(data::Solution& sol,
                           { doInsert(array, data::TargetType::RESTART_SOLUTION); });
 
     this->allocated_ = false;
+}
+
+template<class FluidSystem>
+auto CompositionalContainer<FluidSystem>::
+cellSaturationPressure(const Scalar liquidFraction,
+                       const Scalar oilPressure,
+                       const std::array<Scalar, numComponents>& moleFractions,
+                       const Scalar temperature,
+                       const CompositionalConfig::EOSType eosType) -> std::optional<Scalar>
+{
+    // Compare against the flash's exact single-phase labels. Round-off can put
+    // a two-phase Rachford-Rice result slightly outside the interval [0, 1].
+    const bool liquidOnly = liquidFraction == Scalar{1};
+    const bool vapourOnly = liquidFraction == Scalar{0};
+    if (!liquidOnly && !vapourOnly) {
+        return oilPressure;
+    }
+
+    // The zero-component instantiation exists only to register
+    // ForceDisableFluidInPlaceOutput and has no equation of state to solve.
+    if constexpr (numComponents > 0) {
+        using Solver = SaturationPressure<Scalar, FluidSystem>;
+        typename Solver::CompVec incipient{};
+        Scalar psat{};
+        const bool found = liquidOnly
+            ? Solver::bubblePressure(moleFractions, temperature, eosType, psat, incipient)
+            : Solver::dewPressure(moleFractions, temperature, eosType, psat, incipient);
+        if (found) {
+            return psat;
+        }
+    }
+    return std::nullopt;
 }
 
 #define INSTANTIATE_COMP_THREEPHASE(NUM) \

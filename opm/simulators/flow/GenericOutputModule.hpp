@@ -286,7 +286,10 @@ public:
         local_data_valid_ = false;
     }
 
-    void validateLocalData(){
+    /// Finalize per-cell output and mark it valid. Call this method on every
+    /// rank because overrides may perform collectives.
+    virtual void validateLocalData()
+    {
         local_data_valid_ = true;
     }
 
@@ -464,7 +467,7 @@ protected:
                         unsigned reportStepNum,
                         const bool substep,
                         const bool log,
-                        const bool isRestart,
+                        const bool forceRestartFieldAllocation,
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
                         std::map<std::string, int> rstKeywords = {});

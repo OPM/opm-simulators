@@ -36,6 +36,7 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
@@ -52,6 +53,7 @@
 #include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <fstream>
 #include <memory>
@@ -62,6 +64,7 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -85,6 +88,7 @@ class OutputCompositionalModule : public GenericOutputModule<GetPropType<TypeTag
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using BaseType = GenericOutputModule<FluidSystem>;
+    using RestartOutput = typename CompositionalContainer<FluidSystem>::RestartOutput;
     using Extractor = detail::Extractor<TypeTag>;
     using BlockExtractor = detail::BlockExtractor<TypeTag>;
 
@@ -127,6 +131,7 @@ public:
                    getPropValue<TypeTag, Properties::EnableBioeffects>(),
                    getPropValue<TypeTag, Properties::EnableGeochemistry>())
         , simulator_(simulator)
+        , eosType_(simulator.vanguard().eclState().compositionalConfig().eosType(0))
     {
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
@@ -177,16 +182,23 @@ public:
                  const unsigned reportStepNum,
                  const bool     substep,
                  const bool     log,
-                 const bool     isRestart)
+                 const bool     forceRestartFieldAllocation)
     {
         if (! std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
         }
 
         auto rstKeywords = this->schedule_.rst_keywords(reportStepNum);
-        this->compC_.allocate(bufferSize, rstKeywords);
+        const bool isRestartOutput = forceRestartFieldAllocation ||
+            (!substep && this->schedule_.write_rst_file(reportStepNum));
+        const auto restartOutput = isRestartOutput
+            ? RestartOutput::Enabled
+            : RestartOutput::Disabled;
+        this->compC_.allocate(bufferSize, rstKeywords, restartOutput);
+        this->numUnresolvedSaturationPressures_ = 0;
 
-        this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
+        this->doAllocBuffers(bufferSize, reportStepNum, substep, log,
+                             forceRestartFieldAllocation,
                              /* hysteresisConfig = */ nullptr,
                              /* numOutputNnc =*/ 0,
                              std::move(rstKeywords));
@@ -714,6 +726,33 @@ public:
                                               intQuants,
                                               totVolume,
                                               referencePorosity);
+
+        // Run the nonlinear PSAT solve in the caller's OpenMP loop. The
+        // assignment is a no-op unless a PSAT restart buffer is allocated.
+        this->assignSaturationPressure_(globalDofIdx, intQuants.fluidState());
+    }
+
+    /// When PSAT is requested, reduce the count of unresolved cells across all
+    /// ranks before marking the output data valid.
+    void validateLocalData() override
+    {
+        if (this->compC_.saturationPressureRequested()) {
+            const auto& comm = this->simulator_.gridView().comm();
+            const auto totalUnresolved = comm.sum(this->numUnresolvedSaturationPressures_);
+            if (totalUnresolved > 0 && comm.rank() == 0) {
+                const std::string_view cell = totalUnresolved == 1 ? "cell" : "cells";
+                // Some unresolved searches correspond to states with no saturation
+                // boundary at this composition and temperature, so report the aggregate
+                // informationally rather than treating every result as a solver failure.
+                OpmLog::info(fmt::format("No saturation pressure was resolved in {} {}; "
+                                         "PSAT is written as zero there. This includes "
+                                         "mixtures that have none.",
+                                         totalUnresolved,
+                                         cell));
+            }
+        }
+        this->numUnresolvedSaturationPressures_ = 0;
+        BaseType::validateLocalData();
     }
 
 protected:
@@ -779,8 +818,42 @@ private:
         }
     }
 
+    /// Store the cell's saturation pressure, using zero for an unsuccessful solve.
+    /// Concurrent calls must use distinct cell indices; the unresolved count is atomic.
+    template<class FluidState>
+    void assignSaturationPressure_(const unsigned globalDofIdx, const FluidState& fluidState)
+    {
+        if (!this->compC_.saturationPressureAllocated()) {
+            return;
+        }
+
+        std::array<Scalar, numComponents> moleFractions{};
+        for (int c = 0; c < numComponents; ++c) {
+            moleFractions[c] = getValue(fluidState.moleFraction(c));
+        }
+        const auto psat = CompositionalContainer<FluidSystem>::cellSaturationPressure(
+            getValue(fluidState.L()),
+            getValue(fluidState.pressure(oilPhaseIdx)),
+            moleFractions,
+            getValue(fluidState.temperature(oilPhaseIdx)),
+            this->eosType_);
+        if (!psat) {
+            // A false result means only that no saturation pressure was resolved;
+            // it does not distinguish a physically absent boundary from numerical
+            // nonconvergence.
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+            ++this->numUnresolvedSaturationPressures_;
+        }
+
+        this->compC_.assignSaturationPressure(globalDofIdx, psat.value_or(Scalar{0}));
+    }
+
     const Simulator& simulator_;
     CompositionalContainer<FluidSystem> compC_;
+    CompositionalConfig::EOSType eosType_;
+    std::size_t numUnresolvedSaturationPressures_{};
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;
 };

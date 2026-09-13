@@ -269,7 +269,7 @@ public:
                  const unsigned reportStepNum,
                  const bool     substep,
                  const bool     log,
-                 const bool     isRestart)
+                 const bool     forceRestartFieldAllocation)
     {
         if (! std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
@@ -281,7 +281,7 @@ public:
                              reportStepNum,
                              substep,
                              log,
-                             isRestart,
+                             forceRestartFieldAllocation,
                              &problem.materialLawManager()->hysteresisConfig(),
                              problem.eclWriter().getOutputNnc().front().size());
     }

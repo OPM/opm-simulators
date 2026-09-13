@@ -637,7 +637,7 @@ doAllocBuffers(const unsigned bufferSize,
                const unsigned reportStepNum,
                const bool     substep,
                const bool     log,
-               const bool     isRestart,
+               const bool     forceRestartFieldAllocation,
                const EclHysteresisConfig* hysteresisConfig,
                const unsigned numOutputNnc,
                std::map<std::string, int> rstKeywords)
@@ -706,13 +706,13 @@ doAllocBuffers(const unsigned bufferSize,
         this->rftC_.allocate(reportStepNum);
     }
 
-    const bool alloc_fields = isRestart || (schedule_.write_rst_file(reportStepNum) && !substep);
+    const bool alloc_fields = forceRestartFieldAllocation ||
+        (schedule_.write_rst_file(reportStepNum) && !substep);
     this->flowsC_.allocate(bufferSize, summaryConfig_, numOutputNnc, alloc_fields, rstKeywords);
 
-    // Field data should be allocated
-    // 1) When we want to restart
-    // 2) When it is ask for by the user via restartConfig
-    // 3) When it is not a substep
+    // Allocate cell-based restart fields when the schedule requests a restart
+    // file, or when a caller needs them independently of the output schedule
+    // (while loading restart data or producing write-all snapshots).
     if (!alloc_fields) {
         return;
     }
