@@ -21,7 +21,10 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <cstddef>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
@@ -711,6 +714,42 @@ BOOST_AUTO_TEST_CASE(compositional_solution_method_keywords)
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(deck["FULLIMP"].back(), errors);
     BOOST_CHECK(errors.empty());
+}
+
+BOOST_AUTO_TEST_CASE(licenses_is_warned_about_but_not_critical)
+{
+    // Flow has no licence management, so LICENSES is ignored: every record
+    // shape must parse, and must be reported as a warning rather than stopping
+    // the run. Note that a bare terminator yields no records at all -- a
+    // slash-terminated keyword cannot hold an empty record.
+    const auto cases = std::vector<std::pair<std::string, std::vector<std::size_t>>> {
+        {"LICENSES\n/\n", {}},
+        {"LICENSES\n 'A' /\n/\n", {1}},
+        {"LICENSES\n 'A' /\n 'B' 'C' /\n 'D' 'E' 'F' /\n 'G' /\n/\n", {1, 2, 3, 1}},
+    };
+
+    const auto validator = flowKeywordValidator();
+    for (const auto& [keyword_string, feature_counts] : cases) {
+        BOOST_TEST_CONTEXT(keyword_string)
+        {
+            const auto deck = Parser {}.parseString("RUNSPEC\n" + keyword_string);
+            const auto& keyword = deck["LICENSES"].back();
+
+            BOOST_REQUIRE_EQUAL(keyword.size(), feature_counts.size());
+            for (std::size_t record = 0; record < feature_counts.size(); ++record) {
+                BOOST_CHECK_EQUAL(keyword.getRecord(record).getItem("FEATURES").data_size(),
+                                  feature_counts[record]);
+            }
+
+            std::vector<ValidationError> errors;
+            validator.validateDeckKeyword(keyword, errors);
+
+            BOOST_REQUIRE_EQUAL(errors.size(), 1);
+            BOOST_CHECK(!errors.front().critical);
+            BOOST_CHECK_EQUAL(*errors.front().user_message,
+                              "Flow does not check out licences, LICENSES is ignored");
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(winjgas_makeup_gas_and_stage_items_are_flagged)

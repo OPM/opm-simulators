@@ -326,7 +326,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"LGRLOCK", {true, std::nullopt}},
         {"LGROFF", {true, std::nullopt}},
         {"LGRON", {true, std::nullopt}},
-        {"LICENSES", {true, std::nullopt}},
+        {"LICENSES", {false, std::string{"Flow does not check out licences, LICENSES is ignored"}}},
         {"LINCOM", {true, std::nullopt}},
         {"LINKPERM", {true, std::nullopt}},
         {"LKRO", {true, std::nullopt}},
