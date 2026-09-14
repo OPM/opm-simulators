@@ -62,15 +62,17 @@ template <class T>
 GpuVector<T>&
 GpuVector<T>::operator=(const GpuVector<T>& other)
 {
-    // Only copy data if both vectors have elements and same size
-    if (m_buffer.size() > 0 && other.m_buffer.size() > 0) {
-        assertSameSize(other);
-        OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
-                                      other.data(),
-                                      dim() * sizeof(T),
-                                      cudaMemcpyDeviceToDevice));
+    if (dim() == 0 && other.dim() == 0) {
+        // If both are zero-sized, assignment is trivial (do nothing)
+        return *this;
     }
-    // If both are zero-sized, assignment is trivial (do nothing)
+
+    // Only copy data if both vectors have elements and same size
+    assertSameSize(other);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
+                                other.data(),
+                                dim() * sizeof(T),
+                                cudaMemcpyDeviceToDevice));
     return *this;
 }
 
