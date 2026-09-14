@@ -33,6 +33,22 @@ template<typename Scalar, typename IndexTraits> class WellState;
 template<typename Scalar, typename IndexTraits>
 class WellFilterCake {
 public:
+  static WellFilterCake serializationTestObject()
+  {
+    WellFilterCake result;
+    result.inj_fc_multiplier_ = {1.1, 1.2};
+    result.skin_factor_ = {2.1, 2.2};
+    result.thickness_ = {3.1, 3.2};
+    return result;
+  }
+
+  bool operator==(const WellFilterCake& other) const
+  {
+    return inj_fc_multiplier_ == other.inj_fc_multiplier_ &&
+         skin_factor_ == other.skin_factor_ &&
+         thickness_ == other.thickness_;
+  }
+
     //! \brief Post-step filtration model updates
     //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers
     void updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
@@ -49,6 +65,16 @@ public:
 
     //! \brief Returns a const-ref to multipliers.
     const std::vector<Scalar>& multipliers() const { return inj_fc_multiplier_; }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+      // Only dynamic state is serialized. Model configuration remains sourced
+      // from schedule and runtime setup.
+      serializer(inj_fc_multiplier_);
+      serializer(skin_factor_);
+      serializer(thickness_);
+    }
 
 private:
     //! \brief Update the multiplier for well transmissbility due to cake filtration.

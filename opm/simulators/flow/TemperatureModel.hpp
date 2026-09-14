@@ -240,6 +240,19 @@ public:
         , simulator_(simulator)
     {}
 
+    static TemperatureModel serializationTestObject(Simulator& simulator)
+    {
+        TemperatureModel result(simulator);
+        result.doInit(3);
+        result.temperature_ = {281.0, 282.0, 283.0};
+        return result;
+    }
+
+    bool operator==(const TemperatureModel& other) const
+    {
+        return this->temperature_ == other.temperature_;
+    }
+
     void init()
     {
         const unsigned int numCells = simulator_.model().numTotalDof();
@@ -382,6 +395,14 @@ public:
     template <class Restarter>
     void deserialize(Restarter&)
     { /* not implemented */ }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        // Only dynamic state is serialized. Geometry-derived caches and
+        // solver/work arrays are rebuilt from the current simulator state.
+        serializer(this->temperature_);
+    }
 
 protected:
     void updateStorageCache()
@@ -795,6 +816,12 @@ public:
     template <class Restarter>
     void deserialize(Restarter&)
     { /* not implemented */ }
+
+    template<class Serializer>
+    void serializeOp(Serializer&)
+    {
+        // No dynamic state for the disabled temperature model variant.
+    }
 
     void init() {}
     void beginTimeStep() {}

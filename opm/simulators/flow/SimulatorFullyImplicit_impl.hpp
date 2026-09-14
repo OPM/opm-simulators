@@ -589,6 +589,7 @@ serializeOp(Serializer& serializer)
     serializer(simulator_);
     serializer(report_);
     serializer(adaptiveTimeStepping_);
+    serializer(modelParam_);
 }
 
 template<class TypeTag>
