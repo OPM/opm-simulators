@@ -90,7 +90,7 @@ function(add_test_compareECLFiles)
     RESTART_STEP
     RESTART_SCHED
   )
-  set(multiValueArgs TEST_ARGS)
+  set(multiValueArgs TEST_ARGS TEST_ARGS_REPLAY)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
@@ -121,6 +121,9 @@ function(add_test_compareECLFiles)
   if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
+  foreach(arg IN LISTS PARAM_TEST_ARGS_REPLAY)
+    list(APPEND DRIVER_ARGS -y ${arg})
+  endforeach()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME}
     EXE_TARGET
       ${PARAM_SIMULATOR}
@@ -755,6 +758,7 @@ endif ()
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/comparisonTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/rollbackTests.cmake)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
