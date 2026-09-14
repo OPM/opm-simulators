@@ -86,6 +86,7 @@
 
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 
+#include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
@@ -535,6 +536,8 @@ void FlowGenericVanguard::registerParameters_()
         ("Allow the perforations of a well to be distributed to interior of multiple processes");
     Parameters::Register<Parameters::AllowSplittingInactiveWells>
         ("Allow inactive (never non-shut) wells to be split across multiple domains");
+    Parameters::Register<Parameters::EnableStateRollback>
+        ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps (default: false)");
     // register here for the use in the tests without BlackoilModelParameters
     Parameters::Register<Parameters::UseMultisegmentWell>
         ("Use the well model for multi-segment wells instead of the one for single-segment wells");

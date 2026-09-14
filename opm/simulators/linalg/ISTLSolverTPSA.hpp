@@ -162,7 +162,7 @@ public:
     }
 
     /*!
-    * \brief Prepare matix and rhs vector for linear solve
+    * \brief Prepare matrix and rhs vector for linear solve
     *
     * \param M System matrix
     * \param b Right-hand side vector
@@ -182,7 +182,7 @@ public:
         // Set right-hand side vector
         rhs_ = &b;
 
-        // Zero out the overlapping cells (not for the overlapping ILU variant,which handles them
+        // Zero out the overlapping cells (not for the overlapping ILU variant, which handles them
         // itself).
         auto type = prm_.get<std::string>("preconditioner.type", "paroverilu0");
         std::ranges::transform(type, type.begin(), ::tolower);
@@ -204,6 +204,13 @@ public:
         try {
             initPrepare(M, b);
             prepareSolver();
+        }
+        catch (const Dune::MatrixBlockError&) {
+            // A singular matrix block found while building the
+            // preconditioner is recoverable: rethrow it unchanged so that
+            // the adaptive time stepping can chop the time step instead of
+            // aborting the run.
+            throw;
         }
         OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR
             ("TPSA: Failure likely due to a faulty linear solver JSON specification. "
@@ -236,8 +243,11 @@ public:
 
         // Solve linear system
         Dune::InverseOperatorResult result;
-        assert(solver_);
-        solver_->apply(x.istlVector(), rhs_->istlVector(), result);
+        {
+            OPM_TIMEBLOCK(flexibleSolverApply);
+            assert(solver_);
+            solver_->apply(x.istlVector(), rhs_->istlVector(), result);
+        }
 
         // Store no. linear iterations
         iterations_ = result.iterations;
@@ -265,6 +275,19 @@ public:
     */
     void eraseMatrix() override
     {
+        matrix_ = nullptr;
+        rhs_ = nullptr;
+        iterations_ = 0;
+        solveCount_ = 0;
+        solver_ = nullptr;
+        precond_ = nullptr;
+        seqSolver_.reset();
+        seqOperator_.reset();
+#if HAVE_MPI
+        parSolver_.reset();
+        parOperator_.reset();
+        multiComm_.reset();
+#endif
     }
 
     /*!
@@ -368,7 +391,7 @@ protected:
                                   mode));
         }
 
-        // Helper array for eq. indices to matrix/vetor field indices
+        // Helper array for eq. indices to matrix/vector field indices
         static constexpr std::array<unsigned, Linear::numTpsaFields> fieldEq {
             0,
             1,
