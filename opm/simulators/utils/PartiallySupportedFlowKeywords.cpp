@@ -399,8 +399,8 @@ partiallySupported()
                                                            "(liquid composition with a gas "
                                                            "cap) are supported"}}, // COMP_INIT_TYPE
                {11,{false, allow_values<int> {0, 1},
-                    "EQUIL(COMP_NOT_SET_SAT_PRESSURE): only 0 (reset when needed) and 1 "
-                    "(keep datum pressure) are supported"}}, // COMP_NOT_SET_SAT_PRESSURE
+                    "EQUIL(COMP_NOT_SET_SAT_PRESSURE): must be defaulted/omitted or set to "
+                    "0 (reset when needed) or 1 (keep datum pressure)"}}, // COMP_NOT_SET_SAT_PRESSURE
             },
          },
          {
