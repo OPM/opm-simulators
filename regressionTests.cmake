@@ -1747,6 +1747,7 @@ set(_tpsa_cases
   TPSA_LAGGED
   TPSA_FIXEDSTRESS
   TPSA_BC
+  TPSA_SPRING_BC
 )
 
 add_multiple_tests(
