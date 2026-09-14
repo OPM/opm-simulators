@@ -43,6 +43,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -84,7 +85,7 @@ class EosDensityODE
 public:
     using Scalar = typename FluidSystem::Scalar;
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
-    using CompositionFunction = std::function<CompVec(const Scalar)>;
+    using CompositionFunction = std::function<CompVec(Scalar)>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     EosDensityODE(CompositionFunction composition,
@@ -237,6 +238,15 @@ private:
 
     static constexpr int numComponents = FluidSystem::numComponents;
 
+    /// A depth table with a single row is depth-independent, but the
+    /// interpolant still needs two sample points; the duplicate row is placed
+    /// this far below the original. The distance does not matter.
+    static constexpr Scalar constantTableSpan{1.0};
+
+    /// Regions thinner than this are padded by the same amount on either side,
+    /// so the pressure integration never runs on a degenerate interval.
+    static constexpr Scalar minimumSpanExtent{1.0};
+
     /// The equilibrated vertical distributions within one region.
     struct Region {
         int initType{1};                            // EQUIL item 10
@@ -251,7 +261,7 @@ private:
     static CompVec composition(const Region& reg, const Scalar depth)
     {
         CompVec z{};
-        Scalar sum = 0.0;
+        Scalar sum{};
         for (int c = 0; c < numComponents; ++c) {
             z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.zmfVdTable[c], depth));
             sum += z[c];
@@ -269,14 +279,15 @@ private:
                                          const Scalar depthA,
                                          const Scalar depthB)
     {
+        // ZMFVD mole fractions are input data, so a real contrast across the
+        // contact is orders of magnitude above this round-off tolerance.
+        constexpr Scalar sameComposition{1.0e-10};
+
         const CompVec a = composition(reg, depthA);
         const CompVec b = composition(reg, depthB);
-        for (int c = 0; c < numComponents; ++c) {
-            if (std::abs(a[c] - b[c]) > Scalar{1.0e-10}) {
-                return true;
-            }
-        }
-        return false;
+        return !std::ranges::equal(a, b, [](const Scalar x, const Scalar y) {
+            return std::abs(x - y) <= sameComposition;
+        });
     }
 
     Region setupRegion(const EquilRecord& record,
@@ -304,7 +315,9 @@ private:
                       fmt::format("Compositional equilibration only supports zero gas-oil "
                                   "contact capillary pressure (EQUIL item 6); region {} "
                                   "specifies {} bar.",
-                                  regionIdx + 1, record.gasOilContactCapillaryPressure() / 1e5));
+                                  regionIdx + 1,
+                                  unit::convert::to(record.gasOilContactCapillaryPressure(),
+                                                    unit::barsa)));
         }
 
         if (const auto accuracy = record.initializationTargetAccuracy(); accuracy != 0) {
@@ -324,7 +337,7 @@ private:
         // needs two sample points, so duplicate it onto an arbitrary interval.
         const bool constantComposition = (depths.size() == 1);
         if (constantComposition) {
-            depths.push_back(depths.front() + Scalar{1});
+            depths.push_back(depths.front() + constantTableSpan);
         }
         for (int c = 0; c < numComponents; ++c) {
             const auto& col = zmfvd.getMoleFractionColumn(c);
@@ -345,15 +358,15 @@ private:
             // As for ZMFVD above, a single row is a depth-independent
             // temperature and the interpolant needs a second sample point.
             if (tempDepths.size() == 1) {
-                tempDepths.push_back(tempDepths.front() + Scalar{1});
+                tempDepths.push_back(tempDepths.front() + constantTableSpan);
                 temps.push_back(temps.front());
             }
             reg.tempVdTable.setXYContainers(tempDepths, temps);
         }
         else {
-            const std::vector<Scalar> x{0.0, 1.0};
-            const std::vector<Scalar> y(2, tables.rtemp());
-            reg.tempVdTable.setXYContainers(x, y);
+            const std::vector<Scalar> tempDepths{Scalar{0}, constantTableSpan};
+            const std::vector<Scalar> temps(tempDepths.size(), tables.rtemp());
+            reg.tempVdTable.setXYContainers(tempDepths, temps);
         }
 
         // Vertical extent of the region's cells across all processes.
@@ -371,9 +384,8 @@ private:
             // No cells anywhere in this region.
             return reg;
         }
-        if (span[1] - span[0] < Scalar{1}) {
-            // Avoid a degenerate integration interval.
-            span = {span[0] - Scalar{1}, span[1] + Scalar{1}};
+        if (span[1] - span[0] < minimumSpanExtent) {
+            span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
         }
 
         // The equilibration covers the hydrocarbon column only.
@@ -486,7 +498,7 @@ private:
         // to within one atmosphere and is reset to the computed value otherwise.
         // Item 11 = 1 retains the numeric input pressure at the contact regardless
         // of that test; the result need not be an equilibrium system in that case.
-        constexpr Scalar oneAtmosphere = 101325.0;
+        constexpr Scalar oneAtmosphere = unit::atm;
         const Scalar inputPressure = record.datumDepthPressure();
         const bool resetToPsat = record.setToSaturationPressure()
             && (std::abs(inputPressure - psat) >= oneAtmosphere);
@@ -495,14 +507,17 @@ private:
         OpmLog::info(fmt::format("Equilibration region {}: two phases, liquid composition "
                                  "specified (EQUIL item 10 is 3). The saturation pressure "
                                  "at the gas-oil contact ({} m) is {:.6g} bar.",
-                                 regionIdx + 1, reg.zgoc, psat / 1e5));
+                                 regionIdx + 1, reg.zgoc,
+                                 unit::convert::to(psat, unit::barsa)));
 
         if (resetToPsat) {
             OpmLog::warning(fmt::format("Equilibration region {}: the datum pressure {:.6g} bar "
                                         "differs from the saturation pressure {:.6g} bar at the "
                                         "gas-oil contact by one atmosphere or more; the "
                                         "saturation pressure is used instead.",
-                                        regionIdx + 1, inputPressure / 1e5, psat / 1e5));
+                                        regionIdx + 1,
+                                        unit::convert::to(inputPressure, unit::barsa),
+                                        unit::convert::to(psat, unit::barsa)));
         }
 
         const ODE oilOde([&reg](const Scalar depth) { return composition(reg, depth); },
