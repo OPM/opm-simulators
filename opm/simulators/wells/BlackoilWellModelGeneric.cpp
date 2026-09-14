@@ -58,6 +58,7 @@
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
@@ -118,6 +119,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , active_wgstate_(pu)
     , last_valid_wgstate_(pu)
     , nupcol_wgstate_(pu)
+    , prev_timestep_(pu)
     , group_state_helper_(this->wellState(),
                           this->groupState(),
                           this->schedule(),
@@ -127,6 +129,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
                           comm,
                           terminal_output_)
     , genNetwork_(network)
+    , enable_state_rollback_(Parameters::Get<Parameters::EnableStateRollback>())
 {
 
     const auto numProcs = comm_.size();
