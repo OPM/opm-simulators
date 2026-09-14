@@ -16,45 +16,15 @@
 #ifndef OPM_SIMULATORS_LINALG_GPUISTL_DETAIL_GPU_POINTER_ATTRIBUTES_HPP
 #define OPM_SIMULATORS_LINALG_GPUISTL_DETAIL_GPU_POINTER_ATTRIBUTES_HPP
 
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
+
 #include <memory>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace Opm::gpuistl::detail
 {
-
-namespace
-{
-    /**
-    * @brief Checks if the pointer is unregistered.
-    *
-    * @param status The error code returned by cudaPointerGetAttributes.
-    * @param attributes The attributes returned by cudaPointerGetAttributes.
-    * @return True if the pointer is unregistered, false otherwise.
-    *
-    * @note HIP may report unrecognized pointers with status InvalidValue instead of
-    *       success + MemoryTypeUnregistered.
-    */
-    inline bool
-    isMemoryTypeUnregistered(cudaError_t status, const cudaPointerAttributes& attributes)
-    {
-#if USE_HIP
-        // HIP may mirror CUDA < 11: unrecognized pointers return InvalidValue
-        // instead of success + MemoryTypeUnregistered.
-        if (status == cudaErrorInvalidValue) {
-            (void)cudaGetLastError(); // clear error, if any
-            return true;
-        }
-#endif
-
-        // Enumerator value 0 == Unregistered on CUDA 11+ / modern HIP.
-        // Do not name cudaMemoryTypeUnregistered: hipify-perl will not translate it.
-        return status == cudaSuccess
-            && attributes.type == static_cast<cudaMemoryType>(0);
-    }
-
-} // namespace
 
 /**
  * @brief Checks whether the given pointer is associated with GPU device memory.
@@ -74,15 +44,9 @@ isGPUPointer(const T* ptr)
     if (ptr == nullptr) {
         return false;
     }
-
     cudaPointerAttributes attributes{};
-    const cudaError_t status = cudaPointerGetAttributes(&attributes, ptr);
+    OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
 
-    if (isMemoryTypeUnregistered(status, attributes)) {
-        return false;
-    }
-
-    OPM_GPU_SAFE_CALL(status);
     return attributes.type == cudaMemoryTypeDevice;
 }
 
@@ -144,14 +108,12 @@ isCPUPointer(const T* ptr)
     }
 
     cudaPointerAttributes attributes{};
-    const cudaError_t status = cudaPointerGetAttributes(&attributes, ptr);
+    OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
 
-    if (isMemoryTypeUnregistered(status, attributes)) {
-        return true;
-    }
-
-    OPM_GPU_SAFE_CALL(status);
-    return attributes.type == cudaMemoryTypeHost;
+    // Enumerator value 0 == Unregistered on CUDA 11+ / modern HIP.
+    // Do not name cudaMemoryTypeUnregistered: hipify-perl will not translate it.
+    const auto pointerTypeUnregistered = static_cast<cudaMemoryType>(0);
+    return attributes.type == cudaMemoryTypeHost || attributes.type == pointerTypeUnregistered;
 }
 
 
