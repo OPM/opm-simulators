@@ -520,6 +520,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_stoppedwells.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
   tests/test_timer.cpp
+  tests/test_tpsa_conversions.cpp
   tests/test_tpsa_face_properties.cpp
   tests/test_tpsa_localresidual.cpp
   tests/test_tpsa_matrix.cpp

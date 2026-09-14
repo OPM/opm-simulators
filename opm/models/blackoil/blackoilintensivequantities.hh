@@ -667,6 +667,16 @@ public:
                     porosity_ += rockBiot * active_pressure;
                 }
 
+                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+                    const Scalar rockBiotTemp = problem.rockBiotTemp(globalSpaceIdx);
+                    if (rockBiotTemp != 0.0) {
+                        const Scalar rockRefTemp = problem.rockReferenceTemperature();
+                        Evaluation active_temp = fluidState_.temperature(/*phaseIdx=*/0) -
+                            rockRefTemp;
+                        porosity_ += rockBiotTemp * active_temp;
+                    }
+                }
+
                 // TPSA coupling term, pore volume changes due to mechanics
                 porosity_ += problem.rockMechPoroChange(globalSpaceIdx, /*timeIdx=*/timeIdx);
             }

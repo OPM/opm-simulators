@@ -180,8 +180,10 @@ public:
     using BaseType::shouldWriteOutput;
     using BaseType::shouldWriteRestartFile;
     using BaseType::rockBiotComp;
+    using BaseType::rockBiotTemp;
     using BaseType::lame;
     using BaseType::biotCoeff;
+    using BaseType::biotTemp;
     using BaseType::rockCompressibility;
     using BaseType::porosity;
 
@@ -754,6 +756,16 @@ public:
     }
 
     /*!
+     * \copydoc BlackoilProblem::rockBiotTemp
+     */
+    template <class Context>
+    Scalar rockBiotTemp(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    {
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return this->rockBiotTemp(globalSpaceIdx);
+    }
+
+    /*!
      * \copydoc BlackoilProblem::lame
      */
     template <class Context>
@@ -771,6 +783,16 @@ public:
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return this->biotCoeff(globalSpaceIdx);
+    }
+
+    /*!
+     * \copydoc BlackoilProblem::biotTemp
+     */
+    template <class Context>
+    Scalar biotTemp(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    {
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return this->biotTemp(globalSpaceIdx);
     }
 
     /*!

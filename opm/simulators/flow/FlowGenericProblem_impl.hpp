@@ -30,6 +30,8 @@
 
 #include <dune/common/parametertree.hh>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/OverburdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RockwnodTable.hpp>
@@ -362,9 +364,21 @@ FlowGenericProblem<GridView,FluidSystem>::
 rockBiotComp(unsigned elementIdx) const
 {
     // Additional compressibility of the rock due to Biot poroelasticity
-    auto biot = biotCoeff(elementIdx);
-    auto lameParam = lame(elementIdx);
+    const auto biot = biotCoeff(elementIdx);
+    const auto lameParam = lame(elementIdx);
     return biot * biot / lameParam;
+}
+
+template <class GridView, class FluidSystem>
+typename FlowGenericProblem<GridView, FluidSystem>::Scalar
+FlowGenericProblem<GridView, FluidSystem>::
+rockBiotTemp(unsigned elementIdx) const
+{
+    // Additional compressibility due to Biot thermoelasticity
+    const auto biotT = biotTemp(elementIdx);
+    const auto biotC = biotCoeff(elementIdx);
+    const auto lameParam = lame(elementIdx);
+    return biotC * biotT / lameParam;
 }
 
 template<class GridView, class FluidSystem>
@@ -419,6 +433,81 @@ biotCoeff(unsigned elementIdx) const
     return biotC;
 }
 
+template <class GridView, class FluidSystem>
+typename FlowGenericProblem<GridView, FluidSystem>::Scalar
+FlowGenericProblem<GridView, FluidSystem>::
+biotTemp(unsigned elementIdx) const
+{
+    const auto& fp = eclState_.fieldProps();
+
+    // Return early if deck does not have necessary parameters
+    if (!fp.has_double("THERMEXR") && !fp.has_double("THELCOEF")) {
+        return 0.0;
+    }
+
+    // Calculate from THERMEXR or THELCOEF
+    // OBS: Only accept (YMODULE, PRATIO) or (LAME, SMODULUS) conversions for now
+    Scalar biotT = 0.0;
+    if (fp.has_double("THERMEXR") && !fp.has_double("THELCOEF")) {
+        const auto thermexr = this->lookUpData_.fieldPropDouble(fp, "THERMEXR", elementIdx);
+
+        if (fp.has_double("LAME") && fp.has_double("SMODULUS")) {
+            const auto lamParam = lame(elementIdx);
+            const auto sMod = this->lookUpData_.fieldPropDouble(fp, "SMODULUS", elementIdx);
+            biotT = thermexr * (3.0 * lamParam + 2.0 * sMod);
+        } else if (fp.has_double("YMODULE") && fp.has_double("PRATIO")) {
+            const auto yMod = this->lookUpData_.fieldPropDouble(fp, "YMODULE", elementIdx);
+            const auto pRatio = this->lookUpData_.fieldPropDouble(fp, "PRATIO", elementIdx);
+            biotT = thermexr * yMod / (1.0 - 2.0 * pRatio);
+        } else if (fp.has_double("LAME") && fp.has_double("PRATIO")) {
+            const auto lamParam = lame(elementIdx);
+            const auto pRatio = this->lookUpData_.fieldPropDouble(fp, "PRATIO", elementIdx);
+            biotT =
+                thermexr * lamParam * (1.0 / pRatio - 2.0 * pRatio - 1.0) / (1.0 - 2.0 * pRatio);
+        } else if (fp.has_double("SMODULUS") && fp.has_double("PRATIO")) {
+            const auto sMod = this->lookUpData_.fieldPropDouble(fp, "SMODULUS", elementIdx);
+            const auto pRatio = this->lookUpData_.fieldPropDouble(fp, "PRATIO", elementIdx);
+            biotT = thermexr * 2.0 * sMod * (1 + pRatio) / (1.0 - 2.0 * pRatio);
+        } else if (fp.has_double("YMODULE") && fp.has_double("SMODULUS")) {
+            const auto yMod = this->lookUpData_.fieldPropDouble(fp, "YMODULE", elementIdx);
+            const auto sMod = this->lookUpData_.fieldPropDouble(fp, "SMODULUS", elementIdx);
+            biotT = thermexr * yMod * sMod / (3.0 * sMod - yMod);
+        } else {
+            OPM_THROW(std::runtime_error,
+                      "THERMEXR requires one of (LAME, SMODULUS), (YMODULE, PRATIO), "
+                      "(LAME, PRATIO), (SMODULUS, PRATIO) or (YMODULE, SMODULUS) "
+                      "to compute the Biot temperature coefficient. "
+                      "(YMODULE, LAME) is not supported.");
+        }
+
+    } else if (!fp.has_double("THERMEXR") && fp.has_double("THELCOEF")) {
+        const auto thelcoef = this->lookUpData_.fieldPropDouble(fp, "THELCOEF", elementIdx);
+
+        if (fp.has_double("LAME") && fp.has_double("SMODULUS")) {
+            const auto lamParam = lame(elementIdx);
+            const auto sMod = this->lookUpData_.fieldPropDouble(fp, "SMODULUS", elementIdx);
+            biotT = thelcoef * (lamParam + 2 * sMod) / (2 * sMod);
+        } else if (fp.has_double("PRATIO")) {
+            const auto pRatio = this->lookUpData_.fieldPropDouble(fp, "PRATIO", elementIdx);
+            biotT = thelcoef * (1 - pRatio) / (1 - 2 * pRatio);
+        } else if (fp.has_double("YMODULE") && fp.has_double("SMODULUS")) {
+            const auto yMod = this->lookUpData_.fieldPropDouble(fp, "YMODULE", elementIdx);
+            const auto sMod = this->lookUpData_.fieldPropDouble(fp, "SMODULUS", elementIdx);
+            biotT = thelcoef * (4.0 * sMod - yMod) / (6.0 * sMod - 2.0 * yMod);
+        } else {
+            OPM_THROW(std::runtime_error,
+                      "THELCOEF requires one of (LAME, SMODULUS), (YMODULE, SMODULUS) "
+                      "to compute the Biot temperature coefficient. "
+                      "(YMODULE, LAME) is not supported.");
+        }
+    } else {
+        OPM_THROW(std::runtime_error,
+                  "THERMEXR and THELCOEF cannot both be specified for the "
+                  "Biot temperature coefficient");
+    }
+
+    return biotT;
+}
 
 template<class GridView, class FluidSystem>
 template<class T>

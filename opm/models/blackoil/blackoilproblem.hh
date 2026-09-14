@@ -170,6 +170,25 @@ public:
     { return 0.0; }
 
     /*!
+     * \brief Returns the additional compressibility of a cell due to thermoelasticity
+     */
+    template <class Context>
+    Scalar rockBiotTemp(const Context&,
+                        unsigned,
+                        unsigned) const
+    {
+        return 0.0;
+    }
+
+    /*!
+     * \brief Returns the additional compressibility of a cell due to thermoelasticity
+     */
+    Scalar rockBiotTemp(unsigned) const
+    {
+        return 0.0;
+    }
+
+    /*!
      * \brief Returns Lame's first parameter of a cell
      */
     template <class Context>
@@ -197,7 +216,28 @@ public:
      * \brief Returns Biot coefficient of a cell
      */
     Scalar biotCoeff(unsigned) const
-    { return 0.0; }
+    {
+        return 0.0;
+    }
+
+    /*!
+     * \brief Returns Biot temperature coefficient of a cell
+     */
+    template <class Context>
+    Scalar biotTemp(const Context&,
+                    unsigned,
+                    unsigned) const
+    {
+        return 0.0;
+    }
+
+    /*!
+     * \brief Returns Biot temperature coefficient of a cell
+     */
+    Scalar biotTemp(unsigned) const
+    {
+        return 0.0;
+    }
 
     /*!
      * \brief Returns the reference pressure for rock the compressibility of a cell

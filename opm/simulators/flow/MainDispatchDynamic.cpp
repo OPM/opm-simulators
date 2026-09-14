@@ -35,6 +35,7 @@
 #include <flow/flow_brine_precsalt_vapwat.hpp>
 #include <flow/flow_brine_saltprecipitation.hpp>
 #include <flow/flow_energy.hpp>
+#include <flow/flow_energy_tpsa.hpp>
 #include <flow/flow_extbo.hpp>
 #include <flow/flow_foam.hpp>
 #include <flow/flow_gasoil.hpp>
@@ -46,6 +47,7 @@
 #include <flow/flow_gaswater_dissolution_diffuse.hpp>
 #include <flow/flow_gaswater_dissolution_tpsa.hpp>
 #include <flow/flow_gaswater_energy.hpp>
+#include <flow/flow_gaswater_energy_tpsa.hpp>
 #include <flow/flow_gaswater_saltprec_energy.hpp>
 #include <flow/flow_gaswater_saltprec_vapwat.hpp>
 #include <flow/flow_gaswater_solvent.hpp>
@@ -56,6 +58,7 @@
 #include <flow/flow_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_onephase.hpp>
 #include <flow/flow_onephase_energy.hpp>
+#include <flow/flow_onephase_energy_tpsa.hpp>
 #include <flow/flow_onephase_tpsa.hpp>
 #include <flow/flow_polymer.hpp>
 #include <flow/flow_solvent.hpp>
@@ -314,6 +317,8 @@ int Opm::Main::runWaterOnly(const Phases& phases)
 
 int Opm::Main::runWaterOnlyEnergy(const Phases& phases)
 {
+    const auto& rspec = this->eclipseState_->runspec();
+
     if (!phases.active(Phase::WATER) || phases.size() != 2) {
         if (outputCout_) {
             std::cerr << "No valid configuration is found for water-only "
@@ -322,6 +327,10 @@ int Opm::Main::runWaterOnlyEnergy(const Phases& phases)
         }
 
         return EXIT_FAILURE;
+    }
+
+    if (rspec.mech() && rspec.mechSolver().tpsa()) {
+        return flowWaterOnlyEnergyTpsaMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     return flowWaterOnlyEnergyMain(argc_, argv_, outputCout_, outputFiles_);
@@ -415,6 +424,9 @@ int Opm::Main::runExtendedBlackOil()
 
 int Opm::Main::runThermal(const Phases& phases)
 {
+    const auto& rspec = this->eclipseState_->runspec();
+    const bool tpsa = rspec.mech() && rspec.mechSolver().tpsa();
+
     // oil-gas-thermal
     if (!phases.active(Phase::WATER) &&
         phases.active(Phase::OIL) &&
@@ -432,12 +444,20 @@ int Opm::Main::runThermal(const Phases& phases)
             return flowGasWaterSaltprecEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
+        if (tpsa) {
+            return flowGasWaterEnergyTpsaMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
         return flowGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     // brine-energy
     if (phases.active(Phase::BRINE)) {
         return flowBrineEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+    }
+
+    if (tpsa) {
+        return flowEnergyTpsaMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     return flowEnergyMain(argc_, argv_, outputCout_, outputFiles_);

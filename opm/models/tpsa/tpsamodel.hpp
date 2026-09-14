@@ -185,6 +185,7 @@ public:
 
         // Initialize potential force vectors
         mechPotPresForce_.resize(numDof);
+        mechPotTempForce_.resize(numDof);
     }
 
     /*!
@@ -639,14 +640,16 @@ public:
     }
 
     /*!
-    * \brief Output potential forces
+    * \brief Output total potential forces
+    *
+    * This is the sum of pressure and temperature potential forces
     *
     * \param globalIdx Cell index
     * \returns Potential forces at grid cell
     */
     Scalar mechPotentialForce(unsigned globalIdx) const
     {
-        return mechPotentialPressForce(globalIdx);
+        return mechPotentialPressForce(globalIdx) + mechPotentialTempForce(globalIdx);
     }
 
     /*!
@@ -660,6 +663,12 @@ public:
         return mechPotPresForce_[globalIdx];
     }
 
+    /*!
+    * \brief Sets potential pressure force
+    *
+    * \param globalIdx Cell index
+    * \param val Potential pressure force at grid cell
+    */
     void setMechPotentialPressForce(unsigned globalIdx, Scalar val)
     {
         mechPotPresForce_[globalIdx] = val;
@@ -670,12 +679,21 @@ public:
     *
     * \param globalIdx Cell index
     * \returns Potential temperature forces at grid cell
-    *
-    * \note Needed in OutputBlackOilModule, but zero for now!
     */
-    Scalar mechPotentialTempForce(unsigned /*globalIdx*/) const
+    Scalar mechPotentialTempForce(unsigned globalIdx) const
     {
-        return Scalar(0.0);
+        return mechPotTempForce_[globalIdx];
+    }
+
+    /*!
+    * \brief Sets potential temperature force
+    *
+    * \param globalIdx Cell index
+    * \param val Potential temperature force at grid cell
+    */
+    void setMechPotentialTempForce(unsigned globalIdx, Scalar val)
+    {
+        mechPotTempForce_[globalIdx] = val;
     }
 
 protected:
@@ -725,6 +743,7 @@ private:
     std::vector<Scalar> eqWeights_;
     std::vector<MaterialState> materialState_;
     PotForceVector mechPotPresForce_;
+    PotForceVector mechPotTempForce_;
 };  // class TpsaModel
 
 }  // namespace Opm

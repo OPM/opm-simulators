@@ -35,6 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/materialstates/MaterialStateTPSA.hpp>
+#include <opm/material/thermal/EnergyModuleType.hpp>
 
 #include <opm/models/io/vtktpsamodule.hpp>
 #include <opm/models/tpsa/tpsabaseproperties.hpp>
@@ -81,6 +82,9 @@ public:
     enum { historySize = getPropValue<TypeTag, Properties::SolutionHistorySizeTPSA>() };
     enum { numEq = getPropValue<TypeTag, Properties::NumEqTPSA>() };
     enum { numPhases = FluidSystem::numPhases };
+
+    static constexpr EnergyModules energyModuleType =
+        getPropValue<TypeTag, Properties::EnergyModuleType>();
 
     enum { contiRotEqIdx = Indices::contiRotEqIdx };
     enum { contiSolidPresEqIdx = Indices::contiSolidPresEqIdx };
@@ -344,6 +348,19 @@ public:
         const auto dPres = biot * (pres - initPres);
 
         auto sourceFromFlow = -dPres / lameParam;
+
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+            const auto biotTemp = this->biotTemp(globalSpaceIdx);
+            const auto temp = decay<Scalar>(fs.temperature(0));
+            const auto initTemp = this->initialFluidState(globalSpaceIdx).temperature(0);
+            const auto dTemp = biotTemp * (temp - initTemp);
+            sourceFromFlow += -dTemp / lameParam;
+
+            // Store potential temperature force for output
+            geoMechModel_.setMechPotentialTempForce(globalSpaceIdx, dTemp);
+        }
+
+        // Add calculated source terms to output
         sourceTerm[contiSolidPresEqIdx] += sourceFromFlow;
 
         // Store potential pressure force for output
@@ -370,6 +387,16 @@ public:
         const auto lameParam = this->lame(elementIdx);
 
         return biot / lameParam * solidPres;
+    }
+
+    /*!
+    * \brief Reference temperature for thermoelasticity
+    *
+    * \returns Standard condition temperature (STCOND), in Kelvin
+    */
+    Scalar rockReferenceTemperature() const
+    {
+        return this->simulator().vanguard().eclState().getTableManager().stCond().temperature;
     }
 
     // ///

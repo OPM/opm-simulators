@@ -1766,6 +1766,28 @@ add_multiple_tests(
     --enable-opm-rst-file=1
 )
 
+set(_tpsa_energy
+    TPSA_THERMAL
+)
+
+add_multiple_tests(
+  _tpsa_energy
+  ""
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase_energy_tpsa
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tpsa
+  TEST_ARGS
+    --enable-opm-rst-file=1
+    --initial-time-step-in-days=0.1
+)
+
 add_test_compareECLFiles(
   CASENAME
     ppcwmax
