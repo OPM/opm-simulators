@@ -504,6 +504,7 @@ macro(opm-simulators_tests_hook)
                  deviceBlockOperations
                  gpu_ad
                  gpu_linear_two_phase_material
+                 gpu_pointer_attributes
                  gpu_resources
                  gpu_safe_call
                  gpu_smart_pointers
@@ -521,7 +522,6 @@ macro(opm-simulators_tests_hook)
                  GpuView
                  HypreInterfaceGPU
                  HyprePreconditionerGPU
-                 gpu_pointer_attributes
                  MiniMatrix
                  MiniVector
                  preconditioner_factory_gpu

@@ -182,7 +182,6 @@ public:
     template <int BlockDimension>
     void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
     {
-        // TODO-H: Documentation says synchronous transfer, but implementation relies on GpuBuffer. Check!
         m_buffer.copyFromHost(bvector);
     }
 

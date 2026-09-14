@@ -354,7 +354,6 @@ public:
             return;
         }
 
-
         if (m_numberOfElements == 0) {
             // We have no data, so we can just allocate new memory
             OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * newSize));
