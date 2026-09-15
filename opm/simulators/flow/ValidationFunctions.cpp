@@ -20,13 +20,19 @@
 #include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/F.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/M.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
 #include <fmt/format.h>
 
+#include <cstddef>
+#include <string>
+
 namespace {
-    void validateBRINE(const Opm::DeckKeyword& keyword,
+    void validateBRINE(const Opm::Deck&,
+                       const Opm::DeckKeyword& keyword,
                        std::vector<Opm::KeywordValidation::ValidationError>& errors)
     {
         if (keyword.empty()) {
@@ -43,8 +49,71 @@ namespace {
         );
     }
 
+    // FACTLI carries one multiplier per equilibration region in a single item,
+    // and the per-item validation only ever inspects the first value.  Flow
+    // labels single phase cells as if every multiplier were one, so every
+    // region has to be checked here.
+    void validateFACTLI(const Opm::Deck&,
+                        const Opm::DeckKeyword& keyword,
+                        std::vector<Opm::KeywordValidation::ValidationError>& errors)
+    {
+        if (keyword.empty()) {
+            return;
+        }
+
+        using Kw = Opm::ParserKeywords::FACTLI;
+
+        const auto& item = keyword.getRecord(0).getItem<Kw::DATA>();
+
+        for (std::size_t i = 0; i < item.data_size(); ++i) {
+            if (item.defaultApplied(i) || item.get<double>(i) == Kw::DATA::defaultValue) {
+                continue;
+            }
+
+            errors.emplace_back(Opm::KeywordValidation::ValidationError {
+                true,
+                keyword.location(),
+                0,  // a single record
+                1,
+                fmt::format("{}", item.get<double>(i)),
+                fmt::format("FACTLI(DATA): the Li phase labelling is not scaled, so only "
+                            "the default multiplier of 1.0 is supported (equilibration "
+                            "region {})", i + 1)}
+            );
+        }
+    }
+
+    // PARACHOR only feeds the surface tension calculation, which is requested
+    // with MISCIBLE.  Flow computes no surface tensions either way, so report
+    // the keyword - but say plainly when the values could not have been used
+    // anyway, so a deck that merely carries them is not read as a problem.
+    void validatePARACHOR(const Opm::Deck& deck,
+                          const Opm::DeckKeyword& keyword,
+                          std::vector<Opm::KeywordValidation::ValidationError>& errors)
+    {
+        if (keyword.empty()) {
+            return;
+        }
+
+        const bool miscible = deck.hasKeyword<Opm::ParserKeywords::MISCIBLE>();
+
+        errors.emplace_back(Opm::KeywordValidation::ValidationError {
+            miscible,
+            keyword.location(),
+            0,  // not relevant
+            0,  // not relevant
+            std::nullopt,
+            miscible
+                ? std::string{"Surface tensions are not calculated, so the parachors "
+                              "MISCIBLE asks for are not used"}
+                : std::string{"Surface tensions are not calculated; without MISCIBLE the "
+                              "parachors are unused either way"}}
+        );
+    }
+
     // Special case since we support the parsing of the items, which can be UDAs.
-    void validateGSATPROD(const Opm::DeckKeyword& keyword,
+    void validateGSATPROD(const Opm::Deck&,
+                          const Opm::DeckKeyword& keyword,
                           std::vector<Opm::KeywordValidation::ValidationError>& errors)
     {
         if (keyword.empty()) {
@@ -88,7 +157,10 @@ namespace Opm::KeywordValidation {
 std::unordered_map<std::string, ValidationFunction>
 specialValidation()
 {
-    return {{"BRINE", validateBRINE}, {"GSATPROD", validateGSATPROD}};
+    return {{"BRINE", validateBRINE},
+            {"FACTLI", validateFACTLI},
+            {"GSATPROD", validateGSATPROD},
+            {"PARACHOR", validatePARACHOR}};
 }
 
 }

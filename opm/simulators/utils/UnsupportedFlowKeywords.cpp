@@ -96,6 +96,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"COMPRP", {true, std::nullopt}},
         {"COMPRPL", {true, std::nullopt}},
         {"COMPSEGL", {true, std::nullopt}},
+        {"COMPVD", {false, std::string{"The initial composition is not read from depth tables"}}},
         {"COMPVE", {true, std::nullopt}},
         {"COMPVEL", {true, std::nullopt}},
         {"CPIFACT", {true, std::nullopt}},

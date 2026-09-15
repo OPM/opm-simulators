@@ -768,3 +768,125 @@ WINJGAS
     validator.validateDeckKeyword(deck["WINJGAS"].back(), errors);
     BOOST_CHECK_EQUAL(errors.size(), 2);
 }
+
+
+// PARACHOR is sized by TABDIMS, so a deck carrying it needs TABDIMS too.
+Deck compositionalPropsDeck(const std::string& props)
+{
+    return Parser {}.parseString(std::string {R"(
+RUNSPEC
+TABDIMS
+/
+PROPS
+)"} + props);
+}
+
+BOOST_AUTO_TEST_CASE(parachor_severity_follows_miscible)
+{
+    const auto validateParachor = [](const Deck& deck) {
+        std::vector<ValidationError> errors;
+        specialValidation().at("PARACHOR")(deck, deck["PARACHOR"].back(), errors);
+        return errors;
+    };
+
+    const auto body = std::string {"PARACHOR\n  74.92 192.74 390.4 /\n"};
+
+    // Without MISCIBLE the parachors could not have been used anyway, so the
+    // keyword is reported as a warning and the message says so.
+    {
+        const auto errors = validateParachor(compositionalPropsDeck(body));
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(!errors[0].critical);
+        BOOST_REQUIRE(errors[0].user_message.has_value());
+        BOOST_CHECK(errors[0].user_message->find("without MISCIBLE") != std::string::npos);
+    }
+
+    // With MISCIBLE the deck is asking for surface tensions that flow does not
+    // compute, which would change the results, so it is a critical error.
+    {
+        const auto deck = Parser {}.parseString(std::string {R"(
+RUNSPEC
+MISCIBLE
+/
+TABDIMS
+/
+PROPS
+)"} + body);
+        const auto errors = validateParachor(deck);
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(errors[0].critical);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(only_the_neutral_factli_multiplier_is_accepted)
+{
+    const auto validator = flowKeywordValidator();
+
+    const auto validateFactli = [](const Deck& deck) {
+        std::vector<ValidationError> errors;
+        specialValidation().at("FACTLI")(deck, deck["FACTLI"].back(), errors);
+        return errors;
+    };
+
+    // The neutral multiplier is what flow already does, however it is spelled,
+    // and over however many equilibration regions.
+    for (const auto* body : {"FACTLI\n  1.0 /\n",
+                             "FACTLI\n  1*1.0 /\n",
+                             "FACTLI\n  1* /\n",
+                             "FACTLI\n  15*1.0 /\n",
+                             "FACTLI\n  15* /\n",
+                             "FACTLI\n  3*1.0 2* 4*1.0 /\n"}) {
+        BOOST_TEST_CONTEXT(body)
+        {
+            BOOST_CHECK(validateFactli(compositionalPropsDeck(body)).empty());
+        }
+    }
+
+    // Any other multiplier moves the oil/gas label of single phase cells, so it
+    // is a critical error rather than a warning - in whichever region it sits.
+    for (const auto* body : {"FACTLI\n  0.8 /\n",
+                             "FACTLI\n  0.8 14*1.0 /\n",
+                             "FACTLI\n  14*1.0 0.8 /\n",
+                             "FACTLI\n  7*1.0 1.3 7*1.0 /\n"}) {
+        BOOST_TEST_CONTEXT(body)
+        {
+            const auto errors = validateFactli(compositionalPropsDeck(body));
+            BOOST_REQUIRE_EQUAL(errors.size(), 1);
+            BOOST_CHECK(errors[0].critical);
+        }
+    }
+
+    // Each offending region is reported with its own value and region number,
+    // so a multiplier buried in a long list can still be found.
+    {
+        const auto errors = validateFactli(compositionalPropsDeck("FACTLI\n  7*1.0 1.3 6*1.0 0.8 /\n"));
+        BOOST_REQUIRE_EQUAL(errors.size(), 2);
+        BOOST_REQUIRE(errors[0].user_message.has_value());
+        BOOST_CHECK(errors[0].user_message->find("region 8") != std::string::npos);
+        BOOST_REQUIRE(errors[1].user_message.has_value());
+        BOOST_CHECK(errors[1].user_message->find("region 15") != std::string::npos);
+        BOOST_CHECK(errors[0].item_value.has_value());
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(compvd_is_flagged_as_unsupported)
+{
+    // COMPVD initialises the composition against depth, which flow does not
+    // do.  Its sibling ZMFVD is already reported; COMPVD has to be too.
+    const auto keywords_string = std::string {R"(
+RUNSPEC
+EQLDIMS
+/
+PROPS
+COMPVD
+  2573.5 0.7 0.2 0.1 0 277.5 /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto validator = flowKeywordValidator();
+
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(deck["COMPVD"].back(), errors);
+    BOOST_REQUIRE_EQUAL(errors.size(), 1);
+    BOOST_CHECK(!errors[0].critical);
+}

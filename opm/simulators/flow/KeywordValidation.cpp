@@ -89,7 +89,7 @@ namespace Opm::KeywordValidation {
             const auto& special_it = this->m_special_validation.find(keyword.name());
             if (special_it != this->m_special_validation.end()) {
                 const auto& validator = special_it->second;
-                validator(keyword, errors);
+                validator(deck, keyword, errors);
             }
         }
 
