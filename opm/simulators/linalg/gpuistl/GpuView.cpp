@@ -18,7 +18,6 @@
 */
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
