@@ -1,0 +1,563 @@
+/*
+  Copyright 2026, SINTEF Digital
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "config.h"
+
+#define BOOST_TEST_MODULE CompositionalEquil
+#include <boost/test/unit_test.hpp>
+
+#include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+
+#include <opm/material/constraintsolvers/SaturationPressure.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <dune/common/parallel/mpihelper.hh>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace {
+
+using Scalar = double;
+using FluidSystem = Opm::GenericOilGasWaterFluidSystem<Scalar, 3, false>;
+using InitialStateComputer = Opm::EQUIL::Comp::InitialStateComputer<FluidSystem>;
+using SatP = Opm::SaturationPressure<Scalar, FluidSystem>;
+using CompVec = std::array<Scalar, 3>;
+
+constexpr Scalar barsa = 1.0e5;
+constexpr Scalar gravity = 9.80665;
+
+// A 1x1x20 vertical column from 2000 m to 2100 m in 5 m cells, filled with a
+// CO2/methane/decane mixture that grades from methane-rich at the top to
+// decane-rich at the bottom. This is the geometry used by the numeric
+// expectations below.
+std::string deckString(const std::string& equil,
+                       const std::string& runspecExtra = "EQLDIMS\n/\n",
+                       const std::string& regions = "",
+                       const std::string& zmfvd =
+                           "ZMFVD\n"
+                           " 2000   0 0.7 0.3\n"
+                           " 2100   0 0.3 0.7  /\n",
+                       const std::string& rtemp = "RTEMP\n100\n/\n")
+{
+    return
+        "RUNSPEC\n"
+        "METRIC\n"
+        "TABDIMS\n/\n"
+        "OIL\nGAS\n"
+        "DIMENS\n1 1 20 /\n"
+        "COMPS\n3 /\n"
+        "START\n  1 'JAN' 2016  /\n"
+        + runspecExtra +
+        "GRID\n"
+        "DX\n20*5 /\n"
+        "DY\n20*100 /\n"
+        "DZ\n20*5 /\n"
+        "TOPS\n1*2000.0 /\n"
+        "PORO\n20*0.3 /\n"
+        "PERMX\n20*2000 /\n"
+        "PERMY\n20*2000 /\n"
+        "PERMZ\n20*2000 /\n"
+        "PROPS\n"
+        "CNAMES\nCO2\nMETHANE\nDECANE\n/\n"
+        "ROCK\n68.9476 0 /\n"
+        + zmfvd
+        + rtemp +
+        "EOS\nPR /\n"
+        "BIC\n0\n0\n0\n/\n"
+        "ACF\n0.22394\n0.01142\n0.4884\n/\n"
+        "PCRIT\n73.773\n45.992\n21.03\n/\n"
+        "TCRIT\n304.128\n190.564\n617.7\n/\n"
+        "MW\n44.00\n16.04\n142.28\n/\n"
+        "VCRIT\n0.09412\n0.09863\n0.60980\n/\n"
+        "STCOND\n15.0 1.0 /\n"
+        + regions +
+        "SOLUTION\n"
+        + equil +
+        "END\n";
+}
+
+struct EquilFixture
+{
+    explicit EquilFixture(const std::string& deck_string)
+        : deck(Opm::Parser{}.parseString(deck_string))
+        , eclState(deck)
+        , schedule(deck, eclState, std::make_shared<Opm::Python>())
+    {
+        FluidSystem::initFromState(eclState, schedule);
+        for (std::size_t c = 0; c < depths.size(); ++c) {
+            depths[c] = 2002.5 + 5.0 * static_cast<Scalar>(c);
+        }
+    }
+
+    InitialStateComputer compute(const std::vector<int>& eqlnum) const
+    {
+        return InitialStateComputer(eclState,
+                                    eclState.compositionalConfig().eosType(0),
+                                    {depths.begin(), depths.end()},
+                                    eqlnum,
+                                    Opm::Parallel::Communication{},
+                                    gravity,
+                                    /*numSamplePoints=*/100);
+    }
+
+    Opm::Deck deck;
+    Opm::EclipseState eclState;
+    Opm::Schedule schedule;
+    std::array<Scalar, 20> depths{};
+};
+
+// The mixture composition the ZMFVD table prescribes at a depth.
+CompVec tableComposition(const Scalar depth)
+{
+    const Scalar t = (depth - 2000.0) / 100.0;
+    return {0.0, 0.7 - 0.4 * t, 0.3 + 0.4 * t};
+}
+
+// The density a pressure difference between two neighbouring cells implies
+// through the hydrostatic relation dp = rho g dz.
+Scalar impliedDensity(const Scalar pAbove, const Scalar pBelow)
+{
+    return (pBelow - pAbove) / (gravity * 5.0);
+}
+
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(Type1LiquidRootPressureIntegration)
+{
+    // Type 1 takes ZMFVD as the total composition. Since the datum lies below
+    // the gas-oil contact, the initializer uses the liquid EOS root to integrate
+    // pressure from the datum and marks oil as the nominal phase. The downstream
+    // flash may still split the mixture into oil and gas.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        const auto& fs = states[c];
+        BOOST_CHECK_CLOSE(fs.saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+        BOOST_CHECK_SMALL(fs.saturation(FluidSystem::gasPhaseIdx), 1e-10);
+        BOOST_CHECK_CLOSE(fs.temperature(FluidSystem::oilPhaseIdx), 373.15, 1e-10);
+
+        // The total composition is the ZMFVD interpolant at the cell centre.
+        const CompVec z = tableComposition(fix.depths[c]);
+        for (int comp = 0; comp < 3; ++comp) {
+            BOOST_CHECK_SMALL(std::abs(Opm::getValue(fs.moleFraction(comp)) - z[comp]),
+                              1e-10);
+        }
+    }
+
+    // The pressure increases with depth at a liquid-like gradient.
+    for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+        const Scalar rho =
+            impliedDensity(Opm::getValue(states[c].pressure(FluidSystem::oilPhaseIdx)),
+                           Opm::getValue(states[c + 1].pressure(FluidSystem::oilPhaseIdx)));
+        BOOST_CHECK_GT(rho, 400.0);
+        BOOST_CHECK_LT(rho, 800.0);
+    }
+
+    // The expected pressures are 149.666 barsa in the top cell and
+    // 154.694 barsa in the bottom one.
+    BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.front().pressure(FluidSystem::oilPhaseIdx))
+                               - 149.666 * barsa), 0.05 * barsa);
+    BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.back().pressure(FluidSystem::oilPhaseIdx))
+                               - 154.694 * barsa), 0.05 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(Type1VapourRootPressureIntegration)
+{
+    // The contact is below the whole column, so type 1 must use the vapour
+    // root. At 10 bar and 100 C this mixture has distinct gas and liquid roots
+    // with densities around 40 and 494 kg/m^3, respectively. The pressure
+    // gradient therefore detects an incorrect choice of EOS root.
+    const EquilFixture fix(deckString("EQUIL\n 2012.5 10 2300 0 2200 0 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "ZMFVD\n 2000 0 0.5 0.5 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    // The datum coincides with the third cell centre.
+    BOOST_CHECK_CLOSE(states[2].pressure(FluidSystem::gasPhaseIdx), 10.0 * barsa, 1e-10);
+
+    const CompVec z{0.0, 0.5, 0.5};
+    for (const auto& fs : states) {
+        BOOST_CHECK_CLOSE(fs.temperature(FluidSystem::gasPhaseIdx), 373.15, 1e-10);
+        for (int comp = 0; comp < 3; ++comp) {
+            BOOST_CHECK_SMALL(fs.moleFraction(comp) - z[comp], 1e-10);
+        }
+    }
+
+    for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+        const Scalar rho = impliedDensity(states[c].pressure(FluidSystem::gasPhaseIdx),
+                                         states[c + 1].pressure(FluidSystem::gasPhaseIdx));
+        BOOST_CHECK_GT(rho, 30.0);
+        BOOST_CHECK_LT(rho, 60.0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(GasCapAboveContact)
+{
+    // EQUIL item 10 is 3: ZMFVD is the liquid composition and the gas-oil
+    // contact at 2050 m lies inside the column.  The contact pressure is the
+    // saturation pressure of the contact liquid (item 11 is defaulted and the
+    // datum pressure is more than one atmosphere away), and the gas above the
+    // contact holds the equilibrium vapour of that liquid.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+
+    // Independently compute the saturation point of the contact liquid and
+    // check the expected value of 160.5601 barsa.
+    const CompVec liquid = tableComposition(2050.0);
+    Scalar psat = 0.0;
+    CompVec vapor{};
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
+                                       fix.eclState.compositionalConfig().eosType(0),
+                                       psat, vapor));
+    BOOST_CHECK_SMALL(std::abs(psat - 160.5601 * barsa), 0.05 * barsa);
+
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        const auto& fs = states[c];
+        const bool inGas = fix.depths[c] < 2050.0;
+        BOOST_CHECK_CLOSE(fs.saturation(inGas ? FluidSystem::gasPhaseIdx
+                                              : FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+
+        // Every gas cell carries the contact vapour; the liquid cells follow
+        // the table.
+        const CompVec z = inGas ? vapor : tableComposition(fix.depths[c]);
+        for (int comp = 0; comp < 3; ++comp) {
+            BOOST_CHECK_SMALL(std::abs(Opm::getValue(fs.moleFraction(comp)) - z[comp]),
+                              1e-6);
+        }
+    }
+    // The vapour is far richer in the light component than the table value at
+    // the contact depth.
+    BOOST_CHECK_GT(vapor[1], 0.9);
+
+    // The pressure passes through the saturation pressure at the contact,
+    // with a gas-like gradient above it and a liquid-like one below.
+    const Scalar pAbove = Opm::getValue(states[9].pressure(FluidSystem::gasPhaseIdx));
+    const Scalar pBelow = Opm::getValue(states[10].pressure(FluidSystem::oilPhaseIdx));
+    BOOST_CHECK_LT(pAbove, psat);
+    BOOST_CHECK_GT(pBelow, psat);
+
+    for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+        const Scalar rho =
+            impliedDensity(Opm::getValue(states[c].pressure(FluidSystem::oilPhaseIdx)),
+                           Opm::getValue(states[c + 1].pressure(FluidSystem::oilPhaseIdx)));
+        if (c + 1 <= 9) {         // both cells in the gas cap
+            BOOST_CHECK_GT(rho, 30.0);
+            BOOST_CHECK_LT(rho, 300.0);
+        }
+        else if (c >= 10) {       // both cells in the liquid leg
+            BOOST_CHECK_GT(rho, 350.0);
+            BOOST_CHECK_LT(rho, 900.0);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(GasCapKeepingDatumPressure)
+{
+    // As GasCapAboveContact, but EQUIL item 11 is 1: the reference depth is
+    // reset from 2010 m to the contact while the numeric 150 bar input pressure
+    // is retained there. This intentionally need not be an equilibrium
+    // saturation pressure.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 1 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+
+    const Scalar pContact = 150.0 * barsa;
+    BOOST_CHECK_LT(Opm::getValue(states[9].pressure(FluidSystem::gasPhaseIdx)), pContact);
+    BOOST_CHECK_GT(Opm::getValue(states[10].pressure(FluidSystem::oilPhaseIdx)), pContact);
+
+    // Still a gas cap over a liquid leg.
+    BOOST_CHECK_CLOSE(states[0].saturation(FluidSystem::gasPhaseIdx), 1.0, 1e-10);
+    BOOST_CHECK_CLOSE(states[19].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(NonzeroContactCapillaryPressureIsAnError)
+{
+    for (const int initType : std::array{1, 3}) {
+        for (const int capillaryPressure : std::array{-10, 10}) {
+            BOOST_TEST_CONTEXT("Type " << initType << ", PC_GOC " << capillaryPressure) {
+                const EquilFixture fix(deckString(
+                    "EQUIL\n 2010 150 2300 0 2050 " + std::to_string(capillaryPressure)
+                    + " 3* " + std::to_string(initType) + " /\n"));
+                BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                      std::runtime_error,
+                                      [](const std::runtime_error& error) {
+                                          const std::string message = error.what();
+                                          return message.find("EQUIL item 6") != std::string::npos
+                                              && message.find("region 1") != std::string::npos;
+                                      });
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompositionalEquilAccuracy)
+{
+    for (const int initType : std::array{1, 3}) {
+        for (const int accuracy : std::array{-20, -1, 0, 1, 20}) {
+            BOOST_TEST_CONTEXT("Type " << initType << ", accuracy " << accuracy) {
+                const EquilFixture fix(deckString(
+                    "EQUIL\n 2010 150 2300 0 2050 0 2* " + std::to_string(accuracy)
+                    + " " + std::to_string(initType) + " /\n"));
+                if (accuracy == 0) {
+                    BOOST_CHECK_NO_THROW(fix.compute(std::vector<int>(20, 0)));
+                }
+                else {
+                    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                          std::runtime_error,
+                                          [](const std::runtime_error& error) {
+                                              const std::string message = error.what();
+                                              return message.find("EQUIL item 9") != std::string::npos
+                                                  && message.find("region 1") != std::string::npos;
+                                          });
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TwoIndependentRegions)
+{
+    // Two equilibration regions splitting the column in half, each with its
+    // own datum pressure.  The regions must be integrated independently: the
+    // 50 bar difference between the records shows up as a pressure jump at
+    // the region boundary that a single hydrostatic column could never have.
+    const EquilFixture fix(deckString(
+        "EQUIL\n"
+        " 2010 150 2300 0 2000 0 /\n"
+        " 2060 200 2300 0 2050 0 /\n",
+        "EQLDIMS\n2 /\n"
+        "REGDIMS\n2 1 0 0 /\n",
+        "REGIONS\n"
+        "EQLNUM\n10*1 10*2 /\n",
+        "ZMFVD\n"
+        " 2000   0 0.7 0.3\n"
+        " 2100   0 0.3 0.7  /\n"
+        " 2000   0 0.7 0.3\n"
+        " 2100   0 0.3 0.7  /\n"));
+
+    std::vector<int> eqlnum(20, 0);
+    std::fill(eqlnum.begin() + 10, eqlnum.end(), 1);
+    const auto states = fix.compute(eqlnum).fluidStates();
+
+    // Both regions hold single-phase liquid rising in pressure with depth.
+    for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+        if (c == 9) {
+            continue;
+        }
+        BOOST_CHECK_LT(Opm::getValue(states[c].pressure(FluidSystem::oilPhaseIdx)),
+                       Opm::getValue(states[c + 1].pressure(FluidSystem::oilPhaseIdx)));
+    }
+    const Scalar jump = Opm::getValue(states[10].pressure(FluidSystem::oilPhaseIdx))
+                      - Opm::getValue(states[9].pressure(FluidSystem::oilPhaseIdx));
+    BOOST_CHECK_GT(jump, 40.0 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(InvalidEqlnumFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    std::vector<int> eqlnum(20, 0);
+    const Opm::Parallel::Communication comm;
+    if (comm.rank() == 0) {
+        eqlnum.back() = 1;
+    }
+
+    BOOST_CHECK_THROW(fix.compute(eqlnum), std::runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(MismatchedEqlnumSizeFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    const Opm::Parallel::Communication comm;
+    for (const std::size_t size : std::array<std::size_t, 3>{0, 19, 21}) {
+        BOOST_TEST_CONTEXT("EQLNUM size " << size) {
+            std::vector<int> eqlnum(fix.depths.size(), 0);
+            // Only rank 0 has inconsistent input, but every rank must throw
+            // before entering the region setup collectives or indexing cells.
+            if (comm.rank() == 0) {
+                eqlnum.resize(size);
+            }
+            BOOST_CHECK_EXCEPTION(fix.compute(eqlnum), std::runtime_error,
+                                  [&](const std::runtime_error& error) {
+                                      const std::string expected = "EQLNUM contains "
+                                          + std::to_string(size) + " entries for 20 cell depths";
+                                      return comm.rank() != 0
+                                          || std::string(error.what()).find(expected)
+                                              != std::string::npos;
+                                  });
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)
+{
+    // A depth-independent reservoir temperature is a single-row RTEMPVD
+    // table, which is as valid a way to state it as RTEMP. The column should
+    // reproduce the RTEMP case in Type1LiquidRootPressureIntegration.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "ZMFVD\n"
+                                      " 2000   0 0.7 0.3\n"
+                                      " 2100   0 0.3 0.7  /\n",
+                                      "RTEMPVD\n 2000 100 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    for (const auto& fs : states) {
+        BOOST_CHECK_CLOSE(fs.temperature(FluidSystem::oilPhaseIdx), 373.15, 1e-10);
+    }
+    BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.front().pressure(FluidSystem::oilPhaseIdx))
+                               - 149.666 * barsa), 0.05 * barsa);
+    BOOST_CHECK_SMALL(std::abs(Opm::getValue(states.back().pressure(FluidSystem::oilPhaseIdx))
+                               - 154.694 * barsa), 0.05 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(GradedTemperatureFromRtempvd)
+{
+    // A two-row RTEMPVD table is interpolated at the cell centre, so the
+    // column carries the geothermal gradient the table states.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "ZMFVD\n"
+                                      " 2000   0 0.7 0.3\n"
+                                      " 2100   0 0.3 0.7  /\n",
+                                      "RTEMPVD\n 2000 100\n 2100 120 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        const Scalar expected = 373.15 + 0.2 * (fix.depths[c] - 2000.0);
+        BOOST_CHECK_CLOSE(states[c].temperature(FluidSystem::oilPhaseIdx), expected, 1e-10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(DepthTablesUseConstantEndpoints)
+{
+    // Extending the tables with constant endpoint values must leave both the
+    // cell states and the hydrostatic pressure integration unchanged. The
+    // datum and the outer cells lie outside the original table ranges.
+    for (const auto* keyword : std::array{"RTEMPVD", "TEMPVD"}) {
+        BOOST_TEST_CONTEXT(keyword) {
+            const EquilFixture narrow(deckString(
+                "EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2040 0 0.7 0.3\n 2060 0 0.3 0.7 /\n",
+                std::string(keyword) + "\n 2040 100\n 2060 120 /\n"));
+            const auto states = narrow.compute(std::vector<int>(20, 0)).fluidStates();
+
+            const EquilFixture padded(deckString(
+                "EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2000 0 0.7 0.3\n 2040 0 0.7 0.3\n"
+                " 2060 0 0.3 0.7\n 2100 0 0.3 0.7 /\n",
+                std::string(keyword) + "\n 2000 100\n 2040 100\n"
+                                       " 2060 120\n 2100 120 /\n"));
+            const auto expected = padded.compute(std::vector<int>(20, 0)).fluidStates();
+
+            for (std::size_t c = 0; c < states.size(); ++c) {
+                const Scalar t = std::clamp((narrow.depths[c] - 2040.0) / 20.0, 0.0, 1.0);
+                const CompVec z{0.0, 0.7 - 0.4 * t, 0.3 + 0.4 * t};
+                for (int comp = 0; comp < 3; ++comp) {
+                    BOOST_CHECK_SMALL(states[c].moleFraction(comp) - z[comp], 1e-10);
+                }
+                BOOST_CHECK_CLOSE(states[c].temperature(FluidSystem::oilPhaseIdx),
+                                  373.15 + 20.0 * t, 1e-10);
+                BOOST_CHECK_CLOSE(states[c].pressure(FluidSystem::oilPhaseIdx),
+                                  expected[c].pressure(FluidSystem::oilPhaseIdx), 1e-10);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(GasOilContactOutsideDepthTables)
+{
+    // The bubble point and equilibrium vapour must use the endpoint liquid
+    // composition and temperature when the contact is outside the tables.
+    for (const Scalar contact : std::array{2025.0, 2075.0}) {
+        BOOST_TEST_CONTEXT("Contact depth " << contact) {
+            EquilFixture fix(deckString(
+                "EQUIL\n 2010 150 2300 0 " + std::to_string(contact) + " 0 3* 3 /\n",
+                "EQLDIMS\n/\n", "",
+                "ZMFVD\n 2040 0 0.7 0.3\n 2060 0 0.3 0.7 /\n",
+                "RTEMPVD\n 2040 100\n 2060 120 /\n"));
+            const bool aboveTable = contact < 2040.0;
+            const std::size_t contactCell = aboveTable ? 4 : 15;
+            fix.depths[contactCell] = contact;
+            const CompVec liquid = aboveTable ? CompVec{0.0, 0.7, 0.3}
+                                             : CompVec{0.0, 0.3, 0.7};
+            const Scalar temperature = aboveTable ? 373.15 : 393.15;
+            Scalar psat{};
+            CompVec vapor{};
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature,
+                                               fix.eclState.compositionalConfig().eosType(0),
+                                               psat, vapor));
+
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            BOOST_CHECK_CLOSE(states[contactCell].pressure(FluidSystem::oilPhaseIdx),
+                              psat, 1e-8);
+            BOOST_CHECK_CLOSE(states[contactCell].temperature(FluidSystem::oilPhaseIdx),
+                              temperature, 1e-10);
+            for (int comp = 0; comp < 3; ++comp) {
+                BOOST_CHECK_SMALL(states[contactCell].moleFraction(comp) - liquid[comp], 1e-10);
+                BOOST_CHECK_SMALL(states.front().moleFraction(comp) - vapor[comp], 1e-8);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(MissingZmfvdIsAnError)
+{
+    // The composition versus depth is the one piece of input the
+    // equilibration cannot invent.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n",
+                                      "EQLDIMS\n/\n", "", ""));
+    BOOST_CHECK_THROW(fix.compute(std::vector<int>(20, 0)),
+                      std::runtime_error);
+}
+
+namespace {
+
+struct MpiFixture
+{
+    MpiFixture()
+    {
+        int argc = boost::unit_test::framework::master_test_suite().argc;
+        char** argv = boost::unit_test::framework::master_test_suite().argv;
+        Dune::MPIHelper::instance(argc, argv);
+    }
+};
+
+} // Anonymous namespace
+
+BOOST_GLOBAL_FIXTURE(MpiFixture);

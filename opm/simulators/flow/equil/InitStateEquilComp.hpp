@@ -1,0 +1,570 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
+/*
+  Copyright 2026 SINTEF Digital
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+/**
+ * \file
+ *
+ * \brief Hydrostatic equilibration for the compositional simulator (EQUIL + ZMFVD).
+ */
+#ifndef OPM_INIT_STATE_EQUIL_COMP_HPP
+#define OPM_INIT_STATE_EQUIL_COMP_HPP
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/material/common/Tabulated1DFunction.hpp>
+#include <opm/material/constraintsolvers/SaturationPressure.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/simulators/flow/equil/PressureFunction.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <fmt/format.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <limits>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+
+namespace Opm::EQUIL::Comp {
+
+namespace Details {
+
+/// ZMFVD and RTEMPVD use constant endpoint values outside the tabulated depths.
+template <class Scalar>
+Scalar evalDepthTable(const Tabulated1DFunction<Scalar>& table, const Scalar depth)
+{
+    return table.eval(std::clamp(depth, table.xMin(), table.xMax()));
+}
+
+/// Right-hand side of the hydrostatic ODE dp/ddepth = rho(depth, p) * g for a
+/// fluid whose density follows from the cubic equation of state at the given
+/// temperature and composition.  The EOS root (liquid or vapour) is selected
+/// by the phase index.
+template <class FluidSystem>
+class EosDensityODE
+{
+public:
+    using Scalar = typename FluidSystem::Scalar;
+    using CompVec = std::array<Scalar, FluidSystem::numComponents>;
+    using CompositionFunction = std::function<CompVec(Scalar)>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
+    EosDensityODE(CompositionFunction composition,
+                  const TabulatedFunction& tempVdTable,
+                  const unsigned phaseIdx,
+                  const CompositionalConfig::EOSType eosType,
+                  const Scalar normGrav)
+        : composition_(std::move(composition))
+        , tempVdTable_(tempVdTable)
+        , phaseIdx_(phaseIdx)
+        , eosType_(eosType)
+        , g_(normGrav)
+    {}
+
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const
+    {
+        const CompVec z = composition_(depth);
+        const Scalar temp = evalDepthTable(tempVdTable_, depth);
+
+        CompositionalFluidState<Scalar, FluidSystem> fs;
+        fs.setTemperature(temp);
+        fs.setPressure(FluidSystem::oilPhaseIdx, press);
+        fs.setPressure(FluidSystem::gasPhaseIdx, press);
+        for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx) {
+            fs.setMoleFraction(phaseIdx_, compIdx, z[compIdx]);
+        }
+
+        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+        paramCache.updatePhase(fs, phaseIdx_);
+
+        return FluidSystem::density(fs, paramCache, phaseIdx_) * g_;
+    }
+
+private:
+    CompositionFunction composition_;
+    const TabulatedFunction& tempVdTable_;
+    unsigned phaseIdx_;
+    CompositionalConfig::EOSType eosType_;
+    Scalar g_;
+};
+
+} // namespace Details
+
+/*!
+ * \brief Computes the initial state of a compositional model from hydrostatic
+ *        equilibrium (the EQUIL and ZMFVD keywords).
+ *
+ * The composition versus depth is given by ZMFVD and the temperature by RTEMPVD
+ * (or the constant RTEMP).  The phase pressures are obtained by integrating the
+ * hydrostatic ODE with the equation-of-state density, reusing the ODE machinery
+ * of the black-oil equilibration facility.  Only the total composition, pressure
+ * and temperature are needed downstream: the phase split and the saturations are
+ * recomputed by the flash from these quantities.
+ *
+ * The supported initialization procedures (EQUIL item 10) are
+ *  - type 1 (default): ZMFVD provides the total composition and the fluid is
+ *    treated as a continuous hydrocarbon phase.  The subsequent flash assigns
+ *    the phase label; an in-reservoir contact requires composition variation
+ *    across the contact for correct phase labeling;
+ *  - type 3: ZMFVD provides the liquid composition below the gas-oil contact.
+ *    The contact becomes the reference depth, where the pressure is the
+ *    saturation (bubble-point) pressure of the contact liquid unless EQUIL
+ *    item 11 retains the input pressure.  Above the contact the gas has the
+ *    constant composition of the equilibrium vapour at the contact.
+ *
+ * Only cell-centre initialization is supported (EQUIL item 9 = 0).
+ * Gas-oil contact capillary pressure must be zero: the downstream flash uses
+ * a single pressure for all phases.
+ */
+template <class FluidSystem>
+class InitialStateComputer
+{
+public:
+    using Scalar = typename FluidSystem::Scalar;
+    using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
+
+    /// \param[in] inputState      Input state, provides EQUIL, ZMFVD, RTEMP(VD).
+    /// \param[in] eosType         Equation of state used by the fluid system.
+    /// \param[in] cellCenterDepth Depth of each cell centre.
+    /// \param[in] eqlnum          Zero-based equilibration region of each cell.
+    /// \param[in] comm            Communicator for parallel runs.
+    /// \param[in] gravity         Norm of the gravity vector.
+    /// \param[in] numSamplePoints Sample points in each pressure integration.
+    InitialStateComputer(const EclipseState& inputState,
+                         const CompositionalConfig::EOSType eosType,
+                         const std::vector<Scalar>& cellCenterDepth,
+                         const std::vector<int>& eqlnum,
+                         const Parallel::Communication& comm,
+                         const Scalar gravity,
+                         const int numSamplePoints)
+        : eosType_(eosType)
+    {
+        const auto& records = inputState.getInitConfig().getEquil();
+        const auto& tables = inputState.getTableManager();
+
+        if (!tables.hasTables("ZMFVD")) {
+            // COMPVD is the other accepted way of giving the composition
+            // versus depth, but it is not supported here yet; name it so the
+            // message does not read as if ZMFVD were the only valid input.
+            const std::string msg = tables.hasTables("COMPVD")
+                ? "Equilibration of a compositional model with the composition versus "
+                  "depth from COMPVD is not supported; use ZMFVD instead."
+                : "Equilibration of a compositional model requires the composition "
+                  "versus depth from the ZMFVD keyword.";
+            OPM_THROW(std::runtime_error, msg);
+        }
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        if (eqlnum.size() != cellCenterDepth.size()) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("EQLNUM contains {} entries for {} cell depths.",
+                                  eqlnum.size(), cellCenterDepth.size()));
+        }
+        for (std::size_t cell = 0; cell < eqlnum.size(); ++cell) {
+            const auto region = eqlnum[cell];
+            if (region < 0 || std::cmp_greater_equal(region, records.size())) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cell {} has EQLNUM {} outside the {} "
+                                      "equilibration regions.",
+                                      cell, region + 1, records.size()));
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("Invalid EQLNUM: ", comm);
+
+        std::vector<Region> regions;
+        regions.reserve(records.size());
+        for (std::size_t r = 0; r < records.size(); ++r) {
+            regions.push_back(setupRegion(records.getRecord(r), tables, cellCenterDepth,
+                                          eqlnum, comm, gravity, numSamplePoints, r));
+        }
+
+        fluidStates_.resize(cellCenterDepth.size());
+        for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
+            assignCell(fluidStates_[cell], regions[eqlnum[cell]], cellCenterDepth[cell]);
+        }
+    }
+
+    std::vector<FluidState>& fluidStates()
+    { return fluidStates_; }
+
+    const std::vector<FluidState>& fluidStates() const
+    { return fluidStates_; }
+
+private:
+    using CompVec = std::array<Scalar, FluidSystem::numComponents>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using ODE = Details::EosDensityODE<FluidSystem>;
+    using PressFunc = EQUIL::Details::PressureFunction<Scalar, ODE>;
+
+    static constexpr int numComponents = FluidSystem::numComponents;
+
+    /// A depth table with a single row is depth-independent, but the
+    /// interpolant still needs two sample points; the duplicate row is placed
+    /// this far below the original. The distance does not matter.
+    static constexpr Scalar constantTableSpan{1.0};
+
+    /// Regions thinner than this are padded by the same amount on either side,
+    /// so the pressure integration never runs on a degenerate interval.
+    static constexpr Scalar minimumSpanExtent{1.0};
+
+    /// The equilibrated vertical distributions within one region.
+    struct Region {
+        int initType{1};                            // EQUIL item 10
+        Scalar zgoc{};
+        CompVec vaporComposition{};                 // gas above the contact (type 3)
+        std::vector<TabulatedFunction> zmfVdTable;  // per-component ZMFVD
+        TabulatedFunction tempVdTable;
+        std::optional<PressFunc> oilPressure;
+        std::optional<PressFunc> gasPressure;       // type 3 only
+    };
+
+    static CompVec composition(const Region& reg, const Scalar depth)
+    {
+        CompVec z{};
+        Scalar sum{};
+        for (int c = 0; c < numComponents; ++c) {
+            z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.zmfVdTable[c], depth));
+            sum += z[c];
+        }
+        if (!(sum > 0.0)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The ZMFVD composition vanishes at depth {} m.", depth));
+        }
+        std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
+        return z;
+    }
+
+    /// Whether the ZMFVD composition differs between \p depthA and \p depthB.
+    static bool compositionVariesBetween(const Region& reg,
+                                         const Scalar depthA,
+                                         const Scalar depthB)
+    {
+        // ZMFVD mole fractions are input data, so a real contrast across the
+        // contact is orders of magnitude above this round-off tolerance.
+        constexpr Scalar sameComposition{1.0e-10};
+
+        const CompVec a = composition(reg, depthA);
+        const CompVec b = composition(reg, depthB);
+        return !std::ranges::equal(a, b, [](const Scalar x, const Scalar y) {
+            return std::abs(x - y) <= sameComposition;
+        });
+    }
+
+    Region setupRegion(const EquilRecord& record,
+                       const TableManager& tables,
+                       const std::vector<Scalar>& cellCenterDepth,
+                       const std::vector<int>& eqlnum,
+                       const Parallel::Communication& comm,
+                       const Scalar gravity,
+                       const int numSamplePoints,
+                       const std::size_t regionIdx) const
+    {
+        Region reg;
+
+        reg.initType = record.compositionalInitType();
+        if (reg.initType != 1 && reg.initType != 3) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Compositional initialization type {} (EQUIL item 10) is "
+                                  "not supported for region {}; only type 1 (total "
+                                  "composition) and type 3 (liquid composition) are.",
+                                  reg.initType, regionIdx + 1));
+        }
+
+        if (record.gasOilContactCapillaryPressure() != 0.0) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Compositional equilibration only supports zero gas-oil "
+                                  "contact capillary pressure (EQUIL item 6); region {} "
+                                  "specifies {} bar.",
+                                  regionIdx + 1,
+                                  unit::convert::to(record.gasOilContactCapillaryPressure(),
+                                                    unit::barsa)));
+        }
+
+        if (const auto accuracy = record.initializationTargetAccuracy(); accuracy != 0) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Compositional equilibration only supports cell-centre "
+                                  "initialization (EQUIL item 9 = 0); region {} specifies {}.",
+                                  regionIdx + 1, accuracy));
+        }
+
+        reg.zgoc = record.gasOilContactDepth();
+
+        const auto& zmfvd = tables.getZmfvdTables().template getTable<ZmfvdTable>(regionIdx);
+        reg.zmfVdTable.resize(numComponents);
+        std::vector<Scalar> depths(zmfvd.getDepthColumn().begin(),
+                                   zmfvd.getDepthColumn().end());
+        // A single row means a depth-independent composition; the interpolant
+        // needs two sample points, so duplicate it onto an arbitrary interval.
+        const bool constantComposition = (depths.size() == 1);
+        if (constantComposition) {
+            depths.push_back(depths.front() + constantTableSpan);
+        }
+        for (int c = 0; c < numComponents; ++c) {
+            const auto& col = zmfvd.getMoleFractionColumn(c);
+            std::vector<Scalar> values(col.begin(), col.end());
+            if (constantComposition) {
+                values.push_back(values.front());
+            }
+            reg.zmfVdTable[c].setXYContainers(depths, values);
+        }
+
+        if (tables.hasTables("RTEMPVD")) {
+            const auto& rtempvd =
+                tables.getRtempvdTables().template getTable<RtempvdTable>(regionIdx);
+            std::vector<Scalar> tempDepths(rtempvd.getDepthColumn().begin(),
+                                           rtempvd.getDepthColumn().end());
+            const auto& tempCol = rtempvd.getTemperatureColumn();
+            std::vector<Scalar> temps(tempCol.begin(), tempCol.end());
+            // As for ZMFVD above, a single row is a depth-independent
+            // temperature and the interpolant needs a second sample point.
+            if (tempDepths.size() == 1) {
+                tempDepths.push_back(tempDepths.front() + constantTableSpan);
+                temps.push_back(temps.front());
+            }
+            reg.tempVdTable.setXYContainers(tempDepths, temps);
+        }
+        else {
+            const std::vector<Scalar> tempDepths{Scalar{0}, constantTableSpan};
+            const std::vector<Scalar> temps(tempDepths.size(), tables.rtemp());
+            reg.tempVdTable.setXYContainers(tempDepths, temps);
+        }
+
+        // Vertical extent of the region's cells across all processes.
+        auto span = std::array{std::numeric_limits<Scalar>::max(),
+                               std::numeric_limits<Scalar>::lowest()};
+        for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
+            if (std::cmp_equal(eqlnum[cell], regionIdx)) {
+                span[0] = std::min(span[0], cellCenterDepth[cell]);
+                span[1] = std::max(span[1], cellCenterDepth[cell]);
+            }
+        }
+        span[0] = comm.min(span[0]);
+        span[1] = comm.max(span[1]);
+        if (span[0] > span[1]) {
+            // No cells anywhere in this region.
+            return reg;
+        }
+        if (span[1] - span[0] < minimumSpanExtent) {
+            span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
+        }
+
+        // The equilibration covers the hydrocarbon column only.
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            if (record.waterOilContactDepth() < span[1]) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Compositional equilibration does not support a water "
+                                      "zone: the water-oil contact at {} m is above the "
+                                      "deepest cell centre at {} m of region {}.",
+                                      record.waterOilContactDepth(), span[1], regionIdx + 1));
+            }
+            OpmLog::info(fmt::format("Equilibration region {}: the water phase is "
+                                     "initialized with zero saturation.", regionIdx + 1));
+        }
+
+        if (reg.initType == 1) {
+            setupSinglePhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
+        }
+        else {
+            setupTwoPhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
+        }
+
+        return reg;
+    }
+
+    /// EQUIL item 10 type 1: ZMFVD is the total composition. Pressure is
+    /// integrated from the datum with the EOS density; the subsequent flash
+    /// determines the phase split. The EOS root is the vapour one if the datum
+    /// lies above the gas-oil contact and the liquid one otherwise.
+    ///
+    /// The datum-versus-contact test is enough to pick the root because of the
+    /// convention on the gas-oil contact (EQUIL item 5): it lies above the top
+    /// of the reservoir when there is no initial free gas, and below the bottom
+    /// when the region holds only gas.  The defaulted item 5 (0 m, i.e. at the
+    /// surface) therefore expresses "no free gas" and correctly yields the
+    /// liquid root.
+    void setupSinglePhaseRegion(Region& reg,
+                                const EquilRecord& record,
+                                const std::array<Scalar, 2>& span,
+                                const Scalar gravity,
+                                const int numSamplePoints,
+                                const std::size_t regionIdx) const
+    {
+        const Scalar datum = record.datumDepth();
+        const auto phaseIdx = (datum < reg.zgoc)
+            ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
+
+        // For type 1, a gas-oil contact inside the region requires COMPVD or
+        // ZMFVD variation across it so the flash can label the phases correctly.
+        // COMPVD is not supported here yet.
+        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1]) &&
+            !compositionVariesBetween(reg, span[0], reg.zgoc) &&
+            !compositionVariesBetween(reg, reg.zgoc, span[1])) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
+                                        "at {} m lies inside a type-1 region, but ZMFVD "
+                                        "does not vary across the contact. Compositional "
+                                        "variation is required for proper phase labeling.",
+                                        regionIdx + 1, reg.zgoc));
+        }
+
+        const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
+                      reg.tempVdTable, phaseIdx, eosType_, gravity);
+        reg.oilPressure.emplace(ode,
+                                typename PressFunc::InitCond{
+                                    datum, Scalar(record.datumDepthPressure())},
+                                numSamplePoints, span);
+
+        OpmLog::info(fmt::format("Equilibration region {}: pressure integrated with one "
+                                 "EOS root and total composition from ZMFVD "
+                                 "(EQUIL item 10 = 1).",
+                                 regionIdx + 1));
+    }
+
+    /// EQUIL item 10 type 3: ZMFVD is the liquid composition and the gas-oil
+    /// contact is used as the reference depth. If saturation-pressure
+    /// adjustment is enabled and the input pressure differs by one atmosphere
+    /// or more, use the saturation pressure at the contact. Item 11 = 1 always
+    /// preserves the input pressure. The gas above the contact is the
+    /// equilibrium vapour of the contact liquid.
+    void setupTwoPhaseRegion(Region& reg,
+                             const EquilRecord& record,
+                             const std::array<Scalar, 2>& span,
+                             const Scalar gravity,
+                             const int numSamplePoints,
+                             const std::size_t regionIdx) const
+    {
+        const Scalar inputReferenceDepth = record.datumDepth();
+        if (inputReferenceDepth != reg.zgoc) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the reference depth {} m "
+                                        "does not coincide with the gas-oil contact when "
+                                        "EQUIL item 10 is 3; resetting it to the contact "
+                                        "depth {} m.",
+                                        regionIdx + 1, inputReferenceDepth, reg.zgoc));
+        }
+
+        const CompVec liquid = composition(reg, reg.zgoc);
+        const Scalar temp = Details::evalDepthTable(reg.tempVdTable, reg.zgoc);
+        Scalar psat{};
+        CompVec vapor{};
+        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
+                                                                     psat, vapor)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The saturation pressure calculation at the gas-oil "
+                                  "contact of region {} did not converge.", regionIdx + 1));
+        }
+        reg.vaporComposition = vapor;
+
+        // For type 3, the contact is the reference depth. With item 11
+        // defaulted, the input pressure must agree with the saturation pressure
+        // to within one atmosphere and is reset to the computed value otherwise.
+        // Item 11 = 1 retains the numeric input pressure at the contact regardless
+        // of that test; the result need not be an equilibrium system in that case.
+        constexpr Scalar oneAtmosphere = unit::atm;
+        const Scalar inputPressure = record.datumDepthPressure();
+        const bool resetToPsat = record.setToSaturationPressure()
+            && (std::abs(inputPressure - psat) >= oneAtmosphere);
+        const Scalar referencePressure = resetToPsat ? psat : inputPressure;
+
+        OpmLog::info(fmt::format("Equilibration region {}: two phases, liquid composition "
+                                 "specified (EQUIL item 10 is 3). The saturation pressure "
+                                 "at the gas-oil contact ({} m) is {:.6g} bar.",
+                                 regionIdx + 1, reg.zgoc,
+                                 unit::convert::to(psat, unit::barsa)));
+
+        if (resetToPsat) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the datum pressure {:.6g} bar "
+                                        "differs from the saturation pressure {:.6g} bar at the "
+                                        "gas-oil contact by one atmosphere or more; the "
+                                        "saturation pressure is used instead.",
+                                        regionIdx + 1,
+                                        unit::convert::to(inputPressure, unit::barsa),
+                                        unit::convert::to(psat, unit::barsa)));
+        }
+
+        const ODE oilOde([&reg](const Scalar depth) { return composition(reg, depth); },
+                         reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
+        reg.oilPressure.emplace(oilOde,
+                                typename PressFunc::InitCond{reg.zgoc, referencePressure},
+                                numSamplePoints, span);
+
+        const ODE gasOde([vapor](const Scalar) { return vapor; },
+                         reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+        reg.gasPressure.emplace(gasOde,
+                                typename PressFunc::InitCond{reg.zgoc, referencePressure},
+                                numSamplePoints, span);
+    }
+
+    void assignCell(FluidState& fs, const Region& reg, const Scalar depth) const
+    {
+        const bool inGasZone = (reg.initType == 3) && (depth < reg.zgoc);
+
+        const CompVec z = inGasZone ? reg.vaporComposition : composition(reg, depth);
+        const auto& pressFunc = inGasZone ? reg.gasPressure : reg.oilPressure;
+        if (!pressFunc.has_value()) {
+            OPM_THROW(std::runtime_error,
+                      "Evaluating the equilibrated pressure of a region without cells.");
+        }
+        const Scalar press = pressFunc->value(depth);
+
+        fs.setTemperature(Details::evalDepthTable(reg.tempVdTable, depth));
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                fs.setPressure(phaseIdx, press);
+                fs.setSaturation(phaseIdx, 0.0);
+            }
+        }
+        // Nominal single-phase saturation; the flash recomputes the phase split
+        // from the total composition, the pressure and the temperature.
+        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx, 1.0);
+
+        for (int c = 0; c < numComponents; ++c) {
+            fs.setMoleFraction(c, z[c]);
+        }
+    }
+
+    CompositionalConfig::EOSType eosType_;
+    std::vector<FluidState> fluidStates_;
+};
+
+} // namespace Opm::EQUIL::Comp
+
+#endif // OPM_INIT_STATE_EQUIL_COMP_HPP

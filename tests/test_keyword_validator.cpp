@@ -695,6 +695,40 @@ WINJGAS
     BOOST_CHECK(get_error_report(errors, true, true).empty());
 }
 
+BOOST_AUTO_TEST_CASE(compositional_equil_item_11_validation)
+{
+    const auto validator = flowKeywordValidator();
+    const auto validateItem11 = [&validator](const std::string& item11) {
+        const auto keywords = std::string {R"(
+RUNSPEC
+COMPS
+  3 /
+EQLDIMS
+  1 /
+SOLUTION
+EQUIL
+  2000.0 200.0 2200.0 0.0 1500.0 0.0 3* 3 )"}
+            + item11 + " /\n";
+        const auto deck = Parser {}.parseString(keywords);
+        std::vector<ValidationError> errors;
+        validator.validateDeckKeyword(deck["EQUIL"].back(), errors);
+        return errors;
+    };
+
+    BOOST_CHECK(validateItem11("").empty());
+    BOOST_CHECK(validateItem11("1*").empty());
+    BOOST_CHECK(validateItem11("0").empty());
+    BOOST_CHECK(validateItem11("1").empty());
+
+    const auto errors = validateItem11("2");
+    BOOST_REQUIRE_EQUAL(errors.size(), 1);
+    BOOST_CHECK(errors.front().item_number == 11);
+    BOOST_REQUIRE(errors.front().user_message);
+    BOOST_CHECK_EQUAL(*errors.front().user_message,
+                      "EQUIL(COMP_NOT_SET_SAT_PRESSURE): must be defaulted/omitted or set to "
+                      "0 (reset when needed) or 1 (keep datum pressure)");
+}
+
 BOOST_AUTO_TEST_CASE(compositional_solution_method_keywords)
 {
     const auto validator = flowKeywordValidator();
