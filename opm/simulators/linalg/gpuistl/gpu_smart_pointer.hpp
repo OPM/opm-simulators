@@ -17,7 +17,6 @@
 #define OPM_SIMULATORS_LINALG_GPUISTL_GPU_SMART_POINTER_HPP
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <opm/common/utility/gpuDecorators.hpp>
@@ -220,9 +219,6 @@ template <class T>
 T
 copyFromGPU(const T* value)
 {
-#ifndef NDEBUG
-    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(value), "The pointer is not associated with GPU memory.");
-#endif
     T result;
     detail::gpuMemcpyDeviceToHost(&result, value, 1);
     return result;
@@ -273,9 +269,6 @@ template <class T>
 void
 copyToGPU(const T& value, T* ptr)
 {
-#ifndef NDEBUG
-    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(ptr), "The pointer is not associated with GPU memory.");
-#endif
     detail::gpuMemcpyHostToDevice(ptr, &value, 1);
 }
 
