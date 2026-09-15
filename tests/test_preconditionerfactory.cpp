@@ -28,11 +28,11 @@
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 #include <dune/istl/solvers.hh>
 
@@ -68,7 +68,7 @@ template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
 testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
-    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
+    using Matrix = Opm::BlockSparseMatrix<Opm::MatrixBlock<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
     Matrix matrix;
     {
@@ -76,7 +76,7 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        using M = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
         readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
     }
     Vector rhs;
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
 
 
 template <int bz>
-using M = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
+using M = Opm::BlockSparseMatrix<Opm::MatrixBlock<double, bz, bz>>;
 template <int bz>
 using V = Dune::BlockVector<Dune::FieldVector<double, bz>>;
 template <int bz>
@@ -292,7 +292,7 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        using M = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, bz, bz>>;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
         readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle

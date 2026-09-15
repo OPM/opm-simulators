@@ -22,7 +22,7 @@
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
-#include <dune/istl/bcrsmatrix.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize2, T, NumericTypes)
     constexpr int blocksize = 2;
     const int nonZeroes = 3;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
     using GpuMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<T>;
     using GpuJac = Opm::gpuistl::GpuJac<GpuMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize1, T, NumericTypes)
     constexpr int blocksize = 1;
     const int nonZeroes = 8;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
-    using SpMatrix = Dune::BCRSMatrix<M>;
+    using SpMatrix = Opm::BlockSparseMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
     using GpuMatrix = Opm::gpuistl::GpuSparseMatrixWrapper<T>;
     using GpuJac = Opm::gpuistl::GpuJac<GpuMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;

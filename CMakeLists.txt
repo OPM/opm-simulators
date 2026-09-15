@@ -35,6 +35,7 @@ option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7;8;9;10" CACHE STRING "The components to compile support for")
 option(USE_OPENCL "Enable OpenCL support?" ON)
 option(USE_DEV_SIMULATOR_IN_TESTS "Use the development simulator binaries in tests?" OFF)
+option(USE_EXPERIMENTAL_ISTL_MATRIX "Use experimental IBCRSMatrix from dune-istl?" OFF)
 
 # Wrapper for opm_add_target_options that also adds
 # compile definitions and target links from the library
@@ -125,6 +126,9 @@ macro(opm-simulators_prereqs_hook)
   if(HDF5_FOUND)
     target_link_libraries(opmsimulators PUBLIC HDF5::HDF5)
     target_compile_definitions(opmsimulators PUBLIC HAVE_HDF5=1)
+  endif()
+  if(USE_EXPERIMENTAL_ISTL_MATRIX)
+    target_compile_definitions(opmsimulators PUBLIC OPM_USE_EXPERIMENTAL_IBCRSMATRIX=1)
   endif()
 
   if (OPM_ENABLE_PYTHON)

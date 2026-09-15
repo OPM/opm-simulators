@@ -24,11 +24,11 @@
 
 #include <dune/common/parallel/communication.hh>
 #include <dune/istl/operators.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <dune/common/shared_ptr.hh>
 #include <dune/istl/paamg/smoother.hh>
 
@@ -57,7 +57,7 @@ class LinearOperatorExtra : public Dune::LinearOperator<X, Y>
 {
 public:
     using field_type = typename X::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
+    using PressureMatrix = BlockSparseMatrix<MatrixBlock<field_type, 1, 1>>;
     virtual void addWellPressureEquations(PressureMatrix& jacobian,
                                           const X& weights,
                                           const bool use_well_weights) const = 0;
@@ -228,7 +228,7 @@ public:
     using domain_type = X;
     using range_type = Y;
     using field_type = typename X::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
+    using PressureMatrix = BlockSparseMatrix<MatrixBlock<field_type, 1, 1>>;
 
     Dune::SolverCategory::Category category() const override
     {
@@ -302,7 +302,7 @@ public:
     using domain_type = X;
     using range_type = Y;
     using field_type = typename X::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
+    using PressureMatrix = BlockSparseMatrix<MatrixBlock<field_type, 1, 1>>;
 #if HAVE_MPI
     using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
