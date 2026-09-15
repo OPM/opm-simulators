@@ -258,6 +258,12 @@ template <class T>
 void
 GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 {
+    if (numberOfElements > dim()) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Requesting to copy too many elements. Vector has {} elements, while {} was requested.",
+                              dim(),
+                              numberOfElements));
+    }
     m_buffer.copyFromHost(dataPointer, numberOfElements);
 }
 
@@ -265,6 +271,12 @@ template <class T>
 void
 GpuVector<T>::copyFromHostAsync(const T* dataPointer, size_t numberOfElements, cudaStream_t stream)
 {
+    if (numberOfElements > dim()) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Requesting to copy too many elements. Vector has {} elements, while {} was requested.",
+                              dim(),
+                              numberOfElements));
+    }
     m_buffer.copyFromHostAsync(dataPointer, numberOfElements, stream);
 }
 
