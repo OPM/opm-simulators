@@ -1650,19 +1650,15 @@ protected:
     void updateExplicitQuantities_(const bool first_step_after_restart)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
-        const bool invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
-        const bool invalidateFromMinPressure = this->updateMinPressure_();
-
-        // update hysteresis and max oil saturation used in vappars
-        const bool invalidateFromHyst = this->updateHysteresis_();
-        const bool invalidateFromMaxOilSat = this->updateMaxOilSaturation_();
+        // max water saturation, min pressure, hysteresis and max oil
+        // saturation in one sweep over the cached intensive quantities
+        const bool invalidateFromPerDofUpdates = this->updateExplicitQuantitiesFused_();
 
         // deal with DRSDT and DRVDT
         const bool invalidateDRDT = !first_step_after_restart && this->updateCompositionChangeLimits_();
 
         // the derivatives may have changed
-        const bool invalidateIntensiveQuantities
-            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat || invalidateDRDT;
+        const bool invalidateIntensiveQuantities = invalidateFromPerDofUpdates || invalidateDRDT;
         if (invalidateIntensiveQuantities) {
             OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
