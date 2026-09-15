@@ -216,8 +216,16 @@ public:
     /// \brief Compute pore-volume/cell count split among "converged",
     /// "relaxed converged", "unconverged" cells based on CNV point
     /// measures. Also returns list of cells where CNV is greater than
-    /// its strict tolerance
-    CnvPvSplitData characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
+    /// its strict tolerance.
+    /// \param[in] pvOutlierCap Per-cell cap (e.g. relaxed_pv_outlier_cap_multiplier_
+    ///            times the mean eligible cell pore volume) applied to each
+    ///            cell's pore volume before it is added to the returned PV
+    ///            split, so a handful of outsized cells cannot dominate the
+    ///            split. Does not affect the per-cell CNV value itself, only
+    ///            the pore-volume weight it contributes to the split.
+    CnvPvSplitData characteriseCnvPvSplit(const std::vector<Scalar>& B_avg,
+                                          const double dt,
+                                          const Scalar pvOutlierCap);
 
     /// \brief Compute the number of Newtons required by each cell in order to
     /// satisfy the solution change convergence criteria at the last time step.

@@ -653,7 +653,7 @@ localConvergenceData(std::vector<Scalar>& R_sum,
 template <class TypeTag>
 typename NonlinearSystemBlackOilReservoir<TypeTag>::CnvPvSplitData
 NonlinearSystemBlackOilReservoir<TypeTag>::
-characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
+characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt, const Scalar pvOutlierCap)
 {
     OPM_TIMEBLOCK(computeCnvErrorPv);
 
@@ -711,7 +711,13 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         const auto ix = (maxCnv > this->param_.tolerance_cnv_)
             + (maxCnv > this->param_.tolerance_cnv_relaxed_);
 
-        splitPV[ix] += static_cast<double>(pvValue);
+        // Cap this cell's contribution to the pore-volume weighting used by
+        // the relaxed-tolerance decision (not the CNV test above, which
+        // always uses the true pvValue) so that a handful of outsized cells
+        // cannot dominate the eligible pore volume and mask a real,
+        // non-negligible region of unconverged cells -- see
+        // relaxed_pv_outlier_cap_multiplier_.
+        splitPV[ix] += static_cast<double>(std::min(pvValue, pvOutlierCap));
         ++cellCntPV[ix];
 
         // For dP and dS check, we need cell indices of [1] violations
@@ -763,9 +769,38 @@ getReservoirConvergence(const double reportTime,
                                    numAquiferPvSumLocal,
                                    R_sum, maxCoeff, B_avg);
 
-    auto cnvSplitData = this->characteriseCnvPvSplit(B_avg, dt);
-    report.setCnvPoreVolSplit(cnvSplitData.cnvPvSplit,
-                              pvSum - numAquiferPvSum);
+    // Cap each cell's contribution to the relaxed-tolerance pore-volume
+    // weighting at a multiple of the mean eligible (non-aquifer) cell pore
+    // volume. This generalizes the numerical-aquifer exclusion above to any
+    // outsized cell: without it, a handful of large cells (e.g. a big
+    // boundary/tank cell that isn't flagged as a numerical aquifer) can
+    // inflate the eligible pore volume so that the "97% converged" test
+    // passes even though a real, non-negligible region of cells remains
+    // unconverged. this->global_nc_ (total cell count, aquifer cells
+    // included) is used as a cheap stand-in for the eligible cell count;
+    // since numerical aquifers are always a small handful of cells, this
+    // only ever understates the true mean eligible pore volume very
+    // slightly, which biases the resulting cap conservatively (smaller,
+    // i.e. stricter).
+    const Scalar eligiblePvRaw = pvSum - numAquiferPvSum;
+    const Scalar meanEligibleCellPv = (this->global_nc_ > 0)
+        ? eligiblePvRaw / static_cast<Scalar>(this->global_nc_)
+        : Scalar{0};
+    const Scalar pvOutlierCap = (this->param_.relaxed_pv_outlier_cap_multiplier_ > 0.0)
+        ? this->param_.relaxed_pv_outlier_cap_multiplier_ * meanEligibleCellPv
+        : std::numeric_limits<Scalar>::max();
+
+    auto cnvSplitData = this->characteriseCnvPvSplit(B_avg, dt, pvOutlierCap);
+
+    // The eligible pore volume used for (and reported alongside) the
+    // relaxation test is the sum of the possibly-capped per-cell
+    // contributions above, not the raw pvSum - numAquiferPvSum -- see the
+    // comment on pvOutlierCap.
+    const auto& cnvPvSplitPv = cnvSplitData.cnvPvSplit.first;
+    const Scalar cappedEligiblePv =
+        static_cast<Scalar>(cnvPvSplitPv[0] + cnvPvSplitPv[1] + cnvPvSplitPv[2]);
+
+    report.setCnvPoreVolSplit(cnvSplitData.cnvPvSplit, cappedEligiblePv);
 
     // For each iteration, we need to determine whether to use the
     // relaxed tolerances.  To disable the usage of relaxed
@@ -798,16 +833,40 @@ getReservoirConvergence(const double reportTime,
     // Note trailing parentheses here, just before the final
     // semicolon.  This is an immediately invoked function
     // expression which calculates a single boolean value.
+    //
+    // Two independent guards must both hold for relaxation to be granted:
+    //  - the (outlier-capped) pore volume of violating cells is a small
+    //    fraction of the (outlier-capped) eligible pore volume -- as
+    //    before, but now robust to a handful of oversized cells inflating
+    //    the denominator (see pvOutlierCap above);
+    //  - the *number* of violating cells is not too large a fraction of
+    //    the eligible cell count. This is a secondary safety net (disabled
+    //    by default via relaxed_max_cell_count_fraction_ == 1.0) in case a
+    //    non-negligible number of cells are still violating strict CNV
+    //    even though their capped pore-volume share looks negligible.
     const auto relax_pv_fraction_cnv =
-        [&report, this, eligible = pvSum - numAquiferPvSum]()
+        [&report, this]()
     {
         const auto& cnvPvSplit = report.cnvPvSplit().first;
+        const auto& cnvCellCountSplit = report.cnvPvSplit().second;
 
         // [1]: tol < cnv <= relaxed
         // [2]: relaxed < cnv
-        Scalar cnvPvSum = static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]);
-        return cnvPvSum < this->param_.relaxed_max_pv_fraction_ * eligible &&
+        const Scalar cnvPvSum = static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]);
+        const Scalar eligiblePv = static_cast<Scalar>(report.eligiblePoreVolume());
+
+        const bool pv_fraction_ok =
+            cnvPvSum < this->param_.relaxed_max_pv_fraction_ * eligiblePv &&
             cnvPvSum > 0.0;
+
+        const auto violatingCellCount = cnvCellCountSplit[1] + cnvCellCountSplit[2];
+        const auto eligibleCellCount =
+            cnvCellCountSplit[0] + cnvCellCountSplit[1] + cnvCellCountSplit[2];
+        const bool cell_count_ok = eligibleCellCount == 0 ||
+            static_cast<Scalar>(violatingCellCount) <
+                this->param_.relaxed_max_cell_count_fraction_ * static_cast<Scalar>(eligibleCellCount);
+
+        return pv_fraction_ok && cell_count_ok;
     }();
 
     // If tolerances for solution changes are met, we use the
