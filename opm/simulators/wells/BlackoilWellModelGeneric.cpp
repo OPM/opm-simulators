@@ -1310,15 +1310,6 @@ wellStatusSnapshot() const
         auto& entry = snapshot.wells[well.name()];
         entry.status = this->wellState().well(well.name()).status;
 
-        // A well closed by the economic or physical limit checks does not
-        // reach WellState until the next time step is set up, so consult
-        // WellTestState to see the closure in the step that makes it.
-        if ((entry.status == WellStatus::OPEN) &&
-            wtestState.well_is_closed(well.name()))
-        {
-            entry.status = this->closedWellStatus(well);
-        }
-
         // Connection state is tracked independently of the well status: a
         // well that is shut as a whole, e.g., by a 'WELL' workover, has not
         // had any of its connections closed.
@@ -1333,6 +1324,20 @@ wellStatusSnapshot() const
         }
 
         std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
+
+        // A well closed by the economic or physical limit checks does not
+        // reach WellState until the next time step is set up, so consult
+        // WellTestState to see the closure in the step that makes it.  The
+        // indicators follow the WELSPECS shut-in instruction, unlike
+        // closedWellStatus(), which also shuts a stopped well that cannot
+        // cross-flow.  That is an implementation choice rather than something
+        // the deck asked for.
+        if ((entry.status == WellStatus::OPEN) &&
+            wtestState.well_is_closed(well.name()))
+        {
+            entry.status = (well.getAutomaticShutIn() || entry.openCompletions.empty())
+                ? WellStatus::SHUT : WellStatus::STOP;
+        }
     }
 
     return snapshot;
