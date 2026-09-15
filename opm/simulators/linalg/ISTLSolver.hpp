@@ -330,6 +330,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void eraseMatrix() override
         {
             matrix_ = nullptr;
+            rhs_ = nullptr;
+            iterations_ = 0;
+            solveCount_ = 0;
+
+            for (auto& solverInfo : flexibleSolver_) {
+                solverInfo.pre_ = nullptr;
+                solverInfo.solver_.reset();
+                solverInfo.op_.reset();
+            }
         }
 
         void setActiveSolver(const int num) override
