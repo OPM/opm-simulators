@@ -16,12 +16,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <algorithm>
 #include <fmt/core.h>
-#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include <algorithm>
 
 namespace Opm::gpuistl
 {
@@ -51,7 +54,7 @@ GpuView<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
                               size(),
                               numberOfElements));
     }
-    OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    detail::gpuMemcpyHostToDevice(data(), dataPointer, numberOfElements);
 }
 
 template <class T>
@@ -59,7 +62,7 @@ void
 GpuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(numberOfElements);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    detail::gpuMemcpyDeviceToHost(dataPointer, data(), numberOfElements);
 }
 
 template <class T>
