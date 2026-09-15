@@ -31,3 +31,37 @@ add_test_compareSeparateECLFiles(
   MPI_PROCS
     1
 )
+
+# Refining part of the grid must not change the field totals.  The two decks are
+# identical but for the CARFIN block, so any difference in FPR/FOIP/FGIP/FWIP/
+# FRPV/FHPV means the region arrays or the in-place sums are not mapped onto the
+# leaf grid correctly.  The tolerance sits an order of magnitude above the
+# discretisation drift between the two grids (~1.3e-4 by the end of the run) and
+# an order below the ~1.4e-2 error it is there to catch.
+set(lgr_rel_tol 1e-3)
+add_test_compareSeparateECLFiles(
+  CASENAME
+    lgr_field_totals_invariant_under_refinement
+  DIR1
+    lgr
+  FILENAME1
+    SPE1CASE1_CARFIN1-3DCORNERPOINT_XYZ
+  DIR2
+    lgr
+  FILENAME2
+    SPE1CASE1_CARFIN1-3DCORNERPOINT_XYZ_NOLGR
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${lgr_rel_tol}
+  IGNORE_EXTRA_KW
+    BOTH
+  MPI_PROCS
+    1
+  TEST_ARGS
+    --parsing-strictness=low
+)
