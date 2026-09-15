@@ -496,7 +496,6 @@ namespace {
             Opm::Well::ProducerCMode::ORAT,
             Opm::Connection::Order::INPUT,
             Opm::UnitSystem::newMETRIC(),
-            -3.0e+20,           // UDQ undefined
             0.0, true, true, 0,
             Opm::Well::GasInflowEquation::STD
         };

@@ -60,7 +60,7 @@ namespace {
         return Dune::cpgrid::OpmWellType(name, name, 0, 0, 0, 0, 0.0, WellType(),
                                         Well::ProducerCMode(), Connection::Order::TRACK,
                                         UnitSystem::newMETRIC(),
-                                        0.0, 0.0, false, false, 0, Well::GasInflowEquation());
+                                        0.0, false, false, 0, Well::GasInflowEquation());
     }
 
     std::vector<Dune::cpgrid::OpmWellType> createWellsWithConnections(
