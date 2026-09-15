@@ -35,6 +35,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/linalg/LinearSolverAcceleratorType.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -161,7 +162,7 @@ initialLinearization(SimulatorReportSingle& report,
     ParentType::initialLinearization(report,
                                      minIter,
                                      maxIter,
-                                     timer);                                 
+                                     timer);
 
     // -----------   Check if converged   -----------
     std::vector<Scalar> residual_norms;
@@ -418,6 +419,26 @@ solveJacobianSystem(BVector& x)
     auto& jacobian = this->simulator_.model().linearizer().jacobian().istlMatrix();
     auto& residual = this->simulator_.model().linearizer().residual();
     auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+        const auto globalWells = this->grid_.comm().sum(
+            this->simulator_.problem().wellModel().numLocalWellsEnd());
+        if (Parameters::linearSolverAcceleratorTypeFromCLI()
+                == Parameters::LinearSolverAcceleratorType::GPU
+            && globalWells == 0)
+        {
+            auto& linearizer = this->simulator_.model().linearizer();
+            if (linSolver.prepareGpu(linearizer.gpuJacobian(),
+                                     linearizer.flattenedGpuResidual()))
+            {
+                x = 0.0;
+                linSolver.solveGpu(x);
+                return;
+            }
+        }
+    }
+#endif
 
     const int numSolvers = linSolver.numAvailableSolvers();
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {

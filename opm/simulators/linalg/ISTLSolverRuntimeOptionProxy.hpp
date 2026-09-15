@@ -26,10 +26,12 @@
 #include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
 #endif
 
+#if HAVE_CUDA
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/ISTLSolverGPUISTL.hpp>
-#elif HAVE_CUDA
+#else
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
+#endif
 #endif
 
 #include <opm/simulators/linalg/system/ISTLSolverSystem.hpp>
@@ -131,6 +133,43 @@ public:
     {
         return istlSolver_->solve(x);
     }
+
+#if HAVE_CUDA
+    /**
+     * \brief Prepare gpuISTL directly from device-resident system data.
+     *
+     * A false return means a different runtime solver was selected, so callers
+     * must use the ordinary host-data interface instead.
+     */
+    bool prepareGpu(gpuistl::GpuSparseMatrixWrapper<typename Vector::field_type>& matrix,
+                    gpuistl::GpuVector<typename Vector::field_type>& rhs)
+    {
+        auto* gpuSolver = dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get());
+        if (!gpuSolver) {
+            return false;
+        }
+
+        gpuSolver->prepare(matrix, rhs);
+        return true;
+    }
+
+    /**
+     * \brief Solve the resident system and return only the final update to host.
+     */
+    bool solveGpu(Vector& x)
+    {
+        auto* gpuSolver = dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get());
+        if (!gpuSolver) {
+            OPM_THROW(std::logic_error, "GPU solve requested without the gpuISTL backend");
+        }
+
+        gpuistl::GpuVector<typename Vector::field_type> gpuX(x.dim());
+        gpuX = typename Vector::field_type{0};
+        const bool converged = gpuSolver->solve(gpuX);
+        gpuX.copyToHost(x);
+        return converged;
+    }
+#endif
 
     int iterations() const override
     {
