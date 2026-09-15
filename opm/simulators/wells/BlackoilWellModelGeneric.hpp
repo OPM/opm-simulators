@@ -565,6 +565,7 @@ protected:
     bool wells_active_{false};
     bool initial_step_{};
     bool report_step_starts_{};
+    bool deserialized_state_pending_{false};
 
     std::optional<int> last_run_wellpi_{};
 
