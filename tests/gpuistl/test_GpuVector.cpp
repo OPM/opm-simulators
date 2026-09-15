@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <random>
+#include <limits>
 
 BOOST_AUTO_TEST_CASE(TestDocumentedUsage)
 {
@@ -71,6 +72,12 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
     BOOST_CHECK_THROW(Opm::gpuistl::GpuVector<double>(vectorOnGPU.data(), data.size()), std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(TestConstructionRejectsSizeTooLargeForCuBlas)
+{
+    const auto tooLarge = static_cast<size_t>(std::numeric_limits<int>::max()) + size_t{1};
+    BOOST_CHECK_THROW(Opm::gpuistl::detail::to_int(tooLarge), std::invalid_argument);
+    BOOST_CHECK_THROW((Opm::gpuistl::GpuVector<double>(tooLarge)), std::invalid_argument);
+}
 
 BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 {
@@ -186,6 +193,65 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
     std::vector<double> output(data.size());
     vectorOnGPUB.copyToHost(output.data(), output.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(output.begin(), output.end(), data.begin(), data.end());
+}
+
+BOOST_AUTO_TEST_CASE(TestResizeEmptyToEmpty)
+{
+    auto v = Opm::gpuistl::GpuVector<double>();
+    BOOST_CHECK_EQUAL(0u, v.dim());
+    v.resize(0);
+    BOOST_CHECK_EQUAL(0u, v.dim());
+    BOOST_CHECK(v.data() == nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(TestResizeToZeroClears)
+{
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto v = Opm::gpuistl::GpuVector<double>(data);
+    v.resize(0);
+    BOOST_CHECK_EQUAL(0u, v.dim());
+    BOOST_CHECK(v.data() == nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(TestResizeGrowPreservesData)
+{
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto v = Opm::gpuistl::GpuVector<double>(data);
+
+    v.resize(7);
+    BOOST_CHECK_EQUAL(7u, v.dim());
+
+    std::vector<double> host(v.dim(), -1.0);
+    v.copyToHost(host.data(), host.size());
+    BOOST_CHECK_EQUAL_COLLECTIONS(host.begin(), host.begin() + data.size(),
+                                  data.begin(), data.end());
+
+    // New slots are uninitialized; prove full dim() is writable
+    std::vector<double> grown {{10, 20, 30, 40, 50, 60, 70}};
+    v.copyFromHost(grown);
+    auto roundTrip = v.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(roundTrip.begin(), roundTrip.end(),
+                                  grown.begin(), grown.end());
+}
+
+BOOST_AUTO_TEST_CASE(TestResizeShrinkTruncatesData)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
+    auto v = Opm::gpuistl::GpuVector<double>(data);
+
+    v.resize(3);
+    BOOST_CHECK_EQUAL(3u, v.dim());
+    auto truncated = v.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(truncated.begin(), truncated.end(),
+                                  data.begin(), data.begin() + 3);
+}
+
+BOOST_AUTO_TEST_CASE(TestResizeRejectsSizeTooLargeForCuBlas)
+{
+    auto v = Opm::gpuistl::GpuVector<double>(4);
+    const auto tooLarge = static_cast<size_t>(std::numeric_limits<int>::max()) + size_t{1};
+    BOOST_CHECK_THROW(v.resize(tooLarge), std::invalid_argument);
+    BOOST_CHECK_EQUAL(4u, v.dim()); // size unchanged on failure
 }
 
 BOOST_AUTO_TEST_CASE(RandomVectors)
