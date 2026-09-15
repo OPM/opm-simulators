@@ -398,8 +398,12 @@ relativeChange() const
                 Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
                 resultDelta += tmpSat*tmpSat;
                 resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                assert(std::isfinite(resultDelta));
-                assert(std::isfinite(resultDenom));
+                // Non-finite here comes from the solution, not from a broken
+                // invariant, so report it instead of vanishing in release.
+                if (!std::isfinite(resultDelta) || !std::isfinite(resultDenom)) {
+                    OPM_THROW(std::runtime_error,
+                              "Non-finite solution change in the convergence measure");
+                }
             }
         }
     }
