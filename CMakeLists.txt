@@ -587,6 +587,19 @@ macro(opm-simulators_tests_hook)
   if(BUILD_FLOW)
     add_test(
       NAME
+        drsdt_initial_rs_no_free_gas
+      COMMAND
+        ${CMAKE_COMMAND}
+          -DFLOW=$<TARGET_FILE:flow_blackoil>
+          -DDECK=${PROJECT_SOURCE_DIR}/tests/drsdt_initial_rs.DATA
+          -DOUTDIR=${PROJECT_BINARY_DIR}/tests/drsdt_initial_rs
+          -P ${PROJECT_SOURCE_DIR}/tests/check_drsdt_free_gas.cmake
+    )
+  endif()
+
+  if(BUILD_FLOW)
+    add_test(
+      NAME
         flow__version
       COMMAND
         $<TARGET_FILE:flow> --version
@@ -684,6 +697,7 @@ macro(opm-simulators_targets_hook)
   simulators_add_target_options(TARGET MainDispatchDynamic)
 
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_drsdt_initial_rs PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_injection_topup_phase_validation PRIVATE $<TARGET_OBJECTS:moduleVersion>)
