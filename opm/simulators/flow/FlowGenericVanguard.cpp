@@ -130,6 +130,8 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
         OpmLog::error(msg);
         throw std::runtime_error(msg);
     }
+    coarsePartitionGraphThreshold_ = Parameters::Get<Parameters::CoarsePartitionGraphThreshold<double>>();
+    coarsePartitionMaxNodeSize_ = Parameters::Get<Parameters::CoarsePartitionMaxNodeSize>();
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
@@ -151,9 +153,11 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
         partitionMethod_ = Dune::PartitionMethod::metis;
     } else if (pm == "zoltanwell") {
         partitionMethod_ = Dune::PartitionMethod::zoltanGoG;
+    } else if (pm == "zoltanCG") {
+        partitionMethod_ = Dune::PartitionMethod::zoltanCG;
     } else {
         std::string msg = fmt::format("Unknown value for --partition-method parameter: '{}'. "
-                                      "Accepted values are 'simple', 'zoltan', 'metis', and 'zoltanwell'.",
+                                      "Accepted values are 'simple', 'zoltan', 'metis', 'zoltanCG' and 'zoltanwell'.",
                                       pm);
         OpmLog::error(msg);
         throw std::runtime_error(msg);
@@ -476,7 +480,10 @@ void FlowGenericVanguard::registerParameters_()
          "groups from historical SCHEDULE section.");
     Parameters::Register<Parameters::EdgeWeightsMethod>
         ("Choose edge-weighing strategy: 'uniform', 'transmissibility', or 'logtrans' (logarithm of transmissibility).");
-
+    Parameters::Register<Parameters::CoarsePartitionGraphThreshold<Scalar>>
+        ("Merge large transmissibility connected vertices in the partitioning graph. Number between 0 and 1.");
+    Parameters::Register<Parameters::CoarsePartitionMaxNodeSize>
+        ("Maximal size of a single node in coarse graph partitioning method.");
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     Parameters::Register<Parameters::NumJacobiBlocks>
         ("Number of blocks to be created for the Block-Jacobi preconditioner.");
@@ -493,7 +500,7 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::NumOverlap>
         ("Numbers of layers overlap in parallel partition");
     Parameters::Register<Parameters::PartitionMethod>
-        ("Choose partitioning method: 'simple', 'zoltan', 'metis', or "
+        ("Choose partitioning method: 'simple', 'zoltan', 'metis', zoltanCG or "
          "'zoltanwell' (Zoltan with all cells perforated by a well represented by a single vertex).");
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
