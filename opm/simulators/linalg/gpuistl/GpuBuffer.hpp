@@ -251,8 +251,7 @@ public:
     {
         if (numberOfElements > size()) {
             OPM_THROW(std::runtime_error,
-                    fmt::format(fmt::runtime("Requesting to copy too many elements. "
-                                             "buffer has {} elements, while {} was requested."),
+                    fmt::format("Requesting to copy too many elements. Buffer has {} elements, while {} was requested.",
                                 size(),
                                 numberOfElements));
         }
@@ -339,32 +338,33 @@ public:
      *       like PinnedMemoryHolder), the transfer may be faster.
      * @note assumes that this buffer has at least numberOfElements elements
      */
-     void copyFromHostAsync(const T* dataPointer, size_t numberOfElements, cudaStream_t stream = detail::DEFAULT_STREAM)
-     {
-         if (numberOfElements > size()) {
-             OPM_THROW(std::runtime_error,
-                     fmt::format("Requesting to copy too many elements. Buffer has {} elements, while {} was requested.",
-                                 size(),
-                                 numberOfElements));
-         }
-         // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
-         detail::gpuMemcpyHostToDeviceAsync(data(), dataPointer, numberOfElements, stream);
-     }
+    void copyFromHostAsync(const T* dataPointer, size_t numberOfElements, cudaStream_t stream = detail::DEFAULT_STREAM)
+    {
+        if (numberOfElements > size()) {
+            OPM_THROW(std::runtime_error,
+                    fmt::format("Requesting to copy too many elements. Buffer has {} elements, while {} was requested.",
+                                size(),
+                                numberOfElements));
+        }
+        // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
+        detail::gpuMemcpyHostToDeviceAsync(data(), dataPointer, numberOfElements, stream);
+    }
 
-     /**
-      * @brief copyToHostAsync copies numberOfElements to the CPU memory dataPointer asynchronously.
-      * @param dataPointer raw pointer to CPU memory
-      * @param numberOfElements number of elements to copy
-      * @param stream CUDA stream to use for the asynchronous copy (defaults to default stream).
-      *       has been previously registered (e.g., using cudaHostRegister by an external mechanism
-      *       like PinnedMemoryHolder), the transfer may be faster.
-      * @note assumes that this buffer has numberOfElements elements
-      */
-     void copyToHostAsync(T* dataPointer, size_t numberOfElements, cudaStream_t stream = detail::DEFAULT_STREAM) const
-     {
-         assertSameSize(numberOfElements);
-         detail::gpuMemcpyDeviceToHostAsync(dataPointer, data(), numberOfElements, stream);
-     }
+    /**
+     * @brief copyToHostAsync copies numberOfElements to the CPU memory dataPointer asynchronously.
+     * @param dataPointer raw pointer to CPU memory
+     * @param numberOfElements number of elements to copy
+     * @param stream CUDA stream to use for the asynchronous copy (defaults to default stream).
+     * @note This does asynchronous transfer. If the memory region pointed to by dataPointer
+     *       has been previously registered (e.g., using cudaHostRegister by an external mechanism
+     *       like PinnedMemoryHolder), the transfer may be faster.
+     * @note assumes that this buffer has numberOfElements elements
+     */
+    void copyToHostAsync(T* dataPointer, size_t numberOfElements, cudaStream_t stream = detail::DEFAULT_STREAM) const
+    {
+        assertSameSize(numberOfElements);
+        detail::gpuMemcpyDeviceToHostAsync(dataPointer, data(), numberOfElements, stream);
+    }
 
     /**
      * @brief size returns the size (number of T elements) in the buffer

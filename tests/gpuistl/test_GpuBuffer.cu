@@ -304,6 +304,7 @@ BOOST_AUTO_TEST_CASE(TestCopyFromAndToHostAsyncRoundTrip)
     OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
     BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), data.begin(), data.end());
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncPartialCopy)
 {
     // copyFromHostAsync allows numberOfElements <= size() (same as sync copyFromHost)
@@ -318,12 +319,14 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncPartialCopy)
     bufferOnGPU.copyToHost(hostBuffer.data(), hostBuffer.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.begin() + data.size(), data.begin(), data.end());
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncTooManyElementsThrows)
 {
     std::vector<double> data {{1, 2, 3, 4, 5}};
     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(3);
     BOOST_CHECK_THROW(bufferOnGPU.copyFromHostAsync(data.data(), data.size()), std::runtime_error);
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyToHostAsyncWrongSizeThrows)
 {
     std::vector<double> data {{1, 2, 3, 4}};
@@ -341,6 +344,7 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostRejectsDevicePointerInDebug)
     auto destinationOnGPU = Opm::gpuistl::GpuBuffer<double>(data.size());
     BOOST_CHECK_THROW(destinationOnGPU.copyFromHost(sourceOnGPU.data(), data.size()), std::invalid_argument);
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyToHostRejectsDevicePointerInDebug)
 {
     std::vector<double> data {{1, 2, 3, 4}};
@@ -348,4 +352,5 @@ BOOST_AUTO_TEST_CASE(TestCopyToHostRejectsDevicePointerInDebug)
     auto destinationOnGPU = Opm::gpuistl::GpuBuffer<double>(data.size());
     BOOST_CHECK_THROW(sourceOnGPU.copyToHost(destinationOnGPU.data(), data.size()), std::invalid_argument);
 }
+
 #endif

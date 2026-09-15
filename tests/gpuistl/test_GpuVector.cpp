@@ -268,12 +268,14 @@ BOOST_AUTO_TEST_CASE(TestCopyFromAndToHostAsyncRoundTrip)
     OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
     BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), data.begin(), data.end());
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncTooManyElementsThrows)
 {
     std::vector<double> data {{1, 2, 3, 4, 5}};
     auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(3);
     BOOST_CHECK_THROW(vectorOnGPU.copyFromHostAsync(data.data(), data.size()), std::runtime_error);
 }
+
 BOOST_AUTO_TEST_CASE(TestCopyToHostAsyncWrongSizeThrows)
 {
     std::vector<double> data {{1, 2, 3, 4}};

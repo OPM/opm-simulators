@@ -24,6 +24,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <cstddef>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 
 #include <cuda_runtime.h>
@@ -72,7 +74,7 @@ assertDevicePointer([[maybe_unused]] const void* ptr, [[maybe_unused]] std::stri
  */
 template <typename T>
 inline void
-gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, size_t count)
+gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, std::size_t count)
 {
     if (count == 0) {
         return;
@@ -95,7 +97,7 @@ gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, size_t count)
  */
 template <typename T>
 inline void
-gpuMemcpyDeviceToHost(T* dstHost, const T* srcDevice, size_t count)
+gpuMemcpyDeviceToHost(T* dstHost, const T* srcDevice, std::size_t count)
 {
     if (count == 0) {
         return;
@@ -118,7 +120,7 @@ gpuMemcpyDeviceToHost(T* dstHost, const T* srcDevice, size_t count)
  */
 template <typename T>
 inline void
-gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, size_t count)
+gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, std::size_t count)
 {
     if (count == 0) {
         return;
@@ -146,7 +148,7 @@ gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, size_t count)
  */
 template <typename T>
 inline void
-gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, size_t count, cudaStream_t stream)
+gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, std::size_t count, cudaStream_t stream)
 {
     if (count == 0) {
         return;
@@ -174,7 +176,7 @@ gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, size_t count, cudaStr
  */
 template <typename T>
 inline void
-gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, size_t count, cudaStream_t stream)
+gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, std::size_t count, cudaStream_t stream)
 {
     if (count == 0) {
         return;
