@@ -399,10 +399,9 @@ namespace Opm {
             // create the well container
             createWellContainer(reportStepIdx);
 
-            // The deck has now been applied for this time step.  Adopt the
-            // resulting status as the reference so that the deck driven
-            // changes are not reported as events.
-            this->well_perf_events_.synchronise(this->wellStatusSnapshot());
+            // The deck has now been applied for this time step.  Its
+            // connection changes are events; its well status changes are not.
+            this->well_perf_events_.applyDeckChanges(this->wellStatusSnapshot());
 
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->isReservoirCouplingMaster()) {

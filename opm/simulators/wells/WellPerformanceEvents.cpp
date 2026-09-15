@@ -36,7 +36,13 @@ WellPerformanceEvents::beginTimeStep(const Schedule& schedule,
                                      WellStatusSnapshot snapshot)
 {
     this->events_.clear();
-    this->previous_ = std::move(snapshot);
+
+    // A new report step brings its schedule with it, so the snapshot may
+    // already hold connections the deck has opened or closed since the last
+    // step.  Those are WPWE1 and WPWE2 events like any others.  Within a
+    // report step the comparison is against the status this tracker last saw
+    // and finds nothing, which is also what a retried step must report.
+    this->accumulate(std::move(snapshot), false);
 
     if (this->injector_.empty()) {
         // First step of a run or of a restart.  Adopt the wells that already
@@ -72,13 +78,19 @@ WellPerformanceEvents::commitTimeStep(const Schedule& schedule, const int report
 }
 
 void
-WellPerformanceEvents::synchronise(WellStatusSnapshot snapshot)
+WellPerformanceEvents::applyDeckChanges(WellStatusSnapshot snapshot)
 {
-    this->previous_ = std::move(snapshot);
+    this->accumulate(std::move(snapshot), false);
 }
 
 void
 WellPerformanceEvents::accumulate(WellStatusSnapshot current)
+{
+    this->accumulate(std::move(current), true);
+}
+
+void
+WellPerformanceEvents::accumulate(WellStatusSnapshot current, const bool trackStatus)
 {
     for (const auto& [wellName, now] : current.wells) {
         auto prevPos = this->previous_.wells.find(wellName);
@@ -92,12 +104,14 @@ WellPerformanceEvents::accumulate(WellStatusSnapshot current)
 
         auto& events = this->events_[wellName];
 
-        if ((before.status != WellStatus::STOP) && (now.status == WellStatus::STOP)) {
-            events.stopped = 1;
-        }
+        if (trackStatus) {
+            if ((before.status != WellStatus::STOP) && (now.status == WellStatus::STOP)) {
+                events.stopped = 1;
+            }
 
-        if ((before.status != WellStatus::SHUT) && (now.status == WellStatus::SHUT)) {
-            events.shut = 1;
+            if ((before.status != WellStatus::SHUT) && (now.status == WellStatus::SHUT)) {
+                events.shut = 1;
+            }
         }
 
         auto opened = std::vector<int> {};

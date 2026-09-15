@@ -350,8 +350,10 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsOpened, Setup)
     BOOST_CHECK_EQUAL(tracker.events("P3").connsOpened, 0);
 }
 
-BOOST_FIXTURE_TEST_CASE(SynchroniseAbsorbsDeckChanges, Setup)
+BOOST_FIXTURE_TEST_CASE(DeckChangesConnectionsButNotStatus, Setup)
 {
+    // The deck closing a connection is a WPWE2 event; the deck shutting a
+    // well is not a WPWE7 one.
     auto tracker = Opm::WellPerformanceEvents{};
     tracker.beginTimeStep(sched, 0, allOpen());
 
@@ -359,10 +361,11 @@ BOOST_FIXTURE_TEST_CASE(SynchroniseAbsorbsDeckChanges, Setup)
     now.wells["P1"].openCompletions = {1, 2};
     now.wells["P2"].status = Opm::WellStatus::SHUT;
 
-    tracker.synchronise(now);
+    tracker.applyDeckChanges(now);
     tracker.accumulate(now);
 
-    BOOST_CHECK(noEvents(tracker.events("P1")));
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
     BOOST_CHECK(noEvents(tracker.events("P2")));
 }
 

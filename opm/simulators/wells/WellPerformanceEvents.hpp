@@ -80,15 +80,14 @@ struct WellStatusSnapshot {
 /// Accumulates the well and connection status changes that back the WPWE0 to
 /// WPWE7 summary vectors.
 ///
-/// Only automatic status and connection changes are reported.  The tracker
-/// forms those event counters by comparing a snapshot of the dynamic
-/// status taken at the start of a time step -- after the deck has been
-/// applied for the step -- against the status at the end of the step.  Deck
-/// driven changes (WELOPEN, COMPDAT, WCONPROD, ...) are therefore absorbed
-/// by the snapshot rather than reported.  Injector/producer conversions are
-/// the exception, and are tracked whether they come from a schedule keyword
-/// or from ACTIONX, since they have no other source.  The manual states no
-/// such distinction; it has not been checked against a reference run.
+/// The tracker forms the event counters by comparing snapshots of the
+/// dynamic status taken as the time step progresses.  Connection changes are
+/// reported whatever their source -- an economic limit workover, a well test,
+/// or a deck keyword such as WELOPEN or COMPDAT.  Well status changes are
+/// reported only when the simulator makes them: a well the deck shuts or
+/// stops is not a WPWE4 or WPWE7 event.  Injector/producer conversions come
+/// from the schedule, and are tracked whether they arrive through a keyword
+/// or through ACTIONX.
 ///
 /// The counters cover a single time step -- they are discarded when the next
 /// one starts -- so a summary written after a step reports exactly the events
@@ -105,9 +104,8 @@ public:
     /// Start a new time step.
     ///
     /// Discards the counters of the previous step and adopts \p snapshot as
-    /// the reference status.  Call once the deck has been applied for the
-    /// step, so that the deck driven changes are absorbed by the reference
-    /// rather than reported as events.
+    /// the reference status, reporting the connection changes the schedule
+    /// has made since the last step.
     ///
     /// Injector/producer switches (WPWE5, WPWE6) are checked on every step,
     /// including ACTIONX changes within a report step.
@@ -125,10 +123,12 @@ public:
     /// then report the same conversion again when the step is retried.
     void commitTimeStep(const Schedule& schedule, int reportStep);
 
-    /// Adopt \p snapshot as the reference status without recording events.
+    /// Record the connection changes the deck has just made, and adopt
+    /// \p snapshot as the new reference status.
     ///
-    /// Used to step past the deck driven changes of a report step.
-    void synchronise(WellStatusSnapshot snapshot);
+    /// Well status changes are absorbed rather than reported: WPWE4 and
+    /// WPWE7 denote the simulator's own decisions, not the deck's.
+    void applyDeckChanges(WellStatusSnapshot snapshot);
 
     /// Record the changes between the reference status and \p current, and
     /// adopt \p current as the new reference.
@@ -166,6 +166,9 @@ private:
 
     /// Injector/producer flag at the last accepted time step, by well name.
     std::map<std::string, bool> injector_ {};
+
+    /// Shared implementation of accumulate() and applyDeckChanges().
+    void accumulate(WellStatusSnapshot current, bool trackStatus);
 };
 
 } // namespace Opm
