@@ -43,6 +43,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     inj_mult_min_damp_factor_ = Parameters::Get<Parameters::InjMultMinDampFactor<Scalar>>();
     max_residual_allowed_ = Parameters::Get<Parameters::MaxResidualAllowed<Scalar>>();
     relaxed_max_pv_fraction_ = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
+    relaxed_pv_outlier_cap_multiplier_ = Parameters::Get<Parameters::RelaxedPvOutlierCapMultiplier<Scalar>>();
+    relaxed_max_cell_count_fraction_ = Parameters::Get<Parameters::RelaxedMaxCellCountFraction<Scalar>>();
     tolerance_mb_ = Parameters::Get<Parameters::ToleranceMb<Scalar>>();
     tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::Get<Parameters::ToleranceMbRelaxed<Scalar>>());
     tolerance_energy_balance_ = Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
@@ -147,6 +149,17 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("The fraction of the pore volume of the reservoir "
          "where the volumetric error (CNV) may be violated "
          "during strict Newton iterations.");
+    Parameters::Register<Parameters::RelaxedPvOutlierCapMultiplier<Scalar>>
+        ("Cap each cell's contribution to the relaxed pore-volume-fraction "
+         "CNV test at this multiple of the mean eligible cell pore volume, "
+         "so that a handful of outsized cells cannot mask a real "
+         "convergence failure elsewhere. Set to a non-positive value to "
+         "disable capping.");
+    Parameters::Register<Parameters::RelaxedMaxCellCountFraction<Scalar>>
+        ("Secondary guard for the relaxed pore-volume-fraction CNV test: "
+         "the fraction of eligible cells, by count, allowed to violate "
+         "strict CNV before the relaxed tolerance is granted. "
+         "Default 1.0 disables this guard.");
     Parameters::Register<Parameters::ToleranceMb<Scalar>>
         ("Tolerated mass balance error relative to total mass present");
     Parameters::Register<Parameters::ToleranceMbRelaxed<Scalar>>
