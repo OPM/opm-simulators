@@ -21,6 +21,7 @@
 #define OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/EconomicLimitsMessage.hpp>
@@ -39,6 +40,10 @@ class DeferredLogger;
 class Group;
 template<typename Scalar, typename IndexTraits> class WellState;
 class WellTestState;
+
+} // namespace Opm
+
+namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
 class GroupEconomicLimitsChecker
@@ -118,7 +123,6 @@ private:
     const UnitSystem& unit_system_;
     const WellState<Scalar, IndexTraits>& well_state_;
     WellTestState& well_test_state_;
-    const Schedule& schedule_;
     GroupEconProductionLimits::GEconGroupProp gecon_props_;
     bool debug_ = true;
     std::array<Scalar,NUM_PHASES> production_rates_;
