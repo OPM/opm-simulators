@@ -1557,6 +1557,7 @@ namespace Opm
     computeWellRatesWithBhpIterations(const Simulator& simulator,
                                       const Scalar& bhp,
                                       const GroupStateHelperType& groupStateHelper,
+                                      WellStateType& well_state,
                                       std::vector<Scalar>& well_flux) const
     {
         auto& deferred_logger = groupStateHelper.deferredLogger();
@@ -1614,6 +1615,7 @@ namespace Opm
                                                         " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
+        well_state.well(this->index_of_well_) = well_state_copy.well(this->index_of_well_);
         well_copy.updatePrimaryVariables(groupStateHelper_copy);
         well_copy.computeWellConnectionPressures(simulator, groupStateHelper_copy);
         well_copy.computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
@@ -1626,8 +1628,8 @@ namespace Opm
     std::vector<typename StandardWell<TypeTag>::Scalar>
     StandardWell<TypeTag>::
     computeWellPotentialWithTHP(const Simulator& simulator,
-                               const GroupStateHelperType& groupStateHelper,
-                               const WellStateType& well_state) const
+                                const GroupStateHelperType& groupStateHelper,
+                                WellStateType& well_state) const
     {
         auto& deferred_logger = groupStateHelper.deferredLogger();
         std::vector<Scalar> potentials(this->number_of_phases_, 0.0);
@@ -1640,13 +1642,13 @@ namespace Opm
             if (bhp_at_thp_limit) {
                 const Scalar bhp = std::min(*bhp_at_thp_limit,
                                             static_cast<Scalar>(controls.bhp_limit));
-                computeWellRatesWithBhp(simulator, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, well_state, potentials);
             } else {
                 deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
                                         "Failed in getting converged thp based potential calculation for well "
                                         + name() + ". Instead the bhp based value is used");
                 const Scalar bhp = controls.bhp_limit;
-                computeWellRatesWithBhp(simulator, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, well_state, potentials);
             }
         } else {
             computeWellRatesWithThpAlqProd(
@@ -1663,6 +1665,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
                                   const GroupStateHelperType& groupStateHelper,
+                                  WellStateType& well_state,
                                   std::vector<Scalar>& well_potentials) const
     {
         // Create a copy of the well.
@@ -1743,6 +1746,7 @@ namespace Opm
             const EvalWell rate = well_copy.primary_variables_.getQs(Indices::contiSolventEqIdx);
             well_potentials[gas_pos] += rate.value();
         }
+        well_state.well(this->index_of_well_) = well_state_copy.well(this->index_of_well_);
         return converged;
     }
 
@@ -1798,11 +1802,13 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& simulator,
-                          const WellStateType& well_state,
+                          WellStateType& well_state,
                           const GroupStateHelperType& groupStateHelper,
                           std::vector<Scalar>& well_potentials) // const
     {
-        auto& deferred_logger = groupStateHelper.deferredLogger();
+        auto groupStateHelper_copy = groupStateHelper;
+        auto guard = groupStateHelper_copy.pushWellState(well_state);
+        auto& deferred_logger = groupStateHelper_copy.deferredLogger();
         const auto [compute_potential, bhp_controlled_well] =
             this->WellInterfaceGeneric<Scalar, IndexTraits>::computeWellPotentials(well_potentials, well_state);
 
@@ -1814,9 +1820,9 @@ namespace Opm
         // for newly opened wells we dont compute the potentials implicit
         // group controlled wells with defaulted guiderates will have zero targets as
         // the potentials are used to compute the well fractions.
-        if (this->param_.local_well_solver_control_switching_ && !(this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(groupStateHelper))) {
+        if (this->param_.local_well_solver_control_switching_ && !(this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(groupStateHelper_copy))) {
             converged_implicit = computeWellPotentialsImplicit(
-                simulator, groupStateHelper, well_potentials
+                simulator, groupStateHelper_copy, well_state, well_potentials
             );
         }
         if (!converged_implicit) {
@@ -1839,10 +1845,10 @@ namespace Opm
                     bhp = std::min(ws.bhp, bhp);
 
                 assert(std::abs(bhp) != std::numeric_limits<Scalar>::max());
-                computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, well_potentials);
+                computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper_copy, well_state, well_potentials);
             } else {
                 // the well has a THP related constraint
-                well_potentials = computeWellPotentialWithTHP(simulator, groupStateHelper, well_state);
+                well_potentials = computeWellPotentialWithTHP(simulator, groupStateHelper_copy, well_state);
             }
         }
 
@@ -2327,7 +2333,8 @@ namespace Opm
             // able to get a solution with an update
             // solution
             std::vector<Scalar> rates(3);
-            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, rates);
+            auto temp_well_state = groupStateHelper.wellState();
+            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, temp_well_state, rates);
             this->adaptRatesForVFP(rates);
             return rates;
         };
