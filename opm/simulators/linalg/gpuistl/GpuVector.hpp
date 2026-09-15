@@ -254,7 +254,7 @@ public:
      * @param dataPointer raw pointer to CPU memory
      * @param numberOfElements number of elements to copy
      * @note This does synchronous transfer.
-     * @note assumes that this vector has numberOfElements elements
+     * @note assumes that this vector has at least numberOfElements elements
      */
     void copyFromHost(const T* dataPointer, size_t numberOfElements);
 
@@ -266,7 +266,7 @@ public:
      * @note This does asynchronous transfer. If the memory region pointed to by dataPointer
      *       has been previously registered (e.g., using cudaHostRegister by an external mechanism
      *       like PinnedMemoryHolder), the transfer may be faster.
-     * @note assumes that this vector has numberOfElements elements
+     * @note assumes that this vector has at least numberOfElements elements
      */
     void copyFromHostAsync(const T* dataPointer, size_t numberOfElements, cudaStream_t stream = detail::DEFAULT_STREAM);
 
