@@ -7,6 +7,54 @@ set(coarse_rel_tol_parallel 1e-2)
 
 add_test_compare_parallel_simulation(
   CASENAME
+    sshift_compositional
+  FILENAME
+    SIMPLE_COMP_SSHIFT
+  SIMULATOR
+    flow_comp
+  DEV_SIMULATOR
+    flow_comp3_2p
+  # This compares serial and parallel runs of the same binary, so keep the
+  # tighter compositional tolerances rather than the general parallel values.
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-5
+  DIR
+    compositional
+  MPI_PROCS
+    2
+)
+
+if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL 2)
+  if(USE_DEV_SIMULATOR_IN_TESTS)
+    set(_split_well_simulator flow_comp3_2p)
+  else()
+    set(_split_well_simulator flow_comp)
+  endif()
+
+  add_test(
+    NAME
+      runSimulator/flow_comp_split_well_rejected
+    COMMAND
+      ${PROJECT_SOURCE_DIR}/tests/run-parallel-compositional-split-well.sh
+      ${MPIEXEC_EXECUTABLE}
+      ${MPIEXEC_NUMPROC_FLAG}
+      $<TARGET_FILE:${_split_well_simulator}>
+      ${OPM_TESTS_ROOT}/compositional/SIMPLE_COMP_SSHIFT.DATA
+      ${BASE_RESULT_PATH}/parallel/flow_comp+split_well_rejected
+  )
+  set_tests_properties(
+    runSimulator/flow_comp_split_well_rejected
+    PROPERTIES
+      PROCESSORS 2
+      TIMEOUT 30
+  )
+  unset(_split_well_simulator)
+endif()
+
+add_test_compare_parallel_simulation(
+  CASENAME
     spe1
   FILENAME
     SPE1CASE2

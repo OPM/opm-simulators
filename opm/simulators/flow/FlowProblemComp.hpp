@@ -126,73 +126,21 @@ public:
      */
     void finishInit()
     {
-        // TODO: there should be room to remove duplication for this function,
-        // but there is relatively complicated logic in the function calls in this function
-        // some refactoring is needed for this function
         FlowProblemType::finishInit();
 
         auto& simulator = this->simulator();
-
-        auto finishTransmissibilities = [updated = false, this]() mutable {
-            if (updated) {
-                return;
-            }
-            this->transmissibilities_.finishInit(
-                [&vg = this->simulator().vanguard()](const unsigned int it) { return vg.gridIdxToEquilGridIdx(it); });
-            updated = true;
-        };
-        // TODO: we might need to do the same with FlowProblemBlackoil for parallel
-
-        finishTransmissibilities();
-
-        if (enableEclOutput_) {
-            eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
-            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
-                return simulator.vanguard().gridEquilIdxToGridIdx(i);
-            };
-            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+        const bool transmissibilitiesFinished =
+            this->prepareTransmissibilityOutput_(*eclWriter_, enableEclOutput_);
+        if (!transmissibilitiesFinished) {
+            this->finishTransmissibilities_();
         }
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
-
-        // Set the start time of the simulation
-        simulator.setStartTime(schedule.getStartTime());
-        simulator.setEndTime(schedule.simTime(schedule.size() - 1));
-
-        // We want the episode index to be the same as the report step index to make
-        // things simpler, so we have to set the episode index to -1 because it is
-        // incremented by endEpisode(). The size of the initial time step and
-        // length of the initial episode is set to zero for the same reason.
-        simulator.setEpisodeIndex(-1);
-        simulator.setEpisodeLength(0.0);
-
-        this->initGravity_(eclState);
-
-        if (this->enableTuning_) {
-            // if support for the TUNING keyword is enabled, we get the initial time
-            // steping parameters from it instead of from command line parameters
-            const auto& tuning = schedule[0].tuning();
-            this->initialTimeStepSize_ = tuning.TSINIT.has_value() ? tuning.TSINIT.value() : -1.0;
-            this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
-        }
+        this->initializeSimulatorTime_();
 
         this->initFluidSystem_();
-
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-            && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
-        }
-
-        this->readRockParameters_(simulator.vanguard().cellCenterDepths(), [&simulator](const unsigned idx) {
-            std::array<int, dim> coords;
-            simulator.vanguard().cartesianCoordinate(idx, coords);
-            std::ranges::transform(coords, coords.begin(),
-                                   [](const auto c) { return c + 1; });
-            return coords;
-        });
-        FlowProblemType::readMaterialParameters_();
-        FlowProblemType::readThermalParameters_();
+        this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
         if (enableEclOutput_) {
