@@ -1,0 +1,126 @@
+RUNSPEC
+TITLE
+ DRSDT initial Rs
+
+DIMENS
+ 10 1 10 /
+
+OIL
+GAS
+WATER
+DISGAS
+METRIC
+
+WELLDIMS
+ 1 10 1 1 /
+
+START
+ 1 'JAN' 2020 /
+
+GRID
+DX
+ 100*100 /
+DY
+ 100*100 /
+DZ
+ 100*10 /
+TOPS
+ 10*2000 /
+PORO
+ 100*0.25 /
+PERMX
+ 100*200 /
+PERMY
+ 100*200 /
+PERMZ
+ 100*20 /
+
+PROPS
+DENSITY
+ 850 1000 1.0 /
+
+PVTW
+ 250 1.02 4.0E-5 0.5 0 /
+
+ROCK
+ 250 4.0E-5 /
+
+-- Rs 43 sm3/sm3 at the 100 bar bubble point, rising to 80 at 250 bar.
+PVTO
+ 20.0  30.0  1.100 1.20 /
+ 43.0 100.0  1.220 0.90
+      250.0  1.205 1.05 /
+ 60.0 170.0  1.310 0.75
+      250.0  1.295 0.85 /
+ 80.0 250.0  1.400 0.65
+      320.0  1.385 0.72 /
+/
+
+PVDG
+  30.0 0.0400 0.0130
+ 100.0 0.0125 0.0150
+ 170.0 0.0078 0.0180
+ 250.0 0.0055 0.0220 /
+
+SWOF
+ 0.15 0.0  1.0 0
+ 0.30 0.02 0.6 0
+ 0.50 0.10 0.3 0
+ 0.70 0.25 0.1 0
+ 0.85 0.45 0.0 0
+ 1.00 1.00 0.0 0 /
+
+SGOF
+ 0.00 0.0  1.0  0
+ 0.05 0.0  0.75 0
+ 0.20 0.05 0.40 0
+ 0.40 0.20 0.12 0
+ 0.60 0.45 0.02 0
+ 0.85 0.90 0.0  0 /
+
+SOLUTION
+RPTSOL
+ 'FIP=2' /
+-- 250 bar at 2050 m, OWC below the grid and GOC above it: all oil.  PBVD puts
+-- the bubble point at 100 bar, far below reservoir pressure, so every cell is
+-- undersaturated and holds Rs = 43.
+EQUIL
+ 2050 250 2200 0 1900 0 1 1 0 /
+
+PBVD
+ 2000 100
+ 2100 100 /
+
+SUMMARY
+FGIPL
+FGIPG
+FOIP
+WOPR
+ /
+WGOR
+ /
+WBHP
+ /
+
+SCHEDULE
+RPTSCHED
+ 'FIP=2' /
+
+DRSDT
+ 1.0 /
+
+WELSPECS
+ 'PROD' 'G1' 5 1 1* 'OIL' /
+/
+COMPDAT
+ 'PROD' 5 1 1 10 'OPEN' 1* 1* 0.216 /
+/
+WCONPROD
+ 'PROD' 'OPEN' 'ORAT' 500 /
+/
+
+TSTEP
+ 1e-10 /
+
+TSTEP
+ 5*1 /

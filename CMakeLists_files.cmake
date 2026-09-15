@@ -479,6 +479,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
   tests/test_group_higher_constraints.cpp
+  tests/test_drsdt_initial_rs.cpp
   tests/test_equil.cpp
   tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
@@ -655,6 +656,8 @@ if(HDF5_FOUND)
 endif()
 
 list (APPEND TEST_DATA_FILES
+  tests/drsdt_initial_rs.DATA
+  tests/check_drsdt_free_gas.cmake
   tests/equil_base.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
