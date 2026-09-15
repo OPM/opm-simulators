@@ -1711,7 +1711,7 @@ namespace Opm
         // Always take a few (more than one) iterations after a switch before allowing a new switch
         // The optimal number here is subject to further investigation, but it has been observerved
         // that unless this number is >1, we may get stuck in a cycle
-        const int min_its_after_switch = 3;
+        const int min_its_after_switch = this->param_.min_iter_after_switch_ms_wells_;
         // We also want to restrict the number of status switches to avoid oscillation between STOP<->OPEN
         const int max_status_switch = this->param_.max_well_status_switch_inner_iter_;
         int its_since_last_switch = min_its_after_switch;
