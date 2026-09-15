@@ -383,13 +383,25 @@ namespace Opm {
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
+
+        this->well_perf_events_.beginTimeStep(this->schedule(), reportStepIdx,
+                                              this->wellStatusSnapshot());
+
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
+            // A WTEST re-open is the simulator's own decision, so record it
+            // before the deck is applied below.
+            this->well_perf_events_.accumulate(this->wellStatusSnapshot());
+
             // create the well container
             createWellContainer(reportStepIdx);
+
+            // The deck has now been applied for this time step.  Its
+            // connection changes are events; its well status changes are not.
+            this->well_perf_events_.applyDeckChanges(this->wellStatusSnapshot());
 
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->isReservoirCouplingMaster()) {
@@ -726,6 +738,8 @@ namespace Opm {
         this->checkGconsaleLimits(fieldGroup, this->wellState(),
                                   simulator_.episodeIndex(), local_deferredLogger);
 
+        this->well_perf_events_.accumulate(this->wellStatusSnapshot());
+
         this->calculateProductivityIndexValues(local_deferredLogger);
 
         this->groupStateHelper().updateNONEProductionGroups();
@@ -733,6 +747,7 @@ namespace Opm {
 #ifdef RESERVOIR_COUPLING_ENABLED
         this->rescoupHelper_.rescoupSyncSummaryData();
 #endif
+        this->well_perf_events_.commitTimeStep(this->schedule(), reportStepIdx);
         this->commitWGState();
 
         //reporting output temperatures
@@ -986,9 +1001,7 @@ namespace Opm {
                 // something like wellTestState().hasWell(well_name)?
                 if (this->wellTestState().well_is_closed(well_name))
                 {
-                    if (well_ecl.getAutomaticShutIn() ||
-                        !well_ecl.getAllowCrossFlow() ||
-                        this->allConnectionsClosed(well_ecl))
+                    if (this->closedWellStatus(well_ecl) == WellStatus::SHUT)
                     {
                         this->wellState().shutWell(w);
                         this->well_close_times_.erase(well_name);
