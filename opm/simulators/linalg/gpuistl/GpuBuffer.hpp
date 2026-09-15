@@ -23,6 +23,7 @@
 #include <exception>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
@@ -82,10 +83,7 @@ public:
         if (m_numberOfElements == 0) {
             return;
         }
-        OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
-                                    other.m_dataOnDevice,
-                                    m_numberOfElements * sizeof(T),
-                                    cudaMemcpyDeviceToDevice));
+        detail::gpuMemcpyDeviceToDevice(m_dataOnDevice, other.m_dataOnDevice, m_numberOfElements);
     }
 
     /**
@@ -167,8 +165,7 @@ public:
             OPM_THROW(std::invalid_argument, "dataOnHost is not a CPU pointer");
         }
 
-        OPM_GPU_SAFE_CALL(cudaMemcpy(
-            m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+        detail::gpuMemcpyHostToDevice(m_dataOnDevice, dataOnHost, m_numberOfElements);
     }
 
 
@@ -258,7 +255,7 @@ public:
                                 size(),
                                 numberOfElements));
         }
-        OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+        detail::gpuMemcpyHostToDevice(data(), dataPointer, numberOfElements);
     }
 
     /**
@@ -271,7 +268,7 @@ public:
     void copyToHost(T* dataPointer, size_t numberOfElements) const
     {
         assertSameSize(numberOfElements);
-        OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+        detail::gpuMemcpyDeviceToHost(dataPointer, data(), numberOfElements);
     }
 
     /**
@@ -365,10 +362,7 @@ public:
 
             // Move the data from the old to the new buffer with truncation
             size_t sizeOfMove = std::min({m_numberOfElements, newSize});
-            OPM_GPU_SAFE_CALL(cudaMemcpy(tmpBuffer,
-                                        m_dataOnDevice,
-                                        sizeOfMove * sizeof(T),
-                                        cudaMemcpyDeviceToDevice));
+            detail::gpuMemcpyDeviceToDevice(tmpBuffer, m_dataOnDevice, sizeOfMove);
 
             // free the old buffer
             OPM_GPU_SAFE_CALL(cudaFree(m_dataOnDevice));
