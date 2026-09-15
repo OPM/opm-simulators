@@ -73,8 +73,8 @@ BOOST_AUTO_TEST_CASE(Invert4x4WithUnderflowingDeterminant)
     // A well conditioned matrix (condition number about 9.5) scaled such that its
     // determinant, which is homogeneous of degree one in every row, falls below the
     // 1e-40 threshold used to decide whether the cofactor determinant can be divided
-    // by. Scaling leaves the matrix just as invertible as it was, so this must be
-    // inverted through the pivoted fallback rather than reported as singular.
+    // by. Scaling leaves the matrix just as invertible as it was, so this must not
+    // be reported as singular.
     BaseType matrix;
     const double base[4][4] = {{2, 1, 0, 0},
                                {1, 2, 1, 0},
@@ -96,6 +96,76 @@ BOOST_AUTO_TEST_CASE(Invert4x4WithUnderflowingDeterminant)
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             BOOST_CHECK_SMALL(product[i][j] - (i == j ? 1.0 : 0.0), 1e-12);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(Invert4x4RankThree)
+{
+    using BaseType = Dune::FieldMatrix<double, 4, 4>;
+
+    // Last row is the sum of the first two. The cofactor determinant comes out at
+    // roundoff rather than at zero, and elimination reaches no exactly zero pivot,
+    // so neither an absolute threshold nor the pivoting catches this.
+    const double base[4][4] = {{1,  2,  3,  4},
+                               {5,  6,  7,  8},
+                               {9, 10, 11, 13},
+                               {6,  8, 10, 12}};
+
+    for (const double scale : {1.0, 1e-7}) {
+        BaseType matrix;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                matrix[i][j] = base[i][j] * scale;
+            }
+        }
+
+        BaseType inverse;
+        BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix, inverse),
+                          Dune::MatrixBlockError);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(Invert4x4DecisionIsScaleInvariant)
+{
+    using BaseType = Dune::FieldMatrix<double, 4, 4>;
+
+    // Scaling rows and columns leaves a block exactly as invertible as it was while
+    // moving its determinant through nearly two hundred orders of magnitude. Powers
+    // of two, so the scaling rounds nothing and the singular block keeps its zero
+    // pivot.
+    const double regular[4][4] = {{2, 1, 0, 0},
+                                  {1, 2, 1, 0},
+                                  {0, 1, 2, 1},
+                                  {0, 0, 1, 2}};
+    const double singular[4][4] = {{1, 5,  9, 13},
+                                   {2, 6, 10, 14},
+                                   {3, 7, 11, 15},
+                                   {4, 8, 12, 16}};
+
+    for (const int rowExp : {-40, -13, 0, 13, 40}) {
+        for (const int colExp : {-40, -13, 0, 13, 40}) {
+            BaseType matrix;
+            BaseType singularMatrix;
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    const int exponent = rowExp + i + colExp - j;
+                    matrix[i][j] = std::ldexp(regular[i][j], exponent);
+                    singularMatrix[i][j] = std::ldexp(singular[i][j], exponent);
+                }
+            }
+
+            BaseType inverse;
+            BOOST_CHECK_NO_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix, inverse));
+            const BaseType product = matrix.rightmultiply(inverse);
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    BOOST_CHECK_SMALL(product[i][j] - (i == j ? 1.0 : 0.0), 1e-12);
+                }
+            }
+
+            BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(singularMatrix, inverse),
+                              Dune::MatrixBlockError);
         }
     }
 }
