@@ -108,6 +108,12 @@ BOOST_AUTO_TEST_CASE(TestCopyFromBvector)
         hostBuffer.begin(), hostBuffer.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.dim());
 }
 
+BOOST_AUTO_TEST_CASE(TestCopyFromHostZeroElementsIsNoOp)
+{
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>{}; // size 0, data() == nullptr
+    BOOST_CHECK_NO_THROW(bufferOnGPU.copyFromHost(static_cast<const double*>(nullptr), 0));
+}
+
 BOOST_AUTO_TEST_CASE(TestCopyToBvector)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};

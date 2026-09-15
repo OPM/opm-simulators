@@ -74,6 +74,9 @@ template <typename T>
 inline void
 gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, size_t count)
 {
+    if (count == 0) {
+        return;
+    }
     assertDevicePointer(dstDevice, "dstDevice");
     assertHostPointer(srcHost, "srcHost");
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice));
@@ -94,6 +97,9 @@ template <typename T>
 inline void
 gpuMemcpyDeviceToHost(T* dstHost, const T* srcDevice, size_t count)
 {
+    if (count == 0) {
+        return;
+    }
     assertHostPointer(dstHost, "dstHost");
     assertDevicePointer(srcDevice, "srcDevice");
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost));
@@ -114,6 +120,9 @@ template <typename T>
 inline void
 gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, size_t count)
 {
+    if (count == 0) {
+        return;
+    }
     assertDevicePointer(dstDevice, "dstDevice");
     assertDevicePointer(srcDevice, "srcDevice");
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstDevice, srcDevice, count * sizeof(T), cudaMemcpyDeviceToDevice));
@@ -139,6 +148,9 @@ template <typename T>
 inline void
 gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, size_t count, cudaStream_t stream)
 {
+    if (count == 0) {
+        return;
+    }
     assertDevicePointer(dstDevice, "dstDevice");
     assertHostPointer(srcHost, "srcHost");
     OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice, stream));
@@ -164,32 +176,12 @@ template <typename T>
 inline void
 gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, size_t count, cudaStream_t stream)
 {
+    if (count == 0) {
+        return;
+    }
     assertHostPointer(dstHost, "dstHost");
     assertDevicePointer(srcDevice, "srcDevice");
     OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost, stream));
-}
-
-/**
- * @brief gpuMemcpyDeviceToDeviceAsync copies count elements of type T from device to device asynchronously.
- * @param dstDevice raw pointer to GPU memory (destination)
- * @param srcDevice raw pointer to GPU memory (source)
- * @param count number of elements to copy
- * @param stream CUDA stream to use for the asynchronous copy
- *
- * @tparam T element type
- *
- * @note This does asynchronous transfer.
- * @note In debug builds, checks that @p dstDevice and @p srcDevice are GPU pointers.
- * @note Does not synchronize the stream; the caller is responsible for stream completion.
- * @note Expects caller to specify the @p stream (no default is provided).
- */
-template <typename T>
-inline void
-gpuMemcpyDeviceToDeviceAsync(T* dstDevice, const T* srcDevice, size_t count, cudaStream_t stream)
-{
-    assertDevicePointer(dstDevice, "dstDevice");
-    assertDevicePointer(srcDevice, "srcDevice");
-    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dstDevice, srcDevice, count * sizeof(T), cudaMemcpyDeviceToDevice, stream));
 }
 
 } // namespace Opm::gpuistl::detail
