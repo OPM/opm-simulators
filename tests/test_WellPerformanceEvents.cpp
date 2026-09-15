@@ -490,10 +490,10 @@ ENDACTIO
     BOOST_CHECK(noEvents(tracker.events("I1")));
 }
 
-BOOST_AUTO_TEST_CASE(WellEnteringTheScheduleIsDrilled)
+BOOST_AUTO_TEST_CASE(WellEnteringTheScheduleIsNotDrilled)
 {
-    // Flow has no drilling queue, so WPWE0 reports the wells WELSPECS brings
-    // into the schedule while the run is under way.
+    // Flow has no drilling queue, and a well WELSPECS brings into the
+    // schedule while the run is under way is not a WPWE0 event either.
     auto text = deckString();
     text.insert(text.find("DATES\n 1 'MAR' 2020 /"), R"(
 WELSPECS
@@ -512,7 +512,6 @@ WCONPROD
 
     auto tracker = Opm::WellPerformanceEvents{};
 
-    // The wells that exist when the tracker starts are not drilled events.
     tracker.beginTimeStep(schedule, 0, allOpen());
     for (const auto* well : { "P1", "P2", "P3", "I1" }) {
         BOOST_CHECK(noEvents(tracker.events(well)));
@@ -521,17 +520,12 @@ WCONPROD
 
     // P4 enters the schedule at the second report step.
     tracker.beginTimeStep(schedule, 1, allOpen());
-    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 1);
-    BOOST_CHECK_EQUAL(tracker.events("P1").drilled, 0);
-
-    // A retry of that step must report it again, and only the accepted step
-    // may retire it.
-    tracker.beginTimeStep(schedule, 1, allOpen());
-    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 1);
+    BOOST_CHECK(noEvents(tracker.events("P4")));
+    BOOST_CHECK(noEvents(tracker.events("P1")));
 
     tracker.commitTimeStep(schedule, 1);
     tracker.beginTimeStep(schedule, 1, allOpen());
-    BOOST_CHECK_EQUAL(tracker.events("P4").drilled, 0);
+    BOOST_CHECK(noEvents(tracker.events("P4")));
 }
 
 BOOST_AUTO_TEST_CASE(SerializationTestObject)
