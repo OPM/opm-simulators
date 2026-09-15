@@ -200,11 +200,11 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
     BOOST_CHECK(noEvents(tracker.events("P2")));
 }
 
-BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
+BOOST_FIXTURE_TEST_CASE(LastConnectionClosed, Setup)
 {
-    // A CON workover closing the last open connection leaves the well
-    // closed to the bottom (WPWE3) in addition to the connection count
-    // (WPWE2), and the well is shut (WPWE7).
+    // Closing the last open connection leaves the well closed to the bottom
+    // (WPWE3) in addition to the connection count (WPWE2), and the well is
+    // shut (WPWE7).
     auto tracker = Opm::WellPerformanceEvents{};
 
     auto before = allOpen();
@@ -212,7 +212,7 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, true };
+    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {} };
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -222,71 +222,38 @@ BOOST_FIXTURE_TEST_CASE(LastConnectionClosed_CON, Setup)
     BOOST_CHECK_EQUAL(ev.stopped, 0);
 }
 
-BOOST_FIXTURE_TEST_CASE(LastConnectionClosedWithoutWorkover, Setup)
+BOOST_FIXTURE_TEST_CASE(ClosedToBottomLeavesOneCompletion, Setup)
 {
-    // WPWE3's first route is restricted to CON workovers.  A well left with
-    // no flowing connection by anything else -- the deck, a whole well
-    // workover, a well test -- is not reported as closed to the bottom.
-    auto tracker = Opm::WellPerformanceEvents{};
-
-    auto before = allOpen();
-    before.wells["P1"].openCompletions = {1};
-    tracker.beginTimeStep(sched, 0, before);
-
-    auto now = before;
-    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, false };
-    tracker.accumulate(now);
-
-    const auto& ev = tracker.events("P1");
-    BOOST_CHECK_EQUAL(ev.connsClosed, 1);
-    BOOST_CHECK_EQUAL(ev.closedToBottom, 0);
-    BOOST_CHECK_EQUAL(ev.shut, 1);
-}
-
-BOOST_FIXTURE_TEST_CASE(ClosedToBottom_PlusCON, Setup)
-{
-    // A +CON workover is reported through WPWE3 alone.
+    // WPWE3 is geometric: it fires once the closures have left the well open
+    // over its topmost completion alone, whatever closed the rest.  WPWE2
+    // counts those connections just the same.
     auto tracker = Opm::WellPerformanceEvents{};
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P2"].openCompletions = {1, 2};
-    now.wells["P2"].closedByConPlus = {3, 4};
+    now.wells["P2"].openCompletions = {1};
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P2");
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
-    BOOST_CHECK_EQUAL(ev.connsClosed, 0);
+    BOOST_CHECK_EQUAL(ev.connsClosed, 3);
     BOOST_CHECK_EQUAL(ev.shut, 0);
 }
 
-BOOST_FIXTURE_TEST_CASE(ClosedToBottom_WECON, Setup)
+BOOST_FIXTURE_TEST_CASE(ClosedTailIsNotClosedToBottom, Setup)
 {
-    // No CECON on P3: the well level WECON procedure (+CON) applies.
+    // Closing the bottom connections is not enough on its own: two
+    // completions are still able to flow.
     auto tracker = Opm::WellPerformanceEvents{};
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P3"].openCompletions = {1, 2, 3};
-    now.wells["P3"].closedByConPlus = {4};
+    now.wells["P3"].openCompletions = {1, 2};
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P3");
-    BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
-    BOOST_CHECK_EQUAL(ev.connsClosed, 0);
-}
-
-BOOST_FIXTURE_TEST_CASE(MixedCONAndPlusCON, Setup)
-{
-    auto tracker = Opm::WellPerformanceEvents{};
-    tracker.beginTimeStep(sched, 0, allOpen());
-    auto now = allOpen();
-    now.wells["P2"].openCompletions = {1, 2};
-    // Completion 3 closed by CON and 4 by +CON in the same update.
-    now.wells["P2"].closedByConPlus = {4};
-    tracker.accumulate(now);
-    BOOST_CHECK_EQUAL(tracker.events("P2").connsClosed, 1);
-    BOOST_CHECK_EQUAL(tracker.events("P2").closedToBottom, 1);
+    BOOST_CHECK_EQUAL(ev.closedToBottom, 0);
+    BOOST_CHECK_EQUAL(ev.connsClosed, 2);
 }
 
 BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
@@ -294,7 +261,9 @@ BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
     // COMPLUMP maps several connections onto one completion number, so a
     // snapshot carries that number once per connection.  WPWE1 and WPWE2 count
     // connections, so closing or opening a lumped completion must count every
-    // connection it carries rather than the completion itself.
+    // connection it carries rather than the completion itself.  WPWE3 instead
+    // counts the distinct numbers: one lumped completion left able to flow is
+    // still closed to the bottom.
     auto tracker = Opm::WellPerformanceEvents{};
 
     auto before = allOpen();
@@ -305,36 +274,32 @@ BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
     now.wells["P1"].openCompletions = {1, 1};
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
 
     tracker.beginTimeStep(sched, 0, now);
     tracker.accumulate(before);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 2);
 }
 
-BOOST_FIXTURE_TEST_CASE(ActualWorkoverOverridesConfiguredLimits, Setup)
+BOOST_FIXTURE_TEST_CASE(ClosuresAreNotRepeated, Setup)
 {
     auto tracker = Opm::WellPerformanceEvents{};
     tracker.beginTimeStep(sched, 0, allOpen());
-    auto now = allOpen();
-    // An inactive CECON +CON setting must not override an actual CON closure.
-    now.wells["P2"].openCompletions = {1, 2, 3};
-    // Conversely, WECON +CON can close connections with CECON CON configured.
-    now.wells["P1"].openCompletions = {1, 2};
-    now.wells["P1"].closedByConPlus = {3, 4};
-    tracker.accumulate(now);
-    BOOST_CHECK_EQUAL(tracker.events("P2").connsClosed, 1);
-    BOOST_CHECK_EQUAL(tracker.events("P2").closedToBottom, 0);
-    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 0);
-    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
 
+    auto now = allOpen();
+    now.wells["P1"].openCompletions = {1, 2};
+    tracker.accumulate(now);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
+
+    // Connections closed in an earlier step count once, and must not add to
+    // the count for the closure this step makes.
     tracker.commitTimeStep(sched, 0);
     tracker.beginTimeStep(sched, 0, now);
     now.wells["P1"].openCompletions = {1};
     tracker.accumulate(now);
-    // Previously recorded +CON closures are not new events, and must not
-    // affect the count for this timestep's CON closure.
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
-    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
 }
 
 BOOST_FIXTURE_TEST_CASE(WellShutAndStopped, Setup)

@@ -44,27 +44,15 @@ struct WellStatusSnapshot {
 
         /// Completion number of every connection that is currently able to
         /// flow, one entry per connection and sorted numerically for set
-        /// operations.  Completion numbers need not follow the wellbore
-        /// ordering used by +CON, and COMPLUMP may map several connections
-        /// onto one completion, so this is a multiset: the repeats are what
-        /// make WPWE1 and WPWE2 count connections rather than completions.
-        /// Do not deduplicate.
+        /// operations.  COMPLUMP may map several connections onto one
+        /// completion, so this is a multiset: the repeats are what make WPWE1
+        /// and WPWE2 count connections rather than completions, while WPWE3
+        /// works on the distinct values.  Do not deduplicate.
         std::vector<int> openCompletions {};
-
-        /// Sorted completion numbers currently closed by an actual +CON
-        /// workover, rather than merely configured with +CON limits.
-        std::vector<int> closedByConPlus {};
-
-        /// True when no connection is able to flow and every one of them was
-        /// closed by a 'CON' workover -- the manual's first route to WPWE3.
-        /// Derived here because only the snapshot sees every connection.
-        bool closedToBottomByCon {false};
 
         bool operator==(const Entry& rhs) const
         {
-            return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions)
-                && (this->closedByConPlus == rhs.closedByConPlus)
-                && (this->closedToBottomByCon == rhs.closedToBottomByCon);
+            return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions);
         }
 
         template <class Serializer>
@@ -72,8 +60,6 @@ struct WellStatusSnapshot {
         {
             serializer(status);
             serializer(openCompletions);
-            serializer(closedByConPlus);
-            serializer(closedToBottomByCon);
         }
     };
 

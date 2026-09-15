@@ -129,21 +129,15 @@ WellPerformanceEvents::accumulate(WellStatusSnapshot current)
             continue;
         }
 
-        // Several CON and +CON workovers can occur between snapshots.  Only
-        // exclude connections actually closed by +CON from the WPWE2 count.
-        const auto numConPlus = std::count_if(closed.begin(), closed.end(),
-            [&now](const int complnum)
-            {
-                return std::binary_search(now.closedByConPlus.begin(),
-                                          now.closedByConPlus.end(), complnum);
-            });
+        events.connsClosed += static_cast<int>(closed.size());
 
-        events.connsClosed += static_cast<int>(closed.size()) - static_cast<int>(numConPlus);
-
-        // WPWE3 has two routes: a '+CON' workover, which closes to the bottom
-        // by construction, or a well left with no flowing connection because
-        // 'CON' workovers closed all of them.
-        if ((numConPlus > 0) || now.closedToBottomByCon) {
+        // WPWE3: the closures have left the well open over at most one
+        // completion, so everything below the topmost one is closed.  The
+        // cause does not matter.  openCompletions is a sorted multiset, so
+        // comparing its ends counts the distinct completions.
+        if (now.openCompletions.empty() ||
+            (now.openCompletions.front() == now.openCompletions.back()))
+        {
             events.closedToBottom = 1;
         }
     }
@@ -157,8 +151,8 @@ WellPerformanceEvents::serializationTestObject()
     auto result = WellPerformanceEvents{};
 
     result.events_["W1"] = data::WellEvents::serializationTestObject();
-    result.previous_.wells["W1"] = WellStatusSnapshot::Entry { WellStatus::OPEN, {1, 2, 3}, {4}, false };
-    result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {}, {}, true };
+    result.previous_.wells["W1"] = WellStatusSnapshot::Entry { WellStatus::OPEN, {1, 2, 3} };
+    result.previous_.wells["W2"] = WellStatusSnapshot::Entry { WellStatus::SHUT, {} };
     result.injector_["W1"] = false;
     result.injector_["W2"] = true;
     result.baseline_ = true;

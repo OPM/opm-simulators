@@ -1322,10 +1322,6 @@ wellStatusSnapshot() const
         // Connection state is tracked independently of the well status: a
         // well that is shut as a whole, e.g., by a 'WELL' workover, has not
         // had any of its connections closed.
-        using EconWorkover = WellTestState::EconWorkover;
-        auto closedByCon = 0;
-        auto closedByOther = 0;
-
         for (const auto& connection : well.getConnections()) {
             const auto complnum = connection.complnum();
 
@@ -1333,32 +1329,10 @@ wellStatusSnapshot() const
                 !wtestState.completion_is_closed(well.name(), complnum))
             {
                 entry.openCompletions.push_back(complnum);
-                continue;
-            }
-
-            switch (wtestState.completion_workover(well.name(), complnum)) {
-            case EconWorkover::CONP:
-                entry.closedByConPlus.push_back(complnum);
-                break;
-
-            case EconWorkover::CON:
-                ++closedByCon;
-                break;
-
-            default:
-                // Closed by the deck, by a whole-well workover, or by a well
-                // test -- not by a connection workover.
-                ++closedByOther;
-                break;
             }
         }
 
-        entry.closedToBottomByCon = entry.openCompletions.empty()
-            && entry.closedByConPlus.empty()
-            && (closedByOther == 0) && (closedByCon > 0);
-
         std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
-        std::sort(entry.closedByConPlus.begin(), entry.closedByConPlus.end());
     }
 
     return snapshot;
