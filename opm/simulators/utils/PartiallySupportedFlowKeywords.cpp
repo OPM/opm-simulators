@@ -335,8 +335,15 @@ partiallySupported()
          {
             "WTEST",
             {
-               {3,{true, allow_values<std::string> {"E", "P", "G", "EP", "PE", "EG", "GE", "PG", "GP", "PEG", "PGE", "EPG", "EGP", "GEP", "GPE"},
-                  "WTEST(TEST): only the E (economic) and P (physical) and G (group) reason is currently supported"}}, // REASON
+               {3,{true, [](const std::string& val)
+                  {
+                      // Any combination, in any order, of the reasons the
+                      // simulator can close a well for.  'D' (THP design
+                      // limits) is not among them.
+                      return !val.empty() && val.find_first_not_of("EPGC") == std::string::npos;
+                  },
+                  "WTEST(TEST): only the E (economic), P (physical), G (group) and "
+                  "C (completion) reasons are currently supported"}}, // REASON
             },
          },
          {
