@@ -81,6 +81,17 @@ OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
 // 4. gpuBufferParams goes out of scope here → device memory is freed.
 ```
 
+**Do not add host-side element access to `GpuBuffer`.** There is no
+`operator[]` that quietly does a device→host copy — any such sync must
+be explicit (e.g. `copyFromGPU`, see section 5b) so the cost is visible
+at the call site, never hidden behind an innocuous-looking accessor.
+
+If the ported class owns anything beyond a plain `GpuBuffer` member
+(a stream, an extra `cudaMalloc`, a library handle), its destructor
+must not let a GPU error escape as an exception — destructors use
+**`OPM_GPU_WARN_IF_ERROR`**, not a throwing `*_SAFE_CALL`, since a
+throwing destructor during unwind terminates the program.
+
 ---
 
 ## 2. Decorating the class: `gpuDecorators.hpp`
@@ -110,6 +121,20 @@ provides is:
 
 When `HAVE_CUDA` is set the header also pulls in either
 `<cuda_runtime.h>` or `<hip/hip_runtime.h>` (selected via `USE_HIP`).
+
+Two gotchas with these macros:
+
+* **`#if OPM_IS_INSIDE_DEVICE_FUNCTION` guards do nothing on their own.**
+  The condition only evaluates true inside a function that itself
+  carries a device decorator (`OPM_HOST_DEVICE` or `OPM_DEVICE`). Adding
+  the guard to an undecorated function is a silent no-op — it always
+  takes the host branch.
+* **Decorate const and non-const overloads symmetrically.** If
+  `xs()` and `xs() const` both need to run on the device, both need
+  `OPM_HOST_DEVICE` — a decorated const overload with an undecorated
+  non-const twin (or vice versa) fails to compile only for whichever
+  call the GPU build happens to select, which can slip past a quick
+  test.
 
 ### Exceptions: use `OPM_THROW`
 
@@ -669,6 +694,24 @@ void evaluateKernel(GpuViewComposite params, Scalar x, Scalar* out)
 Always wrap CUDA/HIP runtime calls in **`OPM_GPU_SAFE_CALL`** (from
 `opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp`) so that
 errors are turned into `OPM_THROW`-style exceptions on the host.
+The same header family provides `OPM_CUSPARSE_SAFE_CALL`,
+`OPM_CUBLAS_SAFE_CALL` and `OPM_HYPRE_SAFE_CALL` for calls into the
+corresponding libraries — use the macro that matches the API you are
+calling, not the generic one.
+
+### Kernel argument design
+
+* **Turn runtime `bool` / block-size arguments into template
+  parameters** dispatched with `if constexpr`, rather than branching
+  on them inside the kernel body. This lets the compiler drop the
+  unused branch and any oversized scratch arrays it would otherwise
+  need to allocate for the worst case.
+* **Bound-check with `if (idx < n) { ... }`** at the top of the
+  kernel — grid sizes are normally rounded up to a multiple of the
+  block size, so some threads will have `idx >= n`.
+* **Precompute indices implied by a static sparsity pattern** on the
+  host and pass them in, rather than recomputing them per-thread on
+  the device.
 
 ---
 
@@ -701,7 +744,14 @@ place where `.cu` files are actually compiled. The pattern is:
    back, and `BOOST_CHECK` against the CPU reference computed from the
    exact same inputs. Always compare GPU output to a CPU reference
    computed from the *same* class — that is what guarantees identical
-   semantics on both backends.
+   semantics on both backends. A test that only checks the kernel
+   compiled and ran proves nothing, since these class templates are
+   lazily instantiated and a wrong-but-compiling specialization is
+   common.
+   If your kernel takes a block-size template parameter (see the
+   "Kernel argument design" tip in section 6), parameterise the test
+   over at least block sizes 1, 2 and 3 — size-1 and size-3 catch
+   off-by-one bugs that a size-2 case can hide.
 4. Register the test in
    **`opm-simulators/CMakeLists_files.cmake`** by adding a single
    line next to the existing GPU tests, e.g.:
@@ -795,6 +845,11 @@ Practical implications when porting a class:
   `nvcc` and `hipcc`, so it is the right knob if you ever need to
   branch on "GPU compiler vs host compiler" rather than on
   "CUDA vs HIP".
+* **Actually build and test under `hipcc`, not just `nvcc`, before
+  calling a port done.** The translation is automatic, but automatic
+  is not the same as correct — hipify-perl output has its own edge
+  cases, and the only way to catch them is to run the HIP build, not
+  just trust the mechanism.
 
 In short: write the class for CUDA in `opm-simulators` (and pure,
 header-only, decorator-guarded code in `opm-common` / `opm-grid`),
@@ -819,7 +874,13 @@ falls out automatically.
       `GpuView` instantiation are guarded (e.g. `static_assert` or
       `if constexpr`) so they fail clearly at compile time if misused.
 - [ ] Every member function callable from a kernel is annotated with
-      `OPM_HOST_DEVICE`.
+      `OPM_HOST_DEVICE`, and const/non-const overloads are decorated
+      symmetrically.
+- [ ] `GpuBuffer` has no host-side element access and no device→host
+      sync hidden behind an operator.
+- [ ] If the class owns more than a plain `GpuBuffer` (a stream, an
+      extra `cudaMalloc`, a library handle), its destructor uses
+      `OPM_GPU_WARN_IF_ERROR`, not a throwing `*_SAFE_CALL`.
 - [ ] All exceptions go through `OPM_THROW`.
 - [ ] `<opm/common/utility/gpuDecorators.hpp>` is the only GPU-related
       header included from the class definition itself.
@@ -839,3 +900,7 @@ falls out automatically.
 - [ ] The test name is added to the `foreach(test ...)` block in
       `opm-simulators/CMakeLists.txt` so it gets the `gpu_cuda` /
       `gpu_hip` CTest label.
+- [ ] The test is parameterised over at least block sizes 1, 2 and 3
+      if the kernel takes a block-size template parameter.
+- [ ] The build still succeeds with `HAVE_CUDA` off (no GPU present),
+      and has been run under `hipcc`, not just `nvcc`.
