@@ -93,6 +93,8 @@ public:
      *
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
+     * @note For now data.size() needs to be within the limits of int due to restrictions of CuBlas.
+     *
      *
      * @param data the vector to copy from
      */
@@ -114,6 +116,7 @@ public:
      *
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
+     * @note For now bvector.size() needs to be within the limits of int due to restrictions of CuBlas.
      *
      * @param bvector the vector to copy from
      */
