@@ -15,6 +15,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.hpp>
 #include <opm/input/eclipse/EclipseState/Co2StoreConfig.hpp>
+#include <opm/common/utility/SaltArray.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -261,7 +262,13 @@ BOOST_FIXTURE_TEST_CASE(TestBrine_CO2OnGPU, Fixture) {
 
 // Test case evaluating pvt values for BrineDynamic on a GPU and CPU
 BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
-    std::vector<double> salinities = {0.2, 0.3, 0.4};
+    std::vector<Opm::SaltArray<double, Opm::SaltMassFraction> > salinities;
+    salinities[0][Opm::SaltIndex::NA] = 0.2;
+    salinities[0][Opm::SaltIndex::CL] = 0.2;
+    salinities[1][Opm::SaltIndex::NA] = 0.3;
+    salinities[1][Opm::SaltIndex::CL] = 0.3;
+    salinities[2][Opm::SaltIndex::NA] = 0.4;
+    salinities[2][Opm::SaltIndex::CL] = 0.4;
 
     CpuCo2Pvt cpuCo2Pvt(salinities);
     double internalEnergyReference = cpuCo2Pvt.internalEnergy(1, temp, pressure, Evaluation(0.4), Evaluation(0.0)).value();
@@ -280,7 +287,13 @@ BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
 BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     Evaluation rs(0.3);
     Evaluation saltConcentration(0.1);
-    std::vector<double> salinities = {0.2, 0.3, 0.4};
+    std::vector<Opm::SaltArray<double, Opm::SaltMassFraction> > salinities;
+    salinities[0][Opm::SaltIndex::NA] = 0.2;
+    salinities[0][Opm::SaltIndex::CL] = 0.2;
+    salinities[1][Opm::SaltIndex::NA] = 0.3;
+    salinities[1][Opm::SaltIndex::CL] = 0.3;
+    salinities[2][Opm::SaltIndex::NA] = 0.4;
+    salinities[2][Opm::SaltIndex::CL] = 0.4;
 
     CpuBrineCo2Pvt cpuBrineCo2Pvt(salinities);
     double internalEnergyReference = cpuBrineCo2Pvt.internalEnergy(1, temp, pressure, rs, saltConcentration).value();
