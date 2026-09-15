@@ -861,7 +861,11 @@ closeOffendingCompletion(const int offending_completion,
     }
 
     if (allCompletionsClosed) {
-        well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+        // The economic limit acted on the completions; the well shuts because
+        // none is left to flow through.  Record that as the closure reason, so
+        // WTEST re-tests the well under 'C' rather than under 'E' -- an 'E'
+        // re-test would reopen completions a workover had just closed.
+        well_test_state.close_well(well_.name(), WellTestConfig::Reason::COMPLETION, simulation_time);
         // if all the completion/connections are closed, the well can only be SHUT
         if (write_message_to_opmlog) {
             const std::string& sep = economicLimitMessageSeparator();
