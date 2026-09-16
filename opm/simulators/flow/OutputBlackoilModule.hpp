@@ -2088,6 +2088,12 @@ private:
                         // Total stress is not stored but calculated result is Voigt notation
                         mech.assignStress(ectx.globalDofIdx,
                                           model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+
+                        // Only assign traction if TRACT/TRACT- is requested
+                        if (mech.enableTraction()) {
+                            mech.assignTraction(ectx.globalDofIdx,
+                                                model.traction(ectx.globalDofIdx));
+                        }
                     },
                     true
                 );
