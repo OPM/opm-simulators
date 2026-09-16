@@ -8,7 +8,7 @@
 #include <immintrin.h>
 
 
-bsr_matrix* bsr_alloc()
+bsr_matrix* bsr_alloc(void)
 {
     bsr_matrix *A=malloc(sizeof(bsr_matrix));
     assert(A);
