@@ -8,7 +8,7 @@
 #include <immintrin.h>
 
 
-bsr_matrix* bsr_alloc()
+bsr_matrix* bsr_alloc(void)
 {
     bsr_matrix *A=malloc(sizeof(bsr_matrix));
     assert(A);
@@ -38,7 +38,7 @@ void bsr_free(bsr_matrix *A)
     A=NULL;
 }
 
-inline void * buffered_alloc(size_t alignment, size_t size)
+static void * buffered_alloc(size_t alignment, size_t size)
 {
     // round up to nearest integer multiple of alignment
     size_t real_size = alignment*((size + alignment - 1)/alignment);

@@ -35,7 +35,7 @@ struct bsr_matrix
  *
  * @return Pointer to bsr matrix.
  */
-bsr_matrix* bsr_alloc();
+bsr_matrix* bsr_alloc(void);
 
 /**
  * @brief Delete bsr matrix.
