@@ -468,6 +468,12 @@ public:
         auto& simulator = this->simulator();
         simulator.setTimeStepIndex(simulator.timeStepIndex()+1);
 
+        // wellModel_.endTimeStep() must run before tracerModel_.endTimeStep():
+        // it reconciles per-perforation phase_mixing_rates (see
+        // WellInterface::solvePhaseMixingRates), which
+        // TracerModel::assembleTracerEquationWell (called from
+        // tracerModel_.endTimeStep() -> advanceTracerFields()) reads to split
+        // tracer transport between free and dissolved/vaporized fractions.
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
         this->tracerModel_.endTimeStep();

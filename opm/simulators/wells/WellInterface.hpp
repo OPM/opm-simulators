@@ -333,6 +333,45 @@ public:
     bool updateWellOperabilityFromWellEq(const Simulator& simulator,
                                          const GroupStateHelperType& groupStateHelper);
 
+    // The per-perforation free/dissolved split (perf_data.phase_mixing_rates)
+    // has two consumers: the WGPRS/WOPRF-family (and connection/group/field
+    // level) summary keywords, and the tracer model, which uses it to split
+    // tracer transport between the free and dissolved/vaporized fractions of
+    // gas/oil at each perforation (TracerModel::assembleTracerEquationWell).
+    //
+    // A well can be reported as locally "converged" using primary variables
+    // inherited unchanged from the previous timestep (0 inner iterations).
+    // When that happens, phase_mixing_rates ends up computed against the
+    // *current* reservoir state while surface_rates still reflects the
+    // *old* well state -- the two can then disagree enough that e.g.
+    // WGPRF = WGPR - WGPRS goes negative, and the same inconsistent split is
+    // what the tracer model would use. This solves the well's local
+    // equations once more on a throwaway copy of the well state, forcing at
+    // least one real Newton correction so the phase-mixing split ends up
+    // consistent with the surface rates it will be compared against. Only
+    // the phase-mixing diagnostics are copied back into well_state; bhp,
+    // surface_rates, and every other quantity feeding the accepted solution
+    // or restart are left untouched. Default implementation is a no-op, for
+    // well types that do not (yet) implement it.
+    //
+    // Must run after the timestep's well equations are solved but before
+    // tracer transport -- called from BlackoilWellModel::timeStepSucceeded(),
+    // which FlowProblem::endTimeStep() invokes (via wellModel_.endTimeStep())
+    // before tracerModel_.endTimeStep(). Do not move this call past that
+    // point without also moving the tracer transport step.
+    virtual void solvePhaseMixingRates(const Simulator& /*simulator*/,
+                                       const GroupStateHelperType& /*groupStateHelper*/,
+                                       WellStateType& /*well_state*/) {}
+
+    // Sums perf_data.phase_mixing_rates -- set unconditionally on every
+    // assembly, since the same dis_gas/vap_oil values feed cq_s -- into the
+    // well-level, cross-rank-reduced ws.phase_mixing_rates. Intended to be
+    // called once the well-local equations have converged (from
+    // solvePhaseMixingRates()), not from inside the per-iteration assembly
+    // loop, since only the converged call's result is ever used for
+    // summary/tracer output.
+    void consolidatePhaseMixingRates(WellStateType& well_state) const;
+
     // update perforation water throughput based on solved water rate
     virtual void updateWaterThroughput(const double dt,
                                        WellStateType& well_state) const = 0;

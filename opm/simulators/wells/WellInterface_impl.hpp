@@ -730,6 +730,27 @@ namespace Opm
     }
 
     template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    consolidatePhaseMixingRates(WellStateType& well_state) const
+    {
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.phase_mixing_rates.fill(0.0);
+
+        if (this->isProducer()) {
+            const auto& perf_mixing = ws.perf_data.phase_mixing_rates;
+            for (int perf = 0; perf < this->numLocalPerfs(); ++perf) {
+                for (std::size_t idx = 0; idx < ws.phase_mixing_rates.size(); ++idx) {
+                    ws.phase_mixing_rates[idx] += perf_mixing[perf][idx];
+                }
+            }
+        }
+
+        const auto& comm = this->parallelWellInfo().communication();
+        comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
+    }
+
+    template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     solveWellWithOperabilityCheck(const Simulator& simulator,
