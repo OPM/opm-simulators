@@ -22,6 +22,7 @@
 
 #include <opm/material/Constants.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -60,9 +61,11 @@ void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_stat
 
     bool single_phase = false;
     if constexpr (std::is_same_v<T, Scalar>) {
-        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", flash_tolerance, EOSType::PR);
+        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(
+            fluid_state, PTFlashMethod::Ssi, flash_tolerance, EOSType::PR);
     } else { // Evaluation
-        single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", flash_tolerance, EOSType::PR);
+        single_phase = PTFlash<Scalar, FluidSystem>::solve(
+            fluid_state, PTFlashMethod::Ssi, flash_tolerance, EOSType::PR);
     }
 
     constexpr Scalar R = Constants<Scalar>::R;
