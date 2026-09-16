@@ -21,47 +21,14 @@
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_stream.hpp>
 
 #include <cuda_runtime.h>
 
 #include <cstddef>
-#include <stdexcept>
-#include <string>
-#include <string_view>
 
-
-namespace Opm::gpuistl::detail {
-
-/**
- * @brief Debug-only check that @p ptr is host/CPU memory.
- * @note Uses cudaPointerGetAttributes; intended for debug builds only.
- */
-inline void
-assertHostPointer([[maybe_unused]] const void* ptr, [[maybe_unused]] std::string_view name)
+namespace Opm::gpuistl::detail
 {
-#ifndef NDEBUG
-    if (!isCPUPointer(ptr)) {
-        OPM_THROW(std::invalid_argument, std::string(name) + " is not a CPU pointer");
-    }
-#endif
-}
-
-/**
- * @brief Debug-only check that @p ptr is device/GPU memory.
- * @note Uses cudaPointerGetAttributes; intended for debug builds only.
- */
-inline void
-assertDevicePointer([[maybe_unused]] const void* ptr, [[maybe_unused]] std::string_view name)
-{
-#ifndef NDEBUG
-    if (!isGPUPointer(ptr)) {
-        OPM_THROW(std::invalid_argument, std::string(name) + " is not a device/GPU pointer");
-    }
-#endif
-}
-
 
 /**
  * @brief gpuMemcpyHostToDevice copies count elements of type T from host to device.
@@ -81,8 +48,8 @@ gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, std::size_t count)
     if (count == 0) {
         return;
     }
-    assertDevicePointer(dstDevice, "dstDevice");
-    assertHostPointer(srcHost, "srcHost");
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(srcHost);
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice));
 }
 
@@ -104,8 +71,8 @@ gpuMemcpyDeviceToHost(T* dstHost, const T* srcDevice, std::size_t count)
     if (count == 0) {
         return;
     }
-    assertHostPointer(dstHost, "dstHost");
-    assertDevicePointer(srcDevice, "srcDevice");
+    OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(dstHost);
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(srcDevice);
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
@@ -127,13 +94,15 @@ gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, std::size_t count)
     if (count == 0) {
         return;
     }
-    assertDevicePointer(dstDevice, "dstDevice");
-    assertDevicePointer(srcDevice, "srcDevice");
-    OPM_GPU_SAFE_CALL(cudaMemcpy(dstDevice, srcDevice, count * sizeof(T), cudaMemcpyDeviceToDevice));
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(srcDevice);
+    OPM_GPU_SAFE_CALL(
+        cudaMemcpy(dstDevice, srcDevice, count * sizeof(T), cudaMemcpyDeviceToDevice));
 }
 
 /**
- * @brief gpuMemcpyHostToDeviceAsync copies count elements of type T from host to device asynchronously.
+ * @brief gpuMemcpyHostToDeviceAsync copies count elements of type T from host to device
+ * asynchronously.
  * @param dstDevice raw pointer to GPU memory (destination)
  * @param srcHost raw pointer to CPU memory (source)
  * @param count number of elements to copy
@@ -144,7 +113,8 @@ gpuMemcpyDeviceToDevice(T* dstDevice, const T* srcDevice, std::size_t count)
  * @note This does asynchronous transfer. If the memory region pointed to by @p srcHost
  *       has been previously registered (e.g., using cudaHostRegister by an external mechanism
  *       like PinnedMemoryHolder), the transfer may be faster.
- * @note In debug builds, checks that @p srcHost is a CPU pointer and @p dstDevice is a GPU pointer.
+ * @note In debug builds, checks that @p srcHost is a CPU pointer, @p dstDevice is a GPU pointer,
+ *       and @p stream is a valid CUDA stream.
  * @note Does not synchronize the stream; the caller is responsible for stream completion.
  * @note Expects caller to specify the @p stream (no default is provided).
  */
@@ -155,13 +125,16 @@ gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, std::size_t count, cu
     if (count == 0) {
         return;
     }
-    assertDevicePointer(dstDevice, "dstDevice");
-    assertHostPointer(srcHost, "srcHost");
-    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice, stream));
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(srcHost);
+    OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(stream);
+    OPM_GPU_SAFE_CALL(
+        cudaMemcpyAsync(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice, stream));
 }
 
 /**
- * @brief gpuMemcpyDeviceToHostAsync copies count elements of type T from device to host asynchronously.
+ * @brief gpuMemcpyDeviceToHostAsync copies count elements of type T from device to host
+ * asynchronously.
  * @param dstHost raw pointer to CPU memory (destination)
  * @param srcDevice raw pointer to GPU memory (source)
  * @param count number of elements to copy
@@ -172,7 +145,8 @@ gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, std::size_t count, cu
  * @note This does asynchronous transfer. If the memory region pointed to by @p dstHost
  *       has been previously registered (e.g., using cudaHostRegister by an external mechanism
  *       like PinnedMemoryHolder), the transfer may be faster.
- * @note In debug builds, checks that @p dstHost is a CPU pointer and @p srcDevice is a GPU pointer.
+ * @note In debug builds, checks that @p dstHost is a CPU pointer, @p srcDevice is a GPU pointer,
+ *       and @p stream is a valid CUDA stream.
  * @note Does not synchronize the stream; the caller is responsible for stream completion.
  * @note Expects caller to specify the @p stream (no default is provided).
  */
@@ -183,9 +157,11 @@ gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, std::size_t count, cu
     if (count == 0) {
         return;
     }
-    assertHostPointer(dstHost, "dstHost");
-    assertDevicePointer(srcDevice, "srcDevice");
-    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost, stream));
+    OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(dstHost);
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(srcDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(stream);
+    OPM_GPU_SAFE_CALL(
+        cudaMemcpyAsync(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }
 
 } // namespace Opm::gpuistl::detail
