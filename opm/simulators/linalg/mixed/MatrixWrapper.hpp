@@ -90,7 +90,7 @@ template <class Vector>
 void MixedMatrixWrapper<Vector>::
 mv(const Vector& x, Vector& y) const
 {
-    int const b = block_size;
+    int constexpr b = block_size;
     if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::mv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspmv2(M_, &x[0][0], &y[0][0]);
     else if constexpr(b==3) bsr_vmspmv3(M_, &x[0][0], &y[0][0]);
@@ -102,7 +102,7 @@ mv(const Vector& x, Vector& y) const
         int *colidx=M_->colidx;
         const float *data=M_->flt;
 
-        int bb = b*b;
+        int constexpr bb = b*b;
         double yy[bb];
         for(int i=0;i<nrows;i++)
         {
@@ -140,7 +140,7 @@ template <class Vector>
 void MixedMatrixWrapper<Vector>::
 umv(const Vector& x, Vector& y) const
 {
-    int const b = block_size;
+    int constexpr b = block_size;
     if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::umv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], 1.0);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], 1.0);
@@ -162,7 +162,7 @@ template <class Vector>
 void MixedMatrixWrapper<Vector>::
 usmv(double alpha, const Vector& x, Vector& y) const
 {
-    int const b = block_size;
+    int constexpr b = block_size;
     if      constexpr(b==1){OPM_THROW(std::invalid_argument, "MixedMatrixWrapper::usmv does not support block size == 1!\n");}
     else if constexpr(b==2) bsr_vmspumv2(M_, &x[0][0], &y[0][0], alpha);
     else if constexpr(b==3) bsr_vmspumv3(M_, &x[0][0], &y[0][0], alpha);
@@ -174,7 +174,7 @@ usmv(double alpha, const Vector& x, Vector& y) const
         int *colidx=M_->colidx;
         const float *data=M_->flt;
 
-        int bb = b*b;
+        int constexpr bb = b*b;
         double yy[bb];
         for(int i=0;i<nrows;i++)
         {
@@ -211,8 +211,8 @@ void MixedMatrixWrapper<Vector>::
 update(double const *data)
 {
     // transpose each dense block to make them column-major
-    int const b = block_size;
-    int const bb=b*b;
+    int constexpr b = block_size;
+    int constexpr bb=b*b;
     double B[bb];
     for(int k=0;k<nnz_;k++)
     {
