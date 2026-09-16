@@ -177,16 +177,14 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        if (always_use_potentials) {
-            // Fall back to the well potentials. Without this, a well that has a
-            // GUIDERAT/WGRUPCON guide rate would keep returning that (zero)
-            // guide rate here, so the potential based fallback in
-            // localFraction() would be a no-op and every well would end up with
-            // a fraction of 1.0.
-            return guide_rate_->getPotential(name, target_);
-        }
-        if (guide_rate_->has(name) || guide_rate_->hasPotentials(name)) {
-            return guide_rate_->get(name, target_, this->groupStateHelper().getWellRateVector(name));
+        // always_use_potentials:
+        // Fall back to the well potentials. Without this, a well that has a
+        // GUIDERAT/WGRUPCON guide rate would keep returning that (zero)
+        // guide rate here, so the potential based fallback in
+        // localFraction() would be a no-op and every well would end up with
+        // a fraction of 1.0.
+        if (always_use_potentials || guide_rate_->has(name) || guide_rate_->hasPotentials(name)) {
+            return guide_rate_->get(name, target_, this->groupStateHelper().getWellRateVector(name), always_use_potentials);
         }
         return 0.0;
     } else {
