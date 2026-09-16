@@ -74,6 +74,9 @@ struct PerforationRates
     Scalar dis_gas_in_water = 0.0;
     Scalar vap_oil = 0.0;
     Scalar vap_wat = 0.0;
+    // Free (non-dissolved/non-vaporized) gas/oil flux at this perforation.
+    Scalar free_gas = 0.0;
+    Scalar free_oil = 0.0;
 };
 
 } // namespace Opm
