@@ -352,43 +352,36 @@ void FlowGenericVanguard::init()
     }
 
     // Initialize parallelWells with all local wells
-    const auto& schedule_wells = schedule().getWellsatEnd();
-    parallelWells_.reserve(schedule_wells.size());
+    this->parallelWells_.reserve(this->schedule().back().well_order().size());
 
-    for (const auto& well: schedule_wells)
-    {
-        parallelWells_.emplace_back(well.name(), true);
+    for (const auto& wellName : this->schedule().back().well_order()) {
+        this->parallelWells_.emplace_back(wellName, true);
     }
-    std::ranges::sort(parallelWells_);
+    std::ranges::sort(this->parallelWells_);
 
     // Check whether allowing distribute wells makes sense
-    if (enableDistributedWells() )
-    {
-        int hasMsWell = 0;
+    if (this->enableDistributedWells()) {
         const auto& comm = FlowGenericVanguard::comm();
 
-        if (useMultisegmentWell_)
-        {
-            if (comm.rank() == 0)
-            {
-                const auto& wells = this->schedule().getWellsatEnd();
-                hasMsWell = std::ranges::any_of(wells,
-                                                [](const auto& well)
-                                                { return well.isMultiSegment(); }) ? 1 : 0;
-            }
+        int hasMsWell = 0;
+        if (this->useMultisegmentWell_ && (comm.rank() == 0)) {
+            const auto& sched = this->schedule().back();
+
+            hasMsWell = std::ranges::any_of
+                (sched.well_order(),
+                 [&sched](const auto& wellName)
+                 { return sched.wells(wellName).isMultiSegment(); })
+                ? 1 : 0;
         }
 
-        hasMsWell = comm.max(hasMsWell);
-
-        if (hasMsWell != 0)
-        {
-            if (comm.rank() == 0)
-            {
+        if (comm.max(hasMsWell) != 0) {
+            if (comm.rank() == 0) {
                 OpmLog::info("Option --allow-distributed-wells=true in a model with\n"
                              "multisegment wells. This feature is still experimental. You can\n"
                              "set --use-multisegment-well=false to treat the existing\n"
                              "multisegment wells as standard wells.");
             }
+
             comm.barrier();
         }
     }
