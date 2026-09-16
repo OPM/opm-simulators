@@ -20,17 +20,20 @@
 #define OPM_GPUVECTOR_HEADER_HPP
 
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/CuBlasHandle.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-
 #include <fmt/core.h>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/CuBlasHandle.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
-#include <vector>
+
+#include <cstddef>
+#include <ostream>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 
 namespace Opm::gpuistl

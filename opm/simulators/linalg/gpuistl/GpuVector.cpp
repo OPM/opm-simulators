@@ -16,17 +16,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cublas_v2.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <fmt/core.h>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
+
+#include <cuda_runtime.h>
+#include <fmt/core.h>
 
 namespace Opm::gpuistl
 {

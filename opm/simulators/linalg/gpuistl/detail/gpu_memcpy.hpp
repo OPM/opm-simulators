@@ -19,16 +19,18 @@
 #ifndef OPM_GPUISTL_DETAIL_GPU_MEMCPY_HPP
 #define OPM_GPUISTL_DETAIL_GPU_MEMCPY_HPP
 
-#include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
+
+#include <cuda_runtime.h>
 
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
-#include <cuda_runtime.h>
 
 namespace Opm::gpuistl::detail {
 
