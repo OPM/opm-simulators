@@ -35,6 +35,7 @@
 
 #include <opm/material/Constants.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/models/common/energymodule.hh>
@@ -123,7 +124,8 @@ public:
 
         const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
-        const std::string flashTwoPhaseMethod = Parameters::Get<Parameters::FlashTwoPhaseMethod>();
+        const auto ptFlashMethod =
+            ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
         // TODO: the formulation here is still to begin with XMF and YMF values to derive ZMF value
         // TODO: we should check how we update ZMF in the newton update, since it is the primary variables.
 
@@ -197,7 +199,7 @@ public:
                                       elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
         }
         const auto& eos_type = problem.getEosType();
-        FlashSolver::solve(fluidState_, flashTwoPhaseMethod, flashTolerance, eos_type, flashVerbosity);
+        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity);
 
         if (flashVerbosity >= 5) {
             std::string phaseCompositions;

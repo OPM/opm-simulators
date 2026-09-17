@@ -88,6 +88,17 @@ foreach(tgt ${PLAIN_TGT})
   )
 endforeach()
 
+opm_add_test(co2_ptflash_invalid_method
+  EXE_TARGET
+    co2_ptflash_ecfv
+  DRIVER
+    ${PROJECT_SOURCE_DIR}/tests/run-invalid-ptflash-method-test.sh
+  DRIVER_ARGS
+    --invalid-method
+  WORKING_DIRECTORY
+    ${PROJECT_BINARY_DIR}/tests
+)
+
 foreach(tgt reservoir_blackoil_ecfv
             reservoir_blackoil_vcfv
             reservoir_ncp_ecfv

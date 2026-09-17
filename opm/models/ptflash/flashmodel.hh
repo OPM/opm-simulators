@@ -29,6 +29,7 @@
 #define OPM_PTFLASH_MODEL_HH
 
 #include <opm/material/constraintsolvers/PTFlash.hpp>
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 
 #include <opm/material/densead/Math.hpp>
 
@@ -209,7 +210,12 @@ class FlashModel
 public:
     explicit FlashModel(Simulator& simulator)
         : ParentType(simulator)
-    {}
+    {
+        // Reject an unknown method here rather than from inside the flash: the
+        // intensive quantities are updated in parallel, where the throw would
+        // escape an OpenMP region and terminate instead of being reported.
+        ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
+    }
 
     /*!
      * \brief Register all run-time parameters for the immiscible model.
