@@ -28,6 +28,8 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
@@ -225,6 +227,13 @@ private:
             // the very first assembly already honours them.
             const auto wellOpts = coarseSpaceTree(this->prm_[this->activeSolverNum_]);
             wellWeightType_ = wellOpts.get("well_weight_type", std::string{"cellavg"});
+            if (wellWeightType_ != "unit" && wellWeightType_ != "cellavg"
+                && wellWeightType_ != "cellblockavg" && wellWeightType_ != "quasiimpes") {
+                OPM_THROW(std::invalid_argument,
+                          "Unknown well_weight_type '" + wellWeightType_
+                              + "'. Valid values are 'unit', 'cellavg', "
+                                "'cellblockavg' and 'quasiimpes'.");
+            }
             // Give a pressure-controlled well a trivial coarse equation, as the
             // classic CPRW does.  Off keeps the contracted equation for every well.
             wellLayout_.identityOnPressureControl
@@ -412,7 +421,8 @@ private:
                 const std::size_t last = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
                 for (std::size_t b = first; b < last; ++b) {
-                    for (auto col = mergedB_[b].begin(), end = mergedB_[b].end(); col != end; ++col) {
+                    for (auto col = mergedB_[b].begin(), end = mergedB_[b].end();
+                         col != end; ++col) {
                         const auto& cw = resWeights[col.index()];
                         for (int i = 0; i < numResDofs; ++i) {
                             lambda[i] += cw[i];
