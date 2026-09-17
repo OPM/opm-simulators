@@ -119,7 +119,7 @@ These are the objections that actually stop merges. Raise them before any line-l
 - Template on `Scalar`; guard `double`-only paths with `if constexpr (std::is_same_v<Scalar, double>)`.
 
 ### Determinism and reproducibility
-Results must not depend on rank count, thread count, container hashing, or allocation addresses.
+Results must not depend on container hashing or allocation addresses.
 
 - Flag iteration over `unordered_map` / `unordered_set` / pointer-keyed containers where the loop body accumulates into a result, orders output, or decides control. Iterate a sorted key vector instead.
 - `std::stable_sort` where insertion order matters; never sort by pointer address or by a hash.
@@ -147,7 +147,7 @@ For the class-porting pattern (`GpuBuffer`/`GpuView` ownership, `OPM_HOST_DEVICE
 
 **Noise budget.** Cross-cutting findings apply only to lines the diff actually touches — never to surrounding code the author did not modify.
 
-A nit has to be a real observation about a touched line. "No cap" is not licence to pad the list.
+A nit has to be a real observation about a touched line. 
 
 ### C++ hygiene
 - Includes: include what you use; transitive includes don't count (`<cstddef>` for `std::size_t`, `<algorithm>`, `<utility>`, `<type_traits>`, `<stdexcept>`). Remove now-unused ones. Grouping/ordering per `CONTRIBUTING.md`; a `.cpp` includes its own header first.
@@ -157,9 +157,8 @@ A nit has to be a real observation about a touched line. "No cap" is not licence
 - `.empty()` over `.size() == 0`; `contains()` over `find() != end()`; `std::clamp`, `std::any_of`, `std::accumulate`, `std::ranges::` algorithms over hand-rolled loops. `numeric_limits<double>::lowest()`, not `min()`, for "most negative".
 - `const auto&` in range-for; heavy arguments by `const&`; `std::string_view` or `const std::string&`, never `const std::string` by value.
 - No raw `new`/`delete`; `std::make_unique`. `unique_ptr` over `shared_ptr` for unique ownership.
-- `fmt::format` over concatenation and `std::to_string`. Never `std::cerr` / `printf` / `exit()` — use `OpmLog` and exceptions.
+- `std::format` over concatenation and `std::to_string`. Never `std::cerr` / `printf` / `exit()` — use `OpmLog` and exceptions.
 - `assert` is for programmer error only, never for user or deck input, and never as the sole guard.
-- No default arguments on new functions. Put callbacks last in the parameter list. Delete members, parameters and asserts nothing reads.
 - Don't reimplement Dune or OPM utilities: `Dune::DynamicMatrix`, `RegulaFalsi` in `RootFinders.hpp`, `SparseTable<int>` for ragged per-cell data, `PropertyTree` instead of raw Boost property_tree.
 - Naming must not lie: `has*()` must be `const` and non-mutating; `add()` that overwrites is `assign()`; the file name matches the entity in it. Members use trailing underscore in opm-simulators, `m_` in gpuistl.
 
@@ -210,6 +209,5 @@ A PR merges when it is approved **and** the build check is green; where referenc
 - Invent findings. If the diff doesn't show it, ask instead of asserting — and if you cannot describe a concrete path to failure, it is a Question, not a defect.
 - Apply the whole checklist to a one-line fix, or comment on code the diff does not touch.
 - Demand refactors unrelated to the PR's scope, or block on preferences not tied to correctness, compatibility, determinism or performance.
-- Flag line length, brace placement, trailing whitespace or EOF newlines — `clang-format` and pre-commit already own these.
 - Request changes over nits, or produce a wall of low-value comments.
 - Present a contested style preference as a project rule. Braced initialisers versus explicit constructors, and brace placement, are not settled across the project — leave them alone.
