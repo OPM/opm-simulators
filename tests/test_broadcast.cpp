@@ -30,7 +30,9 @@
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <exception>
+#include <map>
 #include <numeric>
+#include <string>
 
 #if HAVE_MPI
 struct MPIError : public std::exception
@@ -85,6 +87,24 @@ BOOST_AUTO_TEST_CASE(BroadCast)
     }
     BOOST_CHECK_EQUAL(d1, 7.0);
     BOOST_CHECK_EQUAL(i1, 8);
+}
+
+BOOST_AUTO_TEST_CASE(BroadcastMap)
+{
+    const auto& cc = Dune::MPIHelper::getCommunication();
+
+    std::map<std::string, std::string> values;
+    if (cc.rank() == 1) {
+        values.emplace("first", "one");
+        values.emplace("second", "two");
+    }
+
+    Opm::Parallel::MpiSerializer ser(cc);
+    ser.broadcast(Opm::Parallel::RootRank{1}, values);
+
+    BOOST_CHECK_EQUAL(values.size(), 2);
+    BOOST_CHECK_EQUAL(values.at("first"), "one");
+    BOOST_CHECK_EQUAL(values.at("second"), "two");
 }
 
 int main(int argc, char** argv)
