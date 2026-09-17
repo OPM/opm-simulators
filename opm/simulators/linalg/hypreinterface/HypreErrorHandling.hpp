@@ -23,7 +23,7 @@
 #include <HYPRE.h>
 #include <HYPRE_parcsr_ls.h>
 #include <_hypre_utilities.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <stdexcept>
 #include <string>
 
