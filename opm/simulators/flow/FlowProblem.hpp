@@ -1341,12 +1341,12 @@ protected:
     //! minima lowered) by a solution that is being thrown away.
     virtual void captureBeginTimeStepState_()
     {
-        prev_timestep_.first_step = first_step_;
-        prev_timestep_.max_polymer_adsorption = this->polymer_.maxAdsorption;
-        prev_timestep_.max_oil_saturation = this->maxOilSaturation_;
-        prev_timestep_.max_water_saturation = this->maxWaterSaturation_;
-        prev_timestep_.min_ref_pressure = this->minRefPressure_;
-        prev_timestep_.rock_comp_trans_mult_val = this->rockCompTransMultVal_;
+        prev_timestep_state_.first_step = first_step_;
+        prev_timestep_state_.max_polymer_adsorption = this->polymer_.maxAdsorption;
+        prev_timestep_state_.max_oil_saturation = this->maxOilSaturation_;
+        prev_timestep_state_.max_water_saturation = this->maxWaterSaturation_;
+        prev_timestep_state_.min_ref_pressure = this->minRefPressure_;
+        prev_timestep_state_.rock_comp_trans_mult_val = this->rockCompTransMultVal_;
         if (materialLawManager_ && materialLawManager_->enableHysteresis()) {
             materialLawManager_->captureBeginTimeStepState();
         }
@@ -1355,12 +1355,12 @@ protected:
     //! \brief Put the explicit quantities back as they were before the step.
     virtual void restoreBeginTimeStepState_()
     {
-        first_step_ = prev_timestep_.first_step;
-        this->polymer_.maxAdsorption = prev_timestep_.max_polymer_adsorption;
-        this->maxOilSaturation_ = prev_timestep_.max_oil_saturation;
-        this->maxWaterSaturation_ = prev_timestep_.max_water_saturation;
-        this->minRefPressure_ = prev_timestep_.min_ref_pressure;
-        this->rockCompTransMultVal_ = prev_timestep_.rock_comp_trans_mult_val;
+        first_step_ = prev_timestep_state_.first_step;
+        this->polymer_.maxAdsorption = prev_timestep_state_.max_polymer_adsorption;
+        this->maxOilSaturation_ = prev_timestep_state_.max_oil_saturation;
+        this->maxWaterSaturation_ = prev_timestep_state_.max_water_saturation;
+        this->minRefPressure_ = prev_timestep_state_.min_ref_pressure;
+        this->rockCompTransMultVal_ = prev_timestep_state_.rock_comp_trans_mult_val;
         if (materialLawManager_ && materialLawManager_->enableHysteresis()) {
             materialLawManager_->restoreBeginTimeStepState();
         }
@@ -1989,7 +1989,7 @@ protected:
         std::vector<Scalar> rock_comp_trans_mult_val;      //!< ROCKCOMP transmissibility multiplier
     };
 
-    PrevTimestepState prev_timestep_;
+    PrevTimestepState prev_timestep_state_;
 
     /// Whether or not the current episode will end at the end of the
     /// current time step.

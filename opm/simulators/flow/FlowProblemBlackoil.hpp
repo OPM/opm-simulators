@@ -179,7 +179,7 @@ public:
         : FlowProblemType(simulator)
         , thresholdPressures_(simulator)
         , mixControls_(simulator.vanguard().schedule())
-        , prev_timestep_(simulator.vanguard().schedule())
+        , prev_timestep_state_(simulator.vanguard().schedule())
         , actionHandler_(simulator.vanguard().eclState(),
                          simulator.vanguard().schedule(),
                          simulator.vanguard().actionState(),
@@ -1192,14 +1192,14 @@ protected:
     void captureBeginTimeStepState_() override
     {
         FlowProblemType::captureBeginTimeStepState_();
-        prev_timestep_.mixControls = mixControls_;
+        prev_timestep_state_.mixControls = mixControls_;
     }
 
     //! \brief Restore mixing rate controls after a failed timestep.
     void restoreBeginTimeStepState_() override
     {
         FlowProblemType::restoreBeginTimeStepState_();
-        mixControls_ = prev_timestep_.mixControls;
+        mixControls_ = prev_timestep_state_.mixControls;
     }
 
     void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart) override
@@ -1775,7 +1775,7 @@ protected:
         MixingRateControls<FluidSystem> mixControls; //!< DRSDT / DRVDT
     };
 
-    PrevTimestepState prev_timestep_;
+    PrevTimestepState prev_timestep_state_;
 
     ActionHandler<Scalar, IndexTraits> actionHandler_;
 

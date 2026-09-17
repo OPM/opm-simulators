@@ -119,7 +119,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , active_wgstate_(pu)
     , last_valid_wgstate_(pu)
     , nupcol_wgstate_(pu)
-    , prev_timestep_(pu)
+    , prev_timestep_state_(pu)
     , group_state_helper_(this->wellState(),
                           this->groupState(),
                           this->schedule(),

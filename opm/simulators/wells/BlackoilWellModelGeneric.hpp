@@ -227,11 +227,11 @@ public:
     void advanceTimeLevel()
     {
         if (enable_state_rollback_) {
-            this->prev_timestep_.wgstate = this->active_wgstate_;
-            this->prev_timestep_.nupcol_wgstate = this->nupcol_wgstate_;
-            this->prev_timestep_.closed_this_step = this->closed_this_step_;
-            this->prev_timestep_.well_open_times = this->well_open_times_;
-            this->prev_timestep_.well_close_times = this->well_close_times_;
+            this->prev_timestep_state_.wgstate = this->active_wgstate_;
+            this->prev_timestep_state_.nupcol_wgstate = this->nupcol_wgstate_;
+            this->prev_timestep_state_.closed_this_step = this->closed_this_step_;
+            this->prev_timestep_state_.well_open_times = this->well_open_times_;
+            this->prev_timestep_state_.well_close_times = this->well_close_times_;
             this->genNetwork_.commitState();
         }
     }
@@ -240,11 +240,11 @@ public:
     void updateFailed()
     {
         if (enable_state_rollback_) {
-            this->active_wgstate_ = this->prev_timestep_.wgstate;
-            this->nupcol_wgstate_ = this->prev_timestep_.nupcol_wgstate;
-            this->closed_this_step_ = this->prev_timestep_.closed_this_step;
-            this->well_open_times_ = this->prev_timestep_.well_open_times;
-            this->well_close_times_ = this->prev_timestep_.well_close_times;
+            this->active_wgstate_ = this->prev_timestep_state_.wgstate;
+            this->nupcol_wgstate_ = this->prev_timestep_state_.nupcol_wgstate;
+            this->closed_this_step_ = this->prev_timestep_state_.closed_this_step;
+            this->well_open_times_ = this->prev_timestep_state_.well_open_times;
+            this->well_close_times_ = this->prev_timestep_state_.well_close_times;
             this->genNetwork_.resetState();
             this->group_state_helper_.updateState(this->wellState(), this->groupState());
         }
@@ -667,7 +667,7 @@ protected:
         std::map<std::string, double> well_close_times;   //!< WCYCLE
     };
 
-    PrevTimestepState prev_timestep_;
+    PrevTimestepState prev_timestep_state_;
     GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
