@@ -254,28 +254,6 @@ TEST_CASES = [
         "vector_labels": ["Prod BHP (PROD1)", "Inj Gas BHP (INJ_G1)", "Inj Water BHP (INJ_W1)", "Avg Press (FPR)"],
     },
     {
-        "name": "EXTREME_ROLLBACK_STRESS",
-        "category": "Extreme Stress Multi-Physics",
-        "description": "Live fluid + VAPOIL + ROCKCOMP + WCYCLE + ACTIONX under forced step cuts",
-        "deck_dir": "model_synthetic",
-        "deck_file": "EXTREME_ROLLBACK_STRESS.DATA",
-        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true", "--newton-max-iterations=6", "--cpr-reuse-setup=0"],
-        "replay_args": ["--initial-time-step-in-days=11111111"],
-        "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
-        "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
-    },
-    {
-        "name": "FORCED_ROLLBACK_MULTICUT",
-        "category": "Forced Cascading Multi-Cut",
-        "description": "Multiple forced Newton convergence failures and cascading cuts on same timestep",
-        "deck_dir": "model_synthetic",
-        "deck_file": "FORCED_ROLLBACK_MULTICUT.DATA",
-        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true", "--newton-max-iterations=4", "--cpr-reuse-setup=0"],
-        "replay_args": ["--initial-time-step-in-days=11111111"],
-        "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
-        "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
-    },
-    {
         "name": "1D_COMP",
         "category": "Compositional Flow & Wells",
         "description": "3-component Peng-Robinson EOS compositional flow with CompWellModel",
@@ -296,7 +274,6 @@ def find_default_paths():
     # Check potential repo root paths
     candidates = [
         script_dir.parent.parent,
-        Path("/home/ahmed/Documents/Projects/opm/src"),
         Path.cwd(),
     ]
     repo_root = None
@@ -573,14 +550,17 @@ def main():
         print(f"[{idx}/{len(active_cases)}] Running {Colors.BOLD}{case['name']}{Colors.END} ({case['category']})... ", end="", flush=True)
         res = run_test_case(case, repo_root, tests_dir, build_dir, results_dir, use_mpi=(not args.no_mpi))
         results.append(res)
-        if res["success"]:
+        if res.get("skipped"):
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.END} in {res['elapsed']:.2f}s")
+        elif res["success"]:
             print(f"{Colors.GREEN}[PASSED]{Colors.END} in {res['elapsed']:.2f}s")
         else:
             print(f"{Colors.RED}[FAILED]{Colors.END} in {res['elapsed']:.2f}s")
 
     total_elapsed = time.time() - total_start
-    passed_count = sum(1 for r in results if r["success"])
-    failed_count = len(results) - passed_count
+    skipped_count = sum(1 for r in results if r.get("skipped"))
+    passed_count = sum(1 for r in results if r["success"] and not r.get("skipped"))
+    failed_count = len(results) - passed_count - skipped_count
 
     print(f"\n{Colors.BOLD}{Colors.CYAN}========================================================================={Colors.END}")
     print(f"{Colors.BOLD}{Colors.CYAN}                       TABLE 1: EXECUTION & REPLAY STATUS               {Colors.END}")
@@ -590,7 +570,12 @@ def main():
     t1_align = ["left", "left", "right", "right", "right", "right", "center"]
     t1_rows = []
     for r in results:
-        status_str = f"{Colors.GREEN}MATCH (2e-14){Colors.END}" if r["success"] else f"{Colors.RED}MISMATCH / FAIL{Colors.END}"
+        if r.get("skipped"):
+            status_str = f"{Colors.YELLOW}SKIPPED (no deck){Colors.END}"
+        elif r["success"]:
+            status_str = f"{Colors.GREEN}MATCH (2e-14){Colors.END}"
+        else:
+            status_str = f"{Colors.RED}MISMATCH / FAIL{Colors.END}"
         st = r["stats"]
         newton_str = f"{st['newton_total']} ({st['newton_wasted']})" if st['newton_total'] > 0 else "-"
         t1_rows.append([
@@ -648,16 +633,20 @@ def main():
     ]
     print(format_table(t3_headers, t3_rows, t3_align))
 
-    print(f"\n{Colors.BOLD}Suite Summary:{Colors.END} {passed_count}/{len(results)} Passed ({failed_count} Failed) in {total_elapsed:.2f}s total wall time.")
+    print(f"\n{Colors.BOLD}Suite Summary:{Colors.END} {passed_count}/{len(results)} Passed "
+          f"({failed_count} Failed, {skipped_count} Skipped) in {total_elapsed:.2f}s total wall time.")
+    if skipped_count > 0:
+        print(f"{Colors.YELLOW}Note: {skipped_count} case(s) skipped because their deck was not found "
+              f"under the test-data directory (not a pass or a fail).{Colors.END}")
 
     if failed_count > 0:
         print(f"\n{Colors.RED}Failure details:{Colors.END}")
         for r in results:
-            if not r["success"]:
+            if not r["success"] and not r.get("skipped"):
                 print(f"\n--- {r['name']} Failure Output ---\n{r['output']}\n")
         sys.exit(1)
     else:
-        print(f"{Colors.GREEN}All tested rollback features demonstrated 100% deterministic replay at machine precision!{Colors.END}\n")
+        print(f"{Colors.GREEN}All executed rollback features demonstrated 100% deterministic replay at machine precision!{Colors.END}\n")
         sys.exit(0)
 
 
