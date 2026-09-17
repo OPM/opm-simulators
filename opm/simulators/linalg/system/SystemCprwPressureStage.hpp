@@ -351,7 +351,7 @@ private:
         // Well column: every cell whose C row references any block of the well.
         for (std::size_t c = 0; c < numRes; ++c) {
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
-                const auto j = wellOfBlock(col.index());
+                const auto j = wellLayout().wellOfBlock(col.index());
                 if (j.has_value()) {
                     coarseMatrix_->entry(c, numRes + *j) = 0.0;
                 }
@@ -418,7 +418,7 @@ private:
         for (std::size_t c = 0; c < numRes; ++c) {
             const auto& bw = w0[c];
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
-                const auto j = wellOfBlock(col.index());
+                const auto j = wellLayout().wellOfBlock(col.index());
                 if (!j.has_value() || layout.isPressureControlled(*j)) {
                     continue;
                 }
@@ -474,7 +474,7 @@ private:
                 // up the full segment-to-segment coupling rather than just the
                 // top segment's column.
                 for (auto col = D[wb].begin(), colEnd = D[wb].end(); col != colEnd; ++col) {
-                    const auto k = wellOfBlock(col.index());
+                    const auto k = wellLayout().wellOfBlock(col.index());
                     if (!k.has_value()) {
                         continue;
                     }
@@ -604,19 +604,6 @@ private:
         if (out) {
             Dune::writeMatrixMarket(coarseRhs_, out);
         }
-    }
-
-    // Merged well block row -> well index.  Linear scan is fine: the offsets
-    // are sorted and this is only used while walking sparse rows of the well
-    // blocks, which are short.
-    std::optional<std::size_t> wellOfBlock(const std::size_t blockRow) const
-    {
-        const auto& offsets = wellLayout().wellBlockOffsets;
-        const auto it = std::upper_bound(offsets.begin(), offsets.end(), blockRow);
-        if (it == offsets.begin() || it == offsets.end()) {
-            return std::nullopt;
-        }
-        return static_cast<std::size_t>(std::distance(offsets.begin(), it) - 1);
     }
 
     const SystemMatrix<Scalar>& S_;
