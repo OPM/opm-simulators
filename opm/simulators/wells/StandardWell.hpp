@@ -154,7 +154,7 @@ namespace Opm
 
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
-                                   const WellStateType& well_state,
+                                   WellStateType& well_state,
                                    const GroupStateHelperType& groupStateHelper,
                                    std::vector<Scalar>& well_potentials) /* const */ override;
 
@@ -320,15 +320,17 @@ namespace Opm
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
                                                const Scalar& bhp,
                                                const GroupStateHelperType& groupStateHelper,
+                                               WellStateType& well_state,
                                                std::vector<Scalar>& well_flux) const override;
 
         std::vector<Scalar>
         computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                     const GroupStateHelperType& groupStateHelper,
-                                    const WellStateType& well_state) const;
+                                    WellStateType& well_state) const;
 
         bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
                                            const GroupStateHelperType& groupStateHelper,
+                                           WellStateType& well_state,
                                            std::vector<Scalar>& well_potentials) const;
 
         // return the density at the perforation[0] of the rank owning this well,
