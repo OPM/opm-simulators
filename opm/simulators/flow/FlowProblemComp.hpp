@@ -462,6 +462,21 @@ protected:
                 eclState.fieldProps(), "EQLNUM", /*needsTranslation=*/true);
         }
 
+        // The water saturation endpoints are selected by SATNUM and scaled per
+        // cell, so they are read here rather than from the equilibration region.
+        std::vector<Scalar> connateWater, maxWater;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const auto numDof = this->model().numGridDof();
+            connateWater.resize(numDof);
+            maxWater.resize(numDof);
+            for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                const auto& eps = this->materialLawManager()
+                    ->oilWaterScaledEpsInfoDrainage(static_cast<int>(dofIdx));
+                connateWater[dofIdx] = eps.Swl;
+                maxWater[dofIdx] = eps.Swu;
+            }
+        }
+
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
             getEosType(),
@@ -469,7 +484,9 @@ protected:
             eqlnum,
             vanguard.gridView().comm(),
             this->gravity()[dimWorld - 1],
-            this->numPressurePointsEquil());
+            this->numPressurePointsEquil(),
+            connateWater,
+            maxWater);
 
         initialFluidStates_ = std::move(initialState.fluidStates());
         // The primary variables are formed from the total composition; see initial().

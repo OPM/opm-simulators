@@ -51,6 +51,8 @@ namespace {
 
 using Scalar = double;
 using FluidSystem = Opm::GenericOilGasWaterFluidSystem<Scalar, 3, false>;
+// The water zone is only reachable when the water phase is compiled in.
+using WaterFluidSystem = Opm::GenericOilGasWaterFluidSystem<Scalar, 3, true>;
 using InitialStateComputer = Opm::EQUIL::Comp::InitialStateComputer<FluidSystem>;
 using SatP = Opm::SaturationPressure<Scalar, FluidSystem>;
 using CompVec = std::array<Scalar, 3>;
@@ -69,14 +71,15 @@ std::string deckString(const std::string& equil,
                            "ZMFVD\n"
                            " 2000   0 0.7 0.3\n"
                            " 2100   0 0.3 0.7  /\n",
-                       const std::string& rtemp = "RTEMP\n100\n/\n")
+                       const std::string& rtemp = "RTEMP\n100\n/\n",
+                       const std::string& phases = "OIL\nGAS\n",
+                       const std::string& propsExtra = "")
 {
     return
         "RUNSPEC\n"
         "METRIC\n"
         "TABDIMS\n/\n"
-        "OIL\n"
-        "GAS\n"
+        + phases +
         "DIMENS\n1 1 20 /\n"
         "COMPS\n3 /\n"
         "START\n  1 'JAN' 2016  /\n"
@@ -103,28 +106,34 @@ std::string deckString(const std::string& equil,
         "MW\n44.00\n16.04\n142.28\n/\n"
         "VCRIT\n0.09412\n0.09863\n0.60980\n/\n"
         "STCOND\n15.0 1.0 /\n"
+        + propsExtra
         + regions +
         "SOLUTION\n"
         + equil +
         "END\n";
 }
 
-struct EquilFixture
+template <class FS>
+struct BasicEquilFixture
 {
-    using Computer = Opm::EQUIL::Comp::InitialStateComputer<FluidSystem>;
+    using Computer = Opm::EQUIL::Comp::InitialStateComputer<FS>;
 
-    explicit EquilFixture(const std::string& deck_string)
+    explicit BasicEquilFixture(const std::string& deck_string)
         : deck(Opm::Parser{}.parseString(deck_string))
         , eclState(deck)
         , schedule(deck, eclState, std::make_shared<Opm::Python>())
     {
-        FluidSystem::initFromState(eclState, schedule);
+        FS::initFromState(eclState, schedule);
         for (std::size_t c = 0; c < depths.size(); ++c) {
             depths[c] = 2002.5 + 5.0 * static_cast<Scalar>(c);
         }
     }
 
-    Computer compute(const std::vector<int>& eqlnum) const
+    /// \param connateWater, maxWater  Per-cell water saturation endpoints, as
+    ///        the simulator reads them from the scaled saturation functions.
+    Computer compute(const std::vector<int>& eqlnum,
+                     const std::vector<Scalar>& connateWater = {},
+                     const std::vector<Scalar>& maxWater = {}) const
     {
         return Computer(eclState,
                         eclState.compositionalConfig().eosType(0),
@@ -132,7 +141,9 @@ struct EquilFixture
                         eqlnum,
                         Opm::Parallel::Communication{},
                         gravity,
-                        /*numSamplePoints=*/100);
+                        /*numSamplePoints=*/100,
+                        connateWater,
+                        maxWater);
     }
 
     Opm::Deck deck;
@@ -140,6 +151,9 @@ struct EquilFixture
     Opm::Schedule schedule;
     std::array<Scalar, 20> depths{};
 };
+
+using EquilFixture = BasicEquilFixture<FluidSystem>;
+using WaterEquilFixture = BasicEquilFixture<WaterFluidSystem>;
 
 // The mixture composition the ZMFVD table prescribes at a depth.
 CompVec tableComposition(const Scalar depth)
@@ -153,6 +167,24 @@ CompVec tableComposition(const Scalar depth)
 Scalar impliedDensity(const Scalar pAbove, const Scalar pBelow)
 {
     return (pBelow - pAbove) / (gravity * 5.0);
+}
+
+// The connate water saturation of the saturation function below, i.e. the
+// water the hydrocarbon column retains above the water-oil contact.
+constexpr Scalar connateSw = 0.01;
+
+// The three-phase counterpart of deckString().
+std::string waterDeckString(const std::string& equil)
+{
+    return deckString(equil, "EQLDIMS\n/\n", "",
+                      "ZMFVD\n"
+                      " 2000   0 0.7 0.3\n"
+                      " 2100   0 0.3 0.7  /\n",
+                      "RTEMP\n100\n/\n",
+                      "OIL\nGAS\nWATER\n",
+                      "SWFN\n 0.01 0.0 0.0\n 1.00 1.0 0.0 /\n"
+                      "SGFN\n 0.00 0.0 0.0\n 0.99 1.0 0.0 /\n"
+                      "SOF3\n 0.00 0.0 0.0\n 0.99 1.0 1.0 /\n");
 }
 
 } // Anonymous namespace
@@ -813,6 +845,64 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
             BOOST_CHECK_SMALL(states[c].moleFraction(2) - (0.01 + 0.09 * t), 1e-10);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
+{
+    // The water-oil contact at 2050 m lies inside the column. Above it the
+    // hydrocarbon leaves room for the connate water of the saturation function;
+    // below it the pore space holds water alone, following its own hydrostatic
+    // column rather than the lighter hydrocarbon gradient.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, connateSw),
+                                    std::vector<Scalar>(20, 1.0)).fluidStates();
+    BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            const auto& fs = states[c];
+            if (fix.depths[c] > 2050.0) {
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
+                BOOST_CHECK_SMALL(fs.saturation(WaterFluidSystem::oilPhaseIdx), 1e-10);
+            }
+            else {
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::waterPhaseIdx),
+                                  connateSw, 1e-10);
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::oilPhaseIdx),
+                                  1.0 - connateSw, 1e-10);
+            }
+        }
+    }
+
+    // The water column is the heavier of the two.
+    const Scalar rhoHc = impliedDensity(states[2].pressure(WaterFluidSystem::oilPhaseIdx),
+                                        states[3].pressure(WaterFluidSystem::oilPhaseIdx));
+    const Scalar rhoWater = impliedDensity(states[15].pressure(WaterFluidSystem::waterPhaseIdx),
+                                           states[16].pressure(WaterFluidSystem::waterPhaseIdx));
+    BOOST_CHECK_GT(rhoWater, rhoHc);
+}
+
+BOOST_AUTO_TEST_CASE(DatumBelowWaterOilContact)
+{
+    // A datum below the water-oil contact states the pressure of the water, not
+    // of the hydrocarbon. The water column is anchored at the datum and hands
+    // the hydrocarbon its pressure at the contact, so the datum pressure must
+    // appear in the water phase of the cell the datum sits in - here cell 12,
+    // whose centre is at 2062.5 m.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2062.5 200 2050 0 2000 0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, connateSw),
+                                    std::vector<Scalar>(20, 1.0)).fluidStates();
+
+    BOOST_CHECK_CLOSE(states[12].pressure(WaterFluidSystem::waterPhaseIdx),
+                      200.0 * barsa, 1e-8);
+
+    // The hydrocarbon above the contact is lighter, so its pressure has fallen
+    // below the datum value, and it keeps only the connate water.
+    BOOST_CHECK_LT(states[0].pressure(WaterFluidSystem::oilPhaseIdx), 200.0 * barsa);
+    BOOST_CHECK_CLOSE(states[0].saturation(WaterFluidSystem::waterPhaseIdx),
+                      connateSw, 1e-10);
 }
 
 namespace {
