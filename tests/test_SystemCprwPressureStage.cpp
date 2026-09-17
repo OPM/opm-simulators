@@ -469,7 +469,8 @@ BOOST_AUTO_TEST_CASE(ClassicTransferDropsWellResidualAndCorrection)
 BOOST_AUTO_TEST_CASE(WellTransferFromStringRejectsUnknownValues)
 {
     BOOST_CHECK(Opm::wellTransferFromString("full") == Opm::WellTransfer::Full);
-    BOOST_CHECK(Opm::wellTransferFromString("no_prolongation") == Opm::WellTransfer::NoProlongation);
+    BOOST_CHECK(Opm::wellTransferFromString("no_prolongation")
+                == Opm::WellTransfer::NoProlongation);
     BOOST_CHECK(Opm::wellTransferFromString("classic") == Opm::WellTransfer::Classic);
     BOOST_CHECK_THROW(Opm::wellTransferFromString("nonsense"), std::invalid_argument);
 }

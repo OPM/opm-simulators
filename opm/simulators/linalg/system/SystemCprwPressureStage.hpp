@@ -22,22 +22,21 @@
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
 #include <opm/simulators/linalg/PressureBhpTransferPolicy.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <dune/istl/matrixmarket.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
-#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
-
-#include <dune/istl/matrixmarket.hh>
-
 #include <algorithm>
-#include <fstream>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -321,8 +320,11 @@ private:
         const std::size_t dim = numRes + numWells;
         // Sized from A alone; well rows are denser than that and land in the
         // implicit-build overflow area, which is what overflowFraction is for.
-        const std::size_t averageEntriesPerRow
-            = static_cast<std::size_t>(std::ceil(static_cast<double>(A.nonzeroes()) / A.N()));
+        // A.N() can be zero for a rank that locally owns no reservoir cells;
+        // guard it rather than feeding NaN to the implicit-build constructor.
+        const std::size_t averageEntriesPerRow = (A.N() == 0)
+            ? 0
+            : static_cast<std::size_t>(std::ceil(static_cast<double>(A.nonzeroes()) / A.N()));
         const double overflowFraction = 1.2;
         coarseMatrix_ = std::make_shared<CoarseMatrix>(dim, dim,
                                                        averageEntriesPerRow,
@@ -467,12 +469,13 @@ private:
                 }
 
                 // Well row, well columns:
-                //   sum_{wb in j} sum_{wb' in k} sum_i w1[wb][i] * D[wb][wb'][i][q]
-                // Summed over all of well k's blocks, to match the column
-                // convention above.  Because the merged D is block diagonal by
-                // well this only ever contributes to k == j, but it now picks
-                // up the full segment-to-segment coupling rather than just the
-                // top segment's column.
+                //   sum_{wb in j} sum_{wb' in j} sum_i w1[wb][i] * D[wb][wb'][i][q]
+                // The merged D is block diagonal by well (WellMatrixMerger
+                // merges each well's own D block, never across wells), so
+                // every nonzero of D[wb] belongs to well j itself: accumulate
+                // straight into the diagonal. This picks up the full
+                // segment-to-segment coupling rather than just the top
+                // segment's column.
                 for (auto col = D[wb].begin(), colEnd = D[wb].end(); col != colEnd; ++col) {
                     const auto k = wellLayout().wellOfBlock(col.index());
                     if (!k.has_value()) {
@@ -482,7 +485,7 @@ private:
                     for (std::size_t i = 0; i < lw.size(); ++i) {
                         el += lw[i] * (*col)[i][q];
                     }
-                    (*coarseMatrix_)[wdof][numRes + *k] += el;
+                    (*coarseMatrix_)[wdof][wdof] += el;
                 }
             }
 
@@ -578,6 +581,17 @@ private:
         }
     }
 
+    // Suffix identifying this rank, so that ranks sharing a working directory
+    // do not clobber each other's dump files.
+    std::string dumpRankSuffix() const
+    {
+        if constexpr (isParallel) {
+            return "_rank" + std::to_string(comm_->communicator().rank());
+        } else {
+            return "";
+        }
+    }
+
     // Developer aid: verbosity above 10 writes the coarse system out so it can
     // be compared entry by entry with the classic path.  This reads the
     // preconditioner sub-tree, which only a JSON configuration sets, so
@@ -588,7 +602,8 @@ private:
             return;
         }
         static int counter = 0;
-        std::ofstream out("system_cprw_coarse_" + std::to_string(counter++) + ".mm");
+        std::ofstream out("system_cprw_coarse_" + std::to_string(counter++)
+                           + dumpRankSuffix() + ".mm");
         if (out) {
             Dune::writeMatrixMarket(*coarseMatrix_, out);
         }
@@ -600,7 +615,8 @@ private:
             return;
         }
         static int counter = 0;
-        std::ofstream out("system_cprw_rhs_" + std::to_string(counter++) + ".mm");
+        std::ofstream out("system_cprw_rhs_" + std::to_string(counter++)
+                           + dumpRankSuffix() + ".mm");
         if (out) {
             Dune::writeMatrixMarket(coarseRhs_, out);
         }
