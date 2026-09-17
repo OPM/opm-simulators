@@ -168,10 +168,6 @@ public:
     GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
         : GpuBuffer(numberOfElements)
     {
-        if (!detail::isCPUPointer(dataOnHost)) {
-            OPM_THROW(std::invalid_argument, "dataOnHost is not a CPU pointer");
-        }
-
         detail::gpuMemcpyHostToDevice(m_dataOnDevice, dataOnHost, m_numberOfElements);
     }
 

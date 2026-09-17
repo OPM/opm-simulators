@@ -309,15 +309,17 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncPartialCopy)
 {
     // copyFromHostAsync allows numberOfElements <= size() (same as sync copyFromHost)
     std::vector<double> data {{10, 20, 30}};
-    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(5);
+    std::vector<double> expected {{10, 20, 30, -1, -1}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(expected.size());
+    std::vector<double> initial(expected.size(), -1.0);
+    bufferOnGPU.copyFromHost(initial.data(), initial.size());
     cudaStream_t stream = nullptr;
     OPM_GPU_SAFE_CALL(cudaStreamCreate(&stream));
     bufferOnGPU.copyFromHostAsync(data.data(), data.size(), stream);
     OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
     OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
-    std::vector<double> hostBuffer(bufferOnGPU.size(), -1.0);
-    bufferOnGPU.copyToHost(hostBuffer.data(), hostBuffer.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.begin() + data.size(), data.begin(), data.end());
+    auto hostBuffer = bufferOnGPU.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), expected.begin(), expected.end());
 }
 
 BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncTooManyElementsThrows)
