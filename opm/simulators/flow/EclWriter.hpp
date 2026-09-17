@@ -805,8 +805,9 @@ private:
     const Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
 
-    /// Collect reservoir coupling master group rates for Summary::eval().
-    /// Returns nullopt for non-RC simulations or non-master processes.
+    /// Collect the reservoir coupling data Summary::eval() needs: on a
+    /// master, the slaves' group rates; on a slave, the injection targets in
+    /// force for its slave groups.  Returns nullopt for non-RC simulations.
     std::optional<data::ReservoirCouplingGroupRates> collectReservoirCouplingGroupRates_()
     {
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -818,11 +819,21 @@ private:
             decltype(simulator_.problem().wellModel())>;
         if constexpr (requires(WellModelType& wm) { wm.isReservoirCouplingMaster(); }) {
             auto& wellModel = simulator_.problem().wellModel();
-            if (!wellModel.isReservoirCouplingMaster()) {
-                return std::nullopt;
+            if (wellModel.isReservoirCouplingMaster()) {
+                return wellModel.reservoirCouplingMaster()
+                    .collectGroupRatesForSummary();
             }
-            return wellModel.reservoirCouplingMaster()
-                .collectGroupRatesForSummary();
+            if (wellModel.isReservoirCouplingSlave()) {
+                auto rates = data::ReservoirCouplingGroupRates{};
+                for (const auto& [group, targets] :
+                         wellModel.reservoirCouplingSlave().effectiveInjectionTargets())
+                {
+                    for (const auto& [phase, target] : targets) {
+                        rates.injection_targets[group][phase] = static_cast<double>(target);
+                    }
+                }
+                return rates;
+            }
         }
 #endif
         return std::nullopt;
