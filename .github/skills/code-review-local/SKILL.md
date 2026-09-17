@@ -79,6 +79,8 @@ Work through `code-review`: blocking issues first, then the routed domain passes
 
 ## Step 3 — Write the review
 
+Never post to github. Deliver review results in chat only.
+
 **Tone.** Write factually, as an automated reviewer. Report findings; don't perform a persona, don't quote maintainers, and don't write anything that implies a human authored the review.
 
 Tone follows confidence, not style. State a High-confidence finding as a fact and name the evidence ("`test_Serialization` has no entry for this type"). State a Medium-confidence finding conditionally ("if `X` can be null here, this dereference is unguarded"). Phrase a Low-confidence item as a question, because you genuinely do not know the answer. Never soften a verified finding to sound polite, and never harden a guess to sound authoritative. Always say what you did and did not check.
@@ -122,17 +124,9 @@ Output template:
 
 Write "None" under any empty section rather than dropping it — an empty Blocking section is information. For a local branch with no open PR, drop the two PR-only Verification lines entirely rather than writing "N/A" — everything else in the template applies unchanged.
 
-## Step 4 — Offer to post (open PR only)
-
-The review is always delivered in chat first — that's the outcome regardless of what happens next. Nothing is posted to GitHub automatically, ever.
-
-If this was an open PR (Step 1 modes 2 or 3), after the write-up ask the user explicitly whether to post it to GitHub, and in what form (an issue comment with the report, inline comments, and/or a review state such as `COMMENTED` / `CHANGES_REQUESTED` / `APPROVED`). Only proceed on an explicit yes for *this* review — `gh pr review`, `gh pr comment`, or `gh api` write calls otherwise stay off the table, and so does any Jenkins trigger comment or `@`-mention. What you post must match what you already showed in chat, not a re-derived version.
-
-If this was a local branch with no open PR (Step 1 mode 1), there is nothing to post — skip this step.
-
 ## Do not
 
 - Build the project or run tests/`ctest` as part of the review — that work is done before this skill runs.
 - Claim bit-identical output, regression numbers, or performance results you did not see in the PR/CI evidence.
 - Write in a maintainer's voice, quote a maintainer, or imply that a person authored the review.
-- Post to GitHub without an explicit yes for that specific review — approval on one run is not standing approval for the next.
+- Post to GitHub.
