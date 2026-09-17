@@ -20,14 +20,25 @@
 #ifndef OPM_COMP_WELLINTERFACE_HPP
 #define OPM_COMP_WELLINTERFACE_HPP
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/simulators/wells/PerforationData.hpp>
+#include <dune/istl/bvector.hh>
 
 #include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/wells/PerforationData.hpp>
+
+#include <cstddef>
 #include <string>
+#include <vector>
 
 namespace Opm {
+
+class Well;
 
 template <typename TypeTag> // TODO: do we need to use TypeTag here?
 class CompWellInterface
@@ -80,7 +91,6 @@ public:
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
 protected:
-
     const Well& well_ecl_;
     int index_of_well_{-1};
 
@@ -98,12 +108,12 @@ protected:
     std::vector<int> saturation_table_number_;
 
     // std::string name_;
-
 };
-
 
 } // end of namespace Opm
 
+#ifndef OPM_COMP_WELLINTERFACE_IMPL_HPP
 #include "CompWellInterface_impl.hpp"
+#endif
 
 #endif // OPM_COMP_WELLINTERFACE_HPP
