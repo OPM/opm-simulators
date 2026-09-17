@@ -29,7 +29,10 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace Opm {
 
@@ -38,6 +41,17 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
 {
     dbhp_max_rel_ = Parameters::Get<Parameters::DbhpMaxRel<Scalar>>();
     dwell_fraction_max_ = Parameters::Get<Parameters::DwellFractionMax<Scalar>>();
+
+    // A zero or non-finite scale removes the well column from the Jacobian.
+    for (const auto& [name, scale] : {
+             std::pair{"--well-bhp-scaling", Parameters::Get<Parameters::WellBhpScaling<Scalar>>()},
+             std::pair{"--well-rate-scaling", Parameters::Get<Parameters::WellRateScaling<Scalar>>()} })
+    {
+        if (!std::isfinite(scale) || !(scale > 0)) {
+            throw std::invalid_argument(std::string(name) + " must be finite and positive, got "
+                                        + std::to_string(scale));
+        }
+    }
     inj_mult_osc_threshold_ = Parameters::Get<Parameters::InjMultOscThreshold<Scalar>>();
     inj_mult_damp_mult_ = Parameters::Get<Parameters::InjMultDampMult<Scalar>>();
     inj_mult_min_damp_factor_ = Parameters::Get<Parameters::InjMultMinDampFactor<Scalar>>();

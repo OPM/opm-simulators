@@ -130,11 +130,11 @@ setEvaluationsFromValues()
         // Jacobian column is that of X = x/s while update(), copyToWellState(),
         // the absolute bhp limit and the convergence checks keep working on
         // physical values. Newton increments are converted in updateNewton().
-        const Scalar s = varScale(eqIdx);
         evaluation_[eqIdx] =
             EvalWell::createVariable(totalNumEq,
-                                     value_[eqIdx] / s,
-                                     Indices::numEq + eqIdx) * s;
+                                     value_[eqIdx],
+                                     Indices::numEq + eqIdx);
+        evaluation_[eqIdx].setDerivative(Indices::numEq + eqIdx, varScale(eqIdx));
     }
 }
 

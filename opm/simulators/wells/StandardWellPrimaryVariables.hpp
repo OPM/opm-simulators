@@ -185,8 +185,8 @@ private:
     //!  - The linear system's unknown is X = x/varScale, so dwells/xw arrive in
     //!    X-space; physicalIncrement() is the only conversion, and the absolute
     //!    limits in updateNewton() are therefore compared in physical units.
-    //!  - eval(i) has a physical value and derivative varScale(i), so B, C and D
-    //!    carry the scaled column while the residual rows stay physical.
+    //!  - eval(i) has a physical value and derivative varScale(i), so C and D
+    //!    carry the scaled well column while the residual rows stay physical.
     //! An alternative is to store X here and multiply out in the accessors; that
     //! keeps value_ and the solution in one space but moves the conversion to
     //! every WellState exchange and every getter.
