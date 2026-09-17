@@ -216,10 +216,43 @@ public:
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
+    // Snapshot dynamic state at start of timestep for failure recovery.
+    //! \brief Snapshot the mutable well-model state at the start of a timestep.
+    //!
+    //! Everything a timestep can modify and that the next attempt must not
+    //! inherit goes in here; see PrevTimestepState for what each member is for.
+    //! Guide rates are deliberately absent: they are updated between timesteps,
+    //! not during the Newton iterations, so a failed step leaves them untouched
+    //! (GuideRate is also non-copyable).
+    void advanceTimeLevel()
+    {
+        if (enable_state_rollback_) {
+            this->prev_timestep_state_.wgstate = this->active_wgstate_;
+            this->prev_timestep_state_.nupcol_wgstate = this->nupcol_wgstate_;
+            this->prev_timestep_state_.closed_this_step = this->closed_this_step_;
+            this->prev_timestep_state_.well_open_times = this->well_open_times_;
+            this->prev_timestep_state_.well_close_times = this->well_close_times_;
+            this->genNetwork_.commitState();
+        }
+    }
+
+    //! \brief Restore the state captured at the start of the failing timestep.
+    void updateFailed()
+    {
+        if (enable_state_rollback_) {
+            this->active_wgstate_ = this->prev_timestep_state_.wgstate;
+            this->nupcol_wgstate_ = this->prev_timestep_state_.nupcol_wgstate;
+            this->closed_this_step_ = this->prev_timestep_state_.closed_this_step;
+            this->well_open_times_ = this->prev_timestep_state_.well_open_times;
+            this->well_close_times_ = this->prev_timestep_state_.well_close_times;
+            this->genNetwork_.resetState();
+            this->group_state_helper_.updateState(this->wellState(), this->groupState());
+        }
+    }
+
     void reportIntervalConnectionOilProduction(const double              dt,
                                                const std::size_t         conn_opt_ix,
                                                RegionVariableCollection& regVars) const;
-
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
@@ -433,7 +466,6 @@ protected:
     ///
     /// \param reportStepIdx Report step whose well set to register
     void registerNewParallelWells(int reportStepIdx);
-
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
 
@@ -616,6 +648,26 @@ protected:
     WGState<Scalar, IndexTraits> active_wgstate_;
     WGState<Scalar, IndexTraits> last_valid_wgstate_;
     WGState<Scalar, IndexTraits> nupcol_wgstate_;
+
+    //! \brief Well-model state as it was at the start of the current timestep.
+    //!
+    //! Retaken by advanceTimeLevel() at the start of every timestep and only
+    //! read by updateFailed(), so it never has to survive a restart and is not
+    //! serialized.
+    struct PrevTimestepState
+    {
+        explicit PrevTimestepState(const PhaseUsageInfo<IndexTraits>& pu)
+            : wgstate(pu), nupcol_wgstate(pu)
+        {}
+
+        WGState<Scalar, IndexTraits> wgstate;        //!< well and group rates, pressures, controls
+        WGState<Scalar, IndexTraits> nupcol_wgstate; //!< NUPCOL: the state group control targets are computed from
+        std::unordered_set<std::string> closed_this_step; //!< wells shut by the solver during this step
+        std::map<std::string, double> well_open_times;    //!< WCYCLE
+        std::map<std::string, double> well_close_times;   //!< WCYCLE
+    };
+
+    PrevTimestepState prev_timestep_state_;
     GroupStateHelperType group_state_helper_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
@@ -628,6 +680,7 @@ protected:
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
     BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
+    bool enable_state_rollback_{false};
 
     bool allConnectionsClosed(const Well& well_ecl) const;
 

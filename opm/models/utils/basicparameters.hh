@@ -72,6 +72,9 @@ struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 //! regression test. It is not meant for production runs.
 struct TruncateTimeStepToFloat { static constexpr bool value = false; };
 
+//! Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps
+struct EnableStateRollback { static constexpr bool value = false; };
+
 /*!
  * \brief Print all parameters on startup?
  *

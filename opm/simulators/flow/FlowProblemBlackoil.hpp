@@ -179,6 +179,7 @@ public:
         : FlowProblemType(simulator)
         , thresholdPressures_(simulator)
         , mixControls_(simulator.vanguard().schedule())
+        , prev_timestep_state_(simulator.vanguard().schedule())
         , actionHandler_(simulator.vanguard().eclState(),
                          simulator.vanguard().schedule(),
                          simulator.vanguard().actionState(),
@@ -1187,6 +1188,20 @@ public:
     }
 
 protected:
+    //! \brief Snapshot the mixing rate controls before the timestep runs.
+    void captureBeginTimeStepState_() override
+    {
+        FlowProblemType::captureBeginTimeStepState_();
+        prev_timestep_state_.mixControls = mixControls_;
+    }
+
+    //! \brief Restore mixing rate controls after a failed timestep.
+    void restoreBeginTimeStepState_() override
+    {
+        FlowProblemType::restoreBeginTimeStepState_();
+        mixControls_ = prev_timestep_state_.mixControls;
+    }
+
     void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart) override
     {
         this->updateExplicitQuantities_(first_step_after_restart);
@@ -1748,6 +1763,19 @@ protected:
     std::unique_ptr<DamarisWriterType> damarisWriter_;
 #endif
     MixingRateControls<FluidSystem> mixControls_;
+
+    //! \brief Blackoil part of the begin-of-timestep snapshot; see
+    //!        FlowProblem::PrevTimestepState.
+    struct PrevTimestepState
+    {
+        explicit PrevTimestepState(const Schedule& schedule)
+            : mixControls(schedule)
+        {}
+
+        MixingRateControls<FluidSystem> mixControls; //!< DRSDT / DRVDT
+    };
+
+    PrevTimestepState prev_timestep_state_;
 
     ActionHandler<Scalar, IndexTraits> actionHandler_;
 

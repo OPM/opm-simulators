@@ -163,6 +163,7 @@ protected:
     Simulator& simulator_;
     const Grid& grid_;
     bool terminal_output_;
+    bool enable_state_rollback_ = false;
     ModelParameters param_;
     WellModel& well_model_;
     SimulatorReportSingle failureReport_;

@@ -59,6 +59,7 @@
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: maybe we can name it FlowProblemProperties.hpp
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/TemperatureModel.hpp>
@@ -244,6 +245,7 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
         , temperatureModel_(simulator)
+        , enable_state_rollback_(Parameters::Get<Parameters::EnableStateRollback>())
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
@@ -376,6 +378,10 @@ public:
         const int episodeIdx = this->episodeIndex();
         const int timeStepSize = this->simulator().timeStepSize();
 
+        if (enable_state_rollback_) {
+            this->captureBeginTimeStepState_();
+        }
+
         this->beginTimeStep_(enableExperiments,
                              episodeIdx,
                              this->simulator().timeStepIndex(),
@@ -398,7 +404,6 @@ public:
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
         temperatureModel_.beginTimeStep();
-
     }
 
     /*!
@@ -407,6 +412,10 @@ public:
      */
     void updateFailed()
     {
+        if (enable_state_rollback_) {
+            this->restoreBeginTimeStepState_();
+        }
+        wellModel_.updateFailed();
         this->model().updateFailed();
     }
 
@@ -417,6 +426,7 @@ public:
     void advanceTimeLevel()
     {
         this->model().advanceTimeLevel();
+        wellModel_.advanceTimeLevel();
     }
 
     /*!
@@ -1323,6 +1333,39 @@ private:
     { return *static_cast<const Implementation *>(this); }
 
 protected:
+    //! \brief Snapshot the explicit quantities before the timestep runs.
+    //!
+    //! updateExplicitQuantities_() advances all of these from the current
+    //! solution at the start of every timestep.  They are running extrema, so
+    //! a step that later fails would otherwise leave the maxima raised (and the
+    //! minima lowered) by a solution that is being thrown away.
+    virtual void captureBeginTimeStepState_()
+    {
+        prev_timestep_state_.first_step = first_step_;
+        prev_timestep_state_.max_polymer_adsorption = this->polymer_.maxAdsorption;
+        prev_timestep_state_.max_oil_saturation = this->maxOilSaturation_;
+        prev_timestep_state_.max_water_saturation = this->maxWaterSaturation_;
+        prev_timestep_state_.min_ref_pressure = this->minRefPressure_;
+        prev_timestep_state_.rock_comp_trans_mult_val = this->rockCompTransMultVal_;
+        if (materialLawManager_ && materialLawManager_->enableHysteresis()) {
+            materialLawManager_->captureBeginTimeStepState();
+        }
+    }
+
+    //! \brief Put the explicit quantities back as they were before the step.
+    virtual void restoreBeginTimeStepState_()
+    {
+        first_step_ = prev_timestep_state_.first_step;
+        this->polymer_.maxAdsorption = prev_timestep_state_.max_polymer_adsorption;
+        this->maxOilSaturation_ = prev_timestep_state_.max_oil_saturation;
+        this->maxWaterSaturation_ = prev_timestep_state_.max_water_saturation;
+        this->minRefPressure_ = prev_timestep_state_.min_ref_pressure;
+        this->rockCompTransMultVal_ = prev_timestep_state_.rock_comp_trans_mult_val;
+        if (materialLawManager_ && materialLawManager_->enableHysteresis()) {
+            materialLawManager_->restoreBeginTimeStepState();
+        }
+    }
+
     template<class UpdateFunc>
     void updateProperty_(const std::string& failureMsg,
                          UpdateFunc func)
@@ -1928,6 +1971,25 @@ protected:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool first_step_ = true;
+    bool enable_state_rollback_ = false;
+
+    //! \brief Explicit quantities as they stood at the start of the current
+    //!        timestep, restored if that timestep fails.
+    //!
+    //! Only written by captureBeginTimeStepState_() and only read by
+    //! restoreBeginTimeStepState_(), both of which run inside a single
+    //! timestep, so this never has to survive a restart.
+    struct PrevTimestepState
+    {
+        bool first_step = true;                            //!< first step of the episode
+        std::vector<Scalar> max_polymer_adsorption;        //!< POLYMER
+        std::vector<Scalar> max_oil_saturation;            //!< VAPPARS / DRSDT saturation history
+        std::vector<Scalar> max_water_saturation;          //!< ROCKCOMP water-induced compaction
+        std::vector<Scalar> min_ref_pressure;              //!< ROCKCOMP irreversible compaction
+        std::vector<Scalar> rock_comp_trans_mult_val;      //!< ROCKCOMP transmissibility multiplier
+    };
+
+    PrevTimestepState prev_timestep_state_;
 
     /// Whether or not the current episode will end at the end of the
     /// current time step.
