@@ -127,7 +127,7 @@ gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, std::size_t count, cu
     }
     OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
     OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(srcHost);
-    OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(stream);
+    OPM_GPUISTL_DETAIL_ASSERT_GPU_STREAM(stream);
     OPM_GPU_SAFE_CALL(
         cudaMemcpyAsync(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice, stream));
 }
@@ -159,7 +159,7 @@ gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, std::size_t count, cu
     }
     OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(dstHost);
     OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(srcDevice);
-    OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(stream);
+    OPM_GPUISTL_DETAIL_ASSERT_GPU_STREAM(stream);
     OPM_GPU_SAFE_CALL(
         cudaMemcpyAsync(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }

@@ -23,8 +23,8 @@
 
 #include <cuda_runtime.h>
 
+#include <format>
 #include <source_location>
-#include <sstream>
 #include <stdexcept>
 #include <string_view>
 
@@ -49,25 +49,35 @@ assertGPUStream([[maybe_unused]] cudaStream_t stream,
         return;
     }
 
-    std::ostringstream str;
     if (err != cudaErrorInvalidResourceHandle) {
-        str << "CUDA stream query for " << name << " failed\n"
-            << "  file: " << location.file_name() << '\n'
-            << "  line: " << location.line() << '\n'
-            << "  column: " << location.column() << '\n'
-            << "  function: " << location.function_name() << '\n'
-            << "  cudaError: " << cudaGetErrorString(err);
-        OPM_THROW(std::runtime_error, str.str());
+        OPM_THROW(std::runtime_error,
+                  std::format("GPU stream query for {} failed\n"
+                              "  file: {}\n"
+                              "  line: {}\n"
+                              "  column: {}\n"
+                              "  function: {}\n"
+                              "  GPU stream error: {}",
+                              name,
+                              location.file_name(),
+                              location.line(),
+                              location.column(),
+                              location.function_name(),
+                              cudaGetErrorString(err)));
     }
 
-    str << name << " is not a valid CUDA stream\n"
-        << "  file: " << location.file_name() << '\n'
-        << "  line: " << location.line() << '\n'
-        << "  column: " << location.column() << '\n'
-        << "  function: " << location.function_name() << '\n'
-        << "  cudaError: " << cudaGetErrorString(err)
-        << " (invalid stream handle)";
-    OPM_THROW(std::invalid_argument, str.str());
+    OPM_THROW(std::invalid_argument,
+              std::format("{} is not a valid GPU stream\n"
+                          "  file: {}\n"
+                          "  line: {}\n"
+                          "  column: {}\n"
+                          "  function: {}\n"
+                          "  GPU stream error: {} (invalid stream handle)",
+                          name,
+                          location.file_name(),
+                          location.line(),
+                          location.column(),
+                          location.function_name(),
+                          cudaGetErrorString(err)));
 #endif
 }
 

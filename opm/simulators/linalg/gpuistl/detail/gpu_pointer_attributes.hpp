@@ -23,9 +23,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <format>
 #include <memory>
 #include <source_location>
-#include <sstream>
 #include <stdexcept>
 #include <string_view>
 
@@ -166,13 +166,17 @@ assertHostPointer([[maybe_unused]] const void* ptr,
 {
 #ifndef NDEBUG
     if (!isCPUPointer(ptr)) {
-        std::ostringstream str;
-        str << name << " is not a CPU pointer\n"
-            << "  file: " << location.file_name() << '\n'
-            << "  line: " << location.line() << '\n'
-            << "  column: " << location.column() << '\n'
-            << "  function: " << location.function_name();
-        OPM_THROW(std::invalid_argument, str.str());
+        OPM_THROW(std::invalid_argument,
+                  std::format("{} is not a CPU pointer\n"
+                              "  file: {}\n"
+                              "  line: {}\n"
+                              "  column: {}\n"
+                              "  function: {}",
+                              name,
+                              location.file_name(),
+                              location.line(),
+                              location.column(),
+                              location.function_name()));
     }
 #endif
 }
@@ -191,13 +195,17 @@ assertDevicePointer([[maybe_unused]] const void* ptr,
 {
 #ifndef NDEBUG
     if (!isGPUPointer(ptr)) {
-        std::ostringstream str;
-        str << name << " is not a device/GPU pointer\n"
-            << "  file: " << location.file_name() << '\n'
-            << "  line: " << location.line() << '\n'
-            << "  column: " << location.column() << '\n'
-            << "  function: " << location.function_name();
-        OPM_THROW(std::invalid_argument, str.str());
+        OPM_THROW(std::invalid_argument,
+                  std::format("{} is not a device/GPU pointer\n"
+                              "  file: {}\n"
+                              "  line: {}\n"
+                              "  column: {}\n"
+                              "  function: {}",
+                              name,
+                              location.file_name(),
+                              location.line(),
+                              location.column(),
+                              location.function_name()));
     }
 #endif
 }
