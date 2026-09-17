@@ -31,22 +31,11 @@
 #ifndef OPM_FLOW_PROBLEM_BLACK_HPP
 #define OPM_FLOW_PROBLEM_BLACK_HPP
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/ConstantRsDeadOilPvt.hpp>
-
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
-
-#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
