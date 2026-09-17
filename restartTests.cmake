@@ -246,13 +246,11 @@ add_test_compare_restarted_simulation(
   ABS_TOL
     ${abs_tol_restart}
   REL_TOL
-    5.0e-2
+    ${rel_tol_restart}
   RESTART_STEP
     3
   DIR
     spe1
-  TEST_ARGS
-    --solver-max-time-step-in-days=1
 )
 
 # Restart run in which a UDQ defining expression has exactly 128
