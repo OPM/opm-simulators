@@ -214,7 +214,7 @@ configureThpresft_()
 
     // extract the multipliers
     int numFaults = faults.size();
-    int numCartesianElem = eclState_.getInputGrid().getCartesianSize();
+    int numCartesianElem = cartMapper_.cartesianSize();
     thpresftValues_.resize(numFaults, -1.0);
     cartElemFaultIdx_.resize(numCartesianElem, -1);
     for (std::size_t faultIdx = 0; faultIdx < faults.size(); ++faultIdx) {
