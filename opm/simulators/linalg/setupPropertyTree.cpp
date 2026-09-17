@@ -730,16 +730,43 @@ void validateSystemCPRTree(const PropertyTree& prm)
                       "In system_cpr configuration, the reservoir_solver must use the CPR preconditioner "
                       "(preconditioner.reservoir_solver.preconditioner.type = 'cpr').");
         }
+        const bool addWells = reservoir_solver->get("preconditioner.add_wells", false);
         // With add_wells the pressure stage is assembled and solved directly by
         // the system preconditioner, which takes its solver settings from the
         // coarsesolver sub-tree rather than from the reservoir_solver wrapper.
-        if (reservoir_solver->get("preconditioner.add_wells", false)
-            && !reservoir_solver->get_child_optional("preconditioner.coarsesolver").has_value()) {
+        const bool hasCoarseSolver
+            = reservoir_solver->get_child_optional("preconditioner.coarsesolver").has_value();
+        if (addWells && !hasCoarseSolver) {
             OPM_THROW(std::invalid_argument,
                       "In system_cpr configuration with "
                       "preconditioner.reservoir_solver.preconditioner.add_wells = true, the "
                       "'preconditioner.reservoir_solver.preconditioner.coarsesolver' sub-tree is "
                       "required: it configures the solver for the CPRW pressure system.");
+        }
+        // Fail here, at setup time, rather than inside
+        // SystemCprwPressureStage::wellTransferFromString/wellCoarseDiagonalFromString
+        // on the first linear solve of the run. Valid values mirror those two parsers.
+        if (addWells) {
+            const auto wellTransfer
+                = prm.get("preconditioner.well_transfer", std::string{"classic"});
+            const bool wellTransferOk = (wellTransfer == "full")
+                || (wellTransfer == "no_prolongation") || (wellTransfer == "classic");
+            if (!wellTransferOk) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("Unknown preconditioner.well_transfer '{}'. Valid "
+                                      "values are 'full', 'no_prolongation' and 'classic'.",
+                                      wellTransfer));
+            }
+            const auto wellCoarseDiagonal
+                = prm.get("preconditioner.well_coarse_diagonal", std::string{"contract_d"});
+            const bool wellCoarseDiagonalOk = (wellCoarseDiagonal == "auto")
+                || (wellCoarseDiagonal == "contract_d") || (wellCoarseDiagonal == "row_sum");
+            if (!wellCoarseDiagonalOk) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("Unknown preconditioner.well_coarse_diagonal '{}'. Valid "
+                                      "values are 'auto', 'contract_d' and 'row_sum'.",
+                                      wellCoarseDiagonal));
+            }
         }
     }
 
@@ -752,8 +779,8 @@ void validateSystemCPRTree(const PropertyTree& prm)
     auto well_solver = prm.get_child_optional("preconditioner.well_solver");
     if (well_solver) {
         const auto inner = well_solver->get<std::string>("solver", "bicgstab");
-        const bool inner_is_krylov
-            = (inner == "bicgstab") || (inner == "gmres") || (inner == "cg") || (inner == "flexgmres");
+        const bool inner_is_krylov = (inner == "bicgstab") || (inner == "gmres")
+            || (inner == "cg") || (inner == "flexgmres");
         const auto outer = prm.get<std::string>("solver", "bicgstab");
         const bool outer_is_flexible = (outer == "flexgmres");
         if (inner_is_krylov && !outer_is_flexible) {

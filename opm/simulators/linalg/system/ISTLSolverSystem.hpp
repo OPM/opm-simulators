@@ -27,6 +27,8 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
@@ -189,6 +191,24 @@ private:
     {
         OPM_TIMEBLOCK(flexibleSolverPrepare);
 
+        // Read before buildWellDofLayout(), which consults
+        // wellLayout_.identityOnPressureControl to decide whether to
+        // populate wellLayout_.pressureControlled: reading it afterwards
+        // would leave that flag one call stale.
+        const auto& prm = this->prm_[this->activeSolverNum_];
+        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"cellavg"});
+        if (wellWeightType_ != "unit" && wellWeightType_ != "cellavg"
+            && wellWeightType_ != "cellblockavg" && wellWeightType_ != "quasiimpes") {
+            OPM_THROW(std::invalid_argument,
+                      "Unknown preconditioner.well_weight_type '" + wellWeightType_
+                          + "'. Valid values are 'unit', 'cellavg', "
+                            "'cellblockavg' and 'quasiimpes'.");
+        }
+        // Give a pressure-controlled well a trivial coarse equation, as the
+        // classic CPRW does.  Off keeps the contracted equation for every well.
+        wellLayout_.identityOnPressureControl
+            = prm.get("preconditioner.well_identity_on_pressure_control", false);
+
         wellBMatrices_.clear();
         wellCMatrices_.clear();
         wellDMatrices_.clear();
@@ -215,13 +235,6 @@ private:
         const bool globalStructureChanged = localStructureChanged;
 #endif
         const bool needStructureRefresh = !sysInitialized_ || globalStructureChanged;
-
-        const auto& prm = this->prm_[this->activeSolverNum_];
-        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"cellavg"});
-        // Give a pressure-controlled well a trivial coarse equation, as the
-        // classic CPRW does.  Off keeps the contracted equation for every well.
-        wellLayout_.identityOnPressureControl
-            = prm.get("preconditioner.well_identity_on_pressure_control", false);
 
         if (needStructureRefresh) {
             OPM_TIMEBLOCK(flexibleSolverCreate);
@@ -319,7 +332,8 @@ private:
                 const std::size_t last = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
                 for (std::size_t b = first; b < last; ++b) {
-                    for (auto col = mergedB_[b].begin(), end = mergedB_[b].end(); col != end; ++col) {
+                    for (auto col = mergedB_[b].begin(), end = mergedB_[b].end();
+                         col != end; ++col) {
                         const auto& cw = resWeights[col.index()];
                         for (int i = 0; i < numResDofs; ++i) {
                             lambda[i] += cw[i];
