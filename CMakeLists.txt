@@ -585,15 +585,19 @@ macro(opm-simulators_tests_hook)
   endif()
 
   if(BUILD_FLOW)
+    set(drsdt_simulator flow)
+    if(USE_DEV_SIMULATOR_IN_TESTS)
+      set(drsdt_simulator flow_blackoil)
+    endif()
     add_test(
       NAME
         drsdt_initial_rs_no_free_gas
       COMMAND
-        ${CMAKE_COMMAND}
-          -DFLOW=$<TARGET_FILE:flow_blackoil>
-          -DDECK=${PROJECT_SOURCE_DIR}/tests/drsdt_initial_rs.DATA
-          -DOUTDIR=${PROJECT_BINARY_DIR}/tests/drsdt_initial_rs
-          -P ${PROJECT_SOURCE_DIR}/tests/check_drsdt_free_gas.cmake
+        ${PROJECT_SOURCE_DIR}/tests/run-drsdt-free-gas-test.sh
+          -e $<TARGET_FILE:${drsdt_simulator}>
+          -i ${PROJECT_SOURCE_DIR}/tests
+          -f drsdt_initial_rs
+          -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
     )
   endif()
 

@@ -657,7 +657,6 @@ endif()
 
 list (APPEND TEST_DATA_FILES
   tests/drsdt_initial_rs.DATA
-  tests/check_drsdt_free_gas.cmake
   tests/equil_base.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA

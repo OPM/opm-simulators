@@ -28,7 +28,12 @@
 #define BOOST_TEST_MODULE DrsdtInitialRs
 
 #include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
+#if (BOOST_VERSION / 100000 == 1) && ((BOOST_VERSION / 100) % 1000 < 71)
+#include <boost/test/floating_point_comparison.hpp>
+#else
 #include <boost/test/tools/floating_point_comparison.hpp>
+#endif
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/start.hh>
