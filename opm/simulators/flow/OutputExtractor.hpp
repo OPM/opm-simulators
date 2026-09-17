@@ -29,6 +29,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/Visitor.hpp>
+#include <opm/common/utility/VoigtArray.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -40,6 +41,7 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <span>
 #include <unordered_map>
 #include <set>
 #include <variant>
@@ -241,8 +243,23 @@ struct BlockExtractor
         PhaseFunc extract;
     };
 
+    /// Callback for extractors bound to one component of a symmetric
+    /// (Voigt) tensor.  Returns the value of the requested component.
+    using TensorFunc = std::function<Scalar(const VoigtIndex, const Context&)>;
+
+    struct TensorEntry
+    {
+        /// Base name of the keyword.  The six components are requested as
+        /// the base name postfixed by "XX", "YY", "ZZ", "YZ", "XZ" or "XY"
+        /// (e.g. BSTRSSXX for base name BSTRSS).
+        std::string_view kw;
+
+        /// Associated extraction lambda
+        TensorFunc extract;
+    };
+
     //! \brief Descriptor for extractors
-    using Entry = std::variant<ScalarEntry, PhaseEntry>;
+    using Entry = std::variant<ScalarEntry, PhaseEntry, TensorEntry>;
 
     //! \brief Descriptor for extractor execution.
     struct Exec
@@ -267,20 +284,44 @@ struct BlockExtractor
     //! keywords.  Shared by setupExecMap (global B*, level 0) and
     //! setupLgrExecMap (LGR-cell LB*, which pass the keyword with its leading
     //! 'L' stripped).  Returns nullopt when no handler matches.
-    template<std::size_t size>
     static std::optional<ScalarFunc>
     makeExtractor(const std::string_view base_kw,
-                  const std::array<Entry,size>& handlers)
+                  const std::span<const Entry> handlers)
     {
         using PhaseViewArray = std::array<std::string_view, numPhases>;
         using StringViewVec = std::vector<std::string_view>;
 
+        // Suffix table position must equal the VoigtIndex enum value
+        // (XX = 0, YY = 1, ZZ = 2, YZ = 3, XZ = 4, XY = 5).
+        static constexpr auto voigtSuffixes = std::array<std::string_view, 6>{
+            "XX", "YY", "ZZ", "YZ", "XZ", "XY",
+        };
+
         unsigned phase{};
+        unsigned voigt{};
         const auto handler_info =
             std::ranges::find_if(
                 handlers,
-                [&base_kw, &phase](const auto& handler)
+                [&base_kw, &phase, &voigt](const auto& handler)
                 {
+                    // Tensor keywords are matched as base name + Voigt
+                    // component suffix, without building the names.
+                    if (const auto* tensor = std::get_if<TensorEntry>(&handler)) {
+                        if (base_kw.size() != tensor->kw.size() + 2 ||
+                            !base_kw.starts_with(tensor->kw))
+                        {
+                            return false;
+                        }
+                        const auto pos =
+                            std::ranges::find(voigtSuffixes,
+                                              base_kw.substr(tensor->kw.size()));
+                        if (pos == voigtSuffixes.end()) {
+                            return false;
+                        }
+                        voigt = std::distance(voigtSuffixes.begin(), pos);
+                        return true;
+                    }
+
                     // Extract list of keyword names from handler
                     const auto gen_handlers =
                         std::visit(VisitorOverloadSet{
@@ -315,6 +356,11 @@ struct BlockExtractor
                                                                     return res;
                                                                 }
                                                             }, entry.kw);
+                                      },
+                                      [](const TensorEntry&) -> StringViewVec
+                                      {
+                                          // handled by the prefix/suffix match above
+                                          return {};
                                       }
                                   }, handler);
 
@@ -348,14 +394,21 @@ struct BlockExtractor
                                              };
                                              return extract(phaseMap[phase], ectx);
                                          };
+                              },
+                              [voigt](const TensorEntry& e) -> ScalarFunc
+                              {
+                                  return [voigt, extract = e.extract]
+                                         (const Context& ectx)
+                                         {
+                                             return extract(static_cast<VoigtIndex>(voigt), ectx);
+                                         };
                               }
                           }, *handler_info);
     }
 
     //! \brief Setup an extractor executor map from a map of evaluations to perform.
-    template<std::size_t size>
     static ExecMap setupExecMap(std::map<std::pair<std::string, int>, double>& blockData,
-                                const std::array<Entry,size>& handlers)
+                                const std::span<const Entry> handlers)
     {
         ExecMap extractors;
 
@@ -407,10 +460,9 @@ struct BlockExtractor
     //! "LBOSAT", ...); the leading 'L' is stripped before the handler lookup.
     //! Extractors are grouped by grid level first so a per-DOF lookup
     //! short-circuits O(1) on levels that have no LB* requests in this run.
-    template<std::size_t size>
     static LgrExecMap setupLgrExecMap(std::map<std::tuple<std::string,int,int>,
                                                double>& lgrBlockData,
-                                      const std::array<Entry,size>& handlers)
+                                      const std::span<const Entry> handlers)
     {
         LgrExecMap extractors;
 
