@@ -26,7 +26,10 @@
 #include <dune/istl/multitypeblockmatrix.hh>
 #include <dune/istl/multitypeblockvector.hh>
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
+#include <optional>
 #include <vector>
 
 namespace Opm
@@ -128,6 +131,16 @@ struct WellDofLayout
     std::size_t totalWellBlocks() const
     {
         return wellBlockOffsets.empty() ? 0 : wellBlockOffsets.back();
+    }
+
+    // Merged well block row -> well index, nullopt outside the layout.
+    std::optional<std::size_t> wellOfBlock(const std::size_t blockRow) const
+    {
+        const auto it = std::upper_bound(wellBlockOffsets.begin(), wellBlockOffsets.end(), blockRow);
+        if (it == wellBlockOffsets.begin() || it == wellBlockOffsets.end()) {
+            return std::nullopt;
+        }
+        return static_cast<std::size_t>(std::distance(wellBlockOffsets.begin(), it) - 1);
     }
 };
 

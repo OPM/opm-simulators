@@ -287,15 +287,6 @@ private:
     // than inside the preconditioner so that the linear-solver core never sees
     // anything well-specific, and so that this can later be replaced by a
     // value obtained from the well model without touching the core.
-    // Merged well block row -> well index.
-    std::size_t wellOfBlock(const std::size_t blockRow) const
-    {
-        const auto& off = wellLayout_.wellBlockOffsets;
-        const auto it = std::upper_bound(off.begin(), off.end(), blockRow);
-        assert(it != off.begin() && it != off.end());
-        return static_cast<std::size_t>(std::distance(off.begin(), it) - 1);
-    }
-
     WellVector<Scalar> computeWellWeights(const ResVector<Scalar>& resWeights) const
     {
         const std::size_t numBlocks = mergedD_.N();
@@ -324,8 +315,8 @@ private:
                 // does. "cellblockavg" averages per block row instead, which
                 // is a finer but non-classic variant.
                 const bool perWell = (wellWeightType_ == "cellavg");
-                const std::size_t first = perWell ? wellLayout_.firstBlock(wellOfBlock(wb)) : wb;
-                const std::size_t last = perWell ? wellLayout_.endBlock(wellOfBlock(wb)) : wb + 1;
+                const std::size_t first = perWell ? wellLayout_.firstBlock(*wellLayout_.wellOfBlock(wb)) : wb;
+                const std::size_t last = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
                 for (std::size_t b = first; b < last; ++b) {
                     for (auto col = mergedB_[b].begin(), end = mergedB_[b].end(); col != end; ++col) {
