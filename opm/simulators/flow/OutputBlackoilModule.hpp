@@ -71,6 +71,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -2116,6 +2117,7 @@ private:
         using Context = typename BlockExtractor::Context;
         using PhaseEntry = typename BlockExtractor::PhaseEntry;
         using ScalarEntry = typename BlockExtractor::ScalarEntry;
+        using TensorEntry = typename BlockExtractor::TensorEntry;
 
         using namespace std::string_view_literals;
 
@@ -3263,13 +3265,31 @@ private:
             },
         };
 
-        this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, handlers);
+        auto blockHandlers = std::span<const Entry>{handlers};
+        auto mechHandlers = std::vector<Entry>{};
+        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            if (this->mech_.allocated()) {
+                mechHandlers.assign(handlers.begin(), handlers.end());
+                mechHandlers.push_back(
+                    Entry{TensorEntry{"BSTRSS",
+                                      [&model = this->simulator_.problem().geoMechModel()]
+                                      (const VoigtIndex index, const Context& ectx)
+                                      {
+                                          return model.stress(ectx.globalDofIdx, /*include_fracture*/true)[index];
+                                      }
+                          }
+                    });
+                blockHandlers = mechHandlers;
+            }
+        }
+
+        this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, blockHandlers);
 
         // The LGR-cell extractors reuse the same handler list -- the
         // physics is identical, only the cell identification differs.
         // Empty for runs without LB* requests (zero non-LGR cost).
         this->lgrBlockExtractors_ =
-            BlockExtractor::setupLgrExecMap(this->lgrBlockData_, handlers);
+            BlockExtractor::setupLgrExecMap(this->lgrBlockData_, blockHandlers);
 
         this->extraBlockData_.clear();
         if (reportStepNum > 0 && !isSubStep) {
