@@ -76,11 +76,13 @@ namespace {
         std::filesystem::path dir_;
     };
 
-    // Run the output thread against 'requests', then signal end of
+    using RequestBatch = std::vector<Opm::ConvergenceReportQueue::OutputRequest>;
+
+    // Run the output thread against each batch in turn, then signal end of
     // production and join.
-    void runOutputThread(const OutputDir&                                          dir,
-                         const std::string&                                        baseName,
-                         std::vector<Opm::ConvergenceReportQueue::OutputRequest>&&  requests)
+    void runOutputThread(const OutputDir&           dir,
+                         const std::string&         baseName,
+                         std::vector<RequestBatch>&& batches)
     {
         auto queue = Opm::ConvergenceReportQueue{};
         auto writer = Opm::ConvergenceOutputThread {
@@ -94,8 +96,10 @@ namespace {
             &Opm::ConvergenceOutputThread::writeASynchronous, &writer
         };
 
-        if (! requests.empty()) {
-            queue.enqueue(std::move(requests));
+        for (auto& requests : batches) {
+            if (! requests.empty()) {
+                queue.enqueue(std::move(requests));
+            }
         }
 
         queue.signalLastOutputRequest();
@@ -137,11 +141,31 @@ BOOST_AUTO_TEST_CASE(HeaderAndOneIteration)
     auto requests = std::vector<Opm::ConvergenceReportQueue::OutputRequest>{};
     requests.push_back({ 0, 0, { makeReport() } });
 
-    runOutputThread(dir, "CASE", std::move(requests));
+    auto batches = std::vector<RequestBatch>{};
+    batches.push_back(std::move(requests));
+    runOutputThread(dir, "CASE", std::move(batches));
 
     const auto lines = dir.infoIterLines("CASE");
 
     BOOST_REQUIRE_EQUAL(lines.size(), std::size_t{2});
     BOOST_CHECK(lines[0].find("ReportStep") != std::string::npos);
+    BOOST_CHECK(lines[1].find("CONV") != std::string::npos);
+}
+
+// A step that aborts before any convergence check sends a request with no
+// reports.  It is not the sentinel, so later requests must still be written.
+BOOST_AUTO_TEST_CASE(EmptyRequestDoesNotStopOutput)
+{
+    const auto dir = OutputDir { "test_extraconvergenceoutputthread_empty" };
+
+    auto batches = std::vector<RequestBatch>(2);
+    batches[0].push_back({ 0, 0, {} });
+    batches[1].push_back({ 0, 1, { makeReport() } });
+
+    runOutputThread(dir, "CASE", std::move(batches));
+
+    const auto lines = dir.infoIterLines("CASE");
+
+    BOOST_REQUIRE_EQUAL(lines.size(), std::size_t{2});
     BOOST_CHECK(lines[1].find("CONV") != std::string::npos);
 }

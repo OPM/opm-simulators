@@ -106,7 +106,13 @@ void SimulatorConvergenceOutput::endThread()
     }
 
     this->convergenceOutputQueue_->signalLastOutputRequest();
-    this->convergenceOutputThread_->join();
+    if (this->convergenceOutputThread_->joinable()) {
+        this->convergenceOutputThread_->join();
+    }
+
+    // Make repeated calls no-ops so that both the explicit shutdown path
+    // and the destructor may call endThread() safely.
+    this->convergenceOutputThread_.reset();
 }
 
 } // namespace Opm
