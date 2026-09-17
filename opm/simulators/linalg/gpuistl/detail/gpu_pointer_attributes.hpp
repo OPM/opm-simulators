@@ -23,8 +23,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include <cstddef>
 #include <memory>
+#include <source_location>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -155,25 +155,23 @@ isCPUPointer(const std::shared_ptr<T>& ptr)
 /**
  * @brief Debug-only check that @p ptr is host/CPU memory.
  * @note Uses cudaPointerGetAttributes; intended for debug builds only.
- * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER so the pointer name and call site are
- * captured.
- *
- * @todo Refactor to use std::source_location once we shift to C++20
+ * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER so the pointer name is captured.
+ *       Call-site file/line/function come from @p location (default: current()).
  */
 inline void
 assertHostPointer([[maybe_unused]] const void* ptr,
                   [[maybe_unused]] std::string_view name,
-                  [[maybe_unused]] std::string_view filename,
-                  [[maybe_unused]] std::string_view functionName,
-                  [[maybe_unused]] std::size_t lineNumber)
+                  [[maybe_unused]] const std::source_location location
+                  = std::source_location::current())
 {
 #ifndef NDEBUG
     if (!isCPUPointer(ptr)) {
         std::ostringstream str;
         str << name << " is not a CPU pointer\n"
-            << "  file: " << filename << '\n'
-            << "  line: " << lineNumber << '\n'
-            << "  function: " << functionName;
+            << "  file: " << location.file_name() << '\n'
+            << "  line: " << location.line() << '\n'
+            << "  column: " << location.column() << '\n'
+            << "  function: " << location.function_name();
         OPM_THROW(std::invalid_argument, str.str());
     }
 #endif
@@ -182,25 +180,23 @@ assertHostPointer([[maybe_unused]] const void* ptr,
 /**
  * @brief Debug-only check that @p ptr is device/GPU memory.
  * @note Uses cudaPointerGetAttributes; intended for debug builds only.
- * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER so the pointer name and call site are
- * captured.
- *
- * @todo Refactor to use std::source_location once we shift to C++20
+ * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER so the pointer name is captured.
+ *       Call-site file/line/function come from @p location (default: current()).
  */
 inline void
 assertDevicePointer([[maybe_unused]] const void* ptr,
                     [[maybe_unused]] std::string_view name,
-                    [[maybe_unused]] std::string_view filename,
-                    [[maybe_unused]] std::string_view functionName,
-                    [[maybe_unused]] std::size_t lineNumber)
+                    [[maybe_unused]] const std::source_location location
+                    = std::source_location::current())
 {
 #ifndef NDEBUG
     if (!isGPUPointer(ptr)) {
         std::ostringstream str;
         str << name << " is not a device/GPU pointer\n"
-            << "  file: " << filename << '\n'
-            << "  line: " << lineNumber << '\n'
-            << "  function: " << functionName;
+            << "  file: " << location.file_name() << '\n'
+            << "  line: " << location.line() << '\n'
+            << "  column: " << location.column() << '\n'
+            << "  function: " << location.function_name();
         OPM_THROW(std::invalid_argument, str.str());
     }
 #endif
@@ -209,15 +205,14 @@ assertDevicePointer([[maybe_unused]] const void* ptr,
 } // namespace Opm::gpuistl::detail
 
 /**
- * @brief Captures the argument name and call site for assertHostPointer.
+ * @brief Captures the argument name for assertHostPointer (call site via source_location).
  */
-#define OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(x)                                                  \
-    ::Opm::gpuistl::detail::assertHostPointer((x), #x, __FILE__, __func__, __LINE__)
+#define OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(x) ::Opm::gpuistl::detail::assertHostPointer((x), #x)
 
 /**
- * @brief Captures the argument name and call site for assertDevicePointer.
+ * @brief Captures the argument name for assertDevicePointer (call site via source_location).
  */
 #define OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(x)                                                \
-    ::Opm::gpuistl::detail::assertDevicePointer((x), #x, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::assertDevicePointer((x), #x)
 
 #endif

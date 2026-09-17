@@ -23,7 +23,7 @@
 
 #include <cuda_runtime.h>
 
-#include <cstddef>
+#include <source_location>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -34,16 +34,14 @@ namespace Opm::gpuistl::detail
 /**
  * @brief Debug-only check that @p stream is a valid CUDA stream handle.
  * @note Uses cudaStreamQuery; cudaSuccess and cudaErrorNotReady both mean the handle is valid.
- * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM so the stream name and call site are captured.
- *
- * @todo Refactor to use std::source_location once we shift to C++20
+ * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM so the stream name is captured.
+ *       Call-site file/line/function come from @p location (default: current()).
  */
 inline void
 assertCudaStream([[maybe_unused]] cudaStream_t stream,
                  [[maybe_unused]] std::string_view name,
-                 [[maybe_unused]] std::string_view filename,
-                 [[maybe_unused]] std::string_view functionName,
-                 [[maybe_unused]] std::size_t lineNumber)
+                 [[maybe_unused]] const std::source_location location
+                 = std::source_location::current())
 {
 #ifndef NDEBUG
     const cudaError_t err = cudaStreamQuery(stream);
@@ -53,9 +51,10 @@ assertCudaStream([[maybe_unused]] cudaStream_t stream,
 
     std::ostringstream str;
     str << name << " is not a valid CUDA stream\n"
-        << "  file: " << filename << '\n'
-        << "  line: " << lineNumber << '\n'
-        << "  function: " << functionName << '\n'
+        << "  file: " << location.file_name() << '\n'
+        << "  line: " << location.line() << '\n'
+        << "  column: " << location.column() << '\n'
+        << "  function: " << location.function_name() << '\n'
         << "  cudaError: " << cudaGetErrorString(err);
     if (err == cudaErrorInvalidResourceHandle) {
         str << " (invalid stream handle)";
@@ -67,9 +66,8 @@ assertCudaStream([[maybe_unused]] cudaStream_t stream,
 } // namespace Opm::gpuistl::detail
 
 /**
- * @brief Captures the argument name and call site for assertCudaStream.
+ * @brief Captures the argument name for assertCudaStream (call site via source_location).
  */
-#define OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(x)                                                   \
-    ::Opm::gpuistl::detail::assertCudaStream((x), #x, __FILE__, __func__, __LINE__)
+#define OPM_GPUISTL_DETAIL_ASSERT_CUDA_STREAM(x) ::Opm::gpuistl::detail::assertCudaStream((x), #x)
 
 #endif // OPM_GPUISTL_DETAIL_GPU_STREAM_HPP
