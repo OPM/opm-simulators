@@ -34,6 +34,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
+#include <opm/simulators/flow/equil/PressureFunction.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
@@ -75,25 +76,6 @@ template<class Scalar> class EquilReg;
 namespace Miscibility { template<class Scalar> class RsFunction; }
 
 namespace Details {
-template <class Scalar, class RHS>
-class RK4IVP
-{
-public:
-    RK4IVP(const RHS& f,
-           const std::array<Scalar,2>& span,
-           const Scalar y0,
-           const int N);
-
-    Scalar operator()(const Scalar x) const;
-
-private:
-    int N_;
-    std::array<Scalar,2> span_;
-    std::vector<Scalar>  y_;
-    std::vector<Scalar>  f_;
-
-    Scalar stepsize() const;
-};
 
 namespace PhasePressODE {
 template <class FluidSystem>
@@ -262,38 +244,7 @@ public:
 
 private:
     template <class ODE>
-    class PressureFunction
-    {
-    public:
-        struct InitCond {
-            Scalar depth;
-            Scalar pressure;
-        };
-
-        explicit PressureFunction(const ODE&      ode,
-                                  const InitCond& ic,
-                                  const int       nsample,
-                                  const VSpan&    span);
-
-        PressureFunction(const PressureFunction& rhs);
-
-        PressureFunction(PressureFunction&& rhs) = default;
-
-        PressureFunction& operator=(const PressureFunction& rhs);
-
-        PressureFunction& operator=(PressureFunction&& rhs);
-
-        Scalar value(const Scalar depth) const;
-
-    private:
-        enum Direction : std::size_t { Up, Down, NumDir };
-
-        using Distribution = Details::RK4IVP<Scalar,ODE>;
-        using DistrPtr = std::unique_ptr<Distribution>;
-
-        InitCond initial_;
-        std::array<DistrPtr, Direction::NumDir> value_;
-    };
+    using PressureFunction = Details::PressureFunction<Scalar, ODE>;
 
     using OilPressODE = PhasePressODE::Oil<
         FluidSystem, typename Region::CalcDissolution
@@ -773,7 +724,7 @@ private:
                                PhaseSat&               psat);
 
      template<class CellRange, class PressTable, class PhaseSat>
-     void equilibrateTiltedFaultBlock(const CellRange& cells, 
+     void equilibrateTiltedFaultBlock(const CellRange& cells,
                             const EquilReg<Scalar>& eqreg,
                             const GridView& gridView, const int numLevels,
                             const PressTable& ptable, PhaseSat& psat);
