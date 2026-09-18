@@ -24,6 +24,9 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #if COMPILE_GPU_BRIDGE
@@ -302,6 +305,12 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // For bouth
     //    C -> w'C(:,bhpInd) where w is weights of the perforation cell
 
+    // The coarse well unknown stays the physical bhp. C and D differentiate
+    // w.r.t. the scaled one, so divide the factor out as those columns enter
+    // here; the pressure stage is then the same matrix as for an unscaled run.
+    static const Scalar bhp_scale =
+        Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
+
     // Add the well contributions in cpr
     // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
     int nperf = 0;
@@ -323,7 +332,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
 
-            jacobian[row_index][welldof_ind] = matel;
+            jacobian[row_index][welldof_ind] = matel / bhp_scale;
             cell_weights += bw;
             nperf += 1;
         }
@@ -364,7 +373,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         for (std::size_t i = 0; i < blockSz; ++i) {
             bweights[0][i] /= abs_max;
         }
-        diagElem = 1.0 / abs_max;
+        diagElem = 1.0 / abs_max / bhp_scale;
     } else {
         // set diagonal element
         if (well.isPressureControlled(well_state)) {
@@ -388,7 +397,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             for (std::size_t i = 0; i < blockSz - 1; ++i) {
                 diagElem += locmat[i][bhp_var_index] * cell_weights[i];
             }
-
+            diagElem /= bhp_scale;
         }
     }
     //
