@@ -21,8 +21,11 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <algorithm>
 #include <cassert>
+#include <stdexcept>
 #include <cstddef>
 #include <ostream>
 #include <numeric>
@@ -69,7 +72,10 @@ namespace Opm
     {
         ++current_step_;
         current_time_ += dt_;
-        assert(dt_ > 0);
+        if (!(dt_ > 0)) {
+            OPM_THROW(std::runtime_error,
+                      "Time step size is not positive");
+        }
         // store used time step sizes
         steps_.push_back( dt_ );
         return *this;
@@ -81,7 +87,10 @@ namespace Opm
         double remaining = (total_time_ - current_time_);
         // apply max time step if it was set
         dt_ = std::min( dt_estimate, max_time_step_ );
-        assert(dt_ > 0);
+        if (!(dt_ > 0)) {
+            OPM_THROW(std::runtime_error,
+                      "Time step size is not positive");
+        }
         if( remaining > 0 ) {
 
             // set new time step (depending on remaining time)
@@ -91,7 +100,10 @@ namespace Opm
                 if( dt_ > max_time_step_ ) {
                     dt_ = 0.5 * remaining;
                 }
-                assert(dt_ > 0);
+                if (!(dt_ > 0)) {
+                    OPM_THROW(std::runtime_error,
+                              "Time step size is not positive");
+                }
                 return;
             }
 
@@ -100,7 +112,10 @@ namespace Opm
 
             if( 1.5 * dt_ > remaining ) {
                 dt_ = 0.5 * remaining;
-                assert(dt_ > 0);
+                if (!(dt_ > 0)) {
+                    OPM_THROW(std::runtime_error,
+                              "Time step size is not positive");
+                }
                 return;
             }
         }
@@ -114,7 +129,10 @@ namespace Opm
 
     double AdaptiveSimulatorTimer::currentStepLength () const
     {
-      assert(dt_ > 0);
+      if (!(dt_ > 0)) {
+          OPM_THROW(std::runtime_error,
+                    "Time step size is not positive");
+      }
         return dt_;
     }
 
