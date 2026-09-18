@@ -253,6 +253,11 @@ struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer;
     ManagedFluidSystemView managedFluidSystemView;
     std::optional<DispatcherGpuIntensiveQuantities> prototype;
+    std::size_t numDof = 0;
+    std::vector<DispatcherGpuPrimaryVariables> hostPrimaryVariables;
+    std::vector<DispatcherGpuIntensiveQuantities> hostIntensiveQuantities;
+    std::unique_ptr<Opm::gpuistl::GpuBuffer<DispatcherGpuPrimaryVariables>> primaryVariablesBuffer;
+    std::unique_ptr<Opm::gpuistl::GpuBuffer<DispatcherGpuIntensiveQuantities>> intensiveQuantitiesBuffer;
 };
 
 template <class CpuTypeTag>
@@ -308,56 +313,54 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
             cpuProblem.model().numGridDof()));
     }
 
-    // -------------------------------------------------------------------
-    // 1. Convert CPU primary variables to the dispatcher's GPU primary
-    //    variables (host-side).
-    // -------------------------------------------------------------------
-    std::vector<DispatcherGpuPrimaryVariables> hostPriVars;
-    hostPriVars.reserve(numDof);
-    for (std::size_t i = 0; i < numDof; ++i) {
-        // The BlackOilPrimaryVariables converting copy ctor handles the
-        // TypeTag/storage difference.
-        hostPriVars.emplace_back(*cpuPriVars[i]);
+    const bool rebuildDeviceBuffers = impl_->numDof != numDof;
+    if (rebuildDeviceBuffers) {
+        // Grid changes are not supported by the property kernel itself, but
+        // retaining buffers with a mismatched extent would be unsafe.
+        impl_->hostPrimaryVariables.resize(numDof);
+        impl_->hostIntensiveQuantities.assign(numDof, *impl_->prototype);
+        impl_->primaryVariablesBuffer
+            = std::make_unique<Opm::gpuistl::GpuBuffer<DispatcherGpuPrimaryVariables>>(numDof);
+        impl_->intensiveQuantitiesBuffer
+            = std::make_unique<Opm::gpuistl::GpuBuffer<DispatcherGpuIntensiveQuantities>>(numDof);
+        impl_->numDof = numDof;
     }
-    std::vector<DispatcherGpuIntensiveQuantities> hostIQ(numDof, *impl_->prototype);
 
-    // -------------------------------------------------------------------
-    // 2. Upload host buffers to the device (host-to-device copies are
-    //    embedded in the GpuBuffer ctors).
-    // -------------------------------------------------------------------
-    Opm::gpuistl::GpuBuffer<DispatcherGpuPrimaryVariables> primaryVariablesBuffer(hostPriVars);
-    Opm::gpuistl::GpuBuffer<DispatcherGpuIntensiveQuantities> intensiveQuantitiesBuffer(hostIQ);
+    // Convert CPU primary variables to the dispatcher's GPU primary
+    // variables in reusable host staging storage.
+    for (std::size_t i = 0; i < numDof; ++i) {
+        impl_->hostPrimaryVariables[i] = DispatcherGpuPrimaryVariables(*cpuPriVars[i]);
+    }
 
-    // -------------------------------------------------------------------
-    // 3. Launch the per-cell update kernel.
-    // -------------------------------------------------------------------
+    // Upload the current primary variables. The IQ prototype initializes
+    // fields that are intentionally not touched by the supported kernel.
+    impl_->primaryVariablesBuffer->copyFromHost(impl_->hostPrimaryVariables);
+    if (rebuildDeviceBuffers) {
+        impl_->intensiveQuantitiesBuffer->copyFromHost(impl_->hostIntensiveQuantities);
+    }
+
     const unsigned blockSize = 64u;
     const unsigned gridSize = static_cast<unsigned>((numDof + blockSize - 1u) / blockSize);
 
     dispatcherUpdateAllCellsKernel<<<gridSize, blockSize>>>(
         impl_->problemView,
         Opm::gpuistl::GpuView<const DispatcherGpuPrimaryVariables>(
-            primaryVariablesBuffer.data(), primaryVariablesBuffer.size()),
+            impl_->primaryVariablesBuffer->data(), impl_->primaryVariablesBuffer->size()),
         Opm::gpuistl::GpuView<DispatcherGpuIntensiveQuantities>(
-            intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
+            impl_->intensiveQuantitiesBuffer->data(), impl_->intensiveQuantitiesBuffer->size()),
         numDof);
     OPM_GPU_SAFE_CALL(cudaGetLastError());
 
-    // -------------------------------------------------------------------
-    // 4. Read the GPU IntensiveQuantities back to host memory.
-    // -------------------------------------------------------------------
-    OPM_GPU_SAFE_CALL(cudaMemcpy(hostIQ.data(),
-                                 intensiveQuantitiesBuffer.data(),
+    OPM_GPU_SAFE_CALL(cudaMemcpy(impl_->hostIntensiveQuantities.data(),
+                                 impl_->intensiveQuantitiesBuffer->data(),
                                  numDof * sizeof(DispatcherGpuIntensiveQuantities),
                                  cudaMemcpyDeviceToHost));
 
-    // -------------------------------------------------------------------
-    // 5. Field-by-field materialization onto the caller's CPU
-    //    IntensiveQuantities. The supported GPU TypeTag has no diffusion or
-    //    dispersion state, so the overlay covers the complete supported IQ.
-    // -------------------------------------------------------------------
+    // Materialize the CPU cache for host-only consumers. The supported GPU
+    // TypeTag has no diffusion or dispersion state, so the overlay covers the
+    // complete supported IQ.
     for (std::size_t i = 0; i < numDof; ++i) {
-        outIQ[i]->overlayBlackOilFieldsFrom(hostIQ[i]);
+        outIQ[i]->overlayBlackOilFieldsFrom(impl_->hostIntensiveQuantities[i]);
     }
 }
 

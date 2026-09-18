@@ -76,8 +76,10 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 /// on the first call.
 ///
 /// On every call, primary variables for the requested DoFs are uploaded to
-/// the device, the per-cell update kernel is launched (one thread per DoF),
-/// and the resulting intensive quantities are read back to host memory.
+/// reusable device storage, the per-cell update kernel is launched (one thread
+/// per DoF), and the resulting intensive quantities are materialized in host
+/// memory for the CPU cache. Device allocations are rebuilt only if the number
+/// of DoFs changes.
 /// The supported gas-water thermal configuration computes the complete
 /// intensive-quantity state needed by this dispatcher, including mobility.
 ///
