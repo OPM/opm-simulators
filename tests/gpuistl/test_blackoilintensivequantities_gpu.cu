@@ -299,6 +299,16 @@ struct FlowGasWaterEnergyProblemTestRealDeck {
     using InheritsFrom = std::tuple<FlowGasWaterEnergyProblem>;
 };
 
+template <template <class> class Storage>
+struct to_gpu_type<FlowGasWaterEnergyProblemTest, Storage> {
+    using type = FlowGasWaterEnergyDeviceTypeTag<Storage>;
+};
+
+template <template <class> class Storage>
+struct to_gpu_type<FlowGasWaterEnergyProblemTestRealDeck, Storage> {
+    using type = FlowGasWaterEnergyDeviceTypeTag<Storage>;
+};
+
 } // namespace TTag
 
 template <class TypeTag>
@@ -731,10 +741,24 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     }
 
     Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
-    dispatcher.update(problem,
-                      primaryVariables.data(),
-                      intensiveQuantities.data(),
-                      numCells);
+    dispatcher.update(problem, solution, /*timeIdx=*/0);
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(/*timeIdx=*/0));
+    dispatcher.materializeHostIntensiveQuantities(
+        /*timeIdx=*/0, intensiveQuantities.data(), numCells);
+
+    // History must remain available when the current slot is updated again,
+    // and the current device allocation must remain stable for borrowed views.
+    const auto* currentIqData = dispatcher.bridge().intensiveQuantitiesView(0).data();
+    dispatcher.advanceTimeLevel();
+    BOOST_REQUIRE(dispatcher.hasDeviceModelView());
+    dispatcher.update(problem, solution, /*timeIdx=*/0);
+    BOOST_CHECK(currentIqData == dispatcher.bridge().intensiveQuantitiesView(0).data());
+    dispatcher.bridge().waitForAssembly(/*timeIdx=*/0);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        intensiveQuantities[i]->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
+    }
+    dispatcher.materializeHostIntensiveQuantities(
+        /*timeIdx=*/1, intensiveQuantities.data(), numCells);
 
     for (std::size_t i = 0; i < numCells; ++i) {
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {
