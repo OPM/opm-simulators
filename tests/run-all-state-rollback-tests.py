@@ -54,6 +54,16 @@ class Colors:
         cls.END = ''
 
 
+# Note on what a MATCH actually proves: every case here is forced (via
+# --full-time-step-initially / tight --newton-max-iterations) to hit at least
+# one real chopped/retried timestep, so a MATCH means baseline and replay took
+# the same accepted trajectory despite that chop. It does NOT by itself mean
+# --enable-state-rollback was necessary for that deck's physics — several
+# categories below (Carter-Tracy/Fetkovich aquifers, Water Tracers, Brine)
+# pass identically with the flag on or off, because their state either
+# self-corrects (overwritten fresh from the already-reverted solution on every
+# retry) or is deferred to only run on converged steps. See TABLE 3 below for
+# which categories genuinely depend on the flag vs. which don't.
 TEST_CASES = [
     {
         "name": "SPE1CASE2_ROCK2DTR",
@@ -156,7 +166,8 @@ TEST_CASES = [
         "deck_dir": "aquifer-oilwater",
         "deck_file": "2D_OW_CTAQUIFER.DATA",
         "simulator": "flow_oilwater",
-        "args": ["--truncate-time-step-to-float=true"],
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1", "--cpr-reuse-setup=0"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
         "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
@@ -168,7 +179,8 @@ TEST_CASES = [
         "deck_dir": "aquifer-fetkovich",
         "deck_file": "2D_FETKOVICHAQUIFER.DATA",
         "simulator": "flow_oilwater",
-        "args": ["--truncate-time-step-to-float=true"],
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1", "--tolerance-cnv=1e-12", "--cpr-reuse-setup=0"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
         "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
@@ -214,7 +226,8 @@ TEST_CASES = [
         "description": "Sequential water tracer transport & concentration tracking",
         "deck_dir": "tracer",
         "deck_file": "BASE_WT_TRACER.DATA",
-        "args": ["--truncate-time-step-to-float=true"],
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1", "--cpr-reuse-setup=0"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
         "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
@@ -226,7 +239,8 @@ TEST_CASES = [
         "deck_dir": "spe1_brine",
         "deck_file": "SPE1CASE1_BRINE.DATA",
         "simulator": "flow_brine",
-        "args": ["--truncate-time-step-to-float=true"],
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1", "--cpr-reuse-setup=0"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["WOPT:PROD", "WGPT:PROD", "WWPT:PROD", "WBHP:PROD"],
         "vector_labels": ["Oil Prod (WOPT)", "Gas Prod (WGPT)", "Water Prod (WWPT)", "BHP (WBHP)"],
@@ -248,7 +262,8 @@ TEST_CASES = [
         "description": "Water-Alternating-Gas relative permeability hysteresis cycles",
         "deck_dir": "waghystr",
         "deck_file": "WAGHYSTR-01.DATA",
-        "args": ["--truncate-time-step-to-float=true"],
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1", "--cpr-reuse-setup=0"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["WBHP:PROD1", "WBHP:INJ_G1", "WBHP:INJ_W1", "FPR"],
         "vector_labels": ["Prod BHP (PROD1)", "Inj Gas BHP (INJ_G1)", "Inj Water BHP (INJ_W1)", "Avg Press (FPR)"],
@@ -260,7 +275,10 @@ TEST_CASES = [
         "deck_dir": "compositional",
         "deck_file": "1D_COMP.DATA",
         "simulator": "flow_comp",
-        "args": ["--truncate-time-step-to-float=true"],
+        # Note: flow_comp does not accept --cpr-reuse-setup (CPR/AMG options are
+        # blackoil-specific), so this relies on tight Newton iterations alone.
+        "args": ["--truncate-time-step-to-float=true", "--full-time-step-initially=true",
+                 "--newton-max-iterations=1"],
         "replay_args": ["--initial-time-step-in-days=11111111"],
         "key_vectors": ["FOPT", "FGPT", "FWPT", "FPR"],
         "vector_labels": ["Oil Prod (FOPT)", "Gas Prod (FGPT)", "Water Prod (FWPT)", "Avg Press (FPR)"],
@@ -623,13 +641,13 @@ def main():
         ["MSW (Multisegment Wells)", "active_wgstate_, closed_this_timestep_", "updateFailed()", "Restores segment pressure/rate states & well control modes"],
         ["ACTIONX / UDQ Triggers", "Deferred to converged endTimeStep()", "convergenceFailed", "Actions evaluate strictly on converged states; no corruption"],
         ["Group Control / NUPCOL", "nupcol_wgstate_, group_state_, network_state_", "updateFailed()", "Prevents guide rate / group target contamination across retries"],
-        ["Carter-Tracy Aquifer", "W_flux_ deferred; influence tables dynamic", "updateFailed()", "Prevents non-physical aquifer influx accumulation on retry"],
-        ["Fetkovich Aquifer", "pressure_previous_, aquifer flux coupling", "updateFailed()", "Ensures aquifer pressure decay remains synchronized with step size"],
+        ["Carter-Tracy Aquifer", "pressure_previous_ (overwritten, not ratcheted)", "None needed", "beginTimeStep() re-reads pressure_previous_ from the already-reverted solution on every retry; self-corrects without rollback (verified with --enable-state-rollback=false)"],
+        ["Fetkovich Aquifer", "pressure_previous_ (shared AquiferAnalytical base)", "None needed", "Same self-correcting mechanism as Carter-Tracy; verified empirically with rollback OFF"],
         ["Polymer / Adsorption", "max_poly_ads_ (irreversible adsorption)", "updateFailed()", "Prevents artificial polymer stripping across divergent trial steps"],
         ["Foam / Mobility Reduction", "Dynamic mobility reduction factors (Fw, Fs, Fg)", "updateFailed()", "Re-evaluated cleanly from primary variables on retried step"],
         ["Relperm Hysteresis", "Historical turning points & scanning curve flags", "updateFailed()", "Prevents locking into incorrect drainage/imbibition scanning curves"],
         ["Water Tracers", "Tracer transport deferred to converged step", "endTimeStep()", "Sequential solver executes only on accepted flow fields"],
-        ["Brine / Salinity", "Instantaneous salinity state functions", "updateFailed()", "Salt concentration reverts with primary solution vector u(t)"],
+        ["Brine / Salinity", "Salt concentration (implicit Newton primary variable)", "None needed", "Reverts via the pre-existing model().updateFailed() primary-solution revert, not the new capture/restore mechanism. SPE1CASE1_BRINE's dependency on --enable-state-rollback is inherited from the underlying SPE1 DRSDT/rock-comp state (same as plain SPE1CASE1), not brine-specific"],
     ]
     print(format_table(t3_headers, t3_rows, t3_align))
 
