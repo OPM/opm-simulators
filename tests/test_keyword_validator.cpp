@@ -802,3 +802,102 @@ WINJGAS
     validator.validateDeckKeyword(deck["WINJGAS"].back(), errors);
     BOOST_CHECK_EQUAL(errors.size(), 2);
 }
+
+
+// PARACHOR is sized by TABDIMS, so a deck carrying it needs TABDIMS too.
+Deck compositionalPropsDeck(const std::string& props)
+{
+    return Parser {}.parseString(std::string {R"(
+RUNSPEC
+TABDIMS
+/
+PROPS
+)"} + props);
+}
+
+BOOST_AUTO_TEST_CASE(parachor_severity_follows_miscible)
+{
+    const auto validateParachor = [](const Deck& deck) {
+        std::vector<ValidationError> errors;
+        specialValidation().at("PARACHOR")(deck, deck["PARACHOR"].back(), errors);
+        return errors;
+    };
+
+    const auto body = std::string {"PARACHOR\n  74.92 192.74 390.4 /\n"};
+
+    // Without MISCIBLE the keyword is reported as a warning.
+    {
+        const auto errors = validateParachor(compositionalPropsDeck(body));
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(!errors[0].critical);
+        BOOST_REQUIRE(errors[0].user_message.has_value());
+        BOOST_CHECK(errors[0].user_message->find("not specified") != std::string::npos);
+    }
+
+    // A deck that also specifies MISCIBLE is the more likely to lean on the
+    // parachors, so there it is a critical error.
+    {
+        const auto deck = Parser {}.parseString(std::string {R"(
+RUNSPEC
+MISCIBLE
+/
+TABDIMS
+/
+PROPS
+)"} + body);
+        const auto errors = validateParachor(deck);
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(errors[0].critical);
+        BOOST_REQUIRE(errors[0].user_message.has_value());
+        BOOST_CHECK(errors[0].user_message->find("not supported") != std::string::npos);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(only_the_neutral_factli_multiplier_is_accepted)
+{
+    const auto validateFactli = [](const Deck& deck) {
+        std::vector<ValidationError> errors;
+        specialValidation().at("FACTLI")(deck, deck["FACTLI"].back(), errors);
+        return errors;
+    };
+
+    // The neutral multiplier is what flow already does, however it is spelled,
+    // and over however many equilibration regions.
+    for (const auto* body : {"FACTLI\n  1.0 /\n",
+                             "FACTLI\n  1*1.0 /\n",
+                             "FACTLI\n  1* /\n",
+                             "FACTLI\n  15*1.0 /\n",
+                             "FACTLI\n  15* /\n",
+                             "FACTLI\n  3*1.0 2* 4*1.0 /\n"}) {
+        BOOST_TEST_CONTEXT(body)
+        {
+            BOOST_CHECK(validateFactli(compositionalPropsDeck(body)).empty());
+        }
+    }
+
+    // Any other multiplier moves the oil/gas label of single phase cells, so it
+    // is a critical error rather than a warning - in whichever region it sits.
+    for (const auto* body : {"FACTLI\n  0.8 /\n",
+                             "FACTLI\n  0.8 14*1.0 /\n",
+                             "FACTLI\n  14*1.0 0.8 /\n",
+                             "FACTLI\n  7*1.0 1.3 7*1.0 /\n"}) {
+        BOOST_TEST_CONTEXT(body)
+        {
+            const auto errors = validateFactli(compositionalPropsDeck(body));
+            BOOST_REQUIRE_EQUAL(errors.size(), 1);
+            BOOST_CHECK(errors[0].critical);
+        }
+    }
+
+    // Each offending region is reported with its own value and region number,
+    // so a multiplier buried in a long list can still be found.
+    {
+        const auto errors = validateFactli(compositionalPropsDeck("FACTLI\n  7*1.0 1.3 6*1.0 0.8 /\n"));
+        BOOST_REQUIRE_EQUAL(errors.size(), 2);
+        BOOST_REQUIRE(errors[0].user_message.has_value());
+        BOOST_CHECK(errors[0].user_message->find("region 8") != std::string::npos);
+        BOOST_REQUIRE(errors[1].user_message.has_value());
+        BOOST_CHECK(errors[1].user_message->find("region 15") != std::string::npos);
+        BOOST_CHECK(errors[0].item_value.has_value());
+    }
+}
