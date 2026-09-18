@@ -108,6 +108,12 @@ BOOST_AUTO_TEST_CASE(TestCopyFromBvector)
         hostBuffer.begin(), hostBuffer.end(), &blockVector[0][0], &blockVector[0][0] + blockVector.dim());
 }
 
+BOOST_AUTO_TEST_CASE(TestCopyFromHostZeroElementsIsNoOp)
+{
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>{}; // size 0, data() == nullptr
+    BOOST_CHECK_NO_THROW(bufferOnGPU.copyFromHost(static_cast<const double*>(nullptr), 0));
+}
+
 BOOST_AUTO_TEST_CASE(TestCopyToBvector)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};
@@ -283,3 +289,70 @@ BOOST_AUTO_TEST_CASE(TestMakeView)
     auto gpubufOnCpu2 = gpubuf2.asStdVector();
     BOOST_CHECK_EQUAL_COLLECTIONS(gpubufOnCpu2.begin(), gpubufOnCpu2.end(), buf2.begin(), buf2.end());
 }
+
+BOOST_AUTO_TEST_CASE(TestCopyFromAndToHostAsyncRoundTrip)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.size());
+    cudaStream_t stream = nullptr;
+    OPM_GPU_SAFE_CALL(cudaStreamCreate(&stream));
+    bufferOnGPU.copyFromHostAsync(data.data(), data.size(), stream);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    std::vector<double> hostBuffer(data.size(), 0.0);
+    bufferOnGPU.copyToHostAsync(hostBuffer.data(), hostBuffer.size(), stream);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
+    BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), data.begin(), data.end());
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncPartialCopy)
+{
+    // copyFromHostAsync allows numberOfElements <= size() (same as sync copyFromHost)
+    std::vector<double> data {{10, 20, 30}};
+    std::vector<double> expected {{10, 20, 30, -1, -1}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(expected.size());
+    std::vector<double> initial(expected.size(), -1.0);
+    bufferOnGPU.copyFromHost(initial.data(), initial.size());
+    cudaStream_t stream = nullptr;
+    OPM_GPU_SAFE_CALL(cudaStreamCreate(&stream));
+    bufferOnGPU.copyFromHostAsync(data.data(), data.size(), stream);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
+    auto hostBuffer = bufferOnGPU.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), expected.begin(), expected.end());
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncTooManyElementsThrows)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(3);
+    BOOST_CHECK_THROW(bufferOnGPU.copyFromHostAsync(data.data(), data.size()), std::runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyToHostAsyncWrongSizeThrows)
+{
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data);
+    std::vector<double> tooSmall(2);
+    BOOST_CHECK_THROW(bufferOnGPU.copyToHostAsync(tooSmall.data(), tooSmall.size()), std::invalid_argument);
+}
+
+#ifndef NDEBUG
+BOOST_AUTO_TEST_CASE(TestCopyFromHostRejectsDevicePointerInDebug)
+{
+    // Exercises detail::gpuMemcpyHostToDevice's debug pointer-kind checks
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto sourceOnGPU = Opm::gpuistl::GpuBuffer<double>(data);
+    auto destinationOnGPU = Opm::gpuistl::GpuBuffer<double>(data.size());
+    BOOST_CHECK_THROW(destinationOnGPU.copyFromHost(sourceOnGPU.data(), data.size()), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyToHostRejectsDevicePointerInDebug)
+{
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto sourceOnGPU = Opm::gpuistl::GpuBuffer<double>(data);
+    auto destinationOnGPU = Opm::gpuistl::GpuBuffer<double>(data.size());
+    BOOST_CHECK_THROW(sourceOnGPU.copyToHost(destinationOnGPU.data(), data.size()), std::invalid_argument);
+}
+
+#endif

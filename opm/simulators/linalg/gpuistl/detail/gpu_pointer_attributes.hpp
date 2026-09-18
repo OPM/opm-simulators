@@ -18,10 +18,16 @@
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <format>
 #include <memory>
+#include <source_location>
+#include <stdexcept>
+#include <string_view>
 
 namespace Opm::gpuistl::detail
 {
@@ -44,7 +50,7 @@ isGPUPointer(const T* ptr)
     if (ptr == nullptr) {
         return false;
     }
-    cudaPointerAttributes attributes{};
+    cudaPointerAttributes attributes {};
     OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
 
     return attributes.type == cudaMemoryTypeDevice;
@@ -107,7 +113,7 @@ isCPUPointer(const T* ptr)
         return false;
     }
 
-    cudaPointerAttributes attributes{};
+    cudaPointerAttributes attributes {};
     OPM_GPU_SAFE_CALL(cudaPointerGetAttributes(&attributes, ptr));
 
     // Enumerator value 0 == Unregistered on CUDA 11+ / modern HIP.
@@ -145,5 +151,76 @@ isCPUPointer(const std::shared_ptr<T>& ptr)
 {
     return isCPUPointer(ptr.get());
 }
+
+/**
+ * @brief Debug-only check that @p ptr is host/CPU memory.
+ * @note Uses cudaPointerGetAttributes; intended for debug builds only.
+ * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER so the pointer name is captured.
+ *       Call-site file/line/function come from @p location (default: current()).
+ */
+inline void
+assertHostPointer([[maybe_unused]] const void* ptr,
+                  [[maybe_unused]] std::string_view name,
+                  [[maybe_unused]] const std::source_location location
+                  = std::source_location::current())
+{
+#ifndef NDEBUG
+    if (!isCPUPointer(ptr)) {
+        OPM_THROW(std::invalid_argument,
+                  std::format("{} is not a CPU pointer\n"
+                              "  file: {}\n"
+                              "  line: {}\n"
+                              "  column: {}\n"
+                              "  function: {}",
+                              name,
+                              location.file_name(),
+                              location.line(),
+                              location.column(),
+                              location.function_name()));
+    }
+#endif
+}
+
+/**
+ * @brief Debug-only check that @p ptr is device/GPU memory.
+ * @note Uses cudaPointerGetAttributes; intended for debug builds only.
+ * @note Prefer OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER so the pointer name is captured.
+ *       Call-site file/line/function come from @p location (default: current()).
+ */
+inline void
+assertDevicePointer([[maybe_unused]] const void* ptr,
+                    [[maybe_unused]] std::string_view name,
+                    [[maybe_unused]] const std::source_location location
+                    = std::source_location::current())
+{
+#ifndef NDEBUG
+    if (!isGPUPointer(ptr)) {
+        OPM_THROW(std::invalid_argument,
+                  std::format("{} is not a device/GPU pointer\n"
+                              "  file: {}\n"
+                              "  line: {}\n"
+                              "  column: {}\n"
+                              "  function: {}",
+                              name,
+                              location.file_name(),
+                              location.line(),
+                              location.column(),
+                              location.function_name()));
+    }
+#endif
+}
+
 } // namespace Opm::gpuistl::detail
+
+/**
+ * @brief Captures the argument name for assertHostPointer (call site via source_location).
+ */
+#define OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(x) ::Opm::gpuistl::detail::assertHostPointer((x), #x)
+
+/**
+ * @brief Captures the argument name for assertDevicePointer (call site via source_location).
+ */
+#define OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(x)                                                \
+    ::Opm::gpuistl::detail::assertDevicePointer((x), #x)
+
 #endif

@@ -16,17 +16,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cublas_v2.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <fmt/core.h>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
+
+#include <cuda_runtime.h>
+#include <fmt/core.h>
 
 namespace Opm::gpuistl
 {
@@ -69,10 +67,8 @@ GpuVector<T>::operator=(const GpuVector<T>& other)
 
     // Only copy data if both vectors have elements and same size
     assertSameSize(other);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
-                                other.data(),
-                                dim() * sizeof(T),
-                                cudaMemcpyDeviceToDevice));
+    detail::gpuMemcpyDeviceToDevice(data(), other.data(), dim());
+
     return *this;
 }
 
@@ -266,7 +262,7 @@ GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
                               dim(),
                               numberOfElements));
     }
-    OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    m_buffer.copyFromHost(dataPointer, numberOfElements);
 }
 
 template <class T>
@@ -279,26 +275,21 @@ GpuVector<T>::copyFromHostAsync(const T* dataPointer, size_t numberOfElements, c
                               dim(),
                               numberOfElements));
     }
-    // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
-    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice, stream));
+    m_buffer.copyFromHostAsync(dataPointer, numberOfElements, stream);
 }
 
 template <class T>
 void
 GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
-    // Synchronous version: use default stream and then synchronize.
-    copyToHostAsync(dataPointer, numberOfElements, detail::DEFAULT_STREAM);
-    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(detail::DEFAULT_STREAM));
+    m_buffer.copyToHost(dataPointer, numberOfElements);
 }
 
 template <class T>
 void
 GpuVector<T>::copyToHostAsync(T* dataPointer, size_t numberOfElements, cudaStream_t stream) const
 {
-    assertSameSize(numberOfElements);
-    // Asynchronous copy. CUDA runtime will use pinned memory if dataPointer is in a registered region.
-    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost, stream));
+    m_buffer.copyToHostAsync(dataPointer, numberOfElements, stream);
 }
 
 template <class T>
@@ -336,10 +327,7 @@ GpuVector<T>::copyFromDeviceToDevice(const GpuVector<T>& other)
     assertHasElements();
     assertSameSize(other);
 
-    OPM_GPU_SAFE_CALL(cudaMemcpy(data(),
-                                other.data(),
-                                dim() * sizeof(T),
-                                cudaMemcpyDeviceToDevice));
+    detail::gpuMemcpyDeviceToDevice(data(), other.data(), dim());
 }
 
 template <typename T>

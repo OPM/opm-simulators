@@ -254,6 +254,36 @@ BOOST_AUTO_TEST_CASE(TestResizeRejectsSizeTooLargeForCuBlas)
     BOOST_CHECK_EQUAL(4u, v.dim()); // size unchanged on failure
 }
 
+BOOST_AUTO_TEST_CASE(TestCopyFromAndToHostAsyncRoundTrip)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.size());
+    cudaStream_t stream = nullptr;
+    OPM_GPU_SAFE_CALL(cudaStreamCreate(&stream));
+    vectorOnGPU.copyFromHostAsync(data.data(), data.size(), stream);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    std::vector<double> hostBuffer(data.size(), 0.0);
+    vectorOnGPU.copyToHostAsync(hostBuffer.data(), hostBuffer.size(), stream);
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    OPM_GPU_SAFE_CALL(cudaStreamDestroy(stream));
+    BOOST_CHECK_EQUAL_COLLECTIONS(hostBuffer.begin(), hostBuffer.end(), data.begin(), data.end());
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyFromHostAsyncTooManyElementsThrows)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5}};
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(3);
+    BOOST_CHECK_THROW(vectorOnGPU.copyFromHostAsync(data.data(), data.size()), std::runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyToHostAsyncWrongSizeThrows)
+{
+    std::vector<double> data {{1, 2, 3, 4}};
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data);
+    std::vector<double> tooSmall(2);
+    BOOST_CHECK_THROW(vectorOnGPU.copyToHostAsync(tooSmall.data(), tooSmall.size()), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(RandomVectors)
 {
 

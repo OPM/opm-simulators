@@ -16,13 +16,14 @@
 #ifndef OPM_SIMULATORS_LINALG_GPUISTL_GPU_SMART_POINTER_HPP
 #define OPM_SIMULATORS_LINALG_GPUISTL_GPU_SMART_POINTER_HPP
 
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include <opm/common/utility/gpuDecorators.hpp>
+
 #include <cuda_runtime.h>
 
 #include <memory>
-
-#include <opm/common/utility/gpuDecorators.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 
 /**
  * @file gpu_smart_pointer.hpp defines convenience classes and functions for using std::shared_ptr and std::unique_ptr
@@ -69,7 +70,7 @@ std::shared_ptr<T>
 make_gpu_shared_ptr(const T& value)
 {
     auto ptr = make_gpu_shared_ptr<T>();
-    OPM_GPU_SAFE_CALL(cudaMemcpy(ptr.get(), &value, sizeof(T), cudaMemcpyHostToDevice));
+    detail::gpuMemcpyHostToDevice(ptr.get(), &value, 1);
     return ptr;
 }
 
@@ -111,7 +112,7 @@ auto
 make_gpu_unique_ptr(const T& value)
 {
     auto ptr = make_gpu_unique_ptr<T>();
-    OPM_GPU_SAFE_CALL(cudaMemcpy(ptr.get(), &value, sizeof(T), cudaMemcpyHostToDevice));
+    detail::gpuMemcpyHostToDevice(ptr.get(), &value, 1);
     return ptr;
 }
 
@@ -218,11 +219,8 @@ template <class T>
 T
 copyFromGPU(const T* value)
 {
-#ifndef NDEBUG
-    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(value), "The pointer is not associated with GPU memory.");
-#endif
     T result;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&result, value, sizeof(T), cudaMemcpyDeviceToHost));
+    detail::gpuMemcpyDeviceToHost(&result, value, 1);
     return result;
 }
 
@@ -271,10 +269,7 @@ template <class T>
 void
 copyToGPU(const T& value, T* ptr)
 {
-#ifndef NDEBUG
-    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(ptr), "The pointer is not associated with GPU memory.");
-#endif
-    OPM_GPU_SAFE_CALL(cudaMemcpy(ptr, &value, sizeof(T), cudaMemcpyHostToDevice));
+    detail::gpuMemcpyHostToDevice(ptr, &value, 1);
 }
 
 /**
