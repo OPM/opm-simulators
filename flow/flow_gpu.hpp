@@ -19,9 +19,7 @@
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
-
-#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
 /*
     This file extracts typetag declarations that must be present in both the .CU and .HIP
    executables for Flow to avoid double maintenance.
@@ -34,19 +32,9 @@ namespace Properties
 {
     namespace TTag
     {
-        // FlowGasWaterEnergyProblemGPU is declared in FlowGasWaterEnergyTypeTag.hpp
-        // (InheritsFrom = FlowGasWaterEnergyProblem).  The template below maps it
-        // to FlowGasWaterEnergyProblemGPUTrue<Storage> for GPU-storage variants.
-
-        template <template <class> class Storage>
-        struct FlowGasWaterEnergyProblemGPUTrue {
-            using InheritsFrom = std::tuple<FlowGasWaterEnergyProblemGPU>;
-        };
-
-        template <template <class> class Storage>
-        struct to_gpu_type<FlowGasWaterEnergyProblemGPU, Storage> {
-            using type = FlowGasWaterEnergyProblemGPUTrue<Storage>;
-        };
+        // The to_gpu_type mapping is defined in
+        // GpuFlowGasWaterEnergyContract.hpp so the property dispatcher and
+        // TPFA assembly instantiate the same device IQ TypeTag.
     } // namespace TTag
 
     template <class TypeTag>
@@ -64,11 +52,6 @@ namespace Properties
         using type = SimpleFIBlackOilModel<TypeTag>;
     };
 
-    template <class TypeTag, template <class> class Storage>
-    struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>> {
-        using type = Opm::
-            BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage>;
-    };
 } // namespace Properties
 
 //! \brief Main function used in flow binary.

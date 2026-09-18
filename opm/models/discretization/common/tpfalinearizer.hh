@@ -62,6 +62,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -1079,9 +1080,12 @@ private:
     template <class SubDomainType>
     void linearize_source_terms_gpu(unsigned int numCells, const SubDomainType& domain)
     {
-        // This procedure mimics the already-existing CPU linearization implemented below
-        // It should be possible to iterate over the sparse source term indices instead
-        // of all cells...
+        // This procedure mimics the already-existing CPU linearization implemented below.
+        // For the supported GPU bridge path, source evaluation itself does not
+        // require IQs unless bioeffects are enabled.  Do not call the model IQ
+        // accessor in that common case: it is an explicit host-materialization
+        // boundary and would download the full device IQ cache after every
+        // property/assembly update merely to calculate source terms.
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
         std::vector<unsigned> indices;
         std::vector<VectorBlockCPU> residualContributions;
@@ -1092,15 +1096,36 @@ private:
         indices.reserve(reservedSize);
         residualContributions.reserve(reservedSize);
         jacobianContributions.reserve(reservedSize);
+
+        std::optional<IntensiveQuantities> unusedIntensiveQuantities;
+        if constexpr (!getPropValue<TypeTag, Properties::EnableBioeffects>()) {
+            // BlackOilLocalResidualTPFA::computeSource() retains an IQ
+            // parameter for bioeffects.  With that feature disabled it is not
+            // read, so a local default object avoids a device-to-host cache
+            // materialization while retaining the shared source implementation.
+            unusedIntensiveQuantities.emplace();
+        }
+
         for (unsigned ii = 0; ii < numCells; ++ii) {
             const unsigned cell = domain.cells[ii];
             ADVectorBlockCPU source(0.0);
-            const auto& intQuantsIn = model_().intensiveQuantities(cell, 0);
             const double volume = model_().dofTotalVolume(cell);
             if (separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(source, problem_(), intQuantsIn, cell, 0);
+                if constexpr (getPropValue<TypeTag, Properties::EnableBioeffects>()) {
+                    LocalResidual::computeSourceDense(
+                        source, problem_(), model_().intensiveQuantities(cell, 0), cell, 0);
+                } else {
+                    LocalResidual::computeSourceDense(
+                        source, problem_(), *unusedIntensiveQuantities, cell, 0);
+                }
             } else {
-                LocalResidual::computeSource(source, problem_(), intQuantsIn, cell, 0);
+                if constexpr (getPropValue<TypeTag, Properties::EnableBioeffects>()) {
+                    LocalResidual::computeSource(
+                        source, problem_(), model_().intensiveQuantities(cell, 0), cell, 0);
+                } else {
+                    LocalResidual::computeSource(
+                        source, problem_(), *unusedIntensiveQuantities, cell, 0);
+                }
             }
             source *= -volume;
             VectorBlockCPU residualContribution(0.0);
