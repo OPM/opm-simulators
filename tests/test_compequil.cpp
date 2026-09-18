@@ -884,6 +884,46 @@ BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
     BOOST_CHECK_GT(rhoWater, rhoHc);
 }
 
+BOOST_AUTO_TEST_CASE(CoincidentContactsKeepTheGasRoot)
+{
+    // Contacts that coincide leave no liquid: every hydrocarbon cell sits above
+    // the gas-oil contact. The datum states the water pressure, so the
+    // hydrocarbon is anchored on the contact itself, and the root has to follow
+    // the gas just above it rather than the water below.
+    const auto hydrocarbonDensity = [](const std::string& composition) {
+        const WaterEquilFixture fix(waterDeckString(
+            "EQUIL\n 2060 10 2050 0 2050 0 /\n", composition));
+        const auto states = fix.compute(std::vector<int>(20, 0),
+                                        std::vector<Scalar>(20, connateSw),
+                                        std::vector<Scalar>(20, 1.0)).fluidStates();
+        BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+        return impliedDensity(states[4].pressure(WaterFluidSystem::oilPhaseIdx),
+                              states[5].pressure(WaterFluidSystem::oilPhaseIdx));
+    };
+
+    // The root COMPVD states outright is the one the inferred root has to match.
+    const Scalar stated = hydrocarbonDensity("COMPVD\n 2000 0 0.5 0.5 0 10.0 /\n");
+    const Scalar inferred = hydrocarbonDensity("ZMFVD\n 2000 0 0.5 0.5 /\n");
+    BOOST_CHECK_LT(stated, 60.0);
+    BOOST_CHECK_CLOSE(inferred, stated, 1e-8);
+}
+
+BOOST_AUTO_TEST_CASE(WaterEndpointsMustCoverEveryCell)
+{
+    // A non-empty endpoint vector is read for every cell, so one of the wrong
+    // length would be indexed past its end.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n"));
+    const std::vector<int> eqlnum(20, 0);
+    const std::vector<Scalar> full(20, connateSw);
+    const std::vector<Scalar> tooShort(19, connateSw);
+
+    BOOST_CHECK_NO_THROW(fix.compute(eqlnum, full, std::vector<Scalar>(20, 1.0)));
+    BOOST_CHECK_THROW(fix.compute(eqlnum, tooShort, std::vector<Scalar>(20, 1.0)),
+                      std::runtime_error);
+    BOOST_CHECK_THROW(fix.compute(eqlnum, full, std::vector<Scalar>(19, 1.0)),
+                      std::runtime_error);
+}
+
 BOOST_AUTO_TEST_CASE(DatumBelowWaterOilContact)
 {
     // A datum below the water-oil contact states the pressure of the water, not

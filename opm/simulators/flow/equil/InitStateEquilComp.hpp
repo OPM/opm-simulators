@@ -254,6 +254,17 @@ public:
                       fmt::format("EQLNUM contains {} entries for {} cell depths.",
                                   eqlnum.size(), cellCenterDepth.size()));
         }
+        // The endpoint vectors are optional, but a non-empty one is indexed for
+        // every cell.
+        for (const auto& [name, limits] : {std::pair{"connate water", std::cref(connateWater)},
+                                           std::pair{"maximum water", std::cref(maxWater)}}) {
+            if (!limits.get().empty() &&
+                (limits.get().size() != cellCenterDepth.size())) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("The {} saturation has {} entries for {} cell depths.",
+                                      name, limits.get().size(), cellCenterDepth.size()));
+            }
+        }
         for (std::size_t cell = 0; cell < eqlnum.size(); ++cell) {
             const auto region = eqlnum[cell];
             if (region < 0 || std::cmp_greater_equal(region, records.size())) {
@@ -336,6 +347,10 @@ private:
         std::optional<PressFunc> gasPressure;       // two zones, or type 3
 
         Scalar zwoc{};                              // water-oil contact
+        /// Set when the datum states the water pressure, so the hydrocarbon is
+        /// anchored at the water-oil contact instead. The fluid there is the one
+        /// just above the contact, which the EOS root has to follow.
+        bool anchoredAtWaterContact{false};
         std::optional<WaterPressFunc> waterPressure;
     };
 
@@ -696,6 +711,7 @@ private:
             integrateWaterPressure(reg, span, gravity, numSamplePoints,
                                    record.datumDepth(), record.datumDepthPressure());
             hcDatum = reg.zwoc;
+            reg.anchoredAtWaterContact = true;
             hcPressure = reg.waterPressure->value(reg.zwoc)
                        + record.waterOilContactCapillaryPressure();
             OpmLog::info(fmt::format("Equilibration region {}: the datum at {} m lies below the "
@@ -820,9 +836,14 @@ private:
         }
 
         // COMPVD states the phase its composition belongs to; without that the
-        // datum's side of the gas-oil contact decides the EOS root.
+        // datum's side of the gas-oil contact decides the EOS root. A datum on
+        // the water-oil contact is not in the hydrocarbon at all, so there the
+        // gas-oil contact itself still leaves gas above: a column whose two
+        // contacts coincide holds no liquid.
+        const bool gasAtDatum = reg.anchoredAtWaterContact ? (datum <= reg.zgoc)
+                                                           : (datum < reg.zgoc);
         const auto phaseIdx = reg.statedPhaseIdx.value_or(
-            (datum < reg.zgoc) ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
+            gasAtDatum ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
 
         // A gas-oil contact inside a single-zone region requires the composition
         // to vary across it, so the flash can label the phases correctly.
