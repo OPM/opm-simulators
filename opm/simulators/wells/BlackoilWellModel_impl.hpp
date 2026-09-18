@@ -744,6 +744,21 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
+        // Reconcile phase_mixing_rates (WGPRS/WOPRF-family summary output,
+        // and the input the tracer model uses to split transport between the
+        // free and dissolved/vaporized fractions) with the accepted surface
+        // rates for this timestep -- see WellInterface::solvePhaseMixingRates
+        // for the rationale. This only ever mutates phase_mixing_rates;
+        // bhp/surface_rates/restart state are untouched.
+        //
+        // Must happen here, inside timeStepSucceeded(), and not later:
+        // FlowProblem::endTimeStep() calls wellModel_.endTimeStep() (which
+        // calls timeStepSucceeded()) before tracerModel_.endTimeStep(), so
+        // tracer transport for this timestep sees the reconciled rates.
+        for (const auto& well : well_container_) {
+            well->solvePhaseMixingRates(simulator_, this->groupStateHelper(), this->wellState());
+        }
+
         this->groupStateHelper().updateNONEProductionGroups();
 
 #ifdef RESERVOIR_COUPLING_ENABLED

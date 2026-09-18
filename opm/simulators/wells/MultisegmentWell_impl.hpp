@@ -1673,6 +1673,104 @@ namespace Opm
 
 
     template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    solvePhaseMixingRates(const Simulator& simulator,
+                          const GroupStateHelperType& groupStateHelper,
+                          WellStateType& well_state)
+    {
+        // Only meaningful for producers with live-oil/wet-gas physics; the
+        // free/dissolved split is otherwise undefined or identically zero.
+        if (!this->isProducer() || this->wellIsStopped()) {
+            return;
+        }
+        if (!FluidSystem::enableDissolvedGas() && !FluidSystem::enableVaporizedOil()) {
+            return;
+        }
+        if (!this->isOperableAndSolvable()) {
+            return;
+        }
+
+        auto& deferred_logger = groupStateHelper.deferredLogger();
+
+        // Work on a throwaway copy: bhp, surface_rates, and every other
+        // primary-variable-derived quantity used for the accepted solution
+        // and restart must be left exactly as the timestep produced them.
+        // Only phase_mixing_rates is copied back out at the end.
+        GroupStateHelperType groupStateHelper_copy = groupStateHelper;
+        WellStateType well_state_copy = well_state;
+        auto guard = groupStateHelper_copy.pushWellState(well_state_copy);
+
+        const double dt = simulator.timeStepSize();
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& ws_copy = well_state_copy.well(this->index_of_well_);
+        const auto prod_controls = this->productionControlsWithWeldraw(summary_state, ws_copy);
+        const Well::InjectionControls inj_controls(0);
+
+        // A bare re-assembly would just recompute the same inconsistent
+        // numbers from the same (possibly stale, inherited-from-last-
+        // timestep) primary variables -- see solvePhaseMixingRates
+        // in WellInterface.hpp for why. So the convergence check is skipped
+        // on the first pass, unconditionally forcing at least one real
+        // Newton correction (assemble, solve, update) before ever accepting
+        // "converged", so the well's own unknowns actually react to the
+        // (frozen) current reservoir state. The iteration cap is
+        // deliberately small: this is a best-effort diagnostic pass, not a
+        // full re-solve to the deck's convergence tolerance, and the common
+        // case converges in 0-2 of these iterations.
+        constexpr int max_it = 5;
+        bool converged = false;
+        for (int it = 0; it < max_it && !converged; ++it) {
+            try {
+                assembleWellEqWithoutIteration(simulator, groupStateHelper_copy, dt,
+                                               inj_controls, prod_controls,
+                                               well_state_copy, /*solving_with_zero_rate=*/false);
+            } catch (const NumericalProblem&) {
+                break;
+            }
+
+            if (it > 0) {
+                const auto report = getWellConvergence(groupStateHelper_copy, Base::B_avg_,
+                                                        /*relax_tolerance=*/false);
+                converged = report.converged();
+                if (converged) {
+                    break;
+                }
+            }
+
+            try {
+                const BVectorWell dx_well = this->linSys_.solve();
+                updateWellState(simulator, dx_well, groupStateHelper_copy, well_state_copy,
+                                /*relaxation_factor=*/1.0);
+            } catch (const NumericalProblem& exp) {
+                deferred_logger.debug("solvePhaseMixingRates: local solve failed for well "
+                                      + this->name() + ": " + exp.what()
+                                      + ". Reporting best-effort phase-mixing rates.");
+                break;
+            }
+        }
+        // One final assembly so phase_mixing_rates matches the primary
+        // variables actually left in well_state_copy after the loop above.
+        try {
+            assembleWellEqWithoutIteration(simulator, groupStateHelper_copy, dt,
+                                           inj_controls, prod_controls,
+                                           well_state_copy, /*solving_with_zero_rate=*/false);
+        } catch (const NumericalProblem&) {
+            // Leave perf_data.phase_mixing_rates at whatever the last
+            // successful assembly produced; this is a best-effort diagnostic
+            // pass and must never fail the (already-accepted) timestep.
+        }
+
+        this->consolidatePhaseMixingRates(well_state_copy);
+
+        // Copy back only the phase-mixing diagnostics.
+        auto& ws_real = well_state.well(this->index_of_well_);
+        const auto& ws_result = well_state_copy.well(this->index_of_well_);
+        ws_real.phase_mixing_rates = ws_result.phase_mixing_rates;
+        ws_real.perf_data.phase_mixing_rates = ws_result.perf_data.phase_mixing_rates;
+    }
+
+    template<typename TypeTag>
     bool
     MultisegmentWell<TypeTag>::
     iterateWellEqWithSwitching(const Simulator& simulator,
@@ -1877,7 +1975,8 @@ namespace Opm
         this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.phase_mixing_rates.fill(0.0);
+        // ws.phase_mixing_rates (well-level, cross-rank-reduced) is built by
+        // consolidatePhaseMixingRates() instead of here; see below.
         if constexpr (has_energy) {
             ws.energy_rate = 0.0;
         }
@@ -1921,10 +2020,10 @@ namespace Opm
                 computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
                                 allow_cf, cq_s, perf_press, perfRates, deferred_logger);
 
-                // updating the solution gas rate and solution oil rate
+                // Record the free/dissolved split for this perforation --
+                // the same dis_gas/vap_oil just folded into cq_s above, so
+                // needed regardless of reporting.
                 if (this->isProducer()) {
-                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
-                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
                     perf_data.phase_mixing_rates[local_perf_index][ws.dissolved_gas] = perfRates.dis_gas;
                     perf_data.phase_mixing_rates[local_perf_index][ws.vaporized_oil] = perfRates.vap_oil;
                 }
@@ -1960,13 +2059,12 @@ namespace Opm
                 }
             }
         }
-        // Accumulate dissolved gas and vaporized oil flow rates across all ranks sharing this well.
-        {
+        // Dissolved gas and vaporized oil flow rates are no longer reduced
+        // across ranks here -- see consolidatePhaseMixingRates(), called
+        // once the well is converged instead of every iteration.
+        if constexpr (has_energy) {
             const auto& comm = this->parallel_well_info_.communication();
-            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
-            if constexpr (has_energy) {
-                ws.energy_rate = comm.sum(ws.energy_rate);
-            }
+            ws.energy_rate = comm.sum(ws.energy_rate);
         }
 
         if (this->parallel_well_info_.communication().size() > 1) {

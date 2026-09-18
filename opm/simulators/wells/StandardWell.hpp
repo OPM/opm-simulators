@@ -160,6 +160,11 @@ namespace Opm
 
         void updatePrimaryVariables(const GroupStateHelperType& groupStateHelper) override;
 
+        // See WellInterface::solvePhaseMixingRates.
+        void solvePhaseMixingRates(const Simulator& simulator,
+                                   const GroupStateHelperType& groupStateHelper,
+                                   WellStateType& well_state) override;
+
         void solveEqAndUpdateWellState(const Simulator& simulator,
                                        const GroupStateHelperType& groupStateHelper,
                                        WellStateType& well_state) override;
