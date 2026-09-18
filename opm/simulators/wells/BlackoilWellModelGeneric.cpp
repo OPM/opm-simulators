@@ -1330,15 +1330,19 @@ wellStatusSnapshot() const
             if ((connection.state() == Connection::State::OPEN) &&
                 !closedByWorkover)
             {
+                // The cell index identifies the connection whatever COMPLUMP
+                // calls it; the completion number is what WPWE3 asks about.
+                entry.openConnections.push_back(connection.global_index());
                 entry.openCompletions.push_back(complnum);
             }
             else if (wtestState.completion_closed_below_offender(well.name(), complnum)) {
-                entry.closedBelowOffender.push_back(complnum);
+                entry.closedBelowOffender.push_back(connection.global_index());
             }
         }
 
-        std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
+        std::sort(entry.openConnections.begin(), entry.openConnections.end());
         std::sort(entry.closedBelowOffender.begin(), entry.closedBelowOffender.end());
+        std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
 
         // A closure made by an economic or physical limit check does not reach
         // WellState until the next time step is set up.  Consult WellTestState

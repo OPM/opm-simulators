@@ -41,19 +41,25 @@ struct WellStatusSnapshot {
     struct Entry {
         WellStatus status {WellStatus::SHUT};
 
-        /// Completion number of every connection that is currently able to
-        /// flow, one entry per connection and sorted numerically for set
-        /// operations.  COMPLUMP may map several connections onto one
-        /// completion, so this is a multiset: the repeats are what make WPWE1
-        /// and WPWE2 count connections rather than completions, while WPWE3
-        /// works on the distinct values.  Do not deduplicate.
-        std::vector<int> openCompletions {};
+        /// Global cell index of every connection that is currently able to
+        /// flow, sorted for set operations.  WPWE1 and WPWE2 count
+        /// connections, so they difference these rather than completion
+        /// numbers: COMPLUMP may map several connections onto one completion
+        /// and may renumber them mid-run, neither of which opens or closes
+        /// anything.
+        std::vector<std::size_t> openConnections {};
 
-        /// Sorted completion numbers currently closed only by the reach of a
-        /// '+CON' workover, rather than by a limit of their own.  WPWE2 does
-        /// not count them, and a workover that reaches past its offender has
-        /// closed the well to the bottom.
-        std::vector<int> closedBelowOffender {};
+        /// Global cell index of every connection currently closed only by the
+        /// reach of a '+CON' workover, rather than by a limit of its own,
+        /// sorted.  WPWE2 does not count them, and a workover that reaches
+        /// past its offender has closed the well to the bottom.
+        std::vector<std::size_t> closedBelowOffender {};
+
+        /// Completion number of every connection able to flow, sorted.  Only
+        /// WPWE3 uses this, to ask whether the well is left flowing through
+        /// its topmost completion alone; that test is over completions, not
+        /// connections, so the repeats COMPLUMP produces are wanted here.
+        std::vector<int> openCompletions {};
 
         /// Completion number of the well's topmost connection, whether or not
         /// it is able to flow.  WPWE3 uses this to distinguish bottom-up
@@ -63,8 +69,10 @@ struct WellStatusSnapshot {
 
         bool operator==(const Entry& rhs) const
         {
-            return (this->status == rhs.status) && (this->openCompletions == rhs.openCompletions)
+            return (this->status == rhs.status)
+                && (this->openConnections == rhs.openConnections)
                 && (this->closedBelowOffender == rhs.closedBelowOffender)
+                && (this->openCompletions == rhs.openCompletions)
                 && (this->topCompletion == rhs.topCompletion);
         }
 
@@ -72,8 +80,9 @@ struct WellStatusSnapshot {
         void serializeOp(Serializer& serializer)
         {
             serializer(status);
-            serializer(openCompletions);
+            serializer(openConnections);
             serializer(closedBelowOffender);
+            serializer(openCompletions);
             serializer(topCompletion);
         }
     };

@@ -140,12 +140,45 @@ struct Setup
 
 using Entry = Opm::WellStatusSnapshot::Entry;
 
+// Cell index identifying the connection that carries completion 'c' in the
+// one-connection-per-completion wells most of these tests use.
+constexpr std::size_t cell(const int c)
+{
+    return 9 + static_cast<std::size_t>(c);
+}
+
+// Connections able to flow, one per completion.
+void setOpen(Entry& e, std::initializer_list<int> completions)
+{
+    e.openConnections.clear();
+    e.openCompletions.clear();
+
+    for (const int c : completions) {
+        e.openConnections.push_back(cell(c));
+        e.openCompletions.push_back(c);
+    }
+}
+
+// Connections able to flow, given as (cell index, completion number).  Used
+// where COMPLUMP puts more than one connection on a completion.
+void setOpenLumped(Entry& e, std::initializer_list<std::pair<std::size_t, int>> conns)
+{
+    e.openConnections.clear();
+    e.openCompletions.clear();
+
+    for (const auto& [cellIx, complnum] : conns) {
+        e.openConnections.push_back(cellIx);
+        e.openCompletions.push_back(complnum);
+    }
+}
+
 Opm::WellStatusSnapshot allOpen()
 {
     auto snap = Opm::WellStatusSnapshot{};
 
     for (const auto* well : { "P1", "P2", "P3", "I1" }) {
-        snap.wells[well] = Entry { Opm::WellStatus::OPEN, {1, 2, 3, 4}, {}, 1 };
+        snap.wells[well] = Entry { Opm::WellStatus::OPEN, {}, {}, {}, 1 };
+        setOpen(snap.wells[well], {1, 2, 3, 4});
     }
 
     return snap;
@@ -179,7 +212,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions = {1, 2, 3};
+    setOpen(now.wells["P1"], {1, 2, 3});
     tracker.accumulate(now);
 
     {
@@ -191,7 +224,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsClosed_CON, Setup)
     }
 
     // Events accumulate within the time step.
-    now.wells["P1"].openCompletions = {1, 2};
+    setOpen(now.wells["P1"], {1, 2});
     tracker.accumulate(now);
 
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
@@ -207,11 +240,11 @@ BOOST_FIXTURE_TEST_CASE(AllConnectionsClosedByConWorkovers, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto before = allOpen();
-    before.wells["P1"].openCompletions = {1};
+    setOpen(before.wells["P1"], {1});
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, 1 };
+    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, {}, 1 };
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -231,7 +264,7 @@ BOOST_FIXTURE_TEST_CASE(IndividualClosuresLeaveOneCompletion, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P2"].openCompletions = {1};
+    setOpen(now.wells["P2"], {1});
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P2");
@@ -253,11 +286,11 @@ BOOST_FIXTURE_TEST_CASE(DeckClosingLastConnectionSetsWPWE3, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto before = allOpen();
-    before.wells["P1"].openCompletions = {1};
+    setOpen(before.wells["P1"], {1});
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"].openCompletions.clear();
+    setOpen(now.wells["P1"], {});
     now.wells["P1"].status = Opm::WellStatus::SHUT;
     tracker.applyDeckChanges(now);
 
@@ -277,8 +310,8 @@ BOOST_FIXTURE_TEST_CASE(PlusConReachIsNotCounted, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions = {1, 2};
-    now.wells["P1"].closedBelowOffender = {4};   // 3 offended, 4 lies below it
+    setOpen(now.wells["P1"], {1, 2});
+    now.wells["P1"].closedBelowOffender = {cell(4)};  // 3 offended, 4 lies below it
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -295,8 +328,8 @@ BOOST_FIXTURE_TEST_CASE(RepeatedPlusConCountsEveryOffender, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions.clear();
-    now.wells["P1"].closedBelowOffender = {2, 4};
+    setOpen(now.wells["P1"], {});
+    now.wells["P1"].closedBelowOffender = {cell(2), cell(4)};
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -314,11 +347,11 @@ BOOST_FIXTURE_TEST_CASE(RemainingCompletionMustBeTheTopmost, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto before = allOpen();
-    before.wells["P1"].openCompletions = {3, 4};
+    setOpen(before.wells["P1"], {3, 4});
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"].openCompletions = {3};
+    setOpen(now.wells["P1"], {3});
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P1");
@@ -328,7 +361,7 @@ BOOST_FIXTURE_TEST_CASE(RemainingCompletionMustBeTheTopmost, Setup)
     // Closing that last one does leave the well closed to the bottom.
     tracker.commitTimeStep(sched, 0);
     tracker.beginTimeStep(sched, 0, now);
-    now.wells["P1"].openCompletions = {};
+    setOpen(now.wells["P1"], {});
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
 }
@@ -341,7 +374,7 @@ BOOST_FIXTURE_TEST_CASE(ClosedTailIsNotClosedToBottom, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P3"].openCompletions = {1, 2};
+    setOpen(now.wells["P3"], {1, 2});
     tracker.accumulate(now);
 
     const auto& ev = tracker.events("P3");
@@ -362,11 +395,11 @@ BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto before = allOpen();
-    before.wells["P1"].openCompletions = {1, 1, 2, 2};
+    setOpenLumped(before.wells["P1"], {{10, 1}, {11, 1}, {12, 2}, {13, 2}});
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = before;
-    now.wells["P1"].openCompletions = {1, 1};
+    setOpenLumped(now.wells["P1"], {{10, 1}, {11, 1}});
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
     BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
@@ -377,13 +410,53 @@ BOOST_FIXTURE_TEST_CASE(LumpedCompletionCountsConnections, Setup)
     BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 2);
 }
 
+BOOST_FIXTURE_TEST_CASE(RenumberingCompletionsIsNotAnEvent, Setup)
+{
+    // COMPLUMP may put the same connections on different completion numbers
+    // partway through a run.  Nothing opens or closes, so nothing is reported:
+    // the indicators follow the connections, not the numbering.
+    auto tracker = Opm::WellPerformanceEventTracker{};
+
+    auto before = allOpen();
+    setOpenLumped(before.wells["P1"], {{10, 1}, {11, 2}, {12, 3}, {13, 4}});
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    setOpenLumped(now.wells["P1"], {{10, 1}, {11, 1}, {12, 1}, {13, 1}});
+    tracker.accumulate(now);
+
+    BOOST_CHECK(noEvents(tracker.events("P1")));
+}
+
+BOOST_FIXTURE_TEST_CASE(ConnectionsSwappedWithinOneCompletion, Setup)
+{
+    // One connection of a lumped completion closes while another opens.  The
+    // set of open completion numbers never changes, but a connection did close
+    // and a connection did open, and both count.  Completion 2 carries the
+    // lump, so the well is not left on its topmost completion and WPWE3 stays
+    // silent.
+    auto tracker = Opm::WellPerformanceEventTracker{};
+
+    auto before = allOpen();
+    setOpenLumped(before.wells["P1"], {{10, 1}, {11, 2}, {12, 2}});
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    setOpenLumped(now.wells["P1"], {{10, 1}, {12, 2}, {13, 2}});
+    tracker.accumulate(now);
+
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
+}
+
 BOOST_FIXTURE_TEST_CASE(ClosuresAreNotRepeated, Setup)
 {
     auto tracker = Opm::WellPerformanceEventTracker{};
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions = {1, 2};
+    setOpen(now.wells["P1"], {1, 2});
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 2);
     BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 0);
@@ -392,7 +465,7 @@ BOOST_FIXTURE_TEST_CASE(ClosuresAreNotRepeated, Setup)
     // the count for the closure this step makes.
     tracker.commitTimeStep(sched, 0);
     tracker.beginTimeStep(sched, 0, now);
-    now.wells["P1"].openCompletions = {1};
+    setOpen(now.wells["P1"], {1});
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
     BOOST_CHECK_EQUAL(tracker.events("P1").closedToBottom, 1);
@@ -429,9 +502,9 @@ BOOST_FIXTURE_TEST_CASE(ConnectionsOpened, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto before = allOpen();
-    before.wells["P1"].openCompletions = {1, 2};
-    before.wells["P2"] = Entry { Opm::WellStatus::SHUT, {}, {}, 1 };
-    before.wells["P3"] = Entry { Opm::WellStatus::STOP, {}, {}, 1 };
+    setOpen(before.wells["P1"], {1, 2});
+    before.wells["P2"] = Entry { Opm::WellStatus::SHUT, {}, {}, {}, 1 };
+    before.wells["P3"] = Entry { Opm::WellStatus::STOP, {}, {}, {}, 1 };
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = allOpen();
@@ -455,7 +528,7 @@ BOOST_FIXTURE_TEST_CASE(DeckChangesConnectionsButNotStatus, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions = {1, 2};
+    setOpen(now.wells["P1"], {1, 2});
     now.wells["P2"].status = Opm::WellStatus::SHUT;
 
     tracker.applyDeckChanges(now);
@@ -472,7 +545,7 @@ BOOST_FIXTURE_TEST_CASE(BeginTimeStepResetsEvents, Setup)
     tracker.beginTimeStep(sched, 0, allOpen());
 
     auto now = allOpen();
-    now.wells["P1"].openCompletions = {1, 2, 3};
+    setOpen(now.wells["P1"], {1, 2, 3});
     tracker.accumulate(now);
     BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
 
@@ -488,7 +561,7 @@ BOOST_FIXTURE_TEST_CASE(ConnectionChangesSurviveRetry, Setup)
     tracker.commitTimeStep(sched, 0);
 
     auto changed = allOpen();
-    changed.wells["P1"].openCompletions = {1, 2, 3};
+    setOpen(changed.wells["P1"], {1, 2, 3});
 
     // Do not commit between attempts: each beginTimeStep() represents a retry
     // after the previous attempt failed.
@@ -503,12 +576,12 @@ BOOST_FIXTURE_TEST_CASE(WtestReopenSurvivesRetry, Setup)
     auto tracker = Opm::WellPerformanceEventTracker{};
 
     auto closed = allOpen();
-    closed.wells["P1"].openCompletions = {1};
+    setOpen(closed.wells["P1"], {1});
     tracker.beginTimeStep(sched, 0, closed);
     tracker.commitTimeStep(sched, 0);
 
     auto reopened = closed;
-    reopened.wells["P1"].openCompletions = {1, 2};
+    setOpen(reopened.wells["P1"], {1, 2});
 
     for (int attempt = 0; attempt < 3; ++attempt) {
         tracker.beginTimeStep(sched, 0, closed);
@@ -559,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(UnknownWellSkipped, Setup)
     tracker.beginTimeStep(sched, 0, before);
 
     auto now = allOpen();
-    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, 1 };
+    now.wells["P1"] = Entry { Opm::WellStatus::SHUT, {}, {}, {}, 1 };
     BOOST_CHECK_NO_THROW(tracker.accumulate(now));
     BOOST_CHECK(noEvents(tracker.events("P1")));
 }
