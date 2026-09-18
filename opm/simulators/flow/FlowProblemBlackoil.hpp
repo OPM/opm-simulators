@@ -38,6 +38,8 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
+#include <opm/grid/LookUpData.hh>
+
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
@@ -1091,6 +1093,17 @@ public:
             this->bioeffects_ = this->eclWriter_->outputModule().getBioeffects().getSolution();
         }
 
+        // TEMPI is given on the input grid but read per leaf cell.
+        std::vector<double> tempiOnLeaf{};
+        if constexpr (energyModuleType != EnergyModules::NoTemperature) {
+            if (eclState.runspec().co2Storage() || eclState.runspec().h2Storage()) {
+                using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
+                const LookUpData<LeafGrid, GridView> lookUpData(simulator.gridView());
+                tempiOnLeaf = lookUpData
+                    .assignFieldPropsDoubleOnLeaf(eclState.fieldProps(), "TEMPI");
+            }
+        }
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = this->initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
@@ -1120,8 +1133,7 @@ public:
             if constexpr (energyModuleType != EnergyModules::NoTemperature) {
                 bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
                 if (needTemperature) {
-                    const auto& fp = simulator.vanguard().eclState().fieldProps();
-                    elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+                    elemFluidState.setTemperature(tempiOnLeaf[elemIdx]);
                 }
             }
 
@@ -1397,6 +1409,12 @@ protected:
 
         initialFluidStates_.resize(numDof);
 
+        // Input-grid arrays read per leaf cell: a refined cell takes its parent's value.
+        using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
+        const LookUpData<LeafGrid, GridView> lookUpData(this->simulator().gridView());
+        const auto onLeaf = [&lookUpData, &fp](const std::string& kw)
+        { return lookUpData.assignFieldPropsDoubleOnLeaf(fp, kw); };
+
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
         std::vector<double> pressureData;
@@ -1409,38 +1427,38 @@ protected:
         std::vector<double> saltpData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-            waterSaturationData = fp.get_double("SWAT");
+            waterSaturationData = onLeaf("SWAT");
         else
             waterSaturationData.resize(numDof);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = fp.get_double("SGAS");
+            gasSaturationData = onLeaf("SGAS");
         else
             gasSaturationData.resize(numDof);
 
-        pressureData = fp.get_double("PRESSURE");
+        pressureData = onLeaf("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_double("RS");
+            rsData = onLeaf("RS");
 
         if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
-            rswData = fp.get_double("RSW");
+            rswData = onLeaf("RSW");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_double("RV");
+            rvData = onLeaf("RV");
 
         if (FluidSystem::enableVaporizedWater())
-            rvwData = fp.get_double("RVW");
+            rvwData = onLeaf("RVW");
 
         // initial reservoir temperature
-        tempiData = fp.get_double("TEMPI");
+        tempiData = onLeaf("TEMPI");
 
         // initial salt concentration data
         if constexpr (enableBrine)
-            saltData = fp.get_double("SALT");
+            saltData = onLeaf("SALT");
 
         // initial precipitated salt saturation data
         if constexpr (enableSaltPrecipitation)
-            saltpData = fp.get_double("SALTP");
+            saltpData = onLeaf("SALTP");
 
         // calculate the initial fluid states
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {

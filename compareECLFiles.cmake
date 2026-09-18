@@ -629,6 +629,21 @@ add_test_runSimulator(
 
 add_test_runSimulator(
   CASENAME
+    spe1case1_carfin1_explicit
+  FILENAME
+    SPE1CASE1_CARFIN1_EXPLICIT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  TEST_ARGS
+    --parsing-strictness=low
+)
+
+add_test_runSimulator(
+  CASENAME
     spe1case1_carfin_gr
   FILENAME
     SPE1CASE1_CARFIN_GR
