@@ -294,6 +294,16 @@ struct FlowGasWaterEnergyProblemTestRealDeck {
     using InheritsFrom = std::tuple<FlowGasWaterEnergyProblem>;
 };
 
+template <template <class> class Storage>
+struct to_gpu_type<FlowGasWaterEnergyProblemTest, Storage> {
+    using type = FlowGasWaterEnergyDeviceTypeTag<Storage>;
+};
+
+template <template <class> class Storage>
+struct to_gpu_type<FlowGasWaterEnergyProblemTestRealDeck, Storage> {
+    using type = FlowGasWaterEnergyDeviceTypeTag<Storage>;
+};
+
 } // namespace TTag
 
 template <class TypeTag>
@@ -641,7 +651,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
 struct TemporaryFile {
     std::filesystem::path path;
     explicit TemporaryFile(std::string_view filename)
-        : path(std::filesystem::temp_directory_path() / filename) {}
+        : path(std::filesystem::current_path() / filename) {}
     ~TemporaryFile() { std::filesystem::remove(path); }
     TemporaryFile(const TemporaryFile&) = delete;
     TemporaryFile& operator=(const TemporaryFile&) = delete;
@@ -706,10 +716,10 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     }
 
     Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
-    dispatcher.update(problem,
-                      primaryVariables.data(),
-                      intensiveQuantities.data(),
-                      numCells);
+    dispatcher.update(problem, solution, /*timeIdx=*/0);
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(/*timeIdx=*/0));
+    dispatcher.materializeHostIntensiveQuantities(
+        /*timeIdx=*/0, intensiveQuantities.data(), numCells);
 
     for (std::size_t i = 0; i < numCells; ++i) {
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {

@@ -33,7 +33,9 @@
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
@@ -53,6 +55,7 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
 
 #include <opm/models/discretization/common/tpfalinearizerstructs.hh>
 
@@ -141,8 +144,8 @@ private:
 
     using GpuModelBufferType = SimpleFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>;
     using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
-
-    using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+    using PropertyAssemblyBridge =
+        gpuistl::GpuFlowGasWaterEnergyBridge<TypeTag, CorrectTypeTagView>;
 
     FullDomain<gpuistl::GpuBuffer<int>> domainBuffer_;
     SparseTable<NeighborInfoGPU, gpuistl::GpuBuffer> neighborInfoBuffer_;
@@ -160,14 +163,13 @@ private:
     gpuistl::GpuBuffer<unsigned> sourceIndices_;
     gpuistl::GpuBuffer<VectorBlockGPU> sourceResidualDeltas_;
     gpuistl::GpuBuffer<MatrixBlockGPU> sourceJacobianDeltas_;
-    // dynamicGpuFluidSystemBuffer_ must be declared before dynamicGpuFluidSystemPtr_
-    // because the ptr holds a GpuView into the buffer's GPU memory.
-    GpuFluidSystemBuffer dynamicGpuFluidSystemBuffer_;
-    // The fluid-system ptr is kept alive because gpuModelBuffer_ and
-    // boundaryInfoBuffer_ store raw GPU pointers into it.
+    // Fallback-only owners. In the direct property/assembly path these stay
+    // empty and all three device views come from propertyAssemblyBridge_.
+    std::optional<GpuFluidSystemBuffer> dynamicGpuFluidSystemBuffer_;
     GpuFluidSystemPtr dynamicGpuFluidSystemPtr_;
-    GpuModelBufferType gpuModelBuffer_;
-    GpuFlowProblemBufferType gpuFlowProblemBuffer_;
+    std::optional<GpuModelBufferType> gpuModelBuffer_;
+    std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
+    const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
     gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
 
 public:
@@ -209,20 +211,11 @@ public:
         , residualBuffer_(gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual))
         , residualView_(gpuistl::make_view(residualBuffer_))
         , flattenedResidual_(residualBuffer_.size() * numEq)
-        , dynamicGpuFluidSystemBuffer_(
-              ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()))
-        , dynamicGpuFluidSystemPtr_(
-              gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer_)))
-        , gpuModelBuffer_([&]() -> GpuModelBufferType {
-            std::vector<Scalar> volumes(numCells);
-            for (unsigned i = 0; i < numCells; ++i) {
-                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
-            }
-            GpuModel gpuModel(
-                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
-            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
-        }())
-        , gpuFlowProblemBuffer_([&]() -> GpuFlowProblemBufferType {
+    {
+        static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
+                                     CorrectTypeTagView>);
+
+        gpuFlowProblemBuffer_.emplace([&]() -> GpuFlowProblemBufferType {
             std::vector<Scalar> alpha0(numCells);
             std::vector<Scalar> alpha1(numCells);
             std::vector<Scalar> alpha2(numCells);
@@ -246,11 +239,38 @@ public:
             ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
                 alpha0, alpha1, alpha2, problem.moduleParams());
             return gpuistl::copy_to_gpu(gpuFlowProblem);
-        }())
-        , boundaryInfoBuffer_(
-              gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                  boundaryInfo, *dynamicGpuFluidSystemPtr_.get()))
-    {
+        }());
+
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_
+                = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+            return;
+        }
+
+        // CPU IQ data is needed only by the legacy CPU-IQ-to-GPU assembly
+        // fallback. The fully GPU path above never materializes it.
+        model.ensureHostIntensiveQuantities(/*timeIdx=*/0);
+        model.ensureHostIntensiveQuantities(/*timeIdx=*/1);
+
+        dynamicGpuFluidSystemBuffer_.emplace(
+            ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+        dynamicGpuFluidSystemPtr_ =
+            gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+        gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
+            std::vector<Scalar> volumes(numCells);
+            for (unsigned i = 0; i < numCells; ++i) {
+                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
+            }
+            SimpleFIBlackOilModel<TypeTag> gpuModel(
+                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
+        }());
+        boundaryInfoBuffer_ =
+            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
     }
 
     auto domainView()
@@ -341,11 +361,6 @@ public:
             residualBuffer_.data(),
             diagMatAddressView_.data(),
             indices.size());
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipDeviceSynchronize());
-#else
-        OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-#endif
     }
 
     void applySourceContributions(const std::vector<unsigned>& indices,
@@ -385,12 +400,15 @@ public:
 
     auto modelView()
     {
-        return gpuistl::make_view(gpuModelBuffer_);
+        if (propertyAssemblyBridge_) {
+            return propertyAssemblyBridge_->modelView();
+        }
+        return gpuistl::make_view(*gpuModelBuffer_);
     }
 
     auto flowProblemView()
     {
-        return gpuistl::make_view(gpuFlowProblemBuffer_);
+        return gpuistl::make_view(*gpuFlowProblemBuffer_);
     }
 
     auto boundaryInfoView()

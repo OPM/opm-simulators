@@ -61,7 +61,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyTypeTags.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -75,86 +76,15 @@ namespace Opm::gpuistl {
 
 namespace {
 
-using DispatcherCpuTag = Opm::Properties::TTag::FlowGasWaterEnergyCpuKernelBase;
-using DispatcherGpuTag = Opm::Properties::TTag::FlowGasWaterEnergyDummyProblemGPU;
+using DispatcherGpuTag =
+    Opm::Properties::TTag::FlowGasWaterEnergyDeviceTypeTag<Opm::gpuistl::GpuView>;
 
-using DispatcherScalar = Opm::GetPropType<DispatcherCpuTag, Opm::Properties::Scalar>;
-
-using DispatcherCpuFluidSystem = Opm::BlackOilFluidSystem<DispatcherScalar>;
-using DispatcherFluidSystemView
-    = Opm::BlackOilFluidSystemNonStatic<DispatcherScalar,
-                                        Opm::BlackOilDefaultFluidSystemIndices,
-                                        Opm::gpuistl::GpuView>;
-
-using DispatcherGpuPrimaryVariables
-    = Opm::BlackOilPrimaryVariables<DispatcherGpuTag, Opm::gpuistl::MiniVector>;
-using DispatcherGpuIntensiveQuantities = Opm::BlackOilIntensiveQuantities<DispatcherGpuTag>;
-
-using DispatcherCpuMaterialLawManager =
-    typename Opm::GetProp<DispatcherCpuTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
-using DispatcherTraits = typename DispatcherCpuMaterialLawManager::MaterialLaw::Traits;
-using DispatcherTwoPhaseTraits =
-    Opm::TwoPhaseMaterialTraits<DispatcherScalar,
-                                DispatcherTraits::wettingPhaseIdx,
-                                DispatcherTraits::nonWettingPhaseIdx>;
-using DispatcherGpuPiecewiseLinearParamsBuf =
-    Opm::PiecewiseLinearTwoPhaseMaterialParams<DispatcherTwoPhaseTraits,
-                                               Opm::gpuistl::GpuView<const DispatcherScalar>>;
-using DispatcherGpuPiecewiseLinearLawBuf =
-    Opm::PiecewiseLinearTwoPhaseMaterial<DispatcherTwoPhaseTraits,
-                                         DispatcherGpuPiecewiseLinearParamsBuf>;
-using DispatcherGpuMaterialLawParamsBuf =
-    Opm::EclTwoPhaseMaterialParams<DispatcherTraits,
-                                   DispatcherGpuPiecewiseLinearParamsBuf,
-                                   DispatcherGpuPiecewiseLinearParamsBuf,
-                                   DispatcherGpuPiecewiseLinearParamsBuf,
-                                   Opm::gpuistl::ValueAsPointer>;
-using DispatcherGpuMaterialLawBuf =
-    Opm::EclTwoPhaseMaterial<DispatcherTraits,
-                             DispatcherGpuPiecewiseLinearLawBuf,
-                             DispatcherGpuPiecewiseLinearLawBuf,
-                             DispatcherGpuPiecewiseLinearLawBuf,
-                             DispatcherGpuMaterialLawParamsBuf>;
-using DispatcherGpuManagerBuf =
-    Opm::EclMaterialLaw::GpuManager<DispatcherTraits,
-                                    DispatcherGpuPiecewiseLinearLawBuf,
-                                    DispatcherGpuPiecewiseLinearLawBuf,
-                                    Opm::gpuistl::GpuBuffer,
-                                    DispatcherGpuMaterialLawBuf>;
-using DispatcherGpuThermalManagerBuf =
-    Opm::EclThermalLaw::GpuManager<DispatcherScalar,
-                                   DispatcherFluidSystemView,
-                                   Opm::gpuistl::GpuBuffer,
-                                   Opm::gpuistl::GpuView>;
-using DispatcherGpuFlowProblemBuf =
-    Opm::GpuFlowProblem<DispatcherScalar,
-                        DispatcherGpuManagerBuf,
-                        Opm::gpuistl::GpuBuffer,
-                        DispatcherGpuThermalManagerBuf>;
-using DispatcherGpuFlowProblemView =
-    decltype(Opm::gpuistl::make_view(std::declval<DispatcherGpuFlowProblemBuf&>()));
-
-template <class ProblemT, class PrimaryVariablesT, class IntensiveQuantitiesT>
-void validateDispatcherInputs(const ProblemT& problem,
-                              const PrimaryVariablesT* const* primaryVariables,
-                              IntensiveQuantitiesT* const* intensiveQuantities,
-                              std::size_t numDof)
+template <class ProblemT, class SolutionVectorT>
+void validateDispatcherInputs(const ProblemT& problem, const SolutionVectorT& solution)
 {
-    if (primaryVariables == nullptr || intensiveQuantities == nullptr) {
-        OPM_THROW(std::invalid_argument,
-                  "GPU intensive-quantities dispatcher received a null pointer array");
-    }
-
-    if (numDof != static_cast<std::size_t>(problem.model().numGridDof())) {
+    if (solution.size() != static_cast<std::size_t>(problem.model().numGridDof())) {
         OPM_THROW(std::invalid_argument,
                   "GPU intensive-quantities dispatcher requires one entry per grid DoF");
-    }
-
-    for (std::size_t i = 0; i < numDof; ++i) {
-        if (primaryVariables[i] == nullptr || intensiveQuantities[i] == nullptr) {
-            OPM_THROW(std::invalid_argument,
-                      "GPU intensive-quantities dispatcher received a null DoF entry");
-        }
     }
 }
 
@@ -239,25 +169,7 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
 // =============================================================================
 template <class CpuTypeTag>
 struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
-    using DynamicCpuFluidSystem
-        = std::remove_reference_t<decltype(DispatcherCpuFluidSystem::getNonStaticInstance())>;
-    using FluidSystemBuffer
-        = decltype(Opm::gpuistl::copy_to_gpu(std::declval<DynamicCpuFluidSystem&>()));
-    using ManagedFluidSystemView
-        = std::unique_ptr<DispatcherFluidSystemView,
-                          Opm::gpuistl::GpuManagedDeleter<DispatcherFluidSystemView>>;
-
-    bool initialized = false;
-    std::unique_ptr<DispatcherGpuFlowProblemBuf> problemBuf;
-    DispatcherGpuFlowProblemView problemView{};
-    std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer;
-    ManagedFluidSystemView managedFluidSystemView;
-    std::optional<DispatcherGpuIntensiveQuantities> prototype;
-    std::size_t numDof = 0;
-    std::vector<DispatcherGpuPrimaryVariables> hostPrimaryVariables;
-    std::vector<DispatcherGpuIntensiveQuantities> hostIntensiveQuantities;
-    std::unique_ptr<Opm::gpuistl::GpuBuffer<DispatcherGpuPrimaryVariables>> primaryVariablesBuffer;
-    std::unique_ptr<Opm::gpuistl::GpuBuffer<DispatcherGpuIntensiveQuantities>> intensiveQuantitiesBuffer;
+    std::unique_ptr<Bridge> bridge;
 };
 
 template <class CpuTypeTag>
@@ -273,95 +185,74 @@ GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::~GpuBlackoilIntensiveQuant
 template <class CpuTypeTag>
 void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
     const Problem& cpuProblem,
-    const PrimaryVariables* const* cpuPriVars,
-    IntensiveQuantities* const* outIQ,
-    std::size_t numDof)
+    const SolutionVector& solution,
+    unsigned timeIdx)
 {
-    if (numDof == 0u) {
+    if (solution.size() == 0u) {
         return;
     }
 
-    validateDispatcherInputs(cpuProblem, cpuPriVars, outIQ, numDof);
+    validateDispatcherInputs(cpuProblem, solution);
     validateGpuPropertyInputs(cpuProblem);
 
-    if (!impl_->initialized) {
-        // Build the GPU FlowProblem from the CPU FlowProblem (one-time setup).
-        impl_->problemBuf = std::make_unique<DispatcherGpuFlowProblemBuf>(cpuProblem);
-        impl_->problemView = Opm::gpuistl::make_view(*impl_->problemBuf);
-
-        // Place the FluidSystemView in unified memory so its device pointer
-        // dereferences are valid both on host and device (mirrors the test).
-        auto& dynamicCpuFluidSystem = DispatcherCpuFluidSystem::getNonStaticInstance();
-        // Keep the owning buffer with this dispatcher. A process-wide static
-        // would retain the first deck's PVT tables across later simulations.
-        impl_->fluidSystemBuffer
-            = std::make_unique<typename Impl::FluidSystemBuffer>(
-                Opm::gpuistl::copy_to_gpu(dynamicCpuFluidSystem));
-        auto fsView = Opm::gpuistl::make_view(*impl_->fluidSystemBuffer);
-
-        impl_->managedFluidSystemView
-            = Opm::gpuistl::make_gpu_managed_unique_ptr<DispatcherFluidSystemView>(fsView);
-
-        // Build a default IntensiveQuantities prototype for the GPU side.
-        Opm::BlackOilIntensiveQuantities<DispatcherCpuTag> cpuPrototype;
-        impl_->prototype = cpuPrototype.template withOtherFluidSystem<DispatcherGpuTag>(
-            *impl_->managedFluidSystemView);
-
-        impl_->initialized = true;
+    if (!impl_->bridge) {
+        impl_->bridge = std::make_unique<Bridge>();
         Opm::OpmLog::info(std::format(
             "[GpuBlackoilIntensiveQuantitiesDispatcher] initialized for {} cells",
             cpuProblem.model().numGridDof()));
     }
 
-    const bool rebuildDeviceBuffers = impl_->numDof != numDof;
-    if (rebuildDeviceBuffers) {
-        // Grid changes are not supported by the property kernel itself, but
-        // retaining buffers with a mismatched extent would be unsafe.
-        impl_->hostPrimaryVariables.resize(numDof);
-        impl_->hostIntensiveQuantities.assign(numDof, *impl_->prototype);
-        impl_->primaryVariablesBuffer
-            = std::make_unique<Opm::gpuistl::GpuBuffer<DispatcherGpuPrimaryVariables>>(numDof);
-        impl_->intensiveQuantitiesBuffer
-            = std::make_unique<Opm::gpuistl::GpuBuffer<DispatcherGpuIntensiveQuantities>>(numDof);
-        impl_->numDof = numDof;
-    }
-
-    // Convert CPU primary variables to the dispatcher's GPU primary
-    // variables in reusable host staging storage.
-    for (std::size_t i = 0; i < numDof; ++i) {
-        impl_->hostPrimaryVariables[i] = DispatcherGpuPrimaryVariables(*cpuPriVars[i]);
-    }
-
-    // Upload the current primary variables. The IQ prototype initializes
-    // fields that are intentionally not touched by the supported kernel.
-    impl_->primaryVariablesBuffer->copyFromHost(impl_->hostPrimaryVariables);
-    if (rebuildDeviceBuffers) {
-        impl_->intensiveQuantitiesBuffer->copyFromHost(impl_->hostIntensiveQuantities);
-    }
+    impl_->bridge->updatePrimaryVariables(cpuProblem, solution, timeIdx);
 
     const unsigned blockSize = 64u;
-    const unsigned gridSize = static_cast<unsigned>((numDof + blockSize - 1u) / blockSize);
+    const unsigned gridSize =
+        static_cast<unsigned>((solution.size() + blockSize - 1u) / blockSize);
 
-    dispatcherUpdateAllCellsKernel<<<gridSize, blockSize>>>(
-        impl_->problemView,
-        Opm::gpuistl::GpuView<const DispatcherGpuPrimaryVariables>(
-            impl_->primaryVariablesBuffer->data(), impl_->primaryVariablesBuffer->size()),
-        Opm::gpuistl::GpuView<DispatcherGpuIntensiveQuantities>(
-            impl_->intensiveQuantitiesBuffer->data(), impl_->intensiveQuantitiesBuffer->size()),
-        numDof);
+    dispatcherUpdateAllCellsKernel<<<gridSize, blockSize, 0, impl_->bridge->stream()>>>(
+        impl_->bridge->flowProblemView(),
+        impl_->bridge->primaryVariablesView(timeIdx),
+        impl_->bridge->intensiveQuantitiesView(timeIdx),
+        solution.size());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
+    impl_->bridge->recordPropertyReady(timeIdx);
+}
 
-    OPM_GPU_SAFE_CALL(cudaMemcpy(impl_->hostIntensiveQuantities.data(),
-                                 impl_->intensiveQuantitiesBuffer->data(),
-                                 numDof * sizeof(DispatcherGpuIntensiveQuantities),
-                                 cudaMemcpyDeviceToHost));
-
-    // Materialize the CPU cache for host-only consumers. The supported GPU
-    // TypeTag has no diffusion or dispersion state, so the overlay covers the
-    // complete supported IQ.
-    for (std::size_t i = 0; i < numDof; ++i) {
-        outIQ[i]->overlayBlackOilFieldsFrom(impl_->hostIntensiveQuantities[i]);
+template <class CpuTypeTag>
+void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::materializeHostIntensiveQuantities(
+    unsigned timeIdx,
+    IntensiveQuantities* const* destination,
+    std::size_t numDof)
+{
+    if (!impl_->bridge) {
+        OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
     }
+    impl_->bridge->materializeHostIntensiveQuantities(timeIdx, destination, numDof);
+}
+
+template <class CpuTypeTag>
+bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::hasDeviceModelView() const
+{
+    return impl_->bridge && impl_->bridge->hasModelView();
+}
+
+template <class CpuTypeTag>
+const typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Bridge&
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::bridge() const
+{
+    if (!impl_->bridge) {
+        OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
+    }
+    return *impl_->bridge;
+}
+
+template <class CpuTypeTag>
+typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Bridge&
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::bridge()
+{
+    if (!impl_->bridge) {
+        OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
+    }
+    return *impl_->bridge;
 }
 
 // =============================================================================
