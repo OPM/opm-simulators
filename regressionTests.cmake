@@ -2999,6 +2999,101 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    wpwe_complump_connection_count
+  FILENAME
+    WPWE-COMPLUMP-CONNECTION-COUNT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wpwe
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wpwe_deck_connection_changes
+  FILENAME
+    WPWE-DECK-CONNECTION-CHANGES
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wpwe
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wpwe_deck_status_conversion
+  FILENAME
+    WPWE-DECK-STATUS-CONVERSION
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wpwe
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wpwe_mixed_closure_causes
+  FILENAME
+    WPWE-MIXED-CLOSURE-CAUSES
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wpwe
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    wpwe_workover_shut_stop
+  FILENAME
+    WPWE-WORKOVER-SHUT-STOP
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    wpwe
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
     wconprod_13
   FILENAME
     WCONPROD-13
