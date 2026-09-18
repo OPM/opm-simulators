@@ -319,6 +319,29 @@ BOOST_FIXTURE_TEST_CASE(PlusConReachIsNotCounted, Setup)
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
 }
 
+BOOST_FIXTURE_TEST_CASE(PlusConReachesPastAlreadyClosedConnections, Setup)
+{
+    // The deck has already shut completions 4 and 5 when a '+CON' fires on 3.
+    // Its reach covers them whether or not they were still able to flow, so
+    // the well is closed to the bottom exactly as it would be had they been
+    // open.  Completions 1 and 2 keep flowing, so the topmost-completion route
+    // does not apply and only the reach can report this.
+    auto tracker = Opm::WellPerformanceEventTracker{};
+
+    auto before = allOpen();
+    setOpen(before.wells["P1"], {1, 2, 3});
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    setOpen(now.wells["P1"], {1, 2});
+    now.wells["P1"].closedBelowOffender = {cell(4), cell(5)};
+    tracker.accumulate(now);
+
+    const auto& ev = tracker.events("P1");
+    BOOST_CHECK_EQUAL(ev.connsClosed, 1);      // the offender alone
+    BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
+}
+
 BOOST_FIXTURE_TEST_CASE(RepeatedPlusConCountsEveryOffender, Setup)
 {
     // If multiple '+CON' limits fail in one cascade, each offending

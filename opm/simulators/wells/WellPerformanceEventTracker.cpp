@@ -155,7 +155,18 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
                             now.openConnections.end(),
                             std::back_inserter(closed));
 
-        if (opened.empty() && closed.empty()) {
+        // A '+CON' reaches below its offender whether or not anything down
+        // there was still able to flow, so the reach is recognised by the
+        // connections it marks, not by the ones whose state it changes: the
+        // deck may have shut them already.
+        auto reached = std::vector<std::size_t> {};
+        std::set_difference(now.closedBelowOffender.begin(),
+                            now.closedBelowOffender.end(),
+                            before.closedBelowOffender.begin(),
+                            before.closedBelowOffender.end(),
+                            std::back_inserter(reached));
+
+        if (opened.empty() && closed.empty() && reached.empty()) {
             continue;
         }
 
@@ -164,7 +175,7 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
             events.connsOpened += static_cast<int>(opened.size());
         }
 
-        if (closed.empty()) {
+        if (closed.empty() && reached.empty()) {
             continue;
         }
 
@@ -182,19 +193,20 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
 
         // WPWE3 has two routes to the bottom of the wellbore.  A workover that
         // reaches below its offending connection gets there directly,
-        // regardless of what remains open above.  Otherwise, the closures must
-        // leave either nothing able to flow or only the topmost completion.  A
-        // well still flowing farther down, with closed completions above it,
-        // has not been closed to the bottom.  The cause of the other closures
-        // does not matter: if the deck shut them, a workover that takes the
-        // final one still reports WPWE3.  openCompletions is a sorted multiset;
-        // equal endpoints therefore mean that it contains one distinct
-        // completion number.
-        if ((belowOffender > 0) ||
-            now.openCompletions.empty() ||
-            ((now.openCompletions.front() == now.openCompletions.back()) &&
-             (now.openCompletions.front() == now.topCompletion)))
-        {
+        // regardless of what remains open above.  Otherwise, the closures of
+        // this time step must leave either nothing able to flow or only the
+        // topmost completion.  A well still flowing farther down, with closed
+        // completions above it, has not been closed to the bottom.  The cause
+        // of the other closures does not matter: if the deck shut them, a
+        // workover that takes the final one still reports WPWE3.
+        // openCompletions is a sorted multiset; equal endpoints therefore mean
+        // that it contains one distinct completion number.
+        const auto onlyTopCompletionLeft = ! closed.empty()
+            && (now.openCompletions.empty()
+                || ((now.openCompletions.front() == now.openCompletions.back())
+                    && (now.openCompletions.front() == now.topCompletion)));
+
+        if (! reached.empty() || onlyTopCompletionLeft) {
             events.closedToBottom = 1;
         }
     }
