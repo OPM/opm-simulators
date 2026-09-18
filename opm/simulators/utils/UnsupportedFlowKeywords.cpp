@@ -502,7 +502,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"RIVTRACE", {true, std::nullopt}},
         {"ROCKFRAC", {true, std::nullopt}},
         {"ROCKPAMA", {true, std::nullopt}},
-        {"ROCKTABH", {true, std::nullopt}},
         {"ROCKTABW", {true, std::nullopt}},
         {"ROCKTHSG", {true, std::nullopt}},
         {"ROCKTSIG", {true, std::nullopt}},
