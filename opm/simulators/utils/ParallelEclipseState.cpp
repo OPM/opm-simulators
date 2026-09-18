@@ -104,8 +104,20 @@ const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& ke
     auto it = m_intProps.find(keyword);
     if (it == m_intProps.end()) {
         // Some of the keywords might be defaulted.
-        // We will let rank 0 create them and distribute them using get_global_int
+        // We will let rank 0 create them and distribute them using get_global_int.
         auto data = get_global_int(keyword);
+        std::size_t valuesPerCell = 1;
+        if (m_comm.rank() == 0) {
+            const auto fieldKey = is_FIP(keyword) ? keyword.substr(0, 6) : keyword;
+            valuesPerCell = m_manager.get_int_field_data(fieldKey).numValuePerCell();
+        }
+        m_comm.broadcast(&valuesPerCell, 1, 0);
+        if (valuesPerCell > 1) {
+            throw std::runtime_error {
+                "Lazily distributing multi-valued integer field properties is not supported"
+            };
+        }
+
         auto& local_data = const_cast<std::map<std::string, Fieldprops::FieldData<int>>&>(m_intProps)[keyword];
         local_data.data.resize(m_activeSize());
         local_data.value_status.resize(m_activeSize());
@@ -161,13 +173,31 @@ const std::vector<double>& ParallelFieldPropsManager::get_double(const std::stri
     auto it = m_doubleProps.find(keyword);
     if (it == m_doubleProps.end()) {
         // Some of the keywords might be defaulted.
-        // We will let rank 0 create them and distribute them using get_global_int
+        // We will let rank 0 create them and distribute them using get_global_double.
         auto data = get_global_double(keyword);
+        std::size_t valuesPerCell = 1;
+        if (m_comm.rank() == 0) {
+            valuesPerCell = m_manager.get_double_field_data(
+                keyword, /* allow_unsupported = */ true).numValuePerCell();
+        }
+        m_comm.broadcast(&valuesPerCell, 1, 0);
+        if (m_hasLgr && valuesPerCell > 1) {
+            throw std::runtime_error {
+                "Distributing multi-valued field properties with LGRs is not supported"
+            };
+        }
+
         auto& local_data = const_cast<std::map<std::string, Fieldprops::FieldData<double>>&>(m_doubleProps)[keyword];
-        local_data.data.resize(m_activeSize());
-        local_data.value_status.resize(m_activeSize());
-        for (int i = 0; i < m_activeSize(); ++i) {
-            local_data.data[i] = data[m_local2Global(i)];
+        const auto localSize = static_cast<std::size_t>(m_activeSize());
+        const auto globalSize = data.size() / valuesPerCell;
+        local_data.data.resize(valuesPerCell * localSize);
+        local_data.value_status.resize(valuesPerCell * localSize);
+        local_data.kw_info.num_value_per_cell(valuesPerCell);
+        for (std::size_t component = 0; component < valuesPerCell; ++component) {
+            for (std::size_t i = 0; i < localSize; ++i) {
+                local_data.data[component * localSize + i] =
+                    data[component * globalSize + m_local2Global(i)];
+            }
         }
         return local_data.data;
     }

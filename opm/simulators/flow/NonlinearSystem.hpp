@@ -134,6 +134,11 @@ protected:
     virtual void storeSolutionUpdate(const GlobalEqVector&)
     {}
 
+    /// Fetch the updated ghost-cell primary variables from the owning
+    /// processes before the intensive quantities are recomputed.
+    virtual void postSolutionUpdate()
+    { simulator_.model().syncOverlap(); }
+
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
     template <class WellModelType>
