@@ -2780,6 +2780,8 @@ add_test_compareECLFiles(
 set(_winjmult_cases
   WINJMULT_MSW
   WINJMULT_STDW
+  WINJMULT_UDQ_MSW
+  WINJMULT_UDQ_STDW
 )
 
 
