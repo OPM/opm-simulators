@@ -141,14 +141,14 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
         // Differenced over connections, not completion numbers.  COMPLUMP
         // may put several connections on one completion and may renumber them
         // while the run is under way; neither opens or closes anything.
-        auto opened = std::vector<std::size_t> {};
+        auto opened = std::vector<WellStatusSnapshot::ConnectionID> {};
         std::set_difference(now.openConnections.begin(),
                             now.openConnections.end(),
                             before.openConnections.begin(),
                             before.openConnections.end(),
                             std::back_inserter(opened));
 
-        auto closed = std::vector<std::size_t> {};
+        auto closed = std::vector<WellStatusSnapshot::ConnectionID> {};
         std::set_difference(before.openConnections.begin(),
                             before.openConnections.end(),
                             now.openConnections.begin(),
@@ -159,7 +159,7 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
         // there was still able to flow, so the reach is recognised by the
         // connections it marks, not by the ones whose state it changes: the
         // deck may have shut them already.
-        auto reached = std::vector<std::size_t> {};
+        auto reached = std::vector<WellStatusSnapshot::ConnectionID> {};
         std::set_difference(now.closedBelowOffender.begin(),
                             now.closedBelowOffender.end(),
                             before.closedBelowOffender.begin(),
@@ -183,7 +183,7 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
         // violated and closes the rest of the well below it.  Only the
         // violation itself counts towards WPWE2.
         const auto belowOffender = std::count_if(closed.begin(), closed.end(),
-            [&now](const std::size_t connection)
+            [&now](const WellStatusSnapshot::ConnectionID& connection)
             {
                 return std::binary_search(now.closedBelowOffender.begin(),
                                           now.closedBelowOffender.end(), connection);
@@ -221,11 +221,11 @@ WellPerformanceEventTracker::serializationTestObject()
 
     result.events_["W1"] = data::WellPerformanceEvents::serializationTestObject();
     result.previous_.wells["W1"] =
-        WellStatusSnapshot::Entry { WellStatus::OPEN, {10, 11, 12}, {13}, {1, 2, 3}, 1 };
+        WellStatusSnapshot::Entry { WellStatus::OPEN, {{0, 10}, {0, 11}, {0, 12}}, {{1, 13}}, {1, 2, 3}, 1 };
     result.previous_.wells["W2"] =
         WellStatusSnapshot::Entry { WellStatus::SHUT, {}, {}, {}, 1 };
     result.lastAccepted_.wells["W1"] =
-        WellStatusSnapshot::Entry { WellStatus::OPEN, {10, 11}, {}, {1, 2}, 1 };
+        WellStatusSnapshot::Entry { WellStatus::OPEN, {{0, 10}, {0, 11}}, {}, {1, 2}, 1 };
     result.hasLastAccepted_ = true;
     result.injector_["W1"] = false;
     result.injector_["W2"] = true;

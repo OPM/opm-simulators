@@ -140,11 +140,13 @@ struct Setup
 
 using Entry = Opm::WellStatusSnapshot::Entry;
 
-// Cell index identifying the connection that carries completion 'c' in the
-// one-connection-per-completion wells most of these tests use.
-constexpr std::size_t cell(const int c)
+using ConnectionID = Opm::WellStatusSnapshot::ConnectionID;
+
+// The connection carrying completion 'c' in the one-connection-per-completion
+// wells most of these tests use.  Level 0 is the global grid.
+ConnectionID cell(const int c, const int level = 0)
 {
-    return 9 + static_cast<std::size_t>(c);
+    return { level, 9 + static_cast<std::size_t>(c) };
 }
 
 // Connections able to flow, one per completion.
@@ -167,7 +169,7 @@ void setOpenLumped(Entry& e, std::initializer_list<std::pair<std::size_t, int>> 
     e.openCompletions.clear();
 
     for (const auto& [cellIx, complnum] : conns) {
-        e.openConnections.push_back(cellIx);
+        e.openConnections.push_back(ConnectionID { 0, cellIx });
         e.openCompletions.push_back(complnum);
     }
 }
@@ -340,6 +342,29 @@ BOOST_FIXTURE_TEST_CASE(PlusConReachesPastAlreadyClosedConnections, Setup)
     const auto& ev = tracker.events("P1");
     BOOST_CHECK_EQUAL(ev.connsClosed, 1);      // the offender alone
     BOOST_CHECK_EQUAL(ev.closedToBottom, 1);
+}
+
+BOOST_FIXTURE_TEST_CASE(CellIndexRepeatedAcrossRefinementLevels, Setup)
+{
+    // A refined grid numbers its cells from zero again, so a connection in an
+    // LGR may carry the same cell index as one in the global grid.  Closing
+    // the refined one must not read as closing the global one.
+    auto tracker = Opm::WellPerformanceEventTracker{};
+
+    // The global-grid connection closes in the same step as the refined one
+    // opens.  On cell index alone the two are indistinguishable and the step
+    // looks like nothing happened.
+    auto before = allOpen();
+    before.wells["P1"].openConnections = { cell(1, 0) };
+    before.wells["P1"].openCompletions = { 1 };
+    tracker.beginTimeStep(sched, 0, before);
+
+    auto now = before;
+    now.wells["P1"].openConnections = { cell(1, 1) };
+    tracker.accumulate(now);
+
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsClosed, 1);
+    BOOST_CHECK_EQUAL(tracker.events("P1").connsOpened, 1);
 }
 
 BOOST_FIXTURE_TEST_CASE(RepeatedPlusConCountsEveryOffender, Setup)

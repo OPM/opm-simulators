@@ -1330,13 +1330,15 @@ wellStatusSnapshot() const
             if ((connection.state() == Connection::State::OPEN) &&
                 !closedByWorkover)
             {
-                // The cell index identifies the connection whatever COMPLUMP
-                // calls it; the completion number is what WPWE3 asks about.
-                entry.openConnections.push_back(connection.global_index());
+                // The cell identifies the connection whatever COMPLUMP calls
+                // it; the completion number is what WPWE3 asks about.
+                entry.openConnections.emplace_back(connection.get_lgr_level(),
+                                                   connection.global_index());
                 entry.openCompletions.push_back(complnum);
             }
             else if (wtestState.completion_closed_below_offender(well.name(), complnum)) {
-                entry.closedBelowOffender.push_back(connection.global_index());
+                entry.closedBelowOffender.emplace_back(connection.get_lgr_level(),
+                                                       connection.global_index());
             }
         }
 

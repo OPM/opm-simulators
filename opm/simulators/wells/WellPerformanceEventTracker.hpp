@@ -26,6 +26,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -38,22 +39,28 @@ class Schedule;
 /// The deck status amended by runtime decisions recorded in WellTestState and
 /// WellState.
 struct WellStatusSnapshot {
+    /// Identifies a connection independently of the completion number it
+    /// carries: the refinement level it belongs to, and its cell index within
+    /// that level.
+    using ConnectionID = std::pair<int, std::size_t>;
+
     struct Entry {
         WellStatus status {WellStatus::SHUT};
 
-        /// Global cell index of every connection that is currently able to
-        /// flow, sorted for set operations.  WPWE1 and WPWE2 count
-        /// connections, so they difference these rather than completion
-        /// numbers: COMPLUMP may map several connections onto one completion
-        /// and may renumber them mid-run, neither of which opens or closes
-        /// anything.
-        std::vector<std::size_t> openConnections {};
+        /// Identity of every connection that is currently able to flow,
+        /// sorted for set operations.  WPWE1 and WPWE2 count connections, so
+        /// they difference these rather than completion numbers: COMPLUMP may
+        /// map several connections onto one completion and may renumber them
+        /// mid-run, neither of which opens or closes anything.  A cell index
+        /// repeats across refinement levels, so the level is part of the
+        /// identity.
+        std::vector<ConnectionID> openConnections {};
 
-        /// Global cell index of every connection currently closed only by the
-        /// reach of a '+CON' workover, rather than by a limit of its own,
-        /// sorted.  WPWE2 does not count them, and a workover that reaches
-        /// past its offender has closed the well to the bottom.
-        std::vector<std::size_t> closedBelowOffender {};
+        /// Identity of every connection currently closed only by the reach of
+        /// a '+CON' workover, rather than by a limit of its own, sorted.
+        /// WPWE2 does not count them, and a workover that reaches past its
+        /// offender has closed the well to the bottom.
+        std::vector<ConnectionID> closedBelowOffender {};
 
         /// Completion number of every connection able to flow, sorted.  Only
         /// WPWE3 uses this, to ask whether the well is left flowing through
