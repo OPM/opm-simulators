@@ -28,6 +28,7 @@ namespace Opm::Parameters {
 struct EnableTuning { static constexpr bool value = false; };
 
 struct RescoupSyncAtReportSteps { static constexpr bool value = false; };
+struct RescoupSpawnWrapper { static constexpr auto* value = ""; };
 
 template<class Scalar>
 struct SolverGrowthFactor { static constexpr Scalar value = 2.0; };
