@@ -1188,8 +1188,34 @@ public:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
         const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
+
+        if (!this->rockCompPoroMultElastic_.empty()) {
+            // ROCKCOMP HYSTERESIS=HYSTER: follow the deflation (virgin/plastic) curve
+            // at or below the lowest pressure ever reached by this cell, and the
+            // reversible elastic reload curve, anchored at that turning pressure,
+            // above it.
+            LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+            LhsEval turningPressure = this->minRefPressure_[elementIdx];
+
+            if (!this->overburdenPressure_.empty()) {
+                effectivePressure -= this->overburdenPressure_[elementIdx];
+                turningPressure -= this->overburdenPressure_[elementIdx];
+            }
+
+            if (rock_config.store()) {
+                const auto& initialPressure = asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
+                effectivePressure -= initialPressure;
+                turningPressure -= initialPressure;
+            }
+
+            if (effectivePressure <= turningPressure)
+                return this->rockCompPoroMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
+
+            return this->rockCompPoroMultElastic_[tableIdx].eval(turningPressure, effectivePressure, /*extrapolation=*/true);
+        }
+
+        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
@@ -1891,8 +1917,31 @@ protected:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
         const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
+
+        if (!this->rockCompTransMultElastic_.empty()) {
+            // ROCKCOMP HYSTERESIS=HYSTER: see rockCompPoroMultiplier() above.
+            LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
+            LhsEval turningPressure = this->minRefPressure_[elementIdx];
+
+            if (!this->overburdenPressure_.empty()) {
+                effectivePressure -= this->overburdenPressure_[elementIdx];
+                turningPressure -= this->overburdenPressure_[elementIdx];
+            }
+
+            if (rock_config.store()) {
+                const auto& initialPressure = asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
+                effectivePressure -= initialPressure;
+                turningPressure -= initialPressure;
+            }
+
+            if (effectivePressure <= turningPressure)
+                return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
+
+            return this->rockCompTransMultElastic_[tableIdx].eval(turningPressure, effectivePressure, /*extrapolation=*/true);
+        }
+
+        LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
