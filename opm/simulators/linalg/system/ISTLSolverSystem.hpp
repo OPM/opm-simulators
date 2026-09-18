@@ -417,8 +417,10 @@ private:
                 // does. "cellblockavg" averages per block row instead, which
                 // is a finer but non-classic variant.
                 const bool perWell = (wellWeightType_ == "cellavg");
-                const std::size_t first = perWell ? wellLayout_.firstBlock(*wellLayout_.wellOfBlock(wb)) : wb;
-                const std::size_t last = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
+                const std::size_t first
+                    = perWell ? wellLayout_.firstBlock(*wellLayout_.wellOfBlock(wb)) : wb;
+                const std::size_t last
+                    = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
                 int nperf = 0;
                 for (std::size_t b = first; b < last; ++b) {
                     for (auto col = mergedB_[b].begin(), end = mergedB_[b].end();

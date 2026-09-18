@@ -82,8 +82,7 @@ namespace Opm
 // restrict a well residual nor apply a coarse bhp correction.  Selecting
 // Classic here reproduces that, which makes the system solver and the classic
 // cprw differ only in numerics rather than in formulation.
-enum class WellTransfer
-{
+enum class WellTransfer {
     Full,           // restrict the well residual and prolong the bhp correction
     NoProlongation, // restrict the well residual, discard the bhp correction
     Classic,        // neither -- as in PressureBhpTransferPolicy
@@ -93,8 +92,7 @@ enum class WellTransfer
 // two different conventions: StandardWellEquations contracts D, while
 // MultisegmentWellEquations sets the diagonal to minus the sum of the well
 // row's reservoir entries and never reads D at all.
-enum class WellCoarseDiagonal
-{
+enum class WellCoarseDiagonal {
     Auto,      // contract D for single-block wells, row sum for multi-block: as classic
     ContractD, // always contract D
     RowSum,    // always minus the row sum
