@@ -658,6 +658,10 @@ report(const int*                            globalCellIdxMap,
         well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
         well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
 
+        // See WellInterface::consolidatePhaseMixingRates.
+        well.rates.set(rt::free_gas, ws.phase_mixing_rates[ws.free_gas]);
+        well.rates.set(rt::free_oil, ws.phase_mixing_rates[ws.free_oil]);
+
         {
             auto& curr = well.current_control;
 
@@ -1321,6 +1325,8 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
 
         connection.rates.set(rt::dissolved_gas, perf_data.phase_mixing_rates[i][ws.dissolved_gas]);
         connection.rates.set(rt::vaporized_oil, perf_data.phase_mixing_rates[i][ws.vaporized_oil]);
+        connection.rates.set(rt::free_gas, perf_data.phase_mixing_rates[i][ws.free_gas]);
+        connection.rates.set(rt::free_oil, perf_data.phase_mixing_rates[i][ws.free_oil]);
     }
 
     if (pu.hasPolymer()) {

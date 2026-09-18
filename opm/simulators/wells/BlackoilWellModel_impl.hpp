@@ -744,6 +744,11 @@ namespace Opm {
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
+        // See WellInterface::consolidatePhaseMixingRates.
+        for (const auto& well : well_container_) {
+            well->consolidatePhaseMixingRates(this->wellState());
+        }
+
         this->groupStateHelper().updateNONEProductionGroups();
 
 #ifdef RESERVOIR_COUPLING_ENABLED

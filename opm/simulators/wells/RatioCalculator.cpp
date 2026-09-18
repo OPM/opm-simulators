@@ -125,6 +125,13 @@ gasOilPerfRateInj(const std::vector<Value>& cq_s,
         // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
         perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilComp_]) -
                                              getValue(rv) * getValue(cq_s[gasComp_])) / d;
+        // Free oil/gas, captured directly rather than derived later as
+        // (total - dissolved): see PerforationRates::free_gas. q_or * b_o
+        // and q_gr * b_g respectively.
+        perf_rates.free_oil = (getValue(cq_s[oilComp_]) -
+                               getValue(rv) * getValue(cq_s[gasComp_])) / d;
+        perf_rates.free_gas = (getValue(cq_s[gasComp_]) -
+                               getValue(rs) * getValue(cq_s[oilComp_])) / d;
     }
 
     if (waterActive) {
@@ -160,6 +167,10 @@ gasOilPerfRateProd(std::vector<Value>& cq_s,
     if (isProducer) {
         perf_rates.dis_gas = getValue(dis_gas);
         perf_rates.vap_oil = getValue(vap_oil);
+        // Free gas/oil, captured directly rather than derived later as
+        // (total - dissolved): see PerforationRates::free_gas.
+        perf_rates.free_gas = getValue(cq_sGas);
+        perf_rates.free_oil = getValue(cq_sOil);
     }
 
     if (waterActive) {
@@ -224,6 +235,10 @@ gasWaterPerfRateInj(const std::vector<Value>& cq_s,
         // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
         perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterComp_]) -
                                                        getValue(rvw) * getValue(cq_s[gasComp_])) / dw;
+        // Free gas, captured directly rather than derived later as
+        // (total - dissolved): q_gr * b_g.
+        perf_rates.free_gas = (getValue(cq_s[gasComp_]) -
+                               getValue(rsw) * getValue(cq_s[waterComp_])) / dw;
     }
 }
 
@@ -245,6 +260,9 @@ gasWaterPerfRateProd(std::vector<Value>& cq_s,
     if (isProducer) {
         perf_rates.vap_wat = getValue(vap_wat);
         perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
+        // Free gas, captured directly rather than derived later as
+        // (total - dissolved): see PerforationRates::free_gas.
+        perf_rates.free_gas = getValue(cq_sGas);
     }
 }
 

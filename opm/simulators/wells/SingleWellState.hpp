@@ -119,12 +119,15 @@ public:
     // filtration injection concentration
     Scalar filtrate_conc{0};
 
-    std::array<Scalar,4> phase_mixing_rates{};
+    std::array<Scalar,6> phase_mixing_rates{};
     enum RateIndices {
       dissolved_gas = 0,
       dissolved_gas_in_water = 1,
       vaporized_oil = 2,
-      vaporized_water = 3
+      vaporized_water = 3,
+      // See WellInterface::consolidatePhaseMixingRates.
+      free_gas = 4,
+      free_oil = 5
     };
 
     struct GroupTarget {

@@ -253,6 +253,18 @@ namespace Opm
                        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
             {
                 ratioCalc.gasWaterPerfRateProd(cq_s, perf_rates, rvw, rsw, this->isProducer());
+            } else if (this->isProducer()) {
+                // No dissolution/vaporization is possible without both a
+                // hydrocarbon phase and a phase to mix with, so whichever
+                // hydrocarbon phase is active here is entirely free.
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const auto oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+                    perf_rates.free_oil = getValue(cq_s[oilCompIdx]);
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const auto gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                    perf_rates.free_gas = getValue(cq_s[gasCompIdx]);
+                }
             }
         } else {
             // Do nothing if crossflow is not allowed
@@ -379,7 +391,8 @@ namespace Opm
         const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.phase_mixing_rates.fill(0.0);
+        // ws.phase_mixing_rates (well-level, cross-rank-reduced) is built by
+        // consolidatePhaseMixingRates() instead of here; see below.
         if constexpr (has_energy) {
             ws.energy_rate = 0.0;
         }
@@ -439,12 +452,8 @@ namespace Opm
         // Update the connection
         this->connectionRates_ = connectionRates;
 
-        // Accumulate dissolved gas and vaporized oil flow rates across all
-        // ranks sharing this well (this->index_of_well_).
-        {
-            const auto& comm = this->parallel_well_info_.communication();
-            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
-        }
+        // Dissolved gas/vaporized oil are reduced across ranks once per
+        // timestep in consolidatePhaseMixingRates(), not here.
 
         // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
         this->linSys_.sumDistributed(this->parallel_well_info_.communication());
@@ -544,16 +553,16 @@ namespace Opm
             }
         }
 
-        // updating the solution gas rate and solution oil rate
+        // Record the free/dissolved split for this perforation -- the same
+        // dis_gas/vap_oil/etc. just folded into cq_s above, so needed
+        // regardless of reporting.
         if (this->isProducer()) {
-            ws.phase_mixing_rates[ws.dissolved_gas] += perf_rates.dis_gas;
-            ws.phase_mixing_rates[ws.dissolved_gas_in_water] += perf_rates.dis_gas_in_water;
-            ws.phase_mixing_rates[ws.vaporized_oil] += perf_rates.vap_oil;
-            ws.phase_mixing_rates[ws.vaporized_water] += perf_rates.vap_wat;
             perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perf_rates.dis_gas;
             perf_data.phase_mixing_rates[perf][ws.dissolved_gas_in_water] = perf_rates.dis_gas_in_water;
             perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perf_rates.vap_oil;
             perf_data.phase_mixing_rates[perf][ws.vaporized_water] = perf_rates.vap_wat;
+            perf_data.phase_mixing_rates[perf][ws.free_gas] = perf_rates.free_gas;
+            perf_data.phase_mixing_rates[perf][ws.free_oil] = perf_rates.free_oil;
         }
 
         if constexpr (has_energy) {
