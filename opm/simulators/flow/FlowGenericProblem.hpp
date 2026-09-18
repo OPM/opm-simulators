@@ -127,6 +127,20 @@ public:
     Scalar overburdenPressure(unsigned elementIdx) const;
 
     /*!
+     * \brief Whether all rock compaction multipliers use their default values.
+     *
+     * The GPU problem currently supports only the default unity multipliers.
+     */
+    bool usesDefaultRockCompaction() const
+    {
+        return rockCompPoroMultWc_.empty() &&
+               rockCompTransMultWc_.empty() &&
+               rockCompPoroMult_.empty() &&
+               rockCompTransMult_.empty() &&
+               rockCompTransMultVal_.empty();
+    }
+
+    /*!
      * \brief Returns the porosity of an element
      *
      * The reference porosity of an element is the porosity of the medium before modified

@@ -32,6 +32,7 @@
 
 #include <opm/common/utility/VectorWithDefaultAllocator.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/models/discretization/common/linearizationtype.hh>
 
@@ -177,7 +178,8 @@ public:
                    Storage<Scalar> maxGasDissolutionFactor,
                    EclThermalLawManager thermalLawManager,
                    Storage<Scalar> rockFraction,
-                   Storage<int> pvtRegionIndex)
+                   Storage<int> pvtRegionIndex,
+                   bool usesDefaultRockCompaction)
         : materialLawManager_(std::move(materialLawManager))
         , porosity_(std::move(porosity))
         , rockCompressibility_(std::move(rockCompressibility))
@@ -189,6 +191,10 @@ public:
         , rockFraction_(std::move(rockFraction))
         , pvtRegionIndex_(std::move(pvtRegionIndex))
     {
+        if (!usesDefaultRockCompaction) {
+            OPM_THROW(std::logic_error,
+                      "GPU FlowProblem does not support non-default rock compaction multipliers");
+        }
     }
 
     /*!
@@ -212,6 +218,10 @@ public:
     explicit GpuFlowProblem(const CpuProblem& cpu)
         : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
     {
+        if (!cpu.usesDefaultRockCompaction()) {
+            OPM_THROW(std::logic_error,
+                      "GPU FlowProblem does not support non-default rock compaction multipliers");
+        }
         const std::size_t n = cpu.model().numGridDof();
         porosity_.resize(n);
         rockCompressibility_.resize(n);
@@ -288,6 +298,10 @@ public:
               return static_cast<int>(p.pvtRegionIndex(u));
           }))
     {
+        if (!cpu.usesDefaultRockCompaction()) {
+            OPM_THROW(std::logic_error,
+                      "GPU FlowProblem does not support non-default rock compaction multipliers");
+        }
     }
 
     OPM_HOST_DEVICE ModelView model() const
@@ -372,6 +386,7 @@ public:
     template <class Evaluation>
     OPM_HOST_DEVICE Evaluation rockCompPoroMultiplier(const auto& /*intQuants*/, std::size_t /*elemIdx*/) const
     {
+        // Ctor guarantees no rock compaction, this is therefore always correct
         return Evaluation(1.0);
     }
 
@@ -379,6 +394,7 @@ public:
     template <class Evaluation>
     OPM_HOST_DEVICE Evaluation rockCompTransMultiplier(const auto& /*intQuants*/, std::size_t /*elemIdx*/) const
     {
+        // Ctor guarantees no rock compaction, this is therefore always correct
         return Evaluation(1.0);
     }
 
@@ -582,7 +598,8 @@ auto copy_to_gpu(
                           GpuBuffer<ScalarT>(cpu.maxGasDissolutionFactorStorage()),
                           ::Opm::gpuistl::copy_to_gpu(cpu.thermalLawManager()),
                           GpuBuffer<ScalarT>(cpu.rockFractionStorage()),
-                          GpuBuffer<int>(cpu.pvtRegionIndexStorage()));
+                          GpuBuffer<int>(cpu.pvtRegionIndexStorage()),
+                          true);
 }
 
 /*!
@@ -618,7 +635,8 @@ auto make_view(::Opm::GpuFlowProblem<ScalarT,
                           toView(buf.maxGasDissolutionFactorStorage()),
                           ::Opm::gpuistl::make_view(buf.thermalLawManager()),
                           toView(buf.rockFractionStorage()),
-                          toView(buf.pvtRegionIndexStorage()));
+                          toView(buf.pvtRegionIndexStorage()),
+                          true);
 }
 
 } // namespace Opm::gpuistl
