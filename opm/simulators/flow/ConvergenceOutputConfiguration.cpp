@@ -57,7 +57,7 @@ namespace {
                 fmt::format("Unsupported convergence output "
                             "option value{}: {}\n"
                             "Supported values are \"none\", "
-                            "\"steps\", and \"iterations\"",
+                            "\"steps\", \"iterations\", and \"performance\"",
                             pl, fmt::join(unsupp.begin(), u, ", "))
             };
         }
@@ -65,7 +65,7 @@ namespace {
         throw std::invalid_argument {
             fmt::format("Option {}:\n - Unsupported value{}: {}\n"
                         " - Supported values are \"none\", "
-                        "\"steps\", and \"iterations\"",
+                        "\"steps\", \"iterations\", and \"performance\"",
                         optionName, pl,
                         fmt::join(unsupp.begin(), u, ", "))
         };
@@ -79,11 +79,13 @@ namespace {
         auto opt = std::vector<Option>{};
 
         const auto values = std::unordered_map<std::string, Option> {
-            { "none"      , Option::None       },
-            { "step"      , Option::Steps      }, // Alias for 'steps' (plural)
-            { "steps"     , Option::Steps      },
-            { "iteration" , Option::Iterations }, // Alias for 'iterations' (plural)
-            { "iterations", Option::Iterations },
+            { "none"       , Option::None        },
+            { "step"       , Option::Steps       }, // Alias for 'steps' (plural)
+            { "steps"      , Option::Steps       },
+            { "iteration"  , Option::Iterations  }, // Alias for 'iterations' (plural)
+            { "iterations" , Option::Iterations  },
+            { "perf"       , Option::Performance }, // Alias for 'performance'
+            { "performance", Option::Performance },
         };
 
         auto unsupp = std::vector<std::string>{};
