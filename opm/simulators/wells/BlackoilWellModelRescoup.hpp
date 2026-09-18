@@ -32,13 +32,17 @@
 
 namespace Opm {
     class DeferredLogger;
+    enum class Phase;
     class Schedule;
+    class SummaryState;
     template<class TypeTag> class BlackoilWellModel;
     template<class Scalar, class IndexTraits> class GroupStateHelper;
     template<class Scalar, class IndexTraits> class WellState;
     template<class Scalar> class ReservoirCouplingMaster;
     template<class Scalar> class ReservoirCouplingSlave;
 }
+
+namespace Opm::ReservoirCoupling { class CouplingInfo; }
 
 namespace Opm {
 
@@ -98,6 +102,13 @@ public:
     { return well_model_.wellContainer(); }
 
     // === Rescoup flow methods ===
+
+    /// \brief Slave-side: evaluate the group and field level UDQs now, so that
+    ///   a UDQ that reads a target the master just imposed is current before
+    ///   the wells are solved, instead of one step behind.  Well and segment
+    ///   level UDQs, and any "UPDATE NEXT" DEFINE, are left to the ordinary
+    ///   end-of-step evaluation.
+    void evalGroupAndFieldUDQs();
 
     /// \brief True if the most recent sendMasterGroupNodePressuresToSlaves
     ///   carried is_final = true (or if no send has happened yet).  Used
@@ -235,7 +246,25 @@ public:
     /// Replaces the previous BlackoilWellModel::setupRescoupScopedLogger().
     std::optional<ReservoirCoupling::ScopedLoggerGuard> setupScopedLogger(DeferredLogger& local_logger);
 
+    /// \brief Slave-side: store each slave group's effective injection target
+    ///   as its GGIRT/GWIRT summary value, so that UDQs and the summary output
+    ///   can use it.  The effective target is the master's, the deck's own, or
+    ///   the smaller of the two, as the group's GRUPSLAV flag says; when the
+    ///   deck's own applies, or no master target exists, the entry is erased.
+    void storeSlaveGroupInjectionTargets();
+
 private:
+    /// \brief The injection target in force for a slave group and phase, in SI:
+    ///   the master's, the deck's, or the smaller of the two, as the GRUPSLAV
+    ///   flag says.  Empty when the deck's own limit applies or no surface-rate
+    ///   master target exists -- the summary evaluator then reads the schedule.
+    std::optional<Scalar>
+    effectiveSlaveGroupInjectionTarget_(const std::string& gname,
+                                        const Phase phase,
+                                        const int reportStepIdx,
+                                        const ReservoirCoupling::CouplingInfo& rescoup,
+                                        const SummaryState& summary_state) const;
+
     /// \brief Per-slave variant of masterNetworkHasMasterGroupLeaves():
     ///   true iff at least one of the given slave's master groups is a
     ///   leaf node in the master's extended network.  This is what

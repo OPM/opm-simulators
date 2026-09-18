@@ -492,6 +492,8 @@ namespace Opm {
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
                 this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
                     this->schedule_, reportStepIdx);
+                this->rescoupHelper_.storeSlaveGroupInjectionTargets();
+                this->rescoupHelper_.evalGroupAndFieldUDQs();
                 slave_needs_well_solution = true;
             }
         }
