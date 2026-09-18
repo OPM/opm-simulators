@@ -79,7 +79,7 @@ Work through `code-review`: blocking issues first, then the routed domain passes
 
 ## Step 3 — Write the review
 
-Never post to github. Deliver review results in chat only.
+Never post to GitHub. Deliver review results in chat only.
 
 **Tone.** Write factually, as an automated reviewer. Report findings; don't perform a persona, don't quote maintainers, and don't write anything that implies a human authored the review.
 

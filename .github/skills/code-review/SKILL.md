@@ -141,7 +141,7 @@ For the class-porting pattern (`GpuBuffer`/`GpuView` ownership, `OPM_HOST_DEVICE
 - Wrap every GPU API call in the matching `OPM_GPU_SAFE_CALL` / `OPM_CUSPARSE_SAFE_CALL` / `OPM_CUBLAS_SAFE_CALL` / `OPM_HYPRE_SAFE_CALL`.
 - A class creating its own stream must destroy *and* synchronise it. Async functions get an `Async` suffix; the default stream is a named constant, never a literal `0`.
 - Portability: guard cuSPARSE generic-API use by CUDA version; every capability `#if` needs an `#else` that errors or falls back, never silent degradation; add `<type_traits>` wherever `is_same_v` appears.
-- New GPU types go into `is_gpu_type` / `is_gpu_operator_v` (`gpuistl/detail/gpu_type_detection.hpp`); CPU-only classes must still compile with GPU support on; GPU solvers must match `ISTLSolver` semantics (convergence check, JSON print, `forceSerial`, NLDD local solver). Justify any GPU/CPU default divergence.
+New GPU types go into `is_gpu_type` (`gpuistl/detail/gpu_type_detection.hpp`) / `is_gpu_operator_v` (`linalg/is_gpu_operator.hpp`); CPU-only classes must still compile with GPU support on; GPU solvers must match `ISTLSolver` semantics (convergence check, JSON print, `forceSerial`, NLDD local solver). Justify any GPU/CPU default divergence.
 
 ## Cross-cutting passes
 
