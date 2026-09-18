@@ -174,12 +174,13 @@ Scalar impliedDensity(const Scalar pAbove, const Scalar pBelow)
 constexpr Scalar connateSw = 0.01;
 
 // The three-phase counterpart of deckString().
-std::string waterDeckString(const std::string& equil)
+std::string waterDeckString(const std::string& equil,
+                            const std::string& composition =
+                                "ZMFVD\n"
+                                " 2000   0 0.7 0.3\n"
+                                " 2100   0 0.3 0.7  /\n")
 {
-    return deckString(equil, "EQLDIMS\n/\n", "",
-                      "ZMFVD\n"
-                      " 2000   0 0.7 0.3\n"
-                      " 2100   0 0.3 0.7  /\n",
+    return deckString(equil, "EQLDIMS\n/\n", "", composition,
                       "RTEMP\n100\n/\n",
                       "OIL\nGAS\nWATER\n",
                       "SWFN\n 0.01 0.0 0.0\n 1.00 1.0 0.0 /\n"
@@ -903,6 +904,94 @@ BOOST_AUTO_TEST_CASE(DatumBelowWaterOilContact)
     BOOST_CHECK_LT(states[0].pressure(WaterFluidSystem::oilPhaseIdx), 200.0 * barsa);
     BOOST_CHECK_CLOSE(states[0].saturation(WaterFluidSystem::waterPhaseIdx),
                       connateSw, 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(WaterOilCapillaryPressureIsPreserved)
+{
+    // Retain both pressure columns even in the water zone. A separate reference
+    // pressure supplies the single-pressure flash until it supports capillarity.
+    // Exercise both directions of anchoring the columns at the contact.
+    for (const Scalar datum : std::array{2010.0, 2062.5}) {
+        BOOST_TEST_CONTEXT("Datum depth " << datum) {
+            const WaterEquilFixture fix(waterDeckString(
+                "EQUIL\n " + std::to_string(datum) + " 150 2052.5 10 2000 0 /\n"));
+            const auto initial = fix.compute(std::vector<int>(20, 0),
+                                              std::vector<Scalar>(20, connateSw),
+                                              std::vector<Scalar>(20, 0.8));
+            const auto& states = initial.fluidStates();
+            const auto& referencePressures = initial.referencePressures();
+            BOOST_REQUIRE_EQUAL(referencePressures.size(), states.size());
+
+            const auto& contact = states[10];
+            BOOST_CHECK_CLOSE(contact.pressure(WaterFluidSystem::oilPhaseIdx)
+                                  - contact.pressure(WaterFluidSystem::waterPhaseIdx),
+                              10.0 * barsa, 1e-6);
+
+            // The hydrocarbon keeps its own, lighter gradient below the contact.
+            const Scalar rhoHc = impliedDensity(states[15].pressure(WaterFluidSystem::oilPhaseIdx),
+                                                states[16].pressure(WaterFluidSystem::oilPhaseIdx));
+            const Scalar rhoWater = impliedDensity(states[15].pressure(WaterFluidSystem::waterPhaseIdx),
+                                                   states[16].pressure(WaterFluidSystem::waterPhaseIdx));
+            BOOST_CHECK_GT(rhoWater, rhoHc);
+            for (std::size_t c = 0; c < states.size(); ++c) {
+                const auto phase = fix.depths[c] > 2052.5 ? WaterFluidSystem::waterPhaseIdx
+                                                         : WaterFluidSystem::oilPhaseIdx;
+                BOOST_CHECK_EQUAL(referencePressures[c], states[c].pressure(phase));
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(WaterContactBelowCells)
+{
+    // With the datum at the last cell centre, querying a deeper contact used to
+    // evaluate a zero-length interval. Adding a cell at that contact must not
+    // change the pressures of the original cells, for any integration path.
+    const std::array decks{
+        waterDeckString("EQUIL\n 2097.5 150 2200 0 2000 0 /\n"),
+        waterDeckString("EQUIL\n 2097.5 150 2200 0 2097.5 0 3* 3 /\n"),
+        waterDeckString("EQUIL\n 2097.5 150 2200 0 2050 0 /\n",
+                        "COMPVD\n 2000 0 1 0 0 100\n"
+                        " 2050 0 0.3 0.7 1 100\n"
+                        " 2100 0 0.3 0.7 1 100 /\n")};
+    for (std::size_t path = 0; path < decks.size(); ++path) {
+        BOOST_TEST_CONTEXT("Integration path " << path) {
+            WaterEquilFixture fix(decks[path]);
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            fix.depths.back() = 2200.0;
+            const auto expected = fix.compute(std::vector<int>(20, 0)).fluidStates();
+
+            for (std::size_t c = 0; c + 1 < states.size(); ++c) {
+                for (unsigned phase = 0; phase < WaterFluidSystem::numPhases; ++phase) {
+                    BOOST_TEST_CONTEXT("Cell " << c << ", phase " << phase) {
+                        BOOST_CHECK(std::isfinite(states[c].pressure(phase)));
+                        BOOST_CHECK_CLOSE(states[c].pressure(phase),
+                                          expected[c].pressure(phase), 1e-8);
+                    }
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(WaterContactAboveCells)
+{
+    // The water-anchored path must also integrate all the way to an off-grid
+    // contact before handing its pressure to the hydrocarbon column.
+    WaterEquilFixture fix(waterDeckString("EQUIL\n 2002.5 150 1900 0 1800 0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    fix.depths.front() = 1900.0;
+    const auto expected = fix.compute(std::vector<int>(20, 0)).fluidStates();
+
+    for (std::size_t c = 1; c < states.size(); ++c) {
+        for (unsigned phase = 0; phase < WaterFluidSystem::numPhases; ++phase) {
+            BOOST_TEST_CONTEXT("Cell " << c << ", phase " << phase) {
+                BOOST_CHECK(std::isfinite(states[c].pressure(phase)));
+                BOOST_CHECK_CLOSE(states[c].pressure(phase),
+                                  expected[c].pressure(phase), 1e-8);
+            }
+        }
+    }
 }
 
 namespace {

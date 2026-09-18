@@ -489,6 +489,16 @@ protected:
             maxWater);
 
         initialFluidStates_ = std::move(initialState.fluidStates());
+        // The current flash has one pressure for all phases. Adapt the
+        // independent equilibrium columns here, using the water column below
+        // the contact. Once phase-pressure differences are supported by the
+        // flash, the equilibrated phase pressures can be used directly.
+        for (std::size_t cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                initialFluidStates_[cell].setPressure(phaseIdx,
+                                                     initialState.referencePressures()[cell]);
+            }
+        }
         // The primary variables are formed from the total composition; see initial().
         zmf_initialization_ = true;
     }
