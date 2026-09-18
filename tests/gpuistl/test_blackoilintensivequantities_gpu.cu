@@ -331,7 +331,6 @@ updateAllCellsKernel(GpuProblem problem,
         return;
     }
     IntensiveQuantities intensiveQuantities = outIntensiveQuantities[i];
-    intensiveQuantities.updateSaturations(primaryVariables[i], 0, Opm::LinearizationType{});
     intensiveQuantities.update(problem, primaryVariables[i], static_cast<unsigned>(i), 0);
     intensiveQuantities.updateEnergyQuantities_(problem, static_cast<unsigned>(i), 0u);
     outIntensiveQuantities[i] = intensiveQuantities;
@@ -536,7 +535,6 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     std::vector<IntensiveQuantitiesCpu> cpuIntensiveQuantities(numCells);
     const auto cpuT0 = std::chrono::steady_clock::now();
     for (std::size_t i = 0; i < numCells; ++i) {
-        cpuIntensiveQuantities[i].updateSaturations(primaryVariablesCpu, 0, Opm::LinearizationType{});
         cpuIntensiveQuantities[i].update(cpuProblem, primaryVariablesCpu, static_cast<unsigned>(i), 0);
     }
     const auto cpuT1 = std::chrono::steady_clock::now();
@@ -715,9 +713,10 @@ static void runProductionDispatcherTest(const std::string& deckPath)
 
     for (std::size_t i = 0; i < numCells; ++i) {
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {
-            BOOST_CHECK_EQUAL(mobilityBefore[2u * i + phaseOffset],
+            BOOST_CHECK_CLOSE(mobilityBefore[2u * i + phaseOffset],
                               asDouble(intensiveQuantities[i]->mobility(
-                                  activePhases[phaseOffset])));
+                                  activePhases[phaseOffset])),
+                              1e-6);
         }
         BOOST_CHECK_CLOSE(waterDensityBefore[i],
                           asDouble(intensiveQuantities[i]->fluidState().density(

@@ -219,7 +219,6 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
         return;
     }
     IntensiveQuantitiesT& iq = outIntensiveQuantities[i];
-    iq.updateSaturations(primaryVariables[i], 0, Opm::LinearizationType{});
     iq.update(problem, primaryVariables[i], static_cast<unsigned>(i), 0);
     iq.updateEnergyQuantities_(problem, static_cast<unsigned>(i), 0u);
 }
