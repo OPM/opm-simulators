@@ -136,7 +136,8 @@ struct WellDofLayout
     // Merged well block row -> well index, nullopt outside the layout.
     std::optional<std::size_t> wellOfBlock(const std::size_t blockRow) const
     {
-        const auto it = std::upper_bound(wellBlockOffsets.begin(), wellBlockOffsets.end(), blockRow);
+        const auto it
+            = std::upper_bound(wellBlockOffsets.begin(), wellBlockOffsets.end(), blockRow);
         if (it == wellBlockOffsets.begin() || it == wellBlockOffsets.end()) {
             return std::nullopt;
         }
