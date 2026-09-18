@@ -25,7 +25,8 @@
 /**
  * \file
  *
- * \brief Hydrostatic equilibration for the compositional simulator (EQUIL + ZMFVD).
+ * \brief Hydrostatic equilibration for the compositional simulator
+ *        (EQUIL + ZMFVD/COMPVD).
  */
 #ifndef OPM_INIT_STATE_EQUIL_COMP_HPP
 #define OPM_INIT_STATE_EQUIL_COMP_HPP
@@ -40,7 +41,9 @@
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/CompvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
@@ -56,10 +59,13 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -68,7 +74,9 @@ namespace Opm::EQUIL::Comp {
 
 namespace Details {
 
-/// ZMFVD and RTEMPVD use constant endpoint values outside the tabulated depths.
+/// Evaluate a depth table using constant endpoint values outside its tabulated
+/// range. Linear extrapolation would introduce composition or temperature
+/// values not specified by the input.
 template <class Scalar>
 Scalar evalDepthTable(const Tabulated1DFunction<Scalar>& table, const Scalar depth)
 {
@@ -132,25 +140,32 @@ private:
 
 /*!
  * \brief Computes the initial state of a compositional model from hydrostatic
- *        equilibrium (the EQUIL and ZMFVD keywords).
+ *        equilibrium (the EQUIL and ZMFVD or COMPVD keywords).
  *
- * The composition versus depth is given by ZMFVD and the temperature by RTEMPVD
- * (or the constant RTEMP).  The phase pressures are obtained by integrating the
- * hydrostatic ODE with the equation-of-state density, reusing the ODE machinery
- * of the black-oil equilibration facility.  Only the total composition, pressure
- * and temperature are needed downstream: the phase split and the saturations are
- * recomputed by the flash from these quantities.
+ * The composition versus depth is given by ZMFVD or COMPVD and the temperature
+ * by RTEMPVD (or the constant RTEMP). The pressure is obtained by integrating
+ * the hydrostatic ODE with the equation-of-state density. The initializer stores
+ * the pressure, temperature, overall composition, and nominal phase saturations;
+ * the downstream flash recomputes the equilibrium phase split.
  *
  * The supported initialization procedures (EQUIL item 10) are
- *  - type 1 (default): ZMFVD provides the total composition and the fluid is
- *    treated as a continuous hydrocarbon phase.  The subsequent flash assigns
- *    the phase label; an in-reservoir contact requires composition variation
- *    across the contact for correct phase labeling;
- *  - type 3: ZMFVD provides the liquid composition below the gas-oil contact.
- *    The contact becomes the reference depth, where the pressure is the
- *    saturation (bubble-point) pressure of the contact liquid unless EQUIL
- *    item 11 retains the input pressure.  Above the contact the gas has the
- *    constant composition of the equilibrium vapour at the contact.
+ *  - type 1 (default): the table provides the total composition. A single-zone
+ *    table uses one EOS root throughout the region. When the gas-oil contact
+ *    lies inside such a region, the composition must vary over the region for
+ *    the downstream flash to label phases correctly. A COMPVD table naming
+ *    both phases instead defines separate gas and liquid zones; the zone
+ *    containing the datum is anchored at the datum pressure and the other at
+ *    the contact;
+ *  - type 3: the table provides the liquid composition below the gas-oil
+ *    contact. The contact becomes the reference depth, where the pressure
+ *    is the saturation (bubble-point) pressure of the contact liquid unless
+ *    EQUIL item 11 retains the input pressure. Above the contact, the gas uses
+ *    the COMPVD vapour rows when present, or the equilibrium vapour composition
+ *    of the contact liquid otherwise.
+ *
+ * The COMPVD phase column selects the EOS root. If its rows name both phases,
+ * the vapour rows define the gas zone above the gas-oil contact and the liquid
+ * rows define the liquid zone below it.
  *
  * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
@@ -163,7 +178,8 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
 
-    /// \param[in] inputState      Input state, provides EQUIL, ZMFVD, RTEMP(VD).
+    /// \param[in] inputState      Input state, provides EQUIL, ZMFVD or COMPVD,
+    ///                            RTEMP(VD).
     /// \param[in] eosType         Equation of state used by the fluid system.
     /// \param[in] cellCenterDepth Depth of each cell centre.
     /// \param[in] eqlnum          Zero-based equilibration region of each cell.
@@ -182,16 +198,10 @@ public:
         const auto& records = inputState.getInitConfig().getEquil();
         const auto& tables = inputState.getTableManager();
 
-        if (!tables.hasTables("ZMFVD")) {
-            // COMPVD is the other accepted way of giving the composition
-            // versus depth, but it is not supported here yet; name it so the
-            // message does not read as if ZMFVD were the only valid input.
-            const std::string msg = tables.hasTables("COMPVD")
-                ? "Equilibration of a compositional model with the composition versus "
-                  "depth from COMPVD is not supported; use ZMFVD instead."
-                : "Equilibration of a compositional model requires the composition "
-                  "versus depth from the ZMFVD keyword.";
-            OPM_THROW(std::runtime_error, msg);
+        if (!tables.hasTables("ZMFVD") && !tables.hasTables("COMPVD")) {
+            OPM_THROW(std::runtime_error,
+                      "Equilibration of a compositional model requires the composition "
+                      "versus depth from the ZMFVD or the COMPVD keyword.");
         }
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -251,36 +261,185 @@ private:
     struct Region {
         int initType{1};                            // EQUIL item 10
         Scalar zgoc{};
-        CompVec vaporComposition{};                 // gas above the contact (type 3)
-        std::vector<TabulatedFunction> zmfVdTable;  // per-component ZMFVD
+        /// Name of the selected composition keyword, used in diagnostics.
+        std::string_view compositionKeyword;
+        /// EOS phase named by every row of a single-phase COMPVD table.
+        std::optional<unsigned> statedPhaseIdx{};
+        /// Nominal phase assigned to cells in a single-zone region.
+        unsigned nominalPhaseIdx{FluidSystem::oilPhaseIdx};
+        /// COMPVD naming both phases describes a gas zone over a liquid one,
+        /// each with its own composition and its own hydrostatic column.
+        bool twoZone{false};
+        /// Gas-zone composition for a COMPVD table that names both phases.
+        std::vector<TabulatedFunction> vaporVdTable;
+        /// Equilibrium vapour at the contact for type 3 without gas-zone rows.
+        CompVec vaporComposition{};
+        /// Overall composition for a single-zone type 1 region, liquid composition
+        /// for type 3, or liquid-zone composition when vaporVdTable stores the gas zone.
+        std::vector<TabulatedFunction> compositionVdTable;
         TabulatedFunction tempVdTable;
         std::optional<PressFunc> oilPressure;
-        std::optional<PressFunc> gasPressure;       // type 3 only
+        std::optional<PressFunc> gasPressure;       // two zones, or type 3
     };
+
+    /// Normalized vapour-zone composition of a two-zone COMPVD region at a given depth.
+    static CompVec vaporComposition(const Region& reg, const Scalar depth)
+    {
+        CompVec z{};
+        Scalar sum = 0.0;
+        for (int c = 0; c < numComponents; ++c) {
+            z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.vaporVdTable[c], depth));
+            sum += z[c];
+        }
+        if (!(sum > 0.0)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD vapour composition vanishes at depth {} m.", depth));
+        }
+        std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
+        return z;
+    }
 
     static CompVec composition(const Region& reg, const Scalar depth)
     {
         CompVec z{};
         Scalar sum{};
         for (int c = 0; c < numComponents; ++c) {
-            z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.zmfVdTable[c], depth));
+            z[c] = std::max(Scalar{0}, Details::evalDepthTable(reg.compositionVdTable[c], depth));
             sum += z[c];
         }
         if (!(sum > 0.0)) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("The ZMFVD composition vanishes at depth {} m.", depth));
+                      fmt::format("The composition vanishes at depth {} m.", depth));
         }
         std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
         return z;
     }
 
-    /// Whether the ZMFVD composition differs between \p depthA and \p depthB.
+    /// Build per-component composition interpolants from the selected \p rows.
+    /// ZMFVD and COMPVD expose the same depth and mole-fraction columns.
+    template <class Table>
+    static void setupComposition(std::vector<TabulatedFunction>& out,
+                                 const Table& table,
+                                 const std::vector<std::size_t>& rows)
+    {
+        const auto& depthCol = table.getDepthColumn();
+
+        std::vector<Scalar> depths;
+        depths.reserve(rows.size() + 1);
+        for (const auto row : rows) {
+            depths.push_back(depthCol[row]);
+        }
+        // A single row means a depth-independent composition; the interpolant
+        // needs two sample points, so duplicate it onto an arbitrary interval.
+        const bool constantComposition = (depths.size() == 1);
+        if (constantComposition) {
+            depths.push_back(depths.front() + constantTableSpan);
+        }
+
+        out.resize(numComponents);
+        for (int c = 0; c < numComponents; ++c) {
+            const auto& col = table.getMoleFractionColumn(c);
+            std::vector<Scalar> values;
+            values.reserve(depths.size());
+            for (const auto row : rows) {
+                values.push_back(col[row]);
+            }
+            if (constantComposition) {
+                values.push_back(values.front());
+            }
+            out[c].setXYContainers(depths, values);
+        }
+    }
+
+    /// Return the region's table index, or the nearest preceding table index.
+    /// Return no value when no table exists at or before \p regionIdx.
+    static std::optional<std::size_t> sourceTable(const TableContainer& container,
+                                                  const std::size_t regionIdx)
+    {
+        const auto& byIndex = container.tables();
+        const auto after = byIndex.upper_bound(regionIdx);
+        if (after == byIndex.begin()) {
+            return std::nullopt;
+        }
+        return std::prev(after)->first;
+    }
+
+    /// Every row of a table, in order.
+    static std::vector<std::size_t> allRows(const std::size_t count)
+    {
+        std::vector<std::size_t> rows(count);
+        std::iota(rows.begin(), rows.end(), std::size_t{0});
+        return rows;
+    }
+
+    /// Verify that vapour rows are at or above the gas-oil contact and liquid
+    /// rows are at or below it.
+    static void checkZonesStraddleContact(const CompvdTable& compvd,
+                                          const std::vector<std::size_t>& vaporRows,
+                                          const std::vector<std::size_t>& liquidRows,
+                                          const Scalar zgoc,
+                                          const std::size_t regionIdx)
+    {
+        if (vaporRows.empty() || liquidRows.empty()) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD table of region {} names both phases but has "
+                                  "no row for one of them.", regionIdx + 1));
+        }
+
+        const auto& depth = compvd.getDepthColumn();
+        if ((depth[vaporRows.back()] > zgoc) || (depth[liquidRows.front()] < zgoc)) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD table of region {} puts its vapour rows down to "
+                                  "{} m and its liquid rows from {} m, which do not meet at "
+                                  "the gas-oil contact at {} m.",
+                                  regionIdx + 1, depth[vaporRows.back()],
+                                  depth[liquidRows.front()], zgoc));
+        }
+    }
+
+    /// The COMPVD rows carrying \p phase.
+    static std::vector<std::size_t> rowsOfPhase(const CompvdTable& compvd,
+                                                const CompvdTable::Phase phase)
+    {
+        const auto& flags = compvd.phaseFlags();
+        std::vector<std::size_t> rows;
+        for (std::size_t r = 0; r < flags.size(); ++r) {
+            if (flags[r] == phase) {
+                rows.push_back(r);
+            }
+        }
+        return rows;
+    }
+
+    /// Return the EOS phase named by every COMPVD row, or no value for absent or
+    /// mixed phase flags.
+    static std::optional<unsigned> statedPhase(const CompvdTable& compvd,
+                                               const std::size_t regionIdx)
+    {
+        const auto& flags = compvd.phaseFlags();
+        if (flags.empty()) {
+            return std::nullopt;
+        }
+
+        const auto first = flags.front();
+        if (std::ranges::any_of(flags, [first](const auto f) { return f != first; })) {
+            OpmLog::info(fmt::format("Equilibration region {}: COMPVD names both phases, "
+                                     "so the composition of each depth decides the phase.",
+                                     regionIdx + 1));
+            return std::nullopt;
+        }
+
+        return (first == CompvdTable::Phase::Vapor)
+            ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
+    }
+
+    /// Whether the selected composition differs between \p depthA and \p depthB.
     static bool compositionVariesBetween(const Region& reg,
                                          const Scalar depthA,
                                          const Scalar depthB)
     {
-        // ZMFVD mole fractions are input data, so a real contrast across the
-        // contact is orders of magnitude above this round-off tolerance.
+        // Input mole fractions that differ physically across the contact should
+        // exceed this round-off tolerance.
         constexpr Scalar sameComposition{1.0e-10};
 
         const CompVec a = composition(reg, depthA);
@@ -329,23 +488,86 @@ private:
 
         reg.zgoc = record.gasOilContactDepth();
 
-        const auto& zmfvd = tables.getZmfvdTables().template getTable<ZmfvdTable>(regionIdx);
-        reg.zmfVdTable.resize(numComponents);
-        std::vector<Scalar> depths(zmfvd.getDepthColumn().begin(),
-                                   zmfvd.getDepthColumn().end());
-        // A single row means a depth-independent composition; the interpolant
-        // needs two sample points, so duplicate it onto an arbitrary interval.
-        const bool constantComposition = (depths.size() == 1);
-        if (constantComposition) {
-            depths.push_back(depths.front() + constantTableSpan);
+        // With one composition keyword, a missing regional record inherits the
+        // nearest preceding record. If both keywords are present, each region
+        // must select one explicitly because inheritance would be ambiguous.
+        const bool deckHasZmfvd = tables.hasTables("ZMFVD");
+        const bool deckHasCompvd = tables.hasTables("COMPVD");
+        const bool statesZmfvd = deckHasZmfvd &&
+                                 tables.getZmfvdTables().hasTable(regionIdx);
+        const bool statesCompvd = deckHasCompvd &&
+                                  tables.getCompvdTables().hasTable(regionIdx);
+
+        if (statesZmfvd && statesCompvd) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Region {} has both a ZMFVD and a COMPVD composition "
+                                  "versus depth; give only one of them.", regionIdx + 1));
         }
-        for (int c = 0; c < numComponents; ++c) {
-            const auto& col = zmfvd.getMoleFractionColumn(c);
-            std::vector<Scalar> values(col.begin(), col.end());
-            if (constantComposition) {
-                values.push_back(values.front());
+
+        std::optional<std::size_t> zmfvdAt;
+        std::optional<std::size_t> compvdAt;
+        if (deckHasZmfvd && deckHasCompvd) {
+            if (!statesZmfvd && !statesCompvd) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Region {} has neither a ZMFVD nor a COMPVD "
+                                      "composition versus depth. A deck using both "
+                                      "keywords has to give every region a record of "
+                                      "its own, as neither can be inherited.",
+                                      regionIdx + 1));
             }
-            reg.zmfVdTable[c].setXYContainers(depths, values);
+            (statesZmfvd ? zmfvdAt : compvdAt) = regionIdx;
+        }
+        else if (deckHasZmfvd) {
+            zmfvdAt = sourceTable(tables.getZmfvdTables(), regionIdx);
+        }
+        else if (deckHasCompvd) {
+            compvdAt = sourceTable(tables.getCompvdTables(), regionIdx);
+        }
+
+        if (!zmfvdAt.has_value() && !compvdAt.has_value()) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("Region {} has neither a ZMFVD nor a COMPVD composition "
+                                  "versus depth.", regionIdx + 1));
+        }
+
+        if (zmfvdAt.has_value()) {
+            reg.compositionKeyword = "ZMFVD";
+            const auto& zmfvd =
+                tables.getZmfvdTables().template getTable<ZmfvdTable>(*zmfvdAt);
+            setupComposition(reg.compositionVdTable, zmfvd,
+                             allRows(zmfvd.getDepthColumn().size()));
+        }
+        else {
+            reg.compositionKeyword = "COMPVD";
+            const auto& compvd =
+                tables.getCompvdTables().template getTable<CompvdTable>(*compvdAt);
+            reg.statedPhaseIdx = statedPhase(compvd, regionIdx);
+
+            if (reg.statedPhaseIdx.has_value()) {
+                // One phase named: all rows form one composition profile, and
+                // the phase flag selects its EOS root.
+                if ((reg.initType == 3) &&
+                    (*reg.statedPhaseIdx == FluidSystem::gasPhaseIdx)) {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Region {} states a vapour composition in COMPVD "
+                                          "while EQUIL item 10 is 3, which takes the liquid "
+                                          "composition at the gas-oil contact.",
+                                          regionIdx + 1));
+                }
+                setupComposition(reg.compositionVdTable, compvd,
+                                 allRows(compvd.getDepthColumn().size()));
+            }
+            else {
+                // Both phases named: the vapour rows describe the gas zone and
+                // the liquid rows the one below the contact.
+                const auto vaporRows = rowsOfPhase(compvd, CompvdTable::Phase::Vapor);
+                const auto liquidRows = rowsOfPhase(compvd, CompvdTable::Phase::Liquid);
+                checkZonesStraddleContact(compvd, vaporRows, liquidRows,
+                                          record.gasOilContactDepth(), regionIdx);
+                reg.twoZone = true;
+                setupComposition(reg.vaporVdTable, compvd, vaporRows);
+                setupComposition(reg.compositionVdTable, compvd, liquidRows);
+            }
         }
 
         if (tables.hasTables("RTEMPVD")) {
@@ -355,7 +577,7 @@ private:
                                            rtempvd.getDepthColumn().end());
             const auto& tempCol = rtempvd.getTemperatureColumn();
             std::vector<Scalar> temps(tempCol.begin(), tempCol.end());
-            // As for ZMFVD above, a single row is a depth-independent
+            // As for the composition tables, a single row is a depth-independent
             // temperature and the interpolant needs a second sample point.
             if (tempDepths.size() == 1) {
                 tempDepths.push_back(tempDepths.front() + constantTableSpan);
@@ -411,17 +633,20 @@ private:
         return reg;
     }
 
-    /// EQUIL item 10 type 1: ZMFVD is the total composition. Pressure is
-    /// integrated from the datum with the EOS density; the subsequent flash
-    /// determines the phase split. The EOS root is the vapour one if the datum
-    /// lies above the gas-oil contact and the liquid one otherwise.
+    /// EQUIL item 10 type 1: the table gives the total composition and the
+    /// pressure is integrated from the datum with the EOS density; the
+    /// subsequent flash determines the phase split.
     ///
-    /// The datum-versus-contact test is enough to pick the root because of the
-    /// convention on the gas-oil contact (EQUIL item 5): it lies above the top
-    /// of the reservoir when there is no initial free gas, and below the bottom
-    /// when the region holds only gas.  The defaulted item 5 (0 m, i.e. at the
-    /// surface) therefore expresses "no free gas" and correctly yields the
-    /// liquid root.
+    /// A COMPVD table naming both phases describes two zones instead, each with
+    /// its own composition, EOS root and hydrostatic column. The column holding
+    /// the datum is anchored there and the other picks its pressure up at the
+    /// contact, so the datum pressure is honoured whichever zone it lies in.
+    ///
+    /// For a single zone the EOS root is the phase COMPVD names, or, when the
+    /// table does not name one, the root implied by the datum's side of the
+    /// gas-oil contact: EQUIL item 5 lies above the top of the reservoir when
+    /// there is no initial free gas and below the bottom when the region holds
+    /// only gas, so the defaulted 0 m correctly yields the liquid root.
     void setupSinglePhaseRegion(Region& reg,
                                 const EquilRecord& record,
                                 const std::array<Scalar, 2>& span,
@@ -430,41 +655,103 @@ private:
                                 const std::size_t regionIdx) const
     {
         const Scalar datum = record.datumDepth();
-        const auto phaseIdx = (datum < reg.zgoc)
-            ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx;
+        const Scalar datumPressure = record.datumDepthPressure();
 
-        // For type 1, a gas-oil contact inside the region requires COMPVD or
-        // ZMFVD variation across it so the flash can label the phases correctly.
-        // COMPVD is not supported here yet.
+        if (reg.twoZone) {
+            setupTwoZoneRegion(reg, span, gravity, numSamplePoints, regionIdx,
+                               datum, datumPressure);
+            return;
+        }
+
+        // COMPVD states the phase its composition belongs to; without that the
+        // datum's side of the gas-oil contact decides the EOS root.
+        const auto phaseIdx = reg.statedPhaseIdx.value_or(
+            (datum < reg.zgoc) ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
+
+        // A gas-oil contact inside a single-zone region requires the composition
+        // to vary across it, so the flash can label the phases correctly.
         if ((reg.zgoc > span[0]) && (reg.zgoc < span[1]) &&
             !compositionVariesBetween(reg, span[0], reg.zgoc) &&
             !compositionVariesBetween(reg, reg.zgoc, span[1])) {
             OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
-                                        "at {} m lies inside a type-1 region, but ZMFVD "
-                                        "does not vary across the contact. Compositional "
-                                        "variation is required for proper phase labeling.",
-                                        regionIdx + 1, reg.zgoc));
+                                        "at {} m lies inside a type-1 region, but the "
+                                        "composition does not vary across the contact. "
+                                        "Compositional variation is required for proper "
+                                        "phase labeling.", regionIdx + 1, reg.zgoc));
         }
 
         const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
                       reg.tempVdTable, phaseIdx, eosType_, gravity);
         reg.oilPressure.emplace(ode,
-                                typename PressFunc::InitCond{
-                                    datum, Scalar(record.datumDepthPressure())},
+                                typename PressFunc::InitCond{datum, datumPressure},
                                 numSamplePoints, span);
+        reg.nominalPhaseIdx = phaseIdx;
 
         OpmLog::info(fmt::format("Equilibration region {}: pressure integrated with one "
-                                 "EOS root and total composition from ZMFVD "
+                                 "EOS root and the total composition from {} "
                                  "(EQUIL item 10 = 1).",
-                                 regionIdx + 1));
+                                 regionIdx + 1, reg.compositionKeyword));
     }
 
-    /// EQUIL item 10 type 3: ZMFVD is the liquid composition and the gas-oil
-    /// contact is used as the reference depth. If saturation-pressure
-    /// adjustment is enabled and the input pressure differs by one atmosphere
-    /// or more, use the saturation pressure at the contact. Item 11 = 1 always
-    /// preserves the input pressure. The gas above the contact is the
-    /// equilibrium vapour of the contact liquid.
+    /// A COMPVD region naming both phases: a gas zone above the gas-oil contact
+    /// and a liquid one below, each integrated with its own composition and EOS
+    /// root.
+    void setupTwoZoneRegion(Region& reg,
+                            const std::array<Scalar, 2>& span,
+                            const Scalar gravity,
+                            const int numSamplePoints,
+                            const std::size_t regionIdx,
+                            const Scalar datum,
+                            const Scalar datumPressure) const
+    {
+        const ODE liquidOde([&reg](const Scalar depth) { return composition(reg, depth); },
+                            reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
+        const ODE gasOde([&reg](const Scalar depth) { return vaporComposition(reg, depth); },
+                         reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+
+        // The datum-side pressure function must reach the actual contact even
+        // when it lies outside the cell span, because the other pressure function
+        // is initialized from its value at the contact.
+        const std::array<Scalar, 2> datumSpan{std::min(span[0], reg.zgoc),
+                                              std::max(span[1], reg.zgoc)};
+        if ((reg.zgoc < span[0]) || (reg.zgoc > span[1])) {
+            OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m "
+                                        "lies outside the cells of the region, so the COMPVD "
+                                        "rows of one phase describe no cell.",
+                                        regionIdx + 1, reg.zgoc));
+        }
+
+        if (datum < reg.zgoc) {
+            reg.gasPressure.emplace(gasOde,
+                                    typename PressFunc::InitCond{datum, datumPressure},
+                                    numSamplePoints, datumSpan);
+            reg.oilPressure.emplace(liquidOde,
+                                    typename PressFunc::InitCond{
+                                        reg.zgoc, reg.gasPressure->value(reg.zgoc)},
+                                    numSamplePoints, span);
+        }
+        else {
+            reg.oilPressure.emplace(liquidOde,
+                                    typename PressFunc::InitCond{datum, datumPressure},
+                                    numSamplePoints, datumSpan);
+            reg.gasPressure.emplace(gasOde,
+                                    typename PressFunc::InitCond{
+                                        reg.zgoc, reg.oilPressure->value(reg.zgoc)},
+                                    numSamplePoints, span);
+        }
+
+        OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above the "
+                                 "contact at {} m and a liquid one below it "
+                                 "(EQUIL item 10 = 1).", regionIdx + 1, reg.zgoc));
+    }
+
+    /// EQUIL item 10 type 3: the selected table supplies the liquid composition,
+    /// and the gas-oil contact is used as the reference depth. If saturation-
+    /// pressure adjustment is enabled and the input pressure differs by one
+    /// atmosphere or more, use the saturation pressure at the contact. Item 11 = 1
+    /// always preserves the input pressure. Above the contact, a two-zone COMPVD
+    /// table supplies the gas composition; otherwise the equilibrium vapour of
+    /// the contact liquid is used.
     void setupTwoPhaseRegion(Region& reg,
                              const EquilRecord& record,
                              const std::array<Scalar, 2>& span,
@@ -526,7 +813,17 @@ private:
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, span);
 
-        const ODE gasOde([vapor](const Scalar) { return vapor; },
+        // Integrate a two-zone gas column with the same depth-dependent
+        // composition assigned to its cells. Otherwise use the equilibrium
+        // vapour composition at the contact throughout the gas column.
+        typename ODE::CompositionFunction gasComposition;
+        if (reg.twoZone) {
+            gasComposition = [&reg](const Scalar depth) { return vaporComposition(reg, depth); };
+        }
+        else {
+            gasComposition = [vapor](const Scalar) { return vapor; };
+        }
+        const ODE gasOde(gasComposition,
                          reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
         reg.gasPressure.emplace(gasOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
@@ -535,9 +832,16 @@ private:
 
     void assignCell(FluidState& fs, const Region& reg, const Scalar depth) const
     {
-        const bool inGasZone = (reg.initType == 3) && (depth < reg.zgoc);
+        const bool inGasZone = ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
 
-        const CompVec z = inGasZone ? reg.vaporComposition : composition(reg, depth);
+        const CompVec z = [&reg, depth, inGasZone]() {
+            if (!inGasZone) {
+                return composition(reg, depth);
+            }
+            // Type 3 holds the contact vapour above the contact; a two-zone
+            // COMPVD table gives the gas zone its own composition versus depth.
+            return reg.twoZone ? vaporComposition(reg, depth) : reg.vaporComposition;
+        }();
         const auto& pressFunc = inGasZone ? reg.gasPressure : reg.oilPressure;
         if (!pressFunc.has_value()) {
             OPM_THROW(std::runtime_error,
@@ -552,9 +856,11 @@ private:
                 fs.setSaturation(phaseIdx, 0.0);
             }
         }
-        // Nominal single-phase saturation; the flash recomputes the phase split
-        // from the total composition, the pressure and the temperature.
-        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx, 1.0);
+
+        // Set a nominal single-phase saturation using the phase represented by
+        // the pressure integration. The downstream flash recomputes the phase
+        // split from composition, pressure, and temperature.
+        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : reg.nominalPhaseIdx, 1.0);
 
         for (int c = 0; c < numComponents; ++c) {
             fs.setMoleFraction(c, z[c]);
