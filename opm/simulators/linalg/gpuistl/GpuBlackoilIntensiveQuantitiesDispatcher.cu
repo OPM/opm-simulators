@@ -29,6 +29,7 @@
 #include <cuda_runtime.h>
 
 #include <opm/common/utility/gpuDecorators.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 
@@ -163,6 +164,14 @@ void validateGpuPropertyInputs(const ProblemT& problem)
     // The GPU view intentionally does not implement these modules
     static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDiffusion>());
     static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDispersion>());
+
+    const auto& schedule = problem.simulator().vanguard().schedule();
+    for (std::size_t reportStep = 0; reportStep < schedule.size(); ++reportStep) {
+        if (schedule[reportStep].events().hasEvent(Opm::ScheduleEvents::GEO_MODIFIER)) {
+            OPM_THROW(std::logic_error,
+                      "GPU intensive-quantities evaluation does not support GEO_MODIFIER");
+        }
+    }
 
     const auto materialLawManager = problem.materialLawManager();
     if (materialLawManager == nullptr) {
