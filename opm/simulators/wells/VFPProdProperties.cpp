@@ -54,7 +54,7 @@ thp(const int    table_id,
     }
 
     const std::vector<double> thp_array = table.getTHPAxis();
-    int nthp = thp_array.size();
+    const auto nthp = thp_array.size();
 
     /**
      * Find the function bhp_array(thp) by creating a 1D view of the data
@@ -66,7 +66,7 @@ thp(const int    table_id,
     auto gfr_i = VFPHelpers<Scalar>::findInterpData( gfr, table.getGFRAxis());
     auto alq_i = VFPHelpers<Scalar>::findInterpData( alq, table.getALQAxis());
     std::vector<Scalar> bhp_array(nthp);
-    for (int i = 0; i < nthp; ++i) {
+    for (std::size_t i = 0; i < nthp; ++i) {
         auto thp_i = VFPHelpers<Scalar>::findInterpData(thp_array[i], thp_array);
         bhp_array[i] = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }

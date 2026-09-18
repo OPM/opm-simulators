@@ -86,7 +86,7 @@ detail::InterpData<Scalar> VFPHelpers<Scalar>::findInterpData(const Scalar value
 {
     detail::InterpData<Scalar> retval;
 
-    const int nvalues = values.size();
+    const auto nvalues = values.size();
 
     // chopping the value to be zero, which means we do not
     // extrapolate the table towards nagative ranges
@@ -113,7 +113,7 @@ detail::InterpData<Scalar> VFPHelpers<Scalar>::findInterpData(const Scalar value
         }
         else {
             //Search internal intervals
-            for (int i=1; i<nvalues; ++i) {
+            for (std::size_t i = 1; i < nvalues; ++i) {
                 if (values[i] >= value) {
                     retval.ind_[0] = i-1;
                     retval.ind_[1] = i;
@@ -367,7 +367,7 @@ findTHP(const std::vector<Scalar>& bhp_array,
         Scalar bhp,
         const bool find_largest)
 {
-    int nthp = thp_array.size();
+    const auto nthp = thp_array.size();
 
     if (!std::isfinite(bhp)) {
         throw NumericalProblem("findTHP: Error bhp is not finite");
@@ -410,9 +410,9 @@ findTHP(const std::vector<Scalar>& bhp_array,
             //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
             //Assuming a small number of values in bhp_array, this should be quite
             //efficient. Other strategies might be bisection, etc.
-            int i=0;
+            std::size_t i = 0;
             bool found = false;
-            for (; i<nthp-1; ++i) {
+            for (; i < nthp - 1; ++i) {
                 const Scalar& y0 = bhp_array[i  ];
                 const Scalar& y1 = bhp_array[i+1];
 
@@ -477,7 +477,7 @@ findTHP(const std::vector<Scalar>& bhp_array,
                 array_ix = 0;
             } else {
                 //search forward within table
-                for (int i = 0; i<nthp-1; ++i) {
+                for (std::size_t i = 0; i < nthp - 1; ++i) {
                     const Scalar& y0 = bhp_array[i  ];
                     const Scalar& y1 = bhp_array[i+1];
                     if (std::min(y0, y1) < bhp && bhp <= std::max(y0, y1)) {
