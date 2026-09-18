@@ -29,8 +29,6 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
-#include <dune/istl/bcrsmatrix.hh>
-
 #include <opm/simulators/linalg/gpubridge/opencl/openclCPR.hpp>
 #include <opm/simulators/linalg/gpubridge/Misc.hpp>
 

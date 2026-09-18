@@ -23,13 +23,13 @@
 
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/ilu.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <array>
 #include <algorithm>
@@ -267,8 +267,8 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     INSTANTIATE_ILUN(__VA_ARGS__)
 
 #define INSTANTIATE_DIM(T,Dim)                                         \
-    INSTANTIATE_FULL(T,Dune::BCRSMatrix<MatrixBlock<T,Dim,Dim>>)       \
-    INSTANTIATE_FULL(T,Dune::BCRSMatrix<Dune::FieldMatrix<T,Dim,Dim>>)
+    INSTANTIATE_FULL(T,BlockSparseMatrix<MatrixBlock<T,Dim,Dim>>)       \
+    INSTANTIATE_FULL(T,BlockSparseMatrix<Dune::FieldMatrix<T,Dim,Dim>>)
 
 #define INSTANTIATE_TYPE(T)                 \
     template T identityFunctor(const T&);   \
