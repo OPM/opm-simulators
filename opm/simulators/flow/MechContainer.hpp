@@ -73,13 +73,20 @@ public:
     void assignStress(const unsigned globalDofIdx,
                       const SymmTensor<Scalar>& stress);
 
+    void assignTraction(const unsigned globalDofIdx,
+                        const std::array<Dune::FieldVector<Scalar,3>, 6>& traction);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const
     { return allocated_; }
 
+    bool enableTraction() const
+    { return enableTraction_; }
+
 private:
     bool allocated_ = false;
+    bool enableTraction_{false};
     ScalarBuffer potentialForce_;
     ScalarBuffer potentialPressForce_;
     ScalarBuffer potentialTempForce_;
@@ -90,6 +97,8 @@ private:
     VoigtArray<Scalar> linstress_;
     VoigtArray<Scalar> strain_;
     VoigtArray<Scalar> stress_;
+
+    std::array<std::array<ScalarBuffer, 6>, 3> traction_;
 };
 
 } // namespace Opm

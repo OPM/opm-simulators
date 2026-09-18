@@ -605,6 +605,47 @@ public:
     }
 
     /*!
+    * \brief Output traction vector for each of the 6 face directions
+    *
+    * \param globalIdx Cell index
+    * \returns Traction vector (force per area) for each face direction (X-, X+, Y-, Y+, Z-, Z+)
+    * at grid cell
+    *
+    * \warning NNC are not implemented with TPSA, therefore traction on NNC faces is not output!
+    */
+    std::array<DimVector, 6> traction(const unsigned globalIdx) const
+    {
+        std::array<DimVector, 6> tractionOutput{};
+        const auto& stressInfo = linearizer_->getStressInfo();
+        if (stressInfo.empty()) {
+            return tractionOutput;
+        }
+
+        // Average traction (force per area) over all face entries sharing the same face
+        // direction, consistent with the face-area weighting used in stress().
+        std::array<Scalar, 6> sumFaceArea{};
+        for (const auto& faceStressInfo : stressInfo[globalIdx]) {
+            const auto faceId = faceStressInfo.faceId;
+
+            // OBS: NNC faces are not added, since TPSA does not handle NNC connections yet!
+            if (faceId < 0 || faceStressInfo.faceArea == 0.0) {
+                continue;
+            }
+
+            tractionOutput[faceId] += faceStressInfo.traction;
+            sumFaceArea[faceId] += faceStressInfo.faceArea;
+        }
+
+        for (std::size_t faceId = 0; faceId < 6; ++faceId) {
+            if (sumFaceArea[faceId] > 0.0) {
+                tractionOutput[faceId] /= sumFaceArea[faceId];
+            }
+        }
+
+        return tractionOutput;
+    }
+
+    /*!
     * \brief Output strain tensor
     *
     * \param globalIdx Cell index
