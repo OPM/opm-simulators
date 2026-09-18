@@ -105,13 +105,12 @@ public:
 #if HAVE_CUDA
             if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
             {
-                if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()
-                    || getPropValue<TypeTag, Properties::EnableDispersion>()) {
-                    OPM_THROW(std::logic_error,
-                              "GPU intensive quantities dispatcher does not support diffusion or dispersion");
-                }
-
                 if (useGpuIntensiveQuantitiesDispatcher_) {
+                    if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()
+                        || getPropValue<TypeTag, Properties::EnableDispersion>()) {
+                        OPM_THROW(std::logic_error,
+                                  "GPU intensive quantities dispatcher does not support diffusion or dispersion");
+                    }
                     runGpuIntensiveQuantitiesDispatcher_(timeIdx);
                     const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
                     for (std::size_t i = 0; i < numCells; ++i) {
