@@ -38,6 +38,8 @@ PropertyTree setupCPRW(const std::string& conf, const FlowLinearSolverParameters
 PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p);
 
+PropertyTree setupGeneralSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p);
+
 // Validates that a PropertyTree with preconditioner.type == "system_cpr" contains
 // all three required sub-trees. Throws std::invalid_argument if any are missing.
 // No-op when the preconditioner type is not system_cpr.
