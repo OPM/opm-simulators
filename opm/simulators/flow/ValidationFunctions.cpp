@@ -22,6 +22,7 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/F.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/M.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
 #include <fmt/format.h>
@@ -30,7 +31,8 @@
 #include <string>
 
 namespace {
-    void validateBRINE(const Opm::DeckKeyword& keyword,
+    void validateBRINE(const Opm::Deck&,
+                       const Opm::DeckKeyword& keyword,
                        std::vector<Opm::KeywordValidation::ValidationError>& errors)
     {
         if (keyword.empty()) {
@@ -51,7 +53,8 @@ namespace {
     // and the per-item validation only ever inspects the first value.  Flow
     // labels single phase cells as if every multiplier were one, so every
     // region has to be checked here.
-    void validateFACTLI(const Opm::DeckKeyword& keyword,
+    void validateFACTLI(const Opm::Deck&,
+                        const Opm::DeckKeyword& keyword,
                         std::vector<Opm::KeywordValidation::ValidationError>& errors)
     {
         if (keyword.empty()) {
@@ -80,8 +83,34 @@ namespace {
         }
     }
 
+    // Flow does not support PARACHOR.  A deck that does not specify MISCIBLE
+    // makes no use of it either, so report that as a warning; with MISCIBLE the
+    // deck leans on something flow cannot do, which is an error.
+    void validatePARACHOR(const Opm::Deck& deck,
+                          const Opm::DeckKeyword& keyword,
+                          std::vector<Opm::KeywordValidation::ValidationError>& errors)
+    {
+        if (keyword.empty()) {
+            return;
+        }
+
+        const bool miscible = deck.hasKeyword<Opm::ParserKeywords::MISCIBLE>();
+
+        errors.emplace_back(Opm::KeywordValidation::ValidationError {
+            miscible,
+            keyword.location(),
+            0,  // not relevant
+            0,  // not relevant
+            std::nullopt,
+            miscible
+                ? std::string{"MISCIBLE is specified, but PARACHOR is not supported"}
+                : std::string{"MISCIBLE is not specified, so PARACHOR is not used"}}
+        );
+    }
+
     // Special case since we support the parsing of the items, which can be UDAs.
-    void validateGSATPROD(const Opm::DeckKeyword& keyword,
+    void validateGSATPROD(const Opm::Deck&,
+                          const Opm::DeckKeyword& keyword,
                           std::vector<Opm::KeywordValidation::ValidationError>& errors)
     {
         if (keyword.empty()) {
@@ -125,7 +154,10 @@ namespace Opm::KeywordValidation {
 std::unordered_map<std::string, ValidationFunction>
 specialValidation()
 {
-    return {{"BRINE", validateBRINE}, {"FACTLI", validateFACTLI}, {"GSATPROD", validateGSATPROD}};
+    return {{"BRINE", validateBRINE},
+            {"FACTLI", validateFACTLI},
+            {"GSATPROD", validateGSATPROD},
+            {"PARACHOR", validatePARACHOR}};
 }
 
 }

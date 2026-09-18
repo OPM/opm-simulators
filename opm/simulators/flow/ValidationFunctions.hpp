@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace Opm {
+class Deck;
 class DeckKeyword;
 }
 
@@ -33,7 +34,11 @@ namespace Opm::KeywordValidation {
 
 struct ValidationError;
 
-using ValidationFunction = std::function<void(const DeckKeyword&,
+// The deck is passed alongside the keyword so that a validator can take other
+// keywords into account, e.g. whether an option that would consume the data is
+// active at all.
+using ValidationFunction = std::function<void(const Deck&,
+                                              const DeckKeyword&,
                                               std::vector<ValidationError>&)>;
 
 // This is a mapping between keyword names and small functions
