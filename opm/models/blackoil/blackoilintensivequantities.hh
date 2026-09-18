@@ -311,14 +311,23 @@ public:
             asImp_().solventPreSatFuncUpdate_(priVars, timeIdx, lintype);
         }
 
-        // Phase relperms.
-        problem.template updateRelperms<FluidState, Args...>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
-
-        // now we compute all phase pressures
+        // Phase relperms and capillary pressures. A problem may provide a
+        // fused implementation (a table-based evaluation can serve both from
+        // one lookup pass); otherwise the two separate calls are used.
         using EvalArr = std::array<Evaluation, numPhases>;
         EvalArr pC;
-        const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
-        MaterialLaw::template capillaryPressures<EvalArr, FluidState, Args...>(pC, materialParams, fluidState_);
+        if constexpr (requires {
+                problem.template updateRelpermsAndCapillaryPressures<FluidState, Args...>(
+                    mobility_, dirMob_, pC, fluidState_, globalSpaceIdx); })
+        {
+            problem.template updateRelpermsAndCapillaryPressures<FluidState, Args...>(
+                mobility_, dirMob_, pC, fluidState_, globalSpaceIdx);
+        }
+        else {
+            problem.template updateRelperms<FluidState, Args...>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
+            const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
+            MaterialLaw::template capillaryPressures<EvalArr, FluidState, Args...>(pC, materialParams, fluidState_);
+        }
 
         // scaling the capillary pressure due to porosity changes
         if constexpr (enableBrine) {
