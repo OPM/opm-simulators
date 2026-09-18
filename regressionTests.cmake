@@ -118,6 +118,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    equil_1d_compvd_water
+  FILENAME
+    EQUIL_1D_COMPVD_WATER
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    equil_1d_compvd_water_gascap
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    equil_1d_compvd_oil
+  FILENAME
+    EQUIL_1D_COMPVD_OIL
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
     spe12
   FILENAME
     SPE1CASE2

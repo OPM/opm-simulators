@@ -90,6 +90,14 @@ class FlashIntensiveQuantities
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
+    /// The share of the pore space the hydrocarbon phases keep even where the
+    /// cell holds water alone. It scales the composition derivatives of the
+    /// component storage terms, so it cannot be zero; it is the floor the
+    /// composition itself is clamped to below, and the water it displaces stays
+    /// under the single precision the restart output carries.
+    static constexpr Scalar hydrocarbonFloor = 1.0e-8;
+
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
@@ -230,8 +238,20 @@ public:
         const Evaluation L = fluidState_.L();
         const Evaluation Vm_L = paramCache.correctedMolarVolume(FluidSystem::oilPhaseIdx);
         const Evaluation Vm_V = paramCache.correctedMolarVolume(FluidSystem::gasPhaseIdx);
-        Evaluation So = max((1 - Sw) * (L * Vm_L / ( L * Vm_L + (1 - L) * Vm_V)), 0.0);
-        Evaluation Sg = max(1 - So - Sw, 0.0);
+
+        // The share of the pore space left to the hydrocarbon. Every component
+        // storage term is proportional to it, so where a cell holds water alone
+        // it takes the whole composition out of the residual: the component
+        // equations then depend on no composition variable and the cell's
+        // diagonal Jacobian block is singular. Below the water-oil contact of an
+        // equilibrated model that is the state every cell starts from. Floor the
+        // value and keep the derivatives, as the composition is clamped above.
+        Evaluation hydrocarbon = 1 - Sw;
+        if (hydrocarbon < hydrocarbonFloor) {
+            hydrocarbon.setValue(hydrocarbonFloor);
+        }
+        Evaluation So = max(hydrocarbon * (L * Vm_L / ( L * Vm_L + (1 - L) * Vm_V)), 0.0);
+        Evaluation Sg = max(hydrocarbon - So, 0.0);
         const Scalar sumS = getValue(So) + getValue(Sg) + getValue(Sw);
         So /= sumS;
         Sg /= sumS;
