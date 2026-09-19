@@ -284,6 +284,15 @@ private:
     /// BlackoilWellModel::maybeSendSlaveGroupFlowToMaster_().
     void refreshAndSendInjectionTargets_();
 
+    /// \brief The surface injection rate target the slave's own schedule gives
+    ///   a group for a phase (SI), 0 when the group has no injection control
+    ///   for that phase.  What the summary evaluator reports for a group
+    ///   without a target in force from the master.
+    Scalar scheduleInjectionTarget_(const std::string& gname,
+                                    const Phase phase,
+                                    const int reportStepIdx,
+                                    const SummaryState& summary_state) const;
+
     /// \brief Send injection targets to each activated slave, replacing the
     ///   ones the slaves are currently holding.  Production constraints are
     ///   not resent.  Only called by refreshAndSendInjectionTargets_().

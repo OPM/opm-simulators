@@ -468,9 +468,10 @@ storeSlaveGroupInjectionTargets()
     //
     // A UDQ that refers to the target reads it from the summary state, so
     // the summary state is primed with the same value, in output units,
-    // ahead of the start-of-step UDQ evaluation.  The end-of-step summary
-    // evaluation then writes the slot from the reported target, or from the
-    // schedule when there is none.
+    // ahead of the UDQ evaluation that follows.  When nothing is in force
+    // the slot is primed with the schedule's own target instead -- what the
+    // end-of-step summary evaluation will report -- so that a target in
+    // force on an earlier sync step cannot linger there.
     using M = UnitSystem::measure;
     auto& summary_state = this->simulator_.vanguard().summaryState();
     const auto& units = this->simulator_.vanguard().eclState().getUnits();
@@ -487,11 +488,15 @@ storeSlaveGroupInjectionTargets()
         for (const auto& [phase, keyword, unit] : targets) {
             const auto effective = this->effectiveSlaveGroupInjectionTarget_(
                 gname, phase, reportStepIdx, rescoup, summary_state);
-            if (! effective.has_value()) {
-                continue;
+            if (effective.has_value()) {
+                in_force[gname][phase] = *effective;
+                summary_state.update_group_var(gname, keyword, units.from_si(unit, *effective));
             }
-            in_force[gname][phase] = *effective;
-            summary_state.update_group_var(gname, keyword, units.from_si(unit, *effective));
+            else {
+                summary_state.update_group_var(
+                    gname, keyword,
+                    units.from_si(unit, this->scheduleInjectionTarget_(gname, phase, reportStepIdx, summary_state)));
+            }
         }
     }
 }
@@ -535,9 +540,8 @@ effectiveSlaveGroupInjectionTarget_(const std::string& gname,
     if (filter == FilterFlag::BOTH) {
         const auto& group = this->schedule().getGroup(gname, reportStepIdx);
         if (group.hasInjectionControl(phase)) {
-            const auto deck_target =
-                group.injectionControls(phase, summary_state).surface_max_rate;
-            return std::min(master_target, static_cast<Scalar>(deck_target));
+            return std::min(master_target,
+                            this->scheduleInjectionTarget_(gname, phase, reportStepIdx, summary_state));
         }
     }
     return master_target;
@@ -579,6 +583,21 @@ refreshAndSendInjectionTargets_()
     this->well_model_.updateAndCommunicateGroupData(
         report_step_idx, /*update_wellgrouptarget=*/false);
     this->sendMasterGroupInjectionTargetsToSlaves_();
+}
+
+template<typename TypeTag>
+typename BlackoilWellModelRescoup<TypeTag>::Scalar
+BlackoilWellModelRescoup<TypeTag>::
+scheduleInjectionTarget_(const std::string& gname,
+                         const Phase phase,
+                         const int reportStepIdx,
+                         const SummaryState& summary_state) const
+{
+    const auto& group = this->schedule().getGroup(gname, reportStepIdx);
+    if (! group.hasInjectionControl(phase)) {
+        return Scalar{0};
+    }
+    return static_cast<Scalar>(group.injectionControls(phase, summary_state).surface_max_rate);
 }
 
 template<typename TypeTag>
