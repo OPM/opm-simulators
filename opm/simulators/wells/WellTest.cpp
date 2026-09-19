@@ -840,7 +840,14 @@ closeOffendingCompletion(const int offending_completion,
     }
 
     for (const int completion : completions_to_close) {
-        well_test_state.close_completion(well_.name(), completion, simulation_time);
+        // Everything except the offender is closed only by the reach of the
+        // '+CON' workover, not by a limit of its own.  WPWE2 counts the
+        // offender alone, and a workover that reaches past it closes the well
+        // to the bottom.
+        const auto closed_below_offender = completion != offending_completion;
+
+        well_test_state.close_completion(well_.name(), completion, simulation_time,
+                                         closed_below_offender);
         closed_this_event.insert(completion);
     }
 
