@@ -308,6 +308,15 @@ receiveSlaveGroupData()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
+refreshSlaveGroupInjectionTargets()
+{
+    this->storeSlaveGroupInjectionTargets();
+    this->evalGroupAndFieldUDQs();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
 rescoupSyncSummaryData()
 {
     // Reservoir coupling: exchange production data between slaves and master.

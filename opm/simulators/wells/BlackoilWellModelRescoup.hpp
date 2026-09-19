@@ -170,6 +170,14 @@ public:
     /// from rescoupSyncSummaryData() when a slave has fresh data to deliver.
     void receiveSlaveGroupData();
 
+    /// \brief Slave-side: recompute the injection target in force for each
+    ///   slave group from the targets just received, and re-evaluate the
+    ///   group and field level UDQs that may read them.  Called after every
+    ///   receive of group constraints: the handshake at the start of a sync
+    ///   step and the replacement targets a master sends back during the
+    ///   cross-rescoup network iteration.
+    void refreshSlaveGroupInjectionTargets();
+
     /// \brief End-of-substep summary-data synchronisation.
     ///
     /// On the master, blocks for any pending slave production data so that
