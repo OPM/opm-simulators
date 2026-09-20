@@ -142,7 +142,23 @@ collectSlaveGroupInjectionData_(std::size_t group_idx) const
     InjectionRates reservoir_rates = this->createInjectionRatesFromRateVector_(
         this->group_state_.injection_reservoir_rates(group.name())
     );
-    return SlaveGroupInjectionData{surface_rates, reservoir_rates};
+    Potentials potentials = this->collectSlaveGroupInjectionPotentials_(group_idx);
+    return SlaveGroupInjectionData{potentials, surface_rates, reservoir_rates};
+}
+
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::Potentials
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupInjectionPotentials_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    Potentials potentials;
+    const auto& gr_pot = this->group_state_.get_injection_group_potential(group_name);
+    potentials[ReservoirCoupling::Phase::Oil] = gr_pot.oil_rate;
+    potentials[ReservoirCoupling::Phase::Gas] = gr_pot.gas_rate;
+    potentials[ReservoirCoupling::Phase::Water] = gr_pot.water_rate;
+    return potentials;
 }
 
 template<typename Scalar, typename IndexTraits>

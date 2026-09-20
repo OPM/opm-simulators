@@ -137,6 +137,12 @@ public:
     );
     const GroupPotential& get_production_group_potential(const std::string& gname) const;
 
+    bool has_injection_group_potential(const std::string& gname) const;
+    void update_group_injection_potential(
+        const std::string& gname, Scalar oil_rate, Scalar gas_rate, Scalar water_rate
+    );
+    const GroupPotential& get_injection_group_potential(const std::string& gname) const;
+
     std::size_t data_size() const;
     std::size_t collect(Scalar* data) const;
     std::size_t distribute(const Scalar* data);
@@ -257,6 +263,7 @@ private:
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
     std::map<std::string, GroupPotential> production_group_potentials;
+    std::map<std::string, GroupPotential> injection_group_potentials;
     std::map<std::string, int> m_number_of_wells_under_group_control;
     std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_inj_group_control;
 

@@ -437,6 +437,8 @@ update()
     std::vector<Scalar> pot(this->num_phases_, 0.0);
     this->updateGuideRatesForProductionGroups_(group, pot);
     this->updateGuideRatesForInjectionGroups_(group);
+    std::vector<Scalar> inj_pot(this->num_phases_, 0.0);
+    this->updateInjectionGroupPotentials_(group, inj_pot);
     this->updateGuideRatesForWells_();
 }
 
@@ -666,6 +668,91 @@ updateGuideRatesForWells_()
 
         well_pot += npot;
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+void
+GuideRateHandler<Scalar, IndexTraits>::UpdateGuideRates::
+updateInjectionGroupPotentialFromSubGroups_(const Group& group, std::vector<Scalar>& pot)
+{
+    for (const std::string& group_name : group.groups()) {
+        std::vector<Scalar> this_pot(this->num_phases_, 0.0);
+        const Group& group_tmp = this->schedule().getGroup(group_name, this->report_step_idx_);
+
+        // compute group injection potentials for sub groups recursively
+        this->updateInjectionGroupPotentials_(group_tmp, this_pot);
+
+        // Apply potential for group_tmp to the parent's pot. Unlike the
+        // production side we do not gate on group-control availability here:
+        // the potentials are only stored (nothing reads them yet), so the
+        // simplest correct quantity is the total injection potential beneath
+        // the group.
+        const auto gefac = group_tmp.getGroupEfficiencyFactor();
+        for (int phase = 0; phase < this->num_phases_; phase++) {
+            pot[phase] += gefac*this_pot[phase];
+        }
+    }
+
+    // If this is a group on the lowest level in the group tree, add contribution from its wells
+    for (const std::string& well_name : group.wells()) {
+        const auto& well_tmp = this->schedule().getWell(well_name, this->report_step_idx_);
+
+        // Only include injectors in group potentials for injection groups
+        if (!well_tmp.isInjector())
+            continue;
+
+        const auto& well_index = this->well_state_.index(well_name);
+        if (!well_index.has_value()) // the well is not found
+            continue;
+
+        if (!this->well_state_.wellIsOwned(well_index.value(), well_name)) // Only sum once
+            continue;
+
+        const auto& ws = this->well_state_.well(well_index.value());
+        if (ws.status == Well::Status::SHUT)
+            continue;
+
+        const auto wefac = well_tmp.getEfficiencyFactor();
+        for (int phase = 0; phase < this->num_phases_; phase++) {
+            pot[phase] += wefac * ws.well_potentials[phase];
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void
+GuideRateHandler<Scalar, IndexTraits>::UpdateGuideRates::
+updateInjectionGroupPotentials_(const Group& group, std::vector<Scalar>& pot)
+{
+    OPM_TIMEFUNCTION();
+    // Aggregate per-phase group injection potentials from the injector wells
+    // beneath this group. This mirrors updateGuideRatesForProductionGroups_,
+    // but stores the result only (it does not feed GuideRate::compute()) so
+    // the existing injection guide-rate behavior is unchanged. The stored
+    // potentials are shipped from a slave to the master in reservoir coupling
+    // (see RescoupSendSlaveGroupData).
+    this->updateInjectionGroupPotentialFromSubGroups_(group, pot);
+
+    const auto& pu = this->phaseUsage();
+    std::array<Scalar,3> potentials{};
+    auto& [oil_pot, gas_pot, water_pot] = potentials;
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        oil_pot = pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)];
+    }
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        gas_pot = pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)];
+    }
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        water_pot = pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+    }
+    // Synchronize potentials across all ranks
+    this->comm().sum(potentials.data(), potentials.size());
+    oil_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oil_pot);
+    water_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, water_pot);
+    gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
+    this->group_state_.update_group_injection_potential(
+        group.name(), oil_pot, gas_pot, water_pot
+    );
 }
 
 #ifdef RESERVOIR_COUPLING_ENABLED

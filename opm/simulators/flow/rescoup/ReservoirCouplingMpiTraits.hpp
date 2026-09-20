@@ -282,6 +282,7 @@ template<class Scalar>
 struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>>
     : detail::StructMPITraits<
           ::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>,
+          &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::potentials,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::surface_rates,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::reservoir_rates
         >  { };

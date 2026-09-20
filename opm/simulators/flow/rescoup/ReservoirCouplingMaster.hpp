@@ -125,6 +125,7 @@ public:
     std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
         return this->slave_name_to_master_groups_map_;
     }
+    const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name);
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
     int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }

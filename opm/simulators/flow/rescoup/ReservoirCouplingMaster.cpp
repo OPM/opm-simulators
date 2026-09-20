@@ -135,6 +135,15 @@ getMasterGroupRate(
 template <class Scalar>
 const ReservoirCoupling::Potentials<Scalar>&
 ReservoirCouplingMaster<Scalar>::
+getSlaveGroupInjectionPotentials(const std::string &master_group_name)
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupInjectionPotentials(master_group_name);
+}
+
+template <class Scalar>
+const ReservoirCoupling::Potentials<Scalar>&
+ReservoirCouplingMaster<Scalar>::
 getSlaveGroupPotentials(const std::string &master_group_name)
 {
     assert(this->report_step_data_);

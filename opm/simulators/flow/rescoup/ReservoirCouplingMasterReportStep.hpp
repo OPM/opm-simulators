@@ -144,6 +144,12 @@ public:
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
+    /// @brief Get the injection potentials for a slave group
+    /// @param master_group_name Name of the master group
+    /// @return Reference to the injection potentials data for the specified group
+    /// @note Stored only; nothing reads the injection potentials yet.
+    const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name) const;
+
     /// @brief Get the production potentials for a slave group
     /// @param master_group_name Name of the master group
     /// @return Reference to the potentials data for the specified group
