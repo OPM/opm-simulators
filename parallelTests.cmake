@@ -7,6 +7,26 @@ set(coarse_rel_tol_parallel 1e-2)
 
 add_test_compare_parallel_simulation(
   CASENAME
+    equil_1d_compvd_water_gascap
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP
+  SIMULATOR
+    flow_comp
+  # Exercise COMPVD phase flags and water-only output across gas, oil and water
+  # zones. Use tight tolerances for serial/MPI agreement while allowing small
+  # differences from partitioning.
+  ABS_TOL
+    1e-6
+  REL_TOL
+    1e-6
+  DIR
+    compositional/equilibration
+  MPI_PROCS
+    2
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     sshift_compositional
   FILENAME
     SIMPLE_COMP_SSHIFT

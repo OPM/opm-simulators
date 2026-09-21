@@ -248,20 +248,6 @@ public:
                       "versus depth from the ZMFVD or the COMPVD keyword.");
         }
 
-        // COMPVD keeps its phase flags outside the table body the EclipseState
-        // broadcast serializes, so only the rank that parsed the deck holds
-        // them; the others would read a table that never carried any. Refuse
-        // the run rather than equilibrate each rank from different input.
-        {
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            if ((comm.size() > 1) && tables.hasTables("COMPVD")) {
-                OPM_THROW(std::runtime_error,
-                          "COMPVD equilibration is not supported on more than one rank: "
-                          "the phase flags do not survive the distribution of the input.");
-            }
-            OPM_END_PARALLEL_TRY_CATCH("Unsupported compositional equilibration: ", comm);
-        }
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if (eqlnum.size() != cellCenterDepth.size()) {
             OPM_THROW(std::runtime_error,
