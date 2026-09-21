@@ -4,6 +4,15 @@ if(NOT TARGET Boost::unit_test_framework)
   return()
 endif()
 
+opm_add_test(test_ParallelFieldProps_np2
+  EXE_TARGET
+    test_ParallelFieldProps
+  DRIVER_ARGS
+    -n 2
+  PROCESSORS
+    2
+)
+
 opm_add_test(test_compequil_invalid_eqlnum_np2
   EXE_TARGET
     test_compequil
