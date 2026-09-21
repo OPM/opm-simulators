@@ -4,6 +4,10 @@
 
 #include <opm/simulators/linalg/mixed/bsr.h>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <stdexcept>
+
 namespace Opm
 {
 
