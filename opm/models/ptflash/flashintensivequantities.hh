@@ -90,6 +90,14 @@ class FlashIntensiveQuantities
     static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
+    /// Minimum hydrocarbon share of the pore space, including cells that would
+    /// otherwise hold water alone. Component-storage derivatives scale with this
+    /// share, so it cannot vanish. The value matches the composition floor, and
+    /// the displaced water remains below the precision of single-precision
+    /// restart output.
+    static constexpr Scalar hydrocarbonFloor = 1.0e-8;
+
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
@@ -230,8 +238,20 @@ public:
         const Evaluation L = fluidState_.L();
         const Evaluation Vm_L = paramCache.correctedMolarVolume(FluidSystem::oilPhaseIdx);
         const Evaluation Vm_V = paramCache.correctedMolarVolume(FluidSystem::gasPhaseIdx);
-        Evaluation So = max((1 - Sw) * (L * Vm_L / ( L * Vm_L + (1 - L) * Vm_V)), 0.0);
-        Evaluation Sg = max(1 - So - Sw, 0.0);
+
+        // Every component storage term is proportional to the pore-space share
+        // occupied by hydrocarbons. If a cell holds only water, a zero share
+        // removes the composition from the residual: the component equations
+        // then depend on no composition variable, and the cell's diagonal
+        // Jacobian block is singular. Every equilibrated cell below the
+        // water-oil contact starts in that state. Floor the value while retaining
+        // its derivatives, as for the composition above.
+        Evaluation hydrocarbon = 1 - Sw;
+        if (hydrocarbon < hydrocarbonFloor) {
+            hydrocarbon.setValue(hydrocarbonFloor);
+        }
+        Evaluation So = max(hydrocarbon * (L * Vm_L / ( L * Vm_L + (1 - L) * Vm_V)), 0.0);
+        Evaluation Sg = max(hydrocarbon - So, 0.0);
         const Scalar sumS = getValue(So) + getValue(Sg) + getValue(Sw);
         So /= sumS;
         Sg /= sumS;
