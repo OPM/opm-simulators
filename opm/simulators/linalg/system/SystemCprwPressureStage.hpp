@@ -534,6 +534,10 @@ private:
         }
 
         for (std::size_t j = 0; j < layout.numWells(); ++j) {
+            if (layout.isPressureControlled(j)) {
+                // Identity coarse row (assembleCoarseMatrix): dp_j must be zero.
+                continue;
+            }
             Scalar el = 0.0;
             for (std::size_t wb = layout.firstBlock(j); wb < layout.endBlock(j); ++wb) {
                 const auto& lw = w1[wb];
