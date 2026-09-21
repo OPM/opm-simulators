@@ -601,6 +601,7 @@ template<class Scalar> class WellContributions;
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
             SimulatorReportSingle last_report_{};
+            typename WellInterface<TypeTag>::WellSolveStats pending_solve_stats_{};
             GuideRateHandler<Scalar, IndexTraits> guide_rate_handler_{};
             ReservoirCoupling::Proxy<Scalar> rescoup_{};
 
@@ -622,6 +623,11 @@ template<class Scalar> class WellContributions;
             // collect the statistics for the standalone well solves gathered
             // since the last call into last_report_ and reset them.
             void collectWellSolveStats();
+
+            // Move the wells' solve statistics into pending_solve_stats_; needed
+            // before the well container is rebuilt, which discards them.
+            void stashWellSolveStats();
+            void addSolveStats(const WellInterface<TypeTag>& well);
 
             // well controls and network pressures affect each other and are solved in an iterative manner.
             // the function handles one iteration of updating well controls and network pressures.
