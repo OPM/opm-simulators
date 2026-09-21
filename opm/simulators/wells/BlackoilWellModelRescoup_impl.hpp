@@ -310,8 +310,14 @@ void
 BlackoilWellModelRescoup<TypeTag>::
 refreshSlaveGroupInjectionTargets()
 {
+    // The deck's own GCONINJE limit may be a UDA, resolved from the summary
+    // state, and the UDQ evaluation below may change it.  So prime, evaluate
+    // the selected UDQs, and work the targets in force out once more with
+    // the UDQs current, as the well control path will see them.  The second
+    // pass repeats the loop over the slave groups, not the UDQ evaluation.
     this->storeSlaveGroupInjectionTargets();
     this->evalGroupAndFieldUDQs();
+    this->storeSlaveGroupInjectionTargets();
 }
 
 template<typename TypeTag>
