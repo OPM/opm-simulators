@@ -472,6 +472,17 @@ public:
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
 
+        // Seed the DRSDT/DRVDT history from the initial composition.  Left at
+        // zero, the limiter caps Rs at DRSDT * dt on the first step and boils
+        // the dissolved gas out of an undersaturated reservoir.  A restarted
+        // run seeds it from the restart solution instead.
+        if (!initconfig.restartRequested()) {
+            for (std::size_t elemIdx = 0; elemIdx < this->initialFluidStates_.size(); ++elemIdx) {
+                const auto& fs = this->initialFluidStates_[elemIdx];
+                this->mixControls_.updateLastValues(elemIdx, fs.Rs(), fs.Rv());
+            }
+        }
+
         if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
             simulator.model().applyInitialSolution();

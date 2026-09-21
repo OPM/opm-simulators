@@ -585,6 +585,23 @@ macro(opm-simulators_tests_hook)
   endif()
 
   if(BUILD_FLOW)
+    set(drsdt_simulator flow)
+    if(USE_DEV_SIMULATOR_IN_TESTS)
+      set(drsdt_simulator flow_blackoil)
+    endif()
+    add_test(
+      NAME
+        drsdt_initial_rs_no_free_gas
+      COMMAND
+        ${PROJECT_SOURCE_DIR}/tests/run-drsdt-free-gas-test.sh
+          -e $<TARGET_FILE:${drsdt_simulator}>
+          -i ${PROJECT_SOURCE_DIR}/tests
+          -f drsdt_initial_rs
+          -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
+    )
+  endif()
+
+  if(BUILD_FLOW)
     add_test(
       NAME
         flow__version
@@ -684,6 +701,7 @@ macro(opm-simulators_targets_hook)
   simulators_add_target_options(TARGET MainDispatchDynamic)
 
   target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_drsdt_initial_rs PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_injection_topup_phase_validation PRIVATE $<TARGET_OBJECTS:moduleVersion>)
