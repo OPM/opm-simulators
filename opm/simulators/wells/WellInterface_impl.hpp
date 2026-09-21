@@ -737,17 +737,34 @@ namespace Opm
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
 
+        // PROTOTYPE: also consolidate the total per-phase surface rate from
+        // the same per-perforation fluxes, so that surface_rates becomes
+        // exactly consistent with phase_mixing_rates (WOPR == WOPRF + WOPRS
+        // by construction, not just to Newton tolerance). Not yet a proposed
+        // change -- evaluating whether this helps or hurts convergence.
+        std::vector<Scalar> perf_rate_sum(ws.surface_rates.size(), 0.0);
+
         if (this->isProducer()) {
             const auto& perf_mixing = ws.perf_data.phase_mixing_rates;
+            const auto& perf_rates = ws.perf_data.phase_rates;
+            const int np = this->numPhases();
             for (int perf = 0; perf < this->numLocalPerfs(); ++perf) {
                 for (std::size_t idx = 0; idx < ws.phase_mixing_rates.size(); ++idx) {
                     ws.phase_mixing_rates[idx] += perf_mixing[perf][idx];
+                }
+                for (int p = 0; p < np; ++p) {
+                    perf_rate_sum[p] += perf_rates[perf * np + p];
                 }
             }
         }
 
         const auto& comm = this->parallelWellInfo().communication();
         comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
+
+        if (this->isProducer()) {
+            comm.sum(perf_rate_sum.data(), perf_rate_sum.size());
+            ws.surface_rates = perf_rate_sum;
+        }
     }
 
     template<typename TypeTag>
