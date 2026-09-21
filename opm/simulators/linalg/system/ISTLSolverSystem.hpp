@@ -41,6 +41,8 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -327,8 +329,9 @@ private:
         }
 
         // Which wells are on pressure control.  Asking this is the outer
-        // layer's job; below here it is just a flag per well.  The order
-        // matches addBCDMatrix, which walks the same well container.
+        // layer's job; below here it is just a flag per well.  Index j is the
+        // position in this rank's BlackoilWellModel well container at this
+        // linear solve, the same loop addBCDMatrix uses to build the D blocks.
         wellLayout_.pressureControlled.clear();
         thpControlled_.clear();
         {
@@ -367,6 +370,11 @@ private:
                 }
                 ++j;
             }
+            if (wellLayout_.pressureControlled.size() != wellDMatrices_.size()) {
+                OPM_THROW(std::logic_error,
+                          "System CPRW: the well container and the extracted well "
+                          "matrices disagree on the number of wells.");
+            }
         }
     }
 
@@ -395,6 +403,7 @@ private:
         const int q = wellLayout_.pressureDofIndex;
 
         WellVector<Scalar> weights(numBlocks);
+        std::optional<std::size_t> cellavgWell;
         for (std::size_t wb = 0; wb < numBlocks; ++wb) {
             auto& lambda = weights[wb];
             lambda = 0.0;
@@ -417,10 +426,15 @@ private:
                 // does. "cellblockavg" averages per block row instead, which
                 // is a finer but non-classic variant.
                 const bool perWell = (wellWeightType_ == "cellavg");
-                const std::size_t first
-                    = perWell ? wellLayout_.firstBlock(*wellLayout_.wellOfBlock(wb)) : wb;
-                const std::size_t last
-                    = perWell ? wellLayout_.endBlock(*wellLayout_.wellOfBlock(wb)) : wb + 1;
+                const auto well = perWell ? wellLayout_.wellOfBlock(wb) : std::nullopt;
+                if (perWell && well.has_value() && well == cellavgWell) {
+                    // A well's blocks are contiguous and share one average.
+                    lambda = weights[wb - 1];
+                    continue;
+                }
+                cellavgWell = well;
+                const std::size_t first = perWell ? wellLayout_.firstBlock(*well) : wb;
+                const std::size_t last = perWell ? wellLayout_.endBlock(*well) : wb + 1;
                 int nperf = 0;
                 for (std::size_t b = first; b < last; ++b) {
                     for (auto col = mergedB_[b].begin(), end = mergedB_[b].end();
