@@ -161,14 +161,14 @@ receiveCoupledNetworkActiveStatus()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
-receiveGroupConstraintsFromMaster()
+receiveGroupConstraintsFromMaster(const ReservoirCoupling::GroupConstraintsSend send)
 {
     OPM_TIMEFUNCTION();
     RescoupReceiveGroupConstraints<Scalar, IndexTraits> constraint_receiver{
         this->well_model_.guideRateHandler(),
         this->groupStateHelper()
     };
-    constraint_receiver.receiveGroupConstraintsFromMaster();
+    constraint_receiver.receiveGroupConstraintsFromMaster(send);
 }
 
 template<typename TypeTag>

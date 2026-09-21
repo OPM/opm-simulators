@@ -487,7 +487,8 @@ namespace Opm {
                 // See RescoupSendSlaveGroupData::collectSlaveGroupSurfaceProductionRates_().
                 this->reservoirCouplingSlave().setWellsSolvedThisSyncStep(false);
                 this->rescoupHelper_.sendSlaveGroupDataToMaster();
-                this->rescoupHelper_.receiveGroupConstraintsFromMaster();
+                this->rescoupHelper_.receiveGroupConstraintsFromMaster(
+                    ReservoirCoupling::GroupConstraintsSend::Handshake);
                 this->rescoupHelper_.receiveCoupledNetworkActiveStatus();
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
                 this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
@@ -2472,7 +2473,8 @@ namespace Opm {
             // for the groups it controls through a derived GCONINJE mode, and
             // sends them straight back.  See
             // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
-            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
+            this->rescoupHelper_.receiveGroupConstraintsFromMaster(
+                ReservoirCoupling::GroupConstraintsSend::Refresh);
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;

@@ -39,7 +39,7 @@ RescoupReceiveGroupConstraints(
 template <class Scalar, class IndexTraits>
 void
 RescoupReceiveGroupConstraints<Scalar, IndexTraits>::
-receiveGroupConstraintsFromMaster()
+receiveGroupConstraintsFromMaster(const ReservoirCoupling::GroupConstraintsSend send)
 {
     // NOTE: All ranks must call these functions because they contain broadcasts.
     //   The MPI_Recv parts inside the functions have their own rank 0 checks.
@@ -50,6 +50,14 @@ receiveGroupConstraintsFromMaster()
     }
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
+    }
+    else if (send == ReservoirCoupling::GroupConstraintsSend::Handshake) {
+        // The handshake's production list is complete, so none means none:
+        // the master has withdrawn every production constraint it imposed on
+        // this slave, and the ones held from an earlier step must go.  A
+        // refresh sends an empty production list to mean "unchanged", so
+        // there the held ones stay.
+        rescoup_slave.clearMasterProductionConstraints();
     }
 }
 

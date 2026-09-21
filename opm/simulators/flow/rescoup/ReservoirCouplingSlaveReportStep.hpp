@@ -183,6 +183,15 @@ public:
     ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
     ///   unconnected slave never participates in the cross-rescoup exchange
     ///   and balances only its own (local) network.
+    /// @brief Forget every master production target and limit held from an
+    ///   earlier receive.  Called when a handshake brings none: the master
+    ///   has withdrawn them.
+    void clearMasterProductionConstraints()
+    {
+        this->master_production_targets_.clear();
+        this->master_production_limits_.clear();
+    }
+
     bool connectedToMasterCoupledNetwork() const
     { return connected_to_master_coupled_network_; }
 

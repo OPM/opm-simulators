@@ -1424,6 +1424,16 @@ updateSlaveGroupCmodesFromMaster()
                 this->groupState().production_control(gname, master_cmode);
             }
         }
+        else {
+            // No production target from the master: back to what the deck
+            // says, NONE when it gives none.  A mode set from an earlier
+            // master target must not outlive the target, or the target
+            // calculation would look for a deck target under the master's
+            // mode.
+            const auto& group = this->schedule_.getGroup(gname, this->report_step_);
+            this->groupState().production_control(
+                gname, group.productionControls(this->summary_state_).cmode);
+        }
         // Injection cmode — check each phase
         for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             if (slave.hasMasterInjectionTarget(gname, phase)) {
