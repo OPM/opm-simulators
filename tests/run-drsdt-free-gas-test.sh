@@ -31,8 +31,9 @@ mkdir -p ${RESULT_PATH}
   "${INPUT_DATA_PATH}/${FILENAME}.DATA" > /dev/null
 test $? -eq 0 || exit 1
 
-PRT=${RESULT_PATH}/${FILENAME}.PRT
-test -f ${PRT} || { echo "No PRT file ${PRT}"; exit 1; }
+# flow upper-cases the output base name.
+PRT=$(find "${RESULT_PATH}" -maxdepth 1 -iname "${FILENAME}.PRT" | head -n 1)
+test -n "${PRT}" || { echo "No PRT file for ${FILENAME} in ${RESULT_PATH}"; exit 1; }
 
 # The fifth ':'-separated field holds free gas, dissolved gas and total.
 awk -F: '/CURRENTLY IN PLACE/ { n++; split($5, gas, " "); if (gas[1] + 0 > 1) { bad = 1; print } }
