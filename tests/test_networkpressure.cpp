@@ -488,4 +488,36 @@ BOOST_AUTO_TEST_CASE(gas_injection_thp_below_axis)
     BOOST_CHECK(comp.invalidNodes().empty());
 }
 
+BOOST_AUTO_TEST_CASE(water_injection_rate_below_flow_axis)
+{
+    auto s = NetworkSetup{NetworkScenario::WaterInjection};
+    // The first flow-axis value is 50 Sm3/d. A 25 Sm3/d lookup must use
+    // that endpoint rather than extrapolating the first interval.
+    MockWellModel::MockGroupStateHelper::MockGroupState::injection_rates_sm3_day = {25.0, 0.0, 0.0};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(151.785, bars), 1e-7);
+    BOOST_CHECK(comp.invalidNodes().empty());
+}
+
+BOOST_AUTO_TEST_CASE(water_injection_zero_rate_uses_first_flow_point)
+{
+    auto s = NetworkSetup{NetworkScenario::WaterInjection};
+    MockWellModel::MockGroupStateHelper::MockGroupState::injection_rates_sm3_day = {0.0, 0.0, 0.0};
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    NetworkPressureComputation<MockWellModel, VFPInjProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_inj_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(151.785, bars), 1e-7);
+    BOOST_CHECK(comp.invalidNodes().empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END() // NetworkPressureComputationTests

@@ -63,9 +63,8 @@ struct NetworkBranchPressure
 };
 
 namespace detail {
-    /// Clamp the VFP lookup point to the table axes; the tables must not be extrapolated
-    /// for network branches (a zero-filled tail extrapolates to negative pressures).
-    /// Rates are scaled uniformly so that WFR/GFR fractions are preserved.
+    /// Clamp injection-network VFP lookup points to the table axes. Scale
+    /// nonzero rates uniformly to preserve their phase fractions.
     template<typename Scalar, typename IndexTraits, typename Table>
     bool clampToTableAxes(const Table& table, std::vector<Scalar>& rates, Scalar& up_press)
     {
@@ -86,6 +85,27 @@ namespace detail {
         if (flo > flo_hi && flo > 0.0) {
             const Scalar s = flo_hi / flo;
             std::ranges::transform(rates, rates.begin(), [s](const auto r) { return s * r; });
+            clamped = true;
+        } else if (flo < flo_axis.front()) {
+            const Scalar flo_lo = flo_axis.front();
+            if (flo > 0.0) {
+                const Scalar s = flo_lo / flo;
+                std::ranges::transform(rates, rates.begin(), [s](const auto r) { return s * r; });
+            } else {
+                // A zero vector cannot be scaled. Choose the phase represented
+                // by the VFPINJ flow axis for this lookup only.
+                switch (table.getFloType()) {
+                case VFPInjTable::FLO_TYPE::FLO_OIL:
+                    rates[IndexTraits::oilPhaseIdx] = flo_lo;
+                    break;
+                case VFPInjTable::FLO_TYPE::FLO_WAT:
+                    rates[IndexTraits::waterPhaseIdx] = flo_lo;
+                    break;
+                case VFPInjTable::FLO_TYPE::FLO_GAS:
+                    rates[IndexTraits::gasPhaseIdx] = flo_lo;
+                    break;
+                }
+            }
             clamped = true;
         }
         return clamped;

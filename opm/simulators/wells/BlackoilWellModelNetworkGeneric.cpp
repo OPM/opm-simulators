@@ -484,12 +484,12 @@ initialize(const int report_step)
         auto& invalid_nodes = this->invalidNodes(domain);
         auto& last_valid_node_pressures = this->last_valid_domain_node_pressures_[details::domainIndex(domain)];
         auto& last_valid_branch_data = this->last_valid_domain_branch_data_[details::domainIndex(domain)];
-        invalid_nodes.clear();
         if (!network.get().active()) {
             node_pressures.clear();
             branch_data.clear();
             last_valid_node_pressures.clear();
             last_valid_branch_data.clear();
+            invalid_nodes.clear();
         }
         else {
             const auto is_stale = [&network](const auto& node_pressure)
@@ -526,14 +526,17 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
     }
 
     const auto domain = details::domainForWell(well);
-    if (domain.has_value() && !this->nodePressures(*domain).empty()) {
+    if (domain.has_value()) {
         const auto it = this->nodePressures(*domain).find(well.wellEcl().groupName());
-        if (it != this->nodePressures(*domain).end() && well.isProducer()) {
+        if (it != this->nodePressures(*domain).end() && well.isProducer()
+            && this->invalidNodes(*domain).count(it->first) == 0) {
             // Carry the converged production-network pressure into the next
             // report step as the producer's starting THP constraint.
             this->imposeWellThpLimit(well, it->second);
-        } else if (it == this->nodePressures(*domain).end()) {
-            // Reapply a retained limit after network detachment or well reconstruction.
+        } else if (it == this->nodePressures(*domain).end()
+                   || (well.isProducer() && this->invalidNodes(*domain).count(it->first) > 0)) {
+            // Reapply a retained limit after network detachment or well reconstruction,
+            // or when the current node pressure is only a no-solution placeholder.
             const auto& ws = well_model_.wellState().well(well.indexOfWell());
             if (ws.network_thp_limit.has_value()) {
                 well.setDynamicThpLimit(*ws.network_thp_limit);
