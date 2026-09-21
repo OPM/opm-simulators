@@ -329,7 +329,7 @@ public:
         auto extractors = std::array{
             Entry{PhaseEntry{&this->saturation_,
                   [](const unsigned phase, const ExtractContext& ectx)
-                  { return getValue(ectx.fs.saturation(phase)); }}
+                  { return ectx.intQuants.saturationForOutput(phase); }}
             },
             Entry{ScalarEntry{&this->fluidPressure_,
                   [](const ExtractContext& ectx)
@@ -355,17 +355,21 @@ public:
             Entry{[&compC = this->compC_](const ExtractContext& ectx)
                   {
                       compC.assignMoleFractions(ectx.globalDofIdx,
-                                                [&fs = ectx.fs](const unsigned compIdx)
-                                                { return getValue(fs.moleFraction(compIdx)); });
+                                                [&ectx](const unsigned compIdx)
+                                                {
+                                                    return ectx.intQuants.hasHydrocarbon()
+                                                        ? getValue(ectx.fs.moleFraction(compIdx))
+                                                        : Scalar{0};
+                                                });
                   }, this->compC_.moleFractionsAllocated()
             },
 
-            // A phase with zero saturation has no defined composition; report zero instead
-            // of stale flash values. A positive, however small, saturation is meaningful.
+            // Use presence before regularization so the numerical hydrocarbon
+            // floor does not create reported phase properties in a water-only cell.
             Entry{[&compC = this->compC_](const ExtractContext& ectx)
                   {
                       const bool hasGas =
-                          getValue(ectx.fs.saturation(gasPhaseIdx)) > Scalar{0};
+                          ectx.intQuants.phaseIsPresent(gasPhaseIdx);
                       compC.assignGasFractions(ectx.globalDofIdx,
                                                [&fs = ectx.fs, hasGas](const unsigned compIdx)
                                                {
@@ -379,7 +383,7 @@ public:
             Entry{[&compC = this->compC_](const ExtractContext& ectx)
                   {
                       const bool hasOil =
-                          getValue(ectx.fs.saturation(oilPhaseIdx)) > Scalar{0};
+                          ectx.intQuants.phaseIsPresent(oilPhaseIdx);
                       compC.assignOilFractions(ectx.globalDofIdx,
                                                [&fs = ectx.fs, hasOil](const unsigned compIdx)
                                                {
@@ -397,24 +401,31 @@ public:
                                                  getValue(ectx.fs.pressure(gasPhaseIdx)));
                   }, this->compC_.phasePressuresAllocated()
             },
-            // Vapour mole fraction of the total mixture from the flash.
+            // The reference convention for a water-only cell is VMF = 1.
+            // Otherwise use the hydrocarbon flash's vapour mole fraction.
             Entry{[&compC = this->compC_](const ExtractContext& ectx)
                   {
                       const Scalar liquidFraction = getValue(ectx.fs.L());
                       compC.assignVaporFraction(ectx.globalDofIdx,
-                                                std::clamp(Scalar{1} - liquidFraction,
-                                                           Scalar{0}, Scalar{1}));
+                                                ectx.intQuants.hasHydrocarbon()
+                                                    ? std::clamp(Scalar{1} - liquidFraction,
+                                                                 Scalar{0}, Scalar{1})
+                                                    : Scalar{1});
                   }, this->compC_.vaporFractionAllocated()
             },
             // The phase densities and viscosities, reported where the phase is present.
             Entry{PhaseEntry{&this->relativePermeability_,
                   [](const unsigned phaseIdx, const ExtractContext& ectx)
-                  { return getValue(ectx.intQuants.relativePermeability(phaseIdx)); }}
+                  {
+                      return ectx.intQuants.phaseIsPresent(phaseIdx)
+                          ? getValue(ectx.intQuants.relativePermeability(phaseIdx))
+                          : Scalar{0};
+                  }}
             },
             Entry{PhaseEntry{&this->density_,
                   [](const unsigned phaseIdx, const ExtractContext& ectx)
                   {
-                      return getValue(ectx.fs.saturation(phaseIdx)) > 0.0
+                      return ectx.intQuants.phaseIsPresent(phaseIdx)
                           ? getValue(ectx.fs.density(phaseIdx))
                           : Scalar{0};
                   }}
@@ -422,7 +433,7 @@ public:
             Entry{PhaseEntry{&this->viscosity_,
                   [](const unsigned phaseIdx, const ExtractContext& ectx)
                   {
-                      return getValue(ectx.fs.saturation(phaseIdx)) > 0.0
+                      return ectx.intQuants.phaseIsPresent(phaseIdx)
                           ? getValue(ectx.fs.viscosity(phaseIdx))
                           : Scalar{0};
                   }}
@@ -452,9 +463,7 @@ public:
 
         const auto densityIfPresent = [](const unsigned phaseIdx) {
             return [phaseIdx](const Context& ectx) -> Scalar {
-                if (!FluidSystem::phaseIsActive(phaseIdx) ||
-                    getValue(ectx.fs.saturation(phaseIdx)) <= 0.0)
-                {
+                if (!ectx.intQuants.phaseIsPresent(phaseIdx)) {
                     return Scalar{0};
                 }
 
@@ -464,9 +473,7 @@ public:
 
         const auto viscosityIfPresent = [](const unsigned phaseIdx) {
             return [phaseIdx](const Context& ectx) -> Scalar {
-                if (!FluidSystem::phaseIsActive(phaseIdx) ||
-                    getValue(ectx.fs.saturation(phaseIdx)) <= 0.0)
-                {
+                if (!ectx.intQuants.phaseIsPresent(phaseIdx)) {
                     return Scalar{0};
                 }
 
@@ -483,11 +490,7 @@ public:
 
         const auto phasePoreVolume = [reservoirPoreVolume](const unsigned phaseIdx) {
             return [phaseIdx, reservoirPoreVolume](const Context& ectx) -> Scalar {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    return Scalar{0};
-                }
-
-                return getValue(ectx.fs.saturation(phaseIdx)) * reservoirPoreVolume(ectx);
+                return ectx.intQuants.saturationForOutput(phaseIdx) * reservoirPoreVolume(ectx);
             };
         };
 
@@ -521,20 +524,18 @@ public:
             Entry{ScalarEntry{"BGPV"sv, phasePoreVolume(gasPhaseIdx)}},
             Entry{ScalarEntry{std::vector{"BSOIL"sv, "BOSAT"sv},
                               [](const Context& ectx)
-                              { return getValue(ectx.fs.saturation(oilPhaseIdx)); }
+                              { return ectx.intQuants.saturationForOutput(oilPhaseIdx); }
                   }
             },
             Entry{ScalarEntry{std::vector{"BSGAS"sv, "BGSAT"sv},
                               [](const Context& ectx)
-                              { return getValue(ectx.fs.saturation(gasPhaseIdx)); }
+                              { return ectx.intQuants.saturationForOutput(gasPhaseIdx); }
                   }
             },
             Entry{ScalarEntry{std::vector{"BSWAT"sv, "BWSAT"sv},
                               [](const Context& ectx)
                               {
-                                  return FluidSystem::phaseIsActive(waterPhaseIdx)
-                                      ? getValue(ectx.fs.saturation(waterPhaseIdx))
-                                      : Scalar{0};
+                                  return ectx.intQuants.saturationForOutput(waterPhaseIdx);
                               }
                   }
             },
@@ -729,7 +730,7 @@ public:
 
         // Run the nonlinear PSAT solve in the caller's OpenMP loop. The
         // assignment is a no-op unless a PSAT restart buffer is allocated.
-        this->assignSaturationPressure_(globalDofIdx, intQuants.fluidState());
+        this->assignSaturationPressure_(globalDofIdx, intQuants);
     }
 
     /// When PSAT is requested, reduce the count of unresolved cells across all
@@ -819,11 +820,19 @@ private:
     }
 
     /// Store the cell's saturation pressure, using zero for an unsuccessful solve.
+    /// Water-only cells use the reference convention PSAT = cell pressure.
     /// Concurrent calls must use distinct cell indices; the unresolved count is atomic.
-    template<class FluidState>
-    void assignSaturationPressure_(const unsigned globalDofIdx, const FluidState& fluidState)
+    void assignSaturationPressure_(const unsigned globalDofIdx,
+                                   const IntensiveQuantities& intQuants)
     {
         if (!this->compC_.saturationPressureAllocated()) {
+            return;
+        }
+
+        const auto& fluidState = intQuants.fluidState();
+        if (!intQuants.hasHydrocarbon()) {
+            this->compC_.assignSaturationPressure(globalDofIdx,
+                                                  getValue(fluidState.pressure(oilPhaseIdx)));
             return;
         }
 

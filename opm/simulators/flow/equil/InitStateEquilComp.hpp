@@ -43,6 +43,7 @@
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/CompvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
@@ -136,6 +137,41 @@ private:
     Scalar g_;
 };
 
+/// The hydrostatic gradient of the water phase, whose density comes from the
+/// water PVT rather than from the equation of state.
+template <class FluidSystem>
+class WaterDensityODE
+{
+public:
+    using Scalar = typename FluidSystem::Scalar;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
+    WaterDensityODE(const TabulatedFunction& tempVdTable,
+                    const CompositionalConfig::EOSType eosType,
+                    const Scalar normGrav)
+        : tempVdTable_(tempVdTable)
+        , eosType_(eosType)
+        , g_(normGrav)
+    {}
+
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const
+    {
+        CompositionalFluidState<Scalar, FluidSystem> fs;
+        fs.setTemperature(evalDepthTable(tempVdTable_, depth));
+        fs.setPressure(FluidSystem::waterPhaseIdx, press);
+
+        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+
+        return FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx) * g_;
+    }
+
+private:
+    const TabulatedFunction& tempVdTable_;
+    CompositionalConfig::EOSType eosType_;
+    Scalar g_;
+};
+
 } // namespace Details
 
 /*!
@@ -186,14 +222,22 @@ public:
     /// \param[in] comm            Communicator for parallel runs.
     /// \param[in] gravity         Norm of the gravity vector.
     /// \param[in] numSamplePoints Sample points in each pressure integration.
+    /// \param[in] connateWater    Scaled connate water saturation of each cell,
+    ///                            empty when the water phase is inactive.
+    /// \param[in] maxWater        Scaled maximum water saturation of each cell,
+    ///                            empty when the water phase is inactive.
     InitialStateComputer(const EclipseState& inputState,
                          const CompositionalConfig::EOSType eosType,
                          const std::vector<Scalar>& cellCenterDepth,
                          const std::vector<int>& eqlnum,
                          const Parallel::Communication& comm,
                          const Scalar gravity,
-                         const int numSamplePoints)
+                         const int numSamplePoints,
+                         const std::vector<Scalar>& connateWater = {},
+                         const std::vector<Scalar>& maxWater = {})
         : eosType_(eosType)
+        , connateWater_(connateWater)
+        , maxWater_(maxWater)
     {
         const auto& records = inputState.getInitConfig().getEquil();
         const auto& tables = inputState.getTableManager();
@@ -233,7 +277,18 @@ public:
                                       cell, region + 1, records.size()));
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("Invalid EQLNUM: ", comm);
+        // The endpoint vectors are optional, but a non-empty one is indexed for
+        // every cell.
+        for (const auto& [name, limits] : {std::pair{"connate water", std::cref(connateWater)},
+                                           std::pair{"maximum water", std::cref(maxWater)}}) {
+            if (!limits.get().empty() &&
+                (limits.get().size() != cellCenterDepth.size())) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("The {} saturation has {} entries for {} cell depths.",
+                                      name, limits.get().size(), cellCenterDepth.size()));
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("Invalid equilibration input: ", comm);
 
         std::vector<Region> regions;
         regions.reserve(records.size());
@@ -243,8 +298,10 @@ public:
         }
 
         fluidStates_.resize(cellCenterDepth.size());
+        referencePressures_.resize(cellCenterDepth.size());
         for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
-            assignCell(fluidStates_[cell], regions[eqlnum[cell]], cellCenterDepth[cell]);
+            referencePressures_[cell] =
+                assignCell(fluidStates_[cell], regions[eqlnum[cell]], cellCenterDepth[cell], cell);
         }
     }
 
@@ -254,11 +311,19 @@ public:
     const std::vector<FluidState>& fluidStates() const
     { return fluidStates_; }
 
+    /// Pressure of the water column below the water-oil contact, or of the
+    /// hydrocarbon column above it. The current flash uses this common pressure;
+    /// fluidStates() retains the independently integrated phase pressures.
+    const std::vector<Scalar>& referencePressures() const
+    { return referencePressures_; }
+
 private:
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
     using ODE = Details::EosDensityODE<FluidSystem>;
+    using WaterODE = Details::WaterDensityODE<FluidSystem>;
     using PressFunc = EQUIL::Details::PressureFunction<Scalar, ODE>;
+    using WaterPressFunc = EQUIL::Details::PressureFunction<Scalar, WaterODE>;
 
     static constexpr int numComponents = FluidSystem::numComponents;
 
@@ -294,7 +359,25 @@ private:
         TabulatedFunction tempVdTable;
         std::optional<PressFunc> oilPressure;
         std::optional<PressFunc> gasPressure;       // two zones, or type 3
+
+        Scalar zwoc{};                              // water-oil contact
+        /// Set when the datum states the water pressure, so the hydrocarbon is
+        /// anchored at the water-oil contact instead. The fluid there is the one
+        /// just above the contact, which the EOS root has to follow.
+        bool anchoredAtWaterContact{false};
+        std::optional<WaterPressFunc> waterPressure;
     };
+
+    /// Each pressure column must reach the water-oil contact before another
+    /// column can be anchored there. Keep the cell span separate for diagnostics.
+    static std::array<Scalar, 2> waterContactSpan(const Region& reg,
+                                                const std::array<Scalar, 2>& span)
+    {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            return {std::min(span[0], reg.zwoc), std::max(span[1], reg.zwoc)};
+        }
+        return span;
+    }
 
     /// Normalized vapour-zone composition of a two-zone COMPVD region at a given depth.
     static CompVec vaporComposition(const Region& reg, const Scalar depth)
@@ -624,27 +707,119 @@ private:
             span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
         }
 
-        // The equilibration covers the hydrocarbon column only.
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            if (record.waterOilContactDepth() < span[1]) {
-                OPM_THROW(std::runtime_error,
-                          fmt::format("Compositional equilibration does not support a water "
-                                      "zone: the water-oil contact at {} m is above the "
-                                      "deepest cell centre at {} m of region {}.",
-                                      record.waterOilContactDepth(), span[1], regionIdx + 1));
-            }
-            OpmLog::info(fmt::format("Equilibration region {}: the water phase is "
-                                     "initialized with zero saturation.", regionIdx + 1));
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        if (waterActive) {
+            reg.zwoc = record.waterOilContactDepth();
+        }
+
+        // A datum below the water-oil contact states the pressure of the water
+        // rather than of the hydrocarbon: integrate the water from there and
+        // hand the hydrocarbon its pressure at the contact. Otherwise the
+        // hydrocarbon is anchored at the datum and the water follows from the
+        // contact.
+        Scalar hcDatum = record.datumDepth();
+        Scalar hcPressure = record.datumDepthPressure();
+        const bool datumInWater = waterActive && (record.datumDepth() > reg.zwoc);
+        // A datum on the water-oil contact is no more a depth the hydrocarbon
+        // occupies than one below it, so the EOS root follows the fluid just
+        // above the contact in both cases.
+        reg.anchoredAtWaterContact = waterActive && (record.datumDepth() >= reg.zwoc);
+
+        if (datumInWater) {
+            integrateWaterPressure(reg, span, gravity, numSamplePoints,
+                                   record.datumDepth(), record.datumDepthPressure());
+            hcDatum = reg.zwoc;
+            hcPressure = reg.waterPressure->value(reg.zwoc)
+                       + record.waterOilContactCapillaryPressure();
+            OpmLog::info(fmt::format("Equilibration region {}: the datum at {} m lies below the "
+                                     "water-oil contact at {} m, so it gives the water pressure; "
+                                     "the hydrocarbon pressure at the contact is {:.5} bar.",
+                                     regionIdx + 1, record.datumDepth(), reg.zwoc,
+                                     hcPressure / 1.0e5));
         }
 
         if (reg.initType == 1) {
-            setupSinglePhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
+            setupSinglePhaseRegion(reg, span, gravity, numSamplePoints, regionIdx,
+                                   hcDatum, hcPressure);
         }
         else {
+            // Type 3 anchors the hydrocarbon at the gas-oil contact on its own
+            // saturation pressure, so it has no use for a datum that states the
+            // water pressure: the two columns would not meet at the water-oil
+            // contact.
+            if (datumInWater) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Compositional equilibration of region {} places the "
+                                      "datum at {} m, below the water-oil contact at {} m, "
+                                      "while EQUIL item 10 is 3. Put the datum in the "
+                                      "hydrocarbon column or use item 10 = 1.",
+                                      regionIdx + 1, record.datumDepth(), reg.zwoc));
+            }
             setupTwoPhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
         }
 
+        // With the datum in the hydrocarbon the water follows from the contact.
+        if (waterActive && !datumInWater) {
+            setupWaterZone(reg, record, span, gravity, numSamplePoints, regionIdx);
+        }
+        else if (waterActive) {
+            OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact "
+                                 "is at {} m.", regionIdx + 1, reg.zwoc));
+        }
+
         return reg;
+    }
+
+    /// The water phase of a region: connate above the water-oil contact, fully
+    /// water-saturated below it, with its own hydrostatic pressure.
+    ///
+    /// The water pressure is integrated from the contact rather than derived
+    /// from the hydrocarbon pressure: the two only agree there, and away from
+    /// it the water gradient is the steeper one.
+    void setupWaterZone(Region& reg,
+                        const EquilRecord& record,
+                        const std::array<Scalar, 2>& span,
+                        const Scalar gravity,
+                        const int numSamplePoints,
+                        const std::size_t regionIdx) const
+    {
+        // The capillary pressure at the contact (EQUIL item 4) offsets the
+        // water pressure from the hydrocarbon pressure there.
+        if (!reg.oilPressure.has_value() && !reg.gasPressure.has_value()) {
+            return;
+        }
+        const auto& hcPressure = reg.oilPressure.has_value() ? reg.oilPressure : reg.gasPressure;
+        const Scalar pcow = record.waterOilContactCapillaryPressure();
+        const Scalar pContact = hcPressure->value(reg.zwoc) - pcow;
+
+        integrateWaterPressure(reg, span, gravity, numSamplePoints, reg.zwoc, pContact);
+
+        OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact "
+                                 "is at {} m.", regionIdx + 1, reg.zwoc));
+    }
+
+    /// Integrates the water pressure over \p span from \p depth, where it is
+    /// \p pressure.
+    void integrateWaterPressure(Region& reg,
+                                const std::array<Scalar, 2>& span,
+                                const Scalar gravity,
+                                const int numSamplePoints,
+                                const Scalar depth,
+                                const Scalar pressure) const
+    {
+        const WaterODE ode(reg.tempVdTable, eosType_, gravity);
+        reg.waterPressure.emplace(ode,
+                                  typename WaterPressFunc::InitCond{depth, pressure},
+                                  numSamplePoints, waterContactSpan(reg, span));
+    }
+
+    /// A per-cell saturation endpoint, or \p fallback when the caller supplied
+    /// none.
+    static Scalar waterLimit(const std::vector<Scalar>& limits,
+                             const std::size_t cell,
+                             const Scalar fallback)
+    {
+        return limits.empty() ? fallback : limits[cell];
     }
 
     /// EQUIL item 10 type 1: the table gives the total composition and the
@@ -662,15 +837,13 @@ private:
     /// there is no initial free gas and below the bottom when the region holds
     /// only gas, so the defaulted 0 m correctly yields the liquid root.
     void setupSinglePhaseRegion(Region& reg,
-                                const EquilRecord& record,
                                 const std::array<Scalar, 2>& span,
                                 const Scalar gravity,
                                 const int numSamplePoints,
-                                const std::size_t regionIdx) const
+                                const std::size_t regionIdx,
+                                const Scalar datum,
+                                const Scalar datumPressure) const
     {
-        const Scalar datum = record.datumDepth();
-        const Scalar datumPressure = record.datumDepthPressure();
-
         if (reg.twoZone) {
             setupTwoZoneRegion(reg, span, gravity, numSamplePoints, regionIdx,
                                datum, datumPressure);
@@ -678,9 +851,14 @@ private:
         }
 
         // COMPVD states the phase its composition belongs to; without that the
-        // datum's side of the gas-oil contact decides the EOS root.
+        // datum's side of the gas-oil contact decides the EOS root. A datum on
+        // the water-oil contact is not in the hydrocarbon at all, so there the
+        // gas-oil contact itself still leaves gas above: a column whose two
+        // contacts coincide holds no liquid.
+        const bool gasAtDatum = reg.anchoredAtWaterContact ? (datum <= reg.zgoc)
+                                                           : (datum < reg.zgoc);
         const auto phaseIdx = reg.statedPhaseIdx.value_or(
-            (datum < reg.zgoc) ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
+            gasAtDatum ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
 
         // A gas-oil contact inside a single-zone region requires the composition
         // to vary across it, so the flash can label the phases correctly.
@@ -698,7 +876,7 @@ private:
                       reg.tempVdTable, phaseIdx, eosType_, gravity);
         reg.oilPressure.emplace(ode,
                                 typename PressFunc::InitCond{datum, datumPressure},
-                                numSamplePoints, span);
+                                numSamplePoints, waterContactSpan(reg, span));
         reg.nominalPhaseIdx = phaseIdx;
 
         OpmLog::info(fmt::format("Equilibration region {}: pressure integrated with one "
@@ -726,8 +904,9 @@ private:
         // The datum-side pressure function must reach the actual contact even
         // when it lies outside the cell span, because the other pressure function
         // is initialized from its value at the contact.
-        const std::array<Scalar, 2> datumSpan{std::min(span[0], reg.zgoc),
-                                              std::max(span[1], reg.zgoc)};
+        const auto pressureSpan = waterContactSpan(reg, span);
+        const std::array<Scalar, 2> datumSpan{std::min(pressureSpan[0], reg.zgoc),
+                                              std::max(pressureSpan[1], reg.zgoc)};
         if ((reg.zgoc < span[0]) || (reg.zgoc > span[1])) {
             OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m "
                                         "lies outside the cells of the region, so the COMPVD "
@@ -742,7 +921,7 @@ private:
             reg.oilPressure.emplace(liquidOde,
                                     typename PressFunc::InitCond{
                                         reg.zgoc, reg.gasPressure->value(reg.zgoc)},
-                                    numSamplePoints, span);
+                                    numSamplePoints, pressureSpan);
         }
         else {
             reg.oilPressure.emplace(liquidOde,
@@ -751,7 +930,7 @@ private:
             reg.gasPressure.emplace(gasOde,
                                     typename PressFunc::InitCond{
                                         reg.zgoc, reg.oilPressure->value(reg.zgoc)},
-                                    numSamplePoints, span);
+                                    numSamplePoints, pressureSpan);
         }
 
         OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above the "
@@ -825,7 +1004,7 @@ private:
                          reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
         reg.oilPressure.emplace(oilOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
-                                numSamplePoints, span);
+                                numSamplePoints, waterContactSpan(reg, span));
 
         // Integrate a two-zone gas column with the same depth-dependent
         // composition assigned to its cells. Otherwise use the equilibrium
@@ -841,10 +1020,11 @@ private:
                          reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
         reg.gasPressure.emplace(gasOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
-                                numSamplePoints, span);
+                                numSamplePoints, waterContactSpan(reg, span));
     }
 
-    void assignCell(FluidState& fs, const Region& reg, const Scalar depth) const
+    Scalar assignCell(FluidState& fs, const Region& reg, const Scalar depth,
+                      const std::size_t cell) const
     {
         const bool inGasZone = ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
 
@@ -861,28 +1041,59 @@ private:
             OPM_THROW(std::runtime_error,
                       "Evaluating the equilibrated pressure of a region without cells.");
         }
-        const Scalar press = pressFunc->value(depth);
+
+        // The common pressure used by the current flash follows the water
+        // column below the contact, including when the scaled maximum water
+        // saturation leaves some residual hydrocarbon. Keep this separate from
+        // the phase pressures so equilibration retains the capillary offset.
+        const Scalar hydrocarbonPressure = pressFunc->value(depth);
+        const bool inWaterZone = (depth > reg.zwoc) && reg.waterPressure.has_value();
+        const Scalar press = inWaterZone ? reg.waterPressure->value(depth)
+                                         : hydrocarbonPressure;
 
         fs.setTemperature(Details::evalDepthTable(reg.tempVdTable, depth));
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
-                fs.setPressure(phaseIdx, press);
+                fs.setPressure(phaseIdx, hydrocarbonPressure);
                 fs.setSaturation(phaseIdx, 0.0);
             }
         }
 
-        // Set a nominal single-phase saturation using the phase represented by
-        // the pressure integration. The downstream flash recomputes the phase
-        // split from composition, pressure, and temperature.
-        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : reg.nominalPhaseIdx, 1.0);
+        // Below the water-oil contact the pore space holds water alone; above
+        // it the hydrocarbon leaves room for the connate water only.
+        Scalar sWat = 0.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            // The saturation function's own endpoints, per cell: below the
+            // contact the water fills what it can, above it only the connate
+            // water remains.
+            sWat = (depth > reg.zwoc) ? waterLimit(maxWater_, cell, Scalar{1})
+                                      : waterLimit(connateWater_, cell, Scalar{0});
+            fs.setSaturation(FluidSystem::waterPhaseIdx, sWat);
+            if (reg.waterPressure.has_value()) {
+                fs.setPressure(FluidSystem::waterPhaseIdx, reg.waterPressure->value(depth));
+            }
+        }
+
+        // Set a nominal single-phase saturation for the hydrocarbon using the
+        // phase represented by the pressure integration. The downstream flash
+        // recomputes the phase split from composition, pressure, and temperature.
+        fs.setSaturation(inGasZone ? FluidSystem::gasPhaseIdx : reg.nominalPhaseIdx,
+                         Scalar{1} - sWat);
 
         for (int c = 0; c < numComponents; ++c) {
             fs.setMoleFraction(c, z[c]);
         }
+        return press;
     }
 
     CompositionalConfig::EOSType eosType_;
+    /// Per-cell scaled water saturation endpoints. The saturation functions are
+    /// selected by SATNUM and scaled per cell, so neither can be read off the
+    /// equilibration region.
+    std::vector<Scalar> connateWater_;
+    std::vector<Scalar> maxWater_;
     std::vector<FluidState> fluidStates_;
+    std::vector<Scalar> referencePressures_;
 };
 
 } // namespace Opm::EQUIL::Comp
