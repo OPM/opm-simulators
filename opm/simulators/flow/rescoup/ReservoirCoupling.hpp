@@ -178,8 +178,6 @@ inline bool isSlaveEndOfRunSentinel(double next_report_time_offset)
     return next_report_time_offset < 0.0;
 }
 
-/// @brief Phase indices for reservoir coupling, we currently only support black-oil phases
-/// (oil, gas, and water).
 /// Which of the master's two group-constraint sends a slave is receiving.
 ///
 /// The master sends a slave its group constraints at the start of every
@@ -195,6 +193,8 @@ enum class GroupConstraintsSend {
     Refresh,
 };
 
+/// @brief Phase indices for reservoir coupling, we currently only support black-oil phases
+/// (oil, gas, and water).
 enum class Phase : std::size_t {
     Oil = 0,  // Matches Opm::Phase::OIL
     Gas,      // Matches Opm::Phase::GAS
