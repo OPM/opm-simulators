@@ -466,6 +466,38 @@ BOOST_AUTO_TEST_CASE(ClassicTransferDropsWellResidualAndCorrection)
     }
 }
 
+// A pressure-controlled well gets an identity coarse row, so its coarse
+// right-hand side must stay zero: otherwise the coarse solve returns the
+// restricted residual as dp_j and full transfer prolongs it into the well.
+BOOST_AUTO_TEST_CASE(PressureControlledWellHasZeroCoarseRhs)
+{
+    Fixture f;
+    f.layout.identityOnPressureControl = true;
+    f.layout.pressureControlled = {0, 1};
+
+    Opm::ResVector<Scalar> dRes(numCells);
+    for (std::size_t c = 0; c < numCells; ++c) {
+        for (int i = 0; i < numRes; ++i) {
+            dRes[c][i] = 1.0 + c + i;
+        }
+    }
+    Opm::WellVector<Scalar> dWell(numWellBlocks);
+    for (std::size_t wb = 0; wb < numWellBlocks; ++wb) {
+        for (int i = 0; i < numWell; ++i) {
+            dWell[wb][i] = 2.0 + wb - i;
+        }
+    }
+
+    Stage stage(f.S, Opm::PropertyTree(), pressureIndex, Opm::WellTransfer::Full);
+    stage.buildCoarseSystem(f.weights);
+    stage.moveToCoarseLevel(dRes, dWell, f.weights);
+
+    BOOST_CHECK_NE(stage.coarseRhs()[numCells + 0][0], 0.0);
+    BOOST_CHECK_EQUAL(stage.coarseRhs()[numCells + 1][0], 0.0);
+    // Trivial row, scaled to the reservoir coarse diagonals.
+    BOOST_CHECK_GT(coarseEntry(stage, numCells + 1, numCells + 1), 0.0);
+}
+
 BOOST_AUTO_TEST_CASE(WellTransferFromStringRejectsUnknownValues)
 {
     BOOST_CHECK(Opm::wellTransferFromString("full") == Opm::WellTransfer::Full);
