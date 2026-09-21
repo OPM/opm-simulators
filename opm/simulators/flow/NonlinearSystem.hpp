@@ -134,6 +134,11 @@ protected:
     virtual void storeSolutionUpdate(const GlobalEqVector&)
     {}
 
+    /// Synchronize primary variables in overlap and ghost cells before
+    /// recomputing intensive quantities.
+    virtual void postSolutionUpdate()
+    { simulator_.model().syncOverlap(); }
+
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
     template <class WellModelType>
