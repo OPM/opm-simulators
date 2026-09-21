@@ -93,9 +93,7 @@ class FlashIntensiveQuantities
 
     /// Minimum hydrocarbon share of the pore space, including cells that would
     /// otherwise hold water alone. Component-storage derivatives scale with this
-    /// share, so it cannot vanish. The value matches the composition floor, and
-    /// the displaced water remains below the precision of single-precision
-    /// restart output.
+    /// share, so it cannot vanish. The value matches the composition floor.
     static constexpr Scalar hydrocarbonFloor = 1.0e-8;
 
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -247,6 +245,9 @@ public:
         // water-oil contact starts in that state. Floor the value while retaining
         // its derivatives, as for the composition above.
         Evaluation hydrocarbon = 1 - Sw;
+        // Remember physical presence before regularization. A positive share,
+        // even below the floor, still represents hydrocarbon in the cell.
+        hasHydrocarbon_ = getValue(hydrocarbon) > Scalar{0};
         if (hydrocarbon < hydrocarbonFloor) {
             hydrocarbon.setValue(hydrocarbonFloor);
         }
@@ -342,6 +343,28 @@ public:
     const FluidState& fluidState() const
     { return fluidState_; }
 
+    /// Whether the primary variables leave any pore space for hydrocarbons,
+    /// before the numerical floor is applied. Recomputed on every update.
+    bool hasHydrocarbon() const
+    { return hasHydrocarbon_; }
+
+    /// Saturation for reporting. The solver keeps the regularized saturations
+    /// in fluidState(); a cell with no hydrocarbon reports water alone.
+    Scalar saturationForOutput(unsigned phaseIdx) const
+    {
+        if (!FluidSystem::phaseIsActive(phaseIdx)) {
+            return Scalar{0};
+        }
+        if (!hasHydrocarbon_) {
+            return phaseIdx == FluidSystem::waterPhaseIdx ? Scalar{1} : Scalar{0};
+        }
+        return getValue(fluidState_.saturation(phaseIdx));
+    }
+
+    /// Presence for reporting, independent of the numerical hydrocarbon floor.
+    bool phaseIsPresent(unsigned phaseIdx) const
+    { return saturationForOutput(phaseIdx) > Scalar{0}; }
+
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::intrinsicPermeability
      */
@@ -367,6 +390,7 @@ public:
     { return porosity_; }
 
 private:
+    bool hasHydrocarbon_{true};
     DimMatrix intrinsicPerm_;
     FluidState fluidState_;
     Evaluation porosity_;

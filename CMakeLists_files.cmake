@@ -484,6 +484,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_equil.cpp
   tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
+  tests/test_flashphasepresence.cpp
   tests/test_flexiblesolver.cpp
   tests/test_GasSatfuncConsistencyChecks.cpp
   tests/test_gconsump.cpp
