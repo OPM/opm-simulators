@@ -24,6 +24,7 @@
 #if HAVE_CUDA
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 
 #include <cstddef>
 #include <memory>
@@ -99,6 +100,7 @@ template <class CpuTypeTag>
 class GpuBlackoilIntensiveQuantitiesDispatcher
 {
 public:
+    using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
     using Problem            = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
     using PrimaryVariables = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
     using SolutionVector = Opm::GetPropType<CpuTypeTag, Opm::Properties::SolutionVector>;
@@ -118,6 +120,14 @@ public:
     void update(const Problem& cpuProblem,
                 const SolutionVector& solution,
                 unsigned timeIdx);
+
+    void evaluateResident(unsigned timeIdx);
+    unsigned applyNewtonUpdate(const Problem& problem,
+                               const BlackoilNewtonParams<Scalar>& params,
+                               Scalar relaxation, bool useSOR, bool stabilize,
+                               bool validate);
+    bool hasBridge() const;
+    void reportTransferCounters() const;
 
     /// Explicit CPU-boundary materialization for legacy CPU consumers.
     void materializeHostIntensiveQuantities(unsigned timeIdx,

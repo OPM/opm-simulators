@@ -74,6 +74,9 @@ struct ConserveInnerEnergyThermal { static constexpr bool value = false; };
 // through the GPU dispatcher instead of computing it on the CPU. Only supported for
 // GasWater + Energy (CO2STORE) (minus diffusion and dispersion)
 struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = false; };
+struct ExperimentalGpuNewtonUpdate { static constexpr bool value = true; };
+struct ExperimentalGpuNewtonValidation { static constexpr bool value = false; };
+struct ExperimentalGpuNewtonRejectOnce { static constexpr bool value = false; };
 #endif
 
 } // namespace Opm::Parameters

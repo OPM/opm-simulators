@@ -30,6 +30,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Action/Actions.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 
@@ -63,6 +64,9 @@
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilNewtonUpdate.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilNewtonValidation.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -95,8 +99,18 @@ void validateGpuPropertyInputs(const ProblemT& problem)
     static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDiffusion>());
     static_assert(!Opm::getPropValue<DispatcherGpuTag, Opm::Properties::EnableDispersion>());
 
+    if (!problem.usesDefaultRockCompaction()) {
+        OPM_THROW(std::logic_error, "GPU properties do not support dynamic rock compaction");
+    }
     const auto& schedule = problem.simulator().vanguard().schedule();
     for (std::size_t reportStep = 0; reportStep < schedule.size(); ++reportStep) {
+        if (!schedule[reportStep].actions().empty()) {
+            OPM_THROW(std::logic_error, "GPU properties do not support runtime schedule actions");
+        }
+        if (schedule[reportStep].oilvap().defined()) {
+            OPM_THROW(std::logic_error,
+                      "GPU properties do not support time-dependent VAPPARS/DRSDT/DRVDT/DRSDTCON inputs");
+        }
         if (schedule[reportStep].events().hasEvent(Opm::ScheduleEvents::GEO_MODIFIER)) {
             OPM_THROW(std::logic_error,
                       "GPU intensive-quantities evaluation does not support GEO_MODIFIER");
@@ -170,6 +184,8 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
 template <class CpuTypeTag>
 struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     std::unique_ptr<Bridge> bridge;
+    bool validatedBranches{false};
+    std::array<bool, 3> reportedRoundoff{};
 };
 
 template <class CpuTypeTag>
@@ -179,8 +195,23 @@ GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::GpuBlackoilIntensiveQuanti
 }
 
 template <class CpuTypeTag>
-GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::~GpuBlackoilIntensiveQuantitiesDispatcher()
-    = default;
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::~GpuBlackoilIntensiveQuantitiesDispatcher() = default;
+
+template <class CpuTypeTag>
+void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::reportTransferCounters() const
+{
+    if (impl_->bridge) {
+        const auto& c = impl_->bridge->transferCounters();
+        OpmLog::info(std::format(
+            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={}",
+            c.successfulNewtonUpdates, c.primaryVariableUploads, c.primaryVariableUploadBytes,
+            c.primaryVariableDownloads, c.primaryVariableDownloadBytes, c.correctionDownloads,
+            c.correctionDownloadBytes, c.intensiveQuantityDownloads, c.intensiveQuantityDownloadBytes,
+            c.ownedBufferAllocations, c.staticUploadBatches, c.ownedBufferAllocationBytes,
+            c.staticUploadCalls, c.staticUploadBytes, c.solverCorrectionAllocations,
+            c.correctionHistoryUploads, c.correctionHistoryUploadBytes));
+    }
+}
 
 template <class CpuTypeTag>
 void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
@@ -193,7 +224,9 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
     }
 
     validateDispatcherInputs(cpuProblem, solution);
-    validateGpuPropertyInputs(cpuProblem);
+    if (!impl_->bridge || !impl_->bridge->initializedFor(solution.size())) {
+        validateGpuPropertyInputs(cpuProblem);
+    }
 
     if (!impl_->bridge) {
         impl_->bridge = std::make_unique<Bridge>();
@@ -204,17 +237,134 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
 
     impl_->bridge->updatePrimaryVariables(cpuProblem, solution, timeIdx);
 
+    evaluateResident(timeIdx);
+}
+
+template <class CpuTypeTag>
+bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::hasBridge() const
+{
+    return static_cast<bool>(impl_->bridge);
+}
+
+template <class CpuTypeTag>
+void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::evaluateResident(unsigned timeIdx)
+{
+    const auto numCells = bridge().primaryVariablesView(timeIdx).size();
     const unsigned blockSize = 64u;
     const unsigned gridSize =
-        static_cast<unsigned>((solution.size() + blockSize - 1u) / blockSize);
+        static_cast<unsigned>((numCells + blockSize - 1u) / blockSize);
 
     dispatcherUpdateAllCellsKernel<<<gridSize, blockSize, 0, impl_->bridge->stream()>>>(
         impl_->bridge->flowProblemView(),
         impl_->bridge->primaryVariablesView(timeIdx),
         impl_->bridge->intensiveQuantitiesView(timeIdx),
-        solution.size());
+        numCells);
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     impl_->bridge->recordPropertyReady(timeIdx);
+}
+
+template <class CpuTypeTag>
+unsigned GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::applyNewtonUpdate(
+    const Problem& problem, const BlackoilNewtonParams<Scalar>& params,
+    Scalar relaxation, bool useSOR, bool stabilize, bool validate)
+{
+    using Indices = GetPropType<CpuTypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<CpuTypeTag, Properties::FluidSystem>;
+    using Correction = GetPropType<CpuTypeTag, Properties::GlobalEqVector>;
+    auto& state = bridge();
+    SolutionVector reference;
+    std::vector<std::uint8_t> referenceSwitch;
+    if (validate) {
+        if (!impl_->validatedBranches) {
+            validateBlackoilNewtonBranches<CpuTypeTag>(state, problem, problem.model().solution(0), params);
+            impl_->validatedBranches = true;
+        }
+        reference = problem.model().solution(0);
+        Correction correction(state.numDof()), previous(state.numDof());
+        state.materializeHostCorrection(correction, "shadow validation");
+        state.materializePreviousCorrection(previous, "shadow validation");
+        referenceSwitch = state.materializeSwitchHistory();
+        if (stabilize) {
+            Opm::detail::stabilizeNonlinearUpdate(correction, previous, relaxation,
+                useSOR ? NonlinearRelaxType::SOR : NonlinearRelaxType::Dampen);
+        }
+        for (unsigned cell = 0; cell < state.numDof(); ++cell) {
+            const auto current = reference[cell];
+            referenceSwitch[cell] = BlackOilNewtonUpdate<CpuTypeTag>::update(
+                problem, FluidSystem{}, cell, reference[cell], current, correction[cell],
+                params, referenceSwitch[cell] != 0);
+        }
+    }
+    const auto before = state.transferCounters();
+    launchBlackoilNewtonUpdate<typename Bridge::DeviceTypeTagPublic>(
+        state, params, relaxation, useSOR, stabilize);
+    const auto status = state.readUpdateStatus();
+    if (status[0]) {
+        OPM_THROW_PROBLEM(NumericalProblem, std::format(
+            "GPU Newton update failed: cell {}, reason {}", status[0] - 1, status[1]));
+    }
+    if (validate) {
+        SolutionVector candidate(state.numDof());
+        state.materializeCandidatePrimaryVariables(candidate);
+        const auto candidateSwitch = state.materializeCandidateSwitchHistory();
+        const auto mismatch = [&](unsigned cell, const std::string& field) {
+            OPM_THROW(std::runtime_error, std::format(
+                "GPU Newton shadow mismatch: cell {}, time {} s, iteration {}, field {}",
+                cell, problem.simulator().time(), state.transferCounters().successfulNewtonUpdates, field));
+        };
+        for (unsigned cell = 0; cell < state.numDof(); ++cell) {
+            const auto& a = reference[cell];
+            const auto& b = candidate[cell];
+            if (a.primaryVarsMeaningWater() != b.primaryVarsMeaningWater()
+                || a.primaryVarsMeaningGas() != b.primaryVarsMeaningGas()
+                || a.primaryVarsMeaningPressure() != b.primaryVarsMeaningPressure()
+                || a.primaryVarsMeaningBrine() != b.primaryVarsMeaningBrine()
+                || a.primaryVarsMeaningSolvent() != b.primaryVarsMeaningSolvent()
+                || a.pvtRegionIndex() != b.pvtRegionIndex()
+                || a.capillaryPressureFactor() != b.capillaryPressureFactor()
+                || a.pressureScale() != b.pressureScale()
+                || referenceSwitch[cell] != candidateSwitch[cell]) {
+                mismatch(cell, "metadata/switch history");
+            }
+            for (unsigned field = 0; field < Indices::numEq; ++field) {
+                Scalar expected = a[field];
+                Scalar actual = b[field];
+                Scalar atol = 1e-12;
+                if (field == Indices::pressureSwitchIdx) {
+                    expected *= a.pressureScale();
+                    actual *= b.pressureScale();
+                    atol = 1e-4;
+                } else if (field == Indices::temperatureIdx) {
+                    atol = 1e-8;
+                }
+                if (actual != expected && !impl_->reportedRoundoff[field]) {
+                    impl_->reportedRoundoff[field] = true;
+                    OpmLog::info(std::format(
+                        "[GPU Newton roundoff] time={} update={} cell={} field={} relaxation={} switched={} CPU={:.17g} GPU={:.17g} difference={:.17g}",
+                        problem.simulator().time(), state.transferCounters().successfulNewtonUpdates,
+                        cell, field, relaxation, referenceSwitch[cell], expected, actual, actual - expected));
+                    if (field == Indices::waterSwitchIdx
+                        && a.primaryVarsMeaningWater() == BlackOil::WaterMeaning::Rsw
+                        && b.primaryVarsMeaningWater() == BlackOil::WaterMeaning::Rsw) {
+                        diagnoseBlackoilNewtonRsw<CpuTypeTag>(state, a.pvtRegionIndex(),
+                            a[Indices::temperatureIdx], a[Indices::pressureSwitchIdx] * a.pressureScale());
+                    }
+                }
+                if (!std::isfinite(actual)
+                    || std::abs(actual - expected) > atol + 1e-10 * std::abs(expected)) {
+                    mismatch(cell, std::format("{} (CPU {}, GPU {})", field, expected, actual));
+                }
+            }
+        }
+    }
+    state.commitDeviceUpdate();
+    const auto& after = state.transferCounters();
+    if (after.primaryVariableUploads != before.primaryVariableUploads
+        || after.correctionDownloads != before.correctionDownloads
+        || after.ownedBufferAllocations != before.ownedBufferAllocations) {
+        OPM_THROW(std::logic_error, "Resident Newton update performed a forbidden transfer or allocation");
+    }
+    return status[2];
 }
 
 template <class CpuTypeTag>

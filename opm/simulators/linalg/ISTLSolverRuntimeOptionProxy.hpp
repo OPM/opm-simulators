@@ -156,6 +156,20 @@ public:
     /**
      * \brief Solve the resident system and return only the final update to host.
      */
+    bool hasGpuSolver() const
+    {
+        return dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get()) != nullptr;
+    }
+
+    bool solveGpu(gpuistl::GpuVector<typename Vector::field_type>& x)
+    {
+        auto* gpuSolver = dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get());
+        if (!gpuSolver) {
+            OPM_THROW(std::logic_error, "GPU solve requested without the gpuISTL backend");
+        }
+        return gpuSolver->solve(x);
+    }
+
     bool solveGpu(Vector& x)
     {
         auto* gpuSolver = dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get());

@@ -548,6 +548,11 @@ public:
     void finalizeOutput()
     {
         OPM_TIMEBLOCK(finalizeOutput);
+#if HAVE_CUDA
+        if constexpr (requires { this->model().reportGpuNewtonTransfers(); }) {
+            this->model().reportGpuNewtonTransfers();
+        }
+#endif
         // this will write all pending output to disk
         // to avoid corruption of output files
         eclWriter_.reset();
@@ -1083,6 +1088,7 @@ public:
         // to compute real initial solution after this because the initial fluid states
         // need to be correct for stuff like boundary conditions.
         auto& sol = this->model().solution(/*timeIdx=*/0);
+        this->model().markHostPrimaryVariablesModified(/*timeIdx=*/0);
         const auto& gridView = this->gridView();
         ElementContext elemCtx(simulator);
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {

@@ -18,6 +18,7 @@
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/scoped_gpu_memory_accounting.hpp>
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
@@ -50,6 +51,7 @@ make_gpu_shared_ptr()
 {
     T* ptr = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, sizeof(T)));
+    detail::ScopedGpuMemoryAccounting::allocation(sizeof(T));
     auto deleter = [](T* ptrToDelete) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptrToDelete)); };
     return std::shared_ptr<T>(ptr, deleter);
 }
@@ -91,6 +93,7 @@ make_gpu_unique_ptr()
 {
     T* ptr = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, sizeof(T)));
+    detail::ScopedGpuMemoryAccounting::allocation(sizeof(T));
 
     auto deleter = [](T* ptrToDelete) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptrToDelete)); };
     return std::unique_ptr<T, decltype(deleter)>(ptr, deleter);
@@ -169,6 +172,7 @@ make_gpu_unique_ptr_array(std::size_t numElements)
 {
     T* ptr = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, numElements * sizeof(T)));
+    detail::ScopedGpuMemoryAccounting::allocation(numElements * sizeof(T));
     return std::unique_ptr<T[], GpuArrayDeleter<T>>(ptr);
 }
 
@@ -196,6 +200,7 @@ make_gpu_managed_unique_ptr(Args&&... args)
 {
     void* raw = nullptr;
     OPM_GPU_SAFE_CALL(cudaMallocManaged(&raw, sizeof(T)));
+    detail::ScopedGpuMemoryAccounting::allocation(sizeof(T));
     T* ptr = nullptr;
     try {
         ptr = new (raw) T(std::forward<Args>(args)...);

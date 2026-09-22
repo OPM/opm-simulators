@@ -220,6 +220,14 @@ nonlinearIteration(const SimulatorTimerInterface& timer,
         this->conv_monitor_.reset();
         this->current_relaxation_ = 1.0;
         this->dx_old_ = 0.0;
+#if HAVE_CUDA
+        ++newtonAttemptCount_;
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (this->simulator_.model().hasGpuPropertyAssemblyBridge()) {
+                this->simulator_.model().gpuNewtonDispatcher().bridge().resetCorrectionHistory();
+            }
+        }
+#endif
         this->convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
         this->convergence_reports_.back().report.reserve(11);
     }
@@ -262,14 +270,62 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         report.total_newton_iterations = 1;
 
         const unsigned nc = this->simulator_.model().numGridDof();
-        BVector x(nc);
+        bool residentUpdate = false;
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                      && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            auto& model = this->simulator_.model();
+            const auto& solver = model.newtonMethod().linearSolver();
+            residentUpdate = Parameters::Get<Parameters::ExperimentalGpuNewtonUpdate>()
+                && model.hasGpuPropertyAssemblyBridge() && solver.hasGpuSolver()
+                && this->grid_.comm().size() == 1
+                && this->wellModel().numLocalWellsEnd() == 0
+                && this->param_.nonlinear_solver_ != "nldd"
+                && !Parameters::Get<Parameters::UseHybridNewton>()
+                && !getPropValue<TypeTag, Properties::EnableConstraints>();
+            if (!residentNewtonAnnounced_) {
+                OpmLog::info(residentUpdate ? "[GPU Newton] resident path active"
+                    : "[GPU Newton] resident path inactive: requires enabled GPU properties/assembly, gpuISTL, one rank, no wells, ordinary unconstrained Newton");
+                residentNewtonAnnounced_ = true;
+            }
+            if (residentUpdate && !residentNewtonActive_) {
+                model.gpuNewtonDispatcher().bridge().importSwitchHistory(model.newtonMethod().switchHistory());
+                model.gpuNewtonDispatcher().bridge().importPreviousCorrection(this->dx_old_);
+            } else if (!residentUpdate && residentNewtonActive_) {
+                model.ensureHostPrimaryVariables(0);
+                model.newtonMethod().setSwitchHistory(model.gpuNewtonDispatcher().bridge().materializeSwitchHistory());
+                model.gpuNewtonDispatcher().bridge().materializeHostPreviousCorrection(this->dx_old_);
+            }
+            residentNewtonActive_ = residentUpdate;
+        }
+#endif
+        BVector x(residentUpdate && !shouldStoreSolutionUpdate() ? 0 : nc);
 
         linear_solve_setup_time_ = 0.0;
         try {
             this->wellModel().linearize(this->simulator().model().linearizer().jacobian(),
                                         this->simulator().model().linearizer().residual());
 
-            solveJacobianSystem(x);
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                          && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+                if (residentUpdate) {
+                    auto& model = this->simulator_.model();
+                    auto& bridge = model.gpuNewtonDispatcher().bridge();
+                    auto& solver = model.newtonMethod().linearSolver();
+                    bridge.orderSolverAfterProperties();
+                    solver.prepareGpu(model.linearizer().gpuJacobian(), model.linearizer().flattenedGpuResidual());
+                    bridge.correction() = Scalar{0};
+                    solver.solveGpu(bridge.correction());
+                    bridge.orderUpdateAfterSolver();
+                } else {
+                    solveJacobianSystem(x);
+                }
+            } else
+#endif
+            {
+                solveJacobianSystem(x);
+            }
 
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
@@ -287,7 +343,9 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         perfTimer.reset();
         perfTimer.start();
 
-        this->wellModel().postSolve(x);
+        if (!residentUpdate) {
+            this->wellModel().postSolve(x);
+        }
 
         if (this->param_.use_update_stabilization_) {
             bool isOscillate = false;
@@ -317,10 +375,46 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                                  + std::to_string(this->current_relaxation_));
                 }
             }
-            nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
+            if (!residentUpdate) {
+                nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
+            }
         }
 
-        this->updateSolution(x);
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                      && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (residentUpdate) {
+                auto& model = this->simulator_.model();
+                if (shouldStoreSolutionUpdate()) {
+                    prepareSolutionUpdate();
+                }
+                const auto switched = model.gpuNewtonDispatcher().applyNewtonUpdate(
+                    this->simulator_.problem(), model.newtonMethod().params(),
+                    this->current_relaxation_, nonlinear_solver.relaxType() == NonlinearRelaxType::SOR,
+                    this->param_.use_update_stabilization_,
+                    Parameters::Get<Parameters::ExperimentalGpuNewtonValidation>());
+                model.newtonMethod().setNumPriVarsSwitched(switched);
+                model.evaluateResidentProperties(0);
+                if (shouldStoreSolutionUpdate()) {
+                    OpmLog::debug("[GPU Newton] correction download: solution-update diagnostic");
+                    model.gpuNewtonDispatcher().bridge().materializeHostCorrection(x);
+                    storeSolutionUpdate(x);
+                }
+            } else {
+                this->updateSolution(x);
+            }
+        } else
+#endif
+        {
+            this->updateSolution(x);
+        }
+#if HAVE_CUDA
+        if (Parameters::Get<Parameters::ExperimentalGpuNewtonRejectOnce>()
+            && newtonAttemptCount_ == 2 && !validationRejected_) {
+            validationRejected_ = true;
+            OPM_THROW_PROBLEM(NumericalProblem, "Validation-only one-shot timestep rejection after Newton update");
+        }
+#endif
         report.update_time += perfTimer.stop();
     }
 
@@ -441,6 +535,13 @@ solveJacobianSystem(BVector& x)
             {
                 x = 0.0;
                 linSolver.solveGpu(x);
+                if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+                    auto& model = this->simulator_.model();
+                    if (model.hasGpuPropertyAssemblyBridge()) {
+                        model.gpuNewtonDispatcher().bridge().recordCompatibilityCorrectionDownload(
+                            x.dim() * sizeof(Scalar));
+                    }
+                }
                 return;
             }
         }
