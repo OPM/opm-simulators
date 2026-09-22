@@ -175,7 +175,8 @@ namespace Opm {
         // add the eWoms auxiliary module for the wells to the list
         simulator_.model().addAuxiliaryModule(this);
 
-        is_cell_perforated_.resize(local_num_cells_, false);
+        // computeTotalRatesForDof() is called for auxiliary DOFs too.
+        is_cell_perforated_.resize(simulator_.model().numTotalDof(), false);
     }
 
 
@@ -1636,7 +1637,9 @@ namespace Opm {
                              const bool use_well_weights) const
     {
         int nw = this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
+        // Well rows follow all reservoir rows, auxiliary included, as in
+        // StandardWellEquations::extractCPRPressureMatrix.
+        int rdofs = simulator_.model().numTotalDof();
         for ( int i = 0; i < nw; i++ ) {
             int wdof = rdofs + i;
             jacobian[wdof][wdof] = 1.0;// better scaling ?
@@ -1686,7 +1689,8 @@ namespace Opm {
     addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
         int nw =  this->numLocalWellsEnd();
-        int rdofs = local_num_cells_;
+        // Must match addWellPressureEquations(), or well rows overlap auxiliary rows.
+        int rdofs = simulator_.model().numTotalDof();
         const auto wellconnections = this->getMaxWellConnections();
         for (int i = 0; i < nw; ++i) {
             int wdof = rdofs + i;

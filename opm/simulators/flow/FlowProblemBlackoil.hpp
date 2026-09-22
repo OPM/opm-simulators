@@ -38,6 +38,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
+#include <opm/simulators/aquifers/NumericalAquiferAuxCells.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
@@ -311,6 +312,23 @@ public:
     /*!
      * \copydoc FvBaseProblem::finishInit
      */
+    void registerAuxiliaryCellModules()
+    {
+        const auto& eclState = this->simulator().vanguard().eclState();
+
+        if ((eclState.numericalAquiferMode() == NumericalAquiferMode::AuxiliaryCells) &&
+            eclState.aquifer().hasNumericalAquifer())
+        {
+            const auto& aquifers = this->registerAuxCellModule_(
+                std::make_unique<NumericalAquiferAuxCells<TypeTag>>(this->simulator()));
+
+            if (this->simulator().gridView().comm().rank() == 0) {
+                OpmLog::info(fmt::format("Numerical aquifers represented as {} auxiliary "
+                                         "cells outside the grid", aquifers.numDofs()));
+            }
+        }
+    }
+
     void finishInit()
     {
         // TODO: there should be room to remove duplication for this
@@ -385,7 +403,7 @@ public:
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+            this->maxOilSaturation_.resize(this->model().numTotalDof(), 0.0);
         }
 
         this->readRockParameters_(simulator.vanguard().cellCenterDepths(),
@@ -408,7 +426,18 @@ public:
 
         finishTransmissibilities();
 
+        this->applyAuxCellTransmissibilities_();
+
         const auto& initconfig = eclState.getInitConfig();
+
+        // The restart file is per grid element; auxiliary state would come back undefined.
+        if (initconfig.restartRequested() && !this->auxCellModules_.empty()) {
+            OPM_THROW(std::runtime_error,
+                      "Restart is not supported together with auxiliary cells "
+                      "(numerical aquifers represented outside the grid): their state "
+                      "is not written to the restart file.");
+        }
+
         this->tracerModel_.init(initconfig.restartRequested());
         if (initconfig.restartRequested()) {
             this->readEclRestartSolution_();
@@ -434,7 +463,7 @@ public:
         this->computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
-            this->drift_.resize(this->model().numGridDof());
+            this->drift_.resize(this->model().numTotalDof());
             this->drift_ = 0.0;
         }
 
@@ -468,7 +497,7 @@ public:
         // TODO: move to the end for later refactoring of the function finishInit()
         //
         // deal with DRSDT
-        this->mixControls_.init(this->model().numGridDof(),
+        this->mixControls_.init(this->model().numTotalDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
 
@@ -1167,7 +1196,7 @@ public:
 
         if (fip_init) {
             this->updateReferencePorosity_();
-            this->mixControls_.init(this->model().numGridDof(),
+            this->mixControls_.init(this->model().numTotalDof(),
                                     this->episodeIndex(),
                                     eclState.runspec().tabdims().getNumPVTTables());
         }

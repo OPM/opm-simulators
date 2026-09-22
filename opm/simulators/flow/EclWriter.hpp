@@ -885,6 +885,16 @@ private:
 
                 this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
             }
+
+            // Auxiliary DOFs count in the field/region totals (not the per-cell output),
+            // so totals match the grid-cell representation.
+            const auto& model = simulator_.model();
+            for (unsigned dofIdx = model.numGridDof(); dofIdx < model.numTotalDof(); ++dofIdx) {
+                const auto& intQuants = *model.cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
+
+                this->outputModule_->updateFluidInPlace(dofIdx, intQuants,
+                                                        model.dofTotalVolume(dofIdx));
+            }
         }
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",

@@ -289,6 +289,13 @@ public:
     {}
 
     /*!
+     * \brief Register DOF-introducing auxiliary modules; called at the start of the
+     *        model's finishInit(), before the problem's, since that sizes per-DOF data.
+     */
+    void registerAuxiliaryCellModules()
+    {}
+
+    /*!
      * \brief Allows to improve the performance by prefetching all data which is
      *        associated with a given element.
      */

@@ -80,6 +80,13 @@ public:
      */
     Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const;
 
+    //! \brief Set the transmissibility of a non-geometric connection; may be called
+    //!        again to refresh it without touching the sparsity pattern.
+    void setTransmissibility(unsigned elemIdx1, unsigned elemIdx2, Scalar value);
+
+    //! \brief Directional: call once for each ordering of the two DOFs.
+    void setThermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx, Scalar value);
+
     /*!
      * \brief Return the transmissibility for a given boundary segment.
      */

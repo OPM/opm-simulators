@@ -252,14 +252,15 @@ ParallelEclipseState::ParallelEclipseState(Parallel::Communication comm)
 }
 
 
-ParallelEclipseState::ParallelEclipseState(const Deck& deck)
-    : EclipseState(deck)
+ParallelEclipseState::ParallelEclipseState(const Deck& deck, NumericalAquiferMode aquiferMode)
+    : EclipseState(deck, aquiferMode)
     , m_fieldProps(field_props)
 {
 }
 
-ParallelEclipseState::ParallelEclipseState(const Deck& deck, Parallel::Communication comm)
-    : EclipseState(deck)
+ParallelEclipseState::ParallelEclipseState(const Deck& deck, Parallel::Communication comm,
+                                           NumericalAquiferMode aquiferMode)
+    : EclipseState(deck, aquiferMode)
     , m_fieldProps(field_props, comm)
     , m_comm(comm)
 {

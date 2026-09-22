@@ -260,7 +260,8 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         perfTimer.start();
         report.total_newton_iterations = 1;
 
-        const unsigned nc = this->simulator_.model().numGridDof();
+        // Must match the Jacobian, which includes auxiliary rows.
+        const unsigned nc = this->simulator_.model().numTotalDof();
         BVector x(nc);
 
         linear_solve_setup_time_ = 0.0;
@@ -640,6 +641,25 @@ localConvergenceData(std::vector<Scalar>& R_sum,
     }
 
     OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", this->grid_.comm());
+
+    // Auxiliary cells, which the grid loop above does not reach.
+    const unsigned numGridDof = model.numGridDof();
+    const unsigned numTotalDof = model.numTotalDof();
+    for (unsigned cell_idx = numGridDof; cell_idx < numTotalDof; ++cell_idx) {
+        if (!model.dofCarriesModelEquations(cell_idx)) {
+            continue;
+        }
+
+        const auto& intQuants = model.intensiveQuantities(cell_idx, /*timeIdx=*/0);
+        const auto& fs = intQuants.fluidState();
+
+        const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+                             model.dofTotalVolume(cell_idx);
+        pvSumLocal += pvValue;
+
+        this->getMaxCoeff(cell_idx, intQuants, fs, residual, pvValue,
+                          B_avg, R_sum, maxCoeff, maxCoeffCell);
+    }
 
     // compute local average in terms of global number of elements
     const int bSize = B_avg.size();

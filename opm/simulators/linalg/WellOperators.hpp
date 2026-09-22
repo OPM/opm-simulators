@@ -33,6 +33,8 @@
 #include <dune/istl/paamg/smoother.hh>
 
 #include <cstddef>
+#include <vector>
+#include <utility>
 
 namespace Opm {
 
@@ -317,22 +319,36 @@ public:
             Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
     }
 
-    //! constructor: just store a reference to a matrix
+    //! Owned rows are a prefix.
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const LinearOperatorExtra<X, Y>& wellOper,
                                      const std::size_t interiorSize )
-        : A_( A ), wellOper_( wellOper ), interiorSize_(interiorSize)
+        : WellModelGhostLastMatrixAdapter(A, wellOper, {{0, interiorSize}}, A.N())
+    {}
+
+    //! Owned rows as sorted, disjoint [begin, end) bands; auxiliary DOFs sit behind the ghosts.
+    WellModelGhostLastMatrixAdapter (const M& A,
+                                     const LinearOperatorExtra<X, Y>& wellOper,
+                                     std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands,
+                                     const std::size_t numRows)
+        : A_( A )
+        , wellOper_( wellOper )
+        , ownedRowBands_(std::move(ownedRowBands))
+        , numRows_(numRows)
+        , interiorSize_(ownedRowBands_.empty() ? 0 : ownedRowBands_.front().second)
     {}
 
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (auto row = A_.begin() + first; row.index() < last; ++row)
+            {
+                y[row.index()]=0;
+                auto endc = (*row).end();
+                for (auto col = (*row).begin(); col != endc; ++col)
+                    (*col).umv(x[col.index()], y[row.index()]);
+            }
         }
 
         // add well model modification to y
@@ -345,11 +361,13 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (auto row = A_.begin() + first; row.index() < last; ++row)
+            {
+                auto endc = (*row).end();
+                for (auto col = (*row).begin(); col != endc; ++col)
+                    (*col).usmv(alpha, x[col.index()], y[row.index()]);
+            }
         }
         // add scaled well model modification to y
         wellOper_.applyscaleadd(alpha, x, y);
@@ -383,13 +401,27 @@ public:
 protected:
     void ghostLastProject(Y& y) const
     {
-        std::size_t end = y.size();
-        for (std::size_t i = interiorSize_; i < end; ++i)
+        const std::size_t end = std::min(numRows_, y.size());
+
+        std::size_t next = 0;
+        for (const auto& [first, last] : ownedRowBands_) {
+            for (std::size_t i = next; i < std::min(first, end); ++i) {
+                y[i] = 0;
+            }
+
+            next = last;
+        }
+
+        for (std::size_t i = next; i < end; ++i) {
             y[i] = 0;
+        }
     }
 
     const matrix_type& A_ ;
     const LinearOperatorExtra<X, Y>& wellOper_;
+    std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands_;
+    std::size_t numRows_;
+    //! First band's end, for derived operators that assume a prefix.
     std::size_t interiorSize_;
 };
 

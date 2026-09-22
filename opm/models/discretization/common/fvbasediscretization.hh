@@ -456,8 +456,24 @@ public:
      */
     void finishInit()
     {
+        // Before anything below is sized from numTotalDof().
+        simulator_.problem().registerAuxiliaryCellModules();
+
+        // An element-driven linearizer would silently leave auxiliary rows empty.
+        if constexpr (!Linearizer::assemblesAuxiliaryDofEquations) {
+            for (const auto* auxMod : auxEqModules_) {
+                if ((auxMod->numDofs() > 0) && auxMod->carriesModelEquations()) {
+                    throw std::logic_error("An auxiliary module introduces degrees of freedom "
+                                           "carrying the model's conservation equations, but "
+                                           "the linearizer in use assembles element by element "
+                                           "and cannot reach them. Use the TPFA linearizer.");
+                }
+            }
+        }
+
         // initialize the volume of the finite volumes to zero
-        const std::size_t numDof = asImp_().numGridDof();
+        const std::size_t numGridDof = asImp_().numGridDof();
+        const std::size_t numDof = numTotalDof();
         dofTotalVolume_.resize(numDof);
         std::ranges::fill(dofTotalVolume_, 0.0);
 
@@ -491,8 +507,20 @@ public:
         // local process grid partition: those which do not have a non-zero volume
         // before taking the peer processes into account...
         isLocalDof_.resize(numDof);
-        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
+        }
+
+        // Auxiliary DOFs are not in the grid's interior-border interface: local by construction.
+        for (const auto* auxMod : auxEqModules_) {
+            for (unsigned localIdx = 0; localIdx < auxMod->numDofs(); ++localIdx) {
+                const auto globalIdx = static_cast<std::size_t>(auxMod->localToGlobalDof(localIdx));
+                dofTotalVolume_[globalIdx] = auxMod->dofVolume(localIdx);
+            }
+        }
+
+        for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
+            isLocalDof_[dofIdx] = true;
         }
 
         // add the volumes of the DOFs on the process boundaries
@@ -514,6 +542,9 @@ public:
         resizeAndResetIntensiveQuantitiesCache_();
 
         newtonMethod_.finishInit();
+
+        // see addAuxiliaryModule()
+        finishInitCalled_ = true;
     }
 
     /*!
@@ -555,6 +586,13 @@ public:
                 simulator_.problem().initial(uCur[globalIdx], elemCtx, dofIdx, /*timeIdx=*/0);
                 asImp_().supplementInitialSolution_(uCur[globalIdx], elemCtx, dofIdx, /*timeIdx=*/0);
                 uCur[globalIdx].checkDefined();
+            }
+        }
+
+        // After the zeroing above, before the history copy and checkDefined() below.
+        for (unsigned auxModIdx = 0; auxModIdx < numAuxiliaryModules(); ++auxModIdx) {
+            if (auxiliaryModule(auxModIdx)->numDofs() > 0) {
+                auxiliaryModule(auxModIdx)->applyInitial();
             }
         }
 
@@ -1886,6 +1924,13 @@ public:
      */
     void addAuxiliaryModule(BaseAuxiliaryModule<TypeTag>* auxMod)
     {
+        // finishInit() sized the per-DOF containers; later DOFs would silently overflow them.
+        if (auxMod->numDofs() > 0 && finishInitCalled_) {
+            throw std::logic_error("An auxiliary module which introduces degrees of freedom must "
+                                   "be registered before the model's finishInit(), so that the "
+                                   "per-DOF containers are sized for its degrees of freedom");
+        }
+
         auxMod->setDofOffset(numTotalDof());
         auxEqModules_.push_back(auxMod);
 
@@ -1900,7 +1945,11 @@ public:
             solution(timeIdx).resize(numDof);
         }
 
-        auxMod->applyInitial();
+        // DOF-carrying modules are initialised in applyInitialSolution(), which would
+        // otherwise erase this.
+        if (auxMod->numDofs() == 0) {
+            auxMod->applyInitial();
+        }
     }
 
     /*!
@@ -1920,6 +1969,23 @@ public:
      */
     std::size_t numAuxiliaryModules() const
     { return auxEqModules_.size(); }
+
+    //! \brief True for grid DOFs; for auxiliary ones the owning module decides.
+    bool dofCarriesModelEquations(unsigned globalDofIdx) const
+    {
+        if (globalDofIdx < asImp_().numGridDof()) {
+            return true;
+        }
+
+        for (const auto* auxMod : auxEqModules_) {
+            const auto begin = static_cast<unsigned>(auxMod->dofOffset());
+            if (globalDofIdx >= begin && globalDofIdx < begin + auxMod->numDofs()) {
+                return auxMod->carriesModelEquations();
+            }
+        }
+
+        return false;
+    }
 
     /*!
      * \brief Returns a given module for auxiliary equations
@@ -1971,7 +2037,7 @@ protected:
     {
         // allocate the storage cache
         if (enableStorageCache()) {
-            const std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = numTotalDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
                 storageCacheUpToDate_[timeIdx].resize(numDof, /*value=*/0);
@@ -1980,7 +2046,7 @@ protected:
 
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
-            const std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = numTotalDof();
             cachedIntensiveQuantityHistorySize_ = simulator_.problem().intensiveQuantityHistorySize();
             const unsigned intensiveHistorySize = cachedIntensiveQuantityHistorySize_;
 
@@ -2047,6 +2113,8 @@ protected:
 
     // a vector with all auxiliary equations to be considered
     std::vector<BaseAuxiliaryModule<TypeTag>*> auxEqModules_;
+
+    bool finishInitCalled_{false};
 
     NewtonMethod newtonMethod_;
 

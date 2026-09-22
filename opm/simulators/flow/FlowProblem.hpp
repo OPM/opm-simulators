@@ -58,6 +58,7 @@
 #include <opm/simulators/flow/EquilInitializer.hpp>
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: maybe we can name it FlowProblemProperties.hpp
+#include <opm/simulators/flow/FlowAuxCellModule.hpp>
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
@@ -744,6 +745,10 @@ public:
      */
     Scalar dofCenterDepth(unsigned globalSpaceIdx) const
     {
+        if (globalSpaceIdx >= this->model().numGridDof()) {
+            return this->auxCellDepth_(globalSpaceIdx);
+        }
+
         return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
     }
 
@@ -832,7 +837,10 @@ public:
 
             unsigned tableIdx = 0;
             if (!this->rockTableIdx_.empty()) {
-                tableIdx = this->rockTableIdx_[globalSpaceIdx];
+                // Auxiliary DOFs have no entry here; they take the first ROCK region.
+                if (globalSpaceIdx < this->rockTableIdx_.size()) {
+                    tableIdx = this->rockTableIdx_[globalSpaceIdx];
+                }
             }
             return this->rockParams_[tableIdx].referencePressure;
         }
@@ -851,12 +859,12 @@ public:
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
     {
-        return materialLawManager_->materialLawParams(globalDofIdx);
+        return materialLawManager_->materialLawParams(auxCellSaturationProxy_(globalDofIdx));
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx, FaceDir::DirEnum facedir) const
     {
-        return materialLawManager_->materialLawParams(globalDofIdx, facedir);
+        return materialLawManager_->materialLawParams(auxCellSaturationProxy_(globalDofIdx), facedir);
     }
 
     /*!
@@ -1009,13 +1017,13 @@ public:
     solidEnergyLawParams(unsigned globalSpaceIdx,
                          unsigned /*timeIdx*/) const
     {
-        return this->thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
+        return this->thermalLawManager_->solidEnergyLawParams(auxCellSaturationProxy_(globalSpaceIdx));
     }
     const ThermalConductionLawParams &
     thermalConductionLawParams(unsigned globalSpaceIdx,
                                unsigned /*timeIdx*/)const
     {
-        return this->thermalLawManager_->thermalConductionLawParams(globalSpaceIdx);
+        return this->thermalLawManager_->thermalConductionLawParams(auxCellSaturationProxy_(globalSpaceIdx));
     }
 
     /*!
@@ -1185,7 +1193,10 @@ public:
 
         unsigned tableIdx = 0;
         if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+            // Auxiliary DOFs have no entry here; they take the first ROCK region.
+            if (elementIdx < this->rockTableIdx_.size()) {
+                tableIdx = this->rockTableIdx_[elementIdx];
+            }
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
@@ -1326,6 +1337,10 @@ public:
     {
         return drift_;
     }
+
+    //! For reporting, which needs to see what lives outside the grid.
+    const std::vector<std::unique_ptr<FlowAuxCellModule<TypeTag>>>& auxCellModules() const
+    { return auxCellModules_; }
 
 private:
     Implementation& asImp_()
@@ -1525,6 +1540,7 @@ protected:
         this->updatePlmixnum_();
 
         OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
+        this->authorAuxCellRegions_();
         ////////////////////////////////
         // porosity
         updateReferencePorosity_();
@@ -1541,6 +1557,8 @@ protected:
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
+        // Grid DOFs only: endpoint scaling/hysteresis are keyed on grid entities.
+        // Auxiliary cells go through auxCellSaturationProxy_() instead.
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
                                                    this-> template fieldPropIntTypeOnLeafAssigner_<int>(),
                                                    this-> lookupIdxOnLevelZeroAssigner_());
@@ -1572,7 +1590,8 @@ protected:
 
         std::size_t numDof = this->model().numGridDof();
 
-        this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
+        this->referencePorosity_[/*timeIdx=*/0].resize(this->model().numTotalDof());
+        this->authorAuxCellPorosity_();
 
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
@@ -1601,7 +1620,9 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         std::size_t numDof = this->model().numGridDof();
-        this->rockFraction_[/*timeIdx=*/0].resize(numDof);
+        this->rockFraction_[/*timeIdx=*/0].resize(this->model().numTotalDof(), 0.0);
+
+        // Zero for auxiliary cells: they store no rock heat.
         // For the energy equation, we need the volume of the rock.
         // The volume of the rock is computed by rockFraction * geometric volume of the element.
         // The reference porosity is defined as porosity * ntg * pore-volume-multiplier.
@@ -1702,6 +1723,132 @@ protected:
         {
             // unit::gravity is 9.80665 m^2/s--i.e., standard measure at Tellus equator.
             this->gravity_[dim - 1] = unit::gravity;
+        }
+    }
+
+    //! Must run before the model sizes its per-DOF containers; connections are built
+    //! after, since the global DOF offset is assigned on registration.
+    template <class Module>
+    Module& registerAuxCellModule_(std::unique_ptr<Module> module)
+    {
+        // Aux DOFs are not in the communication index set yet, so each rank would
+        // solve its own copy of the aquifer.
+        if (this->simulator().gridView().comm().size() > 1) {
+            OPM_THROW(std::runtime_error,
+                      "Degrees of freedom outside the grid (numerical aquifers "
+                      "represented as auxiliary cells) are not supported in parallel "
+                      "yet. Run on one process, or use --numerical-aquifer-mode=grid.");
+        }
+
+        auto& ref = *module;
+        this->simulator().model().addAuxiliaryModule(&ref);
+        this->auxCellModules_.push_back(std::move(module));
+        ref.buildConnections();
+        return ref;
+    }
+
+    //! Auxiliary cells borrow their initialisation partner's per-element tables; exact
+    //! only if both share a saturation region.
+    unsigned auxCellSaturationProxy_(unsigned globalDofIdx) const
+    {
+        if (globalDofIdx < this->model().numGridDof()) {
+            return globalDofIdx;
+        }
+
+        for (const auto& module : this->auxCellModules_) {
+            const auto begin = static_cast<unsigned>(module->dofOffset());
+            if ((globalDofIdx >= begin) && (globalDofIdx < begin + module->numDofs())) {
+                return module->initialisationPartner(globalDofIdx - begin);
+            }
+        }
+
+        return 0;
+    }
+
+    Scalar auxCellDepth_(unsigned globalSpaceIdx) const
+    {
+        for (const auto& module : this->auxCellModules_) {
+            const auto begin = static_cast<unsigned>(module->dofOffset());
+            if ((globalSpaceIdx >= begin) && (globalSpaceIdx < begin + module->numDofs())) {
+                return module->depth(globalSpaceIdx - begin);
+            }
+        }
+
+        return 0.0;
+    }
+
+    //! Region arrays are read per DOF, so they must cover aux DOFs too; empty means one region.
+    void authorAuxCellRegions_()
+    {
+        const auto numTotalDof = this->model().numTotalDof();
+        if (numTotalDof == this->model().numGridDof()) {
+            return;
+        }
+
+        const auto extend = [numTotalDof](auto& numbers, auto&& regionOf) {
+            if (numbers.empty()) {
+                return;
+            }
+
+            numbers.resize(numTotalDof, 0);
+            regionOf(numbers);
+        };
+
+        extend(this->pvtnum_, [this](auto& numbers) {
+            for (const auto& module : this->auxCellModules_) {
+                for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                    numbers[module->localToGlobalDof(localIdx)] = module->pvtRegionIndex(localIdx);
+                }
+            }
+        });
+
+        extend(this->satnum_, [this](auto& numbers) {
+            for (const auto& module : this->auxCellModules_) {
+                for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                    numbers[module->localToGlobalDof(localIdx)] = module->satRegionIndex(localIdx);
+                }
+            }
+        });
+
+        // No solvent/polymer support for aux cells yet; region zero as placeholder.
+        extend(this->miscnum_, [](auto&) {});
+        extend(this->plmixnum_, [](auto&) {});
+    }
+
+    //! Porosity times the DOF volume must give back the module's pore volume.
+    void authorAuxCellPorosity_()
+    {
+        for (const auto& module : this->auxCellModules_) {
+            for (unsigned localIdx = 0; localIdx < module->numDofs(); ++localIdx) {
+                const auto globalIdx = static_cast<unsigned>(module->localToGlobalDof(localIdx));
+                const auto bulkVolume = module->bulkVolume(localIdx);
+
+                this->referencePorosity_[/*timeIdx=*/0][globalIdx] = (bulkVolume > 0.0)
+                    ? module->poreVolume(localIdx) / bulkVolume
+                    : 0.0;
+            }
+        }
+    }
+
+    //! Call once the grid's transmissibilities are final.
+    void applyAuxCellTransmissibilities_()
+    {
+        using ConnectionVector = std::vector<typename FlowAuxCellModule<TypeTag>::Connection>;
+
+        for (const auto& module : this->auxCellModules_) {
+            ConnectionVector conns;
+            module->connections(conns);
+
+            for (const auto& conn : conns) {
+                this->transmissibilities_.setTransmissibility(conn.dof1, conn.dof2, conn.trans);
+
+                if constexpr (enableFullyImplicitThermal) {
+                    this->transmissibilities_
+                        .setThermalHalfTrans(conn.dof1, conn.dof2, conn.thermalHalfTrans12);
+                    this->transmissibilities_
+                        .setThermalHalfTrans(conn.dof2, conn.dof1, conn.thermalHalfTrans21);
+                }
+            }
         }
     }
 
@@ -1888,7 +2035,10 @@ protected:
 
         unsigned tableIdx = 0;
         if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+            // Auxiliary DOFs have no entry here; they take the first ROCK region.
+            if (elementIdx < this->rockTableIdx_.size()) {
+                tableIdx = this->rockTableIdx_[elementIdx];
+            }
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = obtain(fs.pressure(refPressurePhaseIdx_()));
@@ -1918,6 +2068,9 @@ protected:
     }
 
     typename Vanguard::TransmissibilityType transmissibilities_;
+
+    //! Owned here because their data feeds the problem's per-DOF tables.
+    std::vector<std::unique_ptr<FlowAuxCellModule<TypeTag>>> auxCellModules_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;

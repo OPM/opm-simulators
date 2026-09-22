@@ -470,7 +470,11 @@ protected:
                         const bool forceRestartFieldAllocation,
                         const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
-                        std::map<std::string, int> rstKeywords = {});
+                        std::map<std::string, int> rstKeywords = {},
+                        unsigned auxDofCount = 0);
+
+    //! \brief Extend the reporting regions over the auxiliary DOFs, from their host cells.
+    void extendRegionsForAuxiliaryDofs(const std::vector<int>& hostCartesianIndex);
 
     /// Allocate the buffers a derived module owns.  Called while the restart
     /// keywords are being handled, so that a keyword consumed here is marked

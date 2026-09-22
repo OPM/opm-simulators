@@ -118,6 +118,8 @@ struct FlexibleSolverInfo
     std::unique_ptr<LinearOperatorExtra<Vector,Vector>> wellOperator_;
     AbstractPreconditionerType* pre_ = nullptr;
     std::size_t interiorCellNum_ = 0;
+    //! Owned, but after the ghost rows rather than in the interior prefix.
+    std::size_t numAuxiliaryDof_ = 0;
 };
 
 
@@ -520,6 +522,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                         flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
                     }
                 }
+                // Not known yet in initialize().
+                flexibleSolver_[activeSolverNum_].numAuxiliaryDof_ =
+                    simulator_.model().numTotalDof() - simulator_.model().numGridDof();
+
                 std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),

@@ -87,27 +87,56 @@ public:
         if constexpr (gridIsUnchanging) {
             if constexpr (avoidElementContext) {
                 updateCachedIntQuants(timeIdx);
-                return;
             }
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            else {
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (const auto& chunk : element_chunks_) {
-                ElementContext elemCtx(this->simulator_);
-                for (const auto& elem : chunk) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                for (const auto& chunk : element_chunks_) {
+                    ElementContext elemCtx(this->simulator_);
+                    for (const auto& elem : chunk) {
+                        elemCtx.updatePrimaryStencil(elem);
+                        elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    }
                 }
+                OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
+                                           this->simulator_.vanguard().grid().comm());
             }
-            OPM_END_PARALLEL_TRY_CATCH("invalidateAndUpdateIntensiveQuantities: state error",
-                                       this->simulator_.vanguard().grid().comm());
         } else {
             // Grid is possibly refined or otherwise changed between calls.
             ElementContext elemCtx(this->simulator_);
             for (const auto& elem : elements(this->gridView_)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+            }
+        }
+
+        updateAuxiliaryIntQuants(timeIdx);
+    }
+
+    //! Auxiliary DOFs are unreachable by the grid loops above.  Gated on
+    //! supportsElementContextFreeUpdate, which is weaker than AvoidElementContext.
+    void updateAuxiliaryIntQuants(const unsigned timeIdx) const
+    {
+        if (this->numTotalDof() == this->numGridDof()) {
+            return;
+        }
+
+        if constexpr (!IntensiveQuantities::supportsElementContextFreeUpdate) {
+            throw std::logic_error("Auxiliary degrees of freedom need intensive quantities "
+                                   "updated without an element context, which this model "
+                                   "configuration does not support");
+        }
+        else {
+            if (!this->storeIntensiveQuantities()) {
+                return;
+            }
+
+            const unsigned numGridDof = this->numGridDof();
+            const unsigned numTotalDof = this->numTotalDof();
+            for (unsigned globalIdx = numGridDof; globalIdx < numTotalDof; ++globalIdx) {
+                this->updateSingleCachedIntQuantUnchecked(globalIdx, timeIdx);
             }
         }
     }
