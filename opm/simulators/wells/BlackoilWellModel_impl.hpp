@@ -388,6 +388,9 @@ namespace Opm {
             // test wells
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
+            // Rebuilding the container discards the wells' solve statistics.
+            stashWellSolveStats();
+
             // create the well container
             createWellContainer(reportStepIdx);
 
@@ -642,6 +645,8 @@ namespace Opm {
                                            "Exception message: {}"), wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
             }
+            // The tested well is a temporary; keep its solve statistics.
+            addSolveStats(*well);
         }
     }
 
@@ -1264,16 +1269,41 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     collectWellSolveStats()
     {
+        stashWellSolveStats();
+        const auto& stats = pending_solve_stats_;
+        last_report_.well_solve_time += stats.solve_time;
+        last_report_.well_potential_solve_time += stats.potential_solve_time;
+        last_report_.well_solve_assemble_time += stats.assemble_time;
+        last_report_.well_solve_linear_solve_time += stats.linear_solve_time;
+        last_report_.total_well_iterations += stats.iterations;
+        last_report_.total_well_potential_iterations += stats.potential_iterations;
+        pending_solve_stats_ = {};
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    stashWellSolveStats()
+    {
         for (const auto& well : well_container_) {
-            const auto& stats = well->solveStats();
-            last_report_.well_solve_time += stats.solve_time;
-            last_report_.well_potential_solve_time += stats.potential_solve_time;
-            last_report_.well_solve_assemble_time += stats.assemble_time;
-            last_report_.well_solve_linear_solve_time += stats.linear_solve_time;
-            last_report_.total_well_iterations += stats.iterations;
-            last_report_.total_well_potential_iterations += stats.potential_iterations;
-            well->resetSolveStats();
+            addSolveStats(*well);
         }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addSolveStats(const WellInterface<TypeTag>& well)
+    {
+        auto& pending = pending_solve_stats_;
+        const auto& stats = well.solveStats();
+        pending.solve_time += stats.solve_time;
+        pending.potential_solve_time += stats.potential_solve_time;
+        pending.assemble_time += stats.assemble_time;
+        pending.linear_solve_time += stats.linear_solve_time;
+        pending.iterations += stats.iterations;
+        pending.potential_iterations += stats.potential_iterations;
+        well.resetSolveStats();
     }
 
 

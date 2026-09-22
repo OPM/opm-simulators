@@ -409,16 +409,17 @@ namespace Opm
             os << fmt::format("  Well solves:                {:7.2f} s", t);
             os << std::endl;
 
+            t = well_potential_solve_time + (failureReport ? failureReport->well_potential_solve_time : 0.0);
+            os << fmt::format("  Potential solves:           {:7.2f} s", t);
+            os << std::endl;
+
+            // These two cover both the well solves and the potential solves.
             t = well_solve_assemble_time + (failureReport ? failureReport->well_solve_assemble_time : 0.0);
-            os << fmt::format("    Assembly:                 {:7.2f} s", t);
+            os << fmt::format("  Well + potential assembly:  {:7.2f} s", t);
             os << std::endl;
 
             t = well_solve_linear_solve_time + (failureReport ? failureReport->well_solve_linear_solve_time : 0.0);
-            os << fmt::format("    Linear solve:             {:7.2f} s", t);
-            os << std::endl;
-
-            t = well_potential_solve_time + (failureReport ? failureReport->well_potential_solve_time : 0.0);
-            os << fmt::format("  Potential solves:           {:7.2f} s", t);
+            os << fmt::format("  Well + potential lin. solve:{:7.2f} s", t);
             os << std::endl;
         }
 
