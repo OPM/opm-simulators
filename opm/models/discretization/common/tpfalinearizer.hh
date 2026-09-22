@@ -944,16 +944,20 @@ private:
                 int constexpr blockSize = 256; // Experimentally this is a good value for multiple
                                                // GPUs. Autotune this later.
 
-                gpuParams_ = std::make_unique<GpuParams>(domain,
-                                                        neighborInfo_,
-                                                        *gpuJacobian_,
-                                                        *gpuBufferDiagMatAddress_,
-                                                        jacobian_->istlMatrix(),
-                                                        residual_,
-                                                        boundaryInfo_,
-                                                        model_(),
-                                                        problem_(),
-                                                        numCells);
+                if (!gpuParams_) {
+                    gpuParams_ = std::make_unique<GpuParams>(domain,
+                                                            neighborInfo_,
+                                                            *gpuJacobian_,
+                                                            *gpuBufferDiagMatAddress_,
+                                                            jacobian_->istlMatrix(),
+                                                            residual_,
+                                                            boundaryInfo_,
+                                                            model_(),
+                                                            problem_(),
+                                                            numCells);
+                } else {
+                    gpuParams_->refreshForLinearization(numCells);
+                }
 
                 linearize_parallelization_wrapper<run_assembly_on_gpu,
                                                   typename GpuParams::LocalResidualGPU>(

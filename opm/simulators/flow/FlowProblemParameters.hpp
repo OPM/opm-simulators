@@ -69,6 +69,12 @@ struct UseHybridNewton { static constexpr bool value = false; };
 // Conserve inner energy instead of enthalpy even if THERMAL is used
 struct ConserveInnerEnergyThermal { static constexpr bool value = false; };
 
+#if HAVE_CUDA
+struct ExperimentalGpuNewtonUpdate { static constexpr bool value = true; };
+struct ExperimentalGpuNewtonValidation { static constexpr bool value = false; };
+struct ExperimentalGpuNewtonRejectOnce { static constexpr bool value = false; };
+#endif
+
 } // namespace Opm::Parameters
 
 namespace Opm {
