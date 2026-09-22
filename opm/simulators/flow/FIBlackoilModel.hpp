@@ -53,6 +53,7 @@
 #include <chrono>
 #include <cstddef>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 
@@ -288,7 +289,6 @@ public:
         }
 
         assert(timeIdx < this->cachedIntensiveQuantityHistorySize());
-        ensureHostIntensiveQuantities(timeIdx);
         const auto* intquant = this->cachedIntensiveQuantities(globalIdx, timeIdx);
         if (!intquant) {
             OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
@@ -303,7 +303,7 @@ public:
      */
     const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        ensureHostIntensiveQuantities(timeIdx);
+        ensureHostIntensiveQuantities(timeIdx, globalIdx);
         return ParentType::cachedIntensiveQuantities(globalIdx, timeIdx);
     }
 
@@ -313,7 +313,8 @@ public:
      * A valid device cache deliberately does not mark the CPU cache valid.
      * This is the sole compatibility boundary for the GPU property path.
      */
-    void ensureHostIntensiveQuantities(unsigned timeIdx) const
+    void ensureHostIntensiveQuantities(unsigned timeIdx,
+                                      std::optional<unsigned> globalIdx = std::nullopt) const
     {
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             if (!gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()
@@ -326,9 +327,19 @@ public:
             std::lock_guard<std::mutex> lock(gpuHostIntensiveQuantitiesMutex_);
             const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
             bool hostCacheIsValid = true;
-            for (std::size_t i = 0; i < numCells; ++i) {
-                hostCacheIsValid = hostCacheIsValid
-                                   && ParentType::cachedIntensiveQuantities(i, timeIdx) != nullptr;
+            if (globalIdx) {
+                // A per-cell consumer only needs this entry. Scanning the
+                // entire slot here makes a traversal of the grid quadratic.
+                // Keep the read under the lock: another output thread may
+                // still be publishing the materialized cache.
+                hostCacheIsValid = ParentType::cachedIntensiveQuantities(*globalIdx, timeIdx) != nullptr;
+            } else {
+                for (std::size_t i = 0; i < numCells; ++i) {
+                    if (ParentType::cachedIntensiveQuantities(i, timeIdx) == nullptr) {
+                        hostCacheIsValid = false;
+                        break;
+                    }
+                }
             }
             if (hostCacheIsValid) {
                 return;
