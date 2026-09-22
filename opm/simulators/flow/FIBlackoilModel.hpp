@@ -151,6 +151,37 @@ public:
         std::forward<Func>(func)();
     }
 
+    using ParentType::globalResidual;
+
+    auto globalResidual(GetPropType<TypeTag, Properties::GlobalEqVector>& destination,
+                        const GetPropType<TypeTag, Properties::SolutionVector>& value) const
+    {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
+                const auto original = this->solution(0);
+                this->mutableSolution(0) = value;
+                markHostPrimaryVariablesModified(0);
+                const auto restore = [&]() {
+                    this->mutableSolution(0) = original;
+                    markHostPrimaryVariablesModified(0);
+                    invalidateAndUpdateIntensiveQuantities(0);
+                };
+                try {
+                    invalidateAndUpdateIntensiveQuantities(0);
+                    const auto result = ParentType::globalResidual(destination);
+                    restore();
+                    return result;
+                } catch (...) {
+                    restore();
+                    throw;
+                }
+            }
+        }
+#endif
+        return ParentType::globalResidual(destination, value);
+    }
+
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         if (!this->enableIntensiveQuantityCache_) {
@@ -279,6 +310,16 @@ public:
      */
     void updateFailed()
     {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasPrimaryVariables(1)) {
+                gpuIntensiveQuantitiesDispatcher_->bridge().restorePreviousSolution();
+                evaluateResidentProperties(0);
+                return;
+            }
+        }
+#endif
         // Prevent the CPU rollback from reloading IQs from the rejected step.
         this->markHostPrimaryVariablesModified(/*timeIdx=*/0);
         ParentType::updateFailed();
@@ -393,6 +434,30 @@ public:
         }
     }
 
+    template<class T = TypeTag>
+    auto& gpuNewtonDispatcher()
+    {
+        static_assert(gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<T>::value);
+        return *gpuIntensiveQuantitiesDispatcher_;
+    }
+
+    void evaluateResidentProperties(unsigned timeIdx) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            this->invalidateIntensiveQuantitiesCache(timeIdx);
+            gpuIntensiveQuantitiesDispatcher_->evaluateResident(timeIdx);
+        }
+    }
+
+    void reportGpuNewtonTransfers() const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_) {
+                gpuIntensiveQuantitiesDispatcher_->reportTransferCounters();
+            }
+        }
+    }
+
     bool hasGpuPropertyAssemblyBridge() const
     {
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
@@ -416,11 +481,22 @@ public:
 
     void advanceTimeLevel()
     {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasPrimaryVariables(0)) {
+                gpuIntensiveQuantitiesDispatcher_->bridge().advanceTimeLevel();
+                this->shiftStorageCache(1);
+                this->shiftIntensiveQuantityCache(1);
+                return;
+            }
+        }
+#endif
         ParentType::advanceTimeLevel();
 #if HAVE_CUDA
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             if (gpuIntensiveQuantitiesDispatcher_) {
-                gpuIntensiveQuantitiesDispatcher_->advanceTimeLevel();
+                gpuIntensiveQuantitiesDispatcher_->bridge().advanceTimeLevel();
             }
         }
 #endif

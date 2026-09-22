@@ -83,6 +83,12 @@ struct TracerReorderRetrySteps { static constexpr int value = 10; };
 // in the gravity term of the phase potential across a face
 struct SaturationWeightedDensity { static constexpr bool value = false; };
 
+#if HAVE_CUDA
+struct ExperimentalGpuNewtonUpdate { static constexpr bool value = true; };
+struct ExperimentalGpuNewtonValidation { static constexpr bool value = false; };
+struct ExperimentalGpuNewtonRejectOnce { static constexpr bool value = false; };
+#endif
+
 } // namespace Opm::Parameters
 
 namespace Opm {

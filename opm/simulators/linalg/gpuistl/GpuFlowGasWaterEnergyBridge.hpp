@@ -29,12 +29,16 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/scoped_gpu_memory_accounting.hpp>
+
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -54,10 +58,13 @@ class GpuFlowGasWaterEnergyBridge
     static constexpr unsigned numTimeSlots = 2;
 
     using CpuPrototypeTypeTag = Properties::TTag::FlowGasWaterEnergyCpuDeviceContract<CpuTypeTag>;
+public:
     using Scalar = GetPropType<CpuTypeTag, Properties::Scalar>;
+
+private:
     using Problem = GetPropType<CpuTypeTag, Properties::Problem>;
-    using HostPrimaryVariables = GetPropType<CpuTypeTag, Properties::PrimaryVariables>;
     using SolutionVector = GetPropType<CpuTypeTag, Properties::SolutionVector>;
+    using HostPrimaryVariables = GetPropType<CpuTypeTag, Properties::PrimaryVariables>;
     using HostIntensiveQuantities = GetPropType<CpuTypeTag, Properties::IntensiveQuantities>;
     using CpuFluidSystem = GetPropType<CpuTypeTag, Properties::FluidSystem>;
 
@@ -91,6 +98,7 @@ class GpuFlowGasWaterEnergyBridge
 
 public:
     using DeviceTypeTagPublic = DeviceTypeTag;
+    using DevicePrimaryVariablesPublic = DevicePrimaryVariables;
     using DeviceIntensiveQuantitiesView = gpuistl::GpuView<DeviceIntensiveQuantities>;
     using DevicePrimaryVariablesView = gpuistl::GpuView<const DevicePrimaryVariables>;
     using DeviceModelViewPublic = DeviceModelView;
@@ -106,6 +114,36 @@ public:
         waitForLastWriter_();
     }
 
+    struct TransferCounters {
+        std::uint64_t primaryVariableUploads{0}, primaryVariableUploadBytes{0};
+        std::uint64_t primaryVariableDownloads{0}, primaryVariableDownloadBytes{0};
+        std::uint64_t correctionDownloads{0}, correctionDownloadBytes{0};
+        std::uint64_t correctionHistoryUploads{0}, correctionHistoryUploadBytes{0};
+        std::uint64_t intensiveQuantityDownloads{0}, intensiveQuantityDownloadBytes{0};
+        std::uint64_t ownedBufferAllocations{0};
+        std::uint64_t ownedBufferAllocationBytes{0};
+        std::uint64_t staticUploadBatches{0};
+        std::uint64_t staticUploadCalls{0}, staticUploadBytes{0};
+        std::uint64_t solverCorrectionAllocations{0};
+        std::uint64_t successfulNewtonUpdates{0};
+        std::string lastCorrectionDownloadCause;
+        std::string lastPrimaryVariableDownloadCause;
+    };
+
+    const TransferCounters& transferCounters() const { return counters_; }
+
+    void recordCompatibilityCorrectionDownload(std::size_t bytes,
+                                               const char* cause = "host solver interface")
+    {
+        ++counters_.correctionDownloads;
+        counters_.correctionDownloadBytes += bytes;
+        ++counters_.solverCorrectionAllocations;
+        counters_.lastCorrectionDownloadCause = cause;
+    }
+    bool hasInitialized() const { return problemBuffer_ != nullptr; }
+    bool initializedFor(std::size_t numDof) const { return hasInitialized() && numDof_ == numDof; }
+    std::size_t numDof() const { return numDof_; }
+
     bool hasPrimaryVariables(unsigned timeIdx) const
     { return timeIdx < numTimeSlots && primaryGeneration_[timeIdx] != 0; }
 
@@ -115,6 +153,8 @@ public:
     bool hostPrimaryVariablesCurrent(unsigned timeIdx) const
     { return hasPrimaryVariables(timeIdx) && hostPrimaryGeneration_[timeIdx] == primaryGeneration_[timeIdx]; }
 
+    // Only an explicit CPU mutation invalidates resident state. Taking a
+    // non-const solution reference or refreshing its mirror does not.
     void invalidateHostEditedPrimaryVariables(unsigned timeIdx)
     {
         validateTimeIdx_(timeIdx);
@@ -123,12 +163,23 @@ public:
         iqGeneration_[timeIdx] = 0;
     }
 
+    void updatePrimaryVariables(const Problem& cpuProblem,
+                                const SolutionVector& solution,
+                                unsigned timeIdx)
+    { importHostPrimaryVariables(cpuProblem, solution, timeIdx); }
+
+    void importHostPrimaryVariables(const Problem& cpuProblem,
+                                    const SolutionVector& solution,
+                                    unsigned timeIdx)
+    {
+        validateTimeIdx_(timeIdx);
+        ensureInitialized_(cpuProblem, timeIdx, solution.size());
+        importSlot_(solution, timeIdx);
+    }
+
     void materializeHostPrimaryVariables(unsigned timeIdx, SolutionVector& destination)
     {
-        validateReadySlot_(timeIdx);
-        if (!hasPrimaryVariables(timeIdx)) {
-            OPM_THROW(std::logic_error, "Invalid GPU primary-variable slot");
-        }
+        validatePrimarySlot_(timeIdx);
         if (destination.size() != numDof_) {
             OPM_THROW(std::invalid_argument, "Invalid host primary-variable destination size");
         }
@@ -136,40 +187,163 @@ public:
             return;
         }
         auto& mirror = hostPrimaryVariables_[timeIdx];
-        OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream_.get()));
-        primaryVariablesBuffer_[timeIdx]->copyToHost(mirror);
+        copyDeviceToHost_(mirror.data(), primaryVariablesBuffer_[timeIdx]->data(),
+                          numDof_ * sizeof(DevicePrimaryVariables));
+        synchronizeStream_();
         for (std::size_t i = 0; i < numDof_; ++i) {
             destination[i] = HostPrimaryVariables(mirror[i]);
         }
         hostPrimaryGeneration_[timeIdx] = primaryGeneration_[timeIdx];
+        ++counters_.primaryVariableDownloads;
+        counters_.primaryVariableDownloadBytes += numDof_ * sizeof(DevicePrimaryVariables);
+        counters_.lastPrimaryVariableDownloadCause = "CPU consumer";
     }
 
-    void updatePrimaryVariables(const Problem& cpuProblem,
-                                const SolutionVector& solution,
-                                unsigned timeIdx)
+    gpuistl::GpuVector<Scalar>& correction() { return *correction_; }
+    gpuistl::GpuVector<Scalar>& previousCorrection() { return *previousCorrection_; }
+    gpuistl::GpuView<DevicePrimaryVariables> scratchPrimaryVariablesView()
+    { return {scratchPrimaryVariables_->data(), numDof_}; }
+    gpuistl::GpuView<std::uint8_t> switchedLastIterationView()
+    { return {switchHistory_->data(), numDof_}; }
+    gpuistl::GpuView<std::uint8_t> scratchSwitchHistoryView()
+    { return {scratchSwitchHistory_->data(), numDof_}; }
+    gpuistl::GpuView<std::uint32_t> updateStatusView()
+    { return {updateStatus_->data(), 4}; }
+
+    void clearUpdateStatus()
     {
-        validateTimeIdx_(timeIdx);
-        ensureInitialized_(cpuProblem, timeIdx, solution.size());
+        updateStatusChecked_ = false;
+        zeroAsync_(updateStatus_->data(), 4 * sizeof(std::uint32_t));
+    }
 
-        if (solution.size() != numDof_) {
-            OPM_THROW(std::invalid_argument,
-                      "GPU property bridge received a solution with a mismatched number of DoFs");
+    std::array<std::uint32_t, 4> readUpdateStatus()
+    {
+        std::array<std::uint32_t, 4> status{};
+        copyDeviceToHost_(status.data(), updateStatus_->data(), sizeof(status));
+        synchronizeStream_();
+        lastUpdateStatus_ = status;
+        updateStatusChecked_ = true;
+        return status;
+    }
+
+    // The solver uses its existing default stream. Both handoffs use events,
+    // including the reset writes queued before the next solve.
+    void orderSolverAfterProperties()
+    {
+        recordEvent(primaryReady_, stream_.get());
+        waitForEventAsync(detail::DEFAULT_STREAM, primaryReady_);
+    }
+
+    void orderUpdateAfterSolver()
+    {
+        recordEvent(solverReady_, detail::DEFAULT_STREAM);
+        waitForEventAsync(stream_.get(), solverReady_);
+    }
+
+    // Call only after checking readUpdateStatus(). Scratch data is never
+    // visible to properties or CPU consumers on a failed update.
+    void commitDeviceUpdate(unsigned timeIdx = 0)
+    {
+        validatePrimarySlot_(timeIdx);
+        if (!updateStatusChecked_ || lastUpdateStatus_[0] != 0) {
+            OPM_THROW(std::logic_error, "Cannot publish an unchecked or failed GPU Newton update");
         }
-
-        // Reuse staging storage only after its preceding upload completes.
-        OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream_.get()));
-        auto& hostPrimaryVariables = hostPrimaryVariables_[timeIdx];
-        for (std::size_t i = 0; i < numDof_; ++i) {
-            hostPrimaryVariables[i] = DevicePrimaryVariables(solution[i]);
-        }
-
-        detail::gpuMemcpyHostToDeviceAsync(primaryVariablesBuffer_[timeIdx]->data(),
-                                           hostPrimaryVariables.data(), numDof_, stream_.get());
+        primaryVariablesBuffer_[timeIdx].swap(scratchPrimaryVariables_);
+        switchHistory_.swap(scratchSwitchHistory_);
         primaryGeneration_[timeIdx] = ++generation_;
-        hostPrimaryGeneration_[timeIdx] = primaryGeneration_[timeIdx];
-        iqGeneration_[timeIdx] = 0;
         deviceIqValid_[timeIdx] = false;
-        lastWriterTimeIdx_ = timeIdx;
+        iqGeneration_[timeIdx] = 0;
+        recordPrimaryReady_();
+        updateStatusChecked_ = false;
+        ++counters_.successfulNewtonUpdates;
+    }
+
+    void resetCorrectionHistory()
+    {
+        if (previousCorrection_) {
+            zeroAsync_(previousCorrection_->data(), previousCorrection_->dim() * sizeof(Scalar));
+            recordPrimaryReady_();
+        }
+    }
+
+    // CPU diagnostics and shadow checks must request and account for their
+    // correction copy explicitly; ordinary Newton iterations never call this.
+    // Explicit activation/fallback boundary. CPU stabilization may have
+    // advanced dx_old_ while the resident path was inactive, including SOR.
+    template<class HostVector>
+    void importPreviousCorrection(const HostVector& source)
+    {
+        synchronizeStream_();
+        previousCorrection_->copyFromHost(source);
+        ++counters_.correctionHistoryUploads;
+        counters_.correctionHistoryUploadBytes += previousCorrection_->dim() * sizeof(Scalar);
+    }
+
+    template<class HostVector>
+    void materializeHostCorrection(HostVector& destination, const char* cause = "diagnostic")
+    {
+        synchronizeStream_();
+        correction_->copyToHost(destination);
+        counters_.lastCorrectionDownloadCause = cause;
+        ++counters_.correctionDownloads;
+        counters_.correctionDownloadBytes += correction_->dim() * sizeof(Scalar);
+    }
+
+    template<class HostVector>
+    void materializeHostPreviousCorrection(HostVector& destination, const char* cause = "validation")
+    {
+        synchronizeStream_();
+        previousCorrection_->copyToHost(destination);
+        counters_.lastCorrectionDownloadCause = cause;
+        ++counters_.correctionDownloads;
+        counters_.correctionDownloadBytes += previousCorrection_->dim() * sizeof(Scalar);
+    }
+
+    template<class HostVector>
+    void materializePreviousCorrection(HostVector& destination, const char* cause = "validation")
+    { materializeHostPreviousCorrection(destination, cause); }
+
+    void materializeCandidatePrimaryVariables(SolutionVector& destination)
+    {
+        if (destination.size() != numDof_) {
+            OPM_THROW(std::invalid_argument, "Invalid shadow primary-variable destination size");
+        }
+        std::vector<DevicePrimaryVariables> values(numDof_);
+        copyDeviceToHost_(values.data(), scratchPrimaryVariables_->data(),
+                          numDof_ * sizeof(DevicePrimaryVariables));
+        synchronizeStream_();
+        for (std::size_t i = 0; i < numDof_; ++i) {
+            destination[i] = HostPrimaryVariables(values[i]);
+        }
+        ++counters_.primaryVariableDownloads;
+        counters_.primaryVariableDownloadBytes += numDof_ * sizeof(DevicePrimaryVariables);
+        counters_.lastPrimaryVariableDownloadCause = "validation";
+    }
+
+    std::vector<std::uint8_t> materializeCandidateSwitchHistory()
+    {
+        std::vector<std::uint8_t> result(numDof_);
+        copyDeviceToHost_(result.data(), scratchSwitchHistory_->data(), numDof_);
+        synchronizeStream_();
+        return result;
+    }
+
+    std::vector<std::uint8_t> materializeSwitchHistory()
+    {
+        std::vector<std::uint8_t> result(numDof_);
+        copyDeviceToHost_(result.data(), switchHistory_->data(), numDof_);
+        synchronizeStream_();
+        return result;
+    }
+
+    void importSwitchHistory(const std::vector<std::uint8_t>& values)
+    {
+        if (values.size() != numDof_) {
+            OPM_THROW(std::invalid_argument, "Invalid GPU Newton switch-history size");
+        }
+        copyHostToDevice_(switchHistory_->data(), values.data(), numDof_);
+        // The caller owns this staging vector, so consume it before returning.
+        synchronizeStream_();
     }
 
     auto stream() const
@@ -179,7 +353,7 @@ public:
 
     DevicePrimaryVariablesView primaryVariablesView(unsigned timeIdx) const
     {
-        validateReadySlot_(timeIdx);
+        validatePrimarySlot_(timeIdx);
         return DevicePrimaryVariablesView(primaryVariablesBuffer_[timeIdx]->data(), numDof_);
     }
 
@@ -189,12 +363,16 @@ public:
         return DeviceIntensiveQuantitiesView(intensiveQuantitiesBuffer_[timeIdx]->data(), numDof_);
     }
 
+
+
+
+
     void recordPropertyReady(unsigned timeIdx)
     {
         validateReadySlot_(timeIdx);
         recordEvent(propertyReady_, stream_.get());
-        iqGeneration_[timeIdx] = primaryGeneration_[timeIdx];
         deviceIqValid_[timeIdx] = true;
+        iqGeneration_[timeIdx] = primaryGeneration_[timeIdx];
         lastWriterTimeIdx_ = timeIdx;
     }
 
@@ -279,6 +457,8 @@ public:
             hostIntensiveQuantities_.assign(numDof_, *prototype_);
         }
         intensiveQuantitiesBuffer_[timeIdx]->copyToHost(hostIntensiveQuantities_);
+        ++counters_.intensiveQuantityDownloads;
+        counters_.intensiveQuantityDownloadBytes += numDof_ * sizeof(DeviceIntensiveQuantities);
         for (std::size_t i = 0; i < numDof_; ++i) {
             destination[i]->overlayBlackOilFieldsFrom(hostIntensiveQuantities_[i]);
         }
@@ -289,20 +469,40 @@ public:
      */
     void advanceTimeLevel()
     {
-        if (!hasIntensiveQuantities(0)) {
-            invalidateHostEditedPrimaryVariables(/*timeIdx=*/1);
-            return;
+        if (!hasInitialized()) { return; }
+        orderUpdateAfterSolver();
+        if (hasPrimaryVariables(0)) {
+            copyDeviceToDevice_(primaryVariablesBuffer_[1]->data(), primaryVariablesBuffer_[0]->data(),
+                                numDof_ * sizeof(DevicePrimaryVariables));
+            primaryGeneration_[1] = primaryGeneration_[0];
+            hostPrimaryGeneration_[1] = 0;
+            recordPrimaryReady_();
         }
-        detail::gpuMemcpyDeviceToDeviceAsync(intensiveQuantitiesBuffer_[1]->data(),
-                                             intensiveQuantitiesBuffer_[0]->data(),
-                                             numDof_, stream_.get());
-        // CPU time-level advance has already copied its current solution to history.
-        detail::gpuMemcpyDeviceToDeviceAsync(primaryVariablesBuffer_[1]->data(),
-                                             primaryVariablesBuffer_[0]->data(),
-                                             numDof_, stream_.get());
-        primaryGeneration_[1] = primaryGeneration_[0];
-        hostPrimaryGeneration_[1] = primaryGeneration_[1];
-        recordPropertyReady(/*timeIdx=*/1);
+        else {
+            primaryGeneration_[1] = hostPrimaryGeneration_[1] = 0;
+        }
+        deviceIqValid_[1] = false;
+        iqGeneration_[1] = 0;
+        if (hasIntensiveQuantities(0)) {
+            copyDeviceToDevice_(intensiveQuantitiesBuffer_[1]->data(), intensiveQuantitiesBuffer_[0]->data(),
+                                numDof_ * sizeof(DeviceIntensiveQuantities));
+            recordPropertyReady(1);
+        }
+    }
+
+    void restorePreviousSolution()
+    {
+        validatePrimarySlot_(1);
+        orderUpdateAfterSolver();
+        copyDeviceToDevice_(primaryVariablesBuffer_[0]->data(), primaryVariablesBuffer_[1]->data(),
+                            numDof_ * sizeof(DevicePrimaryVariables));
+        primaryGeneration_[0] = ++generation_;
+        hostPrimaryGeneration_[0] = 0;
+        deviceIqValid_[0] = false;
+        iqGeneration_[0] = 0;
+        recordPrimaryReady_();
+        // Switch history deliberately survives rollback, like CPU wasSwitched_.
+        resetCorrectionHistory();
     }
 
 private:
@@ -321,11 +521,16 @@ private:
         reset_();
         numDof_ = numDof;
 
-        auto fluidSystemBuffer =
-            ::Opm::gpuistl::copy_to_gpu(CpuFluidSystem::getNonStaticInstance());
-        fluidSystemBuffer_ = std::make_unique<FluidSystemBuffer>(std::move(fluidSystemBuffer));
-        const auto fluidSystemView = ::Opm::gpuistl::make_view(*fluidSystemBuffer_);
-        deviceFluidSystem_ = ::Opm::gpuistl::make_gpu_shared_ptr<DeviceFluidSystem>(fluidSystemView);
+        detail::GpuMemoryCounts allocations, staticData;
+        const detail::ScopedGpuMemoryAccounting ownerAccounting(allocations);
+        {
+            const detail::ScopedGpuMemoryAccounting staticAccounting(staticData);
+            auto fluidSystemBuffer =
+                ::Opm::gpuistl::copy_to_gpu(CpuFluidSystem::getNonStaticInstance());
+            fluidSystemBuffer_ = std::make_unique<FluidSystemBuffer>(std::move(fluidSystemBuffer));
+            const auto fluidSystemView = ::Opm::gpuistl::make_view(*fluidSystemBuffer_);
+            deviceFluidSystem_ = ::Opm::gpuistl::make_gpu_shared_ptr<DeviceFluidSystem>(fluidSystemView);
+        }
 
         BlackOilIntensiveQuantities<CpuPrototypeTypeTag> cpuPrototype;
         prototype_ =
@@ -340,17 +545,38 @@ private:
                 std::make_unique<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>(initialIq);
         }
 
+        scratchPrimaryVariables_ = std::make_unique<gpuistl::GpuBuffer<DevicePrimaryVariables>>(numDof_);
+        switchHistory_ = std::make_unique<gpuistl::GpuBuffer<std::uint8_t>>(numDof_);
+        scratchSwitchHistory_ = std::make_unique<gpuistl::GpuBuffer<std::uint8_t>>(numDof_);
+        updateStatus_ = std::make_unique<gpuistl::GpuBuffer<std::uint32_t>>(4);
+        constexpr unsigned numEq = getPropValue<CpuTypeTag, Properties::NumEq>();
+        correction_ = std::make_unique<gpuistl::GpuVector<Scalar>>(numDof_ * numEq);
+        previousCorrection_ = std::make_unique<gpuistl::GpuVector<Scalar>>(numDof_ * numEq);
+        zeroAsync_(switchHistory_->data(), numDof_);
+        zeroAsync_(scratchSwitchHistory_->data(), numDof_);
+        resetCorrectionHistory();
+
         std::vector<Scalar> volumes(numDof_);
         for (std::size_t i = 0; i < numDof_; ++i) {
             volumes[i] = cpuProblem.model().dofTotalVolume(static_cast<unsigned>(i));
         }
-        volumesBuffer_ = std::make_unique<gpuistl::GpuBuffer<Scalar>>(volumes);
-        problemBuffer_ = std::make_unique<GpuProblemBuffer>(cpuProblem);
+        {
+            const detail::ScopedGpuMemoryAccounting staticAccounting(staticData);
+            volumesBuffer_ = std::make_unique<gpuistl::GpuBuffer<Scalar>>(volumes);
+            problemBuffer_ = std::make_unique<GpuProblemBuffer>(cpuProblem);
+        }
 
         // The first device update overwrites currentTimeIdx.  The previous slot
         // can be seeded once from an already-valid CPU history cache, avoiding
         // any IQ transfer in steady-state GPU/GPU iterations.
+        const unsigned previousTimeIdx = currentTimeIdx == 0 ? 1 : 0;
+        importSlot_(cpuProblem.model().solution(previousTimeIdx), previousTimeIdx);
         initializePreviousSlot_(cpuProblem, currentTimeIdx);
+        counters_.ownedBufferAllocations += allocations.allocations;
+        counters_.ownedBufferAllocationBytes += allocations.allocationBytes;
+        ++counters_.staticUploadBatches;
+        counters_.staticUploadCalls += staticData.hostToDeviceCalls;
+        counters_.staticUploadBytes += staticData.hostToDeviceBytes;
     }
 
     void initializePreviousSlot_(const Problem& cpuProblem, unsigned currentTimeIdx)
@@ -374,14 +600,6 @@ private:
                 initialIq.emplace_back(
                     cached->template withOtherFluidSystem<DeviceTypeTag>(deviceFluidSystem()));
             }
-            const auto& previousSolution = cpuModel.solution(previousTimeIdx);
-            auto& previousPrimary = hostPrimaryVariables_[previousTimeIdx];
-            for (std::size_t i = 0; i < numDof_; ++i) {
-                previousPrimary[i] = DevicePrimaryVariables(previousSolution[i]);
-            }
-            primaryVariablesBuffer_[previousTimeIdx]->copyFromHost(previousPrimary);
-            primaryGeneration_[previousTimeIdx] = ++generation_;
-            hostPrimaryGeneration_[previousTimeIdx] = primaryGeneration_[previousTimeIdx];
             intensiveQuantitiesBuffer_[previousTimeIdx]->copyFromHost(initialIq);
             deviceIqValid_[previousTimeIdx] = true;
             iqGeneration_[previousTimeIdx] = primaryGeneration_[previousTimeIdx];
@@ -413,9 +631,76 @@ private:
         }
     }
 
+    void validatePrimarySlot_(unsigned timeIdx) const
+    {
+        validateReadySlot_(timeIdx);
+        if (!hasPrimaryVariables(timeIdx)) {
+            OPM_THROW(std::logic_error, "GPU bridge attempted to consume invalid primary variables");
+        }
+    }
+
+    void importSlot_(const SolutionVector& solution, unsigned timeIdx)
+    {
+        if (solution.size() != numDof_) {
+            OPM_THROW(std::invalid_argument, "GPU bridge received a mismatched solution size");
+        }
+        orderUpdateAfterSolver();
+        // Host import is an explicit compatibility boundary. Wait before
+        // rewriting staging memory that may still back an earlier upload.
+        synchronizeStream_();
+        auto& mirror = hostPrimaryVariables_[timeIdx];
+        for (std::size_t i = 0; i < numDof_; ++i) {
+            mirror[i] = DevicePrimaryVariables(solution[i]);
+        }
+        copyHostToDevice_(primaryVariablesBuffer_[timeIdx]->data(), mirror.data(),
+                          numDof_ * sizeof(DevicePrimaryVariables));
+        primaryGeneration_[timeIdx] = ++generation_;
+        hostPrimaryGeneration_[timeIdx] = primaryGeneration_[timeIdx];
+        deviceIqValid_[timeIdx] = false;
+        iqGeneration_[timeIdx] = 0;
+        recordPrimaryReady_();
+        ++counters_.primaryVariableUploads;
+        counters_.primaryVariableUploadBytes += numDof_ * sizeof(DevicePrimaryVariables);
+    }
+
+    void recordPrimaryReady_()
+    {
+        recordEvent(primaryReady_, stream_.get());
+    }
+
+    void synchronizeStream_() const
+    {
+        OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream_.get()));
+    }
+
+    void zeroAsync_(void* destination, std::size_t bytes)
+    {
+        OPM_GPU_SAFE_CALL(cudaMemsetAsync(destination, 0, bytes, stream_.get()));
+    }
+
+    void copyHostToDevice_(void* destination, const void* source, std::size_t bytes)
+    {
+        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(destination, source, bytes, cudaMemcpyHostToDevice, stream_.get()));
+    }
+
+    void copyDeviceToHost_(void* destination, const void* source, std::size_t bytes)
+    {
+        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(destination, source, bytes, cudaMemcpyDeviceToHost, stream_.get()));
+    }
+
+    void copyDeviceToDevice_(void* destination, const void* source, std::size_t bytes)
+    {
+        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(destination, source, bytes, cudaMemcpyDeviceToDevice, stream_.get()));
+    }
+
     void waitForLastWriter_() const
     {
-        synchronizeStreamNoThrow(stream_.get());
+        // Capture default-stream assembly readers as well as bridge writers
+        // before replacing owners. This is a lifetime boundary, not a stage
+        // transition, and does not synchronize unrelated device streams.
+        OPM_GPU_WARN_IF_ERROR(cudaEventRecord(solverReady_.get(), detail::DEFAULT_STREAM));
+        OPM_GPU_WARN_IF_ERROR(cudaStreamWaitEvent(stream_.get(), solverReady_.get(), 0));
+        OPM_GPU_WARN_IF_ERROR(cudaStreamSynchronize(stream_.get()));
     }
 
     void reset_()
@@ -427,6 +712,12 @@ private:
             deviceIqValid_[timeIdx] = false;
             primaryGeneration_[timeIdx] = hostPrimaryGeneration_[timeIdx] = iqGeneration_[timeIdx] = 0;
         }
+        scratchPrimaryVariables_.reset();
+        correction_.reset();
+        previousCorrection_.reset();
+        switchHistory_.reset();
+        scratchSwitchHistory_.reset();
+        updateStatus_.reset();
         volumesBuffer_.reset();
         problemBuffer_.reset();
         deviceFluidSystem_.reset();
@@ -440,9 +731,18 @@ private:
     // Construct the stream first so event-construction failure releases it.
     GPUStream stream_;
     GPUEvent propertyReady_;
+    GPUEvent primaryReady_;
+    GPUEvent solverReady_;
     std::size_t numDof_{0};
+    TransferCounters counters_{};
+    std::array<std::uint32_t, 4> lastUpdateStatus_{};
+    bool updateStatusChecked_{false};
     std::uint64_t generation_{0};
     std::array<std::uint64_t, numTimeSlots> primaryGeneration_{}, hostPrimaryGeneration_{}, iqGeneration_{};
+    std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>> scratchPrimaryVariables_;
+    std::unique_ptr<gpuistl::GpuVector<Scalar>> correction_, previousCorrection_;
+    std::unique_ptr<gpuistl::GpuBuffer<std::uint8_t>> switchHistory_, scratchSwitchHistory_;
+    std::unique_ptr<gpuistl::GpuBuffer<std::uint32_t>> updateStatus_;
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>>, numTimeSlots>
         primaryVariablesBuffer_{};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>, numTimeSlots>

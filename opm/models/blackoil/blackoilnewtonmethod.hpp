@@ -43,6 +43,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
@@ -121,6 +122,17 @@ public:
      */
     unsigned numPriVarsSwitched() const
     { return numPriVarsSwitched_; }
+
+    const BlackoilNewtonParams<Scalar>& params() const { return bparams_; }
+    const std::vector<std::uint8_t>& switchHistory() const { return wasSwitched_; }
+    void setSwitchHistory(const std::vector<std::uint8_t>& history)
+    {
+        if (history.size() != wasSwitched_.size()) {
+            OPM_THROW(std::invalid_argument, "Newton switch-history size mismatch");
+        }
+        wasSwitched_ = history;
+    }
+    void setNumPriVarsSwitched(unsigned count) { numPriVarsSwitched_ = count; }
 
 protected:
     friend NewtonMethod<TypeTag>;
@@ -244,8 +256,8 @@ private:
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
-    std::vector<bool> wasSwitched_{};
-    std::vector<bool> wasSwitchedAtStepStart_{};
+    std::vector<std::uint8_t> wasSwitched_{};
+    std::vector<std::uint8_t> wasSwitchedAtStepStart_{};
 };
 
 } // namespace Opm
