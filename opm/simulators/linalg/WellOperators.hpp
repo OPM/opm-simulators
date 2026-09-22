@@ -319,31 +319,14 @@ public:
             Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
     }
 
-    /*!
-     * \brief Constructor for the ordinary case: the owned rows are the first ones.
-     */
+    //! Owned rows are a prefix.
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const LinearOperatorExtra<X, Y>& wellOper,
                                      const std::size_t interiorSize )
         : WellModelGhostLastMatrixAdapter(A, wellOper, {{0, interiorSize}}, A.N())
     {}
 
-    /*!
-     * \brief Constructor taking the owned rows as a list of bands.
-     *
-     * The rows this rank owns need not be a prefix of the matrix.  Degrees of freedom
-     * that have no grid cell -- a numerical aquifer or a fracture represented outside
-     * the grid -- are appended after the grid rows, which puts them behind the ghost
-     * rows; and a grid that gains or loses cells during the run cannot keep its owned
-     * rows at the front without renumbering.
-     *
-     * Describing the owned rows explicitly is what keeps this operator honest in either
-     * case.  With a single band it is exactly the prefix it always was.
-     *
-     * \param ownedRowBands Half-open [begin, end) ranges of rows this rank owns, in
-     *        increasing order and not overlapping.
-     * \param numRows Total number of rows; everything outside the bands is projected out.
-     */
+    //! Owned rows as sorted, disjoint [begin, end) bands; auxiliary DOFs sit behind the ghosts.
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const LinearOperatorExtra<X, Y>& wellOper,
                                      std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands,
@@ -416,7 +399,6 @@ public:
     }
 
 protected:
-    //! Zero every row this rank does not own, i.e. the gaps between the owned bands.
     void ghostLastProject(Y& y) const
     {
         const std::size_t end = std::min(numRows_, y.size());
@@ -439,7 +421,7 @@ protected:
     const LinearOperatorExtra<X, Y>& wellOper_;
     std::vector<std::pair<std::size_t, std::size_t>> ownedRowBands_;
     std::size_t numRows_;
-    //! First band's end, kept for the derived operators which still reason about a prefix.
+    //! First band's end, for derived operators that assume a prefix.
     std::size_t interiorSize_;
 };
 

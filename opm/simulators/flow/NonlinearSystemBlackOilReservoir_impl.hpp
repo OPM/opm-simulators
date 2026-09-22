@@ -260,9 +260,7 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         perfTimer.start();
         report.total_newton_iterations = 1;
 
-        // The Jacobian and the residual are sized for the total number of DOFs, i.e.
-        // they include the rows contributed by auxiliary modules.  The solution vector
-        // handed to the linear solver has to match.
+        // Must match the Jacobian, which includes auxiliary rows.
         const unsigned nc = this->simulator_.model().numTotalDof();
         BVector x(nc);
 
@@ -640,10 +638,7 @@ localConvergenceData(std::vector<Scalar>& R_sum,
 
     OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", this->grid_.comm());
 
-    // Auxiliary cells carry the same equations but are not reachable through the grid,
-    // so the loop above never sees them.  Their residual has to enter the convergence
-    // measures like any other cell's, otherwise the Newton iteration would be declared
-    // converged while their mass balance is still violated.
+    // Auxiliary cells, which the grid loop above does not reach.
     const unsigned numGridDof = model.numGridDof();
     const unsigned numTotalDof = model.numTotalDof();
     for (unsigned cell_idx = numGridDof; cell_idx < numTotalDof; ++cell_idx) {

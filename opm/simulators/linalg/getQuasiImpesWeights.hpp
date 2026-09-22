@@ -61,11 +61,7 @@ namespace Details
 
 namespace Amg
 {
-    /*!
-     * \brief The quasi-IMPES weight of one matrix row.
-     *
-     * Built from the row's diagonal block alone, so it asks nothing of the grid.
-     */
+    //! \brief The quasi-IMPES weight of one matrix row, from its diagonal block alone.
     template <class VectorBlockType, class Matrix>
     VectorBlockType quasiImpesWeightForRow(const Matrix& A,
                                            const int rowIdx,
@@ -104,20 +100,8 @@ namespace Amg
         return bweights;
     }
 
-    /*!
-     * \brief Give the auxiliary degrees of freedom a CPR weight.
-     *
-     * The true-IMPES weights are built by walking the grid, so they leave the auxiliary
-     * degrees of freedom -- which have no element -- untouched.  That is not a small
-     * inaccuracy: the weight multiplies the whole row on its way into the coarse pressure
-     * system, so a zero weight deletes the row and makes that system singular.
-     *
-     * They get the quasi-IMPES weight instead, which needs only the assembled diagonal
-     * block.  Mixing the two is a compromise on scaling, not on correctness; an auxiliary
-     * cell's true-IMPES weight needs the storage term evaluated without an element
-     * context, which is the same thing the TPFA linearizer does and is the natural
-     * follow-up.
-     */
+    //! True-IMPES weights skip auxiliary rows, and a zero weight makes the coarse
+    //! pressure system singular; use quasi-IMPES there.
     template <class Matrix, class Vector>
     void getAuxiliaryDofWeights(const Matrix& matrix,
                                 const int firstAuxiliaryRow,

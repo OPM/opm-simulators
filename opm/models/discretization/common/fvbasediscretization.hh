@@ -456,16 +456,10 @@ public:
      */
     void finishInit()
     {
-        // Give the problem the chance to register auxiliary modules which introduce
-        // degrees of freedom, before anything below is sized from numTotalDof().
+        // Before anything below is sized from numTotalDof().
         simulator_.problem().registerAuxiliaryCellModules();
 
-        // An auxiliary module whose degrees of freedom carry the model's own equations
-        // needs a linearizer that assembles over degrees of freedom rather than over grid
-        // elements: an auxiliary DOF has no element, so an element-driven linearizer walks
-        // straight past it and leaves its row empty.  That failure is entirely silent --
-        // an all-zero row is a singular matrix at best and a spurious 0 = 0 equation at
-        // worst -- so refuse the combination here.
+        // An element-driven linearizer would silently leave auxiliary rows empty.
         if constexpr (!Linearizer::assemblesAuxiliaryDofEquations) {
             for (const auto* auxMod : auxEqModules_) {
                 if ((auxMod->numDofs() > 0) && auxMod->carriesModelEquations()) {
@@ -478,12 +472,6 @@ public:
         }
 
         // initialize the volume of the finite volumes to zero
-        //
-        // Auxiliary modules may introduce degrees of freedom which are appended after
-        // the grid ones, so the per-DOF containers are sized for the total number of
-        // DOFs.  The entries beyond the grid DOFs are authored by the auxiliary modules
-        // themselves: they have no grid geometry to derive a volume from.  If no
-        // auxiliary DOFs exist (numTotalDof() == numGridDof()), this is unchanged.
         const std::size_t numGridDof = asImp_().numGridDof();
         const std::size_t numDof = numTotalDof();
         dofTotalVolume_.resize(numDof);
@@ -523,9 +511,7 @@ public:
             isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
         }
 
-        // Auxiliary DOFs have no grid entity to take a volume from, so the modules state
-        // it themselves.  They are also not shared with peer processes via the grid's
-        // interior-border interface, hence local by construction.
+        // Auxiliary DOFs are not in the grid's interior-border interface: local by construction.
         for (const auto* auxMod : auxEqModules_) {
             for (unsigned localIdx = 0; localIdx < auxMod->numDofs(); ++localIdx) {
                 const auto globalIdx = static_cast<std::size_t>(auxMod->localToGlobalDof(localIdx));
@@ -557,8 +543,7 @@ public:
 
         newtonMethod_.finishInit();
 
-        // from here on the per-DOF containers are sized, so a module which introduces
-        // degrees of freedom can no longer be registered (see addAuxiliaryModule())
+        // see addAuxiliaryModule()
         finishInitCalled_ = true;
     }
 
@@ -604,12 +589,7 @@ public:
             }
         }
 
-        // Let auxiliary modules which introduce degrees of freedom set their initial
-        // condition. Their applyInitial() already ran when they were registered, but
-        // that was before the solution vector was zeroed above, so whatever they wrote
-        // then has just been erased. This has to happen before the history copy below
-        // and before the checkDefined() sweep at the end, both of which span the whole
-        // solution vector.
+        // After the zeroing above, before the history copy and checkDefined() below.
         for (unsigned auxModIdx = 0; auxModIdx < numAuxiliaryModules(); ++auxModIdx) {
             if (auxiliaryModule(auxModIdx)->numDofs() > 0) {
                 auxiliaryModule(auxModIdx)->applyInitial();
@@ -1944,13 +1924,7 @@ public:
      */
     void addAuxiliaryModule(BaseAuxiliaryModule<TypeTag>* auxMod)
     {
-        // A module which introduces degrees of freedom changes numTotalDof(), and
-        // finishInit() sizes every per-DOF container from it. Registering such a module
-        // afterwards would leave all of them short -- silently, and in a way that only
-        // shows up much later as garbage in the intensive quantities or as an
-        // out-of-bounds write. Modules which declare no degrees of freedom (the well
-        // models, which assemble their own equations) are unaffected and may still be
-        // registered at any point, as they are today.
+        // finishInit() sized the per-DOF containers; later DOFs would silently overflow them.
         if (auxMod->numDofs() > 0 && finishInitCalled_) {
             throw std::logic_error("An auxiliary module which introduces degrees of freedom must "
                                    "be registered before the model's finishInit(), so that the "
@@ -1971,10 +1945,8 @@ public:
             solution(timeIdx).resize(numDof);
         }
 
-        // A module which introduces degrees of freedom is initialised later, from
-        // applyInitialSolution(): at registration time the solution vector has not been
-        // written yet, and anything set here would be erased when it is zeroed there.
-        // Modules without degrees of freedom keep being initialised on the spot.
+        // DOF-carrying modules are initialised in applyInitialSolution(), which would
+        // otherwise erase this.
         if (auxMod->numDofs() == 0) {
             auxMod->applyInitial();
         }
@@ -1998,16 +1970,7 @@ public:
     std::size_t numAuxiliaryModules() const
     { return auxEqModules_.size(); }
 
-    /*!
-     * \brief Whether the given degree of freedom carries this model's own conservation
-     *        equations.
-     *
-     * True for every grid degree of freedom.  For an auxiliary one it is up to the
-     * module that owns it: a well's unknowns are of a different kind and scale
-     * themselves, while an auxiliary *cell* carries the model's unknowns and has to
-     * take part in the error norm, the primary-variable switching and the convergence
-     * measures exactly like a grid cell.
-     */
+    //! \brief True for grid DOFs; for auxiliary ones the owning module decides.
     bool dofCarriesModelEquations(unsigned globalDofIdx) const
     {
         if (globalDofIdx < asImp_().numGridDof()) {
@@ -2072,10 +2035,6 @@ public:
 protected:
     void resizeAndResetIntensiveQuantitiesCache_()
     {
-        // Auxiliary DOFs which carry the model's own equations need a storage cache and
-        // intensive quantities just like grid DOFs, so both caches are sized for the
-        // total number of DOFs.  Without auxiliary DOFs this is unchanged.
-
         // allocate the storage cache
         if (enableStorageCache()) {
             const std::size_t numDof = numTotalDof();
@@ -2155,7 +2114,6 @@ protected:
     // a vector with all auxiliary equations to be considered
     std::vector<BaseAuxiliaryModule<TypeTag>*> auxEqModules_;
 
-    // guards the registration order of auxiliary modules with degrees of freedom
     bool finishInitCalled_{false};
 
     NewtonMethod newtonMethod_;

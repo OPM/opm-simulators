@@ -643,9 +643,7 @@ doAllocBuffers(const unsigned bufferSize,
                std::map<std::string, int> rstKeywords,
                const unsigned auxDofCount)
 {
-    // The fluid-in-place buffers span the auxiliary degrees of freedom as well, so that
-    // what lives outside the grid still counts towards the field and region totals; every
-    // other buffer here is written per grid cell and stays that size.
+    // Only the FIP buffers span the auxiliary DOFs; the rest are per grid cell.
     const unsigned fipBufferSize = bufferSize + auxDofCount;
 
     if (rstKeywords.empty()) {
@@ -1069,8 +1067,7 @@ extendRegionsForAuxiliaryDofs(const std::vector<int>& hostCartesianIndex)
             continue;
         }
 
-        // The global array still describes the cell an AQUNUM record names even when that
-        // cell has been left out of the simulation grid to make room for the aquifer.
+        // Global array: the AQUNUM host cell is not in the simulation grid.
         const auto& global = fp.get_global_int(name);
 
         const auto firstAux = region.size();
@@ -1078,7 +1075,7 @@ extendRegionsForAuxiliaryDofs(const std::vector<int>& hostCartesianIndex)
         for (std::size_t i = 0; i < hostCartesianIndex.size(); ++i) {
             const auto host = hostCartesianIndex[i];
             region[firstAux + i] = (host < 0)
-                ? 0                        // no cell to take a region from: no region
+                ? 0
                 : global[static_cast<std::size_t>(host)];
         }
     }

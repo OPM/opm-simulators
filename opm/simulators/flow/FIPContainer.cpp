@@ -508,9 +508,7 @@ outputRestart(data::Solution& sol)
             });
     }
 
-    // The restart file is written per grid cell.  Where auxiliary degrees of freedom
-    // extend these buffers past the grid they contribute to the region sums, which is
-    // what they are for, but they have no cell to be written against.
+    // The restart file is per grid cell; drop the auxiliary tail.
     const auto perCell = [this](const Inplace::Phase phase) {
         auto& v = this->fip_[phase];
         if (v.size() <= this->gridSize_) {

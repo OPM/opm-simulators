@@ -312,12 +312,6 @@ public:
     /*!
      * \copydoc FvBaseProblem::finishInit
      */
-    /*!
-     * \brief Create the auxiliary cell modules this deck asks for.
-     *
-     * Called by the model before it sizes anything, which is the only point at which a
-     * module that introduces degrees of freedom may still be registered.
-     */
     void registerAuxiliaryCellModules()
     {
         const auto& eclState = this->simulator().vanguard().eclState();
@@ -409,8 +403,6 @@ public:
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            // By total degree of freedom count: maxOilSaturation() is asked by
-            // degree-of-freedom index, and an auxiliary cell asks the same way.
             this->maxOilSaturation_.resize(this->model().numTotalDof(), 0.0);
         }
 
@@ -434,14 +426,11 @@ public:
 
         finishTransmissibilities();
 
-        // The auxiliary cells' connections are authored, not geometric, so they are
-        // published once the grid's own transmissibilities are final.
         this->applyAuxCellTransmissibilities_();
 
         const auto& initconfig = eclState.getInitConfig();
 
-        // Auxiliary cells do not appear in the restart file: it is written per grid
-        // element, so their state would come back undefined rather than merely stale.
+        // The restart file is per grid element; auxiliary state would come back undefined.
         if (initconfig.restartRequested() && !this->auxCellModules_.empty()) {
             OPM_THROW(std::runtime_error,
                       "Restart is not supported together with auxiliary cells "
@@ -474,7 +463,6 @@ public:
         this->computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_ || this->enableDriftCompensationTemp_) {
-            // Sized like the residual it compensates, which spans the auxiliary DOFs.
             this->drift_.resize(this->model().numTotalDof());
             this->drift_ = 0.0;
         }
@@ -509,9 +497,6 @@ public:
         // TODO: move to the end for later refactoring of the function finishInit()
         //
         // deal with DRSDT
-        // Sized over every degree of freedom, auxiliary ones included: the intensive
-        // quantities ask for the dissolution limits by degree-of-freedom index, and an
-        // auxiliary cell reaches this the same way a grid cell does.
         this->mixControls_.init(this->model().numTotalDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());

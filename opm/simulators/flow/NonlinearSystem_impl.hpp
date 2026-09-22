@@ -148,8 +148,7 @@ NonlinearSystem(Simulator& simulator,
     , param_(param)
     , well_model_(wellModel)
     , current_relaxation_(1.0)
-      // sized like the linear-system solution vector it is compared against in
-      // stabilizeNonlinearUpdate(), which spans the auxiliary DOFs as well
+      // must match the solution vector in stabilizeNonlinearUpdate()
     , dx_old_(simulator_.model().numTotalDof())
 {}
 

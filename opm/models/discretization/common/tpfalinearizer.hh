@@ -179,13 +179,7 @@ class TpfaLinearizer
 //! \endcond
 
 public:
-    /*!
-     * \brief Whether the linearizer assembles the model's equations on auxiliary DOFs.
-     *
-     * It does: the cell loop runs over every degree of freedom, and an auxiliary DOF's
-     * connections are in neighborInfo_ alongside the geometric ones, so the storage and
-     * flux terms are computed for it exactly as for a grid cell.
-     */
+    //! Yes: the cell loop covers every DOF, auxiliary connections included.
     static constexpr bool assemblesAuxiliaryDofEquations = true;
 
     TpfaLinearizer()
@@ -526,23 +520,7 @@ private:
         neighborInfo_.reserve(numCells, 6 * numCells); // Expect ~6 neighbors per cell
         std::vector<NeighborInfoCPU> loc_nbinfo;
 
-        // Collect the flux connections contributed by auxiliary modules whose degrees of
-        // freedom carry the model's own conservation equations.
-        //
-        // A connection is reported once by its module, but it has to appear in the
-        // neighbour list of *both* of its endpoints: linearize_cell() only ever writes
-        // the row of the degree of freedom it is iterating -- residual[globI], the
-        // diagonal block (globI,globI) and the off-diagonal block (globJ,globI) -- so
-        // the equal and opposite flux into the partner, and the partner's own diagonal
-        // contribution, are produced only when the loop reaches the partner's row. A
-        // connection entered on one side alone would let the auxiliary cell exchange
-        // mass with a reservoir cell that never sees it in return: the Newton iteration
-        // would still converge, on a system that does not conserve mass.
-        // The GPU assembly path copies neighborInfo_, the domain and the residual to the
-        // device and assembles there, while an auxiliary module's linearize() runs on
-        // the host after the copy back. Auxiliary degrees of freedom would therefore be
-        // assembled inconsistently rather than wrongly-but-visibly, so refuse the
-        // combination outright until the device path handles them.
+        // The device path does not assemble auxiliary DOFs.
         if constexpr (runAssemblyOnGpu) {
             if (model.numAuxiliaryDof() > 0) {
                 throw std::logic_error("Auxiliary degrees of freedom are not supported by the GPU "
@@ -557,6 +535,8 @@ private:
             for (unsigned auxModIdx = 0; auxModIdx < numAuxModules; ++auxModIdx) {
                 model.auxiliaryModule(auxModIdx)->addConnections(auxConns);
             }
+            // linearize_cell() writes only its own row, so enter both endpoints or mass
+            // is not conserved.
             for (const auto& conn : auxConns) {
                 if (conn.dof1 >= numCells || conn.dof2 >= numCells || conn.dof1 == conn.dof2) {
                     throw std::logic_error("Auxiliary module reported an invalid connection ("
@@ -569,16 +549,13 @@ private:
                 sparsityPattern[conn.dof1].insert(conn.dof2);
                 sparsityPattern[conn.dof2].insert(conn.dof1);
             }
-            // every auxiliary degree of freedom needs a diagonal block, including one
-            // that currently has no connections at all
+            // diagonal even for an unconnected auxiliary DOF
             for (unsigned dofIdx = model.numGridDof(); dofIdx < numCells; ++dofIdx) {
                 sparsityPattern[dofIdx].insert(dofIdx);
             }
         }
 
-        // Build the neighbour info for a connection that has no geometric face. The
-        // transmissibility carries the whole of the geometry, so the face area is unity
-        // and there is no face direction.
+        // No geometric face: unit area, no direction.
         const auto makeAuxNeighborInfo = [this, gravity](unsigned myIdx, unsigned neighborIdx) {
             ResidualNBInfo nbinfo{problem_().transmissibility(myIdx, neighborIdx),
                                   1.0,
@@ -656,7 +633,6 @@ private:
                         loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
-                // this grid cell's side of any auxiliary connection attached to it
                 for (const unsigned auxNeighbor : auxNeighbors[myIdx]) {
                     loc_nbinfo.push_back(makeAuxNeighborInfo(myIdx, auxNeighbor));
                 }
@@ -696,10 +672,7 @@ private:
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
         }
 
-        // Append one row per auxiliary degree of freedom. The rows of neighborInfo_ are
-        // addressed by degree-of-freedom index, and the grid loop above has produced
-        // exactly the first numGridDof() of them, so appending the auxiliary rows here
-        // puts each one at its own index.
+        // Rows are indexed by DOF; the grid loop produced the first numGridDof().
         for (unsigned auxDofIdx = model.numGridDof(); auxDofIdx < numCells; ++auxDofIdx) {
             loc_nbinfo.clear();
             for (const unsigned neighborIdx : auxNeighbors[auxDofIdx]) {
@@ -708,10 +681,7 @@ private:
             neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
         }
 
-        // neighborInfo_ is indexed up to numTotalDof() by linearize_cell(),
-        // updateStoredTransmissibilities() and the loop below, so a short table is an
-        // out-of-bounds read rather than a missing contribution. SparseTable only
-        // guards this with an assert, so check it unconditionally.
+        // SparseTable only asserts; a short table would be an out-of-bounds read.
         if (static_cast<unsigned>(neighborInfo_.size()) != numCells) {
             throw std::logic_error("The neighbor info table has " +
                                    std::to_string(neighborInfo_.size()) +
@@ -912,10 +882,7 @@ public:
         if (!enableFlows && !enableFlores && blockFlows.empty()) {
             return;
         }
-        // Flow reporting is a grid-cell concept: the rows of flowsInfo_/floresInfo_ are
-        // built per grid element, and the block-flow lookup below maps the DOF back to a
-        // cartesian index.  Auxiliary DOFs have neither, so they are not visited here;
-        // fluxes on auxiliary connections are reported through their own client.
+        // flowsInfo_/floresInfo_ are per grid element; aux fluxes are reported elsewhere.
         const unsigned int numCells = model_().numGridDof();
 #ifdef _OPENMP
 #pragma omp parallel for

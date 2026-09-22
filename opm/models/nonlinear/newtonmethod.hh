@@ -576,10 +576,8 @@ protected:
         // the solution's residual
         error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
-            // Do not consider auxiliary DOFs for the error -- unless they carry the
-            // model's own equations, in which case they are cells as far as the model
-            // is concerned and their residual has to be measured like any other.
-            // A dormant auxiliary cell has no volume and is skipped by the second test.
+            // Skip auxiliary DOFs unless they carry the model's equations; dormant
+            // auxiliary cells have no volume.
             if (!model().dofCarriesModelEquations(dofIdx) ||
                 model().dofTotalVolume(dofIdx) <= 0.0)
             {
@@ -711,9 +709,7 @@ protected:
         std::size_t numDof = model().numTotalDof();
         for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
             if (model().dofCarriesModelEquations(dofIdx)) {
-                // an auxiliary cell holds the model's own primary variables, so it needs
-                // the model's update -- without it the variable switching never runs and
-                // the cell cannot cross a phase-appearance boundary
+                // needed for primary-variable switching
                 asImp_().updatePrimaryVariables_(dofIdx,
                                                  nextSolution[dofIdx],
                                                  currentSolution[dofIdx],

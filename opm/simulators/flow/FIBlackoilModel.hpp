@@ -115,24 +115,8 @@ public:
         updateAuxiliaryIntQuants(timeIdx);
     }
 
-    /*!
-     * \brief Update the intensive quantities of the degrees of freedom introduced by
-     *        auxiliary modules.
-     *
-     * These are not reachable through the grid, so none of the loops above visit them.
-     * The update itself needs no element context: it is driven entirely by the DOF
-     * index and the problem's index-based accessors, which is what allows an auxiliary
-     * cell to carry the model's own equations.
-     *
-     * The index-based update does not cover every module -- solvent, extbo, polymer,
-     * foam, MICP, brine, diffusion and dispersion still need an element -- so it is
-     * instantiated only where the intensive quantities say it is available.  Note that
-     * this is a weaker condition than AvoidElementContext, which is about how the *grid*
-     * cells are updated: a configuration may well drive the grid through element contexts
-     * and still be able to update an auxiliary DOF without one.  A configuration that has
-     * auxiliary DOFs and genuinely cannot update them says so rather than leaving them
-     * uninitialised.
-     */
+    //! Auxiliary DOFs are unreachable by the grid loops above.  Gated on
+    //! supportsElementContextFreeUpdate, which is weaker than AvoidElementContext.
     void updateAuxiliaryIntQuants(const unsigned timeIdx) const
     {
         if (this->numTotalDof() == this->numGridDof()) {

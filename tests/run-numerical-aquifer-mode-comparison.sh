@@ -1,18 +1,8 @@
 #!/bin/bash
 
-# Runs one deck twice -- once with each representation of its numerical aquifers -- and
-# compares the two against each other.
-#
-# The aquifer is the same discrete system either way: the same unknowns, pore volumes,
-# depths, regions and connection transmissibilities.  Only where the unknown lives
-# changes, so the two runs should agree to the level of arithmetic-ordering roundoff, and
-# anything looser is a real difference that wants explaining rather than a wider band.
-#
-# That comparison is only meaningful with the two runs pinned to the same time steps and
-# converged well past the reporting precision.  Left to itself the adaptive stepper takes
-# different substeps in the two runs -- the DOF ordering alone is enough to change where
-# each Newton iteration stops inside the tolerance band -- and the difference grows to a
-# few parts in a thousand for reasons that have nothing to do with the aquifer.
+# Runs one deck in grid and aux numerical-aquifer mode and compares the summaries.
+# Time steps are pinned and tolerances tightened, since DOF ordering alone changes the
+# adaptive substeps and makes the runs drift apart by ~1e-3.
 
 if test $# -eq 0
 then
