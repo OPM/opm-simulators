@@ -492,6 +492,15 @@ storeSlaveGroupInjectionTargets()
     const auto& units = this->simulator_.vanguard().eclState().getUnits();
     auto& slave = this->reservoirCouplingSlave();
     const auto& rescoup = this->schedule()[reportStepIdx].rescoup();
+    // The surface-rate group injection target vectors, which is all of them:
+    // there is no oil equivalent, so a master oil injection target reaches the
+    // control path but has nothing to be reported as; and GVIRT is a reservoir
+    // volume target, which cannot be derived from what the master sends, since
+    // it converts every injection mode to a surface rate before sending (see
+    // RescoupConstraintsCalculator::calculateSlaveGroupInjectionTargets_()).
+    // A slave UDQ naming GVIRT for a slave group therefore still reads the
+    // schedule, as it did before reservoir coupling could report a target at
+    // all.
     const auto targets = std::array {
         std::tuple { Phase::GAS,   std::string{"GGIRT"}, M::gas_surface_rate    },
         std::tuple { Phase::WATER, std::string{"GWIRT"}, M::liquid_surface_rate },
