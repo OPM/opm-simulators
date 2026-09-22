@@ -124,16 +124,17 @@ bool Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 gridJoins_(unsigned elemIdx1, unsigned elemIdx2) const
 {
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+    // The mapper's index type is int for CpGrid but unsigned for ALUGrid.
+    using Index = typename ElementMapper::Index;
 
     for (const auto& elem : elements(gridView_)) {
-        if (elemMapper.index(elem) != static_cast<int>(elemIdx1)) {
+        if (elemMapper.index(elem) != static_cast<Index>(elemIdx1)) {
             continue;
         }
 
         for (const auto& intersection : intersections(gridView_, elem)) {
-            if (intersection.neighbor() &&
-                (elemMapper.index(intersection.outside()) == static_cast<int>(elemIdx2)))
-            {
+            if (intersection.neighbor()
+                && (elemMapper.index(intersection.outside()) == static_cast<Index>(elemIdx2))) {
                 return true;
             }
         }
@@ -167,8 +168,9 @@ describeCell_(unsigned elemIdx) const
             // coarse cell, is where these lookups go wrong. Found through the
             // mapper -- iteration order is not index order.
             ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+            using Index = typename ElementMapper::Index;
             for (const auto& elem : elements(gridView_)) {
-                if (elemMapper.index(elem) == static_cast<int>(elemIdx)) {
+                if (elemMapper.index(elem) == static_cast<Index>(elemIdx)) {
                     text += fmt::format(", level {}", elem.level());
                     break;
                 }
