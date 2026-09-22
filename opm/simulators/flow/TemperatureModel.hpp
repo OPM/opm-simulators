@@ -529,7 +529,7 @@ protected:
     void computeStorageTerm(unsigned globI, LhsEval& storage)
     {
         const auto& intQuants = intQuants_[globI];
-        const auto& poro = getValue(simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0).porosity());
+        const auto poro = getValue(simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0).porosity());
         // accumulate the internal energy of the fluids
         const auto& fs = intQuants.fluidStateTemp();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
