@@ -1966,6 +1966,16 @@ protected:
 
     void updateRockCompTransMultVal_()
     {
+        // Keep the identity representation empty when neither ROCKCOMP
+        // transmissibility multiplier is active.  Besides avoiding needless
+        // work, this guard must precede cachedIntensiveQuantities(): on the
+        // resident GPU path that accessor is an explicit full-IQ
+        // materialization boundary.
+        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty()) {
+            this->rockCompTransMultVal_.clear();
+            return;
+        }
+
         const auto& model = this->simulator().model();
         std::size_t numGridDof = this->model().numGridDof();
         this->rockCompTransMultVal_.resize(numGridDof, 1.0);

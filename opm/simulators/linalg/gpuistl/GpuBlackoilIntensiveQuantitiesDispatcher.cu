@@ -176,6 +176,85 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
     iq.updateEnergyQuantities_(problem, static_cast<unsigned>(i), 0u);
 }
 
+template <class DeviceTypeTag, class IntensiveQuantitiesT>
+__global__ void compactConvergenceKernel(
+    Opm::gpuistl::GpuView<IntensiveQuantitiesT> intensiveQuantities,
+    Opm::gpuistl::GpuView<GetPropType<DeviceTypeTag, Properties::Scalar>> output,
+    std::size_t numCells)
+{
+    using Scalar = GetPropType<DeviceTypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<DeviceTypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<DeviceTypeTag, Properties::Indices>;
+    constexpr unsigned numEq = getPropValue<DeviceTypeTag, Properties::NumEq>();
+    const std::size_t cell = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (cell >= numCells) {
+        return;
+    }
+    Scalar* factors = output.data() + cell * numEq;
+    for (unsigned eq = 0; eq < numEq; ++eq) {
+        factors[eq] = 0.0;
+    }
+    const auto& fs = intensiveQuantities[cell].fluidState();
+    const auto& fluidSystem = fs.fluidSystem();
+    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+        if (!fluidSystem.phaseIsActive(phaseIdx)) {
+            continue;
+        }
+        const unsigned solventIdx = fluidSystem.solventComponentIndex(phaseIdx);
+        const unsigned componentIdx = fluidSystem.canonicalToActiveCompIdx(solventIdx);
+        factors[componentIdx] = 1.0 / fs.invB(phaseIdx).value();
+    }
+    factors[Indices::contiEnergyEqIdx] = 1.0;
+}
+
+template <class DeviceTypeTag, class PrimaryVariablesT>
+__global__ void compactRelativeChangeKernel(
+    Opm::gpuistl::GpuView<const PrimaryVariablesT> current,
+    Opm::gpuistl::GpuView<const PrimaryVariablesT> previous,
+    Opm::gpuistl::GpuView<GetPropType<DeviceTypeTag, Properties::Scalar>> output,
+    std::size_t numCells)
+{
+    using Scalar = GetPropType<DeviceTypeTag, Properties::Scalar>;
+    using Indices = GetPropType<DeviceTypeTag, Properties::Indices>;
+    const std::size_t cell = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (cell >= numCells) {
+        return;
+    }
+    const auto& next = current[cell];
+    const auto& old = previous[cell];
+    const Scalar pressureNext = next[Indices::pressureSwitchIdx];
+    const Scalar pressureOld = old[Indices::pressureSwitchIdx];
+    const Scalar pressureDelta = pressureNext - pressureOld;
+    Scalar numerator = pressureDelta * pressureDelta;
+    Scalar denominator = pressureNext * pressureNext;
+
+    const Scalar waterNext = next.primaryVarsMeaningWater() == BlackOil::WaterMeaning::Sw
+                           ? next[Indices::waterSwitchIdx] : 0.0;
+    const Scalar waterOld = old.primaryVarsMeaningWater() == BlackOil::WaterMeaning::Sw
+                          ? old[Indices::waterSwitchIdx] : 0.0;
+    const Scalar waterDelta = waterNext - waterOld;
+    numerator += waterDelta * waterDelta;
+    denominator += waterNext * waterNext;
+    output[cell * 2] = numerator;
+    output[cell * 2 + 1] = denominator;
+}
+
+template <class DeviceTypeTag, class IntensiveQuantitiesT>
+__global__ void compactRockCompactionStateKernel(
+    Opm::gpuistl::GpuView<IntensiveQuantitiesT> intensiveQuantities,
+    Opm::gpuistl::GpuView<GetPropType<DeviceTypeTag, Properties::Scalar>> output,
+    std::size_t numCells)
+{
+    using FluidSystem = GetPropType<DeviceTypeTag, Properties::FluidSystem>;
+    const std::size_t cell = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (cell >= numCells) {
+        return;
+    }
+    const auto& fs = intensiveQuantities[cell].fluidState();
+    output[cell * 2] = fs.pressure(FluidSystem::gasPhaseIdx).value();
+    output[cell * 2 + 1] = fs.saturation(FluidSystem::waterPhaseIdx).value();
+}
+
 } // namespace
 
 // =============================================================================
@@ -244,6 +323,52 @@ template <class CpuTypeTag>
 bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::hasBridge() const
 {
     return static_cast<bool>(impl_->bridge);
+}
+
+template <class CpuTypeTag>
+std::vector<typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Scalar>
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::compactConvergenceFactors()
+{
+    using DeviceTypeTag = typename Bridge::DeviceTypeTagPublic;
+    auto& state = bridge();
+    const auto numCells = state.numDof();
+    constexpr unsigned blockSize = 128;
+    compactConvergenceKernel<DeviceTypeTag>
+        <<<(numCells + blockSize - 1) / blockSize, blockSize, 0, state.stream()>>>(
+            state.intensiveQuantitiesView(0), state.compactConvergenceView(), numCells);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    return state.downloadCompactConvergence();
+}
+
+template <class CpuTypeTag>
+std::vector<typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Scalar>
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::compactRelativeChange()
+{
+    using DeviceTypeTag = typename Bridge::DeviceTypeTagPublic;
+    auto& state = bridge();
+    const auto numCells = state.numDof();
+    constexpr unsigned blockSize = 128;
+    compactRelativeChangeKernel<DeviceTypeTag>
+        <<<(numCells + blockSize - 1) / blockSize, blockSize, 0, state.stream()>>>(
+            state.primaryVariablesView(0), state.primaryVariablesView(1),
+            state.relativeChangeView(), numCells);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    return state.downloadRelativeChange();
+}
+
+template <class CpuTypeTag>
+std::vector<typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Scalar>
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::compactRockCompactionState()
+{
+    using DeviceTypeTag = typename Bridge::DeviceTypeTagPublic;
+    auto& state = bridge();
+    const auto numCells = state.numDof();
+    constexpr unsigned blockSize = 128;
+    compactRockCompactionStateKernel<DeviceTypeTag>
+        <<<(numCells + blockSize - 1) / blockSize, blockSize, 0, state.stream()>>>(
+            state.intensiveQuantitiesView(0), state.relativeChangeView(), numCells);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    return state.downloadRelativeChange();
 }
 
 template <class CpuTypeTag>

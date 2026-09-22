@@ -429,6 +429,26 @@ relativeChange() const
     Scalar resultDelta = 0.0;
     Scalar resultDenom = 0.0;
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                  && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+        auto& model = this->simulator_.model();
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            const auto contributions = model.gpuNewtonDispatcher().compactRelativeChange();
+            const auto& elemMapper = model.elementMapper();
+            const auto& gridView = this->simulator_.gridView();
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                const unsigned cell = elemMapper.index(elem);
+                resultDelta += contributions[cell * 2];
+                resultDenom += contributions[cell * 2 + 1];
+            }
+            resultDelta = gridView.comm().sum(resultDelta);
+            resultDenom = gridView.comm().sum(resultDenom);
+            return resultDenom > 0.0 ? resultDelta / resultDenom : 0.0;
+        }
+    }
+#endif
+
     const auto& elemMapper = this->simulator_.model().elementMapper();
     const auto& gridView = this->simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -736,6 +756,43 @@ localConvergenceData(std::vector<Scalar>& R_sum,
     const auto& problem = this->simulator_.problem();
 
     const auto& residual = this->simulator_.model().linearizer().residual();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                  && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            const auto factors = this->simulator_.model().gpuNewtonDispatcher()
+                                     .compactConvergenceFactors();
+            constexpr unsigned compactNumEq = getPropValue<TypeTag, Properties::NumEq>();
+            const auto& gridView = this->simulator().gridView();
+            const auto& elemMapper = model.elementMapper();
+            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                const unsigned cell_idx = elemMapper.index(elem);
+                const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0)
+                                     * model.dofTotalVolume(cell_idx);
+                pvSumLocal += pvValue;
+                if (isNumericalAquiferCell(elem)) {
+                    numAquiferPvSumLocal += pvValue;
+                }
+                for (unsigned compIdx = 0; compIdx < compactNumEq; ++compIdx) {
+                    B_avg[compIdx] += factors[cell_idx * compactNumEq + compIdx];
+                    const Scalar r = residual[cell_idx][compIdx];
+                    R_sum[compIdx] += r;
+                    const Scalar coeff = std::abs(r) / pvValue;
+                    if (coeff > maxCoeff[compIdx]) {
+                        maxCoeff[compIdx] = coeff;
+                        maxCoeffCell[compIdx] = cell_idx;
+                    }
+                }
+            }
+            for (unsigned compIdx = 0; compIdx < compactNumEq; ++compIdx) {
+                B_avg[compIdx] /= Scalar(this->global_nc_);
+            }
+            return {pvSumLocal, numAquiferPvSumLocal};
+        }
+    }
+#endif
 
     ElementContext elemCtx(this->simulator_);
     const auto& gridView = this->simulator().gridView();

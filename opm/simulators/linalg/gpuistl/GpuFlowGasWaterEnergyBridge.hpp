@@ -145,6 +145,8 @@ public:
         std::uint64_t correctionDownloads{0}, correctionDownloadBytes{0};
         std::uint64_t correctionHistoryUploads{0}, correctionHistoryUploadBytes{0};
         std::uint64_t intensiveQuantityDownloads{0}, intensiveQuantityDownloadBytes{0};
+        std::uint64_t compactConvergenceDownloads{0}, compactConvergenceDownloadBytes{0};
+        std::uint64_t relativeChangeDownloads{0}, relativeChangeDownloadBytes{0};
         std::uint64_t ownedBufferAllocations{0};
         std::uint64_t ownedBufferAllocationBytes{0};
         std::uint64_t staticUploadBatches{0};
@@ -398,6 +400,41 @@ public:
         return DeviceIntensiveQuantitiesView(intensiveQuantitiesBuffer_[timeIdx]->data(), numDof_);
     }
 
+    gpuistl::GpuView<Scalar> compactConvergenceView()
+    {
+        validateValidSlot_(0);
+        return {compactConvergenceBuffer_->data(), compactConvergenceBuffer_->size()};
+    }
+
+    std::vector<Scalar> downloadCompactConvergence()
+    {
+        std::vector<Scalar> result(compactConvergenceBuffer_->size());
+        copyDeviceToHost_(result.data(), compactConvergenceBuffer_->data(),
+                          result.size() * sizeof(Scalar));
+        synchronizeStream_();
+        ++counters_.compactConvergenceDownloads;
+        counters_.compactConvergenceDownloadBytes += result.size() * sizeof(Scalar);
+        return result;
+    }
+
+    gpuistl::GpuView<Scalar> relativeChangeView()
+    {
+        validatePrimarySlot_(0);
+        validatePrimarySlot_(1);
+        return {relativeChangeBuffer_->data(), relativeChangeBuffer_->size()};
+    }
+
+    std::vector<Scalar> downloadRelativeChange()
+    {
+        std::vector<Scalar> result(relativeChangeBuffer_->size());
+        copyDeviceToHost_(result.data(), relativeChangeBuffer_->data(),
+                          result.size() * sizeof(Scalar));
+        synchronizeStream_();
+        ++counters_.relativeChangeDownloads;
+        counters_.relativeChangeDownloadBytes += result.size() * sizeof(Scalar);
+        return result;
+    }
+
     void recordPropertyReady(unsigned timeIdx)
     {
         validateReadySlot_(timeIdx);
@@ -593,6 +630,9 @@ private:
         constexpr unsigned numEq = getPropValue<CpuTypeTag, Properties::NumEq>();
         correction_ = std::make_unique<gpuistl::GpuVector<Scalar>>(numDof_ * numEq);
         previousCorrection_ = std::make_unique<gpuistl::GpuVector<Scalar>>(numDof_ * numEq);
+        compactConvergenceBuffer_ =
+            std::make_unique<gpuistl::GpuBuffer<Scalar>>(numDof_ * numEq);
+        relativeChangeBuffer_ = std::make_unique<gpuistl::GpuBuffer<Scalar>>(numDof_ * 2);
         zeroAsync_(switchHistory_->data(), numDof_);
         zeroAsync_(scratchSwitchHistory_->data(), numDof_);
         resetCorrectionHistory();
@@ -789,6 +829,8 @@ private:
         switchHistory_.reset();
         scratchSwitchHistory_.reset();
         updateStatus_.reset();
+        compactConvergenceBuffer_.reset();
+        relativeChangeBuffer_.reset();
         volumesBuffer_.reset();
         problemBuffer_.reset();
         deviceFluidSystem_.reset();
@@ -820,6 +862,8 @@ private:
     std::unique_ptr<gpuistl::GpuVector<Scalar>> correction_, previousCorrection_;
     std::unique_ptr<gpuistl::GpuBuffer<std::uint8_t>> switchHistory_, scratchSwitchHistory_;
     std::unique_ptr<gpuistl::GpuBuffer<std::uint32_t>> updateStatus_;
+    std::unique_ptr<gpuistl::GpuBuffer<Scalar>> compactConvergenceBuffer_;
+    std::unique_ptr<gpuistl::GpuBuffer<Scalar>> relativeChangeBuffer_;
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>>, numTimeSlots>
         primaryVariablesBuffer_{};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>, numTimeSlots>

@@ -32,6 +32,7 @@
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -82,14 +83,11 @@ __global__ void apply_source_deltas(const unsigned* indices,
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
- * \brief Manages GPU buffer allocation and view setup for one linearization pass.
+ * \brief Manages persistent GPU buffer ownership and per-linearization refresh.
  *
- * Constructed once per call to TpfaLinearizer::linearize_() when the GPU assembly
- * path is active.  The constructor performs all CPU-to-GPU copies and stores the
- * resulting GPU buffers as members.  Callers retrieve lightweight GpuView objects
- * via the accessor methods and pass them directly to the GPU kernels.  After the
- * kernels complete, copyResidualToHost() and copyJacobianToHost() transfer the
- * computed results back to the CPU.
+ * The topology and other invariant owners are uploaded once.  Subsequent
+ * linearizations retain their addresses and only clear mutable storage and
+ * refresh genuinely changing source contributions.
  */
 template <class TypeTag>
 class TpfaLinearizerGpuParams
@@ -171,6 +169,8 @@ private:
     std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
     const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
     gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
+    std::size_t sourceCapacity_{0};
+    unsigned numCells_{0};
 
 public:
     /*!
@@ -211,6 +211,7 @@ public:
         , residualBuffer_(gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual))
         , residualView_(gpuistl::make_view(residualBuffer_))
         , flattenedResidual_(residualBuffer_.size() * numEq)
+        , numCells_(numCells)
     {
         static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
                                      CorrectTypeTagView>);
@@ -271,6 +272,24 @@ public:
         boundaryInfoBuffer_ =
             gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
                 boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
+    }
+
+    void refreshForLinearization(unsigned numCells)
+    {
+        if (numCells != numCells_) {
+            OPM_THROW(std::logic_error,
+                      "Persistent GPU assembly parameters cannot be reused after a topology change");
+        }
+        if (propertyAssemblyBridge_) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+        }
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipMemset(residualBuffer_.data(), 0,
+                                    residualBuffer_.size() * sizeof(VectorBlockGPU)));
+#else
+        OPM_GPU_SAFE_CALL(cudaMemset(residualBuffer_.data(), 0,
+                                     residualBuffer_.size() * sizeof(VectorBlockGPU)));
+#endif
     }
 
     auto domainView()
@@ -377,12 +396,18 @@ public:
             gpuResidualContributions.emplace_back(residualContributions[i]);
             gpuJacobianContributions.emplace_back(jacobianContributions[i]);
         }
-        sourceIndices_ = gpuistl::GpuBuffer<unsigned>(indices);
-        sourceResidualDeltas_ = gpuistl::GpuBuffer<VectorBlockGPU>(gpuResidualContributions);
-        sourceJacobianDeltas_ = gpuistl::GpuBuffer<MatrixBlockGPU>(gpuJacobianContributions);
         if (indices.empty()) {
             return;
         }
+        if (sourceCapacity_ < indices.size()) {
+            sourceCapacity_ = std::max<std::size_t>(20, indices.size());
+            sourceIndices_ = gpuistl::GpuBuffer<unsigned>(sourceCapacity_);
+            sourceResidualDeltas_ = gpuistl::GpuBuffer<VectorBlockGPU>(sourceCapacity_);
+            sourceJacobianDeltas_ = gpuistl::GpuBuffer<MatrixBlockGPU>(sourceCapacity_);
+        }
+        sourceIndices_.copyFromHost(indices.data(), indices.size());
+        sourceResidualDeltas_.copyFromHost(gpuResidualContributions.data(), indices.size());
+        sourceJacobianDeltas_.copyFromHost(gpuJacobianContributions.data(), indices.size());
         constexpr unsigned blockSize = 256;
         apply_source_deltas<<<(indices.size() + blockSize - 1) / blockSize, blockSize>>>(
             sourceIndices_.data(),
