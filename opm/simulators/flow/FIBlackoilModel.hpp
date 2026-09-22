@@ -43,7 +43,6 @@
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
 #if HAVE_CUDA
-#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 #include <memory>
 #include <variant>

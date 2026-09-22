@@ -33,11 +33,9 @@
 
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
-#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
-#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
@@ -47,17 +45,6 @@
 
 namespace Opm
 {
-
-namespace {
-
-void registerFlowGpuParameters()
-{
-    Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
-        ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
-         "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
-}
-
-} // anonymous namespace
 
 int
 flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles)

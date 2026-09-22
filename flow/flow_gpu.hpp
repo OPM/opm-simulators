@@ -19,6 +19,9 @@
 
 #include <opm/simulators/flow/FlowGasWaterEnergyTypeTag.hpp>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+
+#include <opm/models/utils/parametersystem.hpp>
 /*
     This file extracts typetag declarations that must be present in both the .CU and .HIP
    executables for Flow to avoid double maintenance.
@@ -67,6 +70,13 @@ namespace Properties
             BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage>;
     };
 } // namespace Properties
+
+inline void registerFlowGpuParameters()
+{
+    Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+        ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
+         "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
+}
 
 //! \brief Main function used in flow binary.
 int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles);
