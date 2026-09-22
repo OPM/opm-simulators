@@ -82,7 +82,7 @@
         },
         "setupMpi": {
             "signature_template": "opm.simulators.{{name}}.setup_mpi(init: bool, finalize: bool) -> None",
-            "doc": "Sets MPI up for parallel simulation. This method should be called before any other method.\n\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize: Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
+            "doc": "Sets MPI up for parallel simulation. This method should be called before any other method.\n\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize: Whether to call ``MPI_Finalize()`` when the simulator object goes out of scope.\n\n:return: None"
         },
         "step": {
             "signature_template": "opm.simulators.{{name}}.step() -> int",
