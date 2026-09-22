@@ -118,13 +118,7 @@ class FvBaseLinearizer
 //! \endcond
 
 public:
-    /*!
-     * \brief Whether the linearizer assembles the model's equations on auxiliary DOFs.
-     *
-     * It does not: the assembly is driven by an element loop, and an auxiliary DOF has no
-     * element.  Auxiliary modules here are expected to assemble their rows themselves,
-     * from linearizeAuxiliaryEquations(), the way the well model does.
-     */
+    //! No: the element loop cannot reach auxiliary DOFs.
     static constexpr bool assemblesAuxiliaryDofEquations = false;
 
     FvBaseLinearizer() = default;

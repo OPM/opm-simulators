@@ -48,17 +48,8 @@ namespace Opm {
 /*!
  * \brief Numerical aquifers (AQUNUM/AQUCON) represented as auxiliary cells.
  *
- * The alternative to letting each aquifer cell take over a grid cell.  The aquifer
- * satisfies the same flow equations either way, and with the same coefficients: the pore
- * volume, depth and regions come from the AQUNUM record exactly as they would when
- * overriding a grid cell's field properties, and the connections are the very NNCs the
- * grid-cell representation would have generated -- reused here rather than reimplemented,
- * so that the two representations are the same discrete system and can be compared
- * directly.
- *
- * What differs is only where the unknown lives.  The grid keeps the shape the deck gives
- * it, which means no cell is resurrected to host an aquifer, no field property is
- * overridden, and no non-neighbour connection is created.
+ * Reuses the grid-cell representation's properties and NNCs, so both modes solve the
+ * same discrete system; only where the unknowns live differs.
  */
 template <class TypeTag>
 class NumericalAquiferAuxCells : public FlowAuxCellModule<TypeTag>
@@ -82,10 +73,8 @@ public:
         const auto& eclState = simulator_.vanguard().eclState();
         const auto& aquifers = eclState.aquifer().numericalAquifers();
 
-        // Enumerate aquifer by aquifer and, within an aquifer, in the order its cells
-        // were declared.  Not allAquiferCells(), which is an unordered map: the degree of
-        // freedom numbering would then depend on the hash order, and the chain structure
-        // -- which cell of an aquifer carries the reservoir connections -- would be lost.
+        // Declaration order, not allAquiferCells(): that map's hash order would make the
+        // DOF numbering arbitrary.
         for (const auto& [id, aquifer] : aquifers.aquifers()) {
             const auto first = this->cells_.size();
 
@@ -98,8 +87,6 @@ public:
             this->aquiferRange_.emplace(id, std::make_pair(first, this->cells_.size()));
         }
 
-        // The cells these records name were deactivated when the grid was built, which
-        // is what makes room for the aquifer to live outside it.
         this->checkAquiferCellsAreNotInterior();
     }
 
@@ -124,25 +111,14 @@ public:
     int hostCartesianIndex(unsigned localIdx) const override
     { return static_cast<int>(this->cells_.at(localIdx)->global_index); }
 
-    /*!
-     * \brief The reservoir cell this aquifer cell hangs off.
-     *
-     * Used to start the aquifer from a sensible fluid state.  All AQUCON connections of
-     * an aquifer attach to its first cell, so the whole chain is initialised from that
-     * cell's first reservoir neighbour.
-     */
+    //! Reservoir cell whose state initialises this aquifer cell.
     unsigned initialisationPartner(unsigned localIdx) const override
     { return this->initialisationPartner_.at(localIdx); }
 
     void connections(std::vector<Connection>& conns) const override
     { conns.insert(conns.end(), this->connections_.begin(), this->connections_.end()); }
 
-    /*!
-     * \brief Build the connection list.
-     *
-     * Deferred out of the constructor because it needs the grid's cartesian-to-compressed
-     * mapping, which is only meaningful once the grid has been distributed.
-     */
+    //! Not in the constructor: needs the compressed mapping of the distributed grid.
     void buildConnections()
     {
         const auto& vanguard = simulator_.vanguard();
@@ -153,19 +129,13 @@ public:
         this->initialisationPartner_.assign(this->cells_.size(), 0);
         this->hasReservoirConnection_.assign(this->cells_.size(), false);
 
-        // The grid-cell representation puts these connections into the input NNC list,
-        // where the region-based multipliers are applied to them alongside the deck's own
-        // NNCs (Transmissibility::applyMultRegTToInputNncTrans_).  A MULTREGT record can
-        // reduce an aquifer's connection to the reservoir by orders of magnitude, or shut
-        // it off entirely, so the same multiplier has to be applied here -- otherwise the
-        // aquifer is connected on one path and not on the other.
+        // The grid-cell path applies MULTREGT to these NNCs
+        // (applyMultRegTToInputNncTrans_); match it here.
         const auto& transMult = eclState.getTransMult();
         const auto multiplier = [&transMult](const std::size_t cell1, const std::size_t cell2) {
             return static_cast<Scalar>(transMult.getRegionMultiplierNNC(cell1, cell2));
         };
 
-        // Aquifer cell to aquifer cell: the chain within one aquifer.  Both endpoints
-        // are auxiliary cells.
         for (const auto& nnc : aquifers.aquiferCellNNCs()) {
             const auto dof1 = this->auxDofOf(nnc.cell1);
             const auto dof2 = this->auxDofOf(nnc.cell2);
@@ -173,11 +143,7 @@ public:
             this->connections_.push_back({dof1, dof2, trans, 0.0, 0.0});
         }
 
-        // Aquifer cell to reservoir cell.  The second endpoint is a real grid cell, so it
-        // has to be translated into the local compressed numbering -- and skipped when
-        // this rank does not own it.
-        // NNCdata normalises the order of its two cells, so which endpoint is the
-        // aquifer cell is not fixed; identify it by membership rather than by position.
+        // NNCdata sorts its endpoints, so identify the aquifer end by membership.
         std::size_t skipped = 0;
         for (const auto& nnc : aquifers.aquiferConnectionNNCs(eclState.getInputGrid(),
                                                               eclState.fieldProps()))
@@ -205,11 +171,8 @@ public:
             }
         }
 
-        // Only the cell that carries the AQUCON connections has a reservoir neighbour of
-        // its own; the rest of the chain hangs off it.  Give them all that cell's
-        // neighbour to start from -- per aquifer, so that two aquifers cannot borrow each
-        // other's.  Note this is a fallback for initialisation only: it says where a cell
-        // takes its initial state from, not what it is connected to.
+        // Cells without a reservoir neighbour initialise from their own aquifer's
+        // connected cell (initialisation only, not connectivity).
         for (const auto& [id, range] : this->aquiferRange_) {
             unsigned connected = 0;
             bool found = false;
@@ -240,15 +203,7 @@ public:
         }
     }
 
-    /*!
-     * \brief Set the initial state of the aquifer cells.
-     *
-     * They cannot be equilibrated the ordinary way -- that needs the cell's geometry --
-     * so each one starts from the state of the reservoir cell it is connected to, with
-     * the phase pressures carried to its own depth and the cell filled with water.  That
-     * is the same thing the grid-cell representation arranges for its aquifer cells, and
-     * an explicit initial pressure on the AQUNUM record overrides it either way.
-     */
+    //! Water-filled, partner's pressure shifted hydrostatically, as on the grid-cell path.
     void applyInitial() override
     {
         auto& solution = simulator_.model().solution(/*timeIdx=*/0);
@@ -277,8 +232,7 @@ public:
                                : getValue(fs.pressure(phase)) + rho * gravity * dz);
             }
 
-            // Order matters, as it does on the grid path: assignNaive() decides what the
-            // primary variables mean and needs the PVT region to do it.
+            // assignNaive() needs the PVT region set first.
             solution[globalIdx].setPvtRegionIndex(this->pvtRegionIndex(localIdx));
             solution[globalIdx].assignNaive(fs);
         }
@@ -286,9 +240,7 @@ public:
 
     void linearize(SparseMatrixAdapter&, GlobalEqVector&) override
     {
-        // Nothing to add: the aquifer cells are assembled by the model's own local
-        // residual, like grid cells, and they are always active so there are no dormant
-        // rows to condition.
+        // Assembled by the model's local residual like grid cells; nothing extra.
     }
 
     //! The aquifer identifiers this module represents, in declaration order.
@@ -322,13 +274,7 @@ public:
         return dofs;
     }
 
-    /*!
-     * \brief The connections of one aquifer that reach into the grid.
-     *
-     * The intra-aquifer chain is left out: what an aquifer reports as its influx is what
-     * crosses into the reservoir, not what moves inside itself.  Each entry is
-     * (aquifer degree of freedom, reservoir degree of freedom).
-     */
+    //! (aquifer DOF, reservoir DOF) pairs; the intra-aquifer chain is excluded from influx.
     std::vector<std::pair<unsigned, unsigned>> reservoirConnections(const int aquiferId) const
     {
         std::vector<std::pair<unsigned, unsigned>> conns;
@@ -390,24 +336,8 @@ private:
         return static_cast<unsigned>(pos->second);
     }
 
-    /*!
-     * \brief Refuse an aquifer cell buried inside the model.
-     *
-     * Deactivating the cell an AQUNUM record names is only sound where that cell is at
-     * the edge of the model.  With live rock both above and below it, removing it opens
-     * a hole in the middle of a column: the neighbours lose a connection they would
-     * otherwise have, and with PINCH active the grid processing may bridge across the
-     * gap and connect them to each other instead.  Neither is what the deck describes,
-     * and neither matches what the grid-cell representation does, so the two modes would
-     * quietly stop being comparable.
-     *
-     * Placing an aquifer cell there is questionable modelling to begin with -- a
-     * numerical aquifer is meant to hang off the model, not to sit inside it -- so this
-     * is refused rather than approximated.  The proper answer is for a numerical aquifer
-     * to be defined independently of the grid and then connected to it, which is the
-     * direction the auxiliary-cell representation is going; the restriction can be
-     * lifted once the aquifer no longer needs a cell to name at all.
-     */
+    //! Removing an interior cell would open a hole (or a PINCH bridge) the grid-cell
+    //! mode does not have, so the two modes would silently differ.
     void checkAquiferCellsAreNotInterior() const
     {
         const auto& grid = simulator_.vanguard().eclState().getInputGrid();
@@ -415,7 +345,7 @@ private:
 
         for (const auto* cell : this->cells_) {
             if ((cell->K == 0) || (cell->K + 1 >= nz)) {
-                continue; // at the top or the bottom of the model
+                continue;
             }
 
             const auto above = grid.getGlobalIndex(cell->I, cell->J, cell->K - 1);

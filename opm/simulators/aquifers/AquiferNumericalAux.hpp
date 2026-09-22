@@ -39,18 +39,7 @@ namespace Opm {
 /*!
  * \brief Reporting for a numerical aquifer represented as auxiliary cells.
  *
- * The counterpart of AquiferNumerical, which finds its cells in the grid and reads their
- * fluxes off the element context.  Neither is possible here -- the aquifer is not in the
- * grid -- so both quantities are formed from the degrees of freedom directly:
- *
- *  - the aquifer pressure is the water-volume-weighted water pressure of its cells, the
- *    same average the grid-cell representation forms over the same cells;
- *  - the influx is the water flux across the connections that reach into the reservoir,
- *    computed with the very local residual that assembled them, so the number reported is
- *    the number the equations used rather than a second opinion about it.
- *
- * The intra-aquifer chain is deliberately excluded: what the aquifer reports is what it
- * gives the reservoir, not what moves inside itself.
+ * Counterpart of AquiferNumerical; pressure and influx are read from the aux DOFs.
  */
 template <typename TypeTag>
 class AquiferNumericalAux : public AquiferInterface<TypeTag>
@@ -81,8 +70,7 @@ public:
 
     void initFromRestart(const data::Aquifers&) override
     {
-        // Restart together with auxiliary cells is refused at setup; there is nothing
-        // sensible to restore here and pretending otherwise would hide that.
+        // Restart with auxiliary cells is refused at setup.
     }
 
     void initialSolutionApplied() override
@@ -103,8 +91,7 @@ public:
 
     void addToSource(RateVector&, const unsigned, const unsigned) override
     {
-        // The aquifer is a set of degrees of freedom with their own equations, not a
-        // source term on a reservoir cell.
+        // Own DOFs and equations, not a source term.
     }
 
     data::AquiferData aquiferData() const override
@@ -126,7 +113,7 @@ public:
     Scalar totalFaceArea() const override
     { return 1.0; }
 
-    //! Pore volume of the aquifer, for the field totals it would otherwise drop out of.
+    //! For the field totals, which the grid no longer covers.
     Scalar poreVolume() const
     {
         const auto& model = this->simulator_.model();
@@ -169,19 +156,12 @@ private:
             : Scalar{0};
     }
 
-    /*!
-     * \brief Surface water rate from the aquifer into the reservoir.
-     *
-     * Formed with the same LocalResidual::computeFlux() the linearizer used, given the
-     * same neighbour information it cached, so the reported influx is the flux the
-     * equations were assembled with -- upwinding, gravity, threshold pressures and all --
-     * rather than a reimplementation that would drift from it.
-     */
+    //! Surface water rate into the reservoir, via the linearizer's own computeFlux() so
+    //! the report matches the assembled flux.
     Scalar aquiferFluxRate() const
     {
         if constexpr (! Linearizer::assemblesAuxiliaryDofEquations) {
-            // Cannot happen: auxiliary DOFs carrying equations are refused on such a
-            // linearizer when they are registered.
+            // Unreachable: refused at registration on such a linearizer.
             return Scalar{0};
         }
         else {
@@ -212,13 +192,10 @@ private:
                     const auto waterEqIdx = Indices::conti0EqIdx
                         + fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(waterPos));
 
-                    // computeFlux() reports a flux per unit area, which the linearizer
-                    // scales by the face area; an authored connection carries the whole
-                    // geometry in its transmissibility, so that area is unity.
+                    // Per unit area; faceArea is 1 for authored connections.
                     Scalar connRate = getValue(flux[waterEqIdx]) * nbInfo.res_nbinfo.faceArea;
 
-                    // ... and it is written in mass unless the model conserves surface
-                    // volume, while the aquifer influx is reported as a surface rate.
+                    // Mass unless conserveSurfaceVolume; report a surface rate.
                     if constexpr (! conserveSurfaceVolume) {
                         connRate /= fsys.referenceDensity(waterPos,
                                                           problem.pvtRegionIndex(aquiferDof));

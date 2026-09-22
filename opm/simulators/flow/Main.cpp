@@ -351,9 +351,7 @@ void Main::readDeck(const std::string& deckFilename,
     if (output_param >= 0)
         outputInterval = output_param;
 
-    // How the numerical aquifers of the deck are to be represented.  This has to be
-    // decided before the EclipseState is built, because taking over a grid cell reshapes
-    // the grid and the field properties as the state is constructed.
+    // Needed before the EclipseState is built: grid mode reshapes grid and field props.
     auto aquiferMode = NumericalAquiferMode::GridCells;
     if (numericalAquiferMode == "aux") {
         aquiferMode = NumericalAquiferMode::AuxiliaryCells;

@@ -223,8 +223,7 @@ serializeOp(Serializer& serializer)
         } else if (num) {
             serializer(*num);
         } else if (numAux) {
-            // Nothing to serialize: restart is refused while auxiliary cells are live,
-            // and the reported values are recomputed from the solution at every step.
+            // Restart is refused with auxiliary cells; values are recomputed each step.
         } else if (flux) {
             serializer(*flux);
         } else {
@@ -242,13 +241,7 @@ void BlackoilAquiferModel<TypeTag>::initializeRestartDynamicAquifers()
     this->createDynamicAquifers(rstStep);
 }
 
-/*!
- * \brief Attach reporting to the numerical aquifers that live outside the grid.
- *
- * Deferred until the initial solution is in place: the aquifers proper are created from
- * the problem's constructor, at which point neither the problem nor the auxiliary modules
- * it owns exist yet, and the reported quantities are read off the degrees of freedom.
- */
+// Not in initializeStaticAquifers(): the auxiliary modules do not exist yet there.
 template <typename TypeTag>
 void BlackoilAquiferModel<TypeTag>::createAuxiliaryCellAquifers()
 {
@@ -314,10 +307,7 @@ void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
         }
     }
 
-    // AquiferNumerical is a reporting shim over aquifer cells that live in the grid: it
-    // locates them through the grid and post-computes their pressure and influx from the
-    // neighbouring cells' fluxes.  None of that applies when the aquifer is represented
-    // outside the grid -- the cells it would look for are not there.
+    // AquiferNumerical looks its cells up in the grid.
     const bool numAquifersInGrid =
         this->simulator_.vanguard().eclState().numericalAquiferMode() ==
         NumericalAquiferMode::GridCells;
@@ -330,10 +320,6 @@ void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
             this->aquifers.push_back(std::move(aquNumPtr));
         }
     }
-    // The auxiliary-cell counterpart cannot be built here: this runs from the problem's
-    // own constructor, so neither the problem nor the auxiliary modules exist yet.  See
-    // createAuxiliaryCellAquifers().
-
 }
 
 template <typename TypeTag>

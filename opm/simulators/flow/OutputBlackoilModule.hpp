@@ -295,11 +295,7 @@ public:
         }
     }
 
-    /*!
-     * \brief The input-grid cell each auxiliary degree of freedom takes its regions from.
-     *
-     * In auxiliary-DOF order, so that it lines up with the tail of the per-DOF buffers.
-     */
+    //! In auxiliary-DOF order, to line up with the tail of the per-DOF buffers.
     std::vector<int> auxCellHostCartesianIndices_() const
     {
         const auto& model = this->simulator_.model();

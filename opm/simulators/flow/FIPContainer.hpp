@@ -54,10 +54,7 @@ public:
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    //! \brief Allocate the per-DOF buffers.
-    //! \param bufferSize Number of degrees of freedom, auxiliary ones included.
-    //! \param gridSize Number of grid cells; the restart arrays stop there, since a
-    //!        degree of freedom outside the grid has no cell to be written against.
+    //! \brief bufferSize includes auxiliary DOFs; restart arrays stop at gridSize.
     bool allocate(const std::size_t bufferSize,
                   const std::size_t gridSize,
                   const SummaryConfig& summaryConfig,

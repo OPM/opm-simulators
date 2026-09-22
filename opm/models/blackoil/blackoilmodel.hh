@@ -499,8 +499,7 @@ public:
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
         // do not care about the auxiliary equations as they are supposed to scale
-        // themselves -- but an auxiliary cell holds this model's own primary variables
-        // and needs this model's scaling
+        // themselves; auxiliary cells with the model's own variables excepted
         if (!this->dofCarriesModelEquations(globalDofIdx)) {
             return 1.0;
         }
@@ -564,8 +563,7 @@ public:
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
         // do not care about the auxiliary equations as they are supposed to scale
-        // themselves -- but an auxiliary cell carries this model's own equations and
-        // needs this model's scaling
+        // themselves; auxiliary cells with the model's own equations excepted
         if (!this->dofCarriesModelEquations(globalDofIdx)) {
             return 1.0;
         }

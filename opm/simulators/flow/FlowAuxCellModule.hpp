@@ -35,24 +35,10 @@
 namespace Opm {
 
 /*!
- * \brief Base class for auxiliary modules whose degrees of freedom are *cells*.
+ * \brief Base class for auxiliary modules whose degrees of freedom are cells without
+ *        geometry, assembled by the model's local residual.
  *
- * An auxiliary cell satisfies the same conservation equations as a grid cell, and is
- * assembled by the same local residual.  What it does not have is geometry: its pore
- * volume, depth and regions are authored rather than derived from a grid entity, and so
- * is its connection list.  A numerical aquifer is the simplest example -- it is pure
- * bookkeeping, a volume and a list of connections -- and fracture flow cells are the
- * dynamic one, where the same quantities are recomputed as the aperture changes.
- *
- * This is deliberately not the shape of the well models, which are also auxiliary
- * modules.  Their unknowns are of a different kind and they assemble and scale their own
- * equations in linearize(); they leave carriesModelEquations() false.  A module derived
- * from this class declares the opposite, and in exchange has to supply, per degree of
- * freedom, everything the model would otherwise read off the grid.
- *
- * Indices passed to the accessors below are *module-local*, in [0, numDofs());
- * localToGlobalDof() converts to the model's numbering.  The connections reported by
- * connections() use global numbering, because they may name grid cells.
+ * Accessor indices are module-local; Connection endpoints are global DOFs.
  */
 template <class TypeTag>
 class FlowAuxCellModule : public BaseAuxiliaryModule<TypeTag>
@@ -64,105 +50,53 @@ protected:
     using NeighborSet = typename ParentType::NeighborSet;
 
 public:
-    /*!
-     * \brief A flux connection authored by this module.
-     *
-     * Either endpoint may be a grid cell or an auxiliary cell; both are global degree of
-     * freedom indices.  The transmissibility is the whole of the geometry -- there is no
-     * face area to multiply by.
-     */
+    //! Endpoints are global DOFs, grid or auxiliary; there is no face area.
     struct Connection
     {
         unsigned dof1{};
         unsigned dof2{};
         Scalar trans{};
 
-        //! Thermal half transmissibilities, dof1->dof2 and dof2->dof1.  Only consulted
-        //! when the model solves an energy equation.
+        //! dof1->dof2 and dof2->dof1; energy equation only.
         Scalar thermalHalfTrans12{};
         Scalar thermalHalfTrans21{};
     };
 
-    //! The degrees of freedom of an auxiliary cell module are cells.
     bool carriesModelEquations() const override
     { return true; }
 
-    //! A cell's volume is its bulk volume.
     Scalar dofVolume(unsigned localIdx) const override
     { return this->bulkVolume(localIdx); }
 
-    /*!
-     * \brief The connections of this module, each reported exactly once.
-     *
-     * The discretization enters every connection in the neighbour list of *both* of its
-     * endpoints and assembles it from both sides, so reporting one per pair is correct;
-     * reporting it twice would double the flux.
-     */
+    //! Report each connection once; it is assembled from both sides, so twice doubles the flux.
     virtual void connections(std::vector<Connection>& conns) const = 0;
 
-    /*!
-     * \brief Pore volume of an auxiliary cell.
-     */
     virtual Scalar poreVolume(unsigned localIdx) const = 0;
 
-    /*!
-     * \brief Bulk volume of an auxiliary cell.
-     *
-     * The model divides the pore volume by this to obtain a porosity, so the two have to
-     * be authored consistently.  A module with no meaningful bulk volume should report
-     * the pore volume and accept a porosity of one.
-     */
+    //! Porosity is poreVolume/bulkVolume; without a bulk volume, report the pore volume.
     virtual Scalar bulkVolume(unsigned localIdx) const = 0;
 
-    /*!
-     * \brief Datum depth of an auxiliary cell, used for the gravity head.
-     */
     virtual Scalar depth(unsigned localIdx) const = 0;
 
-    //! Zero-based PVT region of an auxiliary cell.
+    //! Zero-based.
     virtual unsigned pvtRegionIndex(unsigned localIdx) const = 0;
 
-    //! Zero-based saturation-function region of an auxiliary cell.
+    //! Zero-based.
     virtual unsigned satRegionIndex(unsigned localIdx) const = 0;
 
-    /*!
-     * \brief The cell of the input grid whose field properties describe this one.
-     *
-     * A numerical aquifer names a cell, and takes that cell's region numbers wherever the
-     * AQUNUM record does not override them -- so the reporting regions it belongs to are
-     * that cell's, whether or not the cell is part of the simulation grid.  Auxiliary
-     * cells with no such cell to name return -1 and fall back to their initialisation
-     * partner's regions.
-     */
+    //! Input-grid cell supplying the reporting regions; -1 falls back to the
+    //! initialisation partner's.
     virtual int hostCartesianIndex(unsigned /*localIdx*/) const
     { return -1; }
 
-    /*!
-     * \brief A grid cell whose initial state this auxiliary cell is derived from.
-     *
-     * Auxiliary cells cannot be equilibrated by the ordinary machinery, which needs the
-     * cell's geometry.  Reporting a partner lets the problem start from that cell's
-     * initial fluid state; a module which sets its own initial state in applyInitial()
-     * may ignore this.
-     */
+    //! Grid cell to take the initial state from; equilibration needs geometry.
     virtual unsigned initialisationPartner(unsigned localIdx) const = 0;
 
-    /*!
-     * \brief Whether this auxiliary cell currently takes part in the flow problem.
-     *
-     * A module may preallocate degrees of freedom it does not use yet -- fracture cells
-     * that have not opened.  Such a cell has no volume and no connections, so its row
-     * would be empty; the module is responsible for conditioning it in linearize().
-     */
+    //! Inactive (preallocated) cells have empty rows; the module conditions them in linearize().
     virtual bool isActive(unsigned /*localIdx*/) const
     { return true; }
 
-    /*!
-     * \brief Report the sparsity contribution of this module's connections.
-     *
-     * Both directions, plus the diagonal, so that a cell with no connections still has a
-     * block to be conditioned in.
-     */
+    //! Diagonal too, so an unconnected cell still has a block to condition.
     void addNeighbors(std::vector<NeighborSet>& neighbors) const override
     {
         std::vector<Connection> conns;
@@ -179,10 +113,6 @@ public:
         }
     }
 
-    /*!
-     * \brief Hand the same connections to the discretization, which builds the
-     *        neighbour info from them.
-     */
     void addConnections(std::vector<typename ParentType::AuxiliaryConnection>& conns) const override
     {
         std::vector<Connection> own;
