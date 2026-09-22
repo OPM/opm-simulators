@@ -1382,7 +1382,7 @@ protected:
 #pragma omp parallel for
 #endif
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
-                const auto& iq = *model.cachedIntensiveQuantities(dofIdx, /*timeIdx=*/ 0);
+                const auto& iq = model.intensiveQuantities(dofIdx, /*timeIdx=*/ 0);
                 func(dofIdx, iq);
         }
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
@@ -1853,7 +1853,7 @@ protected:
         std::size_t numGridDof = this->model().numGridDof();
         this->rockCompTransMultVal_.resize(numGridDof, 1.0);
         for (std::size_t elementIdx = 0; elementIdx < numGridDof; ++elementIdx) {
-            const auto& iq = *model.cachedIntensiveQuantities(elementIdx, /*timeIdx=*/ 0);
+            const auto& iq = model.intensiveQuantities(elementIdx, /*timeIdx=*/ 0);
             Scalar trans_mult = computeRockCompTransMultiplier_<Scalar>(iq, elementIdx);
             this->rockCompTransMultVal_[elementIdx] = trans_mult;
         }

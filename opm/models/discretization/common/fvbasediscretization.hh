@@ -660,6 +660,17 @@ public:
         return &intensiveQuantityCache_[timeIdx][globalIdx];
     }
 
+    const IntensiveQuantities& intensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
+    {
+        const auto* intQuants = cachedIntensiveQuantities(globalIdx, timeIdx);
+        if (!intQuants) {
+            throw std::logic_error("Intensive quantities are not cached; "
+                                   "--enable-intensive-quantity-cache=false is not "
+                                   "supported by this model");
+        }
+        return *intQuants;
+    }
+
     const auto& intensiveQuantityCache() const
     { return intensiveQuantityCache_; }
 
