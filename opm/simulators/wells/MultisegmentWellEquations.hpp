@@ -124,7 +124,8 @@ public:
                                   const bool /*use_well_weights*/,
                                   const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int seg_pressure_var_ind,
-                                  const WellState<Scalar, IndexTraits>& well_state) const;
+                                  const WellState<Scalar, IndexTraits>& well_state,
+                                  const int nrWells) const;
 
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);
