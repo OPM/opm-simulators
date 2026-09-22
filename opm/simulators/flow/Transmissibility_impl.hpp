@@ -123,16 +123,18 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 bool Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 gridJoins_(unsigned elemIdx1, unsigned elemIdx2) const
 {
+    using Ix = typename ElementMapper::Index;
+
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
 
     for (const auto& elem : elements(gridView_)) {
-        if (elemMapper.index(elem) != static_cast<int>(elemIdx1)) {
+        if (elemMapper.index(elem) != static_cast<Ix>(elemIdx1)) {
             continue;
         }
 
         for (const auto& intersection : intersections(gridView_, elem)) {
             if (intersection.neighbor() &&
-                (elemMapper.index(intersection.outside()) == static_cast<int>(elemIdx2)))
+                (elemMapper.index(intersection.outside()) == static_cast<Ix>(elemIdx2)))
             {
                 return true;
             }
@@ -162,13 +164,15 @@ describeCell_(unsigned elemIdx) const
 
     if constexpr (requires { grid_.maxLevel(); }) {
         if (grid_.maxLevel() > 0) {
+            using Ix = typename ElementMapper::Index;
+
             // Which grid the cell belongs to is the first thing worth knowing:
             // a pair spanning a refinement boundary, or two cells refining one
             // coarse cell, is where these lookups go wrong. Found through the
             // mapper -- iteration order is not index order.
             ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
             for (const auto& elem : elements(gridView_)) {
-                if (elemMapper.index(elem) == static_cast<int>(elemIdx)) {
+                if (elemMapper.index(elem) == static_cast<Ix>(elemIdx)) {
                     text += fmt::format(", level {}", elem.level());
                     break;
                 }
