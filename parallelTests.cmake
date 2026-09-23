@@ -199,6 +199,29 @@ add_test_compare_parallel_simulation(
     --tolerance-mb=1e-8
 )
 
+# Check WPWE events from a +CON workover on a standard well split across ranks.
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe9_wpwe_cecon
+  FILENAME
+    SPE9_WPWE_CECON
+  DIR
+    wpwe
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    1e-3
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --allow-distributed-wells=true
+    --partition-method=simple
+)
+
 # A test for distributed multisegment wells.
 # We load distribute only along the z-axis
 # This file contains one Multisegment well
