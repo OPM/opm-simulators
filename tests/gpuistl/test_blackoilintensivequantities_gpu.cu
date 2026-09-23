@@ -442,6 +442,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
 
     Opm::FlowGenericVanguard::readDeck(deckPath);
     auto sim = std::make_unique<Simulator>();
+    sim->model().applyInitialSolution();
 
     auto& cpuProblem = sim->problem();
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
@@ -484,15 +485,17 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     BOOST_REQUIRE_EQUAL(numCells, expectedNumCells);
     BOOST_REQUIRE_GT(numCells, 0u);
 
-    using PrimaryVariablesCpu = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
     using PrimaryVariablesGpu = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
     using IntensiveQuantitiesCpu = Opm::BlackOilIntensiveQuantities<TypeTag>;
     using IntensiveQuantitiesGpu = Opm::BlackOilIntensiveQuantities<TypeNacht>;
 
-    PrimaryVariablesCpu primaryVariablesCpu;
-    primaryVariablesCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
-    PrimaryVariablesGpu primaryVariablesGpu(primaryVariablesCpu);
-    std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu(numCells, primaryVariablesGpu);
+    const auto& cpuSolution = cpuProblem.model().solution(/*timeIdx=*/0);
+    BOOST_REQUIRE_EQUAL(cpuSolution.size(), numCells);
+    std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu;
+    hostPrimaryVariablesGpu.reserve(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        hostPrimaryVariablesGpu.emplace_back(cpuSolution[i]);
+    }
     Opm::gpuistl::GpuBuffer<PrimaryVariablesGpu> primaryVariablesBuffer(hostPrimaryVariablesGpu);
 
     IntensiveQuantitiesCpu cpuIntensiveQuantitiesPrototype;
@@ -535,7 +538,10 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     std::vector<IntensiveQuantitiesCpu> cpuIntensiveQuantities(numCells);
     const auto cpuT0 = std::chrono::steady_clock::now();
     for (std::size_t i = 0; i < numCells; ++i) {
-        cpuIntensiveQuantities[i].update(cpuProblem, primaryVariablesCpu, static_cast<unsigned>(i), 0);
+        cpuIntensiveQuantities[i].update(cpuProblem,
+                                         cpuSolution[i],
+                                         static_cast<unsigned>(i),
+                                         0);
     }
     const auto cpuT1 = std::chrono::steady_clock::now();
     const double cpuMilliseconds =
