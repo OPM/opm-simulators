@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # This performs a serial and a parallel for a simulator,
-# then compares the summary and restart files from the two runs.
+# then compares the summary, restart, init and grid files from the two runs.
+# The init and grid files carry the transmissibilities and any non-neighbour
+# connections.
 # Meant to track regression in parallel simulators.
 
 if test $# -eq 0
@@ -66,6 +68,25 @@ if [ $? -ne 0 ]
 then
   ecode=1
   ${COMPARE_ECL_COMMAND} -a -l -t UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+fi
+
+echo "=== Executing comparison for init file ==="
+${COMPARE_ECL_COMMAND} -x -t INIT ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+if [ $? -ne 0 ]
+then
+  ecode=1
+  ${COMPARE_ECL_COMMAND} -a -x -t INIT ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+fi
+
+# The init file carries the NNC transmissibilities, the grid file the pairs of
+# cells they connect, so a non-neighbour connection is only covered when both
+# are compared.
+echo "=== Executing comparison for grid file ==="
+${COMPARE_ECL_COMMAND} -x -t EGRID ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+if [ $? -ne 0 ]
+then
+  ecode=1
+  ${COMPARE_ECL_COMMAND} -a -x -t EGRID ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 exit $ecode
