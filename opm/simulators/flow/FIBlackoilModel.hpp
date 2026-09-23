@@ -84,6 +84,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
 
 public:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
         , element_chunks_(this->gridView_,
@@ -410,6 +412,17 @@ public:
             this->invalidateIntensiveQuantitiesCache(timeIdx);
             gpuIntensiveQuantitiesDispatcher_->evaluateResident(timeIdx);
         }
+    }
+
+    bool computeGpuTrueImpesWeights(gpuistl::GpuVector<Scalar>& weights,
+                                   Scalar timeStepSize) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (hasGpuPropertyAssemblyBridge() && this->gridView_.comm().size() == 1) {
+                return gpuIntensiveQuantitiesDispatcher_->computeTrueImpesWeights(weights, timeStepSize);
+            }
+        }
+        return false;
     }
 
     void reportGpuNewtonTransfers() const

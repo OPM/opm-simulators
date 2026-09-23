@@ -19,8 +19,11 @@
 
 #include <dune/istl/operators.hh>
 #include <memory>
+#include <cmath>
+#include <cstdlib>
 #include <optional>
 #include <opm/grid/utility/ElementChunks.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
@@ -444,7 +447,17 @@ private:
                 const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
                 // CPU implementation wrapped for GPU
                 weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
-                    // Use the CPU implementation to calculate the weights
+                    bool residentWeights = false;
+                    if constexpr (requires { m_simulator.model().computeGpuTrueImpesWeights(
+                                                 *m_weights, m_simulator.timeStepSize()); }) {
+                        residentWeights = m_simulator.model().computeGpuTrueImpesWeights(
+                            *m_weights, m_simulator.timeStepSize());
+                        if (residentWeights && std::getenv("OPM_GPU_VALIDATE_TRUEIMPES") == nullptr) {
+                            return *m_weights;
+                        }
+                    }
+                    // Keep the CPU implementation for unsupported models and
+                    // singular-block diagnostics.
                     ElementContext elemCtx(m_simulator);
                     Amg::getTrueImpesWeights(pressureIndex,
                                              m_cpuWeights,
@@ -452,6 +465,28 @@ private:
                                              m_element_chunks,
                                              enableThreadParallel);
 
+                    if (residentWeights) {
+                        // Explicit diagnostic mode: compare every resident weight
+                        // with the existing CPU calculation. Keep all validation
+                        // transfers out of ordinary benchmark runs.
+                        Vector gpuWeights(m_cpuWeights.size());
+                        m_weights->copyToHost(gpuWeights);
+                        real_type maxError = 0;
+                        for (std::size_t cell = 0; cell < m_cpuWeights.size(); ++cell) {
+                            for (int eq = 0; eq < Vector::block_type::size(); ++eq) {
+                                const auto error = std::abs(gpuWeights[cell][eq] - m_cpuWeights[cell][eq]);
+                                if (!std::isfinite(error) || error > 1e-10) {
+                                    OPM_THROW(std::runtime_error, fmt::format(
+                                        "Resident true-IMPES weight mismatch at cell {}, equation {}: GPU={}, CPU={}",
+                                        cell, eq, gpuWeights[cell][eq], m_cpuWeights[cell][eq]));
+                                }
+                                maxError = std::max(maxError, error);
+                            }
+                        }
+                        OpmLog::info(fmt::format("[GPU true-IMPES validation] cells={} max_absolute_error={}",
+                                                m_cpuWeights.size(), maxError));
+                        return *m_weights;
+                    }
                     // Copy CPU vector to GPU vector using main stream and asynchronous transfer
                     m_weights->copyFromHostAsync(m_cpuWeights);
                     return *m_weights;

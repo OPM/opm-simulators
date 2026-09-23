@@ -58,6 +58,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 
@@ -255,6 +256,56 @@ __global__ void compactRockCompactionStateKernel(
     output[cell * 2 + 1] = fs.saturation(FluidSystem::waterPhaseIdx).value();
 }
 
+template <class DeviceTypeTag, class ModelView>
+__global__ void trueImpesWeightsKernel(ModelView model,
+                                       GetPropType<DeviceTypeTag, Properties::Scalar>* weights,
+                                       GetPropType<DeviceTypeTag, Properties::Scalar> dt,
+                                       std::size_t numCells, int* failed)
+{
+    using Scalar = GetPropType<DeviceTypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<DeviceTypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<DeviceTypeTag, Properties::Indices>;
+    using LocalResidual = BlackOilLocalResidualTPFA<DeviceTypeTag>;
+    constexpr unsigned numEq = getPropValue<DeviceTypeTag, Properties::NumEq>();
+    static_assert(numEq == 3);
+    constexpr unsigned pressureIndex = Indices::pressureSwitchIdx;
+    const std::size_t cell = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (cell >= numCells) {
+        return;
+    }
+    const auto& iq = model.intensiveQuantities(cell, 0);
+    MiniVector<Evaluation, numEq> storage;
+    LocalResidual::template computeStorage<Evaluation>(storage, iq);
+    const Scalar storageScale = model.dofTotalVolume(cell) * iq.extrusionFactor() / dt;
+    Scalar block[numEq * numEq];
+    Scalar rhs[numEq] = {};
+    Scalar result[numEq] = {};
+    rhs[pressureIndex] = 1.0;
+    for (unsigned eq = 0; eq < numEq; ++eq) {
+        for (unsigned pv = 0; pv < numEq; ++pv) {
+            block[pv * numEq + eq] = storage[eq].derivative(pv) / storageScale;
+            if (pv == pressureIndex) {
+                block[pv * numEq + eq] *= 50e5;
+            }
+        }
+    }
+    if (!solveBlock<Scalar, numEq>(block, rhs, result)) {
+        atomicExch(failed, 1);
+        return;
+    }
+    Scalar maxAbs = 0.0;
+    for (unsigned eq = 0; eq < numEq; ++eq) {
+        maxAbs = max(maxAbs, abs(result[eq]));
+    }
+    if (!(maxAbs > 0.0) || !isfinite(maxAbs)) {
+        atomicExch(failed, 1);
+        return;
+    }
+    for (unsigned eq = 0; eq < numEq; ++eq) {
+        weights[cell * numEq + eq] = result[eq] / maxAbs;
+    }
+}
+
 } // namespace
 
 // =============================================================================
@@ -263,6 +314,8 @@ __global__ void compactRockCompactionStateKernel(
 template <class CpuTypeTag>
 struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     std::unique_ptr<Bridge> bridge;
+    std::unique_ptr<GpuBuffer<int>> trueImpesStatus;
+    std::uint64_t trueImpesWeightUpdates{0};
     bool validatedBranches{false};
     std::array<bool, 3> reportedRoundoff{};
 };
@@ -282,14 +335,15 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::reportTransferCounter
     if (impl_->bridge) {
         const auto& c = impl_->bridge->transferCounters();
         OpmLog::info(std::format(
-            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={} source_iq_downloads={} source_iq_download_bytes={}",
+            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={} source_iq_downloads={} source_iq_download_bytes={} gpu_trueimpes_updates={}",
             c.successfulNewtonUpdates, c.primaryVariableUploads, c.primaryVariableUploadBytes,
             c.primaryVariableDownloads, c.primaryVariableDownloadBytes, c.correctionDownloads,
             c.correctionDownloadBytes, c.intensiveQuantityDownloads, c.intensiveQuantityDownloadBytes,
             c.ownedBufferAllocations, c.staticUploadBatches, c.ownedBufferAllocationBytes,
             c.staticUploadCalls, c.staticUploadBytes, c.solverCorrectionAllocations,
             c.correctionHistoryUploads, c.correctionHistoryUploadBytes,
-            c.sourceIntensiveQuantityDownloads, c.sourceIntensiveQuantityDownloadBytes));
+            c.sourceIntensiveQuantityDownloads, c.sourceIntensiveQuantityDownloadBytes,
+            impl_->trueImpesWeightUpdates));
     }
 }
 
@@ -513,6 +567,36 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::materializeHostIntens
         OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
     }
     impl_->bridge->materializeHostIntensiveQuantity(timeIdx, globalIdx, destination);
+}
+
+template <class CpuTypeTag>
+bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::computeTrueImpesWeights(
+    GpuVector<Scalar>& weights, Scalar timeStepSize)
+{
+    auto& owner = bridge();
+    constexpr unsigned numEq = getPropValue<CpuTypeTag, Properties::NumEq>();
+    if (weights.dim() != owner.numDof() * numEq || !(timeStepSize > 0.0)) {
+        OPM_THROW(std::invalid_argument, "Invalid resident true-IMPES weights dimensions or timestep");
+    }
+    if (!impl_->trueImpesStatus) {
+        impl_->trueImpesStatus = std::make_unique<GpuBuffer<int>>(1);
+    }
+    int failed = 0;
+    OPM_GPU_SAFE_CALL(cudaMemsetAsync(impl_->trueImpesStatus->data(), 0, sizeof(int), nullptr));
+    // Both CPR and TPFA consume data on the default stream. Order this read
+    // after the property's writer without materializing any host IQs.
+    owner.waitForAssembly(0);
+    using DeviceTypeTag = typename Bridge::DeviceTypeTagPublic;
+    constexpr unsigned blockSize = 256;
+    trueImpesWeightsKernel<DeviceTypeTag><<<(owner.numDof() + blockSize - 1) / blockSize, blockSize>>>(
+        owner.modelView(), weights.data(), timeStepSize, owner.numDof(), impl_->trueImpesStatus->data());
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    impl_->trueImpesStatus->copyToHost(&failed, 1);
+    if (failed) {
+        return false;
+    }
+    ++impl_->trueImpesWeightUpdates;
+    return true;
 }
 
 template <class CpuTypeTag>
