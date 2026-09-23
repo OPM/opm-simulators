@@ -68,9 +68,33 @@ public:
         ReservoirCouplingSlave<Scalar> &slave
     );
 
+    /// @brief Forget every master injection target held from an earlier
+    ///   receive.  Called when the master sends none: the injection list a
+    ///   master sends is complete, so an empty one withdraws them all.
+    void clearMasterInjectionTargets() { this->master_injection_targets_.clear(); }
+
+    /// @brief Forget every master production target and limit held from an
+    ///   earlier receive.  Called when a handshake brings none: the master
+    ///   has withdrawn them.
+    void clearMasterProductionConstraints()
+    {
+        this->master_production_targets_.clear();
+        this->master_production_limits_.clear();
+    }
+
     /// @brief Get the MPI communicator for intra-slave communication
     /// @return Reference to the parallel communication object
     const Parallel::Communication &comm() const { return this->slave_.getComm(); }
+
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step (i.e. at least one of its master groups is a
+    ///   leaf node in the master network). Set by
+    ///   `receiveCoupledNetworkActiveStatusFromMaster` from the master's
+    ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
+    ///   unconnected slave never participates in the cross-rescoup exchange
+    ///   and balances only its own (local) network.
+    bool connectedToMasterCoupledNetwork() const
+    { return connected_to_master_coupled_network_; }
 
     /// @brief Get the MPI communicator for slave-master communication
     /// @return MPI communicator handle for communication with the master process
@@ -175,16 +199,6 @@ public:
     /// @details See `last_received_master_group_node_pressures_is_final_` variable for details.
     bool lastReceivedMasterGroupNodePressuresIsFinal() const
     { return last_received_master_group_node_pressures_is_final_; }
-
-    /// @brief Whether this slave is connected to the master's cross-rescoup
-    ///   network this sync step (i.e. at least one of its master groups is a
-    ///   leaf node in the master network). Set by
-    ///   `receiveCoupledNetworkActiveStatusFromMaster` from the master's
-    ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
-    ///   unconnected slave never participates in the cross-rescoup exchange
-    ///   and balances only its own (local) network.
-    bool connectedToMasterCoupledNetwork() const
-    { return connected_to_master_coupled_network_; }
 
     /// @brief Receive the number of injection and production constraints from master
     /// @return Pair of (num_injection_targets, num_production_constraints)

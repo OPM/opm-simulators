@@ -39,17 +39,31 @@ RescoupReceiveGroupConstraints(
 template <class Scalar, class IndexTraits>
 void
 RescoupReceiveGroupConstraints<Scalar, IndexTraits>::
-receiveGroupConstraintsFromMaster()
+receiveGroupConstraintsFromMaster(const ReservoirCoupling::GroupConstraintsSend send)
 {
     // NOTE: All ranks must call these functions because they contain broadcasts.
     //   The MPI_Recv parts inside the functions have their own rank 0 checks.
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     auto [num_inj_targets, num_prod_constraints] = rescoup_slave.receiveNumGroupConstraintsFromMaster();
+    // The master sends a list only when it has something to put in it, and
+    // these receives are the only place that replaces the held constraints,
+    // so an empty list has to be acted on here.  What it means differs by
+    // side: every send carries a complete injection list, so no injection
+    // targets means none; but an empty production list means "none" only at
+    // the handshake, since the mid-step refresh sends one to mean
+    // "unchanged".  See
+    // RescoupConstraintsCalculator::recalculateInjectionTargetsAndSendToSlaves().
     if (num_inj_targets > 0) {
         rescoup_slave.receiveInjectionGroupTargetsFromMaster(num_inj_targets);
     }
+    else {
+        rescoup_slave.clearMasterInjectionTargets();
+    }
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
+    }
+    else if (send == ReservoirCoupling::GroupConstraintsSend::Handshake) {
+        rescoup_slave.clearMasterProductionConstraints();
     }
 }
 

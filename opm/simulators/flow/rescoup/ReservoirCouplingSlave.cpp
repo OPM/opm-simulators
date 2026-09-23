@@ -64,6 +64,24 @@ ReservoirCouplingSlave(
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+clearMasterInjectionTargets()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterInjectionTargets();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+clearMasterProductionConstraints()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterProductionConstraints();
+}
+
+template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
 hasMasterGroupNodePressure(const std::string& gname) const
