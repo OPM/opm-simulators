@@ -48,7 +48,6 @@ flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFil
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
-    registerFlowGpuParameters();
 
     FlowMain<Properties::TTag::FlowGasWaterEnergyProblemGPU> mainfunc {
         argc, argv, outputCout, outputFiles};
@@ -59,7 +58,6 @@ int
 flowGasWaterEnergyMainGPUStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowGasWaterEnergyProblemGPU;
-    registerFlowGpuParameters();
     auto mainObject = std::make_unique<::Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

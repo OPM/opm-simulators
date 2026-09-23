@@ -71,13 +71,6 @@ namespace Properties
     };
 } // namespace Properties
 
-inline void registerFlowGpuParameters()
-{
-    Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
-        ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
-         "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
-}
-
 //! \brief Main function used in flow binary.
 int flowGasWaterEnergyMainGPU(int argc, char** argv, bool outputCout, bool outputFiles);
 

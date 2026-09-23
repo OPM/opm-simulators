@@ -88,8 +88,22 @@ public:
                           ThreadManager::maxThreads())
     {
 #if HAVE_CUDA
-        useGpuIntensiveQuantitiesDispatcher_ =
-            Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            useGpuIntensiveQuantitiesDispatcher_ =
+                Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+        }
+#endif
+    }
+
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+                ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
+                 "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
+        }
 #endif
     }
 
