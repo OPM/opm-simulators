@@ -554,7 +554,9 @@ public:
             OPM_GPU_SAFE_CALL(cudaEventSynchronize(propertyReady_));
 #endif
         }
-        hostIntensiveQuantities_.assign(numDof_, *prototype_);
+        // The download overwrites every entry; only initialize newly allocated
+        // storage instead of refilling the entire staging buffer each step.
+        hostIntensiveQuantities_.resize(numDof_, *prototype_);
         intensiveQuantitiesBuffer_[timeIdx]->copyToHost(hostIntensiveQuantities_);
         ++counters_.intensiveQuantityDownloads;
         counters_.intensiveQuantityDownloadBytes += numDof_ * sizeof(DeviceIntensiveQuantities);
