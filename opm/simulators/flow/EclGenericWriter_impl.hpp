@@ -282,7 +282,10 @@ writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        if (collectOnIORank_.isParallel()) {
+        // globalRanks() is empty when the I/O-rank cell collection is not set up
+        // (parallel runs with LGRs). Passing it on would write a zero-length
+        // MPI_RANK, which the per-LGR INIT sections then index by father cell.
+        if (collectOnIORank_.isParallel() && !collectOnIORank_.globalRanks().empty()) {
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
