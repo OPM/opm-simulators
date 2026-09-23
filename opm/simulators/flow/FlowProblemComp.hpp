@@ -99,6 +99,7 @@ public:
     static void registerParameters()
     {
         FlowProblemType::registerParameters();
+        Parameters::SetDefault<Parameters::InputSkipMode>("300");
 
         EclWriterType::registerParameters();
 

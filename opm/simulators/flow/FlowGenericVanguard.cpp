@@ -461,9 +461,9 @@ void FlowGenericVanguard::registerParameters_()
          "low (try to apply all keywords, beware: the simulation outcome might be incorrect).");
     Parameters::Register<Parameters::InputSkipMode>
         ("Set compatibility mode for the SKIP100/SKIP300 keywords. Options are "
-         "100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP) [default], "
+         "100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP), "
          "300 (skip SKIP300..ENDSKIP, keep SKIP100..ENDSKIP) and "
-         "all (skip both SKIP100..ENDSKIP and SKIP300..ENDSKIP) ");
+         "all (skip both SKIP100..ENDSKIP and SKIP300..ENDSKIP).");
     Parameters::Register<Parameters::SchedRestart>
         ("When restarting: should we try to initialize wells and "
          "groups from historical SCHEDULE section.");
