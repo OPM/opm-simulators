@@ -40,8 +40,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sgl_ < Scalar{0};
-    const auto high = ! (this->sgl_ < Scalar{1});
+    const auto low = this->sgl_ < Scalar{0} - this->epsilon_;
+    const auto high = ! (this->sgl_ < Scalar{1} + this->epsilon_);
 
     if (low || high) {
         this->setViolated();
@@ -66,8 +66,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = ! (this->sgu_ > Scalar{0});
-    const auto high = this->sgu_ > Scalar{1};
+    const auto low = ! (this->sgu_ > Scalar{0} - this->epsilon_);
+    const auto high = this->sgu_ > Scalar{1} + this->epsilon_;
 
     if (low || high) {
         this->setViolated();
@@ -95,8 +95,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sgcr_ < this->sgl_;
-    const auto high = ! (this->sgcr_ < this->sgu_);
+    const auto low = this->sgcr_ < this->sgl_ - this->epsilon_;
+    const auto high = ! (this->sgcr_ < this->sgu_ + this->epsilon_);
 
     if (low || high) {
         this->setViolated();
