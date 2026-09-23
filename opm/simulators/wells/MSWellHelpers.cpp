@@ -33,6 +33,8 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -360,7 +362,7 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
 template<class Scalar, int Dim>
 using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 template<class Scalar, int M, int N = M>
-using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
+using Mat = BlockSparseMatrix<Dune::FieldMatrix<Scalar,M,N>>;
 
 #define INSTANTIATE_PARALLELLMSWELLB(T, M, N)                                                                                                                                                                                                                                      \
     template class ParallellMSWellB<Mat<T,M,N>>;                                                                                                                                                                                                 \

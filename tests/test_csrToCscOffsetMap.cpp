@@ -6,14 +6,14 @@
 #include <boost/version.hpp>
 
 #include <dune/common/fvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpubridge/opencl/openclBISAI.hpp>
 
 BOOST_AUTO_TEST_CASE(testcsrtocscoffsetmap){
 
-    using Matrix = Dune::BCRSMatrix<double>;
+    using Matrix = Opm::BlockSparseMatrix<double>;
 
     Matrix matrix;
     {

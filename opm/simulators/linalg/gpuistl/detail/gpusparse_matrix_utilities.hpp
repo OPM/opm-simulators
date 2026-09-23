@@ -20,6 +20,7 @@
 #define OPM_GPUISTL_GPUSPARSE_MATRIX_UTILITIES_HPP
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 
@@ -231,13 +232,13 @@ validateVectorMatrixSizes(size_t vectorSize, size_t matrixBlockSize, size_t matr
  */
 #define INSTANTIATE_SPARSE_MATRIX_DUNE_OPERATIONS(CLASS_NAME, realtype, blockdim)                                      \
     template CLASS_NAME<realtype> CLASS_NAME<realtype>::fromMatrix(                                                    \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
+        const BlockSparseMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
     template CLASS_NAME<realtype> CLASS_NAME<realtype>::fromMatrix(                                                    \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool);                                \
+        const BlockSparseMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool);                                \
     template void CLASS_NAME<realtype>::updateNonzeroValues(                                                           \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
+        const BlockSparseMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
     template void CLASS_NAME<realtype>::updateNonzeroValues(                                                           \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool)
+        const BlockSparseMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool)
 
 /**
  * @brief Macro for generating template instantiations for a range of block sizes

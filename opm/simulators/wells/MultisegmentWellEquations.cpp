@@ -470,7 +470,7 @@ sumDistributed(Parallel::Communication comm)
     template void MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::                               \
         extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,numEq,numEq>>&) const;           \
     template void MultisegmentWellEquations<T, BlackOilDefaultFluidSystemIndices, numWellEq,numEq>::                               \
-        extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,                        \
+        extractCPRPressureMatrix(BlockSparseMatrix<MatrixBlock<T,1,1>>&,                        \
                                  const MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::BVector&, \
                                  const int,                                                    \
                                  const bool,                                                   \
