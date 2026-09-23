@@ -2513,6 +2513,9 @@ namespace Opm {
             // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
             this->rescoupHelper_.receiveGroupConstraintsFromMaster(
                 ReservoirCoupling::GroupConstraintsSend::Refresh);
+            // The control modes follow the replacement constraints, as they
+            // do after the handshake.
+            this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;
