@@ -9,8 +9,10 @@ construction, TPSA, NLDD, compositional Flow, GPU assembly, or reservoir
 coupling except where those variants leave visible seams in the default path.
 
 The well/group/network/gas-lift system is treated as one subsystem. Its
-external contract is described, but its internal control and state transitions
-are deliberately deferred to a separate investigation.
+external contract is described here; its internal control and state
+transitions are covered in the companion
+[well, group, network, and gas-lift data-flow
+document](flow-well-group-network-gaslift-data-flow.md).
 
 The source snapshot inspected was:
 
