@@ -92,9 +92,11 @@ main(int argc, char** argv)
     auto inputFilename
         = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
 
-    // Only read the RUNSPEC section of the deck
-    const auto deck
-        = Opm::Parser {}.parseFile(inputFilename, Opm::ParseContext {}, std::vector {Opm::Ecl::SectionType::RUNSPEC});
+    // Use the selected simulator mode during this early RUNSPEC parse as well.
+    Opm::ParseContext parseContext;
+    parseContext.setInputSkipMode(Opm::Parameters::Get<Opm::Parameters::InputSkipMode>());
+    const auto deck = Opm::Parser {}.parseFile(inputFilename, parseContext,
+                                               std::vector {Opm::Ecl::SectionType::RUNSPEC});
     const auto runspec = Opm::Runspec(deck);
     const auto numComps = static_cast<int>(runspec.numComps());
     const auto& phases = runspec.phases();
