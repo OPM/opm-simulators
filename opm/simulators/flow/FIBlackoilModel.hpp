@@ -85,6 +85,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
 
 public:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
         , element_chunks_(this->gridView_,
@@ -315,6 +317,17 @@ public:
         return *intquant;
     }
 
+    // Sparse source evaluation should not materialize the entire device cache.
+    // Ordinary grid traversals retain the bulk materialization path below.
+    const IntensiveQuantities& intensiveQuantitiesForSource(unsigned globalIdx,
+                                                           unsigned timeIdx) const
+    {
+#if HAVE_CUDA
+        ensureHostIntensiveQuantities(timeIdx, globalIdx, /*singleCell=*/true);
+#endif
+        return intensiveQuantities(globalIdx, timeIdx);
+    }
+
 #if HAVE_CUDA
     /*!
      * \brief Guard direct CPU-cache consumers behind the explicit bridge
@@ -333,7 +346,8 @@ public:
      * This is the sole compatibility boundary for the GPU property path.
      */
     void ensureHostIntensiveQuantities(unsigned timeIdx,
-                                      std::optional<unsigned> globalIdx = std::nullopt) const
+                                      std::optional<unsigned> globalIdx = std::nullopt,
+                                      bool singleCell = false) const
     {
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             if (!gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()
@@ -361,6 +375,12 @@ public:
                 }
             }
             if (hostCacheIsValid) {
+                return;
+            }
+            if (singleCell && globalIdx) {
+                gpuIntensiveQuantitiesDispatcher_->materializeHostIntensiveQuantity(
+                    timeIdx, *globalIdx, this->intensiveQuantityCache_[timeIdx][*globalIdx]);
+                this->setIntensiveQuantitiesCacheEntryValidity(*globalIdx, timeIdx, true);
                 return;
             }
             std::vector<IntensiveQuantities*> outIqPtrs(numCells);
@@ -411,6 +431,17 @@ public:
             this->invalidateIntensiveQuantitiesCache(timeIdx);
             gpuIntensiveQuantitiesDispatcher_->evaluateResident(timeIdx);
         }
+    }
+
+    bool computeGpuTrueImpesWeights(gpuistl::GpuVector<Scalar>& weights,
+                                   Scalar timeStepSize) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (hasGpuPropertyAssemblyBridge() && this->gridView_.comm().size() == 1) {
+                return gpuIntensiveQuantitiesDispatcher_->computeTrueImpesWeights(weights, timeStepSize);
+            }
+        }
+        return false;
     }
 
     void reportGpuNewtonTransfers() const
