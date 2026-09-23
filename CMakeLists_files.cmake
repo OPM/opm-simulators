@@ -545,6 +545,7 @@ if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES
     tests/test_ghostlastmatrixadapter.cpp
     tests/test_parallelistlinformation.cpp
+    tests/test_ParallelFieldProps.cpp
     tests/test_ParallelSerialization.cpp
   )
 endif()

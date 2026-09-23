@@ -132,7 +132,11 @@ update_producer_targets(const Well& well,
                   "Well control must be specified for well " + this->name);
     }
 
-    this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+    // Read the reservoir composition only when an open perforation is
+    // available. Initialize schedule targets below even without perforations.
+    if (!this->connection_data.ecl_index.empty()) {
+        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+    }
 
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;

@@ -129,15 +129,18 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
             // Recall: FIP* keywords are special.  We care only about the
             // first three characters of the name following the initial
             // three-character "FIP" prefix, hence "substr(0, 6)".
-            result = is_FIP(keyword)
-                ? this->m_manager.get_global_int(keyword.substr(0, 6))
-                : this->m_manager.get_global_int(keyword);
+            const auto fieldKey = is_FIP(keyword) ? keyword.substr(0, 6) : keyword;
+            result = this->m_manager.get_global_int(fieldKey);
+            if (this->m_manager.get_int_field_data(fieldKey).numValuePerCell() > 1) {
+                throw std::runtime_error {
+                    "Multi-valued field properties must be distributed with the grid"};
+            }
         }
         catch (std::exception& e) {
             exceptionThrown = 1;
             OpmLog::error("No integer property field: " + keyword + " ("+e.what()+")");
             m_comm.broadcast(&exceptionThrown, 1, 0);
-            throw e;
+            throw;
         }
     }
 
@@ -184,6 +187,12 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
     if (m_comm.rank() == 0) {
         try {
             result = m_manager.get_global_double(keyword);
+            // Multi-valued fields are distributed with the grid, and the
+            // global copy would hold only their first component.
+            if (m_manager.get_double_field_data(keyword).numValuePerCell() > 1) {
+                throw std::runtime_error {
+                    "Multi-valued field properties must be distributed with the grid"};
+            }
         }
         catch (const std::exception& e) {
             exceptionThrown = 1;

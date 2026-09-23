@@ -306,7 +306,11 @@ reservoirResidualMetrics() const
 
     std::vector<Scalar> residualMetrics(numEq, 0.0);
 
-    for (unsigned dofIdx = 0; dofIdx < residual.size(); ++dofIdx) {
+    // Ghost-cell residuals may omit fluxes from neighbors beyond the overlap.
+    // Use the owning rank's residual to assess convergence.
+    const auto& elemMapper = model.elementMapper();
+    for (const auto& elem : elements(this->simulator_.gridView(), Dune::Partitions::interior)) {
+        const unsigned dofIdx = elemMapper.index(elem);
         if (dofIdx >= model.numGridDof() || model.dofTotalVolume(dofIdx) <= 0.0) {
             continue;
         }
