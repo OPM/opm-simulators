@@ -40,6 +40,10 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/directionalmobility.hh>
 
@@ -208,6 +212,32 @@ public:
     {
         BlackOilIntensiveQuantities<OtherTypeTag> newIntQuants(*this, other);
         return newIntQuants;
+    }
+
+    /*!
+     * \brief Field-by-field overlay of the BlackOil intensive-quantity values from
+     *        another \c BlackOilIntensiveQuantities instantiation onto this one.
+     *
+        * Used by the experimental GPU intensive-quantities dispatcher to write
+        * the GPU-computed fields onto a CPU-side \c IntensiveQuantities even
+        * when the two TypeTags are not value-compatible. DirMob currently not supported.
+     */
+    template<class OtherTypeTag>
+    void overlayBlackOilFieldsFrom(
+        const BlackOilIntensiveQuantities<OtherTypeTag>& other)
+    {
+        fluidState_.assign(other.fluidState_);
+
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+            this->rockInternalEnergy_ = other.rockInternalEnergy_;
+            this->totalThermalConductivity_ = other.totalThermalConductivity_;
+            this->rockFraction_ = other.rockFraction_;
+        }
+        porosity_ = other.porosity_;
+        referencePorosity_ = other.referencePorosity_;
+        rockCompTransMultiplier_ = other.rockCompTransMultiplier_;
+        mobility_ = other.mobility_;
+        this->extrusionFactor_ = other.extrusionFactor();
     }
 
     OPM_HOST_DEVICE void updateTempSalt(const Problem& problem,

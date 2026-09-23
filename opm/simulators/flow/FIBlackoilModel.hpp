@@ -42,6 +42,14 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+#include <memory>
+#include <variant>
+#include <vector>
+#endif
+
+#include <chrono>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -79,6 +87,24 @@ public:
                           Dune::Partitions::all,
                           ThreadManager::maxThreads())
     {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            useGpuIntensiveQuantitiesDispatcher_ =
+                Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+        }
+#endif
+    }
+
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+                ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
+                 "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
+        }
+#endif
     }
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
@@ -89,6 +115,24 @@ public:
                 updateCachedIntQuants(timeIdx);
                 return;
             }
+#if HAVE_CUDA
+            if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
+            {
+                if (useGpuIntensiveQuantitiesDispatcher_) {
+                    if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()
+                        || getPropValue<TypeTag, Properties::EnableDispersion>()) {
+                        OPM_THROW(std::logic_error,
+                                  "GPU intensive quantities dispatcher does not support diffusion or dispersion");
+                    }
+                    runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+                    const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+                    for (std::size_t i = 0; i < numCells; ++i) {
+                        this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+                    }
+                    return;
+                }
+            }
+#endif
             OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -276,6 +320,40 @@ protected:
     }
 
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+
+#if HAVE_CUDA
+    bool useGpuIntensiveQuantitiesDispatcher_{false};
+    using GpuDispatcherStorage = std::conditional_t<
+        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value,
+        std::unique_ptr<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>,
+        std::monostate>;
+    mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
+
+    void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
+    {
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (!gpuIntensiveQuantitiesDispatcher_) {
+                gpuIntensiveQuantitiesDispatcher_ =
+                    std::make_unique<
+                        Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>();
+            }
+            using PV = GetPropType<TypeTag, Properties::PrimaryVariables>;
+            const auto& sol = this->solution(timeIdx);
+            const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+            std::vector<const PV*> priVarsPtrs(numCells);
+            std::vector<IntensiveQuantities*> outIqPtrs(numCells);
+            for (std::size_t i = 0; i < numCells; ++i) {
+                priVarsPtrs[i] = &sol[i];
+                outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
+            }
+            gpuIntensiveQuantitiesDispatcher_->update(
+                this->simulator_.problem(),
+                priVarsPtrs.data(),
+                outIqPtrs.data(),
+                numCells);
+        }
+    }
+#endif
 };
 
 } // namespace Opm
