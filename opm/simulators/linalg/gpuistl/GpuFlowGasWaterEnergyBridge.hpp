@@ -28,6 +28,11 @@
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/PinnedMemoryHolder.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/PinnedMemoryHolder.hpp>
+#endif
 
 #include <array>
 #include <cstdint>
@@ -547,17 +552,23 @@ public:
             }
         }
 
-        if (lastWriterTimeIdx_ != invalidTimeIdx) {
-#if USE_HIP
-            OPM_GPU_SAFE_CALL(hipEventSynchronize(propertyReady_));
-#else
-            OPM_GPU_SAFE_CALL(cudaEventSynchronize(propertyReady_));
-#endif
+        if (hostIntensiveQuantities_.size() != numDof_) {
+            // Unregister before resize can release the previous allocation.
+            pinnedHostIntensiveQuantities_.reset();
+            hostIntensiveQuantities_.resize(numDof_, *prototype_);
         }
-        // The download overwrites every entry; only initialize newly allocated
-        // storage instead of refilling the entire staging buffer each step.
-        hostIntensiveQuantities_.resize(numDof_, *prototype_);
-        intensiveQuantitiesBuffer_[timeIdx]->copyToHost(hostIntensiveQuantities_);
+        if (!pinnedHostIntensiveQuantities_) {
+            pinnedHostIntensiveQuantities_ =
+                std::make_unique<gpuistl::PinnedMemoryHolder<DeviceIntensiveQuantities>>(
+                    hostIntensiveQuantities_.data(), numDof_);
+        }
+        // Property writes and this download use the same stream. Wait once at
+        // the CPU consumption boundary, without an intermediate event wait or
+        // a pageable staging copy inside the runtime.
+        copyDeviceToHost_(hostIntensiveQuantities_.data(),
+                          intensiveQuantitiesBuffer_[timeIdx]->data(),
+                          numDof_ * sizeof(DeviceIntensiveQuantities));
+        synchronizeStream_();
         ++counters_.intensiveQuantityDownloads;
         counters_.intensiveQuantityDownloadBytes += numDof_ * sizeof(DeviceIntensiveQuantities);
         for (std::size_t i = 0; i < numDof_; ++i) {
@@ -858,6 +869,7 @@ private:
         problemBuffer_.reset();
         deviceFluidSystem_.reset();
         fluidSystemBuffer_.reset();
+        pinnedHostIntensiveQuantities_.reset();
         hostIntensiveQuantities_.clear();
         prototype_.reset();
         lastWriterTimeIdx_ = invalidTimeIdx;
@@ -893,6 +905,9 @@ private:
         intensiveQuantitiesBuffer_{};
     std::array<std::vector<DevicePrimaryVariables>, numTimeSlots> hostPrimaryVariables_{};
     std::vector<DeviceIntensiveQuantities> hostIntensiveQuantities_{};
+    // Declared after the vector so registration is released before its storage.
+    std::unique_ptr<gpuistl::PinnedMemoryHolder<DeviceIntensiveQuantities>>
+        pinnedHostIntensiveQuantities_;
     std::optional<DeviceIntensiveQuantities> prototype_;
     std::unique_ptr<gpuistl::GpuBuffer<Scalar>> volumesBuffer_;
     std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer_;

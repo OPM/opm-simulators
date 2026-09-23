@@ -454,8 +454,20 @@ public:
      */
     void copyResidualToHost(GlobalEqVector& residual, unsigned numCells)
     {
-        auto cpuResidualFromGpu = residualBuffer_.asStdVector();
-        std::memcpy(residual.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+        static_assert(sizeof(typename GlobalEqVector::block_type) == numEq * sizeof(Scalar));
+        static_assert(sizeof(VectorBlockGPU) == numEq * sizeof(Scalar));
+        if (residual.size() != numCells || residualBuffer_.size() != numCells) {
+            OPM_THROW(std::logic_error, "GPU residual download has mismatched cell counts");
+        }
+        // The existing CPU residual is already contiguous. Download into it
+        // directly instead of allocating, filling and copying a staging vector.
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipMemcpy(residual.data(), residualBuffer_.data(),
+                                   numCells * sizeof(VectorBlockGPU), hipMemcpyDeviceToHost));
+#else
+        OPM_GPU_SAFE_CALL(cudaMemcpy(residual.data(), residualBuffer_.data(),
+                                    numCells * sizeof(VectorBlockGPU), cudaMemcpyDeviceToHost));
+#endif
     }
 
     /*!
