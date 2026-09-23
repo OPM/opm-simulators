@@ -49,8 +49,6 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
-#include <opm/grid/LookUpData.hh>
-
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
@@ -1107,10 +1105,8 @@ public:
         std::vector<double> tempiOnLeaf{};
         if constexpr (energyModuleType != EnergyModules::NoTemperature) {
             if (eclState.runspec().co2Storage() || eclState.runspec().h2Storage()) {
-                using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
-                const LookUpData<LeafGrid, GridView> lookUpData(simulator.gridView());
-                tempiOnLeaf = lookUpData
-                    .assignFieldPropsDoubleOnLeaf(eclState.fieldProps(), "TEMPI");
+                tempiOnLeaf = this->fieldPropDoubleOnLeafAssigner_()
+                    (eclState.fieldProps(), "TEMPI");
             }
         }
 
@@ -1406,10 +1402,8 @@ protected:
         initialFluidStates_.resize(numDof);
 
         // Input-grid arrays read per leaf cell: a refined cell takes its parent's value.
-        using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
-        const LookUpData<LeafGrid, GridView> lookUpData(this->simulator().gridView());
-        const auto onLeaf = [&lookUpData, &fp](const std::string& kw)
-        { return lookUpData.assignFieldPropsDoubleOnLeaf(fp, kw); };
+        const auto onLeaf = [assign = this->fieldPropDoubleOnLeafAssigner_(), &fp]
+            (const std::string& kw) { return assign(fp, kw); };
 
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
