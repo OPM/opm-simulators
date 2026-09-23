@@ -145,6 +145,7 @@ public:
         std::uint64_t correctionDownloads{0}, correctionDownloadBytes{0};
         std::uint64_t correctionHistoryUploads{0}, correctionHistoryUploadBytes{0};
         std::uint64_t intensiveQuantityDownloads{0}, intensiveQuantityDownloadBytes{0};
+        std::uint64_t sourceIntensiveQuantityDownloads{0}, sourceIntensiveQuantityDownloadBytes{0};
         std::uint64_t compactConvergenceDownloads{0}, compactConvergenceDownloadBytes{0};
         std::uint64_t relativeChangeDownloads{0}, relativeChangeDownloadBytes{0};
         std::uint64_t ownedBufferAllocations{0};
@@ -510,6 +511,26 @@ public:
     /*!
      * \brief Explicit CPU-boundary materialization of one IQ time slot.
      */
+    void materializeHostIntensiveQuantity(unsigned timeIdx, unsigned globalIdx,
+                                         HostIntensiveQuantities& destination)
+    {
+        validateValidSlot_(timeIdx);
+        if (globalIdx >= numDof_) {
+            OPM_THROW(std::out_of_range, "GPU source cell index is outside the IQ cache");
+        }
+        DeviceIntensiveQuantities value = *prototype_;
+        // Property writers and this read share stream_. Keep the local staging
+        // object alive until the copy completes, then publish the CPU fields.
+        copyDeviceToHost_(&value, intensiveQuantitiesBuffer_[timeIdx]->data() + globalIdx,
+                          sizeof(value));
+        synchronizeStream_();
+        ++counters_.intensiveQuantityDownloads;
+        counters_.intensiveQuantityDownloadBytes += sizeof(value);
+        ++counters_.sourceIntensiveQuantityDownloads;
+        counters_.sourceIntensiveQuantityDownloadBytes += sizeof(value);
+        destination.overlayBlackOilFieldsFrom(value);
+    }
+
     void materializeHostIntensiveQuantities(unsigned timeIdx,
                                             HostIntensiveQuantities* const* destination,
                                             std::size_t numDof)

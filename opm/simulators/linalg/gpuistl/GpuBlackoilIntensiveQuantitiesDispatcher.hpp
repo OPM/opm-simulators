@@ -138,6 +138,10 @@ public:
                                             IntensiveQuantities* const* destination,
                                             std::size_t numDof);
 
+    /// Materialize one source cell without downloading the complete IQ slot.
+    void materializeHostIntensiveQuantity(unsigned timeIdx, unsigned globalIdx,
+                                         IntensiveQuantities& destination);
+
     bool hasDeviceModelView() const;
     const Bridge& bridge() const;
     Bridge& bridge();

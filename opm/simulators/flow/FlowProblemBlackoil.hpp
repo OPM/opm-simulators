@@ -642,7 +642,14 @@ public:
                     if (source_hrate) {
                         rate[Indices::contiEnergyEqIdx] += source_hrate.value() / this->model().dofTotalVolume(globalDofIdx);
                     } else {
-                        const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
+                        const auto& intQuants = [&]() -> const auto& {
+                            const auto& model = this->simulator().model();
+                            if constexpr (requires { model.intensiveQuantitiesForSource(globalDofIdx, /*timeIdx=*/0); }) {
+                                return model.intensiveQuantitiesForSource(globalDofIdx, /*timeIdx=*/0);
+                            } else {
+                                return model.intensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+                            }
+                        }();
                         auto fs = intQuants.fluidState();
                         // if temperature is not set, use cell temperature as default
                         const auto source_temp = source.temperature(ijk, sourceComp);

@@ -282,13 +282,14 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::reportTransferCounter
     if (impl_->bridge) {
         const auto& c = impl_->bridge->transferCounters();
         OpmLog::info(std::format(
-            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={}",
+            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={} source_iq_downloads={} source_iq_download_bytes={}",
             c.successfulNewtonUpdates, c.primaryVariableUploads, c.primaryVariableUploadBytes,
             c.primaryVariableDownloads, c.primaryVariableDownloadBytes, c.correctionDownloads,
             c.correctionDownloadBytes, c.intensiveQuantityDownloads, c.intensiveQuantityDownloadBytes,
             c.ownedBufferAllocations, c.staticUploadBatches, c.ownedBufferAllocationBytes,
             c.staticUploadCalls, c.staticUploadBytes, c.solverCorrectionAllocations,
-            c.correctionHistoryUploads, c.correctionHistoryUploadBytes));
+            c.correctionHistoryUploads, c.correctionHistoryUploadBytes,
+            c.sourceIntensiveQuantityDownloads, c.sourceIntensiveQuantityDownloadBytes));
     }
 }
 
@@ -502,6 +503,16 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::materializeHostIntens
         OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
     }
     impl_->bridge->materializeHostIntensiveQuantities(timeIdx, destination, numDof);
+}
+
+template <class CpuTypeTag>
+void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::materializeHostIntensiveQuantity(
+    unsigned timeIdx, unsigned globalIdx, IntensiveQuantities& destination)
+{
+    if (!impl_->bridge) {
+        OPM_THROW(std::logic_error, "GPU intensive-quantities bridge has not been initialized");
+    }
+    impl_->bridge->materializeHostIntensiveQuantity(timeIdx, globalIdx, destination);
 }
 
 template <class CpuTypeTag>
