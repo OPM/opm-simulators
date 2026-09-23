@@ -1377,7 +1377,8 @@ namespace Opm
                                          const std::vector<int>& phases,
                                          std::vector<Scalar>&    rho)
             {
-                const auto& fs = model.intensiveQuantities(cell, /* time_idx = */ 0).fluidState();
+                const auto& iq = model.intensiveQuantities(cell, /* time_idx = */ 0);
+                const auto& fs = iq.fluidState();
 
                 std::ranges::transform(phases, rho.begin(),
                                        [&fs](const int phase) { return fs.density(phase).value(); });

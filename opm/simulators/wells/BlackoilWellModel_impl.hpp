@@ -122,12 +122,12 @@ namespace Opm {
             {
                 using Item = typename SourceDataSpan::Item;
 
-                const auto* intQuants = this->simulator_.model()
-                    .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
-                const auto& fs = intQuants->fluidState();
+                const auto& intQuants = this->simulator_.model()
+                    .intensiveQuantities(localCell, /*timeIndex = */0);
+                const auto& fs = intQuants.fluidState();
 
                 sourceTerms
-                    .set(Item::PoreVol, intQuants->porosity().value() *
+                    .set(Item::PoreVol, intQuants.porosity().value() *
                          this->simulator_.model().dofTotalVolume(localCell))
                     .set(Item::Depth, this->depth_[localCell]);
 
