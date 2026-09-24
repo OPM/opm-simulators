@@ -78,6 +78,30 @@ add_test_compareECLFiles(
     compositional
 )
 
+# Cover water-rate and liquid-rate controls, and switching an open injector
+# from water to gas while its wellbore still contains water.
+foreach(case IN ITEMS
+    SIMPLE_COMP_WATER_WRAT
+    SIMPLE_COMP_WATER_LRAT
+    SIMPLE_COMP_WATER_TO_GAS)
+  add_test_compareECLFiles(
+    CASENAME
+      ${case}
+    FILENAME
+      ${case}
+    SIMULATOR
+      flow_comp
+    REFERENCE_SIMULATOR
+      flow_comp
+    ABS_TOL
+      ${abs_tol}
+    REL_TOL
+      ${rel_tol}
+    DIR
+      compositional/single_connection_wells
+  )
+endforeach()
+
 add_test_compareECLFiles(
   CASENAME
     equil_1d_zmfvd
