@@ -32,13 +32,17 @@
 
 namespace Opm {
     class DeferredLogger;
+    enum class Phase;
     class Schedule;
+    class SummaryState;
     template<class TypeTag> class BlackoilWellModel;
     template<class Scalar, class IndexTraits> class GroupStateHelper;
     template<class Scalar, class IndexTraits> class WellState;
     template<class Scalar> class ReservoirCouplingMaster;
     template<class Scalar> class ReservoirCouplingSlave;
 }
+
+namespace Opm::ReservoirCoupling { class CouplingInfo; }
 
 namespace Opm {
 
@@ -99,6 +103,13 @@ public:
 
     // === Rescoup flow methods ===
 
+    /// \brief Slave-side: evaluate the group and field level UDQs now, so that
+    ///   a UDQ that reads a target the master just imposed is current before
+    ///   the wells are solved, instead of one step behind.  Well and segment
+    ///   level UDQs, and any "UPDATE NEXT" DEFINE, are left to the ordinary
+    ///   end-of-step evaluation.
+    void evalGroupAndFieldUDQs();
+
     /// \brief True if the most recent sendMasterGroupNodePressuresToSlaves
     ///   carried is_final = true (or if no send has happened yet).  Used
     ///   to gate redundant sends and to decide whether a trailing-final
@@ -158,6 +169,14 @@ public:
     /// Called from the master's beginTimeStep first-substep handshake and
     /// from rescoupSyncSummaryData() when a slave has fresh data to deliver.
     void receiveSlaveGroupData();
+
+    /// \brief Slave-side: recompute the injection target in force for each
+    ///   slave group from the targets just received, and re-evaluate the
+    ///   group and field level UDQs that may read them.  Called after every
+    ///   receive of group constraints: the handshake at the start of a sync
+    ///   step and the replacement targets a master sends back during the
+    ///   cross-rescoup network iteration.
+    void refreshSlaveGroupInjectionTargets();
 
     /// \brief End-of-substep summary-data synchronisation.
     ///
@@ -235,7 +254,25 @@ public:
     /// Replaces the previous BlackoilWellModel::setupRescoupScopedLogger().
     std::optional<ReservoirCoupling::ScopedLoggerGuard> setupScopedLogger(DeferredLogger& local_logger);
 
+    /// \brief Slave-side: store each slave group's effective injection target
+    ///   as its GGIRT/GWIRT summary value, so that UDQs and the summary output
+    ///   can use it.  The effective target is the master's, the deck's own, or
+    ///   the smaller of the two, as the group's GRUPSLAV flag says; when the
+    ///   deck's own applies, or no master target exists, the entry is erased.
+    void storeSlaveGroupInjectionTargets();
+
 private:
+    /// \brief The injection target in force for a slave group and phase, in SI:
+    ///   the master's, the deck's, or the smaller of the two, as the GRUPSLAV
+    ///   flag says.  Empty when the deck's own limit applies or no surface-rate
+    ///   master target exists -- the summary evaluator then reads the schedule.
+    std::optional<Scalar>
+    effectiveSlaveGroupInjectionTarget_(const std::string& gname,
+                                        const Phase phase,
+                                        const int reportStepIdx,
+                                        const ReservoirCoupling::CouplingInfo& rescoup,
+                                        const SummaryState& summary_state) const;
+
     /// \brief Per-slave variant of masterNetworkHasMasterGroupLeaves():
     ///   true iff at least one of the given slave's master groups is a
     ///   leaf node in the master's extended network.  This is what
@@ -254,6 +291,15 @@ private:
     /// is the receiveGroupConstraintsFromMaster() in
     /// BlackoilWellModel::maybeSendSlaveGroupFlowToMaster_().
     void refreshAndSendInjectionTargets_();
+
+    /// \brief The surface injection rate target the slave's own schedule gives
+    ///   a group for a phase (SI), 0 when the group has no injection control
+    ///   for that phase.  What the summary evaluator reports for a group
+    ///   without a target in force from the master.
+    Scalar scheduleInjectionTarget_(const std::string& gname,
+                                    const Phase phase,
+                                    const int reportStepIdx,
+                                    const SummaryState& summary_state) const;
 
     /// \brief Send injection targets to each activated slave, replacing the
     ///   ones the slaves are currently holding.  Production constraints are

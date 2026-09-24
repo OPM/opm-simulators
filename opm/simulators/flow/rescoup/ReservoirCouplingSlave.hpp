@@ -53,6 +53,15 @@ public:
     );
     bool activated() const { return activated_; }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+    /// @brief The surface injection rate target in force for each slave group
+    ///   and phase this sync step (SI): the master's target combined with the
+    ///   deck's own limit as the GRUPSLAV flag says.  Rebuilt every sync step
+    ///   by the well model; reported to the summary output as GGIRT/GWIRT.
+    const std::map<std::string, std::map<Phase, Scalar>>& effectiveInjectionTargets() const
+    { return effective_injection_targets_; }
+    std::map<std::string, std::map<Phase, Scalar>>& effectiveInjectionTargets()
+    { return effective_injection_targets_; }
+
     const Parallel::Communication& getComm() const { return comm_; }
     MPI_Comm getMasterComm() const { return slave_master_comm_; }
     const std::string& getSlaveName() const { return slave_name_; }
@@ -245,6 +254,8 @@ private:
     // Later, the master process will send us group name indices, and not the group names themselves,
     // so we use this mapping to recover the slave group names from the indices.
     std::map<std::size_t, std::string> slave_group_order_;
+    // See effectiveInjectionTargets().
+    std::map<std::string, std::map<Phase, Scalar>> effective_injection_targets_;
     // Stores data that changes for a single report step or for timesteps within a report step.
     std::unique_ptr<ReservoirCouplingSlaveReportStep<Scalar>> report_step_data_{nullptr};
 };

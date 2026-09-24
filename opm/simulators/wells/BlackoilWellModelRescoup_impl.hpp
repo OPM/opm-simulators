@@ -30,13 +30,31 @@
 
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/RegionSetMatcher.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQDefine.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQEnums.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
 
 namespace Opm {
 
@@ -53,6 +71,47 @@ BlackoilWellModelRescoup(BlackoilWellModel<TypeTag>& well_model)
 
 // Public methods alphabetically
 // ------------------------------
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+evalGroupAndFieldUDQs()
+{
+    const int reportStepIdx = this->groupStateHelper().reportStepIdx();
+    auto& deferred_logger = this->groupStateHelper().deferredLogger();
+    // UDQs are normally evaluated at the end of a time step.  A slave UDQ
+    // that depends on a target imposed by the master would then lag one
+    // step behind, so re-evaluate the group and field level UDQs now that
+    // this step's targets have arrived.  Well and segment level UDQs are
+    // left alone: their inputs are not available yet.  So is any
+    // "UPDATE NEXT" DEFINE: it is a one-shot that the ordinary end-of-step
+    // evaluation is meant to consume, and this extra evaluation must not
+    // use it up early.
+    const auto select = [](const UDQDefine& def) {
+        const auto var_type = def.var_type();
+        return ((var_type == UDQVarType::GROUP_VAR) || (var_type == UDQVarType::FIELD_VAR))
+            && (def.status().first != UDQUpdate::NEXT);
+    };
+    const auto& schedule = this->schedule();
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    {
+        schedule[reportStepIdx].udq().eval(
+            reportStepIdx,
+            schedule.wellMatcher(reportStepIdx),
+            schedule[reportStepIdx].group_order(),
+            schedule.segmentMatcherFactory(reportStepIdx),
+            [es = std::cref(this->simulator_.vanguard().eclState())]() {
+                return std::make_unique<RegionSetMatcher>(es.get().fipRegionStatistics());
+            },
+            this->simulator_.vanguard().summaryState(),
+            this->simulator_.vanguard().udqState(),
+            select);
+    }
+    OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger,
+                                   "Failed to evaluate UDQs for reservoir coupling slave: ",
+                                   this->well_model_.terminalOutput(),
+                                   this->simulator_.vanguard().grid().comm())
+}
 
 template<typename TypeTag>
 bool
@@ -249,6 +308,21 @@ receiveSlaveGroupData()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
+refreshSlaveGroupInjectionTargets()
+{
+    // The deck's own GCONINJE limit may be a UDA, resolved from the summary
+    // state, and the UDQ evaluation below may change it.  So prime, evaluate
+    // the selected UDQs, and work the targets in force out once more with
+    // the UDQs current, as the well control path will see them.  The second
+    // pass repeats the loop over the slave groups, not the UDQ evaluation.
+    this->storeSlaveGroupInjectionTargets();
+    this->evalGroupAndFieldUDQs();
+    this->storeSlaveGroupInjectionTargets();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
 rescoupSyncSummaryData()
 {
     // Reservoir coupling: exchange production data between slaves and master.
@@ -392,8 +466,110 @@ setupScopedLogger(DeferredLogger& local_logger)
     return std::nullopt;
 }
 
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+storeSlaveGroupInjectionTargets()
+{
+    const int reportStepIdx = this->groupStateHelper().reportStepIdx();
+    // The injection target that applies to a slave group is not something
+    // the slave's schedule can know on its own: it depends on the target
+    // the master imposes at every synchronization step and on the group's
+    // GRUPSLAV filter flag, which says whether the master's limit, the
+    // deck's own GCONINJE limit, or the smaller of the two is in force.
+    // Work out that effective target and keep it on the slave, where the
+    // summary writer picks it up and reports it as GGIRT/GWIRT.  Only
+    // surface rate targets map onto these keywords.
+    //
+    // A UDQ that refers to the target reads it from the summary state, so
+    // the summary state is primed with the same value, in output units,
+    // ahead of the UDQ evaluation that follows.  When nothing is in force
+    // the slot is primed with the schedule's own target instead -- what the
+    // end-of-step summary evaluation will report -- so that a target in
+    // force on an earlier sync step cannot linger there.
+    using M = UnitSystem::measure;
+    auto& summary_state = this->simulator_.vanguard().summaryState();
+    const auto& units = this->simulator_.vanguard().eclState().getUnits();
+    auto& slave = this->reservoirCouplingSlave();
+    const auto& rescoup = this->schedule()[reportStepIdx].rescoup();
+    // The surface-rate group injection target vectors, which is all of them:
+    // there is no oil equivalent, so a master oil injection target reaches the
+    // control path but has nothing to be reported as; and GVIRT is a reservoir
+    // volume target, which cannot be derived from what the master sends, since
+    // it converts every injection mode to a surface rate before sending (see
+    // RescoupConstraintsCalculator::calculateSlaveGroupInjectionTargets_()).
+    // A slave UDQ naming GVIRT for a slave group therefore still reads the
+    // schedule, as it did before reservoir coupling could report a target at
+    // all.
+    const auto targets = std::array {
+        std::tuple { Phase::GAS,   std::string{"GGIRT"}, M::gas_surface_rate    },
+        std::tuple { Phase::WATER, std::string{"GWIRT"}, M::liquid_surface_rate },
+    };
+    auto& in_force = slave.effectiveInjectionTargets();
+    in_force.clear();
+    for (std::size_t i = 0; i < slave.numSlaveGroups(); ++i) {
+        const auto& gname = slave.slaveGroupIdxToGroupName(i);
+        for (const auto& [phase, keyword, unit] : targets) {
+            const auto effective = this->effectiveSlaveGroupInjectionTarget_(
+                gname, phase, reportStepIdx, rescoup, summary_state);
+            if (effective.has_value()) {
+                in_force[gname][phase] = *effective;
+                summary_state.update_group_var(gname, keyword, units.from_si(unit, *effective));
+            }
+            else {
+                summary_state.update_group_var(
+                    gname, keyword,
+                    units.from_si(unit, this->scheduleInjectionTarget_(gname, phase, reportStepIdx, summary_state)));
+            }
+        }
+    }
+}
+
 // Private methods alphabetically
 // ------------------------------
+
+template<typename TypeTag>
+std::optional<typename BlackoilWellModelRescoup<TypeTag>::Scalar>
+BlackoilWellModelRescoup<TypeTag>::
+effectiveSlaveGroupInjectionTarget_(const std::string& gname,
+                                    const Phase phase,
+                                    const int reportStepIdx,
+                                    const ReservoirCoupling::CouplingInfo& rescoup,
+                                    const SummaryState& summary_state) const
+{
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+    const auto& slave = this->reservoirCouplingSlave();
+    if (! slave.hasMasterInjectionTarget(gname, phase)) {
+        return std::nullopt;
+    }
+    const auto [master_target, cmode] = slave.masterInjectionTarget(gname, phase);
+    if (cmode != Group::InjectionCMode::RATE) {
+        return std::nullopt;
+    }
+
+    // Same fallback as GroupStateHelper::getInjectionFilterFlag_(): a slave
+    // group without a GRUPSLAV record follows the master.
+    auto filter = FilterFlag::MAST;
+    if (rescoup.hasGrupSlav(gname)) {
+        const auto& grup_slav = rescoup.grupSlav(gname);
+        filter = (phase == Phase::GAS) ? grup_slav.gasInjFlag()
+               : (phase == Phase::WATER) ? grup_slav.waterInjFlag()
+               : grup_slav.oilInjFlag();
+    }
+    if (filter == FilterFlag::SLAV) {
+        // The deck's own limit applies; the summary evaluator reads it from
+        // the schedule as for any other group.
+        return std::nullopt;
+    }
+    if (filter == FilterFlag::BOTH) {
+        const auto& group = this->schedule().getGroup(gname, reportStepIdx);
+        if (group.hasInjectionControl(phase)) {
+            return std::min(master_target,
+                            this->scheduleInjectionTarget_(gname, phase, reportStepIdx, summary_state));
+        }
+    }
+    return master_target;
+}
 
 template<typename TypeTag>
 bool
@@ -431,6 +607,21 @@ refreshAndSendInjectionTargets_()
     this->well_model_.updateAndCommunicateGroupData(
         report_step_idx, /*update_wellgrouptarget=*/false);
     this->sendMasterGroupInjectionTargetsToSlaves_();
+}
+
+template<typename TypeTag>
+typename BlackoilWellModelRescoup<TypeTag>::Scalar
+BlackoilWellModelRescoup<TypeTag>::
+scheduleInjectionTarget_(const std::string& gname,
+                         const Phase phase,
+                         const int reportStepIdx,
+                         const SummaryState& summary_state) const
+{
+    const auto& group = this->schedule().getGroup(gname, reportStepIdx);
+    if (! group.hasInjectionControl(phase)) {
+        return Scalar{0};
+    }
+    return static_cast<Scalar>(group.injectionControls(phase, summary_state).surface_max_rate);
 }
 
 template<typename TypeTag>
