@@ -1304,6 +1304,10 @@ wellStatusSnapshot() const
     // ACTIONX condition, and the walk costs far less than a linear solve.
     auto snapshot = WellStatusSnapshot{};
 
+    // Building this snapshot needs no additional MPI communication: each
+    // participating rank has the full scheduled connection list, and well-test
+    // workovers have already recorded their closure decisions in WellTestState.
+    // The owner can therefore snapshot every connection for WPWE output.
     const auto& wtestState = this->wellTestState();
 
     for (const auto& well : this->wells_ecl_) {
