@@ -87,16 +87,21 @@ update_injector_targets(const Well& well,
     if (injection_properties.injectorType == InjectorType::WATER) {
         // The wellbore holds water alone. It still needs a hydrocarbon
         // composition the flash accepts, and a water injector has no stream
-        // to take one from.
-        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+        // to take one from. A well without open local connections has no
+        // well equations, so it can wait for a connection to open.
+        if (!this->connection_data.ecl_index.empty()) {
+            this->total_molar_fractions =
+                cell_mole_fractions[this->connection_data.ecl_index.front()];
+        }
         this->wellbore_water_volume_fraction = 1.;
-    } else {
+    } else if (injection_properties.injectorType == InjectorType::GAS) {
         const auto& inj_composition = injection_properties.gasInjComposition();
         assert(this->total_molar_fractions.size() == inj_composition.size());
-        assert(injection_properties.injectorType == InjectorType::GAS &&
-               "Only gas and water injection is supported for now");
         // TODO: this might not be correct when crossing flow is involved
         this->total_molar_fractions = inj_composition;
+    } else {
+        OPM_THROW(std::runtime_error,
+                  "Only gas and water injection is supported for well " + this->name);
     }
 
     // we initialize all open wells with a rate to avoid singularities
@@ -115,12 +120,9 @@ update_injector_targets(const Well& well,
             this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::OIL:
-            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = inj_surf_rate;
-            break;
         case InjectorType::MULTI:
-            // Not currently handled, keep zero init.
-            break;
+            OPM_THROW(std::runtime_error,
+                      "Only gas and water injection is supported for well " + this->name);
     }
 }
 

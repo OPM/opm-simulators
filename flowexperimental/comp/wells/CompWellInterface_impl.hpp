@@ -36,9 +36,9 @@ CompWellInterface(const Well& well,
 {
     if (well.isInjector()) {
         const auto injector_type = well.getInjectionProperties().injectorType;
-        if (FluidSystem::waterEnabled && injector_type == InjectorType::MULTI) {
-            throw std::runtime_error("multi-phase injection is not supported by the "
-                                     "compositional well model yet");
+        if (injector_type != InjectorType::GAS && injector_type != InjectorType::WATER) {
+            throw std::runtime_error("only gas and water injection is supported by the "
+                                     "compositional well model for well " + well.name());
         }
         if (!FluidSystem::waterEnabled && injector_type == InjectorType::WATER) {
             throw std::runtime_error("the water injector " + well.name() +
