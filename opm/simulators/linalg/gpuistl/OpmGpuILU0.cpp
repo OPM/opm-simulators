@@ -19,7 +19,7 @@
 #include <config.h>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>

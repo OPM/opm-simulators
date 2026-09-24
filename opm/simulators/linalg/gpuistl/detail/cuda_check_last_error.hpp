@@ -19,7 +19,7 @@
 #ifndef OPM_CUDA_CHECK_LAST_ERROR_HPP
 #define OPM_CUDA_CHECK_LAST_ERROR_HPP
 #include <cuda_runtime.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 /**

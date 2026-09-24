@@ -27,7 +27,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <cstddef>
 #include <ostream>
