@@ -177,7 +177,12 @@ updateSurfaceQuantities(const Simulator& simulator)
     if constexpr (FluidSystem::waterEnabled) {
         surface_water_density = tables.getDensityTable()[0].water;
     }
-    if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
+    if (this->isWaterInjector_()) {
+        // The stream is water alone: the hydrocarbon flash gets no weight, and
+        // the wellbore composition keeps it valid.
+        auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+        updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state, Scalar{1.});
+    } else if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
         FluidState<Scalar> fluid_state;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
@@ -200,10 +205,9 @@ calculateSingleConnectionRate(const Simulator& simulator,
                               std::vector<EvalWell>& con_rates) const
 {
     constexpr int con_idx = 0; // TODO: to be a function argument for multiple connection wells
-    // The wellbore carries the two EOS phases only; a water phase in the
-    // reservoir stays in the reservoir (the model can neither inject nor
-    // produce it), so the rate loops below run over the miscible phases while
-    // the mobility vector is sized for every phase getMobility() fills.
+    // The components travel in the two EOS phases, so their rate loop runs over
+    // the miscible phases; water is pure and gets its own rate below. The
+    // mobility vector is sized for every phase getMobility() fills.
     constexpr int np = FluidSystem::numMisciblePhases;
     const EvalWell& bhp = this->primary_variables_.getBhp();
     const unsigned cell_idx = this->well_cells_[0];
@@ -334,6 +338,20 @@ assembleWellEq(const Simulator& simulator,
 
     const auto& summary_state = simulator.vanguard().summaryState();
     assembleControlEq(well_state, summary_state);
+
+    if constexpr (FluidSystem::waterEnabled) {
+        // Every component row scales with the hydrocarbon share of the
+        // wellbore. Once the wellbore holds water alone, as a water injector's
+        // always does, the rows no longer determine the mole fractions and the
+        // well matrix is singular. Keep the mole fractions and balance the
+        // hydrocarbons as a whole instead.
+        const Scalar water_fraction = getValue(this->primary_variables_.getWaterVolumeFraction());
+        if (1. - water_fraction < min_hydrocarbon_fraction_) {
+            constexpr int first_mole_fraction = PrimaryVariables::QTotal + 1;
+            this->well_equations_.sumAndPinRows(FluidSystem::numComponents - 1,
+                                                first_mole_fraction);
+        }
+    }
 
     this->well_equations_.invert();
     // there will be num_comp mass balance equations for each component and one for the well control equations
@@ -581,8 +599,10 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
             surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
         }
     } else { // injector
-        // only gas injection yet
-        surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+        std::fill(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar{0.});
+        const auto injected_phase = this->isWaterInjector_() ? FluidSystem::waterPhaseIdx
+                                                             : FluidSystem::gasPhaseIdx;
+        surface_phase_rates[injected_phase] = total_rate;
     }
 }
 
@@ -594,6 +614,15 @@ updateSurfaceRates(const Simulator& simulator,
 {
     this->updateSecondaryQuantities(simulator);
     this->updateWellStateFromPrimaryVariables(well_state);
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
+isWaterInjector_() const
+{
+    return this->well_ecl_.isInjector() &&
+           this->well_ecl_.getInjectionProperties().injectorType == InjectorType::WATER;
 }
 
 template <typename TypeTag>

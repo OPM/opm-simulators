@@ -97,7 +97,9 @@ public:
                                  const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                                  const SummaryState& st);
 
-    void update_injector_targets(const Well& well, const SummaryState& st);
+    void update_injector_targets(const Well& well,
+                                 const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                                 const SummaryState& st);
 
     void copyRuntimeStateFrom(const SingleCompWellState& other);
 

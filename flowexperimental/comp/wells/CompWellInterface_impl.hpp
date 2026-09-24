@@ -34,14 +34,15 @@ CompWellInterface(const Well& well,
     , reference_depth_(well.getRefDepth())
     , connectionRates_(number_of_connection_)
 {
-    // The wellbore model itself carries no water: it can neither inject water
-    // nor lift mobile water to surface. Immobile (connate) water in the
-    // reservoir is fine -- the connection rates simply never include the water
-    // phase -- so only reject wells that would actually have to move water.
-    if (FluidSystem::waterEnabled && well.isInjector()) {
-        const auto& props = well.getInjectionProperties();
-        if (props.injectorType == InjectorType::WATER || props.injectorType == InjectorType::MULTI) {
-            throw std::runtime_error("water injection is not supported by the compositional well model yet");
+    if (well.isInjector()) {
+        const auto injector_type = well.getInjectionProperties().injectorType;
+        if (FluidSystem::waterEnabled && injector_type == InjectorType::MULTI) {
+            throw std::runtime_error("multi-phase injection is not supported by the "
+                                     "compositional well model yet");
+        }
+        if (!FluidSystem::waterEnabled && injector_type == InjectorType::WATER) {
+            throw std::runtime_error("the water injector " + well.name() +
+                                     " needs an active water phase");
         }
     }
 

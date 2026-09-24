@@ -70,6 +70,7 @@ SingleCompWellState(const std::string& well_name,
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
 update_injector_targets(const Well& well,
+                        const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
@@ -81,17 +82,22 @@ update_injector_targets(const Well& well,
                   "Well control must be specified for well " + this->name);
     }
 
-    const auto& inj_composition = injection_properties.gasInjComposition();
-#ifndef NDEBUG
-    assert(this->total_molar_fractions.size() == inj_composition.size());
-    const auto injection_type = injection_properties.injectorType;
-    const bool is_gas_injecting = (injection_type == InjectorType::GAS);
-    assert(is_gas_injecting && "Only gas injection is supported for now");
-#endif
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
-    // TODO: this might not be correct when crossing flow is involved
-    this->total_molar_fractions = inj_composition;
+    if (injection_properties.injectorType == InjectorType::WATER) {
+        // The wellbore holds water alone. It still needs a hydrocarbon
+        // composition the flash accepts, and a water injector has no stream
+        // to take one from.
+        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+        this->wellbore_water_volume_fraction = 1.;
+    } else {
+        const auto& inj_composition = injection_properties.gasInjComposition();
+        assert(this->total_molar_fractions.size() == inj_composition.size());
+        assert(injection_properties.injectorType == InjectorType::GAS &&
+               "Only gas and water injection is supported for now");
+        // TODO: this might not be correct when crossing flow is involved
+        this->total_molar_fractions = inj_composition;
+    }
 
     // we initialize all open wells with a rate to avoid singularities
     Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
