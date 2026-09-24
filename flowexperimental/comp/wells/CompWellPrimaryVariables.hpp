@@ -35,7 +35,10 @@ template <typename FluidSystem, typename Indices>
 class CompWellPrimaryVariables
 {
 public:
-    static constexpr int numWellConservationEq = FluidSystem::numComponents;
+    // the water phase is immiscible with the hydrocarbon components: it gets
+    // one conservation equation of its own and takes no part in the flash
+    static constexpr bool has_water = FluidSystem::waterEnabled;
+    static constexpr int numWellConservationEq = FluidSystem::numComponents + (has_water ? 1 : 0);
     static constexpr int numWellControlEq = 1;
     static constexpr int numWellEq = numWellConservationEq + numWellControlEq;
     // the indices for the primary variables
@@ -44,6 +47,8 @@ public:
     // the one in the middle with will the mole fractions for the numWellEq - 1 components
     // this can be changed based on the implementation itself
     static constexpr int QTotal = 0; // TODO: for now, it is the total surface rate, but later, we might make it total mass rate
+    // volume fraction of water in the wellbore, only meaningful when has_water
+    static constexpr int WFrac = has_water ? FluidSystem::numComponents : -1000;
     static constexpr int Bhp = numWellEq - numWellControlEq;
 
     using Scalar = typename FluidSystem::Scalar;
@@ -71,6 +76,9 @@ public:
     EvalWell getBhp() const;
 
     EvalWell getTotalRate() const;
+
+    // wellbore water volume fraction (zero when the water phase is disabled)
+    EvalWell getWaterVolumeFraction() const;
 
     static EvalWell extendEval(const Eval& in);
 

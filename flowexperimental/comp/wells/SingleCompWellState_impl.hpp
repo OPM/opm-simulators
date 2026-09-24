@@ -164,6 +164,7 @@ copyRuntimeStateFrom(const SingleCompWellState& other)
     // injector targets from base_init(); only reuse the dynamic state.
     bhp = other.bhp;
     surface_phase_rates = other.surface_phase_rates;
+    wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
     phase_fractions = other.phase_fractions;
     reservoir_phase_rates = other.reservoir_phase_rates;
     if (producer) {

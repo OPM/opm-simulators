@@ -50,6 +50,22 @@ init()
 }
 
 template <typename TypeTag>
+template <typename T>
+T
+CompWell<TypeTag>::
+waterDensity_(const T& pressure, const Scalar temperature)
+{
+    // the water PVT only reads pressure and temperature; a fluid state and
+    // parameter cache are built to satisfy the fluid system's interface
+    FluidState<T> fluid_state;
+    fluid_state.setPressure(FluidSystem::waterPhaseIdx, pressure);
+    fluid_state.setTemperature(temperature);
+    typename FluidSystem::template ParameterCache<T> param_cache
+        {CompositionalConfig::EOSType::PR};
+    return FluidSystem::density(fluid_state, param_cache, FluidSystem::waterPhaseIdx);
+}
+
+template <typename TypeTag>
 void
 CompWell<TypeTag>::
 calculateExplicitQuantities(const Simulator& simulator,
@@ -64,6 +80,19 @@ calculateExplicitQuantities(const Simulator& simulator,
         flashFluidState_(fluid_state_scalar);
 
         this->component_masses_ = wellboreComponentMasses(fluid_state_scalar, this->wellbore_volume_);
+
+        if constexpr (FluidSystem::waterEnabled) {
+            // water occupies its volume fraction of the wellbore; the
+            // hydrocarbon masses scale with the remainder
+            const Scalar wfrac = std::clamp(well_state.wellbore_water_volume_fraction,
+                                            Scalar{0.}, Scalar{1.});
+            for (auto& mass : this->component_masses_) {
+                mass *= (1. - wfrac);
+            }
+            const Scalar rho_w = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
+                                               fluid_state_scalar.temperature(0));
+            this->water_mass_ = wfrac * rho_w * this->wellbore_volume_;
+        }
     }
 }
 
@@ -98,11 +127,6 @@ updateTotalMass()
 
     this->new_component_masses_ = wellboreComponentMasses(fluid_state, this->wellbore_volume_);
 
-    EvalWell total_mass = 0.;
-    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        total_mass += this->new_component_masses_[compidx];
-    }
-
     const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
     const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
     const auto& density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
@@ -110,12 +134,33 @@ updateTotalMass()
     // TODO: some properties should go to the fluid_state?
     fluid_density_ = density_oil * so + density_gas * sg;
 
+    if constexpr (FluidSystem::waterEnabled) {
+        // water occupies its volume fraction of the wellbore, the flashed
+        // hydrocarbon system the remainder
+        const EvalWell wfrac = this->primary_variables_.getWaterVolumeFraction();
+        for (auto& mass : this->new_component_masses_) {
+            mass *= (1. - wfrac);
+        }
+        const EvalWell rho_w = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
+                                             getValue(fluid_state.temperature(0)));
+        this->new_water_mass_ = wfrac * rho_w * this->wellbore_volume_;
+        fluid_density_ = (1. - wfrac) * fluid_density_ + wfrac * rho_w;
+    }
+
+    EvalWell total_mass = this->new_water_mass_;
+    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
+        total_mass += this->new_component_masses_[compidx];
+    }
+
     // The AD derivatives of the component masses and mass fractions with respect
     // to the wellbore primary variables (pressure and composition), including the
     // dependence that flows through the flash, are checked against finite
     // differences in tests/test_compwell_jacobian.cpp.
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
+    }
+    if constexpr (FluidSystem::waterEnabled) {
+        this->water_mass_fraction_ = this->new_water_mass_ / total_mass;
     }
 }
 
@@ -131,11 +176,12 @@ updateSurfaceQuantities(const Simulator& simulator)
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
         }
-        updateSurfaceCondition_(surface_cond, fluid_state);
+        // the injection stream carries no water
+        updateSurfaceCondition_(surface_cond, fluid_state, Scalar{0.});
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
         auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
-        updateSurfaceCondition_(surface_cond, fluid_state);
+        updateSurfaceCondition_(surface_cond, fluid_state, this->water_mass_fraction_);
      }
 }
 
@@ -175,14 +221,24 @@ calculateSingleConnectionRate(const Simulator& simulator,
                 con_rates[comp_idx] += cq_v[phase_idx] * density * mass_fraction;
             }
         }
+        if constexpr (FluidSystem::waterEnabled) {
+            // the water phase is pure water; its mass rate fills the extra slot
+            const EvalWell cq_w = - mob[FluidSystem::waterPhaseIdx] * tw * drawdown;
+            const EvalWell density = PrimaryVariables::extendEval(fluid_state.density(FluidSystem::waterPhaseIdx));
+            con_rates[FluidSystem::numComponents] += cq_w * density;
+        }
     } else { // injecting connection
+        // the injected fluid displaces every mobile phase in the cell
         EvalWell total_mobility = 0.;
-        for (unsigned phase_idx = 0; phase_idx < np; ++phase_idx) {
+        for (unsigned phase_idx = 0; phase_idx < FluidSystem::numPhases; ++phase_idx) {
             total_mobility += mob[phase_idx];
         }
         EvalWell cq_v = - total_mobility * tw * drawdown;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; comp_idx++) {
             con_rates[comp_idx] = cq_v * fluid_density_ * mass_fractions_[comp_idx];
+        }
+        if constexpr (FluidSystem::waterEnabled) {
+            con_rates[FluidSystem::numComponents] = cq_v * fluid_density_ * water_mass_fraction_;
         }
     }
 }
@@ -229,17 +285,20 @@ assembleWellEq(const Simulator& simulator,
 
     assembleSourceTerm(dt);
 
-    std::vector<EvalWell> connection_rates(FluidSystem::numComponents, 0.);
+    // one equation per hydrocarbon component plus one for water when enabled;
+    // the water slot in the reservoir rate vector has the same position
+    // (conti0EqIdx + numComponents) as the water conservation row here
+    std::vector<EvalWell> connection_rates(PrimaryVariables::numWellConservationEq, 0.);
     calculateSingleConnectionRate(simulator, connection_rates);
     // only one perforation for now
     auto& con_rates = this->connectionRates_[0];
-    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+    for (unsigned comp_idx = 0; comp_idx < PrimaryVariables::numWellConservationEq; ++comp_idx) {
         con_rates[comp_idx] = PrimaryVariables::restrictEval(connection_rates[comp_idx]);
     }
 
     // here we use perf index, need to check how the things are done in the StandardWellAssemble
     // assemble the well equations related to the production/injection mass rates for each component
-    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+    for (unsigned comp_idx = 0; comp_idx < PrimaryVariables::numWellConservationEq; ++comp_idx) {
         // the signs need to be checked
         this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
@@ -316,8 +375,19 @@ assembleControlEqProd(const SingleWellState& well_state,
         control_eq = gas_rate + rate_target;
         break;
     }
+    case WellProducerCMode::WRAT : {
+        if constexpr (FluidSystem::waterEnabled) {
+            const Scalar rate_target = prod_controls.water_rate;
+            const EvalWell& total_rate = this->primary_variables_.getTotalRate();
+            const EvalWell water_rate = total_rate * surface_cond.volume_fractions_[FluidSystem::waterPhaseIdx];
+            control_eq = water_rate + rate_target;
+            break;
+        } else {
+            OPM_THROW(std::logic_error, "WRAT control requires an active water phase");
+        }
+    }
     default:
-        OPM_THROW(std::logic_error, "only handles BHP, ORAT and GRAT control for producers for now");
+        OPM_THROW(std::logic_error, "only handles BHP, ORAT, GRAT and WRAT control for producers for now");
     }
 }
 
@@ -370,6 +440,17 @@ assembleSourceTerm(const Scalar dt)
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
         }
         this->well_equations_.residual()[0][comp_idx] += residual.value();
+    }
+
+    if constexpr (FluidSystem::waterEnabled) {
+        // water mass balance of the wellbore, in the row after the components
+        const EvalWell water_mass_rate = total_mass_rate * this->surface_conditions_.waterMassFraction();
+        const EvalWell residual = (this->new_water_mass_ - this->water_mass_) / dt - water_mass_rate;
+        constexpr int water_row = FluidSystem::numComponents;
+        for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
+            this->well_equations_.D()[0][0][water_row][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
+        }
+        this->well_equations_.residual()[0][water_row] += residual.value();
     }
 }
 
@@ -467,17 +548,17 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
     for (int comp_idx = 0; comp_idx < FluidSystem::numComponents - 1; ++comp_idx) {
         total_molar_fractions[comp_idx] = fluid_state.moleFraction(comp_idx);
     }
+    if constexpr (FluidSystem::waterEnabled) {
+        well_state.wellbore_water_volume_fraction =
+            getValue(this->primary_variables_.getWaterVolumeFraction());
+    }
+
     const Scalar total_rate = this->primary_variables_.getTotalRate().value();
     auto& surface_phase_rates = well_state.surface_phase_rates;
     if (well_state.producer) { // producer
         const auto& surface_cond = this->surface_conditions_;
-        // the surface conditions only cover the EOS phases: the wellbore
-        // carries no water, so any water phase produces at zero rate
         for (int p = 0; p < SurfaceConditons::num_phases; ++p) {
             surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
-        }
-        if constexpr (FluidSystem::waterEnabled) {
-            surface_phase_rates[FluidSystem::waterPhaseIdx] = 0.0;
         }
     } else { // injector
         // only gas injection yet
@@ -602,7 +683,9 @@ template <typename TypeTag>
 template <typename T>
 void
 CompWell<TypeTag>::
-updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state)
+updateSurfaceCondition_(const StandardCond& surface_cond,
+                        FluidState<T>& fluid_state,
+                        const T& water_mass_fraction)
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
@@ -626,8 +709,29 @@ updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_s
     const auto& density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
     this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
     this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
-    this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = fluid_state.saturation(FluidSystem::oilPhaseIdx);
-    this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+
+    // the hydrocarbon flash splits the hydrocarbon surface volume; with water
+    // in the stream, both shares shrink by the water volume fraction
+    const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
+    const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+    if constexpr (FluidSystem::waterEnabled) {
+        fluid_state.setPressure(FluidSystem::waterPhaseIdx, surface_cond.pressure);
+        const T rho_w = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
+                                      surface_cond.temperature);
+        // per unit mass of stream: the volumes of the water and hydrocarbon parts
+        const T hc_density = so * density_oil + sg * density_gas;
+        const T water_volume = water_mass_fraction / rho_w;
+        const T hc_volume = (1. - water_mass_fraction) / hc_density;
+        const T water_volume_fraction = water_volume / (water_volume + hc_volume);
+        this->surface_conditions_.surface_densities_[FluidSystem::waterPhaseIdx] = rho_w;
+        this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = water_volume_fraction;
+        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = (1. - water_volume_fraction) * so;
+        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = (1. - water_volume_fraction) * sg;
+    } else {
+        static_cast<void>(water_mass_fraction);
+        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = so;
+        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = sg;
+    }
 }
 
 template <typename TypeTag>
