@@ -624,7 +624,7 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
 
     auto& total_molar_fractions = well_state.total_molar_fractions;
     const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
-    for (int comp_idx = 0; comp_idx < FluidSystem::numComponents - 1; ++comp_idx) {
+    for (int comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
         total_molar_fractions[comp_idx] = fluid_state.moleFraction(comp_idx);
     }
     if constexpr (FluidSystem::waterEnabled) {

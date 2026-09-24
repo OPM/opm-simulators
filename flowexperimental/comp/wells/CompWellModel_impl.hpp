@@ -302,10 +302,9 @@ initWellState()
                                  this->locally_owned_wells_,
                                  /*prev_well_state=*/nullptr);
 
-    // The water a wellbore holds is an inventory, set by its water fraction
-    // and its pressure. A wellbore that starts every report step empty and at
-    // the bhp limit takes the difference from the reservoir, or hands it over,
-    // without the surface rates seeing it.
+    // Carry the wellbore inventory across report steps. Its component masses
+    // depend on the hydrocarbon composition as well as pressure and water
+    // fraction; schedule-derived injector targets must not replace that state.
     if constexpr (FluidSystem::waterEnabled) {
         for (const auto& well : this->wells_ecl_) {
             const auto& name = well.name();
@@ -319,9 +318,8 @@ initWellState()
                 continue;
             }
             ws.bhp = last.bhp;
-            // Keep the water already in an injector when its injection type
-            // changes: the new stream must displace it through the well equations.
             ws.wellbore_water_volume_fraction = last.wellbore_water_volume_fraction;
+            ws.total_molar_fractions = last.total_molar_fractions;
         }
     }
 }

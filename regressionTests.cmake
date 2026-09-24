@@ -79,11 +79,12 @@ add_test_compareECLFiles(
 )
 
 # Cover water-rate and liquid-rate controls, and switching an open injector
-# from water to gas while its wellbore still contains water.
+# between gas and water while its wellbore still contains the previous fluid.
 foreach(case IN ITEMS
     SIMPLE_COMP_WATER_WRAT
     SIMPLE_COMP_WATER_LRAT
-    SIMPLE_COMP_WATER_TO_GAS)
+    SIMPLE_COMP_WATER_TO_GAS
+    SIMPLE_COMP_GAS_TO_WATER)
   add_test_compareECLFiles(
     CASENAME
       ${case}
