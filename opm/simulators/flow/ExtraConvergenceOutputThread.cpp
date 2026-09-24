@@ -107,7 +107,11 @@ namespace {
                        const Opm::ConvergenceReport::ReservoirConvergenceMetric& metric)
     {
         std::ostringstream os;
-        os << to_string(metric.type()) << '_' << getPhaseName(metric.phase());
+        if (metric.phase() < 0) {
+            os << to_string(metric.type());
+        } else {
+            os << to_string(metric.type()) << '_' << getPhaseName(metric.phase());
+        }
 
         return os.str();
     }

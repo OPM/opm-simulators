@@ -23,7 +23,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 
-#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/CompositionalModelParameters.hpp>
 #include <opm/simulators/flow/NonlinearSystem.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -32,7 +32,10 @@
 
 #include <flowexperimental/comp/wells/CompWellModel.hpp>
 
+#include <array>
 #include <filesystem>
+#include <span>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -48,13 +51,19 @@ public:
     using Indices = typename ParentType::Indices;
     using Scalar = typename ParentType::Scalar;
     using ComponentName = typename ParentType::ComponentName;
+    using GlobalEqVector = typename ParentType::GlobalEqVector;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-    using ModelParameters = BlackoilModelParameters<Scalar>;
+    using ModelParameters = CompositionalModelParameters<Scalar>;
 
     static constexpr int numEq = Indices::numEq;
+    static constexpr bool useVolumetricResidual =
+        getPropValue<TypeTag, Properties::UseVolumetricResidual>();
+    static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
+    static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
+    using DSolVector = Dune::BlockVector<Scalar>;
 
     NonlinearSystemCompositional(Simulator& simulator,
                                  const ModelParameters& param,
@@ -86,6 +95,10 @@ public:
     bool hasNlddSolver() const
     { return false; }
 
+    void updateTUNING(const Tuning& /*tuning*/) override;
+
+    void updateTUNINGDP(const TuningDp& /*tuning_dp*/) override;
+
     const SimulatorReport& localAccumulatedReports() const
     {
       static const SimulatorReport emptyReport{};
@@ -109,8 +122,60 @@ public:
 
     void writePartitions(const std::filesystem::path&) const {}
 
+    ConvergenceReport getConvergence(const SimulatorTimerInterface& timer,
+                                     std::vector<Scalar>& residual_norms);
+
+    ConvergenceReport getCompositionalConvergence(double reportTime,
+                                                  std::vector<Scalar>& residual_norms);
+
+    Scalar localCompositionalConvergenceData(Scalar& dPmax,
+                                             Scalar& dSmax,
+                                             std::vector<Scalar>& residualMaxNorm,
+                                             std::vector<Scalar>& residualSum,
+                                             std::vector<Scalar>& specificVolumeAvg) const;
+
+    Scalar compositionalConvergenceReduction(const Scalar poreVolumeSumLocal,
+                                             Scalar& dPmax,
+                                             Scalar& dSmax,
+                                             std::vector<Scalar>& residualMaxNorm,
+                                             std::vector<Scalar>& residualSum,
+                                             std::vector<Scalar>& specificVolumeAvg);
+
+    template <class LogFailure>
+    void addCompositionalConvergenceMetrics(
+        ConvergenceReport& report,
+        const std::span<const Scalar> dSolmax,
+        const std::span<const std::string> dSolnames,
+        const std::span<const ConvergenceReport::ReservoirFailure::Type> types,
+        const std::span<const Scalar> tolerances,
+        const Scalar maxdSolMaxAllowed,
+        LogFailure&& logFailure) const;
+
+protected:
+    bool shouldStoreSolutionUpdate() const override {return true;}
+    void prepareSolutionUpdate() override;
+    void storeSolutionUpdate(const GlobalEqVector& dx) override;
+
 private:
-    std::vector<Scalar> reservoirResidualMetrics() const;
+    struct EffectiveSaturationData
+    {
+        std::array<Scalar, numComponents> molarDens{};
+        std::array<Scalar, numComponents - 1> z{};
+        std::array<Scalar, numComponents - 1> dMolarVolumeDz{};
+        Scalar molarVolume = 0.0;
+        Scalar waterMassDens = 0.0;
+        Scalar waterDensity = 0.0;
+    };
+
+    DSolVector dP_;
+    DSolVector dSeff_;
+    std::vector<EffectiveSaturationData> effSatData_;
+
+    template <class FluidState>
+    EffectiveSaturationData computeEffectiveSaturationData_(const FluidState& fs) const;
+
+    static Scalar effectiveSaturationChange_(const EffectiveSaturationData& oldData,
+                                             const EffectiveSaturationData& newData);
 
     double linear_solve_setup_time_ = 0.0;
 };
