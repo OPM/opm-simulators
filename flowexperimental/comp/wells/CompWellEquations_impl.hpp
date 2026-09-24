@@ -18,6 +18,7 @@
 */
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
 #include <cmath>
 
@@ -73,6 +74,7 @@ init(const int num_conn,  const std::vector<std::size_t>& cells)
     invDrw_.resize(duneD_.N());
 
     this->cells_ = cells;
+    this->res_scales_.assign(cells.size(), 1.0);
     // some others in the future
 }
 
@@ -140,8 +142,40 @@ apply(BVector& r) const
 
     // invDrw_ = invDuneD_ * resWell_
     invDuneD_.mv(resWell_, invDrw_);
-    // r = r - duneC_^T * invDrw_
-    duneC_.mmtv(invDrw_, r);
+    // r = r - scale * duneC_^T * invDrw_, with the per-cell scale converting
+    // the well-equation units to the reservoir residual's units. r holds the
+    // well's own cells, one entry per connection.
+    for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        VectorBlockType tmp(0.0);
+        (*colC).usmtv(res_scales_[colC.index()], invDrw_[0], tmp);
+        r[colC.index()] -= tmp;
+    }
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+template <class SparseMatrixAdapter>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+extract(SparseMatrixAdapter& jacobian) const
+{
+    // A -= C^T D^-1 B, following StandardWellEquations::extract().
+    // B and C have one row of blocks, with a nonzero at (0, j) only if the
+    // well has a connection in cell j.
+    for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        const auto row_index = cells_[colC.index()];
+        for (auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+            const auto col_index = cells_[colB.index()];
+            // tmp = D^-1 B
+            OffDiagMatrixBlockWellType tmp;
+            detail::multMatrixImpl(invDuneD_[0][0], *colB, tmp, std::true_type());
+            // block = -scale * C^T tmp, with the same unit conversion as the
+            // residual correction in apply()
+            typename SparseMatrixAdapter::MatrixBlock tmpMat;
+            detail::negativeMultMatrixTransposed(*colC, tmp, tmpMat);
+            tmpMat *= res_scales_[colC.index()];
+            jacobian.addToBlock(row_index, col_index, tmpMat);
+        }
+    }
 }
 
 template <typename Scalar, int numWellEq, int numEq>

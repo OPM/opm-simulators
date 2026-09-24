@@ -56,6 +56,14 @@ public:
 
     void init(const int num_conn, const std::vector<std::size_t>& cells);
 
+    // Per-connection scaling from well-equation units (total mass per second)
+    // to the reservoir residual's units. The models-layer reservoir residual
+    // is volume-specific (UseVolumetricResidual), so the coupling terms this
+    // class adds to the reservoir system must carry the same 1/volume factor
+    // as the reservoir equations of the connected cells.
+    void setResidualScales(std::vector<Scalar> scales)
+    { res_scales_ = std::move(scales); }
+
     void clear();
 
     DiagMatWell& D()
@@ -89,6 +97,12 @@ public:
 
     void apply(BVector& r) const;
 
+    // subtract the well's Schur complement C^T D^-1 B from the
+    // reservoir Jacobian, so that the reservoir system the Newton
+    // solves is the reduced system of the coupled reservoir-well one
+    template <class SparseMatrixAdapter>
+    void extract(SparseMatrixAdapter& jacobian) const;
+
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
 private:
@@ -110,6 +124,10 @@ private:
 
     // Store the global index of the well connection cells
     std::vector<std::size_t> cells_;
+
+    // per-connection scaling to the reservoir residual's units (see
+    // setResidualScales); defaults to 1 until set
+    std::vector<Scalar> res_scales_;
 };
 
 } // end of namespace Opm

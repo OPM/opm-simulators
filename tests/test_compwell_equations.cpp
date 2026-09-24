@@ -141,8 +141,10 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     Dinv.invert();
 
     // --- Fill the CompWellEquations blocks --------------------------------
+    // The cell indices differ from the connection indices: the vectors handed
+    // to apply() and recoverSolutionWell() are local to the well.
     Eqns eqns;
-    eqns.init(num_conn, std::vector<std::size_t>{0, 1});
+    eqns.init(num_conn, std::vector<std::size_t>{3, 7});
     eqns.clear();
 
     for (int i = 0; i < nw; ++i) {

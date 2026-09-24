@@ -281,6 +281,18 @@ assembleWellEq(const Simulator& simulator,
 {
     this->well_equations_.clear();
 
+    // The reservoir residual is volume-specific when UseVolumetricResidual is
+    // set (the models-layer default, used by the compositional model), so the
+    // coupling terms pushed into the reservoir system need the connected
+    // cells' 1/volume factors. For a total-mass formulation the scale is one.
+    if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
+        std::vector<Scalar> scales(this->well_cells_.size());
+        for (std::size_t i = 0; i < this->well_cells_.size(); ++i) {
+            scales[i] = 1.0 / simulator.model().dofTotalVolume(this->well_cells_[i]);
+        }
+        this->well_equations_.setResidualScales(std::move(scales));
+    }
+
     this->updateSecondaryQuantities(simulator);
 
     assembleSourceTerm(dt);
@@ -581,9 +593,9 @@ getConvergence() const
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-addWellContributions(SparseMatrixAdapter&) const
+addWellContributions(SparseMatrixAdapter& jacobian) const
 {
-    assert(false);
+    this->well_equations_.extract(jacobian);
 }
 
 template <typename TypeTag>
