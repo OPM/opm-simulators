@@ -452,8 +452,21 @@ assembleControlEqProd(const SingleWellState& well_state,
             OPM_THROW(std::logic_error, "WRAT control requires an active water phase");
         }
     }
+    case WellProducerCMode::LRAT : {
+        const Scalar rate_target = prod_controls.liquid_rate;
+        const EvalWell& total_rate = this->primary_variables_.getTotalRate();
+        EvalWell liquid_rate = total_rate
+            * surface_cond.volume_fractions_[FluidSystem::oilPhaseIdx];
+        if constexpr (FluidSystem::waterEnabled) {
+            liquid_rate += total_rate
+                * surface_cond.volume_fractions_[FluidSystem::waterPhaseIdx];
+        }
+        control_eq = liquid_rate + rate_target;
+        break;
+    }
     default:
-        OPM_THROW(std::logic_error, "only handles BHP, ORAT, GRAT and WRAT control for producers for now");
+        OPM_THROW(std::logic_error,
+                  "only handles BHP, ORAT, GRAT, WRAT and LRAT control for producers for now");
     }
 }
 
@@ -720,6 +733,18 @@ updateWellControl(const SummaryState& summary_state,
             const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::gasPhaseIdx];
             if (current_rate > production_controls.gas_rate) {
                 well_state.production_cmode = WellProducerCMode::GRAT;
+                changed = true;
+            }
+        }
+
+        if (!changed && production_controls.hasControl(Well::ProducerCMode::LRAT)
+            && current_control != WellProducerCMode::LRAT) {
+            Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::oilPhaseIdx];
+            if constexpr (FluidSystem::waterEnabled) {
+                current_rate -= well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
+            }
+            if (current_rate > production_controls.liquid_rate) {
+                well_state.production_cmode = WellProducerCMode::LRAT;
                 changed = true;
             }
         }
