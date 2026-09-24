@@ -3067,6 +3067,28 @@ add_test_compareECLFiles(
     --enable-tuning=true
 )
 
+set(_summary_tests
+  SUMMARY_HIST_01
+  SUMMARY_HIST_02
+)
+
+add_multiple_tests(
+  _summary_tests
+  ""
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    summary
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(
     CASENAME
