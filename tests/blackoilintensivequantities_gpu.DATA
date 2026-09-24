@@ -1,0 +1,96 @@
+-- Copyright TODO ADD YEAR AND NAME OF AUTHOR
+--
+-- This file is part of the Open Porous Media project (OPM).
+--
+-- OPM is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- OPM is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+
+RUNSPEC
+
+DIMENS
+3 3 3 /
+
+EQLDIMS
+/
+
+TABDIMS
+/
+
+WATER
+GAS
+CO2STORE
+DISGASW
+VAPWAT
+THERMAL
+METRIC
+
+GRID
+
+GRIDFILE
+0 0 /
+
+DX
+27*1 /
+
+DY
+27*1 /
+
+DZ
+27*1 /
+
+TOPS
+9*0 /
+
+PERMX
+27*1013.25 /
+
+PORO
+27*0.25 /
+
+COPY
+PERMX PERMY /
+PERMX PERMZ /
+/
+
+THCONR
+27*1.5 /
+
+PROPS
+
+SGWFN
+0.0 0.0 1.0 0.0306
+1.0 1.0 0.0 0.306 /
+
+SPECROCK
+20 2125.0
+100 2125.0 /
+
+SOLUTION
+
+RPTRST
+'BASIC=0' /
+
+EQUIL
+0 300 100 0 0 0 1 1 0 /
+
+RTEMPVD
+0 36.12
+1000 70.0 /
+
+SCHEDULE
+
+RPTRST
+'BASIC=0' /
+
+TSTEP
+1 /

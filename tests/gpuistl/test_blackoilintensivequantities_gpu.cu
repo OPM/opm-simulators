@@ -1014,23 +1014,21 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
 
 BOOST_AUTO_TEST_CASE(TestRealDeckGpuVsCpuFromSimulatorSolution)
 {
-    // Drive the per-cell IQ update with the EQUIL-initialized primary
-    // variables of the production CO2STORE deck the user reports diverges
-    // when the dispatcher is enabled. This reproduces the exact code path
-    // taken by the dispatcher in production (per-cell PrimaryVariables
-    // upload + GPU update + readback) and compares every IQ field against
-    // a CPU reference, so we can identify which field becomes non-finite.
+    // Drive the per-cell IQ update with EQUIL-initialized primary variables
+    // from a minimal thermal CO2STORE deck with DISGASW and VAPWAT enabled.
+    // This reproduces the production dispatcher code path (per-cell
+    // PrimaryVariables upload + GPU update + readback) and compares every IQ
+    // field against a CPU reference, so we can identify which field becomes
+    // non-finite.
     //
     // NOTE: this test must run BEFORE the synthetic-deck tests because the
     // BlackOilFluidSystem singleton is global state that gets re-set by
     // every readDeck call; running this after the synthetic tests in the
     // same process leaves the static FluidSystem in a state that is
     // inconsistent with the per-cell GPU FluidSystem copy taken here.
-    const std::string deckPath = "/workspaces/opm/thecaseiwant/deck/THECASEIWANT.DATA";
-    if (!std::filesystem::exists(deckPath)) {
-        BOOST_TEST_MESSAGE("Skipping: deck not found at " << deckPath);
-        return;
-    }
+    const auto deckPath = std::string{"blackoilintensivequantities_gpu.DATA"};
+    BOOST_REQUIRE_MESSAGE(std::filesystem::exists(deckPath),
+                          "Required test deck not found at " << deckPath);
     runIntensiveQuantitiesTestFromSimulatorSolution(deckPath, /*sampleStride=*/1u);
 }
 
