@@ -40,6 +40,7 @@
 #include <stack>
 #include <set>
 #include <unordered_set>
+#include <utility>
 
 namespace Opm
 {
@@ -1416,23 +1417,72 @@ updateSlaveGroupCmodesFromMaster()
     auto& slave = this->reservoirCouplingSlave();
     for (std::size_t i = 0; i < slave.numSlaveGroups(); ++i) {
         const auto& gname = slave.slaveGroupIdxToGroupName(i);
-        // Production cmode
+        // Production cmode.  The master's mode applies when it has a target
+        // for the group and the GRUPSLAV flag lets it.  A mode written from
+        // a master target on an earlier step must not outlive the target or
+        // the flag, so when the override goes the deck's mode is put back --
+        // but only for a group the master did control, since this must not
+        // become a reset of every slave group's mode.
+        auto apply_master = false;
+        auto master_cmode = Group::ProductionCMode::NONE;
         if (slave.hasMasterProductionTarget(gname)) {
-            auto [master_target, master_cmode] = slave.masterProductionTarget(gname);
-            auto filter = this->getProductionFilterFlag_(gname, master_cmode);
-            if (filter != FilterFlag::SLAV) {
-                this->groupState().production_control(gname, master_cmode);
-            }
+            master_cmode = slave.masterProductionTarget(gname).second;
+            apply_master = this->getProductionFilterFlag_(gname, master_cmode) != FilterFlag::SLAV;
         }
+        if (apply_master) {
+            this->groupState().production_control(gname, master_cmode);
+            this->master_production_modes_applied_.insert(gname);
+        }
+        else if (this->master_production_modes_applied_.erase(gname) > 0) {
+            // The master's override is being withdrawn: its target is gone, or
+            // the flag now says SLAV.  Put the deck's mode back once, NONE when
+            // the deck gives none, so that the target calculation does not look
+            // for a deck target under the master's mode.  From here on the well
+            // solve owns the mode again, as it does for any other group.
+            const auto& group = this->schedule_.getGroup(gname, this->report_step_);
+            this->groupState().production_control(
+                gname, group.productionControls(this->summary_state_).cmode);
+        }
+        // Otherwise the master has never controlled this group: leave the mode
+        // the well solve has given it alone.  This function runs after every
+        // receive of group constraints, so overwriting it here would undo the
+        // solver's own control switching.
         // Injection cmode — check each phase
         for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+            // The master's mode applies when it has a target for the phase
+            // and the GRUPSLAV flag lets it.  A mode written from a master
+            // target on an earlier step must not outlive the target or the
+            // flag, so when the override goes the deck's mode is put back --
+            // but only for a group and phase the master did control, since
+            // this must not become a reset of every slave group's mode.
+            auto apply_master = false;
+            auto master_cmode = Group::InjectionCMode::NONE;
             if (slave.hasMasterInjectionTarget(gname, phase)) {
-                auto [master_target, master_cmode] = slave.masterInjectionTarget(gname, phase);
-                auto filter = this->getInjectionFilterFlag_(gname, phase);
-                if (filter != FilterFlag::SLAV) {
-                    this->groupState().injection_control(gname, phase, master_cmode);
-                }
+                master_cmode = slave.masterInjectionTarget(gname, phase).second;
+                apply_master = this->getInjectionFilterFlag_(gname, phase) != FilterFlag::SLAV;
             }
+            auto mode_key = std::make_pair(gname, phase);
+            if (apply_master) {
+                this->groupState().injection_control(gname, phase, master_cmode);
+                this->master_injection_modes_applied_.insert(std::move(mode_key));
+            }
+            else if (this->master_injection_modes_applied_.erase(mode_key) > 0) {
+                // The master's override is being withdrawn: its target is gone,
+                // or the flag now says SLAV.  Put the deck's mode back once,
+                // NONE when the deck gives none, so that the target
+                // calculation does not look for a deck limit under the
+                // master's mode.  From here on the well solve owns the mode
+                // again, as it does for any other group.
+                const auto& group = this->schedule_.getGroup(gname, this->report_step_);
+                const auto deck_cmode = group.hasInjectionControl(phase)
+                    ? group.injectionControls(phase, this->summary_state_).cmode
+                    : Group::InjectionCMode::NONE;
+                this->groupState().injection_control(gname, phase, deck_cmode);
+            }
+            // Otherwise the master has never controlled this group and phase:
+            // leave the mode the well solve has given it alone.  This function
+            // runs after every receive of group constraints, so overwriting it
+            // here would undo the solver's own RATE/FLD switching.
         }
     }
 }

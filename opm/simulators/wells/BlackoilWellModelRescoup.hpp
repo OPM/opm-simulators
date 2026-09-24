@@ -142,8 +142,9 @@ public:
     /// written into the slave's group state via the receiver helper.
     /// Called from the slave's beginTimeStep first-substep handshake, and
     /// once per network iteration from maybeSendSlaveGroupFlowToMaster_(),
-    /// where the master sends injection targets only.
-    void receiveGroupConstraintsFromMaster();
+    /// where the master sends injection targets only.  The caller says
+    /// which of the two it is; see ReservoirCoupling::GroupConstraintsSend.
+    void receiveGroupConstraintsFromMaster(ReservoirCoupling::GroupConstraintsSend send);
 
     /// \brief Receive master-computed network-leaf node pressures and
     ///   apply them as dynamic THP limits on every slave producer

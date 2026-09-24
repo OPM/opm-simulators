@@ -53,6 +53,12 @@ public:
     );
     bool activated() const { return activated_; }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+    /// @brief Forget every master injection target held from an earlier receive
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void clearMasterInjectionTargets();
+    /// @brief Forget every master production target and limit held from an earlier receive
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void clearMasterProductionConstraints();
     const Parallel::Communication& getComm() const { return comm_; }
     MPI_Comm getMasterComm() const { return slave_master_comm_; }
     const std::string& getSlaveName() const { return slave_name_; }
