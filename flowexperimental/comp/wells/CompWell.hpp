@@ -29,6 +29,8 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <optional>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -118,6 +120,12 @@ public:
                         const SingleWellState& well_state,
                         const double dt);
 
+    // assembleWellEq() that steps back towards the last primary variables it
+    // succeeded for when the flash fails for the current ones
+    void assembleWellEqWithBackoff(const Simulator& simulator,
+                                   SingleWellState& well_state,
+                                   const double dt);
+
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
                        SingleWellState& well_state) override;
@@ -140,6 +148,8 @@ private:
 
     // primary variables
     PrimaryVariables primary_variables_;
+    // the last primary variables the well equations could be assembled for
+    std::optional<PrimaryVariables> assembled_primary_variables_;
     WellEquations well_equations_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized

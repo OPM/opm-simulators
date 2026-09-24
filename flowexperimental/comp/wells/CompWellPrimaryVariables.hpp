@@ -86,6 +86,9 @@ public:
 
     void updateNewton(const BVectorWell& dwells);
 
+    // moves the primary variables half of the way to those of other
+    void moveHalfwayTo(const CompWellPrimaryVariables& other);
+
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;

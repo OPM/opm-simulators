@@ -22,6 +22,8 @@
 
 #include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <algorithm>
 
 namespace Opm {
@@ -124,11 +126,23 @@ void
 CompWellPrimaryVariables<FluidSystem, Indices>::
 updateNewton(const BVectorWell& dwells)
 {
-    constexpr Scalar damping = 1.0;
+    // As for the black-oil wells, one update moves a fraction by at most 0.2
+    // and the bhp by at most its own value. While the reservoir iterates are
+    // still far off, a full step can put the composition on its bounds, where
+    // the surface flash may fail, or turn the bhp negative.
+    constexpr Scalar max_fraction_change = 0.2;
+    constexpr Scalar max_relative_bhp_change = 1.0;
+    constexpr Scalar bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
 
-    for (unsigned i = 0; i < value_.size(); ++i) {
-        value_[i] -= damping * dwells[0][i];
+    value_[QTotal] -= dwells[0][QTotal];
+    // the mole fractions and, with water, its volume fraction
+    for (int i = QTotal + 1; i < Bhp; ++i) {
+        value_[i] -= std::clamp(dwells[0][i], -max_fraction_change, max_fraction_change);
     }
+    const Scalar max_bhp_change = max_relative_bhp_change * std::abs(value_[Bhp]);
+    const Scalar bhp_change = std::clamp(dwells[0][Bhp], -max_bhp_change, max_bhp_change);
+    value_[Bhp] = std::max(value_[Bhp] - bhp_change, bhp_lower_limit);
+
     // The mole-fraction primary variables occupy indices [1, numComponents - 1]
     // (QTotal is at 0 and Bhp at numComponents). Clamp each of them, then
     // renormalize so the full composition - including the implicit last
@@ -150,6 +164,17 @@ updateNewton(const BVectorWell& dwells)
         value_[WFrac] = std::clamp(value_[WFrac], Scalar{0.}, Scalar{1.});
     }
 
+    updateEvaluation();
+}
+
+template <typename FluidSystem, typename Indices>
+void
+CompWellPrimaryVariables<FluidSystem, Indices>::
+moveHalfwayTo(const CompWellPrimaryVariables& other)
+{
+    for (std::size_t idx = 0; idx < numWellEq; ++idx) {
+        value_[idx] = 0.5 * (value_[idx] + other.value_[idx]);
+    }
     updateEvaluation();
 }
 

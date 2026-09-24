@@ -363,6 +363,34 @@ assembleWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
+assembleWellEqWithBackoff(const Simulator& simulator,
+                          SingleWellState& well_state,
+                          const double dt)
+{
+    // A Newton update can land on a wellbore state the flash fails for, while
+    // the reservoir iterates are still far off in particular. That would fail
+    // the whole time step, so step back towards the last state that worked.
+    constexpr int max_backoffs = 5;
+    for (int backoff = 0; ; ++backoff) {
+        try {
+            assembleWellEq(simulator, well_state, dt);
+            break;
+        } catch (const NumericalProblem& e) {
+            if (!this->assembled_primary_variables_ || backoff == max_backoffs) {
+                throw;
+            }
+            OpmLog::debug(fmt::format("Well {}: stepping back from a wellbore state that cannot "
+                                      "be assembled ({})", this->well_ecl_.name(), e.what()));
+            this->primary_variables_.moveHalfwayTo(*this->assembled_primary_variables_);
+            updateWellStateFromPrimaryVariables(well_state);
+        }
+    }
+    this->assembled_primary_variables_ = this->primary_variables_;
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
 assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
@@ -507,7 +535,7 @@ iterateWellEq(const Simulator& simulator,
     do {
         updateWellControl(simulator.vanguard().summaryState(), well_state);
 
-        assembleWellEq(simulator, well_state, dt);
+        assembleWellEqWithBackoff(simulator, well_state, dt);
 
         // get convergence
         converged = this->getConvergence();
