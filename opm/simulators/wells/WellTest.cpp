@@ -123,35 +123,50 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
     Scalar max_ratio_completion = 0;
     const int np = well_.numPhases();
 
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_phase_rates = perf_data.phase_rates;
+    // A completion of a distributed well may span ranks, so sum its rates over
+    // the ranks before forming its ratio.  The slots follow the full connection
+    // list so that every rank reduces over the same layout.
+    std::vector<int> complnums;
+    for (const auto& connection : well_.wellEcl().getConnections()) {
+        complnums.push_back(connection.complnum());
+    }
+    std::ranges::sort(complnums);
+    const auto [first_dup, last_dup] = std::ranges::unique(complnums);
+    complnums.erase(first_dup, last_dup);
+
+    std::vector<Scalar> completion_rates(complnums.size() * np, 0.0);
+    const auto& perf_phase_rates = ws.perf_data.phase_rates;
+    for (const auto& [complnum, conns] : well_.getCompletions()) {
+        const auto slot = std::ranges::lower_bound(complnums, complnum) - complnums.begin();
+        for (const int c : conns) {
+            for (int p = 0; p < np; ++p) {
+                completion_rates[slot * np + p] += perf_phase_rates[c * np + p];
+            }
+        }
+    }
+
+    const auto& comm = well_.parallelWellInfo().communication();
+    if (comm.size() > 1) {
+        comm.sum(completion_rates.data(), completion_rates.size());
+    }
+
     // look for the worst_offending_completion
-    for (const auto& completion : well_.getCompletions()) {
-        if (excluded_completions.count(completion.first) > 0) {
+    std::vector<Scalar> rates(np);
+    for (std::size_t slot = 0; slot < complnums.size(); ++slot) {
+        if (excluded_completions.count(complnums[slot]) > 0) {
             // already closed by the ongoing workover event
             continue;
         }
-        std::vector<Scalar> completion_rates(np, 0.0);
 
-        // looping through the connections associated with the completion
-        const std::vector<int>& conns = completion.second;
-        for (const int c : conns) {
-            for (int p = 0; p < np; ++p) {
-                const Scalar connection_rate = perf_phase_rates[c * np + p];
-                completion_rates[p] += connection_rate;
-            }
-        } // end of for (const int c : conns)
-
-        const Scalar ratio_completion = ratioFunc(completion_rates, well_.phaseUsage());
+        std::copy_n(completion_rates.begin() + slot * np, np, rates.begin());
+        const Scalar ratio_completion = ratioFunc(rates, well_.phaseUsage());
 
         if (ratio_completion > max_ratio_completion) {
-            worst_offending_completion = completion.first;
+            worst_offending_completion = complnums[slot];
             max_ratio_completion = ratio_completion;
         }
-    } // end of for (const auto& completion : completions_)
+    }
 
-    const Scalar local_max_ratio_completion = max_ratio_completion;
-    max_ratio_completion = well_.parallelWellInfo().communication().max(max_ratio_completion);
     // An infinite completion ratio (INFINITE_RATIO) gives an infinite extent, so it
     // always outranks any finite violation. Should two different ratio limits both
     // be infinitely violated -- by different completions, since the infinite GOR and
@@ -161,13 +176,6 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar, IndexTraits>& ws,
     const Scalar violation_extent = max_ratio_completion / max_ratio_limit;
 
     if (violation_extent > report.violation_extent) {
-        if (well_.parallelWellInfo().communication().size() > 1) {
-            // well is distributed, communicate the worst-offending completion
-            if (local_max_ratio_completion != max_ratio_completion)
-                worst_offending_completion = std::numeric_limits<int>::min();
-            worst_offending_completion = well_.parallelWellInfo().communication().max(worst_offending_completion);
-        }
-
         report.worst_offending_completion = worst_offending_completion;
         report.violation_extent = violation_extent;
         // Report the well-level ratio (WECON); the completion ratio only
