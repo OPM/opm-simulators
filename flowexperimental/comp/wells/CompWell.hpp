@@ -131,6 +131,9 @@ public:
 
     bool getConvergence() const override;
 
+    void updateSurfaceRates(const Simulator& simulator,
+                            SingleWellState& well_state) override;
+
     void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
@@ -200,6 +203,7 @@ private:
     template <typename T>
     void
     updateSurfaceCondition_(const StandardCond& surface_cond,
+                            const Scalar surface_water_density,
                             FluidState<T>& fluid_state,
                             const T& water_mass_fraction);
 

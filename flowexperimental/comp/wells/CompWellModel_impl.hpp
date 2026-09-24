@@ -109,6 +109,15 @@ void
 CompWellModel<TypeTag>::
 endTimeStep()
 {
+    // The phase rates were split at surface before the last Newton update
+    // moved the wellbore contents. Water breaking through changes that split
+    // fast enough for the reported rates to miss water that left the reservoir.
+    if constexpr (FluidSystem::waterEnabled) {
+        for (auto& well : well_container_) {
+            well->updateSurfaceRates(simulator_, comp_well_states_[well->name()]);
+        }
+    }
+
     // Persist the accepted well state so failed retries restart from the last
     // successful timestep rather than from the beginning of the report step.
     last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
@@ -292,6 +301,29 @@ initWellState()
                                  this->summary_state_,
                                  this->locally_owned_wells_,
                                  /*prev_well_state=*/nullptr);
+
+    // The water a wellbore holds is an inventory, set by its water fraction
+    // and its pressure. A wellbore that starts every report step empty and at
+    // the bhp limit takes the difference from the reservoir, or hands it over,
+    // without the surface rates seeing it.
+    if constexpr (FluidSystem::waterEnabled) {
+        for (const auto& well : this->wells_ecl_) {
+            const auto& name = well.name();
+            if (!this->last_valid_comp_well_states_.has(name)) {
+                continue;
+            }
+            const auto& last = this->last_valid_comp_well_states_[name];
+            auto& ws = this->comp_well_states_[name];
+            if (last.status == WellStatus::SHUT || ws.status == WellStatus::SHUT
+                || last.producer != ws.producer) {
+                continue;
+            }
+            ws.bhp = last.bhp;
+            // Keep the water already in an injector when its injection type
+            // changes: the new stream must displace it through the well equations.
+            ws.wellbore_water_volume_fraction = last.wellbore_water_volume_fraction;
+        }
+    }
 }
 
 

@@ -169,7 +169,14 @@ void
 CompWell<TypeTag>::
 updateSurfaceQuantities(const Simulator& simulator)
 {
-    const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
+    const auto& tables = simulator.vanguard().eclState().getTableManager();
+    const auto& surface_cond = tables.stCond();
+    // Surface volumes of water are defined by DENSITY. PVTW holds at reservoir
+    // temperature, so its density at surface pressure is a different one.
+    Scalar surface_water_density = 0.;
+    if constexpr (FluidSystem::waterEnabled) {
+        surface_water_density = tables.getDensityTable()[0].water;
+    }
     if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
         FluidState<Scalar> fluid_state;
@@ -177,11 +184,12 @@ updateSurfaceQuantities(const Simulator& simulator)
             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
         }
         // the injection stream carries no water
-        updateSurfaceCondition_(surface_cond, fluid_state, Scalar{0.});
+        updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state, Scalar{0.});
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
         auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
-        updateSurfaceCondition_(surface_cond, fluid_state, this->water_mass_fraction_);
+        updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state,
+                                this->water_mass_fraction_);
      }
 }
 
@@ -579,6 +587,16 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
 }
 
 template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateSurfaceRates(const Simulator& simulator,
+                   SingleWellState& well_state)
+{
+    this->updateSecondaryQuantities(simulator);
+    this->updateWellStateFromPrimaryVariables(well_state);
+}
+
+template <typename TypeTag>
 bool
 CompWell<TypeTag>::
 getConvergence() const
@@ -696,6 +714,7 @@ template <typename T>
 void
 CompWell<TypeTag>::
 updateSurfaceCondition_(const StandardCond& surface_cond,
+                        const Scalar surface_water_density,
                         FluidState<T>& fluid_state,
                         const T& water_mass_fraction)
 {
@@ -727,9 +746,7 @@ updateSurfaceCondition_(const StandardCond& surface_cond,
     const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
     const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
     if constexpr (FluidSystem::waterEnabled) {
-        fluid_state.setPressure(FluidSystem::waterPhaseIdx, surface_cond.pressure);
-        const T rho_w = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
-                                      surface_cond.temperature);
+        const T rho_w = surface_water_density;
         // per unit mass of stream: the volumes of the water and hydrocarbon parts
         const T hc_density = so * density_oil + sg * density_gas;
         const T water_volume = water_mass_fraction / rho_w;
@@ -740,6 +757,7 @@ updateSurfaceCondition_(const StandardCond& surface_cond,
         this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = (1. - water_volume_fraction) * so;
         this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = (1. - water_volume_fraction) * sg;
     } else {
+        static_cast<void>(surface_water_density);
         static_cast<void>(water_mass_fraction);
         this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = so;
         this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = sg;

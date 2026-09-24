@@ -77,6 +77,10 @@ public:
                                                        SingleWellState& well_state) = 0;
     virtual bool getConvergence() const = 0;
 
+    /// the surface phase rates of the current primary variables
+    virtual void updateSurfaceRates(const Simulator& simulator,
+                                    SingleWellState& well_state) = 0;
+
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
 protected:
