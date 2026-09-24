@@ -84,7 +84,12 @@ update_injector_targets(const Well& well,
 
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
-    if (injection_properties.injectorType == InjectorType::WATER) {
+    const auto injector_type = inj_controls.injector_type;
+    if (injector_type == InjectorType::WATER && !FluidSystem::waterEnabled) {
+        OPM_THROW(std::runtime_error,
+                  "The water injector " + this->name + " needs an active water phase");
+    }
+    if (injector_type == InjectorType::WATER) {
         // The wellbore holds water alone. It still needs a hydrocarbon
         // composition the flash accepts, and a water injector has no stream
         // to take one from. A well without open local connections has no
@@ -94,7 +99,7 @@ update_injector_targets(const Well& well,
                 cell_mole_fractions[this->connection_data.ecl_index.front()];
         }
         this->wellbore_water_volume_fraction = 1.;
-    } else if (injection_properties.injectorType == InjectorType::GAS) {
+    } else if (injector_type == InjectorType::GAS) {
         const auto& inj_composition = injection_properties.gasInjComposition();
         assert(this->total_molar_fractions.size() == inj_composition.size());
         // TODO: this might not be correct when crossing flow is involved
@@ -110,20 +115,9 @@ update_injector_targets(const Well& well,
         inj_surf_rate = inj_controls.surface_rate;
     }
 
-    switch (inj_controls.injector_type) {
-        case InjectorType::WATER:
-            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
-            break;
-        case InjectorType::GAS:
-            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
-            break;
-        case InjectorType::OIL:
-        case InjectorType::MULTI:
-            OPM_THROW(std::runtime_error,
-                      "Only gas and water injection is supported for well " + this->name);
-    }
+    const auto injected_phase = injector_type == InjectorType::WATER ? FluidSystem::waterPhaseIdx
+                                                                     : FluidSystem::gasPhaseIdx;
+    this->surface_phase_rates[injected_phase] = inj_surf_rate;
 }
 
 template <typename FluidSystem>

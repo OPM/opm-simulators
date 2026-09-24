@@ -89,8 +89,9 @@ calculateExplicitQuantities(const Simulator& simulator,
             for (auto& mass : this->component_masses_) {
                 mass *= (1. - wfrac);
             }
-            const Scalar rho_w = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
-                                               fluid_state_scalar.temperature(0));
+            const Scalar rho_w
+                = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
+                                fluid_state_scalar.temperature(0));
             this->water_mass_ = wfrac * rho_w * this->wellbore_volume_;
         }
     }
@@ -236,7 +237,8 @@ calculateSingleConnectionRate(const Simulator& simulator,
         if constexpr (FluidSystem::waterEnabled) {
             // the water phase is pure water; its mass rate fills the extra slot
             const EvalWell cq_w = - mob[FluidSystem::waterPhaseIdx] * tw * drawdown;
-            const EvalWell density = PrimaryVariables::extendEval(fluid_state.density(FluidSystem::waterPhaseIdx));
+            const EvalWell density
+                = PrimaryVariables::extendEval(fluid_state.density(FluidSystem::waterPhaseIdx));
             con_rates[FluidSystem::numComponents] += cq_w * density;
         }
     } else { // injecting connection
@@ -374,6 +376,9 @@ assembleWellEqWithBackoff(const Simulator& simulator,
     for (int backoff = 0; ; ++backoff) {
         try {
             assembleWellEq(simulator, well_state, dt);
+            // The surface split was just refreshed for these primary variables.
+            // Keep the rates used by control switching and output in sync.
+            updateWellStateFromPrimaryVariables(well_state);
             break;
         } catch (const NumericalProblem& e) {
             if (!this->assembled_primary_variables_ || backoff == max_backoffs) {
@@ -445,7 +450,8 @@ assembleControlEqProd(const SingleWellState& well_state,
         if constexpr (FluidSystem::waterEnabled) {
             const Scalar rate_target = prod_controls.water_rate;
             const EvalWell& total_rate = this->primary_variables_.getTotalRate();
-            const EvalWell water_rate = total_rate * surface_cond.volume_fractions_[FluidSystem::waterPhaseIdx];
+            const EvalWell water_rate
+                = total_rate * surface_cond.volume_fractions_[FluidSystem::waterPhaseIdx];
             control_eq = water_rate + rate_target;
             break;
         } else {
@@ -523,11 +529,14 @@ assembleSourceTerm(const Scalar dt)
 
     if constexpr (FluidSystem::waterEnabled) {
         // water mass balance of the wellbore, in the row after the components
-        const EvalWell water_mass_rate = total_mass_rate * this->surface_conditions_.waterMassFraction();
-        const EvalWell residual = (this->new_water_mass_ - this->water_mass_) / dt - water_mass_rate;
+        const EvalWell water_mass_rate
+            = total_mass_rate * this->surface_conditions_.waterMassFraction();
+        const EvalWell residual
+            = (this->new_water_mass_ - this->water_mass_) / dt - water_mass_rate;
         constexpr int water_row = FluidSystem::numComponents;
         for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
-            this->well_equations_.D()[0][0][water_row][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.D()[0][0][water_row][pvIdx]
+                += residual.derivative(pvIdx + PrimaryVariables::numResEq);
         }
         this->well_equations_.residual()[0][water_row] += residual.value();
     }
@@ -645,16 +654,6 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
                                                              : FluidSystem::gasPhaseIdx;
         surface_phase_rates[injected_phase] = total_rate;
     }
-}
-
-template <typename TypeTag>
-void
-CompWell<TypeTag>::
-updateSurfaceRates(const Simulator& simulator,
-                   SingleWellState& well_state)
-{
-    this->updateSecondaryQuantities(simulator);
-    this->updateWellStateFromPrimaryVariables(well_state);
 }
 
 template <typename TypeTag>
@@ -835,9 +834,12 @@ updateSurfaceCondition_(const StandardCond& surface_cond,
         const T hc_volume = (1. - water_mass_fraction) / hc_density;
         const T water_volume_fraction = water_volume / (water_volume + hc_volume);
         this->surface_conditions_.surface_densities_[FluidSystem::waterPhaseIdx] = rho_w;
-        this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = water_volume_fraction;
-        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = (1. - water_volume_fraction) * so;
-        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = (1. - water_volume_fraction) * sg;
+        this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx]
+            = water_volume_fraction;
+        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx]
+            = (1. - water_volume_fraction) * so;
+        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx]
+            = (1. - water_volume_fraction) * sg;
     } else {
         static_cast<void>(surface_water_density);
         static_cast<void>(water_mass_fraction);

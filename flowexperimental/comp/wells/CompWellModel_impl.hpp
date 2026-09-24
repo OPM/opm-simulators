@@ -109,15 +109,6 @@ void
 CompWellModel<TypeTag>::
 endTimeStep()
 {
-    // The phase rates were split at surface before the last Newton update
-    // moved the wellbore contents. Water breaking through changes that split
-    // fast enough for the reported rates to miss water that left the reservoir.
-    if constexpr (FluidSystem::waterEnabled) {
-        for (auto& well : well_container_) {
-            well->updateSurfaceRates(simulator_, comp_well_states_[well->name()]);
-        }
-    }
-
     // Persist the accepted well state so failed retries restart from the last
     // successful timestep rather than from the beginning of the report step.
     last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);

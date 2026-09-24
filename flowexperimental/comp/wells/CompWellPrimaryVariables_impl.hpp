@@ -46,7 +46,8 @@ update(const SingleWellState& well_state)
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
     }
     if constexpr (has_water) {
-        value_[WFrac] = std::clamp(well_state.wellbore_water_volume_fraction, Scalar{0.}, Scalar{1.});
+        value_[WFrac]
+            = std::clamp(well_state.wellbore_water_volume_fraction, Scalar {0.}, Scalar {1.});
     }
     value_[Bhp] = well_state.bhp;
 

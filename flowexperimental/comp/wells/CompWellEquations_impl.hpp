@@ -124,9 +124,8 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 invert()
 {
-    // On a singular well matrix, fall back to the identity to keep the Newton
-    // update finite. Singularity surfaces differently per block size (throw or
-    // silent inf/NaN), so guard against both below.
+    // A singular well matrix has no valid Schur complement. Let the timestep
+    // recovery handle it rather than treating the identity as its inverse.
     bool singular = false;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
@@ -147,10 +146,7 @@ invert()
     }
 
     if (singular) {
-        invDuneD_[0][0] = 0.0;
-        for (std::size_t i = 0; i < invDuneD_[0][0].rows; ++i) {
-           invDuneD_[0][0][i][i] = 1.0;
-        }
+        throw NumericalProblem("Singular compositional well matrix");
     }
 }
 
