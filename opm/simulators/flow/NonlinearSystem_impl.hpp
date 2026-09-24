@@ -31,6 +31,8 @@
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <opm/simulators/flow/countGlobalCells.hpp>
+
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -145,6 +147,7 @@ NonlinearSystem(Simulator& simulator,
                 const bool terminal_output)
     : simulator_(simulator)
     , grid_(simulator_.vanguard().grid())
+    , global_nc_(detail::countGlobalCells(grid_))
     , terminal_output_(terminal_output)
     , enable_state_rollback_(Parameters::Get<Parameters::EnableStateRollback>())
     , param_(param)

@@ -98,9 +98,9 @@ public:
 
     SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& timer);
 
-    void updateTUNING(const Tuning& tuning);
+    virtual void updateTUNING(const Tuning& tuning);
 
-    void updateTUNINGDP(const TuningDp& tuning_dp);
+    virtual void updateTUNINGDP(const TuningDp& tuning_dp);
 
     void updateSolution(const GlobalEqVector& dx);
 
@@ -167,6 +167,7 @@ protected:
     // --------- Data members ---------
     Simulator& simulator_;
     const Grid& grid_;
+    long int global_nc_;
     bool terminal_output_;
     bool enable_state_rollback_ = false;
     ModelParameters param_;
