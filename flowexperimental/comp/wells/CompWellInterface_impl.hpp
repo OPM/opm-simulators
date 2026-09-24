@@ -17,6 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
+
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
@@ -31,8 +34,15 @@ CompWellInterface(const Well& well,
     , reference_depth_(well.getRefDepth())
     , connectionRates_(number_of_connection_)
 {
-    if (FluidSystem::waterEnabled) {
-        throw std::runtime_error("the well model does not support water phase yet");
+    // The wellbore model itself carries no water: it can neither inject water
+    // nor lift mobile water to surface. Immobile (connate) water in the
+    // reservoir is fine -- the connection rates simply never include the water
+    // phase -- so only reject wells that would actually have to move water.
+    if (FluidSystem::waterEnabled && well.isInjector()) {
+        const auto& props = well.getInjectionProperties();
+        if (props.injectorType == InjectorType::WATER || props.injectorType == InjectorType::MULTI) {
+            throw std::runtime_error("water injection is not supported by the compositional well model yet");
+        }
     }
 
     {

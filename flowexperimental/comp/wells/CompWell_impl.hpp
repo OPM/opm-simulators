@@ -146,12 +146,16 @@ calculateSingleConnectionRate(const Simulator& simulator,
                               std::vector<EvalWell>& con_rates) const
 {
     constexpr int con_idx = 0; // TODO: to be a function argument for multiple connection wells
-    constexpr int np = 2; // TODO: this will be the number of phases
+    // The wellbore carries the two EOS phases only; a water phase in the
+    // reservoir stays in the reservoir (the model can neither inject nor
+    // produce it), so the rate loops below run over the miscible phases while
+    // the mobility vector is sized for every phase getMobility() fills.
+    constexpr int np = FluidSystem::numMisciblePhases;
     const EvalWell& bhp = this->primary_variables_.getBhp();
     const unsigned cell_idx = this->well_cells_[0];
     const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
     assert(int_quantities);
-    std::vector<EvalWell> mob(np, 0.);
+    std::vector<EvalWell> mob(FluidSystem::numPhases, 0.);
     getMobility(simulator, con_idx, mob);
 
     const Scalar tw = this->well_index_[0]; // only one connection
@@ -467,8 +471,13 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
     auto& surface_phase_rates = well_state.surface_phase_rates;
     if (well_state.producer) { // producer
         const auto& surface_cond = this->surface_conditions_;
-        for (int p = 0; p < FluidSystem::numPhases; ++p) {
+        // the surface conditions only cover the EOS phases: the wellbore
+        // carries no water, so any water phase produces at zero rate
+        for (int p = 0; p < SurfaceConditons::num_phases; ++p) {
             surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
+        }
+        if constexpr (FluidSystem::waterEnabled) {
+            surface_phase_rates[FluidSystem::waterPhaseIdx] = 0.0;
         }
     } else { // injector
         // only gas injection yet
