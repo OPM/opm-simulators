@@ -178,6 +178,21 @@ inline bool isSlaveEndOfRunSentinel(double next_report_time_offset)
     return next_report_time_offset < 0.0;
 }
 
+/// Which of the master's two group-constraint sends a slave is receiving.
+///
+/// The master sends a slave its group constraints at the start of every
+/// synchronization step (the handshake), and again, injection targets only,
+/// whenever it refreshes them during the cross-rescoup network iteration.
+/// Both sends carry a complete injection target list, so an empty one means
+/// "no injection targets".  The production constraint list is complete in
+/// the handshake but deliberately empty in a refresh, where empty means "the
+/// ones received in the handshake stay in force".  The receiver must know
+/// which send it is servicing to read an empty production list correctly.
+enum class GroupConstraintsSend {
+    Handshake,
+    Refresh,
+};
+
 /// @brief Phase indices for reservoir coupling, we currently only support black-oil phases
 /// (oil, gas, and water).
 enum class Phase : std::size_t {

@@ -44,6 +44,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -762,6 +763,15 @@ private:
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
                                                 const ReservoirCoupling::RateKind kind) const;
+
+    /// @brief The slave groups whose production control mode was last written
+    ///   from a master target by updateSlaveGroupCmodesFromMaster().
+    /// @details Only these get the deck's mode back when the master's override
+    ///   goes, so that a group the master never controlled keeps the mode the
+    ///   well solve gave it.  Not serialized: after a restart the group state
+    ///   read from file stands, and a withdrawal in the first step after the
+    ///   restart leaves the mode to the well solve.
+    std::set<std::string> master_production_modes_applied_{};
 #endif  // RESERVOIR_COUPLING_ENABLED
 
     const WellState<Scalar, IndexTraits>* well_state_ {nullptr};

@@ -33,7 +33,11 @@ public:
         GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler,
         GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
-    void receiveGroupConstraintsFromMaster();
+    /// @brief Receive the master's group constraints and store them on the slave.
+    /// @param send Which of the master's two sends this is; see
+    ///   ReservoirCoupling::GroupConstraintsSend for what an empty list means
+    ///   in each.
+    void receiveGroupConstraintsFromMaster(ReservoirCoupling::GroupConstraintsSend send);
 private:
     GuideRateHandler<Scalar, IndexTraits>& guide_rate_handler_;
     GroupStateHelper<Scalar, IndexTraits>& group_state_helper_;
