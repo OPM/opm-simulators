@@ -422,17 +422,16 @@ template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::
 closeCompletions(const WellTestState& wellTestState)
 {
+    // Walk the local perforations: for a distributed well, open connections on
+    // other ranks have no slot in well_index_.
     const auto& connections = well_ecl_.getConnections();
-    int perfIdx = 0;
-    for (const auto& connection : connections) {
-        if (connection.state() == Connection::State::OPEN) {
-            if (wellTestState.completion_is_closed(name(), connection.complnum())) {
-                this->well_index_[perfIdx] = 0.0;
-                if (!this->well_index_fracture_.empty()) {
-                    this->well_index_fracture_[perfIdx] = WellIndexFracture{};
-                }
+    for (std::size_t perf = 0; perf < perf_data_->size(); ++perf) {
+        const auto& connection = connections[(*perf_data_)[perf].ecl_index];
+        if (wellTestState.completion_is_closed(name(), connection.complnum())) {
+            this->well_index_[perf] = 0.0;
+            if (!this->well_index_fracture_.empty()) {
+                this->well_index_fracture_[perf] = WellIndexFracture {};
             }
-            perfIdx++;
         }
     }
 }
