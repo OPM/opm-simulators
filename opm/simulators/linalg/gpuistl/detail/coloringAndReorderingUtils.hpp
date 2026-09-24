@@ -19,7 +19,7 @@
 #ifndef OPM_COLORING_AND_REORDERING_UTILS_HPP
 #define OPM_COLORING_AND_REORDERING_UTILS_HPP
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <memory>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/grid/utility/SparseTable.hpp>

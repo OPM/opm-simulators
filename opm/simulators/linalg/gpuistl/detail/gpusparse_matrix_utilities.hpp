@@ -23,7 +23,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <memory>
 #include <vector>
 

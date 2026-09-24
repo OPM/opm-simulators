@@ -30,7 +30,7 @@
 #include <dune/istl/bvector.hh>
 
 #include <cuda.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <cstddef>
 #include <memory>

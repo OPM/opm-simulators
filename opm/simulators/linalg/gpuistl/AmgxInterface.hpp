@@ -29,7 +29,7 @@
 #include <amgx_c.h>
 #include <cuda_runtime.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <string>
 #include <vector>

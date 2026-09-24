@@ -20,7 +20,7 @@
 #define OPM_CUSPARSE_SAFE_CALL_HPP
 #include <cusparse.h>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 

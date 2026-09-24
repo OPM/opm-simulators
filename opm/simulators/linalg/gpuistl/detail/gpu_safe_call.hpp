@@ -20,7 +20,7 @@
 #define OPM_GPU_SAFE_CALL_HPP
 #include <cuda_runtime.h>
 #if CUDA_VERSION >= 12100
-#include <fmt/core.h>
+#include <fmt/format.h>
 #else
 #include <sstream>
 #endif

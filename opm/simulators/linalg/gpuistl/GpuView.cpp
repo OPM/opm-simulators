@@ -21,7 +21,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <algorithm>
 

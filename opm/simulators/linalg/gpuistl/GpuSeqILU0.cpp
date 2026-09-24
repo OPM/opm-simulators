@@ -39,7 +39,7 @@
 #include <cuda_runtime.h>
 #include <cusparse.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 // This file is based on the guide at https://docs.nvidia.com/cuda/cusparse/index.html#csrilu02_solve ,
 // it highly recommended to read that before proceeding.

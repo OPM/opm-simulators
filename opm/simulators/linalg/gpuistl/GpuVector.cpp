@@ -24,7 +24,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 
 #include <cuda_runtime.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace Opm::gpuistl
 {

@@ -22,7 +22,7 @@
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #if HAVE_CUDA
 #include <cuda_runtime.h>
