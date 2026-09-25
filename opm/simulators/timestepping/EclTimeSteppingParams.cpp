@@ -40,10 +40,15 @@ void registerEclTimeSteppingParameters()
          "If false (default), the master synchronizes at every master actual time step. "
          "Has no effect in non-rescoup runs.");
     Parameters::Register<Parameters::RescoupSpawnWrapper>
-        ("Developer flag for reservoir coupling.  If set, the master spawns this "
-         "executable instead of the simulator for each slave, passing the simulator "
-         "path as the first argument followed by the slave's own arguments, so that a "
-         "slave can be started under a debugger.  Has no effect in non-rescoup runs.");
+        ("Developer flag for reservoir coupling, for debugging slave processes.  "
+         "If set, the master spawns this executable instead of the simulator for "
+         "each slave rank, with the simulator path as the first argument followed by "
+         "the slave's own arguments.  The wrapper must start the simulator with "
+         "exactly those arguments, for example with 'exec \"$@\"' in a shell script, "
+         "or under a debugger for the rank to be debugged, and must keep running "
+         "until the simulator exits.  The slave name is in the --slave-log-file "
+         "argument, the rank in the MPI runtime's environment (OMPI_COMM_WORLD_RANK "
+         "for Open MPI).  Has no effect in non-rescoup runs.");
     Parameters::Hide<Parameters::RescoupSpawnWrapper>();
     Parameters::Register<Parameters::SolverGrowthFactor<Scalar>>
         ("The factor time steps are elongated after a successful substep");

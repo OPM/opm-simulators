@@ -484,12 +484,30 @@ spawnSlaveProcesses_()
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
         // Debugging aid: with --rescoup-spawn-wrapper=<path>, spawn that executable
-        // instead of the simulator and hand it the simulator path as its first argument,
-        // followed by the slave's own arguments. The wrapper decides how to start the
-        // simulator, for example under a debugger for one selected rank, and must keep
-        // running as the spawned process until the simulator exits, because the MPI
-        // runtime watches the process it started. The slaves receive the parameter too,
-        // as they receive every other one, and ignore it: they never spawn.
+        // instead of the simulator. Every rank of the slave then runs its own copy of
+        // the wrapper, called as
+        //
+        //   <wrapper> <simulator> --slave-log-file=<slave name> <slave arguments...>
+        //
+        // i.e. with the simulator path first and then exactly the arguments the
+        // simulator would have been given (see getSlaveArgv_()). The wrapper must start
+        // the simulator with those arguments, and must keep running as the spawned
+        // process until the simulator exits, because the MPI runtime watches the
+        // process it started; the simplest way is to exec it. The slave name is in the
+        // --slave-log-file argument, the rank within the slave in the MPI runtime's
+        // environment (OMPI_COMM_WORLD_RANK for Open MPI). A minimal wrapper that
+        // starts rank 2 of slave RES-1 under gdb in its own terminal, and every other
+        // rank as usual:
+        //
+        //   #!/bin/bash
+        //   flow="$1"; shift
+        //   if [[ "$1" == --slave-log-file=RES-1 && "$OMPI_COMM_WORLD_RANK" == 2 ]]; then
+        //       exec xterm -e gdb -ex run --args "$flow" "$@"
+        //   fi
+        //   exec "$flow" "$@"
+        //
+        // The slaves receive this parameter too, as they receive every other one, and
+        // ignore it: they never spawn.
         const std::string& spawn_wrapper = Parameters::Get<Parameters::RescoupSpawnWrapper>();
         const char* spawn_command = flow_program_name;
         std::vector<char*> wrapper_argv;
