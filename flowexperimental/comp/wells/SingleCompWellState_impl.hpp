@@ -185,8 +185,10 @@ copyRuntimeStateFrom(const SingleCompWellState& other)
     // Keep the freshly initialized schedule-derived status, controls and
     // targets from base_init() and carry over the wellbore inventory, which a
     // shut well, or one that switched between producer and injector, lacks.
+    // So does a well without open connections: it had no well equations and
+    // its composition was never set.
     if (status == WellStatus::SHUT || other.status == WellStatus::SHUT
-        || producer != other.producer) {
+        || producer != other.producer || other.connection_data.ecl_index.empty()) {
         return;
     }
     bhp = other.bhp;
