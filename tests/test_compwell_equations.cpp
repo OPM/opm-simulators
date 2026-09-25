@@ -281,7 +281,8 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     }
 }
 
-// Singular 4x4 well matrix: detail::invertMatrix throws NumericalProblem.
+// Singular 4x4 well matrix: detail::invertMatrix throws Dune::MatrixBlockError,
+// which invert() reports as NumericalProblem.
 BOOST_AUTO_TEST_CASE(SingularMatrix4x4)
 {
     Eqns eqns;
@@ -291,7 +292,8 @@ BOOST_AUTO_TEST_CASE(SingularMatrix4x4)
     BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
 
-// Singular 3x3 matrix: detail::invertMatrix silently produces inf/NaN.
+// Singular 3x3 matrix: detail::invertMatrix silently produces inf/NaN, which
+// invert() reports as NumericalProblem too.
 BOOST_AUTO_TEST_CASE(SingularMatrix3x3)
 {
     constexpr int nw3 = 3;

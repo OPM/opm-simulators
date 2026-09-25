@@ -17,9 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
-
-#include <stdexcept>
 #include <string>
 
 namespace Opm {
@@ -34,18 +31,6 @@ CompWellInterface(const Well& well,
     , reference_depth_(well.getRefDepth())
     , connectionRates_(number_of_connection_)
 {
-    if (well.isInjector()) {
-        const auto injector_type = well.getInjectionProperties().injectorType;
-        if (injector_type != InjectorType::GAS && injector_type != InjectorType::WATER) {
-            throw std::runtime_error("only gas and water injection is supported by the "
-                                     "compositional well model for well " + well.name());
-        }
-        if (!FluidSystem::waterEnabled && injector_type == InjectorType::WATER) {
-            throw std::runtime_error("the water injector " + well.name() +
-                                     " needs an active water phase");
-        }
-    }
-
     {
         well_cells_.resize(number_of_connection_);
         well_index_.resize(number_of_connection_);

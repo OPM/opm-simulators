@@ -66,7 +66,7 @@ public:
     // it is part of the secondary variables used in the assembling of the well equations
     struct SurfaceConditons
     {
-        // all fluid-system phases; the water entries stay zero without a water phase
+        // one entry per fluid-system phase, so a water entry only with a water phase
         static constexpr int num_phases = FluidSystem::numPhases;
         std::array<EvalWell, num_phases> surface_densities_{};
         std::array<EvalWell, num_phases> volume_fractions_{};

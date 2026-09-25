@@ -146,7 +146,7 @@ updateNewton(const BVectorWell& dwells,
     value_[Bhp] = std::max(value_[Bhp] - bhp_change, bhp_lower_limit);
 
     // The mole-fraction primary variables occupy indices [1, numComponents - 1]
-    // (QTotal is at 0 and Bhp at numComponents). Clamp each of them, then
+    // (QTotal is at 0, followed by WFrac with water and Bhp). Clamp each of them, then
     // renormalize so the full composition - including the implicit last
     // component - sums to one.
     std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);

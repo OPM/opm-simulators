@@ -44,7 +44,8 @@ public:
     // the indices for the primary variables
     // the first primary variable will be the total surface rate
     // the last primary variable will be the BHP
-    // the one in the middle with will the mole fractions for the numWellEq - 1 components
+    // the ones in the middle are the mole fractions of the first numComponents - 1
+    // components, followed by the water volume fraction when water is enabled
     // this can be changed based on the implementation itself
     static constexpr int QTotal = 0; // TODO: for now, it is the total surface rate, but later, we might make it total mass rate
     // volume fraction of water in the wellbore, only meaningful when has_water

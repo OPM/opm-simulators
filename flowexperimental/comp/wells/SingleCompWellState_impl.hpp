@@ -74,7 +74,6 @@ update_injector_targets(const Well& well,
                         const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
-    const auto& injection_properties = well.getInjectionProperties();
 
     // Report this the way the black-oil model does in WellAssemble.
     if (inj_controls.cmode == Well::InjectorCMode::CMODE_UNDEFINED) {
@@ -84,30 +83,6 @@ update_injector_targets(const Well& well,
 
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
-    const auto injector_type = inj_controls.injector_type;
-    if (injector_type == InjectorType::WATER && !FluidSystem::waterEnabled) {
-        OPM_THROW(std::runtime_error,
-                  "The water injector " + this->name + " needs an active water phase");
-    }
-    if (injector_type == InjectorType::WATER) {
-        // The wellbore holds water alone. It still needs a hydrocarbon
-        // composition the flash accepts, and a water injector has no stream
-        // to take one from. A well without open local connections has no
-        // well equations, so it can wait for a connection to open.
-        if (!this->connection_data.ecl_index.empty()) {
-            this->total_molar_fractions =
-                cell_mole_fractions[this->connection_data.ecl_index.front()];
-        }
-        this->wellbore_water_volume_fraction = 1.;
-    } else if (injector_type == InjectorType::GAS) {
-        const auto& inj_composition = injection_properties.gasInjComposition();
-        assert(this->total_molar_fractions.size() == inj_composition.size());
-        // TODO: this might not be correct when crossing flow is involved
-        this->total_molar_fractions = inj_composition;
-    } else {
-        OPM_THROW(std::runtime_error,
-                  "Only gas and water injection is supported for well " + this->name);
-    }
 
     // we initialize all open wells with a rate to avoid singularities
     Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
@@ -115,9 +90,36 @@ update_injector_targets(const Well& well,
         inj_surf_rate = inj_controls.surface_rate;
     }
 
-    const auto injected_phase = injector_type == InjectorType::WATER ? FluidSystem::waterPhaseIdx
-                                                                     : FluidSystem::gasPhaseIdx;
-    this->surface_phase_rates[injected_phase] = inj_surf_rate;
+    switch (inj_controls.injector_type) {
+    case InjectorType::WATER:
+        if constexpr (FluidSystem::waterEnabled) {
+            // The wellbore holds water alone. It still needs a hydrocarbon
+            // composition the flash accepts, and a water injector has no stream
+            // to take one from. A well without open local connections has no
+            // well equations, so it can wait for a connection to open.
+            if (!this->connection_data.ecl_index.empty()) {
+                this->total_molar_fractions =
+                    cell_mole_fractions[this->connection_data.ecl_index.front()];
+            }
+            this->wellbore_water_volume_fraction = 1.;
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
+        } else {
+            OPM_THROW(std::runtime_error,
+                      "The water injector " + this->name + " needs an active water phase");
+        }
+        break;
+    case InjectorType::GAS: {
+        const auto& inj_composition = well.getInjectionProperties().gasInjComposition();
+        assert(this->total_molar_fractions.size() == inj_composition.size());
+        // TODO: this might not be correct when crossing flow is involved
+        this->total_molar_fractions = inj_composition;
+        this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
+        break;
+    }
+    default:
+        OPM_THROW(std::runtime_error,
+                  "Only gas and water injection is supported for well " + this->name);
+    }
 }
 
 template <typename FluidSystem>

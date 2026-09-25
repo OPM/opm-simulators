@@ -123,8 +123,9 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 invert()
 {
-    // A singular well matrix has no valid Schur complement. Let the timestep
-    // recovery handle it rather than treating the identity as its inverse.
+    // A singular well matrix has no valid Schur complement. Throw, so that the
+    // well assembly backs off or the time step is cut, rather than treating
+    // the identity as its inverse.
     bool singular = false;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
