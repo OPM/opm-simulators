@@ -107,7 +107,7 @@ struct SetupTest {
             (deck, *this->ecl_state, std::make_shared<Opm::Python>());
 
         this->summaryState = std::make_unique<Opm::SummaryState>
-            (Opm::TimeService::from_time_t(schedule->getStartTime()),
+            (schedule->getStartTime(),
              this->ecl_state->runspec().udqParams().undefinedValue());
 
         current_timestep = 0;
