@@ -121,8 +121,9 @@ public:
                         const double dt);
 
     // assembleWellEq() that steps back towards the last primary variables it
-    // succeeded for when the flash fails for the current ones
-    void assembleWellEqWithBackoff(const Simulator& simulator,
+    // succeeded for when assembly fails for the current ones; returns false
+    // when it had to return to those
+    bool assembleWellEqWithBackoff(const Simulator& simulator,
                                    SingleWellState& well_state,
                                    const double dt);
 

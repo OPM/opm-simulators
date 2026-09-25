@@ -21,13 +21,17 @@
 #include <fmt/ranges.h>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
 
+#include <dune/common/fmatrix.hh>
+
 #include <stdexcept>
+#include <string>
 
 namespace Opm {
 
@@ -363,7 +367,7 @@ assembleWellEq(const Simulator& simulator,
 }
 
 template <typename TypeTag>
-void
+bool
 CompWell<TypeTag>::
 assembleWellEqWithBackoff(const Simulator& simulator,
                           SingleWellState& well_state,
@@ -371,26 +375,38 @@ assembleWellEqWithBackoff(const Simulator& simulator,
 {
     // A Newton update can land on a wellbore state the flash fails for, while
     // the reservoir iterates are still far off in particular. That would fail
-    // the whole time step, so step back towards the last state that worked.
+    // the whole time step, so step back towards the last state that worked,
+    // and return to that state if the steps back keep failing.
     constexpr int max_backoffs = 5;
+    bool restored = false;
     for (int backoff = 0; ; ++backoff) {
+        std::string failure;
         try {
             assembleWellEq(simulator, well_state, dt);
-            // The surface split was just refreshed for these primary variables.
-            // Keep the rates used by control switching and output in sync.
-            updateWellStateFromPrimaryVariables(well_state);
             break;
         } catch (const NumericalProblem& e) {
-            if (!this->assembled_primary_variables_ || backoff == max_backoffs) {
-                throw;
-            }
-            OpmLog::debug(fmt::format("Well {}: stepping back from a wellbore state that cannot "
-                                      "be assembled ({})", this->well_ecl_.name(), e.what()));
+            failure = e.what();
+        } catch (const Dune::FMatrixError& e) {
+            // the derivative step of the AD flash reports a singular matrix this way
+            failure = e.what();
+        }
+        if (!this->assembled_primary_variables_ || restored) {
+            throw NumericalProblem(fmt::format("Well {}: {}", this->well_ecl_.name(), failure));
+        }
+        OpmLog::debug(fmt::format("Well {}: stepping back from a wellbore state that cannot "
+                                  "be assembled ({})", this->well_ecl_.name(), failure));
+        if (backoff < max_backoffs) {
             this->primary_variables_.moveHalfwayTo(*this->assembled_primary_variables_);
-            updateWellStateFromPrimaryVariables(well_state);
+        } else {
+            this->primary_variables_ = *this->assembled_primary_variables_;
+            restored = true;
         }
     }
+    // The surface split was just refreshed for these primary variables.
+    // Keep the rates used by control switching and output in sync.
+    updateWellStateFromPrimaryVariables(well_state);
     this->assembled_primary_variables_ = this->primary_variables_;
+    return !restored;
 }
 
 template <typename TypeTag>
@@ -555,7 +571,11 @@ iterateWellEq(const Simulator& simulator,
     for (int it = 0; it <= max_iter; ++it) {
         updateWellControl(summary_state, well_state, /*check_rate_limits=*/false);
 
-        assembleWellEqWithBackoff(simulator, well_state, dt);
+        if (!assembleWellEqWithBackoff(simulator, well_state, dt)) {
+            // Newton steps from the last assembled state keep failing; leave
+            // the well to the next reservoir iteration from that state.
+            return false;
+        }
 
         // Rates are only compared with their limits once the equations have
         // converged. Before that they come from the initial guess or combine
