@@ -106,7 +106,8 @@ void SetDefault_(const std::string& paramName,
  * \param helpPreamble The string that is printed after the error message and before the
  *                     list of parameters.
  * \param os The \c std::ostream which should be used.
- * \param errorMsg The error message to be printed, if any
+ * \param errorMsg The error message to be printed, if any. If given, the list of
+ *                 parameters is replaced by a pointer to --help.
  * \param showAll True to show all parameters
  */
 void printUsage(const std::string& helpPreamble,

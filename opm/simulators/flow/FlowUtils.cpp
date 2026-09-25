@@ -295,8 +295,9 @@ int eclPositionalParameter(std::function<void(const std::string&, const std::str
 
     if (seenParams.count("EclDeckFileName") > 0) {
         errorMsg =
-            "Parameter 'EclDeckFileName' specified multiple times"
-            " as a command line parameter";
+            "Unexpected argument '" + param + "': a deck file has already been given "
+            "and only one is allowed. All other arguments must be options of the "
+            "form --name=value.";
         return 0;
     }
 
