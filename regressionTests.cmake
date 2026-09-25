@@ -78,6 +78,32 @@ add_test_compareECLFiles(
     compositional
 )
 
+# Cover water-rate and liquid-rate controls, and switching an open injector
+# between gas and water while its wellbore still contains the previous fluid.
+# The default absolute tolerance exceeds the 0.1-0.4 sm3/day rates checked.
+foreach(case IN ITEMS
+    SIMPLE_COMP_WATER_WRAT
+    SIMPLE_COMP_WATER_LRAT
+    SIMPLE_COMP_WATER_TO_GAS
+    SIMPLE_COMP_GAS_TO_WATER)
+  add_test_compareECLFiles(
+    CASENAME
+      ${case}
+    FILENAME
+      ${case}
+    SIMULATOR
+      flow_comp
+    REFERENCE_SIMULATOR
+      flow_comp
+    ABS_TOL
+      1e-3
+    REL_TOL
+      ${rel_tol}
+    DIR
+      compositional/single_connection_wells
+  )
+endforeach()
+
 add_test_compareECLFiles(
   CASENAME
     equil_1d_zmfvd

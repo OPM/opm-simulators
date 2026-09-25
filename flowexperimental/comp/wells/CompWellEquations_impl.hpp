@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <cmath>
@@ -89,6 +90,28 @@ clear()
 
 template <typename Scalar, int numWellEq, int numEq>
 void
+CompWellEquations<Scalar, numWellEq, numEq>::sumAndPinRows(const int last_row,
+                                                           const int variable_offset)
+{
+    auto& D = duneD_[0][0];
+    auto& residual = resWell_[0];
+    for (int row = 0; row < last_row; ++row) {
+        D[last_row] += D[row];
+        residual[last_row] += residual[row];
+        D[row] = 0.0;
+        D[row][row + variable_offset] = 1.0;
+        residual[row] = 0.0;
+    }
+    for (auto& B : duneB_[0]) {
+        for (int row = 0; row < last_row; ++row) {
+            B[last_row] += B[row];
+            B[row] = 0.0;
+        }
+    }
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
 CompWellEquations<Scalar, numWellEq, numEq>::
 solve(BVectorWell& dx_well) const
 {
@@ -100,9 +123,9 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 invert()
 {
-    // On a singular well matrix, fall back to the identity to keep the Newton
-    // update finite. Singularity surfaces differently per block size (throw or
-    // silent inf/NaN), so guard against both below.
+    // A singular well matrix has no valid Schur complement. Throw, so that the
+    // well assembly backs off or the time step is cut, rather than treating
+    // the identity as its inverse.
     bool singular = false;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
@@ -123,10 +146,7 @@ invert()
     }
 
     if (singular) {
-        invDuneD_[0][0] = 0.0;
-        for (std::size_t i = 0; i < invDuneD_[0][0].rows; ++i) {
-           invDuneD_[0][0][i][i] = 1.0;
-        }
+        throw NumericalProblem("Singular compositional well matrix");
     }
 }
 
@@ -142,6 +162,29 @@ apply(BVector& r) const
     invDuneD_.mv(resWell_, invDrw_);
     // r = r - duneC_^T * invDrw_
     duneC_.mmtv(invDrw_, r);
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+template <class SparseMatrixAdapter>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::extract(SparseMatrixAdapter& jacobian) const
+{
+    // A -= C^T D^-1 B, following StandardWellEquations::extract().
+    // B and C have one row of blocks, with a nonzero at (0, j) only if the
+    // well has a connection in cell j.
+    for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        const auto row_index = cells_[colC.index()];
+        for (auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+            const auto col_index = cells_[colB.index()];
+            // tmp = D^-1 B
+            OffDiagMatrixBlockWellType tmp;
+            detail::multMatrixImpl(invDuneD_[0][0], *colB, tmp, std::true_type());
+            // block = -C^T tmp
+            typename SparseMatrixAdapter::MatrixBlock tmpMat;
+            detail::negativeMultMatrixTransposed(*colC, tmp, tmpMat);
+            jacobian.addToBlock(row_index, col_index, tmpMat);
+        }
+    }
 }
 
 template <typename Scalar, int numWellEq, int numEq>

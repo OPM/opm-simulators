@@ -76,6 +76,8 @@ public:
     Scalar temperature{0};
 
     std::vector<Scalar> surface_phase_rates;
+    // volume fraction of water in the wellbore; stays zero without a water phase
+    Scalar wellbore_water_volume_fraction {0.};
     std::vector<Scalar> phase_fractions; // V or L
     std::vector<Scalar> reservoir_phase_rates;
     // WZMF
@@ -95,7 +97,9 @@ public:
                                  const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                                  const SummaryState& st);
 
-    void update_injector_targets(const Well& well, const SummaryState& st);
+    void update_injector_targets(const Well& well,
+                                 const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                                 const SummaryState& st);
 
     void copyRuntimeStateFrom(const SingleCompWellState& other);
 

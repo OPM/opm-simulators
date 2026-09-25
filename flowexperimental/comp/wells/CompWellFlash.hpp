@@ -138,6 +138,54 @@ wellboreComponentMasses(const CompositionalFluidState<T, FluidSystem>& fluid_sta
     return component_masses;
 }
 
+/// Contents of the wellbore when water, which takes no part in the flash,
+/// fills the volume fraction water_fraction and the flashed hydrocarbon
+/// system the rest.
+template <typename T, int numComponents>
+struct WellboreContents {
+    std::array<T, numComponents> component_masses {};
+    T water_mass {};
+    // mass fractions of the components and of water in the wellbore mixture
+    std::array<T, numComponents> mass_fractions {};
+    T water_mass_fraction {};
+    T density {};
+};
+
+/// Masses [kg], mass fractions and density of the wellbore mixture of the
+/// flashed hydrocarbon system and water of density water_density. The flashed
+/// fluid state may hold plain scalars where the flash derivatives do not
+/// matter; the results have the value type of the water fraction.
+template <typename FluidSystem, typename TFlash, typename T, typename Scalar>
+WellboreContents<T, FluidSystem::numComponents>
+wellboreContents(const CompositionalFluidState<TFlash, FluidSystem>& hydrocarbons,
+                 const T& water_fraction,
+                 const T& water_density,
+                 const Scalar wellbore_volume)
+{
+    WellboreContents<T, FluidSystem::numComponents> contents;
+    const T hydrocarbon_fraction = 1. - water_fraction;
+
+    const auto masses = wellboreComponentMasses(hydrocarbons, wellbore_volume);
+    contents.water_mass = water_fraction * water_density * wellbore_volume;
+    T total_mass = contents.water_mass;
+    for (int comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        contents.component_masses[comp_idx] = masses[comp_idx] * hydrocarbon_fraction;
+        total_mass += contents.component_masses[comp_idx];
+    }
+    for (int comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        contents.mass_fractions[comp_idx] = contents.component_masses[comp_idx] / total_mass;
+    }
+    contents.water_mass_fraction = contents.water_mass / total_mass;
+
+    const auto& so = hydrocarbons.saturation(FluidSystem::oilPhaseIdx);
+    const auto& sg = hydrocarbons.saturation(FluidSystem::gasPhaseIdx);
+    const auto& density_oil = hydrocarbons.density(FluidSystem::oilPhaseIdx);
+    const auto& density_gas = hydrocarbons.density(FluidSystem::gasPhaseIdx);
+    contents.density = hydrocarbon_fraction * (density_oil * so + density_gas * sg)
+        + water_fraction * water_density;
+    return contents;
+}
+
 } // end of namespace Opm
 
 #endif // OPM_COMP_WELL_FLASH_HPP

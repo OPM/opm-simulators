@@ -29,6 +29,8 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <optional>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -64,7 +66,8 @@ public:
     // it is part of the secondary variables used in the assembling of the well equations
     struct SurfaceConditons
     {
-        static constexpr int num_phases = 2;
+        // one entry per fluid-system phase, so a water entry only with a water phase
+        static constexpr int num_phases = FluidSystem::numPhases;
         std::array<EvalWell, num_phases> surface_densities_{};
         std::array<EvalWell, num_phases> volume_fractions_{};
         std::array<std::array<EvalWell, num_comp>, num_phases> mass_fractions_{};
@@ -80,16 +83,30 @@ public:
         // TODO: it looks like that we can have a concept of component mass density?
         EvalWell massFraction(int comp_idx) const {
             EvalWell mass = 0.;
-            for (unsigned  p = 0; p < num_phases; ++p) {
+            // water carries no hydrocarbon components, so the miscible phases suffice
+            for (unsigned p = 0; p < FluidSystem::numMisciblePhases; ++p) {
                 mass += surface_densities_[p] * volume_fractions_[p] * mass_fractions_[p][comp_idx];
             }
             return mass / density();
+        }
+
+        // mass fraction of the water phase in the surface stream
+        EvalWell waterMassFraction() const
+        {
+            if constexpr (FluidSystem::waterEnabled) {
+                return surface_densities_[FluidSystem::waterPhaseIdx]
+                    * volume_fractions_[FluidSystem::waterPhaseIdx] / density();
+            } else {
+                return EvalWell {0.};
+            }
         }
     };
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             Scalar dwell_fraction_max,
+             Scalar dbhp_max_rel);
 
     void init() override;
 
@@ -105,6 +122,13 @@ public:
     void assembleWellEq(const Simulator& simulator,
                         const SingleWellState& well_state,
                         const double dt);
+
+    // assembleWellEq() that steps back towards the last primary variables it
+    // succeeded for when assembly fails for the current ones; returns false
+    // when it had to return to those
+    bool assembleWellEqWithBackoff(const Simulator& simulator,
+                                   SingleWellState& well_state,
+                                   const double dt);
 
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
@@ -122,15 +146,23 @@ public:
     void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
+    // largest change of a fraction and relative change of the bhp in one
+    // Newton update
+    const Scalar dwell_fraction_max_;
+    const Scalar dbhp_max_rel_;
 
     // primary variables
     PrimaryVariables primary_variables_;
+    // the last primary variables the well equations could be assembled for
+    std::optional<PrimaryVariables> assembled_primary_variables_;
     WellEquations well_equations_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept
     // anyway, they are very rough prototype code for testing and will be changed
     const Scalar wellbore_volume_ {21.6*0.001};
+    // hydrocarbon volume fraction below which the wellbore counts as holding water alone
+    static constexpr Scalar min_hydrocarbon_fraction_ {1.e-8};
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
@@ -138,6 +170,11 @@ private:
     std::array<Scalar, num_comp> component_masses_{0.};
     // the new mass for each component in wellbore, derived from the primary variables
     std::array<EvalWell, num_comp> new_component_masses_{0.};
+    // water in the wellbore, kept outside the flash: previous mass, current
+    // mass and current mass fraction of the wellbore mixture
+    Scalar water_mass_ {0.};
+    EvalWell new_water_mass_ {0.};
+    EvalWell water_mass_fraction_ {0.};
     // quantities used to calculate the quantities under the surface conditions
     SurfaceConditons surface_conditions_;
 
@@ -177,12 +214,22 @@ private:
     void updateWellState(const BVectorWell& dwells,
                          SingleWellState& well_state);
 
-    void updateWellControl(const SummaryState& summary_state,
-                           SingleWellState& well_state) const;
+    bool updateWellControl(const SummaryState& summary_state,
+                           SingleWellState& well_state,
+                           bool check_rate_limits) const;
 
     template <typename T>
-    void
-    updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state);
+    void updateSurfaceCondition_(const StandardCond& surface_cond,
+                                 const Scalar surface_water_density,
+                                 FluidState<T>& fluid_state,
+                                 const T& water_mass_fraction);
+
+    bool isWaterInjector_() const;
+
+    // water density at the given pressure and temperature via the fluid
+    // system's water PVT
+    template <typename T>
+    static T waterDensity_(const T& pressure, const Scalar temperature);
 
     template <typename T>
     void
