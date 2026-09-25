@@ -1939,6 +1939,14 @@ public:
     bool storeIntensiveQuantities() const
     { return enableIntensiveQuantityCache_ || enableThermodynamicHints_; }
 
+    //! Intensive quantities can be read by index (not just the thermodynamic hints).
+    bool intensiveQuantityCacheEnabled() const
+    { return enableIntensiveQuantityCache_; }
+
+    //! The residual forms the storage term from intensive quantities alone.
+    static constexpr bool formsStorageFromIntensiveQuantities =
+        LocalResidual::formsStorageFromIntensiveQuantities;
+
     const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
