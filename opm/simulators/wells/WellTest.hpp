@@ -24,10 +24,11 @@
 #ifndef OPM_WELL_TEST_HEADER_INCLUDED
 #define OPM_WELL_TEST_HEADER_INCLUDED
 
+#include <opm/common/utility/TimeService.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <cstddef>
-#include <ctime>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -74,7 +75,7 @@ public:
                                      WellTestState& well_test_state,
                                      bool zero_group_target,
                                      const UnitSystem& unit_system,
-                                     const std::time_t start_time,
+                                     const time_point start_time,
                                      DeferredLogger& deferred_logger,
                                      std::string* closure_reason = nullptr) const;
 
@@ -83,7 +84,7 @@ public:
                                   const bool write_message_to_opmlog,
                                   WellTestState& well_test_state,
                                   const UnitSystem& unit_system,
-                                  const std::time_t start_time,
+                                  const time_point start_time,
                                   DeferredLogger& deferred_logger) const;
 
     void updateWellTestStatePhysical(const double simulation_time,

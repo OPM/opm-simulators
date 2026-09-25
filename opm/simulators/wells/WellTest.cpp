@@ -43,7 +43,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <ctime>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -417,7 +416,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
                             WellTestState& well_test_state,
                             const bool zero_group_target,
                             const UnitSystem& unit_system,
-                            const std::time_t start_time,
+                            const time_point start_time,
                             DeferredLogger& deferred_logger,
                             std::string* closure_reason) const
 {
@@ -606,7 +605,7 @@ updateWellTestStateCECON(const SingleWellState<Scalar, IndexTraits>& ws,
                          const bool write_message_to_opmlog,
                          WellTestState& well_test_state,
                          const UnitSystem& unit_system,
-                         const std::time_t start_time,
+                         const time_point start_time,
                          DeferredLogger& deferred_logger) const
 {
     if (well_.isInjector()) {

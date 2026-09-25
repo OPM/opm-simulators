@@ -226,7 +226,7 @@ applyActions(const int reportStep,
     }
 
     auto non_triggered = 0;
-    const auto simTime = asTimeT(now);
+    const auto simTime = asTimePoint(now);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
         const auto actionResult = action->eval(context);
         if (! actionResult.conditionSatisfied()) {

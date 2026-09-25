@@ -25,6 +25,7 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 
 #include <opm/common/TimingMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
@@ -560,7 +561,7 @@ std::pair<double, bool>
 ReservoirCouplingSlave<Scalar>::
 getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const
 {
-    double start_date = this->schedule_.getStartTime();
+    double start_date = TimeService::to_time_t(this->schedule_.getStartTime());
     for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.grupSlavCount() > 0) {
@@ -741,7 +742,7 @@ sendSimulationStartDateToMasterProcess_() const
 {
     if (this->comm_.rank() == 0) {
         // NOTE: The master process needs the s
-        double start_date = this->schedule_.getStartTime();
+        double start_date = TimeService::to_time_t(this->schedule_.getStartTime());
         // NOTE: See comment about error handling at the top of this file.
         MPI_Send(
             &start_date,

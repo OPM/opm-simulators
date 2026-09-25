@@ -30,6 +30,7 @@
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
@@ -254,7 +255,7 @@ void
 ReservoirCouplingMaster<Scalar>::
 maybeActivate(int report_step) {
     if (!this->activated()) {
-        double start_date = this->schedule_.getStartTime();
+        double start_date = TimeService::to_time_t(this->schedule_.getStartTime());
         auto current_time = start_date + this->schedule_.seconds(report_step);
         if (Seconds::compare_gt_or_eq(current_time, this->activation_date_)) {
             this->activated_ = true;
@@ -304,7 +305,7 @@ maybeReceiveActivationHandshakeFromSlaves(double current_time)
     }
 
     if (this->comm_.rank() == 0) {
-        auto current_date = this->schedule_.getStartTime() + current_time;
+        auto current_date = TimeService::to_time_t(this->schedule_.getStartTime()) + current_time;
         for (unsigned int i = 0; i < this->numSlavesStarted(); i++) {
             // Skip if already activated
             if (this->slaveIsActivated(i)) {
@@ -631,12 +632,12 @@ ReservoirCouplingMaster<Scalar>::
 getMasterActivationDate_() const
 {
     // Assume master mode is activated when the first SLAVES keyword is encountered in the schedule
-    // NOTE: getStartTime() returns a std::time_t value, which is typically a long integer representing
-    //     the number of seconds since the epoch (1970-01-01 00:00:00 UTC)
+    // NOTE: TimeService::to_time_t() returns the start time as an integer number of seconds since
+    //     the epoch (1970-01-01 00:00:00 UTC)
     //     The maximum integer that can be represented by a double is 2^53 - 1, which is approximately
     //     9e15. This corresponds to a date in the year 2.85e8 or 285 million years into the future.
     //     So we should be able to represent reasonable epoch values within a double.
-    double start_date = this->schedule_.getStartTime();
+    double start_date = TimeService::to_time_t(this->schedule_.getStartTime());
     for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.slaveCount() > 0) {

@@ -31,6 +31,7 @@
 #include <dune/common/parametertree.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -582,7 +583,7 @@ beginEpisode_(bool enableExperiments,
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
         boost::posix_time::ptime curDateTime =
-            boost::posix_time::from_time_t(schedule_.simTime(episodeIdx));
+            boost::posix_time::from_time_t(TimeService::to_time_t(schedule_.simTime(episodeIdx)));
         ss.imbue(std::locale(std::locale::classic(), facet));
         ss << "Report step " << episodeIdx + 1
                   << "/" << schedule_.size() - 1

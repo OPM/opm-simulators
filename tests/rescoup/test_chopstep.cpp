@@ -172,7 +172,7 @@ struct SimulatorFixture
         simulator_{simulator_wrapper_.getSimulatorPtr()},
         schedule_{simulator_->vanguard().schedule()},
         rc_master_{Opm::FlowGenericVanguard::comm(), schedule_, 0, nullptr},
-        start_date_{static_cast<double>(schedule_.getStartTime())}
+        start_date_{static_cast<double>(Opm::TimeService::to_time_t(schedule_.getStartTime()))}
     {
         rc_master_.addSlaveName("RES-1");
         rc_master_.addSlaveName("RES-2");
@@ -181,8 +181,8 @@ struct SimulatorFixture
         rc_master_.resizeSlaveActivationDates(2);
         rc_master_.resizeNextReportDates(2);
         rc_master_.resizeSlaveStartDates(2);
-        rc_master_.setSlaveStartDate(0, schedule_.getStartTime());
-        rc_master_.setSlaveStartDate(1, schedule_.getStartTime());
+        rc_master_.setSlaveStartDate(0, Opm::TimeService::to_time_t(schedule_.getStartTime()));
+        rc_master_.setSlaveStartDate(1, Opm::TimeService::to_time_t(schedule_.getStartTime()));
     }
 
     void checkEq(double a, double b) const { BOOST_CHECK_CLOSE(a, b, 1e-16); }
