@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     // The cell indices differ from the connection indices: the vectors handed
     // to apply() and recoverSolutionWell() are local to the well.
     Eqns eqns;
-    eqns.init(num_conn, std::vector<std::size_t>{3, 7});
+    eqns.init(num_conn, std::vector<std::size_t> {3, 7});
     eqns.clear();
 
     for (int i = 0; i < nw; ++i) {
@@ -317,7 +317,7 @@ BOOST_AUTO_TEST_CASE(SumAndPinRowsOfWaterFilledWellbore)
     constexpr int nw5 = 5;
     constexpr int num_comp = 3;
     constexpr int first_mole_fraction = 1;
-    constexpr std::array<int, 3> kept{0, 3, 4}; // unknowns that are still solved for
+    constexpr std::array<int, 3> kept {0, 3, 4}; // unknowns that are still solved for
     using Eqns5 = Opm::CompWellEquations<Scalar, nw5, ne>;
     using Vec5 = Dune::FieldVector<Scalar, nw5>;
 
@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE(SumAndPinRowsOfWaterFilledWellbore)
     }
 
     Eqns5 eqns;
-    eqns.init(1, std::vector<std::size_t>{0});
+    eqns.init(1, std::vector<std::size_t> {0});
     eqns.clear();
     eqns.D()[0][0] = D;
     eqns.B()[0][0] = B;
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(SumAndPinRowsOfWaterFilledWellbore)
         }
         return sum;
     };
-    constexpr std::array<int, 3> rows{num_comp - 1, 3, 4};
+    constexpr std::array<int, 3> rows {num_comp - 1, 3, 4};
     Dune::FieldMatrix<Scalar, 3, 3> Dred(0.0);
     Dune::FieldVector<Scalar, 3> res_red(0.0), rhs_red(0.0);
     ResVec x;
@@ -378,17 +378,18 @@ BOOST_AUTO_TEST_CASE(SumAndPinRowsOfWaterFilledWellbore)
     }
     Dred.invert();
 
-    const auto check = [&kept](const Vec5& got, const Dune::FieldVector<Scalar, 3>& expected,
+    const auto check = [&kept](const Vec5& got,
+                               const Dune::FieldVector<Scalar, 3>& expected,
                                const std::string& what) {
         for (int comp = 0; comp < num_comp - 1; ++comp) {
             BOOST_CHECK_MESSAGE(got[first_mole_fraction + comp] == 0.0,
                                 what << ": mole fraction " << comp << " moved by "
-                                << got[first_mole_fraction + comp]);
+                                     << got[first_mole_fraction + comp]);
         }
         for (int i = 0; i < 3; ++i) {
             BOOST_CHECK_MESSAGE(std::abs(got[kept[i]] - expected[i]) < 1e-10,
-                                what << "[" << kept[i] << "]: got " << got[kept[i]]
-                                << " expected " << expected[i]);
+                                what << "[" << kept[i] << "]: got " << got[kept[i]] << " expected "
+                                     << expected[i]);
         }
     };
 

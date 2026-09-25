@@ -40,7 +40,8 @@
 namespace Opm {
 
 template <typename TypeTag>
-CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIterationContext& /*iter_ctx*/)
+CompWellModel<TypeTag>::CompWellModel(Simulator& simulator,
+                                      const NewtonIterationContext& /*iter_ctx*/)
     : WellConnectionModule(*this, simulator.gridView().comm())
     , simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())
@@ -59,8 +60,7 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
 template <typename TypeTag>
 template <class Param>
 typename CompWellModel<TypeTag>::Scalar
-CompWellModel<TypeTag>::
-wellNewtonLimit_()
+CompWellModel<TypeTag>::wellNewtonLimit_()
 {
     return Parameters::IsSet<Param>(/*errorIfNotRegistered=*/false) ? Parameters::Get<Param>()
                                                                     : Param::value;
@@ -153,8 +153,8 @@ createWellContainer()
             continue;
         }
 
-        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
-                                                                          dwell_fraction_max_, dbhp_max_rel_));
+        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(
+            wells_ecl_[w], w, well_connection_data_[w], dwell_fraction_max_, dbhp_max_rel_));
     }
 }
 
@@ -308,7 +308,10 @@ initWellState()
         prev_well_state = &this->last_valid_comp_well_states_;
     }
     this->comp_well_states_.init(this->wells_ecl_,
-                                 cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
+                                 cell_pressure,
+                                 well_temperatures,
+                                 cell_mole_fractions,
+                                 this->well_connection_data_,
                                  this->summary_state_,
                                  this->locally_owned_wells_,
                                  prev_well_state);

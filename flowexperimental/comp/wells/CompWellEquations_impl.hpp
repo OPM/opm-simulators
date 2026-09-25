@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <cmath>
 
@@ -90,8 +90,8 @@ clear()
 
 template <typename Scalar, int numWellEq, int numEq>
 void
-CompWellEquations<Scalar, numWellEq, numEq>::
-sumAndPinRows(const int last_row, const int variable_offset)
+CompWellEquations<Scalar, numWellEq, numEq>::sumAndPinRows(const int last_row,
+                                                           const int variable_offset)
 {
     auto& D = duneD_[0][0];
     auto& residual = resWell_[0];
@@ -167,8 +167,7 @@ apply(BVector& r) const
 template <typename Scalar, int numWellEq, int numEq>
 template <class SparseMatrixAdapter>
 void
-CompWellEquations<Scalar, numWellEq, numEq>::
-extract(SparseMatrixAdapter& jacobian) const
+CompWellEquations<Scalar, numWellEq, numEq>::extract(SparseMatrixAdapter& jacobian) const
 {
     // A -= C^T D^-1 B, following StandardWellEquations::extract().
     // B and C have one row of blocks, with a nonzero at (0, j) only if the

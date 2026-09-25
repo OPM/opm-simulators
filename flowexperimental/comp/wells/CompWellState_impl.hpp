@@ -89,8 +89,8 @@ initSingleWell(const Well& well,
                const SummaryState& summary_state)
 {
     if (well.isInjector()) {
-        initSingleInjector(well, cell_pressures, temperature, cell_mole_fractions, conn_data,
-                           summary_state);
+        initSingleInjector(
+            well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
     } else {
         initSingleProducer(well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
     }
@@ -98,13 +98,14 @@ initSingleWell(const Well& well,
 }
 
 template <typename FluidSystem>
-void CompWellState<FluidSystem>::
-initSingleInjector(const Well& well,
-                   const std::vector<Scalar>& /* cell_pressures */,
-                   const Scalar temperature,
-                   const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-                   const std::vector<CompConnectionData>& conn_data,
-                   const SummaryState& summary_state)
+void
+CompWellState<FluidSystem>::initSingleInjector(
+    const Well& well,
+    const std::vector<Scalar>& /* cell_pressures */,
+    const Scalar temperature,
+    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+    const std::vector<CompConnectionData>& conn_data,
+    const SummaryState& summary_state)
 {
     auto& ws = this->wells_.add(well.name(),
                                 SingleWellState(well.name(),

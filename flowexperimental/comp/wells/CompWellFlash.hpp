@@ -142,14 +142,13 @@ wellboreComponentMasses(const CompositionalFluidState<T, FluidSystem>& fluid_sta
 /// fills the volume fraction water_fraction and the flashed hydrocarbon
 /// system the rest.
 template <typename T, int numComponents>
-struct WellboreContents
-{
-    std::array<T, numComponents> component_masses{};
-    T water_mass{};
+struct WellboreContents {
+    std::array<T, numComponents> component_masses {};
+    T water_mass {};
     // mass fractions of the components and of water in the wellbore mixture
-    std::array<T, numComponents> mass_fractions{};
-    T water_mass_fraction{};
-    T density{};
+    std::array<T, numComponents> mass_fractions {};
+    T water_mass_fraction {};
+    T density {};
 };
 
 /// Masses [kg], mass fractions and density of the wellbore mixture of the
@@ -183,7 +182,7 @@ wellboreContents(const CompositionalFluidState<TFlash, FluidSystem>& hydrocarbon
     const auto& density_oil = hydrocarbons.density(FluidSystem::oilPhaseIdx);
     const auto& density_gas = hydrocarbons.density(FluidSystem::gasPhaseIdx);
     contents.density = hydrocarbon_fraction * (density_oil * so + density_gas * sg)
-                       + water_fraction * water_density;
+        + water_fraction * water_density;
     return contents;
 }
 

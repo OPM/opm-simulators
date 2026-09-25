@@ -86,13 +86,12 @@ getTotalRate() const
 
 template <typename FluidSystem, typename Indices>
 typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
-CompWellPrimaryVariables<FluidSystem, Indices>::
-getWaterVolumeFraction() const
+CompWellPrimaryVariables<FluidSystem, Indices>::getWaterVolumeFraction() const
 {
     if constexpr (has_water) {
         return evaluation_[WFrac];
     } else {
-        return EvalWell{0.};
+        return EvalWell {0.};
     }
 }
 
@@ -124,10 +123,9 @@ restrictEval(const EvalWell& in)
 
 template <typename FluidSystem, typename Indices>
 void
-CompWellPrimaryVariables<FluidSystem, Indices>::
-updateNewton(const BVectorWell& dwells,
-             const Scalar dwell_fraction_max,
-             const Scalar dbhp_max_rel)
+CompWellPrimaryVariables<FluidSystem, Indices>::updateNewton(const BVectorWell& dwells,
+                                                             const Scalar dwell_fraction_max,
+                                                             const Scalar dbhp_max_rel)
 {
     // As for the black-oil wells, one update moves a fraction by at most
     // dwell_fraction_max and the bhp by at most dbhp_max_rel of its value.
@@ -163,7 +161,7 @@ updateNewton(const BVectorWell& dwells,
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
     }
     if constexpr (has_water) {
-        value_[WFrac] = std::clamp(value_[WFrac], Scalar{0.}, Scalar{1.});
+        value_[WFrac] = std::clamp(value_[WFrac], Scalar {0.}, Scalar {1.});
     }
 
     updateEvaluation();
@@ -171,8 +169,7 @@ updateNewton(const BVectorWell& dwells,
 
 template <typename FluidSystem, typename Indices>
 void
-CompWellPrimaryVariables<FluidSystem, Indices>::
-moveHalfwayTo(const CompWellPrimaryVariables& other)
+CompWellPrimaryVariables<FluidSystem, Indices>::moveHalfwayTo(const CompWellPrimaryVariables& other)
 {
     for (std::size_t idx = 0; idx < numWellEq; ++idx) {
         value_[idx] = 0.5 * (value_[idx] + other.value_[idx]);

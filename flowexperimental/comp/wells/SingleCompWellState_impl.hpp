@@ -68,10 +68,11 @@ SingleCompWellState(const std::string& well_name,
 }
 
 template <typename FluidSystem>
-void SingleCompWellState<FluidSystem>::
-update_injector_targets(const Well& well,
-                        const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-                        const SummaryState& st)
+void
+SingleCompWellState<FluidSystem>::update_injector_targets(
+    const Well& well,
+    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+    const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
 
@@ -98,8 +99,8 @@ update_injector_targets(const Well& well,
             // to take one from. A well without open local connections has no
             // well equations, so it can wait for a connection to open.
             if (!this->connection_data.ecl_index.empty()) {
-                this->total_molar_fractions =
-                    cell_mole_fractions[this->connection_data.ecl_index.front()];
+                this->total_molar_fractions
+                    = cell_mole_fractions[this->connection_data.ecl_index.front()];
             }
             this->wellbore_water_volume_fraction = 1.;
             this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
@@ -189,8 +190,8 @@ copyRuntimeStateFrom(const SingleCompWellState& other)
     // shut well, or one that switched between producer and injector, lacks.
     // So does a well without open connections: it had no well equations and
     // its composition was never set.
-    if (status == WellStatus::SHUT || other.status == WellStatus::SHUT
-        || producer != other.producer || other.connection_data.ecl_index.empty()) {
+    if (status == WellStatus::SHUT || other.status == WellStatus::SHUT || producer != other.producer
+        || other.connection_data.ecl_index.empty()) {
         return;
     }
     bhp = other.bhp;

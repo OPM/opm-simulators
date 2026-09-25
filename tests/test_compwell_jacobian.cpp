@@ -302,7 +302,8 @@ using ContentsEvaluation = Opm::DenseAd::Evaluation<Scalar, numContentsDeriv>;
 
 // A slightly compressible water, standing in for the fluid system's water PVT.
 template <typename T>
-T waterDensity(const T& pressure)
+T
+waterDensity(const T& pressure)
 {
     return 1000.0 * (1.0 + 4.5e-10 * (pressure - 1.0e5));
 }
@@ -318,7 +319,8 @@ wellboreContentsAt(const T& pressure,
     return Opm::wellboreContents(fs, water_fraction, waterDensity(pressure), wellbore_volume);
 }
 
-std::array<ContentsEvaluation, numComponents> compositionVariables()
+std::array<ContentsEvaluation, numComponents>
+compositionVariables()
 {
     std::array<ContentsEvaluation, numComponents> z;
     z[0] = ContentsEvaluation::createVariable(z0_0, z0Idx);
@@ -327,7 +329,8 @@ std::array<ContentsEvaluation, numComponents> compositionVariables()
     return z;
 }
 
-void checkWellboreContentsDerivatives()
+void
+checkWellboreContentsDerivatives()
 {
     const auto pressure = ContentsEvaluation::createVariable(p0, pIdx);
     const auto water_fraction = ContentsEvaluation::createVariable(w0, wIdx);
@@ -344,14 +347,14 @@ void checkWellboreContentsDerivatives()
     }
     const Scalar density_scale = ad.density.value();
 
-    const std::array<Scalar, numContentsDeriv> base_value{p0, z0_0, z1_0, w0};
-    const std::array<Scalar, numContentsDeriv> eps{p0 * 1.e-5, 1.e-4, 1.e-4, 1.e-4};
+    const std::array<Scalar, numContentsDeriv> base_value {p0, z0_0, z1_0, w0};
+    const std::array<Scalar, numContentsDeriv> eps {p0 * 1.e-5, 1.e-4, 1.e-4, 1.e-4};
     // Scale of each primary variable, so that the absolute floor below is
     // small against the derivatives with respect to pressure as well.
-    const std::array<Scalar, numContentsDeriv> variable_scale{p0, 1.0, 1.0, 1.0};
+    const std::array<Scalar, numContentsDeriv> variable_scale {p0, 1.0, 1.0, 1.0};
 
     const auto contentsAt = [](const std::array<Scalar, numContentsDeriv>& v) {
-        const std::array<Scalar, numComponents> z{v[z0Idx], v[z1Idx], 1.0 - v[z0Idx] - v[z1Idx]};
+        const std::array<Scalar, numComponents> z {v[z0Idx], v[z1Idx], 1.0 - v[z0Idx] - v[z1Idx]};
         return wellboreContentsAt<Scalar>(v[pIdx], z, v[wIdx]);
     };
 
@@ -363,25 +366,38 @@ void checkWellboreContentsDerivatives()
         const auto qp = contentsAt(vp);
         const auto qm = contentsAt(vm);
 
-        const auto check = [&](const ContentsEvaluation& quantity, const Scalar plus,
-                               const Scalar minus, const Scalar scale, const std::string& what) {
+        const auto check = [&](const ContentsEvaluation& quantity,
+                               const Scalar plus,
+                               const Scalar minus,
+                               const Scalar scale,
+                               const std::string& what) {
             const Scalar ad_deriv = quantity.derivative(s);
             const Scalar fd_deriv = (plus - minus) / (2.0 * eps[s]);
             const Scalar tol = 1.e-3 * std::abs(ad_deriv) + 1.e-6 * scale / variable_scale[s];
             BOOST_CHECK_MESSAGE(std::abs(ad_deriv - fd_deriv) <= tol,
-                what << "/dx[" << s << "]: AD=" << ad_deriv << " FD=" << fd_deriv
-                     << " |diff|=" << std::abs(ad_deriv - fd_deriv) << " tol=" << tol);
+                                what << "/dx[" << s << "]: AD=" << ad_deriv << " FD=" << fd_deriv
+                                     << " |diff|=" << std::abs(ad_deriv - fd_deriv)
+                                     << " tol=" << tol);
         };
 
         for (int c = 0; c < numComponents; ++c) {
-            check(ad.component_masses[c], qp.component_masses[c], qm.component_masses[c],
-                  mass_scale, "d(mass[" + std::to_string(c) + "])");
-            check(ad.mass_fractions[c], qp.mass_fractions[c], qm.mass_fractions[c],
-                  1.0, "d(massfrac[" + std::to_string(c) + "])");
+            check(ad.component_masses[c],
+                  qp.component_masses[c],
+                  qm.component_masses[c],
+                  mass_scale,
+                  "d(mass[" + std::to_string(c) + "])");
+            check(ad.mass_fractions[c],
+                  qp.mass_fractions[c],
+                  qm.mass_fractions[c],
+                  1.0,
+                  "d(massfrac[" + std::to_string(c) + "])");
         }
         check(ad.water_mass, qp.water_mass, qm.water_mass, mass_scale, "d(water mass)");
-        check(ad.water_mass_fraction, qp.water_mass_fraction, qm.water_mass_fraction,
-              1.0, "d(water massfrac)");
+        check(ad.water_mass_fraction,
+              qp.water_mass_fraction,
+              qm.water_mass_fraction,
+              1.0,
+              "d(water massfrac)");
         check(ad.density, qp.density, qm.density, density_scale, "d(density)");
     }
 }
@@ -389,7 +405,8 @@ void checkWellboreContentsDerivatives()
 // With water alone in the wellbore every derivative of the flash is multiplied
 // by 1 - w = 0, so the contents from a scalar flash match those from the AD
 // flash, which CompWell relies on to skip the AD flash.
-void checkWaterFilledWellboreContents()
+void
+checkWaterFilledWellboreContents()
 {
     const auto pressure = ContentsEvaluation::createVariable(p0, pIdx);
     const auto water_fraction = ContentsEvaluation::createVariable(1.0, wIdx);
@@ -410,19 +427,23 @@ void checkWaterFilledWellboreContents()
                               const std::string& what) {
         const Scalar tol = 1.e-12 * std::max(1.0, std::abs(expected.value()));
         BOOST_CHECK_MESSAGE(std::abs(expected.value() - actual.value()) <= tol,
-            what << ": AD flash " << expected.value() << ", scalar flash " << actual.value());
+                            what << ": AD flash " << expected.value() << ", scalar flash "
+                                 << actual.value());
         for (int s = 0; s < numContentsDeriv; ++s) {
             const Scalar deriv_tol = 1.e-12 * std::max(1.0, std::abs(expected.derivative(s)));
-            BOOST_CHECK_MESSAGE(std::abs(expected.derivative(s) - actual.derivative(s)) <= deriv_tol,
-                what << "/dx[" << s << "]: AD flash " << expected.derivative(s)
-                     << ", scalar flash " << actual.derivative(s));
+            BOOST_CHECK_MESSAGE(std::abs(expected.derivative(s) - actual.derivative(s))
+                                    <= deriv_tol,
+                                what << "/dx[" << s << "]: AD flash " << expected.derivative(s)
+                                     << ", scalar flash " << actual.derivative(s));
         }
     };
 
     for (int c = 0; c < numComponents; ++c) {
-        checkSame(ad_flash.component_masses[c], scalar_flash.component_masses[c],
+        checkSame(ad_flash.component_masses[c],
+                  scalar_flash.component_masses[c],
                   "mass[" + std::to_string(c) + "]");
-        checkSame(ad_flash.mass_fractions[c], scalar_flash.mass_fractions[c],
+        checkSame(ad_flash.mass_fractions[c],
+                  scalar_flash.mass_fractions[c],
                   "massfrac[" + std::to_string(c) + "]");
     }
     checkSame(ad_flash.water_mass, scalar_flash.water_mass, "water mass");

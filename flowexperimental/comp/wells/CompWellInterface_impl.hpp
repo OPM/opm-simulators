@@ -44,7 +44,6 @@ CompWellInterface(const Well& well,
         }
         // TODO: saturation_table_number
     }
-
 }
 
 template <typename TypeTag>

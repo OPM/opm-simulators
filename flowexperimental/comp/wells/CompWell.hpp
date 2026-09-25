@@ -84,19 +84,20 @@ public:
         EvalWell massFraction(int comp_idx) const {
             EvalWell mass = 0.;
             // water carries no hydrocarbon components, so the miscible phases suffice
-            for (unsigned  p = 0; p < FluidSystem::numMisciblePhases; ++p) {
+            for (unsigned p = 0; p < FluidSystem::numMisciblePhases; ++p) {
                 mass += surface_densities_[p] * volume_fractions_[p] * mass_fractions_[p][comp_idx];
             }
             return mass / density();
         }
 
         // mass fraction of the water phase in the surface stream
-        EvalWell waterMassFraction() const {
+        EvalWell waterMassFraction() const
+        {
             if constexpr (FluidSystem::waterEnabled) {
-                return surface_densities_[FluidSystem::waterPhaseIdx] *
-                       volume_fractions_[FluidSystem::waterPhaseIdx] / density();
+                return surface_densities_[FluidSystem::waterPhaseIdx]
+                    * volume_fractions_[FluidSystem::waterPhaseIdx] / density();
             } else {
-                return EvalWell{0.};
+                return EvalWell {0.};
             }
         }
     };
@@ -145,7 +146,6 @@ public:
     void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
-
     // largest change of a fraction and relative change of the bhp in one
     // Newton update
     const Scalar dwell_fraction_max_;
@@ -172,9 +172,9 @@ private:
     std::array<EvalWell, num_comp> new_component_masses_{0.};
     // water in the wellbore, kept outside the flash: previous mass, current
     // mass and current mass fraction of the wellbore mixture
-    Scalar water_mass_{0.};
-    EvalWell new_water_mass_{0.};
-    EvalWell water_mass_fraction_{0.};
+    Scalar water_mass_ {0.};
+    EvalWell new_water_mass_ {0.};
+    EvalWell water_mass_fraction_ {0.};
     // quantities used to calculate the quantities under the surface conditions
     SurfaceConditons surface_conditions_;
 
@@ -219,11 +219,10 @@ private:
                            bool check_rate_limits) const;
 
     template <typename T>
-    void
-    updateSurfaceCondition_(const StandardCond& surface_cond,
-                            const Scalar surface_water_density,
-                            FluidState<T>& fluid_state,
-                            const T& water_mass_fraction);
+    void updateSurfaceCondition_(const StandardCond& surface_cond,
+                                 const Scalar surface_water_density,
+                                 FluidState<T>& fluid_state,
+                                 const T& water_mass_fraction);
 
     bool isWaterInjector_() const;
 
