@@ -226,7 +226,9 @@ applyActions(const int reportStep,
     }
 
     auto non_triggered = 0;
-    const auto simTime = asTimeT(now);
+    // Not from 'now': that is rounded down to whole seconds for display,
+    // while an action's start time keeps its fraction of a second.
+    const auto simTime = TimeService::advance(schedule_.getStartTime(), sim_time);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
         const auto actionResult = action->eval(context);
         if (! actionResult.conditionSatisfied()) {

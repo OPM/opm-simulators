@@ -26,12 +26,12 @@
 
 #include <dune/common/timer.hh>
 
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 #include <opm/simulators/wells/WellIndexFracture.hpp>
 
-#include <ctime>
 #include <map>
 #include <memory>
 #include <optional>
@@ -211,7 +211,7 @@ public:
                              const bool zero_group_target,
                              WellTestState& wellTestState,
                              const UnitSystem& unit_system,
-                             const std::time_t start_time,
+                             const time_point start_time,
                              DeferredLogger& deferred_logger,
                              std::string* closure_reason = nullptr) const;
 

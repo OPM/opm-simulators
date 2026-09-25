@@ -27,7 +27,6 @@
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
-#include <ctime>
 #include <string>
 
 namespace Opm {
@@ -36,18 +35,18 @@ namespace Opm {
 //!        \p sim_time seconds.
 //!
 //! Shared by the well (WECON) and group (GECON) economic-limit workover
-//! messages so both report the same date basis. UTC (gmtime) is used
-//! deliberately so the printed date does not depend on the host time zone.
-inline std::string economicLimitDateString(const std::time_t start_time, const double sim_time)
+//! messages so both report the same date basis. The date is UTC, so it does
+//! not depend on the host time zone.
+inline std::string economicLimitDateString(const time_point start_time, const double sim_time)
 {
-    const std::time_t cur_time = TimeService::advance(start_time, sim_time);
-    return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
+    return fmt::format("{:%d-%b-%Y}",
+                       asTm(TimeStampUTC { TimeService::advance(start_time, sim_time) }));
 }
 
 //! \brief The "at time ... (date = ...)" clause shared by the well (WECON) and
 //!        connection (CECON) economic-limit messages.
 inline std::string economicLimitWhenString(const UnitSystem& unit_system,
-                                           const std::time_t start_time,
+                                           const time_point start_time,
                                            const double sim_time)
 {
     return fmt::format("at time {:.2f} {} (date = {})",
