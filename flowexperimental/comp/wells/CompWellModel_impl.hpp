@@ -282,37 +282,19 @@ initWellState()
         }
     }
 
-    // Start each report step from freshly initialized schedule state. Retry
-    // recovery still comes from last_valid_comp_well_states_ via
-    // restoreLastValidState()/endTimeStep(). Passing the last valid state as
-    // prev_well_state here would carry dynamic state across report steps, but
-    // that currently changes regression results, so we pass nullptr for now.
+    // Carry the wellbore inventory (pressure, water fraction and composition)
+    // across report steps, so that schedule-derived targets do not replace it.
+    // Runs without water still start each report step from the schedule, as
+    // carrying the state over changes their regression results.
+    const CompWellState<FluidSystem>* prev_well_state = nullptr;
+    if constexpr (FluidSystem::waterEnabled) {
+        prev_well_state = &this->last_valid_comp_well_states_;
+    }
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_,
                                  this->locally_owned_wells_,
-                                 /*prev_well_state=*/nullptr);
-
-    // Carry the wellbore inventory across report steps. Its component masses
-    // depend on the hydrocarbon composition as well as pressure and water
-    // fraction; schedule-derived injector targets must not replace that state.
-    if constexpr (FluidSystem::waterEnabled) {
-        for (const auto& well : this->wells_ecl_) {
-            const auto& name = well.name();
-            if (!this->last_valid_comp_well_states_.has(name)) {
-                continue;
-            }
-            const auto& last = this->last_valid_comp_well_states_[name];
-            auto& ws = this->comp_well_states_[name];
-            if (last.status == WellStatus::SHUT || ws.status == WellStatus::SHUT
-                || last.producer != ws.producer) {
-                continue;
-            }
-            ws.bhp = last.bhp;
-            ws.wellbore_water_volume_fraction = last.wellbore_water_volume_fraction;
-            ws.total_molar_fractions = last.total_molar_fractions;
-        }
-    }
+                                 prev_well_state);
 }
 
 

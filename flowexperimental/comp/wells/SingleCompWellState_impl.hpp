@@ -182,17 +182,16 @@ template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
 copyRuntimeStateFrom(const SingleCompWellState& other)
 {
-    // Keep the freshly initialized schedule-derived status, controls, and
-    // injector targets from base_init(); only reuse the dynamic state.
-    bhp = other.bhp;
-    surface_phase_rates = other.surface_phase_rates;
-    wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
-    phase_fractions = other.phase_fractions;
-    reservoir_phase_rates = other.reservoir_phase_rates;
-    if (producer) {
-        total_molar_fractions = other.total_molar_fractions;
-        phase_molar_fractions = other.phase_molar_fractions;
+    // Keep the freshly initialized schedule-derived status, controls and
+    // targets from base_init() and carry over the wellbore inventory, which a
+    // shut well, or one that switched between producer and injector, lacks.
+    if (status == WellStatus::SHUT || other.status == WellStatus::SHUT
+        || producer != other.producer) {
+        return;
     }
+    bhp = other.bhp;
+    wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
+    total_molar_fractions = other.total_molar_fractions;
 }
 
 template <typename FluidSystem>
