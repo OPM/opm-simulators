@@ -138,7 +138,7 @@ helpPreamble(int,
         desc = desc + "\n";
 
     return
-        "Usage: "+std::string(argv[0]) + " [OPTIONS] [ECL_DECK_FILENAME]\n"
+        "Usage: "+std::string(argv[0]) + " [OPTIONS] [DECK_FILENAME]\n"
         + desc;
 }
 

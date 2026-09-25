@@ -581,8 +581,16 @@ void printUsage(const std::string& helpPreamble,
                 const std::string& errorMsg,
                 const bool showAll)
 {
+    // On error, print only the usage line and a pointer to --help: the full
+    // option list would push the error off screen.
     if (!errorMsg.empty()) {
         os << errorMsg << "\n\n";
+        const std::string usageLine = helpPreamble.substr(0, helpPreamble.find('\n'));
+        if (!usageLine.empty()) {
+            os << breakLines(usageLine, /*indent=*/2, /*maxWidth=*/getTtyWidth()) << "\n\n";
+        }
+        os << "Run with --help to list all options.\n";
+        return;
     }
 
     os << breakLines(helpPreamble, /*indent=*/2, /*maxWidth=*/getTtyWidth());
@@ -749,9 +757,9 @@ std::string parseCommandLineOptions(int argc,
         // parse argument
         paramName = transformKey(parseKey(s), /*capitalizeFirst=*/true);
         if (seenKeys.count(paramName) > 0) {
-            const std::string msg = "Parameter '" + paramName +
-                                    "' specified multiple times as a "
-                                    "command line parameter";
+            const std::string_view option{argv[i]};
+            const std::string msg = "Option '" + std::string{option.substr(0, option.find('='))} +
+                                    "' given more than once on the command line";
 
             handleUsage(msg);
             return msg;
@@ -759,9 +767,9 @@ std::string parseCommandLineOptions(int argc,
         seenKeys.insert(paramName);
 
         if (s.empty() || s[0] != '=') {
-            const std::string msg = "Parameter '" + paramName +
-                                    "' is missing a value. "
-                                    " Please use " + argv[i] + "=value.";
+            const std::string msg = "Option '" + std::string{argv[i]} +
+                                    "' is missing a value. Please use " +
+                                    argv[i] + "=value.";
 
             handleUsage(msg);
             return msg;

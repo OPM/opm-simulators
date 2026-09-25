@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/flow/FlowUtils.hpp>
 
 #define BOOST_TEST_MODULE ParameterSystemTest
 #include <boost/test/unit_test.hpp>
@@ -165,6 +166,73 @@ Recognized options:
     --simple-param-int=INTEGER                    Simple int parameter. Default: 10
     --simple-param-string=STRING                  Simple string parameter. Default: "foo"
 )"));
+}
+
+BOOST_FIXTURE_TEST_CASE(PrintUsageError, Fixture)
+{
+  std::stringstream usage;
+  Opm::Parameters::printUsage("===foobar===\nA description\n", usage, "Something went wrong", true);
+  BOOST_CHECK_EQUAL(trimString(usage.str()),
+trimString(R"(Something went wrong
+===foobar===
+Run with --help to list all options.
+)"));
+}
+
+BOOST_FIXTURE_TEST_CASE(ParseCommandLineErrors, Fixture)
+{
+  auto noPositional = [](std::function<void(const std::string&,
+                                            const std::string&)>,
+                         std::set<std::string>&,
+                         std::string&,
+                         int,
+                         const char**,
+                         int,
+                         int) -> int
+                      { return 0; };
+
+  const char* duplicate[] = {
+      "test_parametersystem",
+      "--simple-param-bool=true",
+      "--simple-param-bool=false",
+  };
+  BOOST_CHECK_EQUAL(Opm::Parameters::parseCommandLineOptions(3, duplicate, noPositional),
+                    "Option '--simple-param-bool' given more than once on the command line");
+
+  const char* missingValue[] = {
+      "test_parametersystem",
+      "--simple-param-bool",
+  };
+  BOOST_CHECK_EQUAL(Opm::Parameters::parseCommandLineOptions(2, missingValue, noPositional),
+                    "Option '--simple-param-bool' is missing a value. "
+                    "Please use --simple-param-bool=value.");
+}
+
+BOOST_FIXTURE_TEST_CASE(ParseCommandLineExtraPositional, Fixture)
+{
+  auto eclPositional = [](std::function<void(const std::string&,
+                                             const std::string&)> addKey,
+                          std::set<std::string>& seenParams,
+                          std::string& errorMsg,
+                          int,
+                          const char** argv,
+                          int paramIdx,
+                          int) -> int
+                       {
+                           return Opm::detail::eclPositionalParameter(addKey, seenParams,
+                                                                      errorMsg, argv, paramIdx);
+                       };
+
+  const char* argv[] = {
+      "test_parametersystem",
+      "CASE.DATA",
+      "--simple-param-bool=true",
+      "and",
+  };
+  BOOST_CHECK_EQUAL(Opm::Parameters::parseCommandLineOptions(4, argv, eclPositional),
+                    "Unexpected argument 'and': a deck file has already been given and only "
+                    "one is allowed. All other arguments must be options of the form "
+                    "--name=value.");
 }
 
 BOOST_FIXTURE_TEST_CASE(PrintValues, Fixture)
