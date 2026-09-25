@@ -272,6 +272,8 @@ protected:
 
     void extractPermeability_(const std::function<unsigned int(unsigned int)>& map);
 
+    void applyDualPorosityPermScaling_(const std::function<unsigned int(unsigned int)>& map);
+
     void extractPorosity_();
 
     void extractDispersion_();
