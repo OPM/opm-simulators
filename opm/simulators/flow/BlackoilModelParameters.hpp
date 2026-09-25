@@ -91,7 +91,10 @@ template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
 
 template<class Scalar>
-struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
+struct ToleranceWellsStoppedFactor { static constexpr Scalar value = 1e-4; };
+
+template<class Scalar>
+struct ToleranceWellsDynamicThpFactor { static constexpr Scalar value = 1e-1; };
 
 struct MaxWelleqIter { static constexpr int value = 30; };
 
@@ -116,6 +119,14 @@ struct ConvertToMultisegmentWell { static constexpr auto value = "none"; };
 
 template<class Scalar>
 struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
+/// Control-equation tolerances for standard wells. Defaults reproduce the values that
+/// used to be hardcoded at the call site; MSW has had these as parameters all along.
+template<class Scalar>
+struct ToleranceWellBhpEq { static constexpr Scalar value = 1.0e3; };
+template<class Scalar>
+struct ToleranceWellThpEq { static constexpr Scalar value = 1.0e4; };
+template<class Scalar>
+struct ToleranceWellGrupEq { static constexpr Scalar value = 1.0e-6; };
 
 template<class Scalar>
 struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
@@ -123,6 +134,8 @@ struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
 struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value = 99; };
 struct MaxInnerIterMsWells { static constexpr int value = 100; };
 struct MaxInnerIterWells { static constexpr int value = 50; };
+struct MinIterAfterSwitchWells { static constexpr int value = 4; };
+struct MinIterAfterSwitchMsWells { static constexpr int value = 3; };
 struct MaxWellStatusSwitchInInnerIterWells { static constexpr int value = 99; };
 struct MaxWellStatusSwitchForWells { static constexpr int value = 99; };
 struct ShutUnsolvableWells { static constexpr bool value = true; };
@@ -247,11 +260,16 @@ public:
     Scalar tolerance_max_drv_;
     /// Well convergence tolerance.
     Scalar tolerance_wells_;
-    /// Tolerance for the well control equations
-    //  TODO: it might need to distinguish between rate control and pressure control later
-    Scalar tolerance_well_control_;
+    /// Multipliers applied to tolerance_wells_ for stopped/zero-rate wells and for
+    /// wells on a dynamic THP limit (the latter to help network convergence).
+    Scalar tolerance_wells_stopped_factor_;
+    Scalar tolerance_wells_dynamic_thp_factor_;
     /// Tolerance for the pressure equations for multisegment wells
     Scalar tolerance_pressure_ms_wells_;
+    /// standard-well control-equation tolerances (BHP/THP in Pa, GRUP in m3/s)
+    Scalar tolerance_well_bhp_eq_;
+    Scalar tolerance_well_thp_eq_;
+    Scalar tolerance_well_grup_eq_;
     /// Relaxed tolerance for for the well flow residual
     Scalar relaxed_tolerance_flow_well_;
 
@@ -281,6 +299,11 @@ public:
 
     /// Maximum inner iteration number for standard wells
     int max_inner_iter_wells_;
+
+    /// Inner iterations forced between two control switches of the same well.
+    /// Values <= 1 are known to let the inner solve cycle between controls.
+    int min_iter_after_switch_wells_;
+    int min_iter_after_switch_ms_wells_;
 
     /// Maximum iteration number of the well equation solution
     int max_welleq_iter_;
