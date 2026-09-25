@@ -74,7 +74,6 @@ init(const int num_conn,  const std::vector<std::size_t>& cells)
     invDrw_.resize(duneD_.N());
 
     this->cells_ = cells;
-    this->res_scales_.assign(cells.size(), 1.0);
     // some others in the future
 }
 
@@ -160,14 +159,8 @@ apply(BVector& r) const
 
     // invDrw_ = invDuneD_ * resWell_
     invDuneD_.mv(resWell_, invDrw_);
-    // r = r - scale * duneC_^T * invDrw_, with the per-cell scale converting
-    // the well-equation units to the reservoir residual's units. r holds the
-    // well's own cells, one entry per connection.
-    for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
-        VectorBlockType tmp(0.0);
-        (*colC).usmtv(res_scales_[colC.index()], invDrw_[0], tmp);
-        r[colC.index()] -= tmp;
-    }
+    // r = r - duneC_^T * invDrw_
+    duneC_.mmtv(invDrw_, r);
 }
 
 template <typename Scalar, int numWellEq, int numEq>
@@ -186,11 +179,9 @@ extract(SparseMatrixAdapter& jacobian) const
             // tmp = D^-1 B
             OffDiagMatrixBlockWellType tmp;
             detail::multMatrixImpl(invDuneD_[0][0], *colB, tmp, std::true_type());
-            // block = -scale * C^T tmp, with the same unit conversion as the
-            // residual correction in apply()
+            // block = -C^T tmp
             typename SparseMatrixAdapter::MatrixBlock tmpMat;
             detail::negativeMultMatrixTransposed(*colC, tmp, tmpMat);
-            tmpMat *= res_scales_[colC.index()];
             jacobian.addToBlock(row_index, col_index, tmpMat);
         }
     }

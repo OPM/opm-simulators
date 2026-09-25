@@ -33,8 +33,8 @@
  *
  *   solve(dx)              ->  dx  = D^-1 res_well
  *   recoverSolutionWell    ->  x_w = D^-1 (res_well - B x)
- *   apply(r)               ->  r  -= scale C^T D^-1 res_well
- *   extract(A)             ->  A  -= scale C^T D^-1 B
+ *   apply(r)               ->  r  -= C^T D^-1 res_well
+ *   extract(A)             ->  A  -= C^T D^-1 B
  *
  * It also checks that singular matrices are rejected for both the 4x4 block
  * size (which signals singularity by throwing) and the 3x3 block size (which
@@ -182,8 +182,6 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     Eqns eqns;
     eqns.init(num_conn, std::vector<std::size_t>{3, 7});
     eqns.clear();
-    const std::array<Scalar, num_conn> scales {0.5, 2.0};
-    eqns.setResidualScales({scales[0], scales[1]});
 
     for (int i = 0; i < nw; ++i) {
         eqns.residual()[0][i] = resWell[i];
@@ -232,7 +230,7 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
         checkClose(xw[0], expected, "recoverSolutionWell");
     }
 
-    // --- apply: r -= scale C^T D^-1 res_well -------------------------------
+    // --- apply: r -= C^T D^-1 res_well -------------------------------------
     {
         Eqns::BVector r(num_conn);
         std::array<ResVec, num_conn> r_in;
@@ -245,19 +243,19 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
 
         eqns.apply(r);
 
-        // invDrw = D^-1 res_well ; r_c = r_in_c - scale_c C_c^T invDrw
+        // invDrw = D^-1 res_well ; r_c = r_in_c - C_c^T invDrw
         WellVec invDrw;
         Dinv.mv(resWell, invDrw);
         for (int c = 0; c < num_conn; ++c) {
             ResVec ctx;
             Cref[c].mtv(invDrw, ctx); // C_c^T invDrw
             ResVec expected = r_in[c];
-            expected.axpy(-scales[c], ctx);
+            expected -= ctx;
             checkClose(r[c], expected, "apply conn " + std::to_string(c));
         }
     }
 
-    // --- extract: A_rc -= scale_r C_r^T D^-1 B_c --------------------------
+    // --- extract: A_rc -= C_r^T D^-1 B_c ----------------------------------
     {
         TestMatrixAdapter jacobian;
         eqns.extract(jacobian);
@@ -270,8 +268,7 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
                     for (int j = 0; j < ne; ++j) {
                         for (int k = 0; k < nw; ++k) {
                             for (int l = 0; l < nw; ++l) {
-                                expected[i][j]
-                                    -= scales[row] * Cref[row][k][i] * Dinv[k][l] * Bref[col][l][j];
+                                expected[i][j] -= Cref[row][k][i] * Dinv[k][l] * Bref[col][l][j];
                             }
                         }
                     }

@@ -293,14 +293,10 @@ assembleWellEq(const Simulator& simulator,
 
     // The reservoir residual is volume-specific when UseVolumetricResidual is
     // set (the models-layer default, used by the compositional model), so the
-    // coupling terms pushed into the reservoir system need the connected
-    // cells' 1/volume factors. For a total-mass formulation the scale is one.
+    // reservoir rows of the coupling, C, carry the connected cell's 1/volume.
+    Scalar coupling_scale = 1.;
     if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
-        std::vector<Scalar> scales(this->well_cells_.size());
-        for (std::size_t i = 0; i < this->well_cells_.size(); ++i) {
-            scales[i] = 1.0 / simulator.model().dofTotalVolume(this->well_cells_[i]);
-        }
-        this->well_equations_.setResidualScales(std::move(scales));
+        coupling_scale = 1. / simulator.model().dofTotalVolume(this->well_cells_[0]);
     }
 
     this->updateSecondaryQuantities(simulator);
@@ -325,7 +321,8 @@ assembleWellEq(const Simulator& simulator,
         this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             // C, needs the cell_idx
-            this->well_equations_.C()[0][0][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.C()[0][0][pvIdx][comp_idx]
+                -= coupling_scale * connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
         }
 
