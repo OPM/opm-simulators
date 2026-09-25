@@ -665,6 +665,7 @@ if(HDF5_FOUND)
 endif()
 
 list (APPEND TEST_DATA_FILES
+  tests/blackoilintensivequantities_gpu.DATA
   tests/drsdt_initial_rs.DATA
   tests/equil_base.DATA
   tests/equil_capillary.DATA
