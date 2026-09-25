@@ -143,9 +143,12 @@ update_producer_targets(const Well& well,
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // we give a set of rates for BHP-controlled wells for initialization
+    // Start BHP-controlled wells with a set of rates and rate-controlled wells
+    // at their target. With a zero total rate, a rate control equation does
+    // not depend on any primary variable and the well matrix is singular.
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-    if (prod_controls.cmode == Well::ProducerCMode::BHP) {
+    switch (prod_controls.cmode) {
+    case Well::ProducerCMode::BHP:
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             this->surface_phase_rates[FluidSystem::oilPhaseIdx] = production_rate;
         }
@@ -155,6 +158,23 @@ update_producer_targets(const Well& well,
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->surface_phase_rates[FluidSystem::gasPhaseIdx] = 100. * production_rate;
         }
+        break;
+    case Well::ProducerCMode::ORAT:
+        this->surface_phase_rates[FluidSystem::oilPhaseIdx] = -prod_controls.oil_rate;
+        break;
+    case Well::ProducerCMode::WRAT:
+        if constexpr (FluidSystem::waterEnabled) {
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = -prod_controls.water_rate;
+        }
+        break;
+    case Well::ProducerCMode::GRAT:
+        this->surface_phase_rates[FluidSystem::gasPhaseIdx] = -prod_controls.gas_rate;
+        break;
+    case Well::ProducerCMode::LRAT:
+        this->surface_phase_rates[FluidSystem::oilPhaseIdx] = -prod_controls.liquid_rate;
+        break;
+    default:
+        break;
     }
 }
 
