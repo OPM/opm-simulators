@@ -167,6 +167,17 @@ Recognized options:
 )"));
 }
 
+BOOST_FIXTURE_TEST_CASE(PrintUsageError, Fixture)
+{
+  std::stringstream usage;
+  Opm::Parameters::printUsage("===foobar===", usage, "Something went wrong", true);
+  BOOST_CHECK_EQUAL(trimString(usage.str()),
+trimString(R"(Something went wrong
+===foobar===
+Run with --help to list all options.
+)"));
+}
+
 BOOST_FIXTURE_TEST_CASE(PrintValues, Fixture)
 {
   std::stringstream values;
