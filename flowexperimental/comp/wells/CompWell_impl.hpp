@@ -122,30 +122,40 @@ void
 CompWell<TypeTag>::
 updateTotalMass()
 {
-    // flash calculation in the wellbore
-    auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+    const EvalWell water_fraction = this->primary_variables_.getWaterVolumeFraction();
+    const auto update = [this, &water_fraction](const auto& hydrocarbons) {
+        EvalWell water_density = 0.;
+        if constexpr (FluidSystem::waterEnabled) {
+            water_density = waterDensity_(this->primary_variables_.getBhp(),
+                                          getValue(hydrocarbons.temperature(0)));
+        }
 
-    flashFluidState_(fluid_state);
+        // The AD derivatives of the wellbore contents with respect to the
+        // wellbore primary variables, including the dependence that flows
+        // through the flash, are checked against finite differences in
+        // tests/test_compwell_jacobian.cpp.
+        const auto contents = wellboreContents(hydrocarbons,
+                                               water_fraction,
+                                               water_density,
+                                               this->wellbore_volume_);
+        this->new_component_masses_ = contents.component_masses;
+        this->new_water_mass_ = contents.water_mass;
+        this->mass_fractions_ = contents.mass_fractions;
+        this->water_mass_fraction_ = contents.water_mass_fraction;
+        this->fluid_density_ = contents.density;
+    };
 
-    EvalWell water_density = 0.;
-    if constexpr (FluidSystem::waterEnabled) {
-        water_density = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
-                                      getValue(fluid_state.temperature(0)));
+    // With water alone in the wellbore every derivative of the flash is
+    // multiplied by 1 - water_fraction = 0, so the scalar flash is enough.
+    if (getValue(water_fraction) < 1.) {
+        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+        flashFluidState_(fluid_state);
+        update(fluid_state);
+    } else {
+        auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+        flashFluidState_(fluid_state);
+        update(fluid_state);
     }
-
-    // The AD derivatives of the wellbore contents with respect to the wellbore
-    // primary variables, including the dependence that flows through the
-    // flash, are checked against finite differences in
-    // tests/test_compwell_jacobian.cpp.
-    const auto contents = wellboreContents(fluid_state,
-                                           this->primary_variables_.getWaterVolumeFraction(),
-                                           water_density,
-                                           this->wellbore_volume_);
-    this->new_component_masses_ = contents.component_masses;
-    this->new_water_mass_ = contents.water_mass;
-    this->mass_fractions_ = contents.mass_fractions;
-    this->water_mass_fraction_ = contents.water_mass_fraction;
-    this->fluid_density_ = contents.density;
 }
 
 template <typename TypeTag>
@@ -162,10 +172,13 @@ updateSurfaceQuantities(const Simulator& simulator)
         surface_water_density = tables.getDensityTable()[0].water;
     }
     if (this->isWaterInjector_()) {
-        // The stream is water alone: the hydrocarbon flash gets no weight, and
-        // the wellbore composition keeps it valid.
-        auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
-        updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state, Scalar{1.});
+        // The stream is water alone, so the hydrocarbon surface split carries
+        // no weight and needs no flash.
+        if constexpr (FluidSystem::waterEnabled) {
+            this->surface_conditions_ = SurfaceConditons{};
+            this->surface_conditions_.surface_densities_[FluidSystem::waterPhaseIdx] = surface_water_density;
+            this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = 1.;
+        }
     } else if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
         FluidState<Scalar> fluid_state;
