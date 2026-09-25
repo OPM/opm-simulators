@@ -1284,6 +1284,93 @@ assignDynamicWellStatus(data::Wells& wsrpt) const
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+assignWellPerformanceEventTracker(data::Wells& wsrpt) const
+{
+    this->loopOwnedWells([this, &wsrpt]
+                         ([[maybe_unused]] const auto wellID,
+                          const Well&                 well)
+    {
+        wsrpt[well.name()].performanceEvents =
+            this->well_performance_event_tracker_.events(well.name());
+    });
+}
+
+template<typename Scalar, typename IndexTraits>
+WellStatusSnapshot BlackoilWellModelGeneric<Scalar, IndexTraits>::
+wellStatusSnapshot() const
+{
+    // Take the snapshot unconditionally.  Gating it on the summary
+    // configuration would miss WPWE vectors referenced only by a UDQ or an
+    // ACTIONX condition, and the walk costs far less than a linear solve.
+    auto snapshot = WellStatusSnapshot{};
+
+    // Only the owning rank reports a well's WPWE values, so only owned wells
+    // are snapshot.  No MPI communication is needed: the owner has the well's
+    // full scheduled connection list, and every rank sharing the well records
+    // the same closure decisions in WellTestState.
+    const auto& wtestState = this->wellTestState();
+
+    this->loopOwnedWells([this, &snapshot, &wtestState]([[maybe_unused]] const auto wellIndex,
+                                                        const Well& well) {
+        if (!this->wellState().has(well.name())) {
+            return;
+        }
+
+        auto& entry = snapshot.wells[well.name()];
+        entry.status = this->wellState().well(well.name()).status;
+
+        // Track connection state independently of well status: shutting an
+        // entire well, for example with a 'WELL' workover, does not close its
+        // individual connections.
+        const auto& connections = well.getConnections();
+        if (! connections.empty()) {
+            entry.topCompletion = connections[0].complnum();
+        }
+
+        for (const auto& connection : connections) {
+            const auto complnum = connection.complnum();
+            const auto closedByWorkover =
+                wtestState.completion_is_closed(well.name(), complnum);
+
+            if ((connection.state() == Connection::State::OPEN) &&
+                !closedByWorkover)
+            {
+                // The cell identifies the connection whatever COMPLUMP calls
+                // it; the completion number is what WPWE3 asks about.
+                entry.openConnections.emplace_back(connection.get_lgr_level(),
+                                                   connection.global_index());
+                entry.openCompletions.push_back(complnum);
+            }
+            else if (wtestState.completion_closed_below_offender(well.name(), complnum)) {
+                entry.closedBelowOffender.emplace_back(connection.get_lgr_level(),
+                                                       connection.global_index());
+            }
+        }
+
+        std::ranges::sort(entry.openConnections);
+        std::ranges::sort(entry.closedBelowOffender);
+        std::ranges::sort(entry.openCompletions);
+
+        // A closure made by an economic or physical limit check does not reach
+        // WellState until the next time step is set up.  Consult WellTestState
+        // so the snapshot records the closure in the time step that caused it.
+        // The indicators follow the WELSPECS automatic shut-in instruction.
+        // In contrast, closedWellStatus() also returns SHUT when cross-flow is
+        // disabled; that simulator shortcut is not a deck-requested shut-in
+        // and must not turn a WPWE4 event into WPWE7.
+        if ((entry.status == WellStatus::OPEN) &&
+            wtestState.well_is_closed(well.name()))
+        {
+            entry.status = (well.getAutomaticShutIn() || entry.openCompletions.empty())
+                ? WellStatus::SHUT : WellStatus::STOP;
+        }
+    });
+
+    return snapshot;
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 assignShutConnections(data::Wells& wsrpt,
                       const int reportStepIndex) const
 {
@@ -1660,6 +1747,14 @@ forceShutWellByName(const std::string& wellname,
                              });
     if (it != well_container_generic_.end()) {
         wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+
+        // Non-owning ranks have no snapshot entry, and do not report WPWE.
+        const auto snapshot = this->wellStatusSnapshot();
+        if (const auto pos = snapshot.wells.find(wellname); pos != snapshot.wells.end()) {
+            this->well_performance_event_tracker_.recordWellStatusChangeForRetry(
+                wellname, pos->second.status);
+        }
+
         well_was_shut = 1;
     }
 
@@ -2177,21 +2272,24 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->switched_prod_groups_ == rhs.switched_prod_groups_
         && this->switched_inj_groups_ == rhs.switched_inj_groups_
         && this->closed_offending_wells_ == rhs.closed_offending_wells_
-        && this->gen_gaslift_ == rhs.gen_gaslift_;
+        && this->gen_gaslift_ == rhs.gen_gaslift_
+        && this->well_performance_event_tracker_ == rhs.well_performance_event_tracker_;
 }
 
 
 template<typename Scalar, typename IndexTraits>
-bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
-allConnectionsClosed(const Well& well_ecl) const
+WellStatus BlackoilWellModelGeneric<Scalar, IndexTraits>::
+closedWellStatus(const Well& well_ecl) const
 {
-    return std::ranges::all_of(well_ecl.getConnections(),
-                               [this, &well_name = well_ecl.name()](const auto& connection)
-                               {
-                                   return connection.state() != Connection::State::OPEN
-                                       || this->wellTestState().completion_is_closed(well_name,
-                                                                                     connection.complnum());
-                               });
+    const bool allConnectionsClosed = std::ranges::all_of(
+        well_ecl.getConnections(),
+        [this, &well_name = well_ecl.name()](const auto& connection)
+        {
+            return connection.state() != Connection::State::OPEN
+                || this->wellTestState().completion_is_closed(well_name, connection.complnum());
+        });
+    return (well_ecl.getAutomaticShutIn() || !well_ecl.getAllowCrossFlow() || allConnectionsClosed)
+        ? WellStatus::SHUT : WellStatus::STOP;
 }
 
 template class BlackoilWellModelGeneric<double, BlackOilDefaultFluidSystemIndices>;

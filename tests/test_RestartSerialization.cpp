@@ -30,7 +30,10 @@
 
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
@@ -135,6 +138,7 @@ TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
 namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::TestTypeTag>; }
+TEST_FOR_TYPE(WellPerformanceEventTracker)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObjectHardcoded)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
@@ -341,6 +345,8 @@ using PhaseUsage = Opm::PhaseUsageInfo<IndexTraits>;
 class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric<double, IndexTraits>
 {
 public:
+    using BlackoilWellModelGeneric<double, IndexTraits>::closedWellStatus;
+
     BlackoilWellModelGenericTest(Schedule& schedule,
                                  BlackoilWellModelGasLiftGeneric<double, IndexTraits>& gaslift,
                                  const SummaryState& summaryState,
@@ -375,6 +381,7 @@ public:
         const auto controls = {Group::InjectionCMode::NONE, Group::InjectionCMode::RATE, Group::InjectionCMode::RATE };
         switched_inj_groups_ = {{"test4", {controls, {}, controls} }};
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
+        well_performance_event_tracker_ = WellPerformanceEventTracker::serializationTestObject();
     }
 
     void calcResvCoeff(const int, const int, const std::vector<double>&, std::vector<double>&) const override
@@ -447,6 +454,62 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for BlackoilWellModelGeneric");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized BlackoilWellModelGeneric differ");
+}
+
+BOOST_AUTO_TEST_CASE(ClosedWellStatusAtSetup)
+{
+    // Reuse the well-model fixture to check the status applied when time-step
+    // setup materializes a closure recorded in WellTestState.
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 1 1 2 /
+OIL
+GRID
+DX
+ 2*100 /
+DY
+ 2*100 /
+DZ
+ 2*10 /
+TOPS
+ 2*1000 /
+PORO
+ 2*0.3 /
+PERMX
+ 2*100 /
+PERMY
+ 2*100 /
+PERMZ
+ 2*10 /
+SCHEDULE
+WELSPECS
+ 'W1' 'G1' 1 1 1* 'OIL' 2* 'STOP' 'YES' /
+/
+COMPDAT
+ 'W1' 1 1 1 2 'OPEN' 1* 1.0 0.2 /
+/
+)");
+    Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    Opm::SummaryState summary;
+    Opm::PhaseUsage phaseUsage;
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+    auto well = schedule.getWell("W1", 0);
+    auto& state = model.wellTestState();
+    state.close_well("W1", Opm::WellTestConfig::Reason::ECONOMIC, 1.0);
+
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::STOP);
+    state.close_completion("W1", 1, 1.0);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::STOP);
+    state.close_completion("W1", 2, 1.0);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
+
+    state.open_completions("W1");
+    well.updateCrossFlow(false);
+    BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>

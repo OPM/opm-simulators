@@ -270,6 +270,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
   opm/simulators/wells/WellInterfaceGeneric.cpp
   opm/simulators/wells/WellInterfaceIndices.cpp
+  opm/simulators/wells/WellPerformanceEventTracker.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
   opm/simulators/wells/WellState.cpp
   opm/simulators/wells/WellTest.cpp
@@ -539,6 +540,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
   tests/test_WellMatrixMerger.cpp
+  tests/test_WellPerformanceEventTracker.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
@@ -1341,6 +1343,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
   opm/simulators/wells/WellInterfaceIndices.hpp
+  opm/simulators/wells/WellPerformanceEventTracker.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp

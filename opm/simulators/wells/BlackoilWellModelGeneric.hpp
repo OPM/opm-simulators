@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
+#include <opm/simulators/wells/WellPerformanceEventTracker.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
@@ -307,6 +308,7 @@ public:
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
         serializer(gen_gaslift_);
+        serializer(well_performance_event_tracker_);
     }
 
     bool operator==(const BlackoilWellModelGeneric& rhs) const;
@@ -484,6 +486,20 @@ protected:
     /// values for \code data::Well::dynamicStatus \endcode.
     void assignDynamicWellStatus(data::Wells& wsrpt) const;
 
+    /// Assign well performance evaluation indicators (WPWE0 .. WPWE7) for
+    /// each well owned by the current rank.
+    ///
+    /// \param[in,out] wsrpt Well solution object.  On exit, holds current
+    /// values for \code data::Well::performanceEvents \endcode.
+    void assignWellPerformanceEventTracker(data::Wells& wsrpt) const;
+
+    /// Dynamic status of the wells owned by the current rank, covering every
+    /// connection of each well, including those in cells on other ranks.
+    ///
+    /// The deck status of each well and connection amended by the runtime
+    /// decisions in WellState and WellTestState.
+    WellStatusSnapshot wellStatusSnapshot() const;
+
     /// Assign basic result quantities for shut connections of wells owned
     /// by current rank.
     ///
@@ -630,6 +646,8 @@ protected:
 
     mutable std::unordered_set<std::string> closed_this_step_;
 
+    WellPerformanceEventTracker well_performance_event_tracker_;
+
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties<Scalar, IndexTraits>> vfp_properties_{};
 
@@ -682,7 +700,9 @@ protected:
     BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& genNetwork_;
     bool enable_state_rollback_{false};
 
-    bool allConnectionsClosed(const Well& well_ecl) const;
+    /// Effective status applied during time-step setup to a well closed in
+    /// WellTestState.
+    WellStatus closedWellStatus(const Well& well_ecl) const;
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);
