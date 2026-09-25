@@ -347,7 +347,7 @@ void FlowGenericVanguard::init()
 
     if (!this->summaryState_) {
         this->summaryState_ = std::make_unique<SummaryState>
-            (TimeService::from_time_t(this->eclSchedule_->getStartTime()),
+            (this->eclSchedule_->getStartTime(),
              this->eclState_->runspec().udqParams().undefinedValue());
     }
 

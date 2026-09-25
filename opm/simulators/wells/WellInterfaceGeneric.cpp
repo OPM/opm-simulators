@@ -58,7 +58,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -352,7 +351,7 @@ updateWellTestState(const SingleWellState<Scalar, IndexTraits>& ws,
                     const bool zero_group_target,
                     WellTestState& wellTestState,
                     const UnitSystem& unit_system,
-                    const std::time_t start_time,
+                    const time_point start_time,
                     DeferredLogger& deferred_logger,
                     std::string* closure_reason) const
 {
