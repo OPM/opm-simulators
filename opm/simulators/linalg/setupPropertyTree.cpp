@@ -297,7 +297,9 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // System CPR configuration (coupled reservoir-well system solver).
-    if (conf == "system_cpr") {
+    // system_cprw differs only in that its pressure stage carries the well
+    // unknowns, exactly as cprw does relative to cpr.
+    if ((conf == "system_cpr") || (conf == "system_cprw")) {
         if (!linearSolverMaxIterSet) {
             p.linear_solver_maxiter_ = cprDefaultMaxIter;
         }
@@ -606,9 +608,10 @@ setupUMFPack([[maybe_unused]] const std::string& conf, const FlowLinearSolverPar
 
 
 PropertyTree
-setupSystemCPR([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 {
     using namespace std::string_literals;
+    const bool add_wells = (conf == "system_cprw");
     PropertyTree prm;
 
     // Outer solver
@@ -619,6 +622,45 @@ setupSystemCPR([[maybe_unused]] const std::string& conf, const FlowLinearSolverP
 
     // Top-level preconditioner: system_cpr
     prm.put("preconditioner.type", "system_cpr"s);
+    // How the well equations are contracted to the one coarse unknown each
+    // well carries in the CPRW pressure system. Only read when add_wells.
+    //   cellavg      - average of the reservoir weights over the well's
+    //                  perforated cells, on the conservation equations only.
+    //                  This is what cprw does (use_well_weights = false).
+    //   cellblockavg - the same average taken per block row instead of per
+    //                  well. Identical to cellavg for a standard well, and
+    //                  worse for multisegment wells (Norne per-connection:
+    //                  2604 against 2569).
+    //   quasiimpes   - inv(D)^T e_bhp, normalised. Catastrophic for
+    //                  multisegment wells; do not make it the default again
+    //                  without re-checking them.
+    //   unit         - the pressure row as-is; a debugging baseline.
+    prm.put("preconditioner.well_weight_type", "cellavg"s);
+    // How the well unknowns take part in the pressure-stage transfer:
+    //   full            - restrict the well residual, prolong the bhp correction
+    //   no_prolongation - restrict, but discard the bhp correction
+    //   classic         - neither, i.e. the classic cprw formulation, so that
+    //                     the only remaining difference is numerics
+    // classic is the default: on full Norne with one segment per connection it
+    // measures best (2558, against 2569 for no_prolongation and 2576 for full),
+    // and on standard wells the three are within one iteration of each other.
+    // The margin is thin. It is also taken with an exact well solve, which
+    // nearly annihilates the well residual; restricting it may well pay once
+    // the well solve is inexact.
+    // Only read when add_wells.
+    prm.put("preconditioner.well_transfer", "classic"s);
+    // Give a pressure-controlled well a trivial coarse equation, matching
+    // StandardWellEquations::extractCPRPressureMatrix. Only read when add_wells.
+    prm.put("preconditioner.well_identity_on_pressure_control", "true"s);
+    // How a well's coarse diagonal is formed:
+    //   auto       - contract D for single-block wells, minus the row sum for
+    //                multisegment ones, i.e. what classic cprw does
+    //   contract_d - always contract D
+    //   row_sum    - always minus the row sum
+    // contract_d is the default. On full Norne with one segment per connection
+    // it is worth ~0.4% over row_sum (2569 against 2580), and it is what makes
+    // the classic cprw path 2646 rather than 2716 on the same case.
+    prm.put("preconditioner.well_coarse_diagonal", "contract_d"s);
 
     // --- Reservoir smoother ---
     prm.put("preconditioner.reservoir_smoother.maxiter", 1);
@@ -640,7 +682,10 @@ setupSystemCPR([[maybe_unused]] const std::string& conf, const FlowLinearSolverP
     prm.put("preconditioner.reservoir_solver.preconditioner.type", "cpr"s);
     prm.put("preconditioner.reservoir_solver.preconditioner.relaxation", 1.0);
     prm.put("preconditioner.reservoir_solver.preconditioner.use_well_weights", "false"s);
-    prm.put("preconditioner.reservoir_solver.preconditioner.add_wells", "false"s);
+    // add_wells promotes the pressure stage from reservoir-only CPR to CPRW
+    // over the full (reservoir, well) system.
+    prm.put("preconditioner.reservoir_solver.preconditioner.add_wells",
+            add_wells ? "true"s : "false"s);
     prm.put("preconditioner.reservoir_solver.preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.reservoir_solver.preconditioner.pre_smooth", 0);
     prm.put("preconditioner.reservoir_solver.preconditioner.post_smooth", 0);
@@ -684,6 +729,69 @@ void validateSystemCPRTree(const PropertyTree& prm)
             OPM_THROW(std::invalid_argument,
                       "In system_cpr configuration, the reservoir_solver must use the CPR preconditioner "
                       "(preconditioner.reservoir_solver.preconditioner.type = 'cpr').");
+        }
+        const bool addWells = reservoir_solver->get("preconditioner.add_wells", false);
+        // With add_wells the pressure stage is assembled and solved directly by
+        // the system preconditioner, which takes its solver settings from the
+        // coarsesolver sub-tree rather than from the reservoir_solver wrapper.
+        const bool hasCoarseSolver
+            = reservoir_solver->get_child_optional("preconditioner.coarsesolver").has_value();
+        if (addWells && !hasCoarseSolver) {
+            OPM_THROW(std::invalid_argument,
+                      "In system_cpr configuration with "
+                      "preconditioner.reservoir_solver.preconditioner.add_wells = true, the "
+                      "'preconditioner.reservoir_solver.preconditioner.coarsesolver' sub-tree is "
+                      "required: it configures the solver for the CPRW pressure system.");
+        }
+        // Fail here, at setup time, rather than inside
+        // SystemCprwPressureStage::wellTransferFromString/wellCoarseDiagonalFromString
+        // on the first linear solve of the run. Valid values mirror those two parsers.
+        if (addWells) {
+            const auto wellTransfer
+                = prm.get("preconditioner.well_transfer", std::string{"classic"});
+            const bool wellTransferOk = (wellTransfer == "full")
+                || (wellTransfer == "no_prolongation") || (wellTransfer == "classic");
+            if (!wellTransferOk) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("Unknown preconditioner.well_transfer '{}'. Valid "
+                                      "values are 'full', 'no_prolongation' and 'classic'.",
+                                      wellTransfer));
+            }
+            const auto wellCoarseDiagonal
+                = prm.get("preconditioner.well_coarse_diagonal", std::string{"contract_d"});
+            const bool wellCoarseDiagonalOk = (wellCoarseDiagonal == "auto")
+                || (wellCoarseDiagonal == "contract_d") || (wellCoarseDiagonal == "row_sum");
+            if (!wellCoarseDiagonalOk) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("Unknown preconditioner.well_coarse_diagonal '{}'. Valid "
+                                      "values are 'auto', 'contract_d' and 'row_sum'.",
+                                      wellCoarseDiagonal));
+            }
+        }
+    }
+
+    // A Krylov well solver stops on a tolerance, so it performs a different
+    // number of inner iterations for each right-hand side. That makes the whole
+    // system preconditioner non-stationary, which Krylov methods with short
+    // recurrences (bicgstab, cg) and standard GMRES are not allowed to use: they
+    // assume a fixed preconditioning operator. The outer solver has to be a
+    // flexible one.
+    auto well_solver = prm.get_child_optional("preconditioner.well_solver");
+    if (well_solver) {
+        const auto inner = well_solver->get<std::string>("solver", "bicgstab");
+        const bool inner_is_krylov = (inner == "bicgstab") || (inner == "gmres")
+            || (inner == "cg") || (inner == "flexgmres");
+        const auto outer = prm.get<std::string>("solver", "bicgstab");
+        const bool outer_is_flexible = (outer == "flexgmres");
+        if (inner_is_krylov && !outer_is_flexible) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("system_cpr is configured with an approximate (Krylov) well "
+                                  "solver, 'preconditioner.well_solver.solver' = '{}', which makes "
+                                  "the preconditioner vary between applications. The outer solver "
+                                  "must then be flexible: set 'solver' to 'flexgmres' (it is "
+                                  "currently '{}'), or use a stationary well solver such as "
+                                  "'umfpack' or 'preconditioner2inverseoperator'.",
+                                  inner, outer));
         }
     }
 }
