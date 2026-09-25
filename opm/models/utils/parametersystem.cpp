@@ -581,18 +581,20 @@ void printUsage(const std::string& helpPreamble,
                 const std::string& errorMsg,
                 const bool showAll)
 {
+    // On error, print only the usage line and a pointer to --help: the full
+    // option list would push the error off screen.
     if (!errorMsg.empty()) {
         os << errorMsg << "\n\n";
+        const std::string usageLine = helpPreamble.substr(0, helpPreamble.find('\n'));
+        if (!usageLine.empty()) {
+            os << breakLines(usageLine, /*indent=*/2, /*maxWidth=*/getTtyWidth()) << "\n\n";
+        }
+        os << "Run with --help to list all options.\n";
+        return;
     }
 
     os << breakLines(helpPreamble, /*indent=*/2, /*maxWidth=*/getTtyWidth());
     os << "\n";
-
-    // The full option list would push the error off screen.
-    if (!errorMsg.empty()) {
-        os << "Run with --help to list all options.\n";
-        return;
-    }
 
     os << "Recognized options:\n";
 
