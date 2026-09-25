@@ -1304,15 +1304,16 @@ wellStatusSnapshot() const
     // ACTIONX condition, and the walk costs far less than a linear solve.
     auto snapshot = WellStatusSnapshot{};
 
-    // Building this snapshot needs no additional MPI communication: each
-    // participating rank has the full scheduled connection list, and well-test
-    // workovers have already recorded their closure decisions in WellTestState.
-    // The owner can therefore snapshot every connection for WPWE output.
+    // Only the owning rank reports a well's WPWE values, so only owned wells
+    // are snapshot.  No MPI communication is needed: the owner has the well's
+    // full scheduled connection list, and every rank sharing the well records
+    // the same closure decisions in WellTestState.
     const auto& wtestState = this->wellTestState();
 
-    for (const auto& well : this->wells_ecl_) {
+    this->loopOwnedWells([this, &snapshot, &wtestState]([[maybe_unused]] const auto wellIndex,
+                                                        const Well& well) {
         if (!this->wellState().has(well.name())) {
-            continue;
+            return;
         }
 
         auto& entry = snapshot.wells[well.name()];
@@ -1363,7 +1364,7 @@ wellStatusSnapshot() const
             entry.status = (well.getAutomaticShutIn() || entry.openCompletions.empty())
                 ? WellStatus::SHUT : WellStatus::STOP;
         }
-    }
+    });
 
     return snapshot;
 }
@@ -1747,9 +1748,12 @@ forceShutWellByName(const std::string& wellname,
     if (it != well_container_generic_.end()) {
         wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
 
+        // Non-owning ranks have no snapshot entry, and do not report WPWE.
         const auto snapshot = this->wellStatusSnapshot();
-        this->well_performance_event_tracker_.recordWellStatusChangeForRetry(
-            wellname, snapshot.wells.at(wellname).status);
+        if (const auto pos = snapshot.wells.find(wellname); pos != snapshot.wells.end()) {
+            this->well_performance_event_tracker_.recordWellStatusChangeForRetry(
+                wellname, pos->second.status);
+        }
 
         well_was_shut = 1;
     }

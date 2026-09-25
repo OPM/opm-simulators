@@ -493,8 +493,8 @@ protected:
     /// values for \code data::Well::performanceEvents \endcode.
     void assignWellPerformanceEventTracker(data::Wells& wsrpt) const;
 
-    /// Dynamic status of the wells present on the current rank, covering
-    /// every connection of each well, including those in cells on other ranks.
+    /// Dynamic status of the wells owned by the current rank, covering every
+    /// connection of each well, including those in cells on other ranks.
     ///
     /// The deck status of each well and connection amended by the runtime
     /// decisions in WellState and WellTestState.

@@ -34,7 +34,7 @@ namespace Opm
 
 class Schedule;
 
-/// Dynamic status of the wells present on the current rank, covering every
+/// Dynamic status of the wells owned by the current rank, covering every
 /// connection of each well, including those in cells on other ranks.
 ///
 /// The deck status amended by runtime decisions recorded in WellTestState and
