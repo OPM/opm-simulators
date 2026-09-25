@@ -1800,6 +1800,25 @@ private:
                                                      stdVolGas * rhoG / stdMassTotal,
                                                      stdVolOil * rhoO / stdMassTotal,
                                                      stdVolCo2 * rhoCO2 / stdMassTotal);
+
+                          if (extboC.phaseMassFractionsRequested()) {
+                              const Scalar xVolume = ectx.intQuants.xVolume().value();
+                              const Scalar yVolume = ectx.intQuants.yVolume().value();
+                              const Scalar rs = getValue(ectx.fs.Rs());
+                              const Scalar rv = getValue(ectx.fs.Rv());
+                              const Scalar oilPhaseMass = rhoO +
+                                  rs * ((1.0 - xVolume) * rhoG + xVolume * rhoCO2);
+                              const Scalar gasPhaseMass = rv * rhoO +
+                                  (1.0 - yVolume) * rhoG + yVolume * rhoCO2;
+                              const Scalar oilMassFraction =
+                                  getValue(ectx.fs.saturation(oilPhaseIdx)) > 0.0 && oilPhaseMass > 0.0
+                                      ? xVolume * rs * rhoCO2 / oilPhaseMass : 0.0;
+                              const Scalar gasMassFraction =
+                                  getValue(ectx.fs.saturation(gasPhaseIdx)) > 0.0 && gasPhaseMass > 0.0
+                                      ? yVolume * rhoCO2 / gasPhaseMass : 0.0;
+                              extboC.assignPhaseMassFractions(ectx.globalDofIdx,
+                                                              oilMassFraction, gasMassFraction);
+                          }
                       }
                     }, this->extboC_.allocated()
             },

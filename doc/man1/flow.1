@@ -555,3 +555,20 @@ Try to detect and correct oscillations or stagnation during the Newton method. D
 .TP
 \fB\-\-water\-only\-threshold\fR=\fI\,SCALAR\/\fR
 Cells with water saturation above or equal is considered one\-phase water only. Default: 1
+.SH PVTSOL RESTART OUTPUT
+For models using PVTSOL, SOLVMFO and SOLVMFG request the per\-cell solvent
+mass fraction of the whole oil and gas phases, respectively. For a CO2
+solvent, these are phase CO2 mass fractions. A fraction is zero when its
+phase is absent. In a present oil phase the fraction equals
+SDENSITY * XVOL * RS * 1OVERBO / OIL_DEN; in a present gas phase it equals
+SDENSITY * YVOL * 1OVERBG / GAS_DEN, where XVOL and YVOL are the PVTSOL
+partition variables. For example:
+.PP
+.nf
+RPTRST
+  BASIC=2 SOLVMFO=1 SOLVMFG=1 /
+.fi
+.PP
+The arrays are written in each requested report step, including graphics\-only
+output with NORST=1, without
+\fB\-\-enable\-opm\-rst\-file=true\fR.

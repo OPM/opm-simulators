@@ -26,6 +26,8 @@
 #ifndef OPM_EXTBO_CONTAINER_HPP
 #define OPM_EXTBO_CONTAINER_HPP
 
+#include <map>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -38,7 +40,8 @@ class ExtboContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
-    void allocate(const unsigned bufferSize);
+    void allocate(const unsigned bufferSize,
+                  std::map<std::string, int>& rstKeywords);
 
     void assignMassFractions(const unsigned globalDofIdx,
                              const Scalar gas,
@@ -52,10 +55,17 @@ public:
     void assignZFraction(const unsigned globalDofIdx,
                          const Scalar zFraction);
 
+    void assignPhaseMassFractions(const unsigned globalDofIdx,
+                                  const Scalar oil,
+                                  const Scalar gas);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const
     { return allocated_; }
+
+    bool phaseMassFractionsRequested() const
+    { return !oilPhaseSolventMassFraction_.empty() || !gasPhaseSolventMassFraction_.empty(); }
 
 private:
     bool allocated_ = false;
@@ -65,6 +75,8 @@ private:
     ScalarBuffer mFracOil_;
     ScalarBuffer mFracGas_;
     ScalarBuffer mFracCo2_;
+    ScalarBuffer oilPhaseSolventMassFraction_;
+    ScalarBuffer gasPhaseSolventMassFraction_;
 };
 
 } // namespace Opm
