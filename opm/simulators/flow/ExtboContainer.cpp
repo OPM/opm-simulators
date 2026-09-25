@@ -31,19 +31,26 @@
 #include <array>
 #include <string>
 #include <tuple>
+#include <utility>
 
 namespace Opm {
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
-allocate(const unsigned bufferSize)
+allocate(const unsigned bufferSize,
+         std::map<std::string, int>& rstKeywords)
 {
+    const auto requestOilMassFraction = std::exchange(rstKeywords["SOLVMFO"], 0) > 0;
+    const auto requestGasMassFraction = std::exchange(rstKeywords["SOLVMFG"], 0) > 0;
+
     X_volume_.resize(bufferSize, 0.0);
     Y_volume_.resize(bufferSize, 0.0);
     Z_fraction_.resize(bufferSize, 0.0);
     mFracOil_.resize(bufferSize, 0.0);
     mFracGas_.resize(bufferSize, 0.0);
     mFracCo2_.resize(bufferSize, 0.0);
+    oilPhaseSolventMassFraction_.resize(requestOilMassFraction ? bufferSize : 0, 0.0);
+    gasPhaseSolventMassFraction_.resize(requestGasMassFraction ? bufferSize : 0, 0.0);
 
     allocated_ = true;
 }
@@ -80,6 +87,20 @@ assignZFraction(const unsigned globalDofIdx,
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
+assignPhaseMassFractions(const unsigned globalDofIdx,
+                         const Scalar oil,
+                         const Scalar gas)
+{
+    if (!oilPhaseSolventMassFraction_.empty()) {
+        oilPhaseSolventMassFraction_[globalDofIdx] = oil;
+    }
+    if (!gasPhaseSolventMassFraction_.empty()) {
+        gasPhaseSolventMassFraction_[globalDofIdx] = gas;
+    }
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {
@@ -108,6 +129,17 @@ outputRestart(data::Solution& sol)
                                   data::TargetType::RESTART_OPM_EXTENDED);
                               }
                           });
+
+    if (!oilPhaseSolventMassFraction_.empty()) {
+        sol.insert("SOLVMFO", UnitSystem::measure::identity,
+                   std::move(oilPhaseSolventMassFraction_),
+                   data::TargetType::RESTART_SOLUTION);
+    }
+    if (!gasPhaseSolventMassFraction_.empty()) {
+        sol.insert("SOLVMFG", UnitSystem::measure::identity,
+                   std::move(gasPhaseSolventMassFraction_),
+                   data::TargetType::RESTART_SOLUTION);
+    }
 
     this->allocated_ = false;
 }

@@ -947,7 +947,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableExtbo_) {
-        extboC_.allocate(bufferSize);
+        extboC_.allocate(bufferSize, rstKeywords);
     }
 
     if (enableBioeffects_) {
