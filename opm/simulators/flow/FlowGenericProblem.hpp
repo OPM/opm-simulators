@@ -372,6 +372,12 @@ protected:
     std::vector<TabulatedTwoDFunction> rockCompTransMultWc_;
     std::vector<TabulatedFunction> rockCompPoroMult_;
     std::vector<TabulatedFunction> rockCompTransMult_;
+    // ROCKCOMP HYSTERESIS=HYSTER only: the reversible "elastic" curves built from
+    // ROCKTABH, indexed by (turning pressure, current pressure). Used instead of
+    // rockCompPoroMult_/rockCompTransMult_ whenever the current pressure is above
+    // the lowest pressure the cell has ever reached (this->minRefPressure_).
+    std::vector<TabulatedTwoDFunction> rockCompPoroMultElastic_;
+    std::vector<TabulatedTwoDFunction> rockCompTransMultElastic_;
     std::vector<Scalar> rockCompTransMultVal_;
 
     PolymerSolutionContainer<Scalar> polymer_;
