@@ -142,18 +142,12 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
         // may put several connections on one completion and may renumber them
         // while the run is under way; neither opens or closes anything.
         auto opened = std::vector<WellStatusSnapshot::ConnectionID> {};
-        std::set_difference(now.openConnections.begin(),
-                            now.openConnections.end(),
-                            before.openConnections.begin(),
-                            before.openConnections.end(),
-                            std::back_inserter(opened));
+        std::ranges::set_difference(
+            now.openConnections, before.openConnections, std::back_inserter(opened));
 
         auto closed = std::vector<WellStatusSnapshot::ConnectionID> {};
-        std::set_difference(before.openConnections.begin(),
-                            before.openConnections.end(),
-                            now.openConnections.begin(),
-                            now.openConnections.end(),
-                            std::back_inserter(closed));
+        std::ranges::set_difference(
+            before.openConnections, now.openConnections, std::back_inserter(closed));
 
         if (opened.empty() && closed.empty()) {
             continue;
@@ -171,11 +165,9 @@ WellPerformanceEventTracker::accumulate(WellStatusSnapshot current, const bool t
         // A '+CON' workover reaches past the connection whose limit was
         // violated and closes the rest of the well below it.  Only the
         // violation itself counts towards WPWE2.
-        const auto belowOffender = std::count_if(closed.begin(), closed.end(),
-            [&now](const WellStatusSnapshot::ConnectionID& connection)
-            {
-                return std::binary_search(now.closedBelowOffender.begin(),
-                                          now.closedBelowOffender.end(), connection);
+        const auto belowOffender = std::ranges::count_if(
+            closed, [&now](const WellStatusSnapshot::ConnectionID& connection) {
+                return std::ranges::binary_search(now.closedBelowOffender, connection);
             });
 
         events.connsClosed += static_cast<int>(closed.size()) - static_cast<int>(belowOffender);

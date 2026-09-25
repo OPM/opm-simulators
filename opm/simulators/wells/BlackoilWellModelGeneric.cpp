@@ -1346,9 +1346,9 @@ wellStatusSnapshot() const
             }
         }
 
-        std::sort(entry.openConnections.begin(), entry.openConnections.end());
-        std::sort(entry.closedBelowOffender.begin(), entry.closedBelowOffender.end());
-        std::sort(entry.openCompletions.begin(), entry.openCompletions.end());
+        std::ranges::sort(entry.openConnections);
+        std::ranges::sort(entry.closedBelowOffender);
+        std::ranges::sort(entry.openCompletions);
 
         // A closure made by an economic or physical limit check does not reach
         // WellState until the next time step is set up.  Consult WellTestState
