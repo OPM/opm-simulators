@@ -486,6 +486,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
   tests/test_equil.cpp
+  tests/test_extbocontainer.cpp
   tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
   tests/test_flashphasepresence.cpp

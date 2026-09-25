@@ -918,6 +918,8 @@ add_test_compareECLFiles(
     ${abs_tol}
   REL_TOL
     ${coarse_rel_tol}
+  TEST_ARGS
+    --enable-opm-rst-file=true
 )
 
 add_test_compareECLFiles(
