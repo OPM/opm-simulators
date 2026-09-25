@@ -83,21 +83,18 @@ calculateExplicitQuantities(const Simulator& simulator,
 
         flashFluidState_(fluid_state_scalar);
 
-        this->component_masses_ = wellboreComponentMasses(fluid_state_scalar, this->wellbore_volume_);
-
+        Scalar water_density = 0.;
         if constexpr (FluidSystem::waterEnabled) {
-            // water occupies its volume fraction of the wellbore; the
-            // hydrocarbon masses scale with the remainder
-            const Scalar wfrac = std::clamp(well_state.wellbore_water_volume_fraction,
-                                            Scalar{0.}, Scalar{1.});
-            for (auto& mass : this->component_masses_) {
-                mass *= (1. - wfrac);
-            }
-            const Scalar rho_w
-                = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
-                                fluid_state_scalar.temperature(0));
-            this->water_mass_ = wfrac * rho_w * this->wellbore_volume_;
+            water_density = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
+                                          fluid_state_scalar.temperature(0));
         }
+        const auto contents
+            = wellboreContents(fluid_state_scalar,
+                               getValue(this->primary_variables_.getWaterVolumeFraction()),
+                               water_density,
+                               this->wellbore_volume_);
+        this->component_masses_ = contents.component_masses;
+        this->water_mass_ = contents.water_mass;
     }
 }
 
@@ -130,43 +127,25 @@ updateTotalMass()
 
     flashFluidState_(fluid_state);
 
-    this->new_component_masses_ = wellboreComponentMasses(fluid_state, this->wellbore_volume_);
-
-    const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
-    const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
-    const auto& density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
-    const auto& density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
-    // TODO: some properties should go to the fluid_state?
-    fluid_density_ = density_oil * so + density_gas * sg;
-
+    EvalWell water_density = 0.;
     if constexpr (FluidSystem::waterEnabled) {
-        // water occupies its volume fraction of the wellbore, the flashed
-        // hydrocarbon system the remainder
-        const EvalWell wfrac = this->primary_variables_.getWaterVolumeFraction();
-        for (auto& mass : this->new_component_masses_) {
-            mass *= (1. - wfrac);
-        }
-        const EvalWell rho_w = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
-                                             getValue(fluid_state.temperature(0)));
-        this->new_water_mass_ = wfrac * rho_w * this->wellbore_volume_;
-        fluid_density_ = (1. - wfrac) * fluid_density_ + wfrac * rho_w;
+        water_density = waterDensity_(fluid_state.pressure(FluidSystem::waterPhaseIdx),
+                                      getValue(fluid_state.temperature(0)));
     }
 
-    EvalWell total_mass = this->new_water_mass_;
-    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        total_mass += this->new_component_masses_[compidx];
-    }
-
-    // The AD derivatives of the component masses and mass fractions with respect
-    // to the wellbore primary variables (pressure and composition), including the
-    // dependence that flows through the flash, are checked against finite
-    // differences in tests/test_compwell_jacobian.cpp.
-    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
-    }
-    if constexpr (FluidSystem::waterEnabled) {
-        this->water_mass_fraction_ = this->new_water_mass_ / total_mass;
-    }
+    // The AD derivatives of the wellbore contents with respect to the wellbore
+    // primary variables, including the dependence that flows through the
+    // flash, are checked against finite differences in
+    // tests/test_compwell_jacobian.cpp.
+    const auto contents = wellboreContents(fluid_state,
+                                           this->primary_variables_.getWaterVolumeFraction(),
+                                           water_density,
+                                           this->wellbore_volume_);
+    this->new_component_masses_ = contents.component_masses;
+    this->new_water_mass_ = contents.water_mass;
+    this->mass_fractions_ = contents.mass_fractions;
+    this->water_mass_fraction_ = contents.water_mass_fraction;
+    this->fluid_density_ = contents.density;
 }
 
 template <typename TypeTag>
