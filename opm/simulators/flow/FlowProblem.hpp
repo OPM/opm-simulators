@@ -1404,13 +1404,6 @@ protected:
                     // gathered mode: the writer would look up different keys than the ones
                     // the leaf-grid walk records.
                     if (simulator.vanguard().eclState().getLgrs().size() > 0) {
-                        if (simulator.vanguard().numOverlap() < 1) {
-                            throw std::runtime_error("Parallel LGR output requires at least one "
-                                                     "overlap layer (--num-overlap >= 1): a "
-                                                     "rank-boundary connection is recorded by the "
-                                                     "rank owning the lower-index cell, which needs "
-                                                     "the partner cell in its overlap layer.");
-                        }
                         this->finishTransmissibilities_();
                         localTransmissibilitiesFinished = true;
                         const auto& localTrans = simulator.problem().eclTransmissibilities();
