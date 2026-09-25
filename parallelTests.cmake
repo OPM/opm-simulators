@@ -132,6 +132,29 @@ add_test_compare_parallel_simulation(
     --tolerance-mb=1e-8
 )
 
+# WECON 'CON' on a well whose lumped completion is split across two ranks.
+add_test_compare_parallel_simulation(
+  CASENAME
+    wecon_con_complump_distributed
+  FILENAME
+    WECON_CON_COMPLUMP_DISTRIBUTED
+  DIR
+    wecon_wtest
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  MPI_PROCS
+    2
+  TEST_ARGS
+    --allow-distributed-wells=true
+    --partition-method=simple
+)
+
 # A test for distributed standard wells. We load distribute only along the z-axis
 add_test_compare_parallel_simulation(
   CASENAME
