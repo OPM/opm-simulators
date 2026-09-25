@@ -103,7 +103,9 @@ public:
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             Scalar dwell_fraction_max,
+             Scalar dbhp_max_rel);
 
     void init() override;
 
@@ -143,6 +145,11 @@ public:
     void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
+
+    // largest change of a fraction and relative change of the bhp in one
+    // Newton update
+    const Scalar dwell_fraction_max_;
+    const Scalar dbhp_max_rel_;
 
     // primary variables
     PrimaryVariables primary_variables_;

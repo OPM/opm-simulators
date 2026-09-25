@@ -39,8 +39,12 @@ template <typename TypeTag>
 CompWell<TypeTag>::
 CompWell(const Well& well,
          int index_of_well,
-         const std::vector<CompConnectionData>& well_connection_data)
+         const std::vector<CompConnectionData>& well_connection_data,
+         const Scalar dwell_fraction_max,
+         const Scalar dbhp_max_rel)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
+  , dwell_fraction_max_(dwell_fraction_max)
+  , dbhp_max_rel_(dbhp_max_rel)
 {
 }
 
@@ -618,7 +622,7 @@ void
 CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
-    this->primary_variables_.updateNewton(dwells);
+    this->primary_variables_.updateNewton(dwells, this->dwell_fraction_max_, this->dbhp_max_rel_);
 }
 
 template <typename TypeTag>

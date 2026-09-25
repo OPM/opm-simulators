@@ -84,7 +84,9 @@ public:
 
     static Eval restrictEval(const EvalWell& in);
 
-    void updateNewton(const BVectorWell& dwells);
+    void updateNewton(const BVectorWell& dwells,
+                      Scalar dwell_fraction_max,
+                      Scalar dbhp_max_rel);
 
     // moves the primary variables half of the way to those of other
     void moveHalfwayTo(const CompWellPrimaryVariables& other);
