@@ -81,6 +81,11 @@ OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
 // 4. gpuBufferParams goes out of scope here → device memory is freed.
 ```
 
+**Do not add host-side element access to `GpuBuffer`.** There is no
+`operator[]` that quietly does a device→host copy — any such sync must
+be explicit (e.g. `copyFromGPU`, see section 5b) so the cost is visible
+at the call site, never hidden behind an innocuous-looking accessor.
+
 ---
 
 ## 2. Decorating the class: `gpuDecorators.hpp`
@@ -669,6 +674,10 @@ void evaluateKernel(GpuViewComposite params, Scalar x, Scalar* out)
 Always wrap CUDA/HIP runtime calls in **`OPM_GPU_SAFE_CALL`** (from
 `opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp`) so that
 errors are turned into `OPM_THROW`-style exceptions on the host.
+The same header family provides `OPM_CUSPARSE_SAFE_CALL`,
+`OPM_CUBLAS_SAFE_CALL` and `OPM_HYPRE_SAFE_CALL` for calls into the
+corresponding libraries — use the macro that matches the API you are
+calling, not the generic one.
 
 ---
 
@@ -702,6 +711,9 @@ place where `.cu` files are actually compiled. The pattern is:
    exact same inputs. Always compare GPU output to a CPU reference
    computed from the *same* class — that is what guarantees identical
    semantics on both backends.
+   If your kernel takes a (matrix) block-size template parameter parameterise the test
+   over at least block sizes 1, 2 and 3 — size-1 and size-3 catch
+   off-by-one bugs that a size-2 case can hide.
 4. Register the test in
    **`opm-simulators/CMakeLists_files.cmake`** by adding a single
    line next to the existing GPU tests, e.g.:
@@ -820,6 +832,11 @@ falls out automatically.
       `if constexpr`) so they fail clearly at compile time if misused.
 - [ ] Every member function callable from a kernel is annotated with
       `OPM_HOST_DEVICE`.
+- [ ] `GpuBuffer` has no host-side element access and no device→host
+      sync hidden behind an operator.
+- [ ] If the class owns more than a raw GPU resource (a stream, an
+      extra `cudaMalloc`, a library handle), its destructor uses
+      `OPM_GPU_WARN_IF_ERROR`, not a throwing `*_SAFE_CALL`.
 - [ ] All exceptions go through `OPM_THROW`.
 - [ ] `<opm/common/utility/gpuDecorators.hpp>` is the only GPU-related
       header included from the class definition itself.
@@ -839,3 +856,5 @@ falls out automatically.
 - [ ] The test name is added to the `foreach(test ...)` block in
       `opm-simulators/CMakeLists.txt` so it gets the `gpu_cuda` /
       `gpu_hip` CTest label.
+- [ ] The test is parameterised over at least block sizes 1, 2 and 3
+      if the kernel takes a (matrix) block-size template parameter.
