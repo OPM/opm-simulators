@@ -206,8 +206,9 @@ private:
     void updateWellState(const BVectorWell& dwells,
                          SingleWellState& well_state);
 
-    void updateWellControl(const SummaryState& summary_state,
-                           SingleWellState& well_state) const;
+    bool updateWellControl(const SummaryState& summary_state,
+                           SingleWellState& well_state,
+                           bool check_rate_limits) const;
 
     template <typename T>
     void
