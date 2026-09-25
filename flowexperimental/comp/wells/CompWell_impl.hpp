@@ -659,9 +659,16 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
         }
     } else { // injector
         std::fill(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar {0.});
-        const auto injected_phase
-            = this->isWaterInjector_() ? FluidSystem::waterPhaseIdx : FluidSystem::gasPhaseIdx;
-        surface_phase_rates[injected_phase] = total_rate;
+        switch (this->well_ecl_.getInjectionProperties().injectorType) {
+        case InjectorType::WATER:
+            surface_phase_rates[FluidSystem::waterPhaseIdx] = total_rate;
+            break;
+        case InjectorType::OIL:
+            surface_phase_rates[FluidSystem::oilPhaseIdx] = total_rate;
+            break;
+        default:
+            surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+        }
     }
 }
 

@@ -109,17 +109,23 @@ SingleCompWellState<FluidSystem>::update_injector_targets(
                       "The water injector " + this->name + " needs an active water phase");
         }
         break;
-    case InjectorType::GAS: {
+    case InjectorType::GAS:
+    case InjectorType::OIL: {
+        // WINJGAS gives the injected hydrocarbon stream of oil injectors too,
+        // since there is no WINJOIL.
         const auto& inj_composition = well.getInjectionProperties().gasInjComposition();
         assert(this->total_molar_fractions.size() == inj_composition.size());
         // TODO: this might not be correct when crossing flow is involved
         this->total_molar_fractions = inj_composition;
-        this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
+        const auto injected_phase = inj_controls.injector_type == InjectorType::OIL
+            ? FluidSystem::oilPhaseIdx
+            : FluidSystem::gasPhaseIdx;
+        this->surface_phase_rates[injected_phase] = inj_surf_rate;
         break;
     }
     default:
         OPM_THROW(std::runtime_error,
-                  "Only gas and water injection is supported for well " + this->name);
+                  "Only gas, oil and water injection is supported for well " + this->name);
     }
 }
 
