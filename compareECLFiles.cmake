@@ -712,6 +712,35 @@ add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       DIR compositional)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
+# Check explicit SWAT initialization in both modes without reference files.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_default
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> default"
+)
+
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_compat
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  TEST_ARGS
+    --compat-explicit-swat-init=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> compat"
+)
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe
