@@ -720,11 +720,15 @@ updateWellControl(const SummaryState& summary_state,
             }
         }
 
-        if (!changed && production_controls.hasControl(Well::ProducerCMode::WRAT) && current_control != WellProducerCMode::WRAT) {
-            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
-            if (current_rate > production_controls.water_rate) {
-                well_state.production_cmode = WellProducerCMode::WRAT;
-                changed = true;
+        // WELTARG can add a WRAT limit without a water phase
+        if constexpr (FluidSystem::waterEnabled) {
+            if (!changed && production_controls.hasControl(Well::ProducerCMode::WRAT)
+                && current_control != WellProducerCMode::WRAT) {
+                const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
+                if (current_rate > production_controls.water_rate) {
+                    well_state.production_cmode = WellProducerCMode::WRAT;
+                    changed = true;
+                }
             }
         }
 
