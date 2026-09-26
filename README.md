@@ -29,9 +29,6 @@
 [Follow the build instructions on the home page](http://opm-project.org/?page_id=36).
 
 
-## In-Code Documentation
-In addition to providing the [manual](https://opm-project.org/?page_id=955) we also document the source code with Doxygen, using the `make doc` command.
-
 
 ## Reporting Issues
 Issues can either be reported here on [GitHub repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)

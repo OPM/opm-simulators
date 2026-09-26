@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 but this project does not use [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 Instead, version numbers indicate the year and month of release.
 
+## [2026.04] - TBD
+
+### Added
+- New summary vectors for thermal energy: WTPRHEA, WTPTHEA, WTIRHEA, WTITHEA
+- New summary vectors for gas lift: FGLIT, GGLIT, WGLIT
+- New summary vector for region oil recovery efficiency: ROE
+- New summary vectors for inter-block flows: BFLOI+, BFLOI-, BFLOJ+, BFLOJ-, BFLOK+, BFLOK-, BFLOW+, BFLOW-, BFLOG+, BFLOG-
+- New summary vectors for inter-block velocities: BVELI+, BVELI-, BVELJ+, BVELJ-, BVELK+, BVELK-
+- COMPVD equilibration support for compositional models
+- Pressure and temperature dependent water viscosity for brine and energy runs
+- Sequential energy equation solving after black-oil equations
+
+### Fixed
+- Fixed duplicate section formatting in [2019-10]
+
+### Changed
+- ESMRY output now enabled by default (use --ecl-enable-esmry=false to disable)
+- Improved GPU support with better AMGCL integration
+
 ## [2019-10] - 2019-10-31
 
 ### Added
