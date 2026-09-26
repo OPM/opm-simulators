@@ -817,6 +817,21 @@ WINJGAS
     BOOST_CHECK_EQUAL(errors.size(), 2);
 }
 
+BOOST_AUTO_TEST_CASE(ginjgas_is_warned_about_but_not_critical)
+{
+    const auto deck = Parser {}.parseString(R"(
+SCHEDULE
+GINJGAS
+  'GI*' STREAM ISTR /
+/
+)");
+    std::vector<ValidationError> errors;
+    flowKeywordValidator().validateDeckKeyword(deck["GINJGAS"].back(), errors);
+
+    BOOST_REQUIRE_EQUAL(errors.size(), 1);
+    BOOST_CHECK(!errors.front().critical);
+}
+
 
 // PARACHOR is sized by TABDIMS, so a deck carrying it needs TABDIMS too.
 Deck compositionalPropsDeck(const std::string& props)
