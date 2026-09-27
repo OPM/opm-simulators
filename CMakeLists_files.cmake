@@ -150,6 +150,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/flow/equil/EquilibrationHelpers.cpp
   opm/simulators/flow/equil/InitStateEquil.cpp
+  opm/simulators/flow/rescoup/ReservoirCouplingSlaveTargetCheck.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp
@@ -470,6 +471,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/models/test_propertysystem.cpp
   tests/models/test_tasklets.cpp
   tests/models/test_tasklets_failure.cpp
+  tests/rescoup/test_slave_target_check.cpp
   tests/test_ALQState.cpp
   tests/test_aquifergridutils.cpp
   tests/test_aqantrc_flow_keyword.cpp
@@ -1114,6 +1116,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/equil/InitStateEquil_impl.hpp
   opm/simulators/flow/equil/PressureFunction.hpp
   opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp
+  opm/simulators/flow/rescoup/ReservoirCouplingSlaveTargetCheck.hpp
   opm/simulators/wells/SegmentState.hpp
   opm/simulators/wells/WellContainer.hpp
   opm/simulators/aquifers/AquiferAnalytical.hpp

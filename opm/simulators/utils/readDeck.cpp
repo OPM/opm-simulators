@@ -71,6 +71,7 @@
 
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
+#include <opm/simulators/flow/rescoup/ReservoirCouplingSlaveTargetCheck.hpp>
 #include <opm/simulators/utils/FullySupportedFlowKeywords.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -451,6 +452,10 @@ namespace {
                 (deck, *schedule, eclipseState->fieldProps(),
                  eclipseState->aquifer(), *parseContext, errorGuard,
                  std::move(lgrGridDims));
+        }
+
+        if (slaveMode) {
+            Opm::ReservoirCoupling::checkSlaveGroupTargetVectors(*schedule, *summaryConfig);
         }
 
         Opm::checkConsistentArrayDimensions(*eclipseState, *schedule,
