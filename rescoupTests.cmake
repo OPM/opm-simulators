@@ -55,48 +55,42 @@ else()
   set(_rescoup_simulator flow)
 endif()
 
+# Register a reservoir coupling integration test.  The custom target
+# test_<name> copies the test data directory tests/rescoup/<dir> and the
+# shared tests/include to the build tree; the test runs that directory's
+# run_ctest.sh with the simulator and the MPI launcher.
+function(add_rescoup_test name dir timeout)
+  add_custom_target(test_${name}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/${dir}
+      ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/${dir}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
+      ${CMAKE_CURRENT_BINARY_DIR}/tests/include
+    COMMENT "Copying ${dir} test data to build tree"
+    DEPENDS ${_rescoup_simulator}
+  )
+  add_test(NAME ${name}
+    COMMAND
+      ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/${dir}/run_ctest.sh
+      $<TARGET_FILE:${_rescoup_simulator}>
+      ${_rescoup_mpiexec}
+    WORKING_DIRECTORY
+      ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/${dir}
+    CONFIGURATIONS Integration
+  )
+  set_tests_properties(${name} PROPERTIES TIMEOUT ${timeout})
+endfunction()
+
 # Slave parse error test.
-add_custom_target(test_rc_slave_parsing_err
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/include
-  COMMENT "Copying slave_parse_error test data to build tree"
-  DEPENDS ${_rescoup_simulator}
-)
-add_test(NAME rc_slave_parsing_err
-  COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error/run_ctest.sh
-    $<TARGET_FILE:${_rescoup_simulator}>
-    ${_rescoup_mpiexec}
-  WORKING_DIRECTORY
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error
-  CONFIGURATIONS Integration
-)
-set_tests_properties(rc_slave_parsing_err PROPERTIES TIMEOUT 30)
+add_rescoup_test(rc_slave_parsing_err slave_parse_error 30)
 
 # Multi-slave parse error test: one slave fails to parse while another is
 # healthy. Verifies the master aborts the healthy slave cleanly (exit 1) instead
 # of deadlocking on a collective MPI_Comm_disconnect.
-add_custom_target(test_rc_slave_parsing_err_2slaves
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error_2slaves
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error_2slaves
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/include
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/include
-  COMMENT "Copying slave_parse_error_2slaves test data to build tree"
-  DEPENDS ${_rescoup_simulator}
-)
-add_test(NAME rc_slave_parsing_err_2slaves
-  COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rescoup/slave_parse_error_2slaves/run_ctest.sh
-    $<TARGET_FILE:${_rescoup_simulator}>
-    ${_rescoup_mpiexec}
-  WORKING_DIRECTORY
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/rescoup/slave_parse_error_2slaves
-  CONFIGURATIONS Integration
-)
-set_tests_properties(rc_slave_parsing_err_2slaves PROPERTIES TIMEOUT 40)
+add_rescoup_test(rc_slave_parsing_err_2slaves slave_parse_error_2slaves 40)
+
+# Unsupported target vector test: the slave's UDQ uses GOPRT for a slave
+# group, which the slave cannot report.  Verifies that the slave stops while
+# reading its deck and the master exits with code 1.
+add_rescoup_test(rc_slave_udq_target slave_udq_target 30)
