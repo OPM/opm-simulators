@@ -103,13 +103,6 @@ public:
     static void registerParameters()
     {
         ParentType::registerParameters();
-#if HAVE_CUDA
-        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
-                ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
-                 "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
-        }
-#endif
     }
 
     using ParentType::globalResidual;
