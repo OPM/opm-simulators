@@ -462,8 +462,20 @@ assembleControlEqProd(const SingleWellState& well_state,
             OPM_THROW(std::logic_error, "WRAT control requires an active water phase");
         }
     }
+    case WellProducerCMode::LRAT : {
+        const Scalar rate_target = prod_controls.liquid_rate;
+        const EvalWell& total_rate = this->primary_variables_.getTotalRate();
+        EvalWell liquid_rate = total_rate
+            * surface_cond.volume_fractions_[FluidSystem::oilPhaseIdx];
+        if constexpr (FluidSystem::waterEnabled) {
+            liquid_rate += total_rate
+                * surface_cond.volume_fractions_[FluidSystem::waterPhaseIdx];
+        }
+        control_eq = liquid_rate + rate_target;
+        break;
+    }
     default:
-        OPM_THROW(std::logic_error, "only handles BHP, ORAT, GRAT and WRAT control for producers for now");
+        OPM_THROW(std::logic_error, "only handles BHP, ORAT, GRAT, WRAT and LRAT control for producers for now");
     }
 }
 
@@ -541,34 +553,42 @@ iterateWellEq(const Simulator& simulator,
               SingleWellState& well_state)
 {
     constexpr int max_iter = 200;
+    const auto& summary_state = simulator.vanguard().summaryState();
 
-    int it = 0;
-    bool converged = false;
-
-    do {
-        updateWellControl(simulator.vanguard().summaryState(), well_state);
+    for (int it = 0; it <= max_iter; ++it) {
+        // Check the bhp limit in every iteration, not only after convergence: a well on a rate
+        // target it cannot reach within its bhp limit might otherwise never converge.
+        updateWellControl(summary_state, well_state, /*check_rate_limits=*/false);
 
         if (!assembleWellEqWithBackoff(simulator, well_state, dt)) {
             // Newton steps from the last assembled state keep failing; leave
             // the well to the next reservoir iteration from that state.
+            updateConnectionQuantities(simulator, well_state);
             return false;
         }
 
-        // get convergence
-        converged = this->getConvergence();
-
-        if (converged) {
-            break;
+        // Rates are only compared with their limits once the equations have
+        // converged. Before that they come from the initial guess or combine
+        // the latest total rate with the previous surface split.
+        const bool converged = this->getConvergence();
+        if (converged
+            && !updateWellControl(summary_state, well_state, /*check_rate_limits=*/true)) {
+            // The last assembly is at the current well state.
+            updateConnectionQuantities(simulator, well_state);
+            return true;
         }
-
-        ++it;
-
-        solveEqAndUpdateWellState(well_state);
-    } while (it < max_iter);
-
-    // When converged, the last assembly is at the current well state.
+        if (!converged && it < max_iter) {
+            solveEqAndUpdateWellState(well_state);
+        }
+    }
+    // A control switch in the last iteration leaves the converged equations of the
+    // previous control. Assemble the new control, so that the convergence check and
+    // the reservoir iteration see its equations instead.
+    if (this->getConvergence()) {
+        assembleWellEqWithBackoff(simulator, well_state, dt);
+    }
     updateConnectionQuantities(simulator, well_state);
-    return converged;
+    return false;
 }
 
 template <typename TypeTag>
@@ -723,10 +743,11 @@ addWellContributions(SparseMatrixAdapter& jacobian) const
 }
 
 template <typename TypeTag>
-void
+bool
 CompWell<TypeTag>::
 updateWellControl(const SummaryState& summary_state,
-                  SingleWellState& well_state) const
+                  SingleWellState& well_state,
+                  const bool check_rate_limits) const
 {
     std::string from;
     if (this->well_ecl_.isInjector()) {
@@ -749,30 +770,43 @@ updateWellControl(const SummaryState& summary_state,
             }
         }
 
-        if (!changed && production_controls.hasControl(Well::ProducerCMode::ORAT) && current_control != WellProducerCMode::ORAT) {
-            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::oilPhaseIdx];
-            if (current_rate > production_controls.oil_rate) {
-                well_state.production_cmode = WellProducerCMode::ORAT;
-                changed = true;
-            }
-        }
-
-        // WELTARG can add a WRAT limit without a water phase
-        if constexpr (FluidSystem::waterEnabled) {
-            if (!changed && production_controls.hasControl(Well::ProducerCMode::WRAT) && current_control != WellProducerCMode::WRAT) {
-                const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
-                if (current_rate > production_controls.water_rate) {
-                    well_state.production_cmode = WellProducerCMode::WRAT;
+        if (check_rate_limits) {
+            if (!changed && production_controls.hasControl(Well::ProducerCMode::ORAT) && current_control != WellProducerCMode::ORAT) {
+                const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::oilPhaseIdx];
+                if (current_rate > production_controls.oil_rate) {
+                    well_state.production_cmode = WellProducerCMode::ORAT;
                     changed = true;
                 }
             }
-        }
 
-        if (!changed && production_controls.hasControl(Well::ProducerCMode::GRAT) && current_control != WellProducerCMode::GRAT) {
-            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::gasPhaseIdx];
-            if (current_rate > production_controls.gas_rate) {
-                well_state.production_cmode = WellProducerCMode::GRAT;
-                changed = true;
+            // WELTARG can add a WRAT limit without a water phase
+            if constexpr (FluidSystem::waterEnabled) {
+                if (!changed && production_controls.hasControl(Well::ProducerCMode::WRAT) && current_control != WellProducerCMode::WRAT) {
+                    const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
+                    if (current_rate > production_controls.water_rate) {
+                        well_state.production_cmode = WellProducerCMode::WRAT;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!changed && production_controls.hasControl(Well::ProducerCMode::GRAT) && current_control != WellProducerCMode::GRAT) {
+                const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::gasPhaseIdx];
+                if (current_rate > production_controls.gas_rate) {
+                    well_state.production_cmode = WellProducerCMode::GRAT;
+                    changed = true;
+                }
+            }
+
+            if (!changed && production_controls.hasControl(Well::ProducerCMode::LRAT) && current_control != WellProducerCMode::LRAT) {
+                Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::oilPhaseIdx];
+                if constexpr (FluidSystem::waterEnabled) {
+                    current_rate -= well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
+                }
+                if (current_rate > production_controls.liquid_rate) {
+                    well_state.production_cmode = WellProducerCMode::LRAT;
+                    changed = true;
+                }
             }
         }
     } else {
@@ -789,7 +823,7 @@ updateWellControl(const SummaryState& summary_state,
                 changed = true;
             }
         }
-        if (!changed && injection_controls.hasControl(Well::InjectorCMode::RATE) && current_control != WellInjectorCMode::RATE) {
+        if (check_rate_limits && !changed && injection_controls.hasControl(Well::InjectorCMode::RATE) && current_control != WellInjectorCMode::RATE) {
             const Scalar rate_limit = injection_controls.surface_rate;
             // an injector's surface rates hold its injected phase only
             const Scalar current_rate = std::accumulate(well_state.surface_phase_rates.begin(),
@@ -815,6 +849,7 @@ updateWellControl(const SummaryState& summary_state,
         }
         OpmLog::info(fmt::format("Well {} changed control from {} to {} \n", this->well_ecl_.name(), from, to));
     }
+    return changed;
 }
 
 template <typename TypeTag>
