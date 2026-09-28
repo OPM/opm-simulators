@@ -15,15 +15,19 @@
 */
 #include <boost/test/tools/old/interface.hpp>
 #include <config.h>
+#include <csignal>
+#include <cstdlib>
 #include <stdexcept>
+
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define BOOST_TEST_MODULE TestThrowMacrosOnGPU
 
+#include <boost/test/unit_test.hpp>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <boost/test/unit_test.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace {
 // NOTE: We have to split this into a separate function due
@@ -44,12 +48,36 @@ __global__ void codeThatContainsMacros(bool call) {
 
 BOOST_AUTO_TEST_CASE(TestKernel)
 {
-    // TODO: Figure out why this test halts when run in debug mode on AMD GPUs
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    codeThatContainsMacros<<<1, 1>>>(false);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    // A device-side abort leaves the GPU context unusable, and ROCm also aborts
+    // the process. Run the kernel in a child so the remaining tests can proceed.
+    constexpr auto macroFailureExitCode = EXIT_FAILURE;
+    constexpr auto testSetupFailureExitCode = 2;
+    const auto childProcessId = fork();
+    BOOST_REQUIRE_NE(childProcessId, -1);
+
+    if (childProcessId == 0) {
+        std::signal(SIGABRT, SIG_DFL);
+
+        if (cudaDeviceSynchronize() != cudaSuccess) {
+            _exit(testSetupFailureExitCode);
+        }
+
+        codeThatContainsMacros<<<1, 1>>>(false);
+        if (cudaGetLastError() != cudaSuccess) {
+            _exit(testSetupFailureExitCode);
+        }
+
+        const auto synchronizeResult = cudaDeviceSynchronize();
+        _exit(synchronizeResult == cudaSuccess ? testSetupFailureExitCode : macroFailureExitCode);
+    }
+
+    auto childStatus = 0;
+    BOOST_REQUIRE_EQUAL(waitpid(childProcessId, &childStatus, 0), childProcessId);
+
+    const auto childAborted = WIFSIGNALED(childStatus) && (WTERMSIG(childStatus) == SIGABRT);
+    const auto reportedKernelFailure
+        = WIFEXITED(childStatus) && (WEXITSTATUS(childStatus) == macroFailureExitCode);
+    BOOST_CHECK(childAborted || reportedKernelFailure);
 }
 
 BOOST_AUTO_TEST_CASE(TestOutsideKernel)
