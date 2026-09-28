@@ -36,6 +36,7 @@ init(const std::vector<Well>& wells_ecl,
      const std::vector<std::vector<CompConnectionData> >& well_connection_data,
      const SummaryState& summary_state,
      const std::vector<bool>& locally_owned_wells,
+     const WellGroupEvents& events,
      const CompWellState* prev_well_state)
 {
     this->base_init(wells_ecl, cell_pressures, well_temperatures, cell_mole_fractions,
@@ -46,9 +47,15 @@ init(const std::vector<Well>& wells_ecl,
         return;
     }
 
+    // As for the black-oil wells, a well keeps its previous control unless
+    // the schedule updates the well at this report step.
+    constexpr auto event_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                              | ScheduleEvents::PRODUCTION_UPDATE
+                              | ScheduleEvents::INJECTION_UPDATE;
     for (const auto& well_name : this->wells_.wells()) {
         if (prev_well_state->wells_.has(well_name)) {
-            this->wells_[well_name].copyRuntimeStateFrom(prev_well_state->wells_[well_name]);
+            this->wells_[well_name].copyRuntimeStateFrom(prev_well_state->wells_[well_name],
+                                                         !events.hasEvent(well_name, event_mask));
         }
     }
 }

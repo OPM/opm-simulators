@@ -27,6 +27,7 @@
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/output/data/Wells.hpp>
 
 
@@ -52,6 +53,7 @@ public:
               const std::vector<std::vector<CompConnectionData> >& well_connection_data,
               const SummaryState& sumary_state,
               const std::vector<bool>& locally_owned_wells,
+              const WellGroupEvents& events,
               const CompWellState* prev_well_state = nullptr);
 
     const SingleWellState& operator[](const std::string& well_name) const;

@@ -186,9 +186,10 @@ update_producer_targets(const Well& well,
 
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
-copyRuntimeStateFrom(const SingleCompWellState& other)
+copyRuntimeStateFrom(const SingleCompWellState& other,
+                     const bool keep_control)
 {
-    // Keep the freshly initialized schedule-derived status, controls and
+    // Keep the freshly initialized schedule-derived status and
     // targets from base_init() and carry over the wellbore inventory, which a
     // shut well, or one that switched between producer and injector, lacks.
     // So does a well without open connections: it had no well equations and
@@ -200,6 +201,10 @@ copyRuntimeStateFrom(const SingleCompWellState& other)
     bhp = other.bhp;
     wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
     total_molar_fractions = other.total_molar_fractions;
+    if (keep_control) {
+        injection_cmode = other.injection_cmode;
+        production_cmode = other.production_cmode;
+    }
 }
 
 template <typename FluidSystem>
