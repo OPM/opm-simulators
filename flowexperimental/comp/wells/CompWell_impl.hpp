@@ -269,6 +269,14 @@ assembleWellEq(const Simulator& simulator,
 {
     this->well_equations_.clear();
 
+    // The reservoir residual is volume-specific when UseVolumetricResidual is
+    // set (the models-layer default, used by the compositional model), so the
+    // reservoir rows of the coupling, C, carry the connected cell's 1/volume.
+    Scalar coupling_scale = 1.;
+    if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
+        coupling_scale = 1. / simulator.model().dofTotalVolume(this->well_cells_[0]);
+    }
+
     this->updateSecondaryQuantities(simulator);
 
     assembleSourceTerm(dt);
@@ -291,7 +299,8 @@ assembleWellEq(const Simulator& simulator,
         this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             // C, needs the cell_idx
-            this->well_equations_.C()[0][0][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.C()[0][0][pvIdx][comp_idx]
+                -= coupling_scale * connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
         }
 
@@ -576,9 +585,9 @@ getConvergence() const
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-addWellContributions(SparseMatrixAdapter&) const
+addWellContributions(SparseMatrixAdapter& jacobian) const
 {
-    assert(false);
+    this->well_equations_.extract(jacobian);
 }
 
 template <typename TypeTag>

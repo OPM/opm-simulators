@@ -27,19 +27,18 @@
  *     [ B    D   ] [ x_well ] = [ res_well ]
  *
  * and eliminates the well unknowns via a Schur complement. This test fills the
- * blocks B, C, D and the well residual with known values and checks the three
+ * blocks B, C, D and the well residual with known values and checks the four
  * operations the model relies on against independent dense reference
  * computations (using plain Dune::FieldMatrix algebra):
  *
  *   solve(dx)              ->  dx  = D^-1 res_well
  *   recoverSolutionWell    ->  x_w = D^-1 (res_well - B x)
  *   apply(r)               ->  r  -= C^T D^-1 res_well
+ *   extract(A)             ->  A  -= C^T D^-1 B
  *
- * It also exercises the singular-matrix fallback (inverse replaced by the
- * identity) for both the 4x4 block size (which signals singularity by throwing
- * Opm::NumericalProblem) and the 3x3 block size (which does not throw but
- * silently yields non-finite values, inf/NaN). The 3x3 case is a regression
- * guard for the fallback only working when numWellEq == 4.
+ * It also checks that singular matrices are rejected for both the 4x4 block
+ * size (which signals singularity by throwing) and the 3x3 block size (which
+ * silently yields non-finite values, inf/NaN).
  */
 #include "config.h"
 
@@ -47,6 +46,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include <flowexperimental/comp/wells/CompWellEquations.hpp>
+
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
@@ -74,6 +75,26 @@ using DiagMat = Dune::FieldMatrix<Scalar, nw, nw>;
 using OffDiagMat = Dune::FieldMatrix<Scalar, nw, ne>;
 using WellVec = Dune::FieldVector<Scalar, nw>;
 using ResVec = Dune::FieldVector<Scalar, ne>;
+using ResMat = Dune::FieldMatrix<Scalar, ne, ne>;
+
+struct TestMatrixAdapter {
+    using MatrixBlock = ResMat;
+    std::array<std::array<MatrixBlock, 8>, 8> blocks;
+
+    TestMatrixAdapter()
+    {
+        for (auto& row : blocks) {
+            for (auto& block : row) {
+                block = 0.0;
+            }
+        }
+    }
+
+    void addToBlock(std::size_t row, std::size_t col, const MatrixBlock& block)
+    {
+        blocks.at(row).at(col) += block;
+    }
+};
 
 // Well-conditioned (diagonally dominant) diagonal block.
 DiagMat makeD()
@@ -114,6 +135,18 @@ void checkClose(const ResVec& a, const ResVec& b, const std::string& what)
     }
 }
 
+void
+checkClose(const ResMat& a, const ResMat& b, const std::string& what)
+{
+    for (int i = 0; i < ne; ++i) {
+        for (int j = 0; j < ne; ++j) {
+            BOOST_CHECK_MESSAGE(std::abs(a[i][j] - b[i][j]) < 1e-10,
+                                what << "[" << i << "][" << j << "]: got " << a[i][j]
+                                     << " expected " << b[i][j]);
+        }
+    }
+}
+
 } // anonymous namespace
 
 BOOST_AUTO_TEST_CASE(SchurComplementOperations)
@@ -141,8 +174,10 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     Dinv.invert();
 
     // --- Fill the CompWellEquations blocks --------------------------------
+    // The cell indices differ from the connection indices: the vectors handed
+    // to apply() and recoverSolutionWell() are local to the well.
     Eqns eqns;
-    eqns.init(num_conn, std::vector<std::size_t>{0, 1});
+    eqns.init(num_conn, std::vector<std::size_t>{3, 7});
     eqns.clear();
 
     for (int i = 0; i < nw; ++i) {
@@ -216,36 +251,47 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
             checkClose(r[c], expected, "apply conn " + std::to_string(c));
         }
     }
+
+    // --- extract: A_rc -= C_r^T D^-1 B_c ----------------------------------
+    {
+        TestMatrixAdapter jacobian;
+        eqns.extract(jacobian);
+
+        constexpr std::array<std::size_t, num_conn> cells {3, 7};
+        for (int row = 0; row < num_conn; ++row) {
+            for (int col = 0; col < num_conn; ++col) {
+                ResMat expected(0.0);
+                for (int i = 0; i < ne; ++i) {
+                    for (int j = 0; j < ne; ++j) {
+                        for (int k = 0; k < nw; ++k) {
+                            for (int l = 0; l < nw; ++l) {
+                                expected[i][j] -= Cref[row][k][i] * Dinv[k][l] * Bref[col][l][j];
+                            }
+                        }
+                    }
+                }
+                checkClose(jacobian.blocks[cells[row]][cells[col]],
+                           expected,
+                           "extract conn " + std::to_string(row) + "," + std::to_string(col));
+            }
+        }
+    }
 }
 
-// Singular 4x4 well matrix: detail::invertMatrix throws Opm::NumericalProblem,
-// the fallback replaces the inverse with the identity, so solve() returns the
-// residual unchanged.
-BOOST_AUTO_TEST_CASE(SingularFallback4x4)
+// Singular 4x4 well matrix: detail::invertMatrix throws Dune::MatrixBlockError,
+// which invert() reports as NumericalProblem.
+BOOST_AUTO_TEST_CASE(SingularMatrix4x4)
 {
     Eqns eqns;
     eqns.init(num_conn, std::vector<std::size_t>{0, 1});
     eqns.clear(); // D is now all zeros -> singular
 
-    WellVec resWell;
-    for (int i = 0; i < nw; ++i) {
-        resWell[i] = 1.0 + i;
-        eqns.residual()[0][i] = resWell[i];
-    }
-
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
-
-    Eqns::BVectorWell dx(1);
-    eqns.solve(dx);
-    checkClose(dx[0], resWell, "singular-4x4 solve (identity inverse)");
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
 
-// Singular 3x3 well matrix (numWellEq == 3, e.g. a two-component well):
-// detail::invertMatrix does NOT throw here - it silently produces inf/NaN. This
-// is the regression guard for invert() detecting that non-finite result and
-// still falling back to the identity (the fallback previously only worked for
-// the 4x4 block size).
-BOOST_AUTO_TEST_CASE(SingularFallback3x3)
+// Singular 3x3 matrix: detail::invertMatrix silently produces inf/NaN, which
+// invert() reports as NumericalProblem too.
+BOOST_AUTO_TEST_CASE(SingularMatrix3x3)
 {
     constexpr int nw3 = 3;
     using Eqns3 = Opm::CompWellEquations<Scalar, nw3, ne>;
@@ -254,19 +300,5 @@ BOOST_AUTO_TEST_CASE(SingularFallback3x3)
     eqns.init(1, std::vector<std::size_t>{0});
     eqns.clear(); // singular D
 
-    Dune::FieldVector<Scalar, nw3> resWell;
-    for (int i = 0; i < nw3; ++i) {
-        resWell[i] = 2.0 + i;
-        eqns.residual()[0][i] = resWell[i];
-    }
-
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
-
-    Eqns3::BVectorWell dx(1);
-    eqns.solve(dx);
-    for (int i = 0; i < nw3; ++i) {
-        BOOST_CHECK_MESSAGE(std::abs(dx[0][i] - resWell[i]) < 1e-10,
-                            "singular-3x3 solve (identity inverse)[" << i << "]: got "
-                            << dx[0][i] << " expected " << resWell[i]);
-    }
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
