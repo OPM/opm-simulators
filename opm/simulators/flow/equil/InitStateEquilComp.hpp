@@ -336,8 +336,8 @@ public:
         for (std::size_t r = 0; r < records.size(); ++r) {
             // The fluid system takes the properties of the region's EOS region.
             const typename FluidSystem::ScopedEosRegion eosRegion{eosRegions[r]};
-            regions.push_back(setupRegion(records.getRecord(r), tables,
-                                          compConfig.eosType(eosRegions[r]), pvtRegions[r],
+            const auto eosType = compConfig.eosType(eosRegions[r]);
+            regions.push_back(setupRegion(records.getRecord(r), tables, eosType, pvtRegions[r],
                                           cellCenterDepth, eqlnum, pvtnum, comm, gravity,
                                           numSamplePoints, r));
         }
