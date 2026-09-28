@@ -305,6 +305,7 @@ initWellState()
                                  cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_,
                                  this->locally_owned_wells_,
+                                 this->report_step_start_events_,
                                  &this->last_valid_comp_well_states_);
 }
 
