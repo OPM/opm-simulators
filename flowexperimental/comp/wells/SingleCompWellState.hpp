@@ -76,6 +76,8 @@ public:
     Scalar temperature{0};
 
     std::vector<Scalar> surface_phase_rates;
+    // volume fraction of water in the wellbore; stays zero without a water phase
+    Scalar wellbore_water_volume_fraction{0.};
     std::vector<Scalar> phase_fractions; // V or L
     std::vector<Scalar> reservoir_phase_rates;
     // WZMF

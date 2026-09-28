@@ -40,8 +40,12 @@ update(const SingleWellState& well_state)
         sum_mole_fraction += mole_fractions[i];
     }
     assert(sum_mole_fraction != 0.);
-    for (int i = 0; i < numWellConservationEq - 1; ++i) {
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
+    }
+    if constexpr (has_water) {
+        value_[WFrac]
+            = std::clamp(well_state.wellbore_water_volume_fraction, Scalar {0.}, Scalar {1.});
     }
     value_[Bhp] = well_state.bhp;
 
@@ -81,6 +85,18 @@ getTotalRate() const
 template <typename FluidSystem, typename Indices>
 typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
 CompWellPrimaryVariables<FluidSystem, Indices>::
+getWaterVolumeFraction() const
+{
+    if constexpr (has_water) {
+        return evaluation_[WFrac];
+    } else {
+        return EvalWell{0.};
+    }
+}
+
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
+CompWellPrimaryVariables<FluidSystem, Indices>::
 extendEval(const Eval& in)
 {
     EvalWell out = 0.0;
@@ -115,7 +131,7 @@ updateNewton(const BVectorWell& dwells)
         value_[i] -= damping * dwells[0][i];
     }
     // The mole-fraction primary variables occupy indices [1, numComponents - 1]
-    // (QTotal is at 0 and Bhp at numComponents). Clamp each of them, then
+    // (QTotal is at 0, followed by WFrac with water and Bhp). Clamp each of them, then
     // renormalize so the full composition - including the implicit last
     // component - sums to one.
     std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);
@@ -130,6 +146,9 @@ updateNewton(const BVectorWell& dwells)
     assert(sum_mole_fraction != 0.);
     for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
+    }
+    if constexpr (has_water) {
+        value_[WFrac] = std::clamp(value_[WFrac], Scalar{0.}, Scalar{1.});
     }
 
     updateEvaluation();
@@ -179,6 +198,10 @@ toFluidState() const
 
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
     fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+    if constexpr (has_water) {
+        // the water density evaluation reads the water-phase pressure
+        fluid_state.setPressure(FluidSystem::waterPhaseIdx, pressure);
+    }
 
     fluid_state.setTemperature(temperature_);
 
