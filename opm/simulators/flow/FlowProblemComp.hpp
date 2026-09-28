@@ -146,6 +146,7 @@ public:
             throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
                                      "by compositional modeling yet");
         }
+        this->updateNum("EOSNUM", eosnum_, eclState.getTableManager().getTabdims().getNumEosRes());
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -434,7 +435,7 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
-            getEosType(),
+            eosnum_,
             vanguard.cellCenterDepths(),
             eqlnum,
             vanguard.gridView().comm(),
@@ -639,6 +640,8 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+    // Zero-based reservoir EOS region of each cell, empty for a single region.
+    std::vector<int> eosnum_;
 
     bool zmf_initialization_ {false};
 

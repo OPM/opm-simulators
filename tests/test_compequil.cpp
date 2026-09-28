@@ -43,6 +43,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -62,6 +63,37 @@ using CompVec = std::array<Scalar, 3>;
 
 constexpr Scalar barsa = 1.0e5;
 constexpr Scalar gravity = 9.80665;
+
+// The records of the single reservoir EOS region of deckString().
+const std::string eosRecords =
+    "EOS\nPR /\n"
+    "BIC\n0\n0\n0\n/\n"
+    "ACF\n0.22394\n0.01142\n0.4884\n/\n"
+    "PCRIT\n73.773\n45.992\n21.03\n/\n"
+    "TCRIT\n304.128\n190.564\n617.7\n/\n"
+    "MW\n44.00\n16.04\n142.28\n/\n"
+    "VCRIT\n0.09412\n0.09863\n0.60980\n/\n";
+
+// Two reservoir EOS regions: the first repeats eosRecords, the second uses SRK
+// and a higher critical temperature of decane.
+const std::string twoEosRegions =
+    "EOS\nPR /\nSRK /\n"
+    "BIC\n0 0 0 /\n0 0 0 /\n"
+    "ACF\n0.22394 0.01142 0.4884 /\n0.22394 0.01142 0.4884 /\n"
+    "PCRIT\n73.773 45.992 21.03 /\n73.773 45.992 21.03 /\n"
+    "TCRIT\n304.128 190.564 617.7 /\n304.128 190.564 640.0 /\n"
+    "MW\n44.00 16.04 142.28 /\n44.00 16.04 142.28 /\n"
+    "VCRIT\n0.09412 0.09863 0.60980 /\n0.09412 0.09863 0.60980 /\n";
+
+// The second EOS region of twoEosRegions on its own.
+const std::string secondEosRegion =
+    "EOS\nSRK /\n"
+    "BIC\n0 0 0 /\n"
+    "ACF\n0.22394 0.01142 0.4884 /\n"
+    "PCRIT\n73.773 45.992 21.03 /\n"
+    "TCRIT\n304.128 190.564 640.0 /\n"
+    "MW\n44.00 16.04 142.28 /\n"
+    "VCRIT\n0.09412 0.09863 0.60980 /\n";
 
 // A 1x1x20 vertical column from 2000 m to 2100 m in 5 m cells, filled with a
 // CO2/methane/decane mixture that grades from methane-rich at the top to
@@ -100,14 +132,8 @@ std::string deckString(const std::string& equil,
         "CNAMES\nCO2\nMETHANE\nDECANE\n/\n"
         "ROCK\n68.9476 0 /\n"
         + zmfvd
-        + rtemp +
-        "EOS\nPR /\n"
-        "BIC\n0\n0\n0\n/\n"
-        "ACF\n0.22394\n0.01142\n0.4884\n/\n"
-        "PCRIT\n73.773\n45.992\n21.03\n/\n"
-        "TCRIT\n304.128\n190.564\n617.7\n/\n"
-        "MW\n44.00\n16.04\n142.28\n/\n"
-        "VCRIT\n0.09412\n0.09863\n0.60980\n/\n"
+        + rtemp
+        + eosRecords +
         "STCOND\n15.0 1.0 /\n"
         + propsExtra
         + regions +
@@ -134,12 +160,14 @@ struct BasicEquilFixture
 
     /// \param connateWater, maxWater  Per-cell water saturation endpoints, as
     ///        the simulator reads them from the scaled saturation functions.
+    /// \param eosnum  Zero-based EOS region of each cell, empty for one region.
     Computer compute(const std::vector<int>& eqlnum,
                      const std::vector<Scalar>& connateWater = {},
-                     const std::vector<Scalar>& maxWater = {}) const
+                     const std::vector<Scalar>& maxWater = {},
+                     const std::vector<int>& eosnum = {}) const
     {
         return Computer(eclState,
-                        eclState.compositionalConfig().eosType(0),
+                        eosnum,
                         {depths.begin(), depths.end()},
                         eqlnum,
                         Opm::Parallel::Communication{},
@@ -157,6 +185,24 @@ struct BasicEquilFixture
 
 using EquilFixture = BasicEquilFixture<FluidSystem>;
 using WaterEquilFixture = BasicEquilFixture<WaterFluidSystem>;
+
+/// A deck from deckString() with other EOS records for \p numEosRegions regions.
+std::string withEosRecords(std::string deck,
+                           const std::string& records,
+                           const std::size_t numEosRegions)
+{
+    const std::array replacements{
+        std::pair{eosRecords, records},
+        std::pair{std::string{"TABDIMS\n/\n"},
+                  "TABDIMS\n8* " + std::to_string(numEosRegions) + " /\n"},
+    };
+    for (const auto& [from, to] : replacements) {
+        const auto pos = deck.find(from);
+        BOOST_REQUIRE(pos != std::string::npos);
+        deck.replace(pos, from.size(), to);
+    }
+    return deck;
+}
 
 // The mixture composition the ZMFVD table prescribes at a depth.
 CompVec tableComposition(const Scalar depth)
@@ -569,6 +615,81 @@ BOOST_AUTO_TEST_CASE(MismatchedEqlnumSizeFailsOnAllRanks)
                                   });
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(EachRegionTakesTheEquationOfStateOfItsCells)
+{
+    // Two equilibration regions, each in its own EOS region. Each must
+    // equilibrate exactly as in a deck holding its EOS region alone.
+    const auto deck = [](const std::string& eosnum) {
+        return deckString("EQUIL\n"
+                          " 2010 150 2300 0 2000 0 /\n"
+                          " 2060 200 2300 0 2050 0 /\n",
+                          "EQLDIMS\n2 /\n"
+                          "REGDIMS\n2 1 0 0 /\n",
+                          "REGIONS\n"
+                          "EQLNUM\n10*1 10*2 /\n" + eosnum,
+                          "ZMFVD\n"
+                          " 2000   0 0.7 0.3\n"
+                          " 2100   0 0.3 0.7  /\n"
+                          " 2000   0 0.7 0.3\n"
+                          " 2100   0 0.3 0.7  /\n");
+    };
+    std::vector<int> regions(20, 0);
+    std::fill(regions.begin() + 10, regions.end(), 1);
+
+    // The fluid system is static, so each fixture computes before the next one
+    // initializes it.
+    const auto pressures = [&regions](const EquilFixture& fix, const std::vector<int>& eosnum) {
+        const auto states = fix.compute(regions, {}, {}, eosnum).fluidStates();
+        std::vector<Scalar> result;
+        std::ranges::transform(states, std::back_inserter(result), [](const auto& fs) {
+            return Opm::getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+        });
+        return result;
+    };
+    const auto both = pressures(
+        EquilFixture(withEosRecords(deck("EOSNUM\n10*1 10*2 /\n"), twoEosRegions, 2)), regions);
+    const auto first = pressures(EquilFixture(deck("")), {});
+    const auto second = pressures(EquilFixture(withEosRecords(deck(""), secondEosRegion, 1)), {});
+
+    for (std::size_t c = 0; c < both.size(); ++c) {
+        BOOST_TEST_CONTEXT("cell " << c) {
+            BOOST_CHECK_CLOSE(both[c], c < 10 ? first[c] : second[c], 1e-10);
+        }
+    }
+    // The second EOS region changes the column it holds.
+    BOOST_CHECK_GT(std::abs(second.back() - first.back()), 0.01 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(RegionAcrossEosRegionsIsRejected)
+{
+    const EquilFixture fix(withEosRecords(
+        deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n",
+                   "REGIONS\nEOSNUM\n10*1 10*2 /\n"),
+        twoEosRegions, 2));
+    std::vector<int> eosnum(20, 0);
+    std::fill(eosnum.begin() + 10, eosnum.end(), 1);
+
+    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0), {}, {}, eosnum),
+                          std::runtime_error,
+                          [](const std::runtime_error& error) {
+                              return std::string_view{error.what()}.find(
+                                  "Equilibration region 1 holds cells of EOS regions 1 and 2")
+                                  != std::string_view::npos;
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(InvalidEosnumFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    std::vector<int> eosnum(20, 0);
+    const Opm::Parallel::Communication comm;
+    if (comm.rank() == 0) {
+        eosnum.back() = 1;
+    }
+
+    BOOST_CHECK_THROW(fix.compute(std::vector<int>(20, 0), {}, {}, eosnum), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)
