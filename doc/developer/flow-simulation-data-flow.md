@@ -376,10 +376,12 @@ Consequences:
   material-law parameter object.
 - Output extracts hysteresis state through the material-law manager instead of
   reading the reservoir solution.
-- `EclMaterialLawManager` has explicit begin-timestep capture/restore support,
-  but no production call site currently uses it. Flow instead relies on
-  hysteresis being updated only from accepted/restored state at timestep
-  entry.
+- In the newer source snapshot described by the
+  [focused hysteresis investigation](flow-hysteresis-state.md), Flow calls
+  `EclMaterialLawManager`'s begin-timestep capture/restore when
+  `EnableStateRollback` is enabled. The option defaults to false. The focused
+  investigation also separates historical fields from calculated coefficients
+  and assesses a smaller snapshot.
 - Directional material-law parameters multiply the capture/restore surface.
 
 A simpler target is:
