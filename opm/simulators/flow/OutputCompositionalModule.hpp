@@ -131,7 +131,6 @@ public:
                    getPropValue<TypeTag, Properties::EnableBioeffects>(),
                    getPropValue<TypeTag, Properties::EnableGeochemistry>())
         , simulator_(simulator)
-        , eosType_(simulator.vanguard().eclState().compositionalConfig().eosType(0))
     {
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
@@ -840,12 +839,14 @@ private:
         for (int c = 0; c < numComponents; ++c) {
             moleFractions[c] = getValue(fluidState.moleFraction(c));
         }
+        const auto& problem = this->simulator_.problem();
+        const typename FluidSystem::ScopedEosRegion eosRegion{problem.eosRegionIndex(globalDofIdx)};
         const auto psat = CompositionalContainer<FluidSystem>::cellSaturationPressure(
             getValue(fluidState.L()),
             getValue(fluidState.pressure(oilPhaseIdx)),
             moleFractions,
             getValue(fluidState.temperature(oilPhaseIdx)),
-            this->eosType_);
+            problem.getEosType(globalDofIdx));
         if (!psat) {
             // A false result means only that no saturation pressure was resolved;
             // it does not distinguish a physically absent boundary from numerical
@@ -861,7 +862,6 @@ private:
 
     const Simulator& simulator_;
     CompositionalContainer<FluidSystem> compC_;
-    CompositionalConfig::EOSType eosType_;
     std::size_t numUnresolvedSaturationPressures_{};
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;

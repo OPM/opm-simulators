@@ -128,11 +128,15 @@ public:
             "disabled (the default), the input SWAT is retained.");
     }
 
-    Opm::CompositionalConfig::EOSType getEosType() const
+    //! The zero-based reservoir EOS region of a cell.
+    std::size_t eosRegionIndex(const unsigned globalDofIdx) const
+    { return eosnum_.empty() ? 0 : eosnum_[globalDofIdx]; }
+
+    //! The equation of state of a cell's reservoir EOS region.
+    Opm::CompositionalConfig::EOSType getEosType(const unsigned globalDofIdx) const
     {
-        auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-        return eclState.compositionalConfig().eosType(0);
+        const auto& eclState = this->simulator().vanguard().eclState();
+        return eclState.compositionalConfig().eosType(eosRegionIndex(globalDofIdx));
     }
 
     /*!
@@ -309,6 +313,7 @@ public:
     void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const typename FluidSystem::ScopedEosRegion eosRegion{eosRegionIndex(globalDofIdx)};
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
@@ -331,7 +336,7 @@ public:
             }
 
             {
-                const auto& eos_type = getEosType();
+                const auto& eos_type = getEosType(globalDofIdx);
                 typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
@@ -649,7 +654,6 @@ protected:
     void normalizeExplicitSwat_()
     {
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
-        const auto eos_type = getEosType();
         // Flash as the model does, so that this converges wherever the model's flash does.
         const Scalar flash_tolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
@@ -660,7 +664,8 @@ protected:
         // A failing flash on one rank must not leave the others in the reduction below.
         const auto& comm = this->simulator().vanguard().grid().comm();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto& fs : initialFluidStates_) {
+        for (unsigned cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            auto& fs = initialFluidStates_[cell];
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
@@ -673,6 +678,8 @@ protected:
                 zmf_oil_and_gas = true;
             }
 
+            const typename FluidSystem::ScopedEosRegion eos_region{eosRegionIndex(cell)};
+            const auto eos_type = getEosType(cell);
             typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
 
             // Hydrocarbon moles per unit pore volume as given. Each given phase holds its
