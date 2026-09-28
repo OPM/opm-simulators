@@ -282,16 +282,13 @@ initWellState()
         }
     }
 
-    // Start each report step from freshly initialized schedule state. Retry
-    // recovery still comes from last_valid_comp_well_states_ via
-    // restoreLastValidState()/endTimeStep(). Passing the last valid state as
-    // prev_well_state here would carry dynamic state across report steps, but
-    // that currently changes regression results, so we pass nullptr for now.
+    // Carry the wellbore inventory (pressure, water fraction and composition)
+    // across report steps, so that schedule-derived targets do not replace it.
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_,
                                  this->locally_owned_wells_,
-                                 /*prev_well_state=*/nullptr);
+                                 &this->last_valid_comp_well_states_);
 }
 
 
