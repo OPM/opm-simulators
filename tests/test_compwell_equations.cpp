@@ -38,11 +38,9 @@
  *
  * It checks extract(jacobian), A -= C^T D^-1 B, against apply(x, Ax).
  *
- * It also exercises the singular-matrix fallback (inverse replaced by the
- * identity) for both the 4x4 block size (which signals singularity by throwing
- * Opm::NumericalProblem) and the 3x3 block size (which does not throw but
- * silently yields non-finite values, inf/NaN). The 3x3 case is a regression
- * guard for the fallback only working when numWellEq == 4.
+ * It also checks that singular matrices are rejected for both the 4x4 block
+ * size (which signals singularity by throwing) and the 3x3 block size (which
+ * silently yields non-finite values, inf/NaN).
  */
 #include "config.h"
 
@@ -319,34 +317,20 @@ BOOST_AUTO_TEST_CASE(MatrixContributionsMatchOperator)
     }
 }
 
-// Singular 4x4 well matrix: detail::invertMatrix throws Opm::NumericalProblem,
-// the fallback replaces the inverse with the identity, so solve() returns the
-// residual unchanged.
-BOOST_AUTO_TEST_CASE(SingularFallback4x4)
+// Singular 4x4 well matrix: detail::invertMatrix throws Dune::MatrixBlockError,
+// which invert() reports as NumericalProblem.
+BOOST_AUTO_TEST_CASE(SingularMatrix4x4)
 {
     Eqns eqns;
     eqns.init(num_conn, std::vector<std::size_t>{0, 1});
     eqns.clear(); // D is now all zeros -> singular
 
-    WellVec resWell;
-    for (int i = 0; i < nw; ++i) {
-        resWell[i] = 1.0 + i;
-        eqns.residual()[0][i] = resWell[i];
-    }
-
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
-
-    Eqns::BVectorWell dx(1);
-    eqns.solve(dx);
-    checkClose(dx[0], resWell, "singular-4x4 solve (identity inverse)");
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
 
-// Singular 3x3 well matrix (numWellEq == 3, e.g. a two-component well):
-// detail::invertMatrix does NOT throw here - it silently produces inf/NaN. This
-// is the regression guard for invert() detecting that non-finite result and
-// still falling back to the identity (the fallback previously only worked for
-// the 4x4 block size).
-BOOST_AUTO_TEST_CASE(SingularFallback3x3)
+// Singular 3x3 matrix: detail::invertMatrix silently produces inf/NaN, which
+// invert() reports as NumericalProblem too.
+BOOST_AUTO_TEST_CASE(SingularMatrix3x3)
 {
     constexpr int nw3 = 3;
     using Eqns3 = Opm::CompWellEquations<Scalar, nw3, ne>;
@@ -355,19 +339,5 @@ BOOST_AUTO_TEST_CASE(SingularFallback3x3)
     eqns.init(1, std::vector<std::size_t>{0});
     eqns.clear(); // singular D
 
-    Dune::FieldVector<Scalar, nw3> resWell;
-    for (int i = 0; i < nw3; ++i) {
-        resWell[i] = 2.0 + i;
-        eqns.residual()[0][i] = resWell[i];
-    }
-
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
-
-    Eqns3::BVectorWell dx(1);
-    eqns.solve(dx);
-    for (int i = 0; i < nw3; ++i) {
-        BOOST_CHECK_MESSAGE(std::abs(dx[0][i] - resWell[i]) < 1e-10,
-                            "singular-3x3 solve (identity inverse)[" << i << "]: got "
-                            << dx[0][i] << " expected " << resWell[i]);
-    }
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
