@@ -42,6 +42,7 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
@@ -921,6 +922,7 @@ run()
 {
     auto& simulator = solver_().model().simulator();
     auto& problem = simulator.problem();
+    const bool truncateTimeStepToFloat = Parameters::Get<Parameters::TruncateTimeStepToFloat>();
     // counter for solver restarts
     int restarts = 0;
     SimulatorReport report;
@@ -955,14 +957,30 @@ run()
             report += substep_report;
 
             OPM_TIMEBLOCK(convergenceSucceeded);
+            // When the time step is truncated to float precision, advance the timer
+            // by the truncated step size used by the model and base the next step
+            // size on it. This keeps the elapsed time and the step sizes reproducible
+            // from the step sizes alone, which the timestep replay tests rely on.
+            // The step that ends the report step keeps dt so that the report time
+            // is hit exactly.
+            double dt_taken = dt;
+            if (truncateTimeStepToFloat) {
+                const double model_dt = simulator.timeStepSize();
+                const double remaining = this->substep_timer_.totalTime()
+                                       - this->substep_timer_.simulationTimeElapsed();
+                if (model_dt > 0.0 && dt < remaining) {
+                    this->substep_timer_.setCurrentStepLength(model_dt);
+                    dt_taken = model_dt;
+                }
+            }
             ++this->substep_timer_;   // advance by current dt
 
             const int iterations = getNumIterations_(substep_report);
             auto dt_estimate = timeStepControlComputeEstimate_(
-                                     dt, iterations, this->substep_timer_);
+                                     dt_taken, iterations, this->substep_timer_);
 
             assert(dt_estimate > 0);
-            dt_estimate = maybeRestrictTimeStepGrowth_(dt, dt_estimate, restarts);
+            dt_estimate = maybeRestrictTimeStepGrowth_(dt_taken, dt_estimate, restarts);
             restarts = 0;         // solver converged, reset restarts counter
 
             maybeReportSubStep_(substep_report);
@@ -975,7 +993,7 @@ run()
             }
 
             // set new time step length
-            checkTimeStepCanAdvance_(dt, dt_estimate);
+            checkTimeStepCanAdvance_(dt_taken, dt_estimate);
             setTimeStep_(dt_estimate);
 
             report.success.converged = this->substep_timer_.done();
