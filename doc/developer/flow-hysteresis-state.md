@@ -22,6 +22,15 @@ calculation is historical and its inputs may no longer exist. They must remain
 in the authoritative state unless a smaller set of sufficient historical
 values is identified and tested.
 
+Here “earlier curve” means an earlier **active scanning curve**, not a deck
+drainage or imbibition table being replaced. The input tables remain in the
+parameter configuration. WAG constructs a branch from the current reversal
+coordinates and anchor relperms. While imbibition proceeds,
+`krnImbStartNxt_` is evaluated from that active branch. On the next switch to
+drainage, it is copied to `krnImbStart_`, and the former branch's anchor is
+overwritten. The current saturation and the fixed tables alone then do not
+identify the anchor that came from the older branch.
+
 | Category | Examples in `EclHysteresisTwoPhaseLawParams` | How to treat it |
 | --- | --- | --- |
 | Configuration, fixed during an ordinary simulation step | `EclHysteresisConfig`, WAG configuration, drainage/imbibition curve parameters, endpoint scaling, SATNUM/IMBNUM selection, `Sncrd_`, `Sncri_`, `C_`, `Cw_`, `KrndMax_`, `Krwi_snmax_`, `pcmaxd_`, `pcmaxi_`, `Swco_` | Construct from deck/region/cell data; share or reference where possible. “Static” here means fixed over a step, not necessarily immutable for every use of the manager. |
@@ -34,6 +43,53 @@ can be expensive enough to retain for evaluation while still being absent
 from the rollback snapshot. Conversely, a value written by a calculation can
 be essential history if that calculation consumed an earlier curve that has
 since been replaced.
+
+## How the hysteresis options combine
+
+Flow's saturation-function hysteresis has a global enable, independently
+selected relative-permeability and capillary-pressure behavior, and an
+additional WAG switch. `SATOPTS HYSTER` enables the general feature. `EHYSTR`
+selects its conventional models; if omitted, the parser currently defaults
+to relative-permeability model 0 and capillary-pressure model 0.
+`WAGHYSTR` supplies per-region WAG parameters and activates the WAG switch
+only when general hysteresis is enabled; the parser also requires oil, water,
+and gas phases for WAG.
+
+```text
+SATOPTS HYSTER
+├── EHYSTR relative-permeability selection
+│   ├── -1: conventional relperm hysteresis disabled
+│   ├── 0/1: Carlson for non-wetting phase;
+│   │        drainage/imbibition curve for wetting phase
+│   ├── 2/3: Killough for non-wetting phase;
+│   │        drainage/imbibition curve for wetting phase
+│   └── 4: Killough treatment of both phases
+├── EHYSTR capillary-pressure selection
+│   ├── -1: no capillary-pressure hysteresis
+│   └── 0: Killough capillary-pressure hysteresis
+└── optional WAGHYSTR, per saturation region
+    └── if GAS_MODEL is enabled: use WAG scanning for
+        gas-oil non-wetting (gas) relative permeability
+```
+
+WAG is therefore neither a separate material-law object nor an extra
+correction applied after Carlson/Killough. In the gas-oil
+`twoPhaseSatKrn()` function, the WAG branch is tested *before* the conventional
+`krHysteresisModel` branch and returns directly. That includes the case where
+conventional relative-permeability hysteresis is selected as `-1`; enabling
+the WAG gas model still selects WAG gas relperm in this implementation.
+
+| Evaluated quantity | With active WAG gas model | Otherwise |
+| --- | --- | --- |
+| Gas relative permeability in gas-oil system | WAG scanning branch | `EHYSTR` conventional non-wetting selection |
+| Oil relative permeability in gas-oil system | `EHYSTR` wetting-phase selection | Same |
+| Oil-water relative permeabilities | `EHYSTR` selection | Same |
+| Capillary pressure | `EHYSTR` capillary-pressure selection | Same |
+
+This table describes the implemented branches, not every behavior suggested
+by the keyword's fields. `WAGHYSTR` parses `RES_OIL` and `WATER_MODEL` flags,
+but the material-law evaluation inspected here only queries `GAS_MODEL`.
+Disabling `GAS_MODEL` leaves the conventional gas-oil branch in use.
 
 ## Present ownership and lifecycle
 
@@ -74,10 +130,12 @@ Rollback now has two modes:
   state rollback. The manager snapshot is a timestep-only object and is not
   restart-serialized.
 
-The manager snapshot holds arrays of `EclHysteresisDynamicState` for each
-applicable two-phase system and direction. Each element currently copies 23
-scalar fields, one integer, and three booleans. It largely mirrors the mutable
-members of the parameter object rather than a minimal history representation.
+The manager snapshot now holds arrays of `EclHysteresisCompactState` for each
+applicable two-phase system and direction. Each common entry has four scalar
+history fields and two flags. WAG-active gas-oil laws additionally have a
+sparse, cell-indexed full-state sidecar; non-WAG laws do not pay for WAG cycle
+history. The full `EclHysteresisDynamicState` remains the short-lived interface
+between material-law wrappers and the manager snapshot.
 The number of arrays depends on phase approach and directional settings, so
 even a modest reduction per element can matter for a large grid.
 
@@ -123,23 +181,19 @@ There is no justified minimal WAG snapshot yet. A source-level dependency
 argument is necessary but insufficient because sentinels, branch transitions,
 and exact numerical equivalence also matter.
 
-For non-WAG paths, a first useful snapshot would have the four historic
+For non-WAG paths, the implemented snapshot has the four historic
 saturation values in the first two rows (`krnSwMdc`, `krwSwMdc`, `pcSwMdc`,
 `pcSwMic`) and two status flags (`initialImb`, `isDrain`). This compares with
-23 scalar fields, an integer, and three booleans in every current snapshot,
-including non-WAG cases. Model-specific compact history types could avoid
-carrying unused WAG slots; enabled features may permit further reduction.
-The calculated Carlson/Killough fields would be restored by a pure
-`recomputeDerived(config, history)` function. The current
-`updateDynamicParams_()` cannot simply be called during restore: its WAG
-section advances cycles and updates branch history under certain flags. The
-pure recomputation function must be separate from the transition update.
-It must also preserve uninitialized/sentinel behavior before the first
-physical update instead of evaluating a drainage curve at a sentinel
-saturation.
+23 scalar fields, an integer, and status booleans in the previous full
+snapshot. The calculated Carlson/Killough fields are restored by a separate
+`updateConventionalDerivedParams_()` path. The WAG branch of
+`updateDynamicParams_()` advances cycles, so restore never calls it for
+non-WAG state. Drainage-curve values at the initial `krnSwMdc = 2` sentinel
+remain zero, as they were before the first physical update; the conventional
+coefficients computed at finalization are recomputed using the same formulas.
 
-For `double`, the current scalar portion alone is 23 × 8 = 184 bytes per
-active two-phase-law snapshot. Four scalar history values are 32 bytes;
+For `double`, the previous full-state scalar portion alone was 23 × 8 = 184
+bytes per active two-phase-law snapshot. Four scalar history values are 32 bytes;
 flags and struct padding add to both figures. These are per-law snapshot
 figures, not total simulator-memory savings, because the configuration and
 current evaluation caches remain. Splitting out a compact non-WAG type is
@@ -225,6 +279,12 @@ and snapshots explicit histories.
    WAG reversals, two-/three-phase cases, and directional settings.
 
 ## Recommended sequence
+
+The compact non-WAG timestep snapshot, sparse WAG sidecar, and separation of
+ordinary derived-coefficient recomputation from WAG transition updates are now
+implemented. The remaining items below are longer-term work; in particular,
+the live parameter objects still own the history, and restart serialization
+has not changed.
 
 1. Introduce two phase law types or views: `HysteresisHistory` for the
    authoritative fields and `HysteresisDerived` for coefficients. Keep the
