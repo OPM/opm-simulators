@@ -45,6 +45,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     relaxed_max_pv_fraction_ = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
     relaxed_pv_outlier_cap_multiplier_ = Parameters::Get<Parameters::RelaxedPvOutlierCapMultiplier<Scalar>>();
     relaxed_max_cell_count_fraction_ = Parameters::Get<Parameters::RelaxedMaxCellCountFraction<Scalar>>();
+    cnv_pv_floor_fraction_ = Parameters::Get<Parameters::CnvPvFloorFraction<Scalar>>();
     tolerance_mb_ = Parameters::Get<Parameters::ToleranceMb<Scalar>>();
     tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::Get<Parameters::ToleranceMbRelaxed<Scalar>>());
     tolerance_energy_balance_ = Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
@@ -160,6 +161,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "the fraction of eligible cells, by count, allowed to violate "
          "strict CNV before the relaxed tolerance is granted. "
          "Default 1.0 disables this guard.");
+    Parameters::Register<Parameters::CnvPvFloorFraction<Scalar>>
+        ("Floor on the pore volume used in the per-cell volumetric error "
+         "(CNV), as a fraction of the median cell pore volume, so that "
+         "tiny cells cannot dictate convergence. The CNV measured with a "
+         "cell's own pore volume must still be below the relaxed CNV "
+         "tolerance. Set to a non-positive value to disable the floor.");
     Parameters::Register<Parameters::ToleranceMb<Scalar>>
         ("Tolerated mass balance error relative to total mass present");
     Parameters::Register<Parameters::ToleranceMbRelaxed<Scalar>>

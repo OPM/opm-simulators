@@ -46,8 +46,20 @@ struct InjMultMinDampFactor { static constexpr Scalar value = 0.05; };
 template<class Scalar>
 struct MaxResidualAllowed { static constexpr Scalar value = 1e7; };
 
+// Disabled by default. Small cells that would otherwise dictate CNV
+// convergence are handled by CnvPvFloorFraction instead.
 template<class Scalar>
-struct RelaxedMaxPvFraction { static constexpr Scalar value = 0.03; };
+struct RelaxedMaxPvFraction { static constexpr Scalar value = 0.0; };
+
+// Floor on the pore volume used in the per-cell CNV measure, as a fraction
+// of the median cell pore volume. A cell much smaller than a typical cell
+// is then held to an absolute mass error relative to a typical cell rather
+// than to its own pore volume, so that tiny cells cannot dictate
+// convergence. Normal and large cells are not affected. The CNV measured
+// with the cell's own pore volume must still be below the relaxed CNV
+// tolerance. <= 0.0 disables the floor.
+template<class Scalar>
+struct CnvPvFloorFraction { static constexpr Scalar value = 0.01; };
 
 // Caps each cell's contribution to the relaxed-tolerance pore-volume
 // weighting at this multiple of the mean eligible (non-aquifer) cell pore
@@ -243,6 +255,9 @@ public:
     //// fraction of violating cells by count rather than pore volume; see
     //// RelaxedMaxCellCountFraction.
     Scalar relaxed_max_cell_count_fraction_;
+    //// Pore volume floor, as a fraction of the median cell pore volume,
+    //// used in the per-cell CNV measure; see CnvPvFloorFraction.
+    Scalar cnv_pv_floor_fraction_;
     /// Relative mass balance tolerance (total mass balance error).
     Scalar tolerance_mb_;
     /// Relaxed mass balance tolerance (can be used when iter >= min_strict_mb_iter_).

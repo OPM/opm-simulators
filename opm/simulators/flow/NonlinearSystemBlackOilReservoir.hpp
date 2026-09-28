@@ -44,6 +44,7 @@
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -211,7 +212,14 @@ public:
     localConvergenceData(std::vector<Scalar>& R_sum,
                          std::vector<Scalar>& maxCoeff,
                          std::vector<Scalar>& B_avg,
-                         std::vector<int>& maxCoeffCell);
+                         std::vector<int>& maxCoeffCell,
+                         std::vector<Scalar>& maxCoeffTruePv);
+
+    /// \brief Pore volume floor used in the per-cell CNV measure, i.e.
+    /// cnv_pv_floor_fraction_ times the median cell pore volume. Zero if
+    /// the floor is disabled or not yet computed.
+    Scalar cnvPvFloor() const
+    { return std::max(cnvPvFloor_, Scalar{0}); }
 
     /// \brief Compute pore-volume/cell count split among "converged",
     /// "relaxed converged", "unconverged" cells based on CNV point
@@ -288,7 +296,9 @@ public:
                      std::vector<Scalar>& B_avg,
                      std::vector<Scalar>& R_sum,
                      std::vector<Scalar>& maxCoeff,
-                     std::vector<int>& maxCoeffCell);
+                     std::vector<int>& maxCoeffCell,
+                     const Scalar pvTrue = 0.0,
+                     std::vector<Scalar>* maxCoeffTruePv = nullptr);
 
     //! \brief Returns true if an NLDD solver exists
     bool hasNlddSolver() const
@@ -308,6 +318,14 @@ protected:
 
     /// \brief The number of cells of the global grid.
     long int global_nc_;
+
+    /// \brief Pore volume floor for the per-cell CNV measure, see
+    /// cnvPvFloor(). Negative until computed on the first convergence check.
+    Scalar cnvPvFloor_{-1.0};
+
+    /// \brief Compute cnv_pv_floor_fraction_ times the global median
+    /// pore volume of the (non numerical aquifer) interior cells.
+    Scalar computeCnvPvFloor() const;
 
     SolutionVector solUpd_;
 
