@@ -134,14 +134,17 @@ struct BasicEquilFixture
 
     /// \param connateWater, maxWater  Per-cell water saturation endpoints, as
     ///        the simulator reads them from the scaled saturation functions.
+    /// \param pvtnum  Zero-based PVT region of each cell, empty for one region.
     Computer compute(const std::vector<int>& eqlnum,
                      const std::vector<Scalar>& connateWater = {},
-                     const std::vector<Scalar>& maxWater = {}) const
+                     const std::vector<Scalar>& maxWater = {},
+                     const std::vector<int>& pvtnum = {}) const
     {
         return Computer(eclState,
                         eclState.compositionalConfig().eosType(0),
                         {depths.begin(), depths.end()},
                         eqlnum,
+                        pvtnum,
                         Opm::Parallel::Communication{},
                         gravity,
                         /*numSamplePoints=*/100,
@@ -189,6 +192,66 @@ std::string waterDeckString(const std::string& equil,
                       "SWFN\n 0.01 0.0 0.0\n 1.00 1.0 0.0 /\n"
                       "SGFN\n 0.00 0.0 0.0\n 0.99 1.0 0.0 /\n"
                       "SOF3\n 0.00 0.0 0.0\n 0.99 1.0 1.0 /\n");
+}
+
+// A deck from deckString() declaring two PVT regions, both with its rock.
+std::string withTwoPvtRegions(std::string deck)
+{
+    for (const auto& [from, to] : {std::pair{std::string{"TABDIMS\n/\n"},
+                                             std::string{"TABDIMS\n1* 2 /\n"}},
+                                   std::pair{std::string{"ROCK\n68.9476 0 /\n"},
+                                             std::string{"ROCK\n68.9476 0 /\n68.9476 0 /\n"}}}) {
+        const auto pos = deck.find(from);
+        BOOST_REQUIRE(pos != std::string::npos);
+        deck.replace(pos, from.size(), to);
+    }
+    return deck;
+}
+
+// A water zone at the base of each block of ten cells.
+constexpr auto twoBlockEquil = "EQUIL\n"
+                               " 2010 150 2035 0 2000 0 /\n"
+                               " 2060 155 2085 0 2050 0 /\n";
+
+// The fresh water of PVT region 1 and the brine of PVT region 2.
+constexpr auto freshWaterAndBrine = "PVTW\n"
+                                    " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
+                                    " 75.0 1.01 2.5E-5 0.9 0.0 /\n"
+                                    "DENSITY\n"
+                                    " 800.0 1000.0 1.0 /\n"
+                                    " 800.0 1150.0 1.0 /\n";
+
+// Two equilibration regions and two PVT regions over the column. The arguments
+// give the EQLNUM and PVTNUM records, the two EQUIL records, and the PVTW and
+// DENSITY of the two PVT regions.
+std::string twoWaterRegionsDeck(const std::string& eqlnum, const std::string& pvtnum,
+                                const std::string& equil = twoBlockEquil,
+                                const std::string& water = freshWaterAndBrine)
+{
+    return withTwoPvtRegions(deckString(equil,
+                           "EQLDIMS\n2 /\n",
+                           "REGIONS\n"
+                           "EQLNUM\n" + eqlnum + " /\n"
+                           "PVTNUM\n" + pvtnum + " /\n",
+                           "ZMFVD\n"
+                           " 2000   0 0.7 0.3\n"
+                           " 2100   0 0.3 0.7  /\n"
+                           " 2000   0 0.7 0.3\n"
+                           " 2100   0 0.3 0.7  /\n",
+                           "RTEMP\n100\n/\n",
+                           "OIL\nGAS\nWATER\n",
+                           "SWFN\n 0.01 0.0 0.0\n 1.00 1.0 0.0 /\n"
+                           "SGFN\n 0.00 0.0 0.0\n 0.99 1.0 0.0 /\n"
+                           "SOF3\n 0.00 0.0 0.0\n 0.99 1.0 1.0 /\n"
+                           + water));
+}
+
+// The water density of a PVT region above at a pressure in bar.
+Scalar waterDensity(const Scalar surfaceDensity, const Scalar bw, const Scalar cw,
+                    const Scalar pressure)
+{
+    const Scalar x = cw * (pressure - 75.0);
+    return surfaceDensity * (1.0 + x + 0.5 * x * x) / bw;
 }
 
 } // Anonymous namespace
@@ -1017,6 +1080,155 @@ BOOST_AUTO_TEST_CASE(GasZoneMeetingTheWaterAnchorsIt)
     BOOST_CHECK_CLOSE(states[10].saturation(WaterFluidSystem::gasPhaseIdx),
                       1.0 - connateSw, 1e-10);
     BOOST_CHECK_CLOSE(states[11].saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(EachWaterColumnTakesThePvtRegionOfItsCells)
+{
+    // The lower block holds brine: its water column is steeper than the fresh
+    // water column of the upper block, and than its own column would be in the
+    // first PVT region.
+    std::vector<int> regions(20, 0);
+    std::fill(regions.begin() + 10, regions.end(), 1);
+    const std::vector<Scalar> connate(20, connateSw);
+    const std::vector<Scalar> maxWater(20, 1.0);
+    const WaterEquilFixture fix(twoWaterRegionsDeck("10*1 10*2", "10*1 10*2"));
+    const auto states = fix.compute(regions, connate, maxWater, regions).fluidStates();
+    const auto first = fix.compute(regions, connate, maxWater).fluidStates();
+
+    const auto pressure = [](const auto& fs) {
+        return Opm::getValue(fs.pressure(WaterFluidSystem::waterPhaseIdx));
+    };
+    // Cells 8 and 9 lie below the upper contact at 2035 m, 18 and 19 below the
+    // lower one at 2085 m.
+    const Scalar fresh = impliedDensity(pressure(states[8]), pressure(states[9]));
+    const Scalar brine = impliedDensity(pressure(states[18]), pressure(states[19]));
+    const Scalar pFresh = 0.5 * (pressure(states[8]) + pressure(states[9])) / barsa;
+    const Scalar pBrine = 0.5 * (pressure(states[18]) + pressure(states[19])) / barsa;
+    BOOST_CHECK_CLOSE(fresh, waterDensity(1000.0, 1.03, 4.0e-5, pFresh), 0.01);
+    BOOST_CHECK_CLOSE(brine, waterDensity(1150.0, 1.01, 2.5e-5, pBrine), 0.01);
+    BOOST_CHECK_CLOSE(impliedDensity(pressure(first[18]), pressure(first[19])),
+                      waterDensity(1000.0, 1.03, 4.0e-5, pBrine), 0.01);
+}
+
+BOOST_AUTO_TEST_CASE(OneEquilibrationRegionHoldsTheWaterOfEachPvtRegion)
+{
+    // One equilibration region over both PVT regions, with its contact at 2035 m
+    // among the fresh-water cells. The hydrocarbon and the fresh water are as
+    // without the second PVT region, and the brine column starts from the same
+    // contact.
+    const std::vector<int> eqlnum(20, 0);
+    std::vector<int> pvtnum(20, 0);
+    std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
+    const std::vector<Scalar> connate(20, connateSw);
+    const std::vector<Scalar> maxWater(20, 1.0);
+    const WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "10*1 10*2"));
+    const auto states = fix.compute(eqlnum, connate, maxWater, pvtnum).fluidStates();
+    const auto first = fix.compute(eqlnum, connate, maxWater).fluidStates();
+
+    const auto pressure = [](const auto& fs, const unsigned phaseIdx) {
+        return Opm::getValue(fs.pressure(phaseIdx));
+    };
+    constexpr auto water = WaterFluidSystem::waterPhaseIdx;
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            BOOST_CHECK_EQUAL(pressure(states[c], WaterFluidSystem::oilPhaseIdx),
+                              pressure(first[c], WaterFluidSystem::oilPhaseIdx));
+            if (c < 10) {
+                BOOST_CHECK_EQUAL(pressure(states[c], water), pressure(first[c], water));
+            }
+        }
+    }
+
+    // Cells 18 and 19 hold brine. Cell 10 lies 17.5 m below the contact, where
+    // the brine exceeds the fresh water by the weight of the denser column.
+    const Scalar pBrine = 0.5 * (pressure(states[18], water) + pressure(states[19], water));
+    BOOST_CHECK_CLOSE(impliedDensity(pressure(states[18], water), pressure(states[19], water)),
+                      waterDensity(1150.0, 1.01, 2.5e-5, pBrine / barsa), 0.01);
+    const Scalar pCell10 = 0.5 * (pressure(states[10], water) + pressure(first[10], water));
+    BOOST_CHECK_CLOSE(pressure(states[10], water) - pressure(first[10], water),
+                      (waterDensity(1150.0, 1.01, 2.5e-5, pCell10 / barsa)
+                       - waterDensity(1000.0, 1.03, 4.0e-5, pCell10 / barsa))
+                          * gravity * (fix.depths[10] - 2035.0),
+                      0.1);
+}
+
+BOOST_AUTO_TEST_CASE(DatumInDifferentWatersIsRejected)
+{
+    // A datum below the contact gives the pressure of both the fresh water and
+    // the brine, which cannot both reach the contact at one pressure.
+    const WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "10*1 10*2",
+                                                    "EQUIL\n"
+                                                    " 2045 150 2035 0 2000 0 /\n"
+                                                    " 2060 155 2085 0 2050 0 /\n"));
+    std::vector<int> pvtnum(20, 0);
+    std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
+    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0),
+                                      std::vector<Scalar>(20, connateSw),
+                                      std::vector<Scalar>(20, 1.0), pvtnum),
+                          std::runtime_error,
+                          [](const std::runtime_error& error) {
+                              return std::string_view{error.what()}.find(
+                                  "the water of its PVT regions 1 and 2 reaches the contact")
+                                  != std::string_view::npos;
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(DatumInTheSameWaterIsAccepted)
+{
+    // PVT regions that share their water, as when they differ in the rock only,
+    // equilibrate as one.
+    const WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "10*1 10*2",
+                                                    "EQUIL\n"
+                                                    " 2045 150 2035 0 2000 0 /\n"
+                                                    " 2060 155 2085 0 2050 0 /\n",
+                                                    "PVTW\n"
+                                                    " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
+                                                    " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
+                                                    "DENSITY\n"
+                                                    " 800.0 1000.0 1.0 /\n"
+                                                    " 800.0 1000.0 1.0 /\n"));
+    const std::vector<int> eqlnum(20, 0);
+    std::vector<int> pvtnum(20, 0);
+    std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
+    const std::vector<Scalar> connate(20, connateSw);
+    const std::vector<Scalar> maxWater(20, 1.0);
+    const auto states = fix.compute(eqlnum, connate, maxWater, pvtnum).fluidStates();
+    const auto single = fix.compute(eqlnum, connate, maxWater).fluidStates();
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        for (const auto phaseIdx : {WaterFluidSystem::oilPhaseIdx,
+                                    WaterFluidSystem::waterPhaseIdx}) {
+            BOOST_CHECK_EQUAL(Opm::getValue(states[c].pressure(phaseIdx)),
+                              Opm::getValue(single[c].pressure(phaseIdx)));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(PvtRegionsMayVaryWithoutWater)
+{
+    // Without water the PVT regions take no part in the equilibration.
+    const EquilFixture fix(withTwoPvtRegions(deckString(
+        "EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n",
+        "REGIONS\nPVTNUM\n10*1 10*2 /\n")));
+    std::vector<int> pvtnum(20, 0);
+    std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
+    const auto states = fix.compute(std::vector<int>(20, 0), {}, {}, pvtnum).fluidStates();
+    const auto single = fix.compute(std::vector<int>(20, 0)).fluidStates();
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        BOOST_CHECK_EQUAL(Opm::getValue(states[c].pressure(FluidSystem::oilPhaseIdx)),
+                          Opm::getValue(single[c].pressure(FluidSystem::oilPhaseIdx)));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(InvalidPvtnumIsRejected)
+{
+    const WaterEquilFixture fix(twoWaterRegionsDeck("10*1 10*2", "10*1 10*2"));
+    std::vector<int> regions(20, 0);
+    std::fill(regions.begin() + 10, regions.end(), 1);
+    auto pvtnum = regions;
+    pvtnum.back() = 2;
+    BOOST_CHECK_THROW(fix.compute(regions, std::vector<Scalar>(20, connateSw),
+                                  std::vector<Scalar>(20, 1.0), pvtnum),
+                      std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(CoincidentContactsKeepTheGasRoot)
