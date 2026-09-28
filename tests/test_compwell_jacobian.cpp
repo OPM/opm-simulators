@@ -386,6 +386,50 @@ void checkWellboreContentsDerivatives()
     }
 }
 
+// With water alone in the wellbore every derivative of the flash is multiplied
+// by 1 - w = 0, so the contents from a scalar flash match those from the AD
+// flash, which CompWell relies on to skip the AD flash.
+void checkWaterFilledWellboreContents()
+{
+    const auto pressure = ContentsEvaluation::createVariable(p0, pIdx);
+    const auto water_fraction = ContentsEvaluation::createVariable(1.0, wIdx);
+    const auto z = compositionVariables();
+    const auto ad_flash = wellboreContentsAt(pressure, z, water_fraction);
+
+    std::array<Scalar, numComponents> z_value;
+    for (int c = 0; c < numComponents; ++c) {
+        z_value[c] = z[c].value();
+    }
+    auto fs = makeWellboreFluidState<Scalar>(p0, z_value, temperature);
+    Opm::flashWellboreFluidState(fs, flash_tolerance);
+    const auto scalar_flash
+        = Opm::wellboreContents(fs, water_fraction, waterDensity(pressure), wellbore_volume);
+
+    const auto checkSame = [](const ContentsEvaluation& expected,
+                              const ContentsEvaluation& actual,
+                              const std::string& what) {
+        const Scalar tol = 1.e-12 * std::max(1.0, std::abs(expected.value()));
+        BOOST_CHECK_MESSAGE(std::abs(expected.value() - actual.value()) <= tol,
+            what << ": AD flash " << expected.value() << ", scalar flash " << actual.value());
+        for (int s = 0; s < numContentsDeriv; ++s) {
+            const Scalar deriv_tol = 1.e-12 * std::max(1.0, std::abs(expected.derivative(s)));
+            BOOST_CHECK_MESSAGE(std::abs(expected.derivative(s) - actual.derivative(s)) <= deriv_tol,
+                what << "/dx[" << s << "]: AD flash " << expected.derivative(s)
+                     << ", scalar flash " << actual.derivative(s));
+        }
+    };
+
+    for (int c = 0; c < numComponents; ++c) {
+        checkSame(ad_flash.component_masses[c], scalar_flash.component_masses[c],
+                  "mass[" + std::to_string(c) + "]");
+        checkSame(ad_flash.mass_fractions[c], scalar_flash.mass_fractions[c],
+                  "massfrac[" + std::to_string(c) + "]");
+    }
+    checkSame(ad_flash.water_mass, scalar_flash.water_mass, "water mass");
+    checkSame(ad_flash.water_mass_fraction, scalar_flash.water_mass_fraction, "water massfrac");
+    checkSame(ad_flash.density, scalar_flash.density, "density");
+}
+
 } // anonymous namespace
 
 BOOST_AUTO_TEST_CASE(WellboreFlashDerivatives)
@@ -398,6 +442,12 @@ BOOST_AUTO_TEST_CASE(WellboreContentsDerivatives)
 {
     registerFluidSystemComponents();
     checkWellboreContentsDerivatives();
+}
+
+BOOST_AUTO_TEST_CASE(WaterFilledWellboreContents)
+{
+    registerFluidSystemComponents();
+    checkWaterFilledWellboreContents();
 }
 
 BOOST_AUTO_TEST_CASE(WellboreFlashDerivativesWithVolumeShift)
