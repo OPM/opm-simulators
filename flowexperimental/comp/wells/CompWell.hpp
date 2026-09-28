@@ -158,6 +158,10 @@ private:
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
 
+    // a well that cannot flow at its bhp limit is stopped for the time step:
+    // it takes a zero rate and its bhp floats
+    bool stopped_{false};
+
     // primary variables
     PrimaryVariables primary_variables_;
     // the last primary variables the well equations could be assembled for
@@ -229,6 +233,9 @@ private:
     bool updateWellControl(const SummaryState& summary_state,
                            SingleWellState& well_state,
                            bool check_rate_limits) const;
+
+    void updateStatus_(const Simulator& simulator,
+                       const SingleWellState& well_state);
 
     template <typename T>
     void

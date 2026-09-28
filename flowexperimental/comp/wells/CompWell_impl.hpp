@@ -111,6 +111,7 @@ calculateExplicitQuantities(const Simulator& simulator,
         this->prev_component_masses_ = contents.component_masses;
         this->prev_water_mass_ = contents.water_mass;
     }
+    updateStatus_(simulator, well_state);
 }
 
 template <typename TypeTag>
@@ -407,7 +408,9 @@ assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
     EvalWell control_eq;
-    if (this->well_ecl_.isProducer()) {
+    if (this->stopped_) {
+        control_eq = this->primary_variables_.getTotalRate();
+    } else if (this->well_ecl_.isProducer()) {
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
         assembleControlEqProd(well_state, prod_controls, control_eq);
     } else {
@@ -605,6 +608,36 @@ iterateWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
+updateStatus_(const Simulator& simulator,
+              const SingleWellState& well_state)
+{
+    // As the black-oil wells do by default, decide at the start of each time
+    // step whether the well can flow at its bhp limit. With a single
+    // connection, it can while the cell pressure is beyond the limit.
+    const auto& summary_state = simulator.vanguard().summaryState();
+    const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[0], 0);
+    assert(int_quantities);
+    const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
+    const bool producer = this->well_ecl_.isProducer();
+    this->stopped_ = producer
+        ? cell_pressure <= this->well_ecl_.productionControls(summary_state).bhp_limit
+        : cell_pressure >= this->well_ecl_.injectionControls(summary_state).bhp_limit;
+
+    const bool had_rate = well_state.get_total_surface_rate() != 0.;
+    if (this->stopped_ && had_rate) {
+        OpmLog::debug(fmt::format("Well {} cannot flow at its bhp limit and is stopped", this->name()));
+    } else if (!this->stopped_ && !had_rate) {
+        // As at a report step, the well restarts from a nonzero rate: a rate
+        // control at a zero rate can leave the well matrix singular.
+        OpmLog::debug(fmt::format("Well {} can flow again and is reopened", this->name()));
+        const Scalar rate = 10. * unit::cubic(unit::meter) / unit::day;
+        this->primary_variables_.setTotalRate(producer ? -rate : rate);
+    }
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
 solveEqAndUpdateWellState(SingleWellState& well_state)
 {
    BVectorWell dx_well(1);
@@ -649,6 +682,9 @@ CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
     this->primary_variables_.updateNewton(dwells, this->dwell_fraction_max_, this->dbhp_max_rel_);
+    if (this->stopped_) {
+        this->primary_variables_.setTotalRate(0.);
+    }
 }
 
 template <typename TypeTag>
@@ -766,6 +802,9 @@ updateWellControl(const SummaryState& summary_state,
                   SingleWellState& well_state,
                   const bool check_rate_limits) const
 {
+    if (this->stopped_) {
+        return false;
+    }
     std::string from;
     if (this->well_ecl_.isInjector()) {
         from = WellInjectorCMode2String(well_state.injection_cmode);

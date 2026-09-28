@@ -88,6 +88,8 @@ public:
 
     void updateNewton(const BVectorWell& dwells, Scalar dwell_fraction_max, Scalar dbhp_max_rel);
 
+    void setTotalRate(Scalar rate);
+
     // moves the primary variables half of the way to those of other
     void moveHalfwayTo(const CompWellPrimaryVariables& other);
 
