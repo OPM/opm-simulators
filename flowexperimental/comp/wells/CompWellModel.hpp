@@ -142,7 +142,7 @@ public:
     void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
     // some functions to compile
-    bool addMatrixContributions() const { return false; }
+    bool addMatrixContributions() const { return true; }
     const Schedule& schedule() const { return schedule_; }
     auto begin() const { return well_container_.begin(); }
     auto end() const { return well_container_.end(); }

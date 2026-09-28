@@ -89,6 +89,12 @@ public:
 
     void apply(BVector& r) const;
 
+    // subtract the well's Schur complement C^T D^-1 B from the
+    // reservoir Jacobian, so that the reservoir system the Newton
+    // solves is the reduced system of the coupled reservoir-well one
+    template <class SparseMatrixAdapter>
+    void extract(SparseMatrixAdapter& jacobian) const;
+
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
 private:
