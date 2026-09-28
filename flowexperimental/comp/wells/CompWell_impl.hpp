@@ -38,8 +38,10 @@ CompWell<TypeTag>::
 CompWell(const Well& well,
          int index_of_well,
          const std::vector<CompConnectionData>& well_connection_data,
+         const std::size_t eos_region,
          const CompositionalConfig::EOSType eos_type)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
+  , eos_region_(eos_region)
   , eos_type_(eos_type)
 {
 }
@@ -63,6 +65,7 @@ calculateExplicitQuantities(const Simulator& simulator,
     {
         // flash calculation in the wellbore to obtain the explicit
         // component masses
+        const typename FluidSystem::ScopedEosRegion eos_region{eos_region_};
         auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
 
         flashFluidState_(fluid_state_scalar);
@@ -96,6 +99,7 @@ CompWell<TypeTag>::
 updateTotalMass()
 {
     // flash calculation in the wellbore
+    const typename FluidSystem::ScopedEosRegion eos_region{eos_region_};
     auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
 
     flashFluidState_(fluid_state);
@@ -642,8 +646,9 @@ updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_s
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
-    // The stock-tank flash keeps Peng-Robinson until the surface equation of
-    // state is supported.
+    // The stock-tank flash keeps the first EOS region and Peng-Robinson until
+    // the surface equation of state is supported.
+    const typename FluidSystem::ScopedEosRegion eos_region{0};
     flashAtSurfaceConditions(fluid_state, surface_cond.pressure, surface_cond.temperature);
 
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
