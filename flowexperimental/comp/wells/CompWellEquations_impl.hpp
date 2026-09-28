@@ -92,6 +92,28 @@ clear()
 template <typename Scalar, int numWellEq, int numEq>
 void
 CompWellEquations<Scalar, numWellEq, numEq>::
+sumAndPinRows(const int last_row, const int variable_offset)
+{
+    auto& D = duneD_[0][0];
+    auto& residual = resWell_[0];
+    for (int row = 0; row < last_row; ++row) {
+        D[last_row] += D[row];
+        residual[last_row] += residual[row];
+        D[row] = 0.0;
+        D[row][row + variable_offset] = 1.0;
+        residual[row] = 0.0;
+    }
+    for (auto& B : duneB_[0]) {
+        for (int row = 0; row < last_row; ++row) {
+            B[last_row] += B[row];
+            B[row] = 0.0;
+        }
+    }
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
 solve(BVectorWell& dx_well) const
 {
     invDuneD_.mv(resWell_, dx_well);
