@@ -29,6 +29,8 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -89,7 +91,8 @@ public:
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             CompositionalConfig::EOSType eos_type);
 
     void init() override;
 
@@ -126,6 +129,9 @@ private:
     // primary variables
     PrimaryVariables primary_variables_;
     WellEquations well_equations_;
+
+    // equation of state of the wellbore flash at reservoir conditions
+    CompositionalConfig::EOSType eos_type_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept
