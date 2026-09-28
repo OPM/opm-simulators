@@ -109,9 +109,9 @@ update_injector_targets(const Well& well,
             break;
         case InjectorType::GAS:
         case InjectorType::OIL: {
-            // WINJGAS gives the injected hydrocarbon stream of oil injectors too,
-            // since there is no WINJOIL.
-            const auto& inj_composition = well.getInjectionProperties().gasInjComposition();
+            const auto& injection = well.getInjectionProperties();
+            const auto& inj_composition = inj_controls.injector_type == InjectorType::OIL
+                ? injection.oilInjComposition() : injection.gasInjComposition();
             assert(this->total_molar_fractions.size() == inj_composition.size());
             // TODO: this might not be correct when crossing flow is involved
             this->total_molar_fractions = inj_composition;

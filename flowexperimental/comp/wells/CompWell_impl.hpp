@@ -184,7 +184,9 @@ updateSurfaceQuantities(const Simulator& simulator)
             this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = 1.;
         }
     } else if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
-        const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
+        const auto& injection = this->well_ecl_.getInjectionProperties();
+        const auto& inj_composition = injection.injectorType == InjectorType::OIL
+            ? injection.oilInjComposition() : injection.gasInjComposition();
         FluidState<Scalar> fluid_state;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
