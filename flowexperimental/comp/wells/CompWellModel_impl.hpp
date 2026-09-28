@@ -33,6 +33,10 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -46,8 +50,20 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , comp_config_(ecl_state_.compositionalConfig())
     , comp_well_states_(comp_config_)
     , last_valid_comp_well_states_(comp_config_)
+    , dwell_fraction_max_(wellNewtonLimit_<Parameters::DwellFractionMax<Scalar>>())
+    , dbhp_max_rel_(wellNewtonLimit_<Parameters::DbhpMaxRel<Scalar>>())
 {
     local_num_cells_ = simulator.gridView().size(0);
+}
+
+template <typename TypeTag>
+template <class Param>
+typename CompWellModel<TypeTag>::Scalar
+CompWellModel<TypeTag>::
+wellNewtonLimit_()
+{
+    return Parameters::IsSet<Param>(/*errorIfNotRegistered=*/false) ? Parameters::Get<Param>()
+                                                                    : Param::value;
 }
 
 template <typename TypeTag>
@@ -137,7 +153,8 @@ createWellContainer()
             continue;
         }
 
-        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w]));
+        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
+                                                                          dwell_fraction_max_, dbhp_max_rel_));
     }
 }
 
