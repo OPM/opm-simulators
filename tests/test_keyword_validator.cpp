@@ -786,6 +786,20 @@ BOOST_AUTO_TEST_CASE(licenses_is_warned_about_but_not_critical)
     }
 }
 
+BOOST_AUTO_TEST_CASE(cvcrit_is_warned_about_but_not_critical)
+{
+    const auto deck = Parser {}.parseString(R"(
+SCHEDULE
+CVCRIT
+  0.5 6 0.000001 20 /
+)");
+    std::vector<ValidationError> errors;
+    flowKeywordValidator().validateDeckKeyword(deck["CVCRIT"].back(), errors);
+
+    BOOST_REQUIRE_EQUAL(errors.size(), 1);
+    BOOST_CHECK(!errors.front().critical);
+}
+
 BOOST_AUTO_TEST_CASE(winjgas_makeup_gas_and_stage_items_are_flagged)
 {
     // The WINJGAS handler ignores MAKEUPGAS and STAGE, so supplying them

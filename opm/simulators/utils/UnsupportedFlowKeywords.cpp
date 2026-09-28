@@ -105,6 +105,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"COORDSYS", {false, std::string{"Multiple grid systems not supported, COORDSYS is ignored."}}},
         {"COPYBOX", {true, std::nullopt}},
         {"CRITPERM", {true, std::nullopt}},
+        {"CVCRIT", {false, std::nullopt}},
         {"DCQDEFN", {true, std::nullopt}},
         {"DEBUG", {false, std::nullopt}},
         {"DELAYACT", {true, std::nullopt}},
