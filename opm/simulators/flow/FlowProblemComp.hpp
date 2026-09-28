@@ -144,6 +144,10 @@ public:
         this->initializeSimulatorTime_();
 
         this->initFluidSystem_();
+        if (eclState.getSimulationConfig().rock_config().active()) {
+            throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
+                                     "by compositional modeling yet");
+        }
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)

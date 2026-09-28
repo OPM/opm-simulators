@@ -320,8 +320,15 @@ public:
         // Compute the remaining quantities
         /////////////
 
-        // porosity
+        // porosity, scaled with the pressure by the rock compressibility of the
+        // cell's region as in the black-oil model
         porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
+        const Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
+        if (rockCompressibility > 0.0) {
+            const Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
+            const Evaluation x = rockCompressibility * (p - rockRefPressure);
+            porosity_ *= 1.0 + x + 0.5 * x * x;
+        }
         Valgrind::CheckDefined(porosity_);
 
         // intrinsic permeability
