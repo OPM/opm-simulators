@@ -92,6 +92,7 @@ private:
     void initSingleInjector(const Well& well,
                             const std::vector<Scalar>& cell_pressures,
                             const Scalar temperature,
+                            const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                             const std::vector<CompConnectionData>& conn_data,
                             const SummaryState& summary_state);
 
