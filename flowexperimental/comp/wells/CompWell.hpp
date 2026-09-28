@@ -64,7 +64,8 @@ public:
     // it is part of the secondary variables used in the assembling of the well equations
     struct SurfaceConditons
     {
-        static constexpr int num_phases = 2;
+        // one entry per fluid-system phase, so a water entry only with a water phase
+        static constexpr int num_phases = FluidSystem::numPhases;
         std::array<EvalWell, num_phases> surface_densities_{};
         std::array<EvalWell, num_phases> volume_fractions_{};
         std::array<std::array<EvalWell, num_comp>, num_phases> mass_fractions_{};
@@ -80,16 +81,28 @@ public:
         // TODO: it looks like that we can have a concept of component mass density?
         EvalWell massFraction(int comp_idx) const {
             EvalWell mass = 0.;
-            for (unsigned  p = 0; p < num_phases; ++p) {
+            // water carries no hydrocarbon components, so the miscible phases suffice
+            for (unsigned  p = 0; p < FluidSystem::numMisciblePhases; ++p) {
                 mass += surface_densities_[p] * volume_fractions_[p] * mass_fractions_[p][comp_idx];
             }
             return mass / density();
+        }
+
+        // mass fraction of the water phase in the surface stream
+        EvalWell waterMassFraction() const {
+            if constexpr (FluidSystem::waterEnabled) {
+                return surface_densities_[FluidSystem::waterPhaseIdx] *
+                       volume_fractions_[FluidSystem::waterPhaseIdx] / density();
+            } else {
+                return EvalWell{0.};
+            }
         }
     };
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             unsigned pvt_region_idx);
 
     void init() override;
 
@@ -125,6 +138,9 @@ public:
 
 private:
 
+    // PVT region of the connection cell, which gives the water properties
+    const unsigned pvt_region_idx_;
+
     // primary variables
     PrimaryVariables primary_variables_;
     WellEquations well_equations_;
@@ -140,6 +156,11 @@ private:
     std::array<Scalar, num_comp> prev_component_masses_{0.};
     // the current mass for each component in wellbore, derived from the primary variables
     std::array<EvalWell, num_comp> component_masses_{0.};
+    // water in the wellbore, kept outside the flash: mass at the start of the
+    // time step, current mass and current mass fraction of the wellbore mixture
+    Scalar prev_water_mass_{0.};
+    EvalWell water_mass_{0.};
+    EvalWell water_mass_fraction_{0.};
     // quantities used to calculate the quantities under the surface conditions
     SurfaceConditons surface_conditions_;
 
@@ -189,7 +210,15 @@ private:
 
     template <typename T>
     void
-    updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state);
+    updateSurfaceCondition_(const StandardCond& surface_cond,
+                            const Scalar surface_water_density,
+                            FluidState<T>& fluid_state,
+                            const T& water_mass_fraction);
+
+    // water density at the given pressure and temperature via the fluid
+    // system's water PVT of the well's PVT region
+    template <typename T>
+    T waterDensity_(const T& pressure, const Scalar temperature) const;
 
     template <typename T>
     void

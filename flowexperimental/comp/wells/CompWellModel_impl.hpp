@@ -143,7 +143,11 @@ createWellContainer()
             continue;
         }
 
-        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w]));
+        // as for the black-oil wells, the PVT region of the first connection cell
+        const unsigned pvt_region_idx
+            = simulator_.problem().pvtRegionIndex(well_connection_data_[w].front().cell_index);
+        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
+                                                                          pvt_region_idx));
     }
 }
 
