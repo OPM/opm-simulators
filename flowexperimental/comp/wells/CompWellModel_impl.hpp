@@ -128,7 +128,7 @@ CompWellModel<TypeTag>::
 createWellContainer()
 {
     const auto nw = wells_ecl_.size();
-    const auto eos_type = ecl_state_.compositionalConfig().eosType(0);
+    const auto& problem = simulator_.problem();
     well_container_.clear();
     for (auto w = 0 * nw; w < nw; ++w) {
         const auto& well_name = wells_ecl_[w].name();
@@ -138,8 +138,11 @@ createWellContainer()
             continue;
         }
 
+        // The wellbore takes the EOS region of the cell of its first connection.
+        const auto cell = well_connection_data_[w].front().cell_index;
         well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(
-            wells_ecl_[w], w, well_connection_data_[w], eos_type));
+            wells_ecl_[w], w, well_connection_data_[w],
+            problem.eosRegionIndex(cell), problem.getEosType(cell)));
     }
 }
 
