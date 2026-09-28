@@ -1444,8 +1444,8 @@ protected:
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
 
-        simulator.setStartTime(schedule.getStartTime());
-        simulator.setEndTime(schedule.simTime(schedule.size() - 1));
+        simulator.setStartTime(TimeService::to_time_t(schedule.getStartTime()));
+        simulator.setEndTime(TimeService::to_time_t(schedule.simTime(schedule.size() - 1)));
 
         // Represent initialization as a zero-length episode before report step zero.
         simulator.setEpisodeIndex(-1);

@@ -32,6 +32,7 @@
 
 #include <opm/common/TimingMacros.hpp> // OPM_TIMEBLOCK
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -430,8 +431,8 @@ public:
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
 
-            const auto start_time = boost::posix_time::
-                from_time_t(simulator_.vanguard().schedule().getStartTime());
+            const auto start_time = boost::posix_time::from_time_t
+                (TimeService::to_time_t(simulator_.vanguard().schedule().getStartTime()));
 
             if (this->collectOnIORank_.isIORank()) {
                 this->inplace_ = *this->outputModule_->initialInplace();

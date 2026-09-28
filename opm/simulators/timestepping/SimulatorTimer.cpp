@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
@@ -64,7 +65,8 @@ namespace Opm
 
         end_step_ = end_step;
         setCurrentStepNum(report_step);
-        start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
+        start_date_ = boost::posix_time::from_time_t
+            (TimeService::to_time_t(schedule.getStartTime())).date();
     }
 
     /// Whether the current step is the first step.

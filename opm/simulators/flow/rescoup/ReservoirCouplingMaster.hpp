@@ -118,7 +118,8 @@ public:
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
-    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
+    double getSimulationStartDate() const
+    { return TimeService::to_time_t(this->schedule_.getStartTime()); }
     double getSlaveActivationDate(int index) const { return this->slave_activation_dates_[index]; }
     const double *getSlaveActivationDates() const { return this->slave_activation_dates_.data(); }
     MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
@@ -300,8 +301,8 @@ private:
     std::vector<std::string> slave_names_;
 
     // The start dates are in whole seconds since the epoch. We use a double to store the value
-    // since both schedule_.getStartTime() and schedule_.stepLength(report_step) returns
-    // a double value representing whole seconds.
+    // since both schedule_.getStartTime(), converted to seconds since the epoch, and
+    // schedule_.stepLength(report_step) represent whole seconds.
     // However, note that schedule_[report_step].start_time() returns a time_point
     // which can include milliseconds. The double values are also convenient when we need to
     // to add fractions of seconds for sub steps to the start date.
