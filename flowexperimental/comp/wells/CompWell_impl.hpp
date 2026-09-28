@@ -37,8 +37,10 @@ template <typename TypeTag>
 CompWell<TypeTag>::
 CompWell(const Well& well,
          int index_of_well,
-         const std::vector<CompConnectionData>& well_connection_data)
+         const std::vector<CompConnectionData>& well_connection_data,
+         const CompositionalConfig::EOSType eos_type)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
+  , eos_type_(eos_type)
 {
 }
 
@@ -640,6 +642,8 @@ updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_s
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
+    // The stock-tank flash keeps Peng-Robinson until the surface equation of
+    // state is supported.
     flashAtSurfaceConditions(fluid_state, surface_cond.pressure, surface_cond.temperature);
 
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
@@ -666,7 +670,7 @@ flashFluidState_(FluidState<T>& fluid_state)
 
     // The wellbore flash is a free function so it can be unit tested in
     // isolation (see tests/test_compwell_jacobian.cpp).
-    flashWellboreFluidState(fluid_state);
+    flashWellboreFluidState(fluid_state, 1.e-6, eos_type_);
 }
 
 } // end of namespace Opm
