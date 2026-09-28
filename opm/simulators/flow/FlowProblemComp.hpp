@@ -437,6 +437,7 @@ protected:
             getEosType(),
             vanguard.cellCenterDepths(),
             eqlnum,
+            this->pvtnum_,
             vanguard.gridView().comm(),
             this->gravity()[dimWorld - 1],
             this->numPressurePointsEquil(),
