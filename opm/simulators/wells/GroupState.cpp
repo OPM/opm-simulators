@@ -103,6 +103,12 @@ void GroupState<Scalar>::update_production_rates(const std::string& gname,
 }
 
 template<class Scalar>
+bool GroupState<Scalar>::has_network_leaf_node_injection_rates(const std::string& gname) const
+{
+    return this->m_network_leaf_node_injection_rates.count(gname) > 0;
+}
+
+template<class Scalar>
 void GroupState<Scalar>::update_network_leaf_node_injection_rates(const std::string& gname,
                                                  const std::vector<Scalar>& rates)
 {
@@ -163,6 +169,12 @@ GroupState<Scalar>::network_leaf_node_injection_rates(const std::string& gname) 
         throw std::logic_error("No such group: " + gname);
 
     return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::has_network_leaf_node_production_rates(const std::string& gname) const
+{
+    return this->m_network_leaf_node_production_rates.count(gname) > 0;
 }
 
 template<class Scalar>
