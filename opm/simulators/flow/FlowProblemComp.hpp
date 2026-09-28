@@ -144,6 +144,7 @@ public:
         this->initializeSimulatorTime_();
 
         this->initFluidSystem_();
+        this->updateNum("EOSNUM", eosnum_, eclState.getTableManager().getTabdims().getNumEosRes());
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -428,7 +429,7 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
-            getEosType(),
+            eosnum_,
             vanguard.cellCenterDepths(),
             eqlnum,
             vanguard.gridView().comm(),
@@ -635,6 +636,8 @@ private:
     FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
+    // Zero-based reservoir EOS region of each cell, empty for a single region.
+    std::vector<int> eosnum_;
 
     bool zmf_initialization_ {false};
 
