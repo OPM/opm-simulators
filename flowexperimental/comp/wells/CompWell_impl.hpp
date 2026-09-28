@@ -118,30 +118,40 @@ void
 CompWell<TypeTag>::
 updateTotalMass()
 {
-    // flash calculation in the wellbore
-    auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+    const EvalWell water_fraction = this->primary_variables_.getWaterVolumeFraction();
+    const auto update = [this, &water_fraction](const auto& hydrocarbons) {
+        EvalWell water_density = 0.;
+        if constexpr (FluidSystem::waterEnabled) {
+            water_density = waterDensity_(this->primary_variables_.getBhp(),
+                                          getValue(hydrocarbons.temperature(0)));
+        }
 
-    flashFluidState_(fluid_state);
+        // The AD derivatives of the wellbore contents with respect to the
+        // wellbore primary variables, including the dependence that flows
+        // through the flash, are checked against finite differences in
+        // tests/test_compwell_jacobian.cpp.
+        const auto contents = wellboreContents(hydrocarbons,
+                                               water_fraction,
+                                               water_density,
+                                               this->wellbore_volume_);
+        this->new_component_masses_ = contents.component_masses;
+        this->new_water_mass_ = contents.water_mass;
+        this->mass_fractions_ = contents.mass_fractions;
+        this->water_mass_fraction_ = contents.water_mass_fraction;
+        this->fluid_density_ = contents.density;
+    };
 
-    EvalWell water_density = 0.;
-    if constexpr (FluidSystem::waterEnabled) {
-        water_density = waterDensity_(this->primary_variables_.getBhp(),
-                                      getValue(fluid_state.temperature(0)));
+    // With water alone in the wellbore every derivative of the flash is
+    // multiplied by 1 - water_fraction = 0, so the scalar flash is enough.
+    if (getValue(water_fraction) < 1.) {
+        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+        flashFluidState_(fluid_state);
+        update(fluid_state);
+    } else {
+        auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+        flashFluidState_(fluid_state);
+        update(fluid_state);
     }
-
-    // The AD derivatives of the wellbore contents with respect to the
-    // wellbore primary variables, including the dependence that flows
-    // through the flash, are checked against finite differences in
-    // tests/test_compwell_jacobian.cpp.
-    const auto contents = wellboreContents(fluid_state,
-                                           this->primary_variables_.getWaterVolumeFraction(),
-                                           water_density,
-                                           this->wellbore_volume_);
-    this->new_component_masses_ = contents.component_masses;
-    this->new_water_mass_ = contents.water_mass;
-    this->mass_fractions_ = contents.mass_fractions;
-    this->water_mass_fraction_ = contents.water_mass_fraction;
-    this->fluid_density_ = contents.density;
 }
 
 template <typename TypeTag>
@@ -157,7 +167,15 @@ updateSurfaceQuantities(const Simulator& simulator)
     if constexpr (FluidSystem::waterEnabled) {
         surface_water_density = tables.getDensityTable()[0].water;
     }
-    if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
+    if (this->isWaterInjector_()) {
+        // The stream is water alone, so the hydrocarbon surface split carries
+        // no weight and needs no flash.
+        if constexpr (FluidSystem::waterEnabled) {
+            this->surface_conditions_ = SurfaceConditons{};
+            this->surface_conditions_.surface_densities_[FluidSystem::waterPhaseIdx] = surface_water_density;
+            this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = 1.;
+        }
+    } else if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
         FluidState<Scalar> fluid_state;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
@@ -311,6 +329,20 @@ assembleWellEq(const Simulator& simulator,
 
     const auto& summary_state = simulator.vanguard().summaryState();
     assembleControlEq(well_state, summary_state);
+
+    if constexpr (FluidSystem::waterEnabled) {
+        // Every component row scales with the hydrocarbon share of the
+        // wellbore. Once the wellbore holds water alone, as a water injector's
+        // always does, the rows no longer determine the mole fractions and the
+        // well matrix is singular. Keep the mole fractions and balance the
+        // hydrocarbons as a whole instead.
+        const Scalar water_fraction = getValue(this->primary_variables_.getWaterVolumeFraction());
+        if (1. - water_fraction < min_hydrocarbon_fraction_) {
+            constexpr int first_mole_fraction = PrimaryVariables::QTotal + 1;
+            this->well_equations_.sumAndPinRows(FluidSystem::numComponents - 1,
+                                                first_mole_fraction);
+        }
+    }
 
     this->well_equations_.invert();
     // there will be num_comp mass balance equations for each component and one for the well control equations
@@ -565,9 +597,27 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
             surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
         }
     } else { // injector
-        // only gas injection yet
-        surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+        std::fill(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar{0.});
+        switch (this->well_ecl_.getInjectionProperties().injectorType) {
+        case InjectorType::WATER:
+            surface_phase_rates[FluidSystem::waterPhaseIdx] = total_rate;
+            break;
+        case InjectorType::OIL:
+            surface_phase_rates[FluidSystem::oilPhaseIdx] = total_rate;
+            break;
+        default:
+            surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+        }
     }
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
+isWaterInjector_() const
+{
+    return this->well_ecl_.isInjector() &&
+           this->well_ecl_.getInjectionProperties().injectorType == InjectorType::WATER;
 }
 
 template <typename TypeTag>
