@@ -92,6 +92,7 @@ public:
     CompWell(const Well& well,
              int index_of_well,
              const std::vector<CompConnectionData>& well_connection_data,
+             std::size_t eos_region,
              CompositionalConfig::EOSType eos_type);
 
     void init() override;
@@ -130,7 +131,9 @@ private:
     PrimaryVariables primary_variables_;
     WellEquations well_equations_;
 
-    // equation of state of the wellbore flash at reservoir conditions
+    // EOS region and equation of state of the wellbore flash at reservoir
+    // conditions, from the cell of the first connection
+    std::size_t eos_region_;
     CompositionalConfig::EOSType eos_type_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized
