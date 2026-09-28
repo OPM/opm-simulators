@@ -250,6 +250,15 @@ init(const SimulatorTimer& timer)
             // For restarts the simulator may have gotten some information
             // about the next timestep size from the OPMEXTRA field
             adaptiveTimeStepping_->setSuggestedNextStep(simulator_.timeStepSize());
+
+            // The time stepper above is initialised from the TUNING settings at
+            // the restart step, so apply the Newton settings from the same
+            // TUNING as well. These come from the restart file, or from the deck
+            // when the restart runs with --sched-restart=true (no TUNING_CHANGE
+            // event is raised at the restart step then).
+            if (enableTUNING) {
+                this->updateTUNING(sched_state.tuning());
+            }
         }
     }
 }
