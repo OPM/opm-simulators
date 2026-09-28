@@ -176,6 +176,9 @@ update_producer_targets(const Well& well,
     case Well::ProducerCMode::GRAT:
         this->surface_phase_rates[FluidSystem::gasPhaseIdx] = -prod_controls.gas_rate;
         break;
+    case Well::ProducerCMode::LRAT:
+        this->surface_phase_rates[FluidSystem::oilPhaseIdx] = -prod_controls.liquid_rate;
+        break;
     default:
         break;
     }
