@@ -225,6 +225,8 @@ public:
 
         // Update phases
         typename FluidSystem::template ParameterCache<Evaluation> paramCache(eos_type);
+        // the water properties of the cell's PVT region
+        paramCache.setRegionIndex(problem.pvtRegionIndex(elemCtx, dofIdx, timeIdx));
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
         paramCache.updatePhase(fluidState_, FluidSystem::gasPhaseIdx);
 
