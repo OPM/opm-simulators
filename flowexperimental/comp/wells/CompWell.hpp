@@ -29,6 +29,8 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <optional>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -101,7 +103,9 @@ public:
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             Scalar dwell_fraction_max,
+             Scalar dbhp_max_rel);
 
     void init() override;
 
@@ -117,6 +121,13 @@ public:
     void assembleWellEq(const Simulator& simulator,
                         const SingleWellState& well_state,
                         const double dt);
+
+    // assembleWellEq() that steps back towards the last primary variables it
+    // succeeded for when assembly fails for the current ones; returns false
+    // when it had to return to those
+    bool assembleWellEqWithBackoff(const Simulator& simulator,
+                                   SingleWellState& well_state,
+                                   const double dt);
 
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
@@ -135,8 +146,15 @@ public:
 
 private:
 
+    // largest change of a fraction and relative change of the bhp in one
+    // Newton update
+    const Scalar dwell_fraction_max_;
+    const Scalar dbhp_max_rel_;
+
     // primary variables
     PrimaryVariables primary_variables_;
+    // the last primary variables the well equations could be assembled for
+    std::optional<PrimaryVariables> assembled_primary_variables_;
     WellEquations well_equations_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized
