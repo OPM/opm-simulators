@@ -128,6 +128,7 @@ CompWellModel<TypeTag>::
 createWellContainer()
 {
     const auto nw = wells_ecl_.size();
+    const auto eos_type = ecl_state_.compositionalConfig().eosType(0);
     well_container_.clear();
     for (auto w = 0 * nw; w < nw; ++w) {
         const auto& well_name = wells_ecl_[w].name();
@@ -137,7 +138,8 @@ createWellContainer()
             continue;
         }
 
-        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w]));
+        well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(
+            wells_ecl_[w], w, well_connection_data_[w], eos_type));
     }
 }
 
