@@ -81,6 +81,12 @@ update_injector_targets(const Well& well,
                   "Well control must be specified for well " + this->name);
     }
 
+    // The wellbore equations cannot fill a wellbore with water yet.
+    if (inj_controls.injector_type == InjectorType::WATER) {
+        OPM_THROW(std::runtime_error,
+                  "Water injection is not supported yet for well " + this->name);
+    }
+
     const auto& inj_composition = injection_properties.gasInjComposition();
 #ifndef NDEBUG
     assert(this->total_molar_fractions.size() == inj_composition.size());
