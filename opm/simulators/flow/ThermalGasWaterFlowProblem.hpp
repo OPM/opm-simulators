@@ -39,10 +39,16 @@ public:
     ThermalGasWaterFlowProblem(Storage<Scalar> alpha0,
                                Storage<Scalar> alpha1,
                                Storage<Scalar> alpha2,
+                               Storage<Scalar> alpha3,
+                               Storage<Scalar> alpha4,
+                               Storage<Scalar> alpha5,
                                ModuleParams moduleParams)
         : alpha0_(alpha0)
         , alpha1_(alpha1)
         , alpha2_(alpha2)
+        , alpha3_(alpha3)
+        , alpha4_(alpha4)
+        , alpha5_(alpha5)
         , moduleParams_(moduleParams)
     {
     }
@@ -55,6 +61,12 @@ public:
             return alpha1_[globalIndex];
         } else if (boundaryFaceIndex == 2) {
             return alpha2_[globalIndex];
+        } else if (boundaryFaceIndex == 3) {
+            return alpha3_[globalIndex];
+        } else if (boundaryFaceIndex == 4) {
+            return alpha4_[globalIndex];
+        } else if (boundaryFaceIndex == 5) {
+            return alpha5_[globalIndex];
         } else {
             OPM_THROW(std::logic_error, "Invalid boundary face index");
         }
@@ -84,10 +96,28 @@ public:
         return alpha2_;
     }
 
+    Storage<Scalar>& alpha3()
+    {
+        return alpha3_;
+    }
+
+    Storage<Scalar>& alpha4()
+    {
+        return alpha4_;
+    }
+
+    Storage<Scalar>& alpha5()
+    {
+        return alpha5_;
+    }
+
 private:
     Storage<Scalar> alpha0_;
     Storage<Scalar> alpha1_;
     Storage<Scalar> alpha2_;
+    Storage<Scalar> alpha3_;
+    Storage<Scalar> alpha4_;
+    Storage<Scalar> alpha5_;
     ModuleParams moduleParams_;
 };
 
@@ -103,6 +133,9 @@ namespace gpuistl
             GpuBuffer<Scalar>(cpuProblem.alpha0()),
             GpuBuffer<Scalar>(cpuProblem.alpha1()),
             GpuBuffer<Scalar>(cpuProblem.alpha2()),
+            GpuBuffer<Scalar>(cpuProblem.alpha3()),
+            GpuBuffer<Scalar>(cpuProblem.alpha4()),
+            GpuBuffer<Scalar>(cpuProblem.alpha5()),
             ModuleParams {copy_to_gpu(cpuProblem.moduleParams().convectiveMixingModuleParam)});
     }
 
@@ -115,6 +148,9 @@ namespace gpuistl
             make_view(buffer.alpha0()),
             make_view(buffer.alpha1()),
             make_view(buffer.alpha2()),
+            make_view(buffer.alpha3()),
+            make_view(buffer.alpha4()),
+            make_view(buffer.alpha5()),
             ModuleParams {make_view(buffer.moduleParams().convectiveMixingModuleParam)});
     }
 
