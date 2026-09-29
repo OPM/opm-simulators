@@ -33,6 +33,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 #include <opm/material/Constants.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/PTFlashMethod.hpp>
@@ -382,6 +384,20 @@ public:
      */
     const Evaluation& mobility(unsigned phaseIdx) const
     { return mobility_[phaseIdx]; }
+
+    /*!
+     * \brief Mobility across a face. Directional relative permeabilities are
+     *        not supported, so the face direction is not used.
+     */
+    const Evaluation& mobility(unsigned phaseIdx, FaceDir::DirEnum) const
+    { return mobility_[phaseIdx]; }
+
+    /*!
+     * \brief Transmissibility multiplier from rock compaction, which the model
+     *        does not include.
+     */
+    Scalar rockCompTransMultiplier() const
+    { return 1.0; }
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity
