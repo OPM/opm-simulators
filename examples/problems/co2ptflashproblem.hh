@@ -280,9 +280,14 @@ public:
         return gravity_;
     }
 
-    Opm::CompositionalConfig::EOSType getEosType() const
+    Opm::CompositionalConfig::EOSType getEosType(unsigned /*globalDofIdx*/) const
     {
         return Opm::CompositionalConfig::EOSType::PR;
+    }
+
+    std::size_t eosRegionIndex(unsigned /*globalDofIdx*/) const
+    {
+        return 0;
     }
 
     /*!

@@ -127,6 +127,9 @@ public:
 
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
+        const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        // Every property below takes the component properties of the cell's EOS region.
+        const typename FluidSystem::ScopedEosRegion eosRegion{problem.eosRegionIndex(globalIdx)};
 
         const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
@@ -204,7 +207,7 @@ public:
             OpmLog::debug(fmt::format("Updating the intensive quantities for cell {}",
                                       elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
         }
-        const auto& eos_type = problem.getEosType();
+        const auto& eos_type = problem.getEosType(globalIdx);
         FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity);
 
         if (flashVerbosity >= 5) {

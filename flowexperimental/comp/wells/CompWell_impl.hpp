@@ -35,8 +35,12 @@ template <typename TypeTag>
 CompWell<TypeTag>::
 CompWell(const Well& well,
          int index_of_well,
-         const std::vector<CompConnectionData>& well_connection_data)
+         const std::vector<CompConnectionData>& well_connection_data,
+         const std::size_t eos_region,
+         const CompositionalConfig::EOSType eos_type)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
+  , eos_region_(eos_region)
+  , eos_type_(eos_type)
 {
 }
 
@@ -59,6 +63,7 @@ calculateExplicitQuantities(const Simulator& simulator,
     {
         // flash calculation in the wellbore to obtain the explicit
         // component masses
+        const typename FluidSystem::ScopedEosRegion eos_region{eos_region_};
         auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
 
         flashFluidState_(fluid_state_scalar);
@@ -92,6 +97,7 @@ CompWell<TypeTag>::
 updateTotalMass()
 {
     // flash calculation in the wellbore
+    const typename FluidSystem::ScopedEosRegion eos_region{eos_region_};
     auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
 
     flashFluidState_(fluid_state);
@@ -605,7 +611,10 @@ updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_s
         fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
     }
 
-    flashFluidState_(fluid_state);
+    // The stock-tank flash keeps the first EOS region and Peng-Robinson until
+    // the surface equation of state is supported.
+    const typename FluidSystem::ScopedEosRegion eos_region{0};
+    flashWellboreFluidState(fluid_state);
 
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
@@ -631,7 +640,7 @@ flashFluidState_(FluidState<T>& fluid_state)
 
     // The wellbore flash is a free function so it can be unit tested in
     // isolation (see tests/test_compwell_jacobian.cpp).
-    flashWellboreFluidState(fluid_state);
+    flashWellboreFluidState(fluid_state, 1.e-6, eos_type_);
 }
 
 } // end of namespace Opm
