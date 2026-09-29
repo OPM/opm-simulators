@@ -112,9 +112,6 @@ prepareStep(const SimulatorTimerInterface& timer)
     Dune::Timer perfTimer;
     perfTimer.start();
 
-    unsigned numDof = this->simulator_.model().numGridDof();
-    wasSwitched_.resize(numDof);
-    std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
     if (this->enable_state_rollback_) {
         this->simulator_.model().newtonMethod().resetPrimaryVariableSwitches();
     }
