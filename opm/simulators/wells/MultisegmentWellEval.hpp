@@ -28,7 +28,7 @@
 #include <opm/simulators/wells/MultisegmentWellSegments.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 

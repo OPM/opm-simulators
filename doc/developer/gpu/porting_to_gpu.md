@@ -176,7 +176,7 @@ Other examples worth studying:
 * `opm-common/opm/material/common/UniformTabulated2DFunction.hpp`
 * `opm-common/opm/material/components/CO2Tables.hpp`
 * `opm-common/opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.hpp`
-* `opm-grid/opm/grid/utility/SparseTable.hpp`
+* `opm-common/opm/common/utility/SparseTable.hpp`
 
 ### Skeleton of a GPU-portable composite class
 
@@ -502,7 +502,7 @@ namespace Opm::gpuistl {
 #endif // HAVE_OPM_COMMON && HAVE_CUDA
 ```
 
-See `opm-grid/opm/grid/utility/SparseTable.hpp` for a complete reference
+See `opm-common/opm/common/utility/SparseTable.hpp` for a complete reference
 example.
 
 ### What `gpuistl_if_available.hpp` provides

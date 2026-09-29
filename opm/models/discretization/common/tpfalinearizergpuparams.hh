@@ -48,7 +48,7 @@
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #endif
 
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>

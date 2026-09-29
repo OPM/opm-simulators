@@ -20,7 +20,7 @@
 #define OPM_WELLMATRIXMERGER_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <cstddef>
 #include <vector>

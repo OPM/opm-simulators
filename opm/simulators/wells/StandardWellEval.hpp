@@ -26,7 +26,7 @@
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 

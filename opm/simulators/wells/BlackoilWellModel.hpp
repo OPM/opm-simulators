@@ -29,7 +29,7 @@
 #include <dune/istl/matrixmatrix.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>

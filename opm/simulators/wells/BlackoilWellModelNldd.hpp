@@ -22,7 +22,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_NLDD_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_NLDD_HEADER_INCLUDED
 
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 

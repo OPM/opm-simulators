@@ -3,7 +3,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/linalg/system/WellMatrixMerger.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <array>
 #include <cstddef>
@@ -108,7 +108,7 @@ struct TestMatrices
     std::vector<WWMatrix> dMatrices;
     Opm::SparseTable<int> wellCells;
 };
-    
+
 struct MergedMatrices
 {
     WRMatrix b;
@@ -486,4 +486,3 @@ BOOST_AUTO_TEST_CASE(StructureChangesWhenPerforationMappingChanges)
     BOOST_CHECK(reference != changed);
     BOOST_CHECK(reference.wellCells != changed.wellCells);
 }
-
