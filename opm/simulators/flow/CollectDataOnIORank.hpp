@@ -48,6 +48,7 @@
 
 namespace Dune {
 template<class Grid> class CartesianIndexMapper;
+class CpGrid;
 }
 
 namespace Opm {
@@ -175,6 +176,17 @@ protected:
     /// non-empty only when running in parallel
     std::vector<int> sortedCartesianIdx_;
 };
+
+/// \brief Rank of each level-0 cell of a grid with LGRs.
+///
+/// Each leaf cell gives its rank to its level-0 origin.  A refined cell's
+/// children are all created on the rank that owns it.
+///
+/// \param[in] grid Global grid with LGRs.
+/// \param[in] leafRanks Rank of each leaf cell, by leaf index.
+/// \return Rank of each level-0 cell, by level-0 index.
+std::vector<int> levelZeroRanks(const Dune::CpGrid& grid,
+                                const std::vector<int>& leafRanks);
 
 } // end namespace Opm
 
