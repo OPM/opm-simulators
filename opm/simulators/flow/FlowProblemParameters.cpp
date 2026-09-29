@@ -81,7 +81,7 @@ void registerFlowProblemParameters()
         ("Conserve inner energy and not enthalpy "
          "even if THERMAL is used.");
     Parameters::Register<Parameters::EnableStateRollback>
-        ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps (default: false)");
+        ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps");
 
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly

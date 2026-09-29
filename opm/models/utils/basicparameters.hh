@@ -73,7 +73,7 @@ struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 struct TruncateTimeStepToFloat { static constexpr bool value = false; };
 
 //! Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps
-struct EnableStateRollback { static constexpr bool value = false; };
+struct EnableStateRollback { static constexpr bool value = true; };
 
 /*!
  * \brief Print all parameters on startup?
