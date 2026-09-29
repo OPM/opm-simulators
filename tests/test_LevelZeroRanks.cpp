@@ -25,10 +25,15 @@
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <memory>
+#include <string>
 #include <vector>
 
 // A 3x1x1 grid of unit cells whose middle cell is refined into 2x1x1
@@ -58,6 +63,73 @@ BOOST_AUTO_TEST_CASE(EachLevelZeroCellTakesTheRankOfItsLeafCells)
     const auto expected = std::vector<int>{10, 11, 12};
     BOOST_CHECK_EQUAL_COLLECTIONS(ranks.begin(), ranks.end(),
                                   expected.begin(), expected.end());
+}
+
+// A 4x3x3 grid of unit cells distributed by hand: the process of a cell
+// follows its I index.  LGR1 refines cells on two processes, LGR2 cells on the
+// last one.  The grids are set up as in a parallel run: the I/O rank keeps a
+// copy of the grid made before the distribution, which shares its global view,
+// and the LGRs are added to the distributed view, then to the global view, and
+// the ids of the refined cells are synchronised.  Each leaf cell collected on
+// the I/O rank must carry the process of its level-zero origin, and the ranks
+// folded onto level zero must give back the chosen distribution.
+BOOST_AUTO_TEST_CASE(CollectedRanksGiveBackTheDistributionOfAGridWithLgrs)
+{
+    Dune::CpGrid grid;
+    grid.createCartesian({4, 3, 3}, {1.0, 1.0, 1.0});
+
+    const int numProcs = grid.comm().size();
+    if (numProcs == 1) {
+        return;
+    }
+
+    std::vector<int> parts(grid.size(0));
+    for (std::size_t cell = 0; cell < parts.size(); ++cell) {
+        parts[cell] = static_cast<int>(cell % 4) * numProcs / 4;
+    }
+
+    std::unique_ptr<Dune::CpGrid> equilGrid;
+    if (grid.comm().rank() == 0) {
+        equilGrid = std::make_unique<Dune::CpGrid>(grid);
+    }
+
+    grid.loadBalance(parts, /* ownersFirst = */ true,
+                     /* addCornerCells = */ false, /* overlapLayers = */ 1);
+
+    const std::vector<std::array<int,3>> cellsPerDim = {{2, 2, 2}, {3, 3, 3}};
+    const std::vector<std::array<int,3>> startIJK = {{1, 0, 0}, {3, 2, 1}};
+    const std::vector<std::array<int,3>> endIJK = {{3, 1, 1}, {4, 3, 3}};
+    const std::vector<std::string> names = {"LGR1", "LGR2"};
+    grid.addLgrsUpdateLeafView(cellsPerDim, startIJK, endIJK, names);
+    grid.switchToGlobalView();
+    grid.addLgrsUpdateLeafView(cellsPerDim, startIJK, endIJK, names);
+    grid.switchToDistributedView();
+    grid.syncDistributedGlobalCellIds();
+
+    const Dune::CartesianIndexMapper<Dune::CpGrid> cartMapper(grid);
+    std::unique_ptr<Dune::CartesianIndexMapper<Dune::CpGrid>> equilCartMapper;
+    if (equilGrid) {
+        equilCartMapper = std::make_unique<Dune::CartesianIndexMapper<Dune::CpGrid>>(*equilGrid);
+    }
+
+    const Opm::CollectDataOnIORank<Dune::CpGrid, Dune::CpGrid, Dune::CpGrid::LeafGridView>
+        collect(grid, equilGrid.get(), grid.leafGridView(), cartMapper, equilCartMapper.get());
+
+    if (collect.isIORank()) {
+        BOOST_REQUIRE_EQUAL(equilGrid->maxLevel(), 2);
+
+        const auto leafView = equilGrid->leafGridView();
+        const auto& leafRanks = collect.globalRanks();
+        BOOST_REQUIRE_EQUAL(leafRanks.size(), static_cast<std::size_t>(leafView.size(0)));
+        for (const auto& elem : elements(leafView)) {
+            BOOST_CHECK_EQUAL(leafRanks[leafView.indexSet().index(elem)],
+                              parts[elem.getOrigin().index()]);
+        }
+
+        const auto ranks = Opm::levelZeroRanks(*equilGrid, leafRanks);
+        BOOST_CHECK_EQUAL_COLLECTIONS(ranks.begin(), ranks.end(),
+                                      parts.begin(), parts.end());
+    }
 }
 
 bool init_unit_test_func()
