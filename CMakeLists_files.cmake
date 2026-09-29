@@ -500,6 +500,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_interregflows.cpp
   tests/test_invert.cpp
   tests/test_keyword_validator.cpp
+  tests/test_lgr_cell_index.cpp
   tests/test_LgrBlockData.cpp
   tests/test_LgrTransIndex.cpp
   tests/test_linearleastsquares.cpp
@@ -724,6 +725,7 @@ list (APPEND TEST_DATA_FILES
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
   tests/GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA
   tests/INJECTION_TOPUP_PHASE_VALIDATION.DATA
+  tests/LGR_CELL_INDEX.DATA
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl
