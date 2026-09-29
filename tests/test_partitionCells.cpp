@@ -24,20 +24,23 @@
 #define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/flow/partitionCells.hpp>
+
 #include <dune/grid/common/gridview.hh>
 
 #include <opm/grid/common/WellConnections.hpp>
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/OpmWellType.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
-#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
-#include <opm/simulators/flow/partitionCells.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+
+#include <opm/input/eclipse/Parser/Parser.hpp>
 
 // Helper functions
 namespace {
@@ -58,7 +61,7 @@ namespace {
     Dune::cpgrid::OpmWellType createWell(const std::string& name) {
         using namespace Opm;
         return Dune::cpgrid::OpmWellType(name, name, 0, 0, 0, 0, 0.0, WellType(),
-                                        Well::ProducerCMode(), Connection::Order::TRACK,
+                                        Well::ProducerCMode(),
                                         UnitSystem::newMETRIC(),
                                         0.0, false, false, 0, Well::GasInflowEquation());
     }
@@ -72,7 +75,7 @@ namespace {
                 well_conn->add(createConnection(idx, 0, 0, idx));
             }
             auto well = createWell(well_name);
-            well.updateConnections(well_conn, true);
+            well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
             wells.push_back(well);
         }
         return wells;
@@ -291,7 +294,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWells3DTest)
         well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));  // Global index: 13
         well_conn->add(createConnection(1, 1, 2, ijkToGlobal(1, 1, 2)));  // Global index: 22
         auto well = createWell("VERTICAL");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -302,7 +305,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWells3DTest)
         well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));  // Global index: 13
         well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));  // Global index: 26
         auto well = createWell("DIAGONAL");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -313,7 +316,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWells3DTest)
         well_conn->add(createConnection(1, 2, 0, ijkToGlobal(1, 2, 0)));  // Global index: 7
         well_conn->add(createConnection(2, 2, 0, ijkToGlobal(2, 2, 0)));  // Global index: 8
         auto well = createWell("HORIZONTAL");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -382,7 +385,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
         well_conn->add(createConnection(2, 3, 1, ijkToGlobal(2, 3, 1)));
         well_conn->add(createConnection(2, 4, 1, ijkToGlobal(2, 4, 1)));
         auto well = createWell("PRODUCER1");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -394,7 +397,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
         well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));  // Intersects with Well 1
         well_conn->add(createConnection(3, 3, 3, ijkToGlobal(3, 3, 3)));
         auto well = createWell("INJECTOR1");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -407,7 +410,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
         well_conn->add(createConnection(3, 2, 2, ijkToGlobal(3, 2, 2)));  // Intersects with Well 1's branch
         well_conn->add(createConnection(4, 2, 2, ijkToGlobal(4, 2, 2)));
         auto well = createWell("PRODUCER2");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -420,7 +423,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
         well_conn->add(createConnection(3, 4, 3, ijkToGlobal(3, 4, 3)));
         well_conn->add(createConnection(4, 4, 3, ijkToGlobal(4, 4, 3)));
         auto well = createWell("PRODUCER3");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -430,7 +433,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
         well_conn->add(createConnection(0, 4, 0, ijkToGlobal(0, 4, 0)));
         well_conn->add(createConnection(1, 4, 0, ijkToGlobal(1, 4, 0)));
         auto well = createWell("ISOLATED");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -578,7 +581,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
         well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));
         well_conn->add(createConnection(1, 1, 2, ijkToGlobal(1, 1, 2)));
         auto well = createWell("WELL1");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
@@ -589,7 +592,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
         well_conn->add(createConnection(2, 1, 1, ijkToGlobal(2, 1, 1)));
         well_conn->add(createConnection(2, 1, 2, ijkToGlobal(2, 1, 2)));
         auto well = createWell("WELL2");
-        well.updateConnections(well_conn, true);
+        well.updateConnections(well_conn, Opm::Connection::Order::TRACK, true);
         wells.push_back(well);
     }
 
