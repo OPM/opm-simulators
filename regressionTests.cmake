@@ -80,6 +80,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    multz_barrier_compositional
+  FILENAME
+    MULTZ_BARRIER
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/transmissibility
+)
+
+add_test_compareECLFiles(
+  CASENAME
     equil_1d_zmfvd
   FILENAME
     EQUIL_1D_ZMFVD
