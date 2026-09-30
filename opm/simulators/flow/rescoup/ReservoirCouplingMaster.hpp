@@ -24,12 +24,16 @@
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingTimeStepper.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <mpi.h>
 
 #include <filesystem>
+#include <map>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -79,10 +83,31 @@ public:
         this->effective_gcw_[group_name] = value;
     }
 
-    /// @brief Clear all effective-GCW entries.  Call at the start of each
-    ///   master-group constraint calculation before any entries are set, so stale
-    ///   caps from a previous sync step do not leak in.
-    void resetEffectiveGCW() { this->effective_gcw_.clear(); }
+    /// @brief Effective group-controlled-wells (GCW) count for a master group in
+    ///   the injection guide-rate distribution of one phase.
+    /// @details The injection counterpart of effectiveGCW().  A master group that
+    ///   is available for higher-level injection control (GCONINJE item 8 = YES)
+    ///   defaults to 1, so it is counted in its parent's injection guide-rate sum
+    ///   for that phase even while on individual control; it is set to 0 when its
+    ///   target for the phase is capped at its slave's injection potential, or
+    ///   when its slave is inactive.
+    /// @return The stored effective GCW, or 1 if the group has no explicit entry
+    ///   for the phase (the participating-and-uncapped default).
+    int effectiveInjectionGCW(const std::string& group_name, Phase phase) const {
+        const auto it = this->effective_injection_gcw_.find({group_name, phase});
+        return (it == this->effective_injection_gcw_.end()) ? 1 : it->second;
+    }
+    void setEffectiveInjectionGCW(const std::string& group_name, Phase phase, int value) {
+        this->effective_injection_gcw_[{group_name, phase}] = value;
+    }
+
+    /// @brief Clear all effective-GCW entries, production and injection.  Call at
+    ///   the start of each master-group constraint calculation before any entries
+    ///   are set, so stale caps from a previous sync step do not leak in.
+    void resetEffectiveGCW() {
+        this->effective_gcw_.clear();
+        this->effective_injection_gcw_.clear();
+    }
 
     double getActivationDate() const { return this->activation_date_; }
     int getArgc() const { return this->argc_; }
@@ -320,6 +345,10 @@ private:
     // distribution independently of the production control mode (see effectiveGCW()).
     // Reset and repopulated on each master-group constraint calculation.
     std::map<std::string, int> effective_gcw_;
+
+    // Effective group-controlled-wells count per (master group, injection phase),
+    // the injection counterpart of effective_gcw_ (see effectiveInjectionGCW()).
+    std::map<std::pair<std::string, Phase>, int> effective_injection_gcw_;
 
     mutable ReservoirCoupling::Logger logger_;
 

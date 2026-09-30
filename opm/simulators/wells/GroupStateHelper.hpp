@@ -319,6 +319,18 @@ public:
     ///   unaffected.
     bool isMasterGroupEligibleForGuideRate(const std::string& group_name) const;
 
+    /// @brief Whether a reservoir-coupling master group is *eligible* to participate in
+    ///   its parent's injection guide-rate distribution for one phase.
+    /// @details The injection counterpart of isMasterGroupEligibleForGuideRate(): the group
+    ///   must have an injection control for the phase (GCONINJE) that is available for
+    ///   higher-level control (GCONINJE item 8 = YES).  As on the production side this is
+    ///   necessary but not sufficient: an eligible group only contributes to the guide-rate
+    ///   sum while its effective injection GCW for the phase is > 0 (see
+    ///   ReservoirCouplingMaster::effectiveInjectionGCW()).  Returns false for any
+    ///   non-master group, so non-rescoup runs are unaffected.
+    bool isMasterGroupEligibleForInjectionGuideRate(const std::string& group_name,
+                                                    Phase injection_phase) const;
+
     bool isRank0() const
     {
         return this->well_state_->isRank0();
@@ -729,12 +741,18 @@ private:
     ///   - Otherwise (RESPOND_TO_PARENT = NO): the group uses only its own limit and
     ///     is excluded from guide-rate distribution, so GCW = 0.  Being on FLD/NONE
     ///     control in that case is contradictory and throws.
-    ///   The injection path is not yet handled and returns 1.
+    ///   For injection the same rule is applied per phase: a group eligible for the
+    ///   phase (see isMasterGroupEligibleForInjectionGuideRate()) returns the effective
+    ///   injection GCW maintained by the rescoup master (see
+    ///   ReservoirCouplingMaster::effectiveInjectionGCW()); any other master group
+    ///   returns 1, as before.
     /// @param group_name Name of the reservoir-coupling master group.
     /// @param is_production_group True for the production GCW, false for injection.
+    /// @param injection_phase The injection phase; only used when is_production_group is false.
     /// @return The effective GCW (0 or 1) for the master group.
     int getMasterGroupEffectiveGCW_(const std::string& group_name,
-                                    bool is_production_group) const;
+                                    bool is_production_group,
+                                    Phase injection_phase) const;
 
     /// @brief Get the effective production limit for a group and rate type,
     /// combining master limit, slave-local target, and GRUPSLAV filter flag.

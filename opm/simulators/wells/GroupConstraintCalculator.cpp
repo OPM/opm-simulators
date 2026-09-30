@@ -696,6 +696,13 @@ bottomGroupHasIndividualControl_()
                this->bottom_group_.name())) {
         return false;
     }
+    // The same holds for injection, per phase, see
+    // GroupStateHelper::isMasterGroupEligibleForInjectionGuideRate().
+    if (this->isInjectionConstraint()
+        && this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
+               this->bottom_group_.name(), this->injectionPhase_())) {
+        return false;
+    }
     return !this->hasHigherLevelControlOrNoLimit(this->bottom_group_);
 }
 

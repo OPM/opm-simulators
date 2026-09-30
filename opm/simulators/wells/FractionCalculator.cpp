@@ -145,6 +145,12 @@ guideRateSum(const Group& group,
                                                                    this->injection_phase_);
             included |= (ctrl == Group::InjectionCMode::FLD) ||
                         (ctrl == Group::InjectionCMode::NONE);
+            // The injection counterpart of the master-group rule for producers above: a
+            // reservoir-coupling master group available for higher-level injection control
+            // (GCONINJE item 8 = YES) stays in its siblings' denominator while on individual
+            // control.  A capped or inactive-slave group is still dropped by the GCW gate below.
+            included |= this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
+                child_group, this->injection_phase_);
         }
         if (included) {
             if (groupControlledWells(child_group, always_included_child) > 0) {

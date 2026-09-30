@@ -147,7 +147,8 @@ public:
     /// @brief Get the injection potentials for a slave group
     /// @param master_group_name Name of the master group
     /// @return Reference to the injection potentials data for the specified group
-    /// @note Stored only; nothing reads the injection potentials yet.
+    /// @note Used to cap a master group's injection target at what its slave group can
+    ///   inject, see RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
     const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name) const;
 
     /// @brief Get the production potentials for a slave group

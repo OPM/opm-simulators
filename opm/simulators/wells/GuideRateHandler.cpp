@@ -683,10 +683,16 @@ updateInjectionGroupPotentialFromSubGroups_(const Group& group, std::vector<Scal
         this->updateInjectionGroupPotentials_(group_tmp, this_pot);
 
         // Apply potential for group_tmp to the parent's pot. Unlike the
-        // production side we do not gate on group-control availability here:
-        // the potentials are only stored (nothing reads them yet), so the
-        // simplest correct quantity is the total injection potential beneath
-        // the group.
+        // production side we do not gate on group-control availability here.
+        // The production gate is a guide-rate rule; these potentials feed no
+        // guide rate, only the reservoir-coupling master's injection cap (see
+        // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_()).
+        // For that cap neither choice is exact: a sub-group or well on its own
+        // control still injects its current rate but will not take more, so
+        // the ungated sum overstates what the group can deliver, and a gated
+        // sum would understate it.  The POTN group guide rate faces the same
+        // question for individually controlled producers, and likewise
+        // includes them.
         const auto gefac = group_tmp.getGroupEfficiencyFactor();
         for (int phase = 0; phase < this->num_phases_; phase++) {
             pot[phase] += gefac*this_pot[phase];
