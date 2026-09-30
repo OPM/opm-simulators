@@ -81,7 +81,7 @@ addToWells(data::Wells& wellDatas,
     }
 
     if (comm.size() > 1) {
-        gatherAndUpdateMap(oilConnectionPressures_, comm);
+        gatherAndUpdateMap(connectionPressures_, comm);
         gatherAndUpdateMap(waterConnectionSaturations_, comm);
         gatherAndUpdateMap(gasConnectionSaturations_, comm);
     }
@@ -121,7 +121,7 @@ addToWells(data::Wells& wellDatas,
                               {
                                   const auto index = connectionData.index;
                                   cond_assign(connectionData.cell_pressure, index,
-                                              oilConnectionPressures_);
+                                              connectionPressures_);
                                   cond_assign(connectionData.cell_saturation_water, index,
                                               waterConnectionSaturations_);
                                   cond_assign(connectionData.cell_saturation_gas, index,
@@ -129,7 +129,7 @@ addToWells(data::Wells& wellDatas,
                               });
     }
 
-    oilConnectionPressures_.clear();
+    connectionPressures_.clear();
     waterConnectionSaturations_.clear();
     gasConnectionSaturations_.clear();
 }
@@ -155,9 +155,9 @@ allocate(const std::size_t reportStepNum)
         for (const auto& connection: well.getConnections()) {
             const std::size_t index = connection.global_index();
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                oilConnectionPressures_.emplace(index, 0.0);
-            }
+            // Pressure is always output, also in runs without an oil phase
+            // (e.g., gas/water).  The caller provides the reference phase.
+            connectionPressures_.emplace(index, 0.0);
 
             if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
                 waterConnectionSaturations_.emplace(index, 0.0);
@@ -173,7 +173,7 @@ allocate(const std::size_t reportStepNum)
 template<class FluidSystem>
 void RFTContainer<FluidSystem>::
 assign(const unsigned cartesianIndex,
-       const AssignmentFunc& oil,
+       const AssignmentFunc& pressure,
        const AssignmentFunc& water,
        const AssignmentFunc& gas)
 {
@@ -185,7 +185,7 @@ assign(const unsigned cartesianIndex,
         }
     };
 
-    cond_assign(oilConnectionPressures_, cartesianIndex, oil);
+    cond_assign(connectionPressures_, cartesianIndex, pressure);
     cond_assign(waterConnectionSaturations_, cartesianIndex, water);
     cond_assign(gasConnectionSaturations_, cartesianIndex, gas);
 }

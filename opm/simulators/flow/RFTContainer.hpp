@@ -59,9 +59,6 @@ class RFTContainer {
     /// Phase index for gas.
     static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
 
-    /// Phase index for oil.
-    static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
-
     /// Phase index for water.
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
@@ -136,9 +133,11 @@ public:
     ///
     /// \param[in] cartesianIndex Linearised global cell ID.
     ///
-    /// \param[in] oil Call-back for transferring cell level pressure values
-    /// in cell \p cartesianIndex from the simulator and into the container.
-    /// Will be invoked only if oil is active in the current run.
+    /// \param[in] pressure Call-back for transferring cell level pressure
+    /// values in cell \p cartesianIndex from the simulator and into the
+    /// container.  Callers should provide the reference phase pressure,
+    /// i.e., the oil pressure if oil is active, otherwise the gas pressure
+    /// if gas is active, and the water pressure otherwise.
     ///
     /// \param[in] water Call-back for transferring cell level water
     /// saturation values in cell \p cartesianIndex from the simulator and
@@ -150,7 +149,7 @@ public:
     /// container.  Will be invoked only if gas is active in the current
     /// run.
     void assign(const unsigned cartesianIndex,
-                const AssignmentFunc& oil,
+                const AssignmentFunc& pressure,
                 const AssignmentFunc& water,
                 const AssignmentFunc& gas);
 
@@ -173,11 +172,12 @@ private:
     /// Needed to properly allocate the internal buffers.
     WellQueryFunc wellOnCurrentRank_;
 
-    /// Cell level oil pressure values for all pertinent well connections.
+    /// Cell level (reference phase) pressure values for all pertinent well
+    /// connections.
     ///
-    /// Keyed by the linearised global cell ID.  Will be populated only if
-    /// oil is active in the current run.
-    std::map<std::size_t, Scalar> oilConnectionPressures_;
+    /// Keyed by the linearised global cell ID.  Populated regardless of
+    /// which phases are active in the current run.
+    std::map<std::size_t, Scalar> connectionPressures_;
 
     /// Cell level water saturation values for all pertinent well
     /// connections.
