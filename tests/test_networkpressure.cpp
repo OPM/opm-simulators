@@ -520,4 +520,49 @@ BOOST_AUTO_TEST_CASE(water_injection_zero_rate_uses_first_flow_point)
     BOOST_CHECK(comp.invalidNodes().empty());
 }
 
+BOOST_AUTO_TEST_CASE(production_node_above_fixed_pressure_is_ignored)
+{
+    // FIELD sits above the fixed pressure node PLAT-A and has no pressure of
+    // its own.  It carries no flow of consequence and must neither affect the
+    // solution nor be assigned a pressure.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    s.network.add_branch(Network::Branch{"PLAT-A", "FIELD", 9999, 0.0});
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(31.0, bars), 1e-7);
+    BOOST_CHECK_CLOSE(pressures.at("PLAT-A"), convert::from(20.0, bars), 1e-7);
+    BOOST_CHECK(pressures.find("FIELD") == pressures.end());
+    BOOST_REQUIRE(branch_data.find("PLAT-A") != branch_data.end());
+    BOOST_CHECK_EQUAL(branch_data.at("PLAT-A").pressure_drop, 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(production_fixed_pressure_node_above_fixed_pressure)
+{
+    // FIELD has a fixed pressure of its own, above the fixed pressure node
+    // PLAT-A.  Both keep their input pressures, whichever order the roots are
+    // visited in, and the branch between them reports the difference.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    s.network.add_branch(Network::Branch{"PLAT-A", "FIELD", 9999, 0.0});
+    Network::Node field{"FIELD"};
+    field.terminal_pressure(convert::from(10.0, bars));
+    s.network.update_node(field);
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
+    const auto [pressures, branch_data] = comp.run();
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(31.0, bars), 1e-7);
+    BOOST_CHECK_CLOSE(pressures.at("PLAT-A"), convert::from(20.0, bars), 1e-7);
+    BOOST_CHECK_CLOSE(pressures.at("FIELD"), convert::from(10.0, bars), 1e-7);
+    BOOST_REQUIRE(branch_data.find("PLAT-A") != branch_data.end());
+    BOOST_CHECK_CLOSE(branch_data.at("PLAT-A").pressure_drop, convert::from(10.0, bars), 1e-7);
+}
+
 BOOST_AUTO_TEST_SUITE_END() // NetworkPressureComputationTests
