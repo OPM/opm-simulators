@@ -442,6 +442,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
 
     Opm::FlowGenericVanguard::readDeck(deckPath);
     auto sim = std::make_unique<Simulator>();
+    sim->model().applyInitialSolution();
 
     auto& cpuProblem = sim->problem();
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
@@ -484,15 +485,17 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     BOOST_REQUIRE_EQUAL(numCells, expectedNumCells);
     BOOST_REQUIRE_GT(numCells, 0u);
 
-    using PrimaryVariablesCpu = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
     using PrimaryVariablesGpu = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
     using IntensiveQuantitiesCpu = Opm::BlackOilIntensiveQuantities<TypeTag>;
     using IntensiveQuantitiesGpu = Opm::BlackOilIntensiveQuantities<TypeNacht>;
 
-    PrimaryVariablesCpu primaryVariablesCpu;
-    primaryVariablesCpu.setPrimaryVarsMeaningPressure(Opm::BlackOil::PressureMeaning::Pg);
-    PrimaryVariablesGpu primaryVariablesGpu(primaryVariablesCpu);
-    std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu(numCells, primaryVariablesGpu);
+    const auto& cpuSolution = cpuProblem.model().solution(/*timeIdx=*/0);
+    BOOST_REQUIRE_EQUAL(cpuSolution.size(), numCells);
+    std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu;
+    hostPrimaryVariablesGpu.reserve(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        hostPrimaryVariablesGpu.emplace_back(cpuSolution[i]);
+    }
     Opm::gpuistl::GpuBuffer<PrimaryVariablesGpu> primaryVariablesBuffer(hostPrimaryVariablesGpu);
 
     IntensiveQuantitiesCpu cpuIntensiveQuantitiesPrototype;
@@ -535,7 +538,10 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     std::vector<IntensiveQuantitiesCpu> cpuIntensiveQuantities(numCells);
     const auto cpuT0 = std::chrono::steady_clock::now();
     for (std::size_t i = 0; i < numCells; ++i) {
-        cpuIntensiveQuantities[i].update(cpuProblem, primaryVariablesCpu, static_cast<unsigned>(i), 0);
+        cpuIntensiveQuantities[i].update(cpuProblem,
+                                         cpuSolution[i],
+                                         static_cast<unsigned>(i),
+                                         0);
     }
     const auto cpuT1 = std::chrono::steady_clock::now();
     const double cpuMilliseconds =
@@ -1008,23 +1014,21 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
 
 BOOST_AUTO_TEST_CASE(TestRealDeckGpuVsCpuFromSimulatorSolution)
 {
-    // Drive the per-cell IQ update with the EQUIL-initialized primary
-    // variables of the production CO2STORE deck the user reports diverges
-    // when the dispatcher is enabled. This reproduces the exact code path
-    // taken by the dispatcher in production (per-cell PrimaryVariables
-    // upload + GPU update + readback) and compares every IQ field against
-    // a CPU reference, so we can identify which field becomes non-finite.
+    // Drive the per-cell IQ update with EQUIL-initialized primary variables
+    // from a minimal thermal CO2STORE deck with DISGASW and VAPWAT enabled.
+    // This reproduces the production dispatcher code path (per-cell
+    // PrimaryVariables upload + GPU update + readback) and compares every IQ
+    // field against a CPU reference, so we can identify which field becomes
+    // non-finite.
     //
     // NOTE: this test must run BEFORE the synthetic-deck tests because the
     // BlackOilFluidSystem singleton is global state that gets re-set by
     // every readDeck call; running this after the synthetic tests in the
     // same process leaves the static FluidSystem in a state that is
     // inconsistent with the per-cell GPU FluidSystem copy taken here.
-    const std::string deckPath = "/workspaces/opm/thecaseiwant/deck/THECASEIWANT.DATA";
-    if (!std::filesystem::exists(deckPath)) {
-        BOOST_TEST_MESSAGE("Skipping: deck not found at " << deckPath);
-        return;
-    }
+    const auto deckPath = std::string{"blackoilintensivequantities_gpu.DATA"};
+    BOOST_REQUIRE_MESSAGE(std::filesystem::exists(deckPath),
+                          "Required test deck not found at " << deckPath);
     runIntensiveQuantitiesTestFromSimulatorSolution(deckPath, /*sampleStride=*/1u);
 }
 
