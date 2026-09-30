@@ -185,6 +185,36 @@ BOOST_AUTO_TEST_CASE(WaterFilledCellTakesTheInflowComposition)
     }
 }
 
+BOOST_AUTO_TEST_CASE(VanishingHydrocarbonKeepsItsComposition)
+{
+    // The step empties the cell of hydrocarbon. Its composition is then no longer
+    // determined by the equations and stays as it was.
+    const State<3> oldState{{0.5, 0.3, 0.2}, 0.95};
+    const auto newState = step(oldState, {0.3, -0.2, -0.1}, 0.1);
+
+    checkBounds(oldState, newState);
+    BOOST_CHECK_EQUAL(newState.sw, 1.0);
+    for (std::size_t c = 0; c < 3; ++c) {
+        BOOST_CHECK_CLOSE(newState.z[c], oldState.z[c], 1.0e-10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(FullWaterCellIgnoresTheCompositionStep)
+{
+    // A cell that holds only water and stays so sees z only through the floor of h, so
+    // the Newton step in z is of order 1/h and mostly carries linear-solver error.
+    // Applying it would send z to a corner of the simplex, where the bounds block every
+    // later step.
+    const State<3> oldState{{0.2, 0.3, 0.5}, 1.0};
+    const auto newState = step(oldState, {0.0, 47.6, -47.6}, 5.0e-6);
+
+    checkBounds(oldState, newState);
+    BOOST_CHECK_EQUAL(newState.sw, 1.0);
+    for (std::size_t c = 0; c < 3; ++c) {
+        BOOST_CHECK_CLOSE(newState.z[c], oldState.z[c], 1.0e-10);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(ComponentAtTheFloorDoesNotHoldBackTheOthers)
 {
     const State<3> oldState{{compositionFloor, 0.5, 0.5 - compositionFloor}, 0.0};

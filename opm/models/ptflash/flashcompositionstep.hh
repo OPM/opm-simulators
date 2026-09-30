@@ -76,7 +76,9 @@ Scalar largestAmountChange(const Scalar share,
  * The step is taken and limited in h and the component amounts h z, where
  * h = max(1 - Sw, hydrocarbonFloor) is the regularized hydrocarbon share of the pore
  * space. Component-storage derivatives scale with h, so Newton steps in the mole
- * fractions can become large in cells containing almost only water.
+ * fractions can become large in cells containing almost only water. Where h ends at its
+ * floor, the hydrocarbon has vanished and z is kept, since the equations no longer
+ * determine it.
  *
  * The returned fractions sum to one and are at or above compositionFloor,
  * and Sw stays within [0, 1]. Changes in h and each h z are limited to
@@ -119,8 +121,11 @@ void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
     const Scalar newHydrocarbonShare = std::max(1 - newSw, hydrocarbonFloor);
 
     // Back from amounts to fractions: z moves by hydrocarbonShare/newHydrocarbonShare of
-    // the damped step.
-    const Scalar zStepScale = alpha * hydrocarbonShare / newHydrocarbonShare;
+    // the damped step. A vanished hydrocarbon keeps its composition: the equations see z
+    // only through the floor of h then, so the step would mostly carry linear-solver error.
+    const bool vanished = newHydrocarbonShare <= hydrocarbonFloor;
+    const Scalar zStepScale = vanished ? Scalar{0}
+                                       : alpha * hydrocarbonShare / newHydrocarbonShare;
     std::array<Scalar, numComponents> newZ{};
     for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
         newZ[compIdx] = z[compIdx] + zStepScale * dz[compIdx];

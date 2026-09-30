@@ -46,6 +46,28 @@ add_test_compare_parallel_simulation(
     2
 )
 
+add_test_compare_parallel_simulation(
+  CASENAME
+    oil_into_water_zone_compositional
+  FILENAME
+    OIL_INTO_WATER_ZONE
+  SIMULATOR
+    flow_comp
+  # Hydrocarbon flowing into cells that hold water alone, with the column cut into
+  # four parts so that the linear solve is inexact. With the TUNING minimum time step,
+  # a stalled Newton iteration aborts the run.
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-4
+  DIR
+    compositional
+  MPI_PROCS
+    4
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL 2)
   if(USE_DEV_SIMULATOR_IN_TESTS)
     set(_split_well_simulator flow_comp3_2p)
@@ -1152,4 +1174,3 @@ add_test_compareSeparateECLFiles(
     --matrix-add-well-contributions=true
     --linear-solver=ilu0
 )
-
