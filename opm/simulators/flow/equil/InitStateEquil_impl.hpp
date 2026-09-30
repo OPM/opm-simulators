@@ -686,6 +686,25 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
     if (!oilActive) {
         // for 2p gas+water we set the water saturation to 1.0 - sg
         sw = 1.0 - this->sat_.gas;
+
+        // Honour SWATINIT by scaling the gas/water capillary pressure curve,
+        // as is done for oil/water below.  Not applicable for a sharp
+        // gas/water interface (constant Pc).
+        if (! this->swatInit_.empty() && ! this->isConstCapPress(this->gasPos())) {
+            const auto pcgw = this->press_.gas - this->press_.water;
+
+            auto [swout, newSwatInit] = this->applySwatInit(pcgw);
+            if (newSwatInit) {
+                // Curve possibly changed (e.g., PPCWMAX): re-invert.
+                const auto isIncr = true; // dPcgw/dSg >= 0 for all Sg.
+                this->sat_.gas = this->invertCapPress(pcgw, this->gasPos(), isIncr);
+                sw = 1.0 - this->sat_.gas;
+            }
+            else {
+                sw = swout;
+                this->sat_.gas = 1.0 - sw;
+            }
+        }
     }
     else {
         const auto isIncr = false; // dPcow/dSw <= 0 for all Sw.
