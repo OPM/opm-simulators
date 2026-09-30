@@ -258,6 +258,12 @@ readRockCompactionParameters_()
         // i.e. don't allow re-inflation.
         minRefPressure_.resize(numElem, 1e99);
         break;
+    case RockConfig::Hysteresis::HYSTER:
+        // Track the lowest pressure each cell has ever reached, exactly as for
+        // IRREVERS. It doubles as the "turning pressure" that selects/anchors
+        // the ROCKTABH elastic reload curve once the cell re-pressurizes above it.
+        minRefPressure_.resize(numElem, 1e99);
+        break;
     default:
         throw std::runtime_error("Not support ROCKOMP hysteresis option ");
     }
@@ -265,7 +271,45 @@ readRockCompactionParameters_()
     std::size_t numRocktabTables = rock_config.num_rock_tables();
     bool waterCompaction = rock_config.water_compaction();
 
-    if (!waterCompaction) {
+    if (waterCompaction && rock_config.hysteresis_mode() == RockConfig::Hysteresis::HYSTER)
+        throw std::runtime_error("ROCKCOMP: combining WATER_COMPACTION with HYSTERESIS=HYSTER is not supported");
+
+    if (!waterCompaction && rock_config.hysteresis_mode() == RockConfig::Hysteresis::HYSTER) {
+        const auto& rocktabhTables = eclState_.getTableManager().getRocktabhTables();
+        if (rocktabhTables.size() != numRocktabTables)
+            throw std::runtime_error("ROCKCOMP HYSTERESIS is set to HYSTER. " + std::to_string(numRocktabTables)
+                                     +" ROCKTABH tables is expected, but " + std::to_string(rocktabhTables.size()) +" is provided");
+
+        // The deflation (virgin/plastic loading) curve, taken from the first row of
+        // each of ROCKTABH's elastic curves, plays the same role that ROCKTAB plays
+        // for REVERS/IRREVERS, so it is stored in the very same tables.
+        rockCompPoroMult_.resize(numRocktabTables);
+        rockCompTransMult_.resize(numRocktabTables);
+        rockCompPoroMultElastic_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme));
+        rockCompTransMultElastic_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme));
+        for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+            const auto& rocktabhTable = rocktabhTables[regionIdx];
+
+            const auto& deflation = rocktabhTable.deflationCurve();
+            rockCompPoroMult_[regionIdx].setXYContainers(deflation.getColumn(0), deflation.getColumn(1));
+            rockCompTransMult_[regionIdx].setXYContainers(deflation.getColumn(0), deflation.getColumn(2));
+
+            const std::size_t numCurves = rocktabhTable.numElasticCurves();
+            for (std::size_t curveIdx = 0; curveIdx < numCurves; ++curveIdx) {
+                const auto& curve = rocktabhTable.elasticCurve(curveIdx);
+                const auto& pressure = curve.getColumn(0);
+                const auto& poro = curve.getColumn(1);
+                const auto& trans = curve.getColumn(2);
+
+                rockCompPoroMultElastic_[regionIdx].appendXPos(pressure[0]);
+                rockCompTransMultElastic_[regionIdx].appendXPos(pressure[0]);
+                for (std::size_t rowIdx = 0; rowIdx < curve.numRows(); ++rowIdx) {
+                    rockCompPoroMultElastic_[regionIdx].appendSamplePoint(curveIdx, pressure[rowIdx], poro[rowIdx]);
+                    rockCompTransMultElastic_[regionIdx].appendSamplePoint(curveIdx, pressure[rowIdx], trans[rowIdx]);
+                }
+            }
+        }
+    } else if (!waterCompaction) {
         const auto& rocktabTables = eclState_.getTableManager().getRocktabTables();
         if (rocktabTables.size() != numRocktabTables)
             throw std::runtime_error("ROCKCOMP is activated." + std::to_string(numRocktabTables)
