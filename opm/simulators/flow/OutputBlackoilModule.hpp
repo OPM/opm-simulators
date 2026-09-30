@@ -1835,7 +1835,20 @@ private:
                   {
                       const auto cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
                       rftC.assign(cartesianIdx,
-                                  [&fs = ectx.fs]() { return getValue(fs.pressure(oilPhaseIdx)); },
+                                  [&fs = ectx.fs]()
+                                  {
+                                      // Reference phase pressure, as for PRESSURE/BPR:
+                                      // oil if present, otherwise gas, otherwise water.
+                                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                          return getValue(fs.pressure(oilPhaseIdx));
+                                      }
+                                      else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                                          return getValue(fs.pressure(gasPhaseIdx));
+                                      }
+                                      else {
+                                          return getValue(fs.pressure(waterPhaseIdx));
+                                      }
+                                  },
                                   [&fs = ectx.fs]() { return getValue(fs.saturation(waterPhaseIdx)); },
                                   [&fs = ectx.fs]() { return getValue(fs.saturation(gasPhaseIdx)); });
                    }
