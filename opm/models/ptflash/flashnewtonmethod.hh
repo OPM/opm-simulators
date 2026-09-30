@@ -32,9 +32,10 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
+#include <opm/models/ptflash/flashcompositionstep.hh>
 
 #include <algorithm>
-#include <cmath>
+#include <array>
 
 namespace Opm::Properties {
 
@@ -60,6 +61,7 @@ class FlashNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMeth
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { z0Idx = Indices::z0Idx };
@@ -107,41 +109,36 @@ protected:
                                              priVarsOld[pressure0Idx] * upper_bound);
 
         ////
-        // z updates
+        // Composition and water saturation updates
         ////
-        // restrict update
-        Scalar maxDeltaZ = 0.0;  // in update vector
-        Scalar sumDeltaZ = 0.0; // changes in last component (not in update vector)
+        std::array<Scalar, numComponents> z{};
+        std::array<Scalar, numComponents> dz{};
+        z.back() = 1.0;
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-            maxDeltaZ = std::max(std::abs(update[z0Idx + compIdx]), maxDeltaZ);
-            sumDeltaZ += update[z0Idx + compIdx];
-        }
-        maxDeltaZ = std::max(std::abs(sumDeltaZ), maxDeltaZ);
-
-        // if max. update is above limit, restrict that one to limit and adjust the rest
-        // accordingly (s.t. last comp. update is sum of the changes in update vector)
-        // \Note: original code uses 0.1, while 0.1 looks like having problem make it converged.
-        // So there is some more to investigate here
-        constexpr Scalar deltaz_limit = 0.2;
-        if (maxDeltaZ > deltaz_limit) {
-            const Scalar alpha = deltaz_limit / maxDeltaZ;
-            for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-                nextValue[z0Idx + compIdx] = priVarsOld[z0Idx + compIdx] - alpha * update[z0Idx + compIdx];
-            }
+            z[compIdx] = priVarsOld[z0Idx + compIdx];
+            dz[compIdx] = -update[z0Idx + compIdx];
+            z.back() -= z[compIdx];
+            dz.back() += update[z0Idx + compIdx];
         }
 
-        // ensure that z-values are less than tol or more than 1-tol
-        constexpr Scalar tol = 1e-8;
-        for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-           nextValue[z0Idx + compIdx] = std::clamp(nextValue[z0Idx + compIdx], tol, 1-tol);
-        }
-
+        Scalar sw = 0.0;
+        Scalar dSw = 0.0;
         if constexpr (waterEnabled) {
-            // limit change in water saturation
-            constexpr Scalar dSwMax = 0.2;
-            if (update[Indices::water0Idx] > dSwMax) {
-                nextValue[Indices::water0Idx] = priVarsOld[Indices::water0Idx] - dSwMax;
-            }
+            sw = priVarsOld[Indices::water0Idx];
+            dSw = -update[Indices::water0Idx];
+        }
+
+        constexpr Scalar maxAmountChange = 0.2;
+        applyFlashCompositionStep(z, sw, dz, dSw,
+                                  IntensiveQuantities::compositionFloor,
+                                  IntensiveQuantities::hydrocarbonFloor,
+                                  maxAmountChange);
+
+        for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
+            nextValue[z0Idx + compIdx] = z[compIdx];
+        }
+        if constexpr (waterEnabled) {
+            nextValue[Indices::water0Idx] = sw;
         }
     }
 };  // class FlashNewtonMethod
