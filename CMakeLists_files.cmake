@@ -539,6 +539,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_preconditioner.cpp
   tests/test_tpsa_primaryvariables.cpp
   tests/test_vfpproperties.cpp
+  tests/test_MswCprWellDiagonal.cpp
   tests/test_WellMatrixMerger.cpp
   tests/test_WellPerformanceEventTracker.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
