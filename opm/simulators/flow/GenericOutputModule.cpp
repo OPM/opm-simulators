@@ -947,7 +947,11 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableExtbo_) {
-        extboC_.allocate(bufferSize);
+        // OPM-specific arrays are only written to full restarts of the
+        // extended OPM restart file.
+        const bool extendedOutput = norst_value == 0 &&
+                                    !eclState_.cfg().io().getEclCompatibleRST();
+        extboC_.allocate(bufferSize, rstKeywords, extendedOutput, log);
     }
 
     if (enableBioeffects_) {

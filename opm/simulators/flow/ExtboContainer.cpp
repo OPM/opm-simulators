@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/output/data/Solution.hpp>
@@ -31,19 +33,58 @@
 #include <array>
 #include <string>
 #include <tuple>
+#include <utility>
 
 namespace Opm {
 
 template<class Scalar>
-void ExtboContainer<Scalar>::
-allocate(const unsigned bufferSize)
+std::pair<Scalar, Scalar> ExtboContainer<Scalar>::
+phaseSolventMassFractions(const PhaseFractionInput& cell)
 {
+    // Phase masses per surface volume of oil and of gas.  XVOL and YVOL are
+    // the solvent fractions of the dissolved and of the free gas.
+    const Scalar oilPhaseMass = cell.oilDensity +
+        cell.rs * ((1.0 - cell.xVolume) * cell.gasDensity + cell.xVolume * cell.solventDensity);
+    const Scalar gasPhaseMass = cell.rv * cell.oilDensity +
+        (1.0 - cell.yVolume) * cell.gasDensity + cell.yVolume * cell.solventDensity;
+
+    const Scalar oil = cell.oilSaturation > 0.0 && oilPhaseMass > 0.0
+        ? cell.xVolume * cell.rs * cell.solventDensity / oilPhaseMass : 0.0;
+    const Scalar gas = cell.gasSaturation > 0.0 && gasPhaseMass > 0.0
+        ? cell.yVolume * cell.solventDensity / gasPhaseMass : 0.0;
+
+    return {oil, gas};
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
+allocate(const unsigned bufferSize,
+         std::map<std::string, int>& rstKeywords,
+         const bool extendedOutput,
+         const bool log)
+{
+    const auto requestOilMassFraction = std::exchange(rstKeywords["SOLVMFO"], 0) > 0;
+    const auto requestGasMassFraction = std::exchange(rstKeywords["SOLVMFG"], 0) > 0;
+
+    // Requests that cannot be written are dropped; warn once per run.
+    if ((requestOilMassFraction || requestGasMassFraction) &&
+        !extendedOutput && log && !warnedUnwritten_)
+    {
+        OpmLog::warning("SOLVMFO and SOLVMFG are only written to restart files "
+                        "with --enable-opm-rst-file=true and NORST=0");
+        warnedUnwritten_ = true;
+    }
+
     X_volume_.resize(bufferSize, 0.0);
     Y_volume_.resize(bufferSize, 0.0);
     Z_fraction_.resize(bufferSize, 0.0);
     mFracOil_.resize(bufferSize, 0.0);
     mFracGas_.resize(bufferSize, 0.0);
     mFracCo2_.resize(bufferSize, 0.0);
+    const auto phaseFractionSize = [bufferSize, extendedOutput](const bool requested)
+    { return requested && extendedOutput ? bufferSize : 0u; };
+    oilPhaseSolventMassFraction_.resize(phaseFractionSize(requestOilMassFraction), 0.0);
+    gasPhaseSolventMassFraction_.resize(phaseFractionSize(requestGasMassFraction), 0.0);
 
     allocated_ = true;
 }
@@ -80,6 +121,20 @@ assignZFraction(const unsigned globalDofIdx,
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
+assignPhaseMassFractions(const unsigned globalDofIdx,
+                         const Scalar oil,
+                         const Scalar gas)
+{
+    if (!oilPhaseSolventMassFraction_.empty()) {
+        oilPhaseSolventMassFraction_[globalDofIdx] = oil;
+    }
+    if (!gasPhaseSolventMassFraction_.empty()) {
+        gasPhaseSolventMassFraction_[globalDofIdx] = gas;
+    }
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {
@@ -90,6 +145,8 @@ outputRestart(data::Solution& sol)
         std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
 
     auto solutionArrays = std::array {
+        DataEntry{"SOLVMFG",  UnitSystem::measure::identity,           gasPhaseSolventMassFraction_},
+        DataEntry{"SOLVMFO",  UnitSystem::measure::identity,           oilPhaseSolventMassFraction_},
         DataEntry{"SS_X",     UnitSystem::measure::identity,           X_volume_},
         DataEntry{"SS_Y",     UnitSystem::measure::identity,           Y_volume_},
         DataEntry{"SS_Z",     UnitSystem::measure::identity,           Z_fraction_},

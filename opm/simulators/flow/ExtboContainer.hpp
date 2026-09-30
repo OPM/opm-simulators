@@ -26,6 +26,9 @@
 #ifndef OPM_EXTBO_CONTAINER_HPP
 #define OPM_EXTBO_CONTAINER_HPP
 
+#include <map>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -38,7 +41,30 @@ class ExtboContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
-    void allocate(const unsigned bufferSize);
+    //! Cell state that determines the phase solvent mass fractions.
+    //! Densities are at surface conditions.
+    struct PhaseFractionInput
+    {
+        Scalar oilSaturation;
+        Scalar gasSaturation;
+        Scalar rs;
+        Scalar rv;
+        Scalar xVolume;
+        Scalar yVolume;
+        Scalar oilDensity;
+        Scalar gasDensity;
+        Scalar solventDensity;
+    };
+
+    //! Solvent mass fractions of the oil and gas phases, zero where the
+    //! phase is absent.
+    static std::pair<Scalar, Scalar>
+    phaseSolventMassFractions(const PhaseFractionInput& cell);
+
+    void allocate(const unsigned bufferSize,
+                  std::map<std::string, int>& rstKeywords,
+                  const bool extendedOutput,
+                  const bool log);
 
     void assignMassFractions(const unsigned globalDofIdx,
                              const Scalar gas,
@@ -52,19 +78,29 @@ public:
     void assignZFraction(const unsigned globalDofIdx,
                          const Scalar zFraction);
 
+    void assignPhaseMassFractions(const unsigned globalDofIdx,
+                                  const Scalar oil,
+                                  const Scalar gas);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const
     { return allocated_; }
 
+    bool phaseMassFractionsRequested() const
+    { return !oilPhaseSolventMassFraction_.empty() || !gasPhaseSolventMassFraction_.empty(); }
+
 private:
     bool allocated_ = false;
+    bool warnedUnwritten_ = false;
     ScalarBuffer X_volume_;
     ScalarBuffer Y_volume_;
     ScalarBuffer Z_fraction_;
     ScalarBuffer mFracOil_;
     ScalarBuffer mFracGas_;
     ScalarBuffer mFracCo2_;
+    ScalarBuffer oilPhaseSolventMassFraction_;
+    ScalarBuffer gasPhaseSolventMassFraction_;
 };
 
 } // namespace Opm
