@@ -45,6 +45,8 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -844,6 +846,75 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
             const Scalar t = std::clamp((fix.depths[c] - 2020.0) / 20.0, 0.0, 1.0);
             BOOST_CHECK_SMALL(states[c].moleFraction(1) - (0.99 - 0.09 * t), 1e-10);
             BOOST_CHECK_SMALL(states[c].moleFraction(2) - (0.01 + 0.09 * t), 1e-10);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneContactOutsideRowGap)
+{
+    // With EQUIL item 10 = 1 the COMPVD rows give the composition versus depth,
+    // so a gas-oil contact outside the gap between the last vapour row (2049 m)
+    // and the first liquid row (2051 m) moves to the nearest edge of the gap.
+    const auto states = [](const std::string& goc) {
+        const EquilFixture fix(deckString(
+            "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+            "COMPVD\n"
+            " 2000   0 0.95 0.05  0  150.0\n"
+            " 2049   0 0.95 0.05  0  150.0\n"
+            " 2051   0 0.60 0.40  1  150.0\n"
+            " 2100   0 0.40 0.60  1  150.0 /\n"));
+        return fix.compute(std::vector<int>(20, 0)).fluidStates();
+    };
+
+    // The cell at 2057.5 m lies above a contact at 2060 m but below the first
+    // liquid row, and the one at 2042.5 m below a contact at 2030 m but above
+    // the last vapour row.
+    for (const auto& [goc, edge, cell, phaseIdx] :
+         {std::tuple{"2060", "2051", std::size_t{11}, FluidSystem::oilPhaseIdx},
+          std::tuple{"2030", "2049", std::size_t{8}, FluidSystem::gasPhaseIdx}}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const auto moved = states(goc);
+            BOOST_CHECK_CLOSE(moved[cell].saturation(phaseIdx), 1.0, 1e-10);
+
+            const auto expected = states(edge);
+            BOOST_REQUIRE_EQUAL(moved.size(), expected.size());
+            for (std::size_t c = 0; c < moved.size(); ++c) {
+                BOOST_TEST_CONTEXT("Cell " << c) {
+                    for (const auto p : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                        BOOST_CHECK_EQUAL(moved[c].pressure(p), expected[c].pressure(p));
+                        BOOST_CHECK_EQUAL(moved[c].saturation(p), expected[c].saturation(p));
+                    }
+                    for (int comp = 0; comp < 3; ++comp) {
+                        BOOST_CHECK_EQUAL(moved[c].moleFraction(comp),
+                                          expected[c].moleFraction(comp));
+                    }
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneRejectsRowsAgainstContact)
+{
+    // Type 3 takes the gas-oil contact as its reference depth, so the rows may
+    // not put the phase change elsewhere. No item 10 accepts a vapour row below
+    // a liquid one.
+    const std::string gapAbove = "COMPVD\n"
+                                 " 2000   0 0.95 0.05  0  150.0\n"
+                                 " 2049   0 0.95 0.05  0  150.0\n"
+                                 " 2051   0 0.60 0.40  1  150.0\n"
+                                 " 2100   0 0.40 0.60  1  150.0 /\n";
+    const std::string interleaved = "COMPVD\n"
+                                    " 2000   0 0.95 0.05  0  150.0\n"
+                                    " 2040   0 0.60 0.40  1  150.0\n"
+                                    " 2060   0 0.95 0.05  0  150.0\n"
+                                    " 2100   0 0.40 0.60  1  150.0 /\n";
+    for (const auto& [equil, compvd] :
+         {std::pair{"EQUIL\n 2060 200 2300 0 2060 0 3* 3 /\n", gapAbove},
+          std::pair{"EQUIL\n 2072.5 200 2300 0 2050 0 /\n", interleaved}}) {
+        BOOST_TEST_CONTEXT(equil << compvd) {
+            const EquilFixture fix(deckString(equil, "EQLDIMS\n/\n", "", compvd));
+            BOOST_CHECK_THROW(fix.compute(std::vector<int>(20, 0)), std::runtime_error);
         }
     }
 }

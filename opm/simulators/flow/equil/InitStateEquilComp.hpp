@@ -201,7 +201,9 @@ private:
  *
  * The COMPVD phase column selects the EOS root. If its rows name both phases,
  * the vapour rows define the gas zone above the gas-oil contact and the liquid
- * rows define the liquid zone below it.
+ * rows define the liquid zone below it. For type 1 a contact outside the gap
+ * between the last vapour row and the first liquid row moves to the nearest
+ * edge of that gap.
  *
  * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
@@ -325,6 +327,7 @@ private:
     /// The equilibrated vertical distributions within one region.
     struct Region {
         int initType{1};                            // EQUIL item 10
+        /// Gas-oil contact. A two-zone COMPVD table may move it, see zoneBoundary().
         Scalar zgoc{};
         /// Name of the selected composition keyword, used in diagnostics.
         std::string_view compositionKeyword;
@@ -455,13 +458,17 @@ private:
         return rows;
     }
 
-    /// Verify that vapour rows are at or above the gas-oil contact and liquid
-    /// rows are at or below it.
-    static void checkZonesStraddleContact(const CompvdTable& compvd,
-                                          const std::vector<std::size_t>& vaporRows,
-                                          const std::vector<std::size_t>& liquidRows,
-                                          const Scalar zgoc,
-                                          const std::size_t regionIdx)
+    /// Depth at which the gas zone of a COMPVD table naming both phases meets
+    /// its liquid zone: the gas-oil contact when it lies between the last
+    /// vapour row and the first liquid row. With EQUIL item 10 = 1 the rows
+    /// give the composition versus depth, so a contact outside that gap moves
+    /// to its nearest edge and every row keeps the phase it names. Type 3 uses
+    /// the contact as its reference depth, so there the rows must agree with it.
+    static Scalar zoneBoundary(const CompvdTable& compvd,
+                               const std::vector<std::size_t>& vaporRows,
+                               const std::vector<std::size_t>& liquidRows,
+                               const Region& reg,
+                               const std::size_t regionIdx)
     {
         if (vaporRows.empty() || liquidRows.empty()) {
             OPM_THROW(std::runtime_error,
@@ -470,14 +477,39 @@ private:
         }
 
         const auto& depth = compvd.getDepthColumn();
-        if ((depth[vaporRows.back()] > zgoc) || (depth[liquidRows.front()] < zgoc)) {
+        const Scalar lastVapor = depth[vaporRows.back()];
+        const Scalar firstLiquid = depth[liquidRows.front()];
+        if (lastVapor > firstLiquid) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD table of region {} has a vapour row at {} m "
+                                  "below its liquid row at {} m. All vapour rows must lie "
+                                  "above the liquid rows.",
+                                  regionIdx + 1, lastVapor, firstLiquid));
+        }
+
+        if ((reg.zgoc >= lastVapor) && (reg.zgoc <= firstLiquid)) {
+            return reg.zgoc;
+        }
+
+        if (reg.initType != 1) {
             OPM_THROW(std::runtime_error,
                       fmt::format("The COMPVD table of region {} puts its vapour rows down to "
                                   "{} m and its liquid rows from {} m, which do not meet at "
-                                  "the gas-oil contact at {} m.",
-                                  regionIdx + 1, depth[vaporRows.back()],
-                                  depth[liquidRows.front()], zgoc));
+                                  "the gas-oil contact at {} m. EQUIL item 10 = {} takes the "
+                                  "contact as the reference depth, so the rows must agree "
+                                  "with it.",
+                                  regionIdx + 1, lastVapor, firstLiquid, reg.zgoc,
+                                  reg.initType));
         }
+
+        const Scalar boundary = std::clamp(reg.zgoc, lastVapor, firstLiquid);
+        OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m lies "
+                                    "outside the COMPVD phase change between the last vapour "
+                                    "row at {} m and the first liquid row at {} m. With EQUIL "
+                                    "item 10 = 1 the rows give the composition versus depth, "
+                                    "so the gas zone ends at {} m instead.",
+                                    regionIdx + 1, reg.zgoc, lastVapor, firstLiquid, boundary));
+        return boundary;
     }
 
     /// The COMPVD rows carrying \p phase.
@@ -645,8 +677,7 @@ private:
                 // the liquid rows the one below the contact.
                 const auto vaporRows = rowsOfPhase(compvd, CompvdTable::Phase::Vapor);
                 const auto liquidRows = rowsOfPhase(compvd, CompvdTable::Phase::Liquid);
-                checkZonesStraddleContact(compvd, vaporRows, liquidRows,
-                                          record.gasOilContactDepth(), regionIdx);
+                reg.zgoc = zoneBoundary(compvd, vaporRows, liquidRows, reg, regionIdx);
                 reg.twoZone = true;
                 setupComposition(reg.vaporVdTable, compvd, vaporRows);
                 setupComposition(reg.compositionVdTable, compvd, liquidRows);
