@@ -494,6 +494,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_GasSatfuncConsistencyChecks.cpp
   tests/test_gconsump.cpp
   tests/test_glift1.cpp
+  tests/test_gpmaint_lgr.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
   tests/test_injection_topup_phase_validation.cpp
@@ -726,6 +727,7 @@ list (APPEND TEST_DATA_FILES
   tests/GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA
   tests/INJECTION_TOPUP_PHASE_VALIDATION.DATA
   tests/GLIFT1.DATA
+  tests/GPMAINT_LGR.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
