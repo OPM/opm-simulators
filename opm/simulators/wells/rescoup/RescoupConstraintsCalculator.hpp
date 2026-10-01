@@ -98,6 +98,11 @@ public:
     ///   wells against them, and they are what produced the rates this
     ///   recomputation is based on.
     ///
+    ///   The injection caps at the slaves' injection potentials are decided
+    ///   afresh here, from the latest slave data, in the same way as in the
+    ///   first calculation of the sync step (see
+    ///   capAndRedistributeInjectionTargets_()); the production caps are kept.
+    ///
     ///   The recomputation is unconditional: it runs for every master group of
     ///   every activated slave, whatever mode each one is under.  A `RATE`
     ///   target is a constant from the deck and a `RESV` target moves only with
@@ -194,6 +199,14 @@ private:
     ///   target.  Currently handles the not-yet-activated case; the
     ///   slave-finished-before-master case deferred to a follow-up PR.
     void excludeInactiveSlaveMasterGroupsFromDistribution_();
+
+    /// @brief Exclude the master groups of currently-inactive slaves from
+    ///   the injection guide-rate distribution of every phase.
+    /// @details Sets their effective injection GCW to 0.  The injection
+    ///   part of excludeInactiveSlaveMasterGroupsFromDistribution_(),
+    ///   separate so that recalculateInjectionTargetsAndSendToSlaves() can
+    ///   rebuild the injection caps without touching production state.
+    void excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
 
     /// @brief Project a slave-reported potentials triple onto a single
     ///   value comparable to a target in the given control mode.

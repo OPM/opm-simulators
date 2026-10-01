@@ -295,9 +295,17 @@ recalculateInjectionTargetsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
-    // The slave injection rates have changed since the targets were first
-    // computed this sync step, so refresh the injection target reductions they
-    // feed (for capped and individually controlled master groups) first.
+    // Decide the injection caps afresh from the latest slave data, exactly as
+    // the first calculation of the sync step does.  A cap kept from earlier in
+    // the sync step would leave its group with effective injection GCW 0, and
+    // such a group drops out of its own guide-rate share: its target would come
+    // out as 0, which the cap test (target > potential) cannot detect.  Only the
+    // injection caps are reset; the production caps decided earlier in the sync
+    // step stay in force.
+    rescoup_master.resetEffectiveInjectionGCW();
+    this->excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
+    // The slave injection rates have also changed since the targets were first
+    // computed this sync step, so refresh the injection target reductions.
     this->updateInjectionGCWAndTargetReductions_();
     const auto num_slaves = rescoup_master.numSlaves();
     std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
@@ -307,10 +315,6 @@ recalculateInjectionTargetsAndSendToSlaves()
                 this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
         }
     }
-    // Groups capped earlier in this sync step keep their effective injection
-    // GCW of 0, so their siblings' targets above already exclude them; this
-    // re-applies their caps and handles any group whose target now exceeds its
-    // potential for the first time.
     this->capAndRedistributeInjectionTargets_(calculator, all_injection_targets);
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (!rescoup_master.slaveIsCoupled(slave_idx)) {
@@ -638,7 +642,28 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
                 // groups are excluded from guide-rate distribution regardless of
                 // item 8.
                 rescoup_master.setEffectiveGCW(group_name, 0);
-                // Likewise for the injection guide-rate distribution of every phase.
+            }
+        }
+    }
+    // Likewise for the injection guide-rate distribution of every phase.
+    this->excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
+}
+
+// Exclude the master groups of currently-uncoupled slaves from the injection
+// guide-rate distribution of every phase, by setting their effective injection
+// GCW to 0.  Split out from excludeInactiveSlaveMasterGroupsFromDistribution_()
+// so the injection caps can be recomputed within a sync step without touching
+// the production state.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+excludeInactiveSlaveMasterGroupsFromInjectionDistribution_()
+{
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (!rescoup_master.slaveIsCoupled(slave_idx)) {
+            for (const auto& group_name : rescoup_master.getMasterGroupNamesForSlave(slave_idx)) {
                 for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
                     rescoup_master.setEffectiveInjectionGCW(group_name, phase, 0);
                 }

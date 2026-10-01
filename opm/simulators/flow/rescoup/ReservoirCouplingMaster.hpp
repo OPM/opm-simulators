@@ -106,8 +106,13 @@ public:
     ///   are set, so stale caps from a previous sync step do not leak in.
     void resetEffectiveGCW() {
         this->effective_gcw_.clear();
-        this->effective_injection_gcw_.clear();
+        this->resetEffectiveInjectionGCW();
     }
+
+    /// @brief Clear the injection effective-GCW entries only, keeping the
+    ///   production ones.  Used when the injection targets are recomputed within
+    ///   a sync step while the production caps decided earlier stay in force.
+    void resetEffectiveInjectionGCW() { this->effective_injection_gcw_.clear(); }
 
     double getActivationDate() const { return this->activation_date_; }
     int getArgc() const { return this->argc_; }
