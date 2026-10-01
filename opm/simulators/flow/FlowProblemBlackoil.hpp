@@ -31,8 +31,6 @@
 #ifndef OPM_FLOW_PROBLEM_BLACK_HPP
 #define OPM_FLOW_PROBLEM_BLACK_HPP
 
-#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -40,7 +38,6 @@
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
-#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
@@ -148,7 +145,6 @@ private:
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
     using HybridNewton = BlackOilHybridNewton<TypeTag>;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 
 #if HAVE_DAMARIS
     using DamarisWriterType = DamarisWriter<TypeTag>;
@@ -177,7 +173,6 @@ public:
      */
     explicit FlowProblemBlackoil(Simulator& simulator)
         : FlowProblemType(simulator)
-        , thresholdPressures_(simulator)
         , mixControls_(simulator.vanguard().schedule())
         , prev_timestep_state_(simulator.vanguard().schedule())
         , actionHandler_(simulator.vanguard().eclState(),
@@ -1106,23 +1101,6 @@ public:
         }
     }
 
-    /*!
-     * \copydoc BlackOilBaseProblem::thresholdPressure
-     */
-    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
-    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
-
-    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
-    { return thresholdPressures_; }
-
-    FlowThresholdPressure<TypeTag>& thresholdPressure()
-    { return thresholdPressures_; }
-
-    const ModuleParams& moduleParams() const
-    {
-        return moduleParams_;
-    }
-
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -1694,8 +1672,6 @@ protected:
         return true;
     }
 
-    FlowThresholdPressure<TypeTag> thresholdPressures_;
-
     std::vector<InitialFluidState> initialFluidStates_;
 
     bool enableEclOutput_;
@@ -1722,8 +1698,6 @@ protected:
     PrevTimestepState prev_timestep_state_;
 
     ActionHandler<Scalar, IndexTraits> actionHandler_;
-
-    ModuleParams moduleParams_;
 
     HybridNewton hybridNewton_;
 

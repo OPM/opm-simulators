@@ -32,7 +32,6 @@
 
 
 #include <opm/simulators/flow/FlowProblem.hpp>
-#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
@@ -119,7 +118,6 @@ public:
      */
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
-        , thresholdPressures_(simulator)
     {
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
@@ -144,6 +142,10 @@ public:
         this->initializeSimulatorTime_();
 
         this->initFluidSystem_();
+        if (eclState.getSimulationConfig().rock_config().active()) {
+            throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
+                                     "by compositional modeling yet");
+        }
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -353,13 +355,6 @@ public:
 
     const std::vector<InitialFluidState>& initialFluidStates() const
     { return initialFluidStates_; }
-
-    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
-    {
-        assert( !thresholdPressures_.enableThresholdPressure() &&
-                " Threshold Pressures are not supported by compostional simulation ");
-        return thresholdPressures_;
-    }
 
     const EclWriterType& eclWriter() const
     { return *eclWriter_; }
@@ -631,8 +626,6 @@ private:
     {
         throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add urea to BC");
     }
-
-    FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
 

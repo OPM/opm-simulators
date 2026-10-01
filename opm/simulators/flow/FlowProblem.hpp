@@ -46,6 +46,8 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
+#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
+#include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -60,6 +62,7 @@
 // TODO: maybe we can name it FlowProblemProperties.hpp
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
+#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/LgrOutputTransGather.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
@@ -171,6 +174,7 @@ protected:
     using TemperatureModel = GetPropType<TypeTag, Properties::TemperatureModel>;
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 
 public:
 
@@ -247,6 +251,7 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
         , temperatureModel_(simulator)
+        , thresholdPressures_(simulator)
         , enable_state_rollback_(Parameters::Get<Parameters::EnableStateRollback>())
     {
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
@@ -588,6 +593,21 @@ public:
     {
         return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
     }
+
+    /*!
+     * \brief Threshold pressure [Pa] for the intersection between two elements.
+     */
+    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
+    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
+
+    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
+    { return thresholdPressures_; }
+
+    FlowThresholdPressure<TypeTag>& thresholdPressure()
+    { return thresholdPressures_; }
+
+    const ModuleParams& moduleParams() const
+    { return moduleParams_; }
 
     /*!
      * \copydoc EclTransmissiblity::diffusivity
@@ -2096,6 +2116,9 @@ protected:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
     TemperatureModel temperatureModel_;
+
+    FlowThresholdPressure<TypeTag> thresholdPressures_;
+    ModuleParams moduleParams_;
 
     template<class T>
     struct BCData

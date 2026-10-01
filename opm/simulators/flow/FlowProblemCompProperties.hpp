@@ -96,5 +96,10 @@ template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowBaseProblemComp>
 { static constexpr bool value = false; };
 
+// Convective mixing is a black-oil feature
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowBaseProblemComp>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Properties
 #endif // OPM_FLOW_PROBLEM_COMP_PROPERTIES_HPP

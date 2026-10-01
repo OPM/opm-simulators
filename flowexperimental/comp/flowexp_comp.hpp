@@ -22,12 +22,12 @@
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
-#include <opm/models/common/darcyfluxmodule.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/ptflash/flashmodel.hh>
 
 #include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
+#include <opm/simulators/flow/NewTranFluxModule.hpp>
 
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
@@ -132,10 +132,10 @@ struct TracerModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     using type = EmptyModel<TypeTag>;
 };
 
-//! Use the Darcy relation to determine the phase velocity
+//! Fluxes from the transmissibilities, so multipliers and edits apply
 template<class TypeTag, int NumComp, bool EnableWater>
 struct FluxModule<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>>
-{ using type = DarcyFluxModule<TypeTag>; };
+{ using type = NewTranFluxModule<TypeTag>; };
 
 template <class TypeTag, int NumComp, bool EnableWater>
 struct FlashSolver<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
