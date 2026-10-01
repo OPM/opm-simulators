@@ -49,7 +49,6 @@ StandardWellEval<FluidSystem,Indices>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif)
     : baseif_(baseif)
     , primary_variables_(baseif_)
-    , F0_(numWellConservationEq)
     , linSys_(baseif_.parallelWellInfo())
     , connections_(baseif)
 {
@@ -67,16 +66,6 @@ extendEval(const Eval& in) const
         out.setDerivative(eqIdx, in.derivative(eqIdx), totalNumEq);
     }
     return out;
-}
-
-template<class FluidSystem, class Indices>
-void
-StandardWellEval<FluidSystem,Indices>::
-computeAccumWell()
-{
-    for (std::size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
-        F0_[eq_idx] = this->primary_variables_.surfaceVolumeFraction(eq_idx).value();
-    }
 }
 
 template<class FluidSystem, class Indices>
@@ -204,6 +193,23 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             report.setWellConvergenceMetric(CR::WellFailure::Type::Invalid, CR::Severity::None, compIdx, well_flux_residual[compIdx], baseif_.name());
         }
 
+    }
+
+    if constexpr (enable_energy) {
+        const Scalar energy_residual = res[Temperature];
+        // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
+        constexpr int dummy_phase = -1;
+        // The energy residual is scaled (energy_scaling_factor_) onto the
+        // mass-balance scale, so we reuse the mass-balance well tolerances.
+        if (std::isnan(energy_residual)) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::NotANumber, dummy_phase, baseif_.name()});
+        } else if (energy_residual > maxResidualAllowed) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::TooLarge, dummy_phase, baseif_.name()});
+        } else if (!relax_tolerance && energy_residual > tol_wells) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        } else if (energy_residual > relaxed_tolerance_flow) {
+            report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        }
     }
 
     WellConvergence(baseif_).

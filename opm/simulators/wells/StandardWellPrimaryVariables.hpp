@@ -53,22 +53,29 @@ protected:
 
     // Table showing the primary variable indices, depending on what phases are present:
     //
-    //         WOG     OG     WG     WO    W/O/G (single phase)
-    // WQTotal   0      0      0      0                       0
-    // WFrac     1  -1000     -1000   1                   -1000
-    // GFrac     2      1      1  -1000                   -1000
-    // Spres     3      2      2      2                       1
+    //                WOG     OG     WG     WO    W/O/G (single phase)
+    // WQTotal          0      0      0      0                       0
+    // WFrac            1  -1000  -1000      1                   -1000
+    // GFrac            2      1      1  -1000                   -1000
+    // Temperature(*)   3      2      2      2                       1
+    // Spres          3/4    2/3    2/3    2/3                     1/2
+    // (*) Temperature is only present when the energy equation is solved
+    //     fully implicitly; Bhp shifts by one when Temperature is present.
 
+public:
     //! \brief Number of the well control equations.
     static constexpr int numWellControlEq = 1;
 
-public:
-    //! \brief Number of the conservation equations.
+    //! \brief Whether the energy equation is solved fully implicitly, adding a
+    //! temperature primary variable and an energy conservation equation.
+    static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
+
+    //! \brief Number of the conservation equations (without the energy equation).
     static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
 
     //! \brief Number of the well equations that will always be used.
     //! \details Based on the solution strategy, there might be other well equations be introduced.
-    static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
+    static constexpr int numStaticWellEq = numWellConservationEq + enable_energy + numWellControlEq;
 
     static constexpr int WQTotal = 0; //!< The index for the weighted total rate
 
@@ -82,6 +89,12 @@ public:
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SFrac = !Indices::enableSolvent ? -1000 : has_wfrac_variable+has_gfrac_variable+1;
+
+    //! \brief The index for the temperature primary variable and the energy equation.
+    //! \details It comes right after the mass conservation equations/fraction
+    //! variables and before Bhp, consistent with the multisegment wells where
+    //! Temperature comes before SPres.
+    static constexpr int Temperature = enable_energy ? numWellConservationEq : -1000;
 
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;
