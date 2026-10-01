@@ -175,7 +175,9 @@ private:
     ///   parent's injection guide-rate sum and makes its rate a parent
     ///   target reduction instead.  The injection GCW and the injection
     ///   target reductions are then recomputed and the uncapped groups'
-    ///   targets are re-evaluated, so they absorb the surplus.
+    ///   targets are re-evaluated, so they absorb the surplus.  This is
+    ///   repeated until no target exceeds its potential, since a larger
+    ///   share can push another group over its own potential.
     /// @param calculator Group-constraint calculator (same instance as
     ///   used for the initial targets).
     /// @param all_injection_targets In/out: per-slave injection targets,

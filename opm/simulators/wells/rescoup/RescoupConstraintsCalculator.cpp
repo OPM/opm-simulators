@@ -423,70 +423,77 @@ capAndRedistributeInjectionTargets_(
     // master-level counterpart of what happens to a well under group control
     // that cannot meet its share: it drops out of the guide-rate distribution
     // and its rate becomes a reduction on the parent's target instead.
+    //
+    // The steps are repeated until a pass caps nothing new: capping one group
+    // raises its siblings' shares, which can push another sibling over its own
+    // potential.  Every further pass caps at least one more (group, phase)
+    // pair, so the loop ends after at most as many passes as there are targets.
     auto& rescoup_master = this->reservoir_coupling_master_;
     const auto num_slaves = all_injection_targets.size();
-
-    // Step 1: identify targets that exceed the potential and cap them.
     std::set<std::pair<std::string, ReservoirCoupling::Phase>> capped;
-    bool newly_capped = false;
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
-        for (auto& it : all_injection_targets[slave_idx]) {
-            const auto& group_name = master_groups[it.group_name_idx];
-            const auto& potentials = rescoup_master.getSlaveGroupInjectionPotentials(group_name);
-            const Scalar pot = this->potentialForInjectionPhase_(potentials, it.phase);
-            if (it.target > pot) {
-                this->deferred_logger_.debug(fmt::format(
-                    "RC injection redistribution: {} phase {} target={:.4f} exceeds "
-                    "potential={:.4f}, capping",
-                    group_name, static_cast<int>(it.phase), it.target, pot));
-                it.target = pot;
-                capped.emplace(group_name, it.phase);
-                const Phase phase = ReservoirCoupling::convertToOpmPhase(it.phase);
-                if (rescoup_master.effectiveInjectionGCW(group_name, phase) != 0) {
-                    newly_capped = true;
+    while (true) {
+        // Step 1: identify targets that exceed the potential and cap them.
+        bool newly_capped = false;
+        for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+            for (auto& it : all_injection_targets[slave_idx]) {
+                const auto& group_name = master_groups[it.group_name_idx];
+                if (capped.count({group_name, it.phase}) > 0) {
+                    continue;  // already capped in an earlier pass
                 }
-                // Drop the capped group from its siblings' injection guide-rate
-                // sum for this phase, so its rate becomes a parent target
-                // reduction on the recompute below.
-                rescoup_master.setEffectiveInjectionGCW(group_name, phase, 0);
+                const auto& potentials = rescoup_master.getSlaveGroupInjectionPotentials(group_name);
+                const Scalar pot = this->potentialForInjectionPhase_(potentials, it.phase);
+                if (it.target > pot) {
+                    this->deferred_logger_.debug(fmt::format(
+                        "RC injection redistribution: {} phase {} target={:.4f} exceeds "
+                        "potential={:.4f}, capping",
+                        group_name, static_cast<int>(it.phase), it.target, pot));
+                    it.target = pot;
+                    capped.emplace(group_name, it.phase);
+                    newly_capped = true;
+                    // Drop the capped group from its siblings' injection guide-rate
+                    // sum for this phase, so its rate becomes a parent target
+                    // reduction on the recompute below.
+                    rescoup_master.setEffectiveInjectionGCW(
+                        group_name, ReservoirCoupling::convertToOpmPhase(it.phase), 0);
+                }
             }
         }
-    }
 
-    // If no group was capped for the first time, the targets computed by the
-    // caller already reflect every cap in force.
-    if (!newly_capped) {
-        return;
-    }
+        // If no group was capped in this pass, every target is within its
+        // potential.
+        if (!newly_capped) {
+            return;
+        }
 
-    // NOTE: updateGroupTargetReduction() below reads a capped master group's
-    // rate from the slave-reported injection surface rates.  As for production
-    // (see capAndRedistributeProductionTargets_()), a group whose target exceeds
-    // its potential has its injectors at their own limits, so the reported rate
-    // is close to the potential the target was capped at.
+        // NOTE: updateGroupTargetReduction() below reads a capped master group's
+        // rate from the slave-reported injection surface rates.  As for production
+        // (see capAndRedistributeProductionTargets_()), a group whose target exceeds
+        // its potential has its injectors at their own limits, so the reported rate
+        // is close to the potential the target was capped at.
 
-    // Step 2: recompute the injection GCW and reductions with the capped groups
-    // excluded.
-    this->updateInjectionGCWAndTargetReductions_();
+        // Step 2: recompute the injection GCW and reductions with the capped groups
+        // excluded.
+        this->updateInjectionGCWAndTargetReductions_();
 
-    // Step 3: recompute the targets of the uncapped groups.
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
-        for (auto& it : all_injection_targets[slave_idx]) {
-            const auto& group_name = master_groups[it.group_name_idx];
-            if (capped.count({group_name, it.phase}) > 0) {
-                continue;  // keep the capped target
+        // Step 3: recompute the targets of the uncapped groups.
+        for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+            for (auto& it : all_injection_targets[slave_idx]) {
+                const auto& group_name = master_groups[it.group_name_idx];
+                if (capped.count({group_name, it.phase}) > 0) {
+                    continue;  // keep the capped target
+                }
+                const Scalar old_target = it.target;
+                const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+                const auto target_info = calculator.groupInjectionTarget(group, it.phase);
+                if (target_info.has_value()) {
+                    it.target = target_info->constraint;
+                }
+                this->deferred_logger_.debug(fmt::format(
+                    "RC injection redistribution: {} phase {} old_target={:.4f} new_target={:.4f}",
+                    group_name, static_cast<int>(it.phase), old_target, it.target));
             }
-            const Scalar old_target = it.target;
-            const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-            const auto target_info = calculator.groupInjectionTarget(group, it.phase);
-            if (target_info.has_value()) {
-                it.target = target_info->constraint;
-            }
-            this->deferred_logger_.debug(fmt::format(
-                "RC injection redistribution: {} phase {} old_target={:.4f} new_target={:.4f}",
-                group_name, static_cast<int>(it.phase), old_target, it.target));
         }
     }
 }
