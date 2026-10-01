@@ -17,10 +17,12 @@
 #ifndef OPM_ISTLSOLVERRUNTIMEOPTIONPROXY_HEADER_INCLUDED
 #define OPM_ISTLSOLVERRUNTIMEOPTIONPROXY_HEADER_INCLUDED
 
-#include "opm/simulators/linalg/FlowLinearSolverParameters.hpp"
-#include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/system/ISTLSolverSystem.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
@@ -32,7 +34,6 @@
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
 #endif
 
-#include <opm/simulators/linalg/system/ISTLSolverSystem.hpp>
 
 #include <filesystem>
 #include <fmt/format.h>
