@@ -229,32 +229,41 @@ BOOST_AUTO_TEST_CASE(ComponentAtTheFloorDoesNotHoldBackTheOthers)
 
 BOOST_AUTO_TEST_CASE(RandomStepsKeepTheBounds)
 {
-    std::mt19937 gen(42);
-    std::uniform_real_distribution<double> uniform(0.0, 1.0);
-    std::uniform_int_distribution<std::size_t> pick(0, 3);
-    constexpr std::array stepSizes{1.0e-8, 0.3, 3.0, 1.0e3};
+    constexpr std::size_t n = 4;
+    // Compositions from even to strongly skewed.
     constexpr std::array exponents{1.0, 4.0, 20.0};
-    // Includes a share just above maxAmountChange, which a damped step can take to its floor.
+    // Saturations at and near the bounds, including a share just above maxAmountChange,
+    // which a damped step can take to its floor.
     constexpr std::array saturations{0.0, 1.0 - maxAmountChange - hydrocarbonFloor,
                                      1.0 - 1.0e-9, 1.0};
-    constexpr std::size_t n = 4;
+    constexpr std::array zStepSizes{1.0e-8, 0.3, 3.0, 1.0e3};
+    constexpr std::array swStepSizes{1.0e-8, 0.3, 3.0};
+
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+    std::bernoulli_distribution coin(0.5);
+    std::uniform_int_distribution<std::size_t> component(0, n - 1);
+    const auto choose = [&gen](const auto& options) {
+        std::uniform_int_distribution<std::size_t> index(0, options.size() - 1);
+        return options[index(gen)];
+    };
 
     for (int sample = 0; sample < 10000; ++sample) {
         State<n> oldState{};
-        const double exponent = exponents[pick(gen) % exponents.size()];
+        const double exponent = choose(exponents);
         for (auto& zc : oldState.z) {
             zc = std::pow(uniform(gen), exponent);
         }
-        oldState.z[pick(gen)] = 0.0;
+        oldState.z[component(gen)] = 0.0;
         // Half of the compositions keep their zeros, as initial compositions may.
-        const double zMin = pick(gen) < 2 ? compositionFloor : 0.0;
+        const double zMin = coin(gen) ? 0.0 : compositionFloor;
         const double zSum = std::accumulate(oldState.z.begin(), oldState.z.end(), 0.0);
         for (auto& zc : oldState.z) {
             zc = zMin + (1.0 - n * zMin) * zc / zSum;
         }
-        oldState.sw = pick(gen) == 0 ? uniform(gen) : saturations[pick(gen)];
+        oldState.sw = coin(gen) ? uniform(gen) : choose(saturations);
 
-        std::normal_distribution<double> zStep(0.0, stepSizes[pick(gen)]);
+        std::normal_distribution<double> zStep(0.0, choose(zStepSizes));
         std::array<double, n> dz{};
         for (auto& dzc : dz) {
             dzc = zStep(gen);
@@ -263,7 +272,7 @@ BOOST_AUTO_TEST_CASE(RandomStepsKeepTheBounds)
         for (auto& dzc : dz) {
             dzc -= dzMean;
         }
-        std::normal_distribution<double> swStep(0.0, stepSizes[pick(gen) % 3]);
+        std::normal_distribution<double> swStep(0.0, choose(swStepSizes));
 
         checkBounds(oldState, step(oldState, dz, swStep(gen)));
     }

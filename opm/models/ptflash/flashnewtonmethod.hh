@@ -111,6 +111,8 @@ protected:
         ////
         // Composition and water saturation updates
         ////
+        // Steps are new minus old values. The last fraction is dependent: it and its step
+        // complete the sums of z and dz to one and zero.
         std::array<Scalar, numComponents> z{};
         std::array<Scalar, numComponents> dz{};
         z.back() = 1.0;
@@ -118,7 +120,7 @@ protected:
             z[compIdx] = priVarsOld[z0Idx + compIdx];
             dz[compIdx] = -update[z0Idx + compIdx];
             z.back() -= z[compIdx];
-            dz.back() += update[z0Idx + compIdx];
+            dz.back() -= dz[compIdx];
         }
 
         Scalar sw = 0.0;

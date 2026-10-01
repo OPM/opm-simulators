@@ -66,6 +66,45 @@ Scalar largestAmountChange(const Scalar share,
     return change;
 }
 
+//! Replaces the old state (z, sw) by the point on the straight line in h and h z towards
+//! (newZ, newShare) whose largest change from the old state is maxAmountChange. The line
+//! starts from the old state moved onto the bounds, and that offset counts against the
+//! limit. The bounds are linear in h and h z, so every point on the line keeps them.
+template <class Scalar, std::size_t numComponents>
+void shortenStep(std::array<Scalar, numComponents>& z,
+                 Scalar& sw,
+                 const std::array<Scalar, numComponents>& newZ,
+                 const Scalar newShare,
+                 const Scalar compositionFloor,
+                 const Scalar hydrocarbonFloor,
+                 const Scalar maxAmountChange)
+{
+    const Scalar share = std::max(1 - sw, hydrocarbonFloor);
+    std::array<Scalar, numComponents> startZ = z;
+    keepCompositionFloor(startZ, compositionFloor);
+    const Scalar startShare = std::max(1 - std::clamp(sw, Scalar{0}, Scalar{1}),
+                                       hydrocarbonFloor);
+
+    // A start that uses up the limit is kept.
+    const Scalar offset = largestAmountChange(share, z, startShare, startZ);
+    const Scalar length = largestAmountChange(startShare, startZ, newShare, newZ);
+    const Scalar scale = offset < maxAmountChange ? (maxAmountChange - offset) / length
+                                                  : Scalar{0};
+
+    const Scalar finalShare = startShare + scale * (newShare - startShare);
+    for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
+        const Scalar startAmount = startShare * startZ[compIdx];
+        const Scalar newAmount = newShare * newZ[compIdx];
+        z[compIdx] = (startAmount + scale * (newAmount - startAmount)) / finalShare;
+    }
+    // Dividing by a small share amplifies roundoff in the amounts, so the floors and the
+    // sum are restored.
+    keepCompositionFloor(z, compositionFloor);
+    // Sw follows from the share: interpolated separately, the two would disagree where
+    // the floor on h applies.
+    sw = 1 - finalShare;
+}
+
 } // namespace detail
 
 /*!
@@ -108,8 +147,8 @@ void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
     const Scalar hydrocarbonShare = std::max(1 - sw, hydrocarbonFloor);
     const Scalar dHydrocarbonShare = -dSw;
 
-    // Use one damping factor to limit the linearized changes in h and h z.
-    // The changes after clamping Sw and enforcing the floors are checked below.
+    // One damping factor limits the linearized changes in h and h z. The changes after
+    // clamping Sw and enforcing the floors are checked at the end.
     Scalar maxChange = std::abs(dHydrocarbonShare);
     for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
         const Scalar dAmount = hydrocarbonShare * dz[compIdx] + z[compIdx] * dHydrocarbonShare;
@@ -132,38 +171,17 @@ void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
     }
     detail::keepCompositionFloor(newZ, compositionFloor);
 
+    // Clamping Sw and enforcing the floors can lengthen the step beyond the limit.
     const Scalar change = detail::largestAmountChange(hydrocarbonShare, z,
                                                       newHydrocarbonShare, newZ);
     if (change <= maxAmountChange) {
         z = newZ;
         sw = newSw;
-        return;
     }
-
-    // Project the old state onto the bounds and count that offset against the limit.
-    // Use the remaining budget to interpolate towards the new amounts. The bounds are
-    // linear in h and h z, so interpolation between the feasible endpoints preserves them.
-    std::array<Scalar, numComponents> startZ = z;
-    detail::keepCompositionFloor(startZ, compositionFloor);
-    const Scalar startShare = std::max(1 - std::clamp(sw, Scalar{0}, Scalar{1}),
-                                       hydrocarbonFloor);
-    const Scalar offset = detail::largestAmountChange(hydrocarbonShare, z, startShare, startZ);
-    const Scalar length = detail::largestAmountChange(startShare, startZ,
-                                                      newHydrocarbonShare, newZ);
-    // If the projection uses the entire budget, take no further Newton step.
-    const Scalar scale = offset < maxAmountChange ? (maxAmountChange - offset) / length
-                                                  : Scalar{0};
-    const Scalar finalShare = startShare + scale * (newHydrocarbonShare - startShare);
-    for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
-        const Scalar startAmount = startShare * startZ[compIdx];
-        const Scalar newAmount = newHydrocarbonShare * newZ[compIdx];
-        z[compIdx] = (startAmount + scale * (newAmount - startAmount)) / finalShare;
+    else {
+        detail::shortenStep(z, sw, newZ, newHydrocarbonShare,
+                            compositionFloor, hydrocarbonFloor, maxAmountChange);
     }
-    // Division by a small share can amplify roundoff. Restore the floors and normalization.
-    detail::keepCompositionFloor(z, compositionFloor);
-    // Sw follows from the share: interpolated separately, the two would disagree where
-    // the floor on h applies.
-    sw = 1 - finalShare;
 }
 
 } // namespace Opm
