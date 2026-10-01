@@ -393,8 +393,8 @@ public:
     { return mobility_[phaseIdx]; }
 
     /*!
-     * \brief Transmissibility multiplier from rock compaction, which the model
-     *        does not include.
+     * \brief Transmissibility multiplier from rock compaction. Compositional runs
+     *        reject ROCKCOMP, so it is one.
      */
     Scalar rockCompTransMultiplier() const
     { return 1.0; }
