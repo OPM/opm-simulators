@@ -139,12 +139,13 @@ RescoupConstraintsCalculator(
 //    sendNum/Injection/Production functions in
 //    ReservoirCouplingMasterReportStep are gated by `if (comm.rank() == 0)`.
 //
-//  Post-phase: aggregate any per-rank-partial group rates written by the
-//    redistribution (production reduction rates) via
-//    GroupState::communicate_rates() so the post-redistribution state is
-//    consistent across ranks.  This is a no-op when the master has no local
-//    wells under FIELD, and matches the pattern at
-//    BlackoilWellModelGeneric.cpp:1326.
+//  Consistency across master ranks: the target reductions are per-rank
+//    partial sums (a master group's rate is added on rank 0 only).  Each time
+//    this calculator recomputes them (updateGCWAndTargetReductions_(),
+//    updateInjectionGCWAndTargetReductions_()) it sums them across the master's
+//    ranks at once, so every rank computes the same targets and cap decisions,
+//    and so makes the same collective calls.  All other group rates were
+//    already summed by the group-data update that precedes this calculation.
 //
 // Details on the target calculation (Phase 1):
 // --------------------------------------------
@@ -219,7 +220,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     //     GroupStateHelper which performs collective operations on the
     //     master's MPI communicator.
     auto& rescoup_master = this->reservoir_coupling_master_;
-    const auto& comm = rescoup_master.getComm();
     GroupConstraintCalculator calculator{
         this->well_model_,
         this->group_state_helper_
@@ -268,14 +268,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
             );
         }
     }
-
-    // Aggregate any per-rank-partial group rates that the redistribution
-    // wrote (most importantly the FIELD-level production reduction rates set
-    // by updateGroupTargetReduction).  For single-cell decks where the master
-    // has no wells the reduction has no per-rank partial component and this
-    // is a no-op, but it keeps the post-redistribution state correct on a
-    // master that owns wells under the FIELD hierarchy.
-    this->group_state_helper_.groupState().communicate_rates(comm);
 }
 
 // Recompute the injection targets against the slave rates the master holds now
@@ -754,6 +746,11 @@ updateGCWAndTargetReductions_()
         /*is_production_group=*/true, /*dummy_injection_phase=*/Phase::OIL);
     const Group& fieldGroup = this->schedule_.getGroup("FIELD", this->report_step_idx_);
     this->group_state_helper_.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
+    // The reduction rates are per-rank partial sums (a master group's rate is
+    // added on rank 0 only); sum them so every rank computes the same targets
+    // and cap decisions, see updateInjectionGCWAndTargetReductions_().
+    this->group_state_helper_.groupState().communicate_reduction_rates(
+        this->group_state_helper_.comm(), /*is_injector=*/false);
 }
 
 // Recompute the injection GCW for every phase and the FIELD-level injection
@@ -769,6 +766,14 @@ updateInjectionGCWAndTargetReductions_()
     }
     const Group& fieldGroup = this->schedule_.getGroup("FIELD", this->report_step_idx_);
     this->group_state_helper_.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
+    // updateGroupTargetReduction() leaves per-rank partial sums: a master
+    // group's slave-reported rate is added on rank 0 only.  Sum them across the
+    // master's ranks before any target is computed from them.  Otherwise the
+    // targets, and with them the cap decisions, can differ between ranks, and
+    // the ranks then make different numbers of the collective calls inside the
+    // target computation (GroupStateHelper::getGroupRatesAvailableForHigherLevelControl()).
+    this->group_state_helper_.groupState().communicate_reduction_rates(
+        this->group_state_helper_.comm(), /*is_injector=*/true);
 }
 
 template class RescoupConstraintsCalculator<double, BlackOilDefaultFluidSystemIndices>;

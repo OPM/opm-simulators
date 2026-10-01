@@ -27,6 +27,7 @@
 
 #include <opm/simulators/wells/WellContainer.hpp>
 
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <utility>
@@ -219,6 +220,33 @@ public:
         }
         if (pos != sz)
             throw std::logic_error("Internal size mismatch when distributing groupData");
+    }
+
+    /// @brief Sum the production or the injection target reduction rates of
+    ///   all groups across the ranks of a communicator.
+    /// @details updateGroupTargetReduction() leaves per-rank partial sums
+    ///   (a well contributes on the rank that owns it, a reservoir-coupling
+    ///   master group only on rank 0).  communicate_rates() sums them together
+    ///   with all other group rates; this sums only the one kind of reduction
+    ///   rates, for code that recomputes them after communicate_rates() has
+    ///   already made the other group rates global.
+    /// @param comm The communicator to sum over.
+    /// @param is_injector True for the injection reduction rates, false for
+    ///   the production ones.
+    template<class Comm>
+    void communicate_reduction_rates(const Comm& comm, const bool is_injector)
+    {
+        auto& rates = is_injector ? this->inj_red_rates : this->prod_red_rates;
+        std::vector<Scalar> data;
+        for (const auto& [gname, v] : rates) {
+            data.insert(data.end(), v.begin(), v.end());
+        }
+        comm.sum(data.data(), data.size());
+        std::size_t pos = 0;
+        for (auto& [gname, v] : rates) {
+            std::copy_n(data.begin() + pos, v.size(), v.begin());
+            pos += v.size();
+        }
     }
 
     template<class Serializer>

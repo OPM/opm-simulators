@@ -258,7 +258,9 @@ private:
     ///   the cap loop and after the finalize-to-individual loop).  The
     ///   ordering matters: `updateGroupControlledWells()` must run before
     ///   `updateGroupTargetReduction()` because the reduction depends on
-    ///   GCW.  Both delegated calls are MPI-collective on the master
+    ///   GCW.  The reduction rates are then summed across the master's
+    ///   ranks (they are per-rank partial sums), so that every rank
+    ///   computes the same targets from them.  MPI-collective on the master
     ///   communicator.
     void updateGCWAndTargetReductions_();
 
@@ -266,7 +268,8 @@ private:
     ///   every phase and the FIELD-level injection target reduction.
     /// @details The injection counterpart of
     ///   updateGCWAndTargetReductions_(), needed after effective injection
-    ///   GCW entries change.  Both delegated calls are MPI-collective on the
+    ///   GCW entries change.  The injection reduction rates are then summed
+    ///   across the master's ranks, as for production.  MPI-collective on the
     ///   master communicator.
     void updateInjectionGCWAndTargetReductions_();
 
