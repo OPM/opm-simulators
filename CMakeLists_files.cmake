@@ -490,6 +490,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_extbocontainer.cpp
   tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
+  tests/test_flashcompositionstep.cpp
   tests/test_flashphasepresence.cpp
   tests/test_flexiblesolver.cpp
   tests/test_GasSatfuncConsistencyChecks.cpp
@@ -952,6 +953,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/parallel/tasklets.hpp
   opm/models/parallel/threadedentityiterator.hh
   opm/models/parallel/threadmanager.hpp
+  opm/models/ptflash/flashcompositionstep.hh
   opm/models/ptflash/flashindices.hh
   opm/models/ptflash/flashintensivequantities.hh
   opm/models/ptflash/flashlocalresidual.hh

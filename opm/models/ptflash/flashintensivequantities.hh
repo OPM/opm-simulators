@@ -91,11 +91,6 @@ class FlashIntensiveQuantities
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-    /// Minimum hydrocarbon share of the pore space, including cells that would
-    /// otherwise hold water alone. Component-storage derivatives scale with this
-    /// share, so it cannot vanish. The value matches the composition floor.
-    static constexpr Scalar hydrocarbonFloor = 1.0e-8;
-
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
@@ -110,6 +105,15 @@ class FlashIntensiveQuantities
 public:
     //! The type of the object returned by the fluidState() method
     using FluidState = CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
+
+    /// Minimum overall mole fraction of a component; the flash needs every
+    /// component present.
+    static constexpr Scalar compositionFloor = 1.0e-8;
+
+    /// Minimum hydrocarbon share of the pore space, including cells that would
+    /// otherwise hold water alone. Component-storage derivatives scale with this
+    /// share, so it cannot vanish. The value matches the composition floor.
+    static constexpr Scalar hydrocarbonFloor = compositionFloor;
 
     FlashIntensiveQuantities() = default;
 
@@ -132,10 +136,7 @@ public:
         const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
         const auto ptFlashMethod =
             ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
-        // TODO: the formulation here is still to begin with XMF and YMF values to derive ZMF value
-        // TODO: we should check how we update ZMF in the newton update, since it is the primary variables.
-
-        // extract the total molar densities of the components
+        // Extract the overall component mole fractions; the last fraction is dependent.
         ComponentVector z(0.);
         {
             Evaluation lastZ = 1.0;
@@ -151,8 +152,8 @@ public:
                 // max() when the bound applies removes composition derivatives from a
                 // vanished component's conservation equation and makes the cell Jacobian
                 // block singular.
-                if (z[compIdx] < 1e-8) {
-                    z[compIdx].setValue(1e-8);
+                if (z[compIdx] < compositionFloor) {
+                    z[compIdx].setValue(compositionFloor);
                 }
                 sumz += z[compIdx];
             }

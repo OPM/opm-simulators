@@ -61,6 +61,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    oil_into_water_zone_compositional
+  FILENAME
+    OIL_INTO_WATER_ZONE
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional
+)
+
+add_test_compareECLFiles(
+  CASENAME
     sshift_compositional
   FILENAME
     SIMPLE_COMP_SSHIFT
