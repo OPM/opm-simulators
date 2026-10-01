@@ -806,8 +806,9 @@ private:
     { return simulator_.vanguard().schedule(); }
 
     /// Collect the reservoir coupling data Summary::eval() needs: on a
-    /// master, the slaves' group rates; on a slave, the injection targets in
-    /// force for its slave groups.  Returns nullopt for non-RC simulations.
+    /// master, the slaves' group rates; on a slave, the injection targets and
+    /// production limits in force for its slave groups.  Returns nullopt for
+    /// non-RC simulations.
     std::optional<data::ReservoirCouplingGroupRates> collectReservoirCouplingGroupRates_()
     {
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -830,6 +831,13 @@ private:
                 {
                     for (const auto& [phase, target] : targets) {
                         rates.injection_targets[group][phase] = static_cast<double>(target);
+                    }
+                }
+                for (const auto& [group, limits] :
+                         wellModel.reservoirCouplingSlave().effectiveProductionTargets())
+                {
+                    for (const auto& [cmode, limit] : limits) {
+                        rates.production_targets[group][cmode] = static_cast<double>(limit);
                     }
                 }
                 return rates;

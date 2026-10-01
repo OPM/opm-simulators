@@ -508,7 +508,7 @@ namespace Opm {
                 this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
                 this->reservoirCouplingSlave().markSlaveGroupsInSchedule(
                     this->schedule_, reportStepIdx);
-                this->rescoupHelper_.refreshSlaveGroupInjectionTargets();
+                this->rescoupHelper_.refreshSlaveGroupTargets();
                 slave_needs_well_solution = true;
             }
         }
@@ -2533,7 +2533,7 @@ namespace Opm {
             // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
             this->rescoupHelper_.receiveGroupConstraintsFromMaster();
             // The targets in force, and the UDQs built on them, follow suit.
-            this->rescoupHelper_.refreshSlaveGroupInjectionTargets();
+            this->rescoupHelper_.refreshSlaveGroupTargets();
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;
