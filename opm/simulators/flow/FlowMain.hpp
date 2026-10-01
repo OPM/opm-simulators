@@ -327,35 +327,36 @@ namespace Opm {
         static void setMaxThreads()
         {
 #if _OPENMP
-            // If openMP is available, default to 2 threads per process unless
-            // OMP_NUM_THREADS is set or command line --threads-per-process used.
-            // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
-            // but let the environment variable take precedence.
+            // If openMP is available, the value of command line --threads-per-process
+            // will determine how many threads will be used. The default number is 2 if
+            // command line argument is not used. To let OpenMP determine how many threads
+            // will be used use value -1 for the command line argument. In this case either
+            // the same number of threads as logical CPUs will be used if the environment
+            // variable OMP_NUM_THREADS is not set. If it is set then that number will be
+            // used.
             constexpr int default_threads = 2;
             const bool isSet = Parameters::IsSet<Parameters::ThreadsPerProcess>();
             const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
             int threads = requested_threads > 0 ? requested_threads : default_threads;
+
+            if (requested_threads > -1)
+                omp_set_num_threads(threads);
 
             const char* env_var = getenv("OMP_NUM_THREADS");
             if (env_var) {
                 int omp_num_threads = -1;
                 auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
                 if (result.ec == std::errc() && omp_num_threads > 0) {
-                    // Set threads to omp_num_threads if it was successfully parsed and is positive
-                    threads = omp_num_threads;
-                    if (isSet) {
-                        OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                    if (isSet && threads > omp_num_threads) {
+                        OpmLog::warning("Requested threads via --threads-per-process commandline argument is "
+                                        "larger then value of "
+                                        "environment variable OMP_NUM_THREADS. Using specified value anyway.");
                     }
                 } else {
                     OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
                 }
             }
 
-            // Requesting -1 thread will let OMP automatically deduce the number
-            // but setting OMP_NUM_THREADS takes precedence.
-            if (env_var || !(isSet && requested_threads == -1)) {
-                omp_set_num_threads(threads);
-            }
 #endif
 
             using TM = GetPropType<TypeTag, Properties::ThreadManager>;
