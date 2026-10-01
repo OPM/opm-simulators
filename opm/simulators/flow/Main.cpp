@@ -48,7 +48,10 @@
 #include <omp.h>
 #endif
 
-#include <iostream>
+#if HAVE_MPI
+#include <mpi.h>
+#endif
+
 // NOTE: There is no C++ header replacement for these C posix headers (as of C++17)
 #include <fcntl.h>  // for open()
 #include <unistd.h> // for dup2(), close()
@@ -141,7 +144,21 @@ Main::~Main()
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
     if (ownMPI_ && this->mpi_finalize_) {
+        int rank{};
+        int size{};
+
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+        std::cerr << "Rank " << rank << '/' << size << " entering Barrier()\n";
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        std::cerr << "Rank " << rank << '/' << size << " entering Finalize()\n";
+
         MPI_Finalize();
+
+        std::cerr << "Rank " << rank << '/' << size << " after Finalize()\n";
     }
 #endif
 }
