@@ -119,6 +119,7 @@ public:
         );
 
         bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
+        bool isReservoirCouplingSlave() const { return this->parent_.isReservoirCouplingSlave(); }
         ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
             return this->parent_.reservoirCouplingMaster();
         }
@@ -153,7 +154,8 @@ public:
          * and stores the result via GroupState::update_group_injection_potential.
          * It does not feed GuideRate::compute(), so the existing injection
          * guide-rate behavior is unchanged. The stored potentials are shipped
-         * from a slave to the master in reservoir coupling.
+         * from a slave to the master in reservoir coupling, and are only
+         * computed on a slave (see update()).
          *
          * @param group The root group to update.
          * @param pot Output parameter for the computed injection potentials.

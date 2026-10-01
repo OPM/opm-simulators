@@ -437,8 +437,15 @@ update()
     std::vector<Scalar> pot(this->num_phases_, 0.0);
     this->updateGuideRatesForProductionGroups_(group, pot);
     this->updateGuideRatesForInjectionGroups_(group);
-    std::vector<Scalar> inj_pot(this->num_phases_, 0.0);
-    this->updateInjectionGroupPotentials_(group, inj_pot);
+    // The group injection potentials are only read by a reservoir-coupling
+    // slave, which sends them to its master (see RescoupSendSlaveGroupData).
+    // Their aggregation makes one collective call per group, so skip it in
+    // every other run.  Being a slave is the same on all ranks of a process,
+    // so all ranks skip, or none does.
+    if (this->isReservoirCouplingSlave()) {
+        std::vector<Scalar> inj_pot(this->num_phases_, 0.0);
+        this->updateInjectionGroupPotentials_(group, inj_pot);
+    }
     this->updateGuideRatesForWells_();
 }
 
@@ -736,7 +743,8 @@ updateInjectionGroupPotentials_(const Group& group, std::vector<Scalar>& pot)
     // but stores the result only (it does not feed GuideRate::compute()) so
     // the existing injection guide-rate behavior is unchanged. The stored
     // potentials are shipped from a slave to the master in reservoir coupling
-    // (see RescoupSendSlaveGroupData).
+    // (see RescoupSendSlaveGroupData), so this is only called on a slave, see
+    // update().
     this->updateInjectionGroupPotentialFromSubGroups_(group, pot);
 
     const auto& pu = this->phaseUsage();
