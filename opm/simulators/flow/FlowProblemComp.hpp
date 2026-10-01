@@ -31,11 +31,7 @@
 #define OPM_FLOW_PROBLEM_COMP_HPP
 
 
-#include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
-#include <opm/models/blackoil/blackoilmoduleparams.hh>
-
 #include <opm/simulators/flow/FlowProblem.hpp>
-#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
@@ -91,7 +87,6 @@ class FlowProblemComp : public FlowProblem<TypeTag>
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
     using EclWriterType = EclWriter<TypeTag, OutputCompositionalModule<TypeTag> >;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
 
 public:
     using FlowProblemType::porosity;
@@ -123,7 +118,6 @@ public:
      */
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
-        , thresholdPressures_(simulator)
     {
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
@@ -361,21 +355,6 @@ public:
 
     const std::vector<InitialFluidState>& initialFluidStates() const
     { return initialFluidStates_; }
-
-    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
-    {
-        assert( !thresholdPressures_.enableThresholdPressure() &&
-                " Threshold Pressures are not supported by compostional simulation ");
-        return thresholdPressures_;
-    }
-
-    // Zero, since threshold pressures are not set up for compositional runs.
-    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
-    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
-
-    // Empty: convective mixing is disabled in the compositional model.
-    const ModuleParams& moduleParams() const
-    { return moduleParams_; }
 
     const EclWriterType& eclWriter() const
     { return *eclWriter_; }
@@ -647,9 +626,6 @@ private:
     {
         throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add urea to BC");
     }
-
-    FlowThresholdPressure<TypeTag> thresholdPressures_;
-    ModuleParams moduleParams_;
 
     std::vector<InitialFluidState> initialFluidStates_;
 
