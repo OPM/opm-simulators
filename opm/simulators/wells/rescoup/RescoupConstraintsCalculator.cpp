@@ -21,6 +21,9 @@
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <limits>
@@ -241,7 +244,8 @@ calculateMasterGroupConstraintsAndSendToSlaves()
             this->sendSlaveGroupConstraintsToSlave_(
                 rescoup_master, slave_idx,
                 constraints.injection_targets[slave_idx],
-                constraints.production_constraints[slave_idx]
+                constraints.production_constraints[slave_idx],
+                constraints.gas_lift_limits[slave_idx]
             );
         }
     }
@@ -286,11 +290,13 @@ calculateMasterGroupConstraints()
     const auto num_slaves = rescoup_master.numSlaves();
     std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
     std::vector<std::vector<ProductionGroupConstraints>> all_production_constraints(num_slaves);
+    std::vector<std::vector<GasLiftGroupLimits>> all_gas_lift_limits(num_slaves);
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (rescoup_master.slaveIsCoupled(slave_idx)) {
             auto [inj, prod] = this->calculateSlaveGroupConstraints_(slave_idx, calculator);
             all_injection_targets[slave_idx] = std::move(inj);
             all_production_constraints[slave_idx] = std::move(prod);
+            all_gas_lift_limits[slave_idx] = this->calculateGasLiftGroupLimits_(slave_idx);
         }
     }
 
@@ -303,7 +309,9 @@ calculateMasterGroupConstraints()
     // and redistribute the surplus to sibling master groups, per phase.
     this->excludeAndRedistributeInjectionTargets_(calculator, all_injection_targets);
 
-    return {std::move(all_injection_targets), std::move(all_production_constraints)};
+    return {std::move(all_injection_targets),
+            std::move(all_production_constraints),
+            std::move(all_gas_lift_limits)};
 }
 
 // ----------------------------------------------------------------------
@@ -928,20 +936,176 @@ sendSlaveGroupConstraintsToSlave_(
     const ReservoirCouplingMaster<Scalar>& rescoup_master,
     std::size_t slave_idx,
     const std::vector<InjectionGroupTarget>& injection_targets,
-    const std::vector<ProductionGroupConstraints>& production_constraints
+    const std::vector<ProductionGroupConstraints>& production_constraints,
+    const std::vector<GasLiftGroupLimits>& gas_lift_limits
 ) const
 {
     auto num_injection_targets = injection_targets.size();
     auto num_production_constraints = production_constraints.size();
+    auto num_gas_lift_limits = gas_lift_limits.size();
     // First, send the number of constraints such that the slave can know if it can expect none
     // or more constraints.
-    rescoup_master.sendNumGroupConstraintsToSlave(slave_idx, num_injection_targets, num_production_constraints);
+    rescoup_master.sendNumGroupConstraintsToSlave(
+        slave_idx, num_injection_targets, num_production_constraints, num_gas_lift_limits);
     if (num_injection_targets > 0) {
         rescoup_master.sendInjectionTargetsToSlave(slave_idx, injection_targets);
     }
     if (num_production_constraints > 0) {
         rescoup_master.sendProductionConstraintsToSlave(slave_idx, production_constraints);
     }
+    if (num_gas_lift_limits > 0) {
+        rescoup_master.sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
+    }
+}
+
+template <class Scalar, class IndexTraits>
+std::vector<typename RescoupConstraintsCalculator<Scalar, IndexTraits>::GasLiftGroupLimits>
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateGasLiftGroupLimits_(std::size_t slave_idx) const
+{
+    // Runs on all ranks: the use below a group sums the master's own wells over the ranks.
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto& comm = rescoup_master.getComm();
+    const auto& glo = this->schedule_.glo(this->report_step_idx_);
+    const auto& helper = this->group_state_helper_;
+    const int gas_pos = this->phase_usage_.phaseIsActive(IndexTraits::gasPhaseIdx)
+        ? this->phase_usage_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx) : -1;
+
+    const auto lift_gas_of = [&rescoup_master](const std::string& master_group) {
+        return rescoup_master.getMasterGroupGasLiftRate(master_group, /*network=*/false);
+    };
+    const auto total_gas_of = [&rescoup_master](const std::string& master_group) {
+        return rescoup_master.getMasterGroupRate(master_group, ReservoirCoupling::Phase::Gas,
+                                                 ReservoirCoupling::RateKind::ProductionSurface)
+            + rescoup_master.getMasterGroupGasLiftRate(master_group, /*network=*/false);
+    };
+    // sumWellGasLiftRates() and sumWellPhaseRates() return the master groups' slave
+    // rates on rank 0 only, so the sums over the ranks count them once.
+    const auto lift_gas_below = [&](const Group& group) {
+        return comm.sum(helper.sumWellGasLiftRates(group));
+    };
+    const auto total_gas_below = [&](const Group& group) {
+        const Scalar gas = (gas_pos >= 0)
+            ? helper.sumWellPhaseRates(/*res_rates=*/false, group, gas_pos, /*injector=*/false)
+            : Scalar{0};
+        return comm.sum(gas) + lift_gas_below(group);
+    };
+
+    constexpr Scalar no_limit = std::numeric_limits<Scalar>::max();
+    const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+    std::vector<GasLiftGroupLimits> result;
+    result.reserve(master_groups.size());
+    for (std::size_t group_idx = 0; group_idx < master_groups.size(); ++group_idx) {
+        const auto& master_group = master_groups[group_idx];
+        Scalar max_lift_gas = no_limit;
+        Scalar max_total_gas = no_limit;
+        const Group* group = &this->schedule_.getGroup(master_group, this->report_step_idx_);
+        while (true) {
+            if (glo.has_group(group->name())) {
+                const auto& gl_group = glo.group(group->name());
+                if (const auto& limit = gl_group.max_lift_gas(); limit.has_value()) {
+                    max_lift_gas = std::min(max_lift_gas, this->shareGasLiftLimit_(
+                        *group, master_group, static_cast<Scalar>(*limit),
+                        lift_gas_below(*group), lift_gas_of));
+                }
+                if (const auto& limit = gl_group.max_total_gas(); limit.has_value()) {
+                    max_total_gas = std::min(max_total_gas, this->shareGasLiftLimit_(
+                        *group, master_group, static_cast<Scalar>(*limit),
+                        total_gas_below(*group), total_gas_of));
+                }
+            }
+            if (group->name() == "FIELD") {
+                break;
+            }
+            group = &this->schedule_.getGroup(group->parent(), this->report_step_idx_);
+        }
+        result.push_back(GasLiftGroupLimits{
+            group_idx,
+            (max_lift_gas < no_limit) ? max_lift_gas : Scalar{-1},
+            (max_total_gas < no_limit) ? max_total_gas : Scalar{-1}
+        });
+        if (max_lift_gas < no_limit || max_total_gas < no_limit) {
+            this->deferred_logger_.debug(fmt::format(
+                "Gas lift limits for master group {}: max_lift_gas = {}, max_total_gas = {}",
+                master_group, result.back().max_lift_gas, result.back().max_total_gas));
+        }
+    }
+    return result;
+}
+
+template <class Scalar, class IndexTraits>
+std::optional<Scalar>
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+efficiencyFactorToAncestor_(const std::string& group_name, const std::string& ancestor) const
+{
+    Scalar factor = 1.0;
+    std::string name = group_name;
+    while (name != ancestor) {
+        if (name == "FIELD") {
+            return std::nullopt;
+        }
+        const Group& group = this->schedule_.getGroup(name, this->report_step_idx_);
+        factor *= group.getGroupEfficiencyFactor();
+        name = group.parent();
+    }
+    return factor;
+}
+
+template <class Scalar, class IndexTraits>
+Scalar
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+shareGasLiftLimit_(const Group& limit_group,
+                   const std::string& master_group,
+                   const Scalar limit,
+                   const Scalar total_use,
+                   const std::function<Scalar(const std::string&)>& use_of) const
+{
+    if (limit_group.name() == master_group) {
+        // GLIFTOPT on the master group itself: the slave group gets the full limit.
+        return limit;
+    }
+    // Rates below are in limit_group units, i.e. scaled by the efficiency factors of
+    // the groups between the master group and limit_group.
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    Scalar this_use = 0.0;
+    Scalar this_weight = 0.0;
+    Scalar this_factor = 1.0;
+    Scalar sum_use = 0.0;     // Use of all master groups below limit_group
+    Scalar sum_weight = 0.0;
+    std::size_t num_groups = 0;
+    for (const auto& [name, slave_name] : rescoup_master.getMasterGroupToSlaveNameMap()) {
+        const auto factor = this->efficiencyFactorToAncestor_(name, limit_group.name());
+        if (!factor.has_value()) {
+            continue;
+        }
+        const Scalar use = *factor * use_of(name);
+        const Scalar weight = *factor * rescoup_master.getMasterGroupGasLiftHeadroom(name);
+        sum_use += use;
+        sum_weight += weight;
+        ++num_groups;
+        if (name == master_group) {
+            this_use = use;
+            this_weight = weight;
+            this_factor = *factor;
+        }
+    }
+    if (num_groups == 0 || this_factor <= 0.0) {
+        return limit;
+    }
+    Scalar share;
+    if (total_use <= limit) {
+        // Hand out the slack in proportion to how much more lift gas each slave group
+        // can take, so that groups without gas lift wells get none of it.
+        const Scalar fraction = (sum_weight > 0.0) ? this_weight / sum_weight : Scalar{0};
+        share = this_use + fraction * (limit - total_use);
+    }
+    else {
+        // Over the limit: what is left after the master's own wells is shared in
+        // proportion to the current use.
+        const Scalar available = std::max(limit - (total_use - sum_use), Scalar{0});
+        share = (sum_use > 0.0) ? this_use * available / sum_use : Scalar{0};
+    }
+    return share / this_factor;
 }
 
 // Recompute GCW (Group Controlled Wells) and the FIELD-level target reduction

@@ -26,6 +26,7 @@
 
 #include <map>
 #include <string>
+#include <tuple>
 #include <utility>
 
 namespace Opm {
@@ -187,8 +188,18 @@ public:
     { return connected_to_master_coupled_network_; }
 
     /// @brief Receive the number of injection and production constraints from master
-    /// @return Pair of (num_injection_targets, num_production_constraints)
-    std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+    /// @return Tuple of (num_injection_targets, num_production_constraints, num_gas_lift_limits)
+    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+
+    /// @brief Receive the gas lift limits for the slave groups from master and store them
+    /// @details Replaces the limits stored earlier.
+    /// @param num_limits Number of gas lift limit records to receive
+    void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
+
+    /// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group, if any
+    /// @param gname Slave group name
+    /// @return Pointer to the limits (-1 means no limit), or nullptr if none were received
+    const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
 
     /// @brief Receive injection group targets from master and store them locally
     /// @param num_targets Number of injection targets to receive
@@ -328,6 +339,8 @@ private:
     // Per-rate-type production limits from master hierarchy. Key: slave group name.
     // A limit of -1 means no limit defined in the hierarchy for that rate type.
     std::map<std::string, MasterProductionLimits> master_production_limits_;
+    // Gas lift limits (GLIFTOPT) from the master. Key: slave group name.
+    std::map<std::string, ReservoirCoupling::GasLiftGroupLimits<Scalar>> master_gas_lift_limits_;
     // Master-computed network-leaf node pressures keyed by slave group name. Only
     // populated for master groups that are leaf nodes in the master's extended
     // network. Cleared and repopulated on every receive cycle.

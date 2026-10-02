@@ -147,6 +147,10 @@ public:
     Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const {
         return this->report_step_data_->getMasterGroupGasLiftRate(group_name, network);
     }
+    /// @brief How much more lift gas the slave group of a master group can take
+    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const {
+        return this->report_step_data_->getMasterGroupGasLiftHeadroom(group_name);
+    }
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
@@ -247,8 +251,15 @@ public:
     void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx,
         std::size_t num_injection_targets,
-        std::size_t num_production_constraints
+        std::size_t num_production_constraints,
+        std::size_t num_gas_lift_limits
     ) const;
+    void sendGasLiftGroupLimitsToSlave(
+        std::size_t slave_idx,
+        const std::vector<ReservoirCoupling::GasLiftGroupLimits<Scalar>>& gas_lift_limits
+    ) const {
+        this->report_step_data_->sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
+    }
 
     /// @brief Send the count of master-computed network-leaf node pressures
     ///   plus the master's `is_final` flag for this sync-step iteration.

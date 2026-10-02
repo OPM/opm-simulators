@@ -298,9 +298,10 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxALQ_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_lift_gas();
+    // GasLiftGroupInfo holds the GLIFTOPT limit, combined with the limit a reservoir
+    // coupling master imposes on a slave group.
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxAlq(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
@@ -309,9 +310,9 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxTotalGas_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_total_gas();
+    // See getGroupMaxALQ_()
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxTotalGasRate(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
