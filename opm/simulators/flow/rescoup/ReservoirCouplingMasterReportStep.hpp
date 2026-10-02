@@ -150,6 +150,12 @@ public:
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
+    /// @brief Get the lift gas rate of the slave group of a master group
+    /// @param group_name Name of the master group
+    /// @param network If true, the rate with network efficiency factors (GEFAC/WEFAC item 3)
+    /// @return Lift gas rate (ALQ) of the slave group's producers
+    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const;
+
     /// @brief Get the number of a slave group's injectors under group control for a phase
     /// @param master_group_name Name of the master group
     /// @param phase Injection phase

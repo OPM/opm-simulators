@@ -435,6 +435,13 @@ private:
         // However, all processes have all groups and their rates available,
         // so we do not need to communicate those.
         alq = comm_.sum(alq);
+        // A reservoir coupling master group has no wells here; its lift gas is
+        // the one reported by the slave.  It is the same on all ranks, so it is
+        // added after the communication.
+        const auto& helper = well_model_.groupStateHelper();
+        if constexpr (requires { helper.reservoirCouplingMasterGroupGasLiftRate(group, true); }) {
+            alq += helper.reservoirCouplingMasterGroupGasLiftRate(group, /*network=*/true);
+        }
         // Only add satellite production once for parallel runs
         // (i.e. add after communication)
         if (group.hasSatelliteProduction()) {

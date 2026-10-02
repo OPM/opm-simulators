@@ -265,6 +265,7 @@ struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_reinjection_rate,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::num_group_controlled_producers,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_lift_rate,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::network_gas_lift_rate,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::well_potentials,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::history_rates,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::num_flowing_producers
