@@ -83,6 +83,19 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::EnableStateRollback>
         ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps (default: false)");
 
+#if HAVE_CUDA
+    Parameters::Register<Parameters::ExperimentalGpuNewtonUpdate>
+        ("Experimental: keep Newton corrections and primary-variable updates on the GPU when supported");
+    Parameters::Register<Parameters::ExperimentalGpuNewtonValidation>
+        ("Validate every resident Newton update against the CPU reference (downloads validation state)");
+    Parameters::Register<Parameters::ExperimentalGpuNewtonRejectOnce>
+        ("Validation only: reject the first update of the second timestep attempt once");
+    Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+        ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
+         "via the GpuBlackoilIntensiveQuantitiesDispatcher. Only takes "
+         "effect for CO2STORE-compatible TypeTags; ignored otherwise.");
+#endif
+
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
     // after it simulated the last episode specified in the deck.)

@@ -543,6 +543,11 @@ public:
     void finalizeOutput()
     {
         OPM_TIMEBLOCK(finalizeOutput);
+#if HAVE_CUDA
+        if constexpr (requires { this->model().reportGpuNewtonTransfers(); }) {
+            this->model().reportGpuNewtonTransfers();
+        }
+#endif
         // this will write all pending output to disk
         // to avoid corruption of output files
         eclWriter_.reset();
@@ -632,7 +637,14 @@ public:
                     if (source_hrate) {
                         rate[Indices::contiEnergyEqIdx] += source_hrate.value() / this->model().dofTotalVolume(globalDofIdx);
                     } else {
-                        const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
+                        const auto& intQuants = [&]() -> const auto& {
+                            const auto& model = this->simulator().model();
+                            if constexpr (requires { model.intensiveQuantitiesForSource(globalDofIdx, /*timeIdx=*/0); }) {
+                                return model.intensiveQuantitiesForSource(globalDofIdx, /*timeIdx=*/0);
+                            } else {
+                                return model.intensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+                            }
+                        }();
                         auto fs = intQuants.fluidState();
                         // if temperature is not set, use cell temperature as default
                         const auto source_temp = source.temperature(ijk, sourceComp);
@@ -1078,6 +1090,7 @@ public:
         // to compute real initial solution after this because the initial fluid states
         // need to be correct for stuff like boundary conditions.
         auto& sol = this->model().solution(/*timeIdx=*/0);
+        this->model().markHostPrimaryVariablesModified(/*timeIdx=*/0);
         const auto& gridView = this->gridView();
         ElementContext elemCtx(simulator);
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -1576,8 +1589,55 @@ protected:
     void updateExplicitQuantities_(const bool first_step_after_restart)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
-        const bool invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
-        const bool invalidateFromMinPressure = this->updateMinPressure_();
+        const int episodeIdx = this->episodeIndex();
+        const bool compositionLimitsActive =
+            this->mixControls_.drsdtConvective(episodeIdx)
+            || this->mixControls_.drsdtActive(episodeIdx)
+            || this->mixControls_.drvdtActive(episodeIdx);
+        if (this->maxWaterSaturation_.empty()
+            && this->minRefPressure_.empty()
+            && !this->materialLawManager_->enableHysteresis()
+            && !this->vapparsActive(episodeIdx)
+            && !compositionLimitsActive
+            && this->rockCompTransMult_.empty()
+            && this->rockCompTransMultWc_.empty()) {
+            this->rockCompTransMultVal_.clear();
+            return;
+        }
+
+        bool invalidateFromMaxWaterSat = false;
+        bool invalidateFromMinPressure = false;
+#if HAVE_CUDA
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+            auto& model = this->model();
+            if (model.hasGpuPropertyAssemblyBridge()
+                && (!this->maxWaterSaturation_.empty() || !this->minRefPressure_.empty())) {
+                const auto state = model.gpuNewtonDispatcher().compactRockCompactionState();
+                const std::size_t numCells = model.numGridDof();
+                for (std::size_t cell = 0; cell < numCells; ++cell) {
+                    if (!this->maxWaterSaturation_.empty()) {
+                        this->maxWaterSaturation_[cell] =
+                            std::max(this->maxWaterSaturation_[cell], state[cell * 2 + 1]);
+                    }
+                    if (!this->minRefPressure_.empty()) {
+                        this->minRefPressure_[cell] =
+                            std::min(this->minRefPressure_[cell], state[cell * 2]);
+                    }
+                }
+                // Match the legacy helpers, which report invalidation whenever
+                // the corresponding ROCKCOMP history array exists.
+                invalidateFromMaxWaterSat = !this->maxWaterSaturation_.empty();
+                invalidateFromMinPressure = !this->minRefPressure_.empty();
+            } else {
+                invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
+                invalidateFromMinPressure = this->updateMinPressure_();
+            }
+        } else
+#endif
+        {
+            invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
+            invalidateFromMinPressure = this->updateMinPressure_();
+        }
 
         // update hysteresis and max oil saturation used in vappars
         const bool invalidateFromHyst = this->updateHysteresis_();

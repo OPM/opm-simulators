@@ -32,6 +32,7 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
+#include <opm/models/blackoil/blackoilnewtonupdate.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/nonlinear/newtonmethod.hh>
@@ -42,6 +43,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
@@ -115,6 +117,17 @@ public:
      */
     unsigned numPriVarsSwitched() const
     { return numPriVarsSwitched_; }
+
+    const BlackoilNewtonParams<Scalar>& params() const { return bparams_; }
+    const std::vector<std::uint8_t>& switchHistory() const { return wasSwitched_; }
+    void setSwitchHistory(const std::vector<std::uint8_t>& history)
+    {
+        if (history.size() != wasSwitched_.size()) {
+            OPM_THROW(std::invalid_argument, "Newton switch-history size mismatch");
+        }
+        wasSwitched_ = history;
+    }
+    void setNumPriVarsSwitched(unsigned count) { numPriVarsSwitched_ = count; }
 
 protected:
     friend NewtonMethod<TypeTag>;
@@ -214,256 +227,11 @@ protected:
                                  const EqVector& update,
                                  const EqVector& currentResidual)
     {
-        static constexpr bool enableSolvent =
-            Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableExtbo =
-            Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enablePolymer =
-            Indices::polymerConcentrationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enablePolymerWeight =
-            Indices::polymerMoleWeightIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableFullyImplicitThermal =
-            Indices::temperatureIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableFoam =
-            Indices::foamConcentrationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableBrine =
-            Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
-        static constexpr bool enableMICP = Indices::enableMICP;
-
-        currentValue.checkDefined();
-        Valgrind::CheckDefined(update);
         Valgrind::CheckDefined(currentResidual);
-
-        // saturation delta for each phase
-        Scalar deltaSw = 0.0;
-        Scalar deltaSo = 0.0;
-        Scalar deltaSg = 0.0;
-        Scalar deltaSs = 0.0;
-
-        if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
-        {
-            if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSw = update[Indices::waterSwitchIdx];
-                deltaSo -= deltaSw;
-            }
-        }
-        if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
-        {
-            if constexpr (Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSg = update[Indices::compositionSwitchIdx];
-                deltaSo -= deltaSg;
-            }
-        }
-        if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            if constexpr (Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSs = update[Indices::solventSaturationIdx];
-                deltaSo -= deltaSs;
-            }
-        }
-
-        // maximum saturation delta
-        Scalar maxSatDelta = std::max(std::abs(deltaSg), std::abs(deltaSo));
-        maxSatDelta = std::max(maxSatDelta, std::abs(deltaSw));
-        maxSatDelta = std::max(maxSatDelta, std::abs(deltaSs));
-
-        // scaling factor for saturation deltas to make sure that none of them exceeds
-        // the specified threshold value.
-        Scalar satAlpha = 1.0;
-        if (maxSatDelta > bparams_.dsMax_) {
-            satAlpha = bparams_.dsMax_ / maxSatDelta;
-        }
-
-        for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-            // calculate the update of the current primary variable. For the black-oil
-            // model we limit the pressure delta relative to the pressure's current
-            // absolute value (Default: 30%) and saturation deltas to an absolute change
-            // (Default: 20%). Further, we ensure that the R factors, solvent
-            // "saturation" and polymer concentration do not become negative after the
-            // update.
-            Scalar delta = update[pvIdx];
-
-            // limit pressure delta
-            if (pvIdx == Indices::pressureSwitchIdx) {
-                if (std::abs(delta) > bparams_.dpMaxRel_ * currentValue[pvIdx]) {
-                    delta = signum(delta) * bparams_.dpMaxRel_ * currentValue[pvIdx];
-                }
-            }
-            // water saturation delta
-            else if (pvIdx == Indices::waterSwitchIdx)
-                if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
-                    delta *= satAlpha;
-                }
-                else {
-                    //Ensure Rvw and Rsw factor does not become negative
-                    if (delta > currentValue[ Indices::waterSwitchIdx]) {
-                        delta = currentValue[ Indices::waterSwitchIdx];
-                    }
-                }
-            else if (pvIdx == Indices::compositionSwitchIdx) {
-                // the switching primary variable for composition is tricky because the
-                // "reasonable" value ranges it exhibits vary widely depending on its
-                // interpretation since it can represent Sg, Rs or Rv. For now, we only
-                // limit saturation deltas and ensure that the R factors do not become
-                // negative.
-                if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
-                    delta *= satAlpha;
-                }
-                else {
-                    // Ensure Rv and Rs factor does not become negative
-                    if (delta > currentValue[Indices::compositionSwitchIdx]) {
-                        delta = currentValue[Indices::compositionSwitchIdx];
-                    }
-                }
-            }
-            else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
-                // solvent saturation updates are also subject to the Appleyard chop
-                if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-                    delta *= satAlpha;
-                }
-                else {
-                    // Ensure Rssolw factor does not become negative
-                    if (delta > currentValue[Indices::solventSaturationIdx]) {
-                        delta = currentValue[Indices::solventSaturationIdx];
-                    }
-                }
-            }
-            else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
-                // z fraction updates are also subject to the Appleyard chop
-                const auto& curr = currentValue[Indices::zFractionIdx]; // or currentValue[pvIdx] given the block condition
-                delta = std::clamp(delta, curr - Scalar{1.0}, curr);
-            }
-            else if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
-                const double sign = delta >= 0. ? 1. : -1.;
-                // maximum change of polymer molecular weight, the unit is MDa.
-                // applying this limit to stabilize the simulation. The value itself is still experimental.
-                const Scalar maxMolarWeightChange = 100.0;
-                delta = sign * std::min(std::abs(delta), maxMolarWeightChange);
-                delta *= satAlpha;
-            }
-            else if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
-                const double sign = delta >= 0. ? 1. : -1.;
-                delta = sign * std::min(std::abs(delta), bparams_.maxTempChange_);
-            }
-            else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
-                     enableSaltPrecipitation &&
-                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
-            {
-                const Scalar maxSaltSaturationChange = 0.1;
-                const Scalar sign = delta >= 0. ? 1. : -1.;
-                delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
-            }
-
-            // do the actual update
-            nextValue[pvIdx] = currentValue[pvIdx] - delta;
-
-            // keep the solvent saturation between 0 and 1
-            if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
-                if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-                    nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
-                }
-            }
-
-            // keep the z fraction between 0 and 1
-            if (enableExtbo && pvIdx == Indices::zFractionIdx) {
-                nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
-            }
-
-            // keep the polymer concentration above 0
-            if (enablePolymer && pvIdx == Indices::polymerConcentrationIdx) {
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-            }
-
-            if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-                const double polymerConcentration = nextValue[Indices::polymerConcentrationIdx];
-                if (polymerConcentration < 1.e-10) {
-                    nextValue[pvIdx] = 0.0;
-                }
-            }
-
-            // keep the foam concentration above 0
-            if (enableFoam && pvIdx == Indices::foamConcentrationIdx) {
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-            }
-
-            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
-               // keep the salt concentration above 0
-                if (!enableSaltPrecipitation ||
-                    currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs)
-               {
-                   nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-                }
-               // keep the salt saturation below upperlimit
-                if (enableSaltPrecipitation &&
-                    currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
-                {
-                   nextValue[pvIdx] = std::min(nextValue[pvIdx], Scalar{1.0-1.e-8});
-                }
-            }
-
-            // keep the temperature within given values
-            if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.tempMin_, bparams_.tempMax_);
-            }
-
-            if (pvIdx == Indices::pressureSwitchIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.pressMin_, bparams_.pressMax_);
-            }
-
-            // keep the values above 0
-            // for the biofilm and calcite, we set an upper limit equal to the initial porosity
-            // minus 1e-8. This prevents singularities (e.g., one of the calcite source term is
-            // evaluated at 1/(iniPoro - calcite)). The value 1e-8 is taken from the salt precipitation
-            // clapping above.
-            if constexpr (enableBioeffects) {
-                if (pvIdx == Indices::microbialConcentrationIdx) {
-                    nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-                }
-                if (pvIdx == Indices::biofilmVolumeFractionIdx) {
-                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx],
-                                                  Scalar{0.0},
-                                                  this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
-                }
-                if constexpr (enableMICP) {
-                    if (pvIdx == Indices::oxygenConcentrationIdx) {
-                        nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-                    }
-                    if (pvIdx == Indices::ureaConcentrationIdx) {
-                        nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
-                    }
-                    if (pvIdx == Indices::calciteVolumeFractionIdx) {
-                        nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
-                                                                        this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
-                    }
-                }
-            }
-        }
-
-        // switch the new primary variables to something which is physically meaningful.
-        // use a threshold value after a switch to make it harder to switch back
-        // immediately.
-        if (wasSwitched_[globalDofIdx]) {
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(),
-                                                                         globalDofIdx,
-                                                                         bparams_.waterSaturationMax_,
-                                                                         bparams_.waterOnlyThreshold_,
-                                                                         bparams_.priVarOscilationThreshold_);
-        }
-        else {
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(),
-                                                                         globalDofIdx,
-                                                                         bparams_.waterSaturationMax_,
-                                                                         bparams_.waterOnlyThreshold_);
-        }
-
-        if (wasSwitched_[globalDofIdx]) {
-            ++numPriVarsSwitched_;
-        }
-        if (bparams_.projectSaturations_) {
-            nextValue.chopAndNormalizeSaturations();
-        }
-
-        nextValue.checkDefined();
+        wasSwitched_[globalDofIdx] = BlackOilNewtonUpdate<TypeTag>::update(
+            this->problem(), FluidSystem{}, globalDofIdx, nextValue, currentValue,
+            update, bparams_, wasSwitched_[globalDofIdx] != 0);
+        numPriVarsSwitched_ += wasSwitched_[globalDofIdx] != 0;
     }
 
 private:
@@ -473,7 +241,7 @@ private:
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
-    std::vector<bool> wasSwitched_{};
+    std::vector<std::uint8_t> wasSwitched_{};
 };
 
 } // namespace Opm

@@ -22,6 +22,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_pointer_attributes.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_stream.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/scoped_gpu_memory_accounting.hpp>
 
 #include <cuda_runtime.h>
 
@@ -51,6 +52,7 @@ gpuMemcpyHostToDevice(T* dstDevice, const T* srcHost, std::size_t count)
     OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
     OPM_GPUISTL_DETAIL_ASSERT_HOST_POINTER(srcHost);
     OPM_GPU_SAFE_CALL(cudaMemcpy(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice));
+    ScopedGpuMemoryAccounting::hostToDevice(count * sizeof(T));
 }
 
 /**
@@ -130,6 +132,7 @@ gpuMemcpyHostToDeviceAsync(T* dstDevice, const T* srcHost, std::size_t count, cu
     OPM_GPUISTL_DETAIL_ASSERT_GPU_STREAM(stream);
     OPM_GPU_SAFE_CALL(
         cudaMemcpyAsync(dstDevice, srcHost, count * sizeof(T), cudaMemcpyHostToDevice, stream));
+    ScopedGpuMemoryAccounting::hostToDevice(count * sizeof(T));
 }
 
 /**

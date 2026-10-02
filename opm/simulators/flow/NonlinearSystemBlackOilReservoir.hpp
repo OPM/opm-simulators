@@ -134,6 +134,13 @@ public:
         TUNINGDP = 2
     };
 
+#if HAVE_CUDA
+    bool residentNewtonActive_{false};
+    bool residentNewtonAnnounced_{false};
+    unsigned newtonAttemptCount_{0};
+    bool validationRejected_{false};
+#endif
+
     // ---------  Public methods  ---------
 
     /// Construct the model. It will retain references to the

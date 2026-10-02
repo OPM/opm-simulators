@@ -31,6 +31,7 @@
 
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
+#include <opm/input/eclipse/Schedule/Action/Actions.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
@@ -341,7 +342,11 @@ namespace Opm {
     {
         OPM_TIMEBLOCK(beginTimeStep);
 
-        this->updateAverageFormationFactor();
+        const auto reportStep = simulator_.episodeIndex();
+        if (this->schedule_.numWells(reportStep) != 0
+            || !this->schedule_[reportStep].actions().empty()) {
+            this->updateAverageFormationFactor();
+        }
 
         auto logger_guard = this->groupStateHelper().pushLogger();
         auto& local_deferredLogger = this->groupStateHelper().deferredLogger();
@@ -740,8 +745,14 @@ namespace Opm {
             this->reportGroupSwitching(local_deferredLogger);
         }
 
-        // update the rate converter with current averages pressures etc in
-        rateConverter_->template defineState<ElementContext>(simulator_);
+        // SOURCE-only models have no well rates to convert. Use the global
+        // schedule count so all MPI ranks make the same collective decision,
+        // including ranks without local wells and schedules with shut wells.
+        // Actions may introduce the first well during this report step.
+        if (this->schedule_.numWells(reportStepIdx) != 0
+            || !this->schedule_[reportStepIdx].actions().empty()) {
+            rateConverter_->template defineState<ElementContext>(simulator_);
+        }
 
         // calculate the well potentials
         try {

@@ -880,22 +880,18 @@ private:
 
                 this->outputModule_->processElement(elemCtx);
                 this->outputModule_->processElementBlockData(elemCtx);
+
+                // Reuse the IQs already loaded into the element context. A
+                // separate parallel FIP traversal reloads the whole cache and,
+                // on GPU models, serializes cell lookups on the host-cache mutex.
+                for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                    const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                    this->outputModule_->updateFluidInPlace(
+                        globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
+                        simulator_.model().dofTotalVolume(globalIdx));
+                }
             }
             this->outputModule_->clearExtractors();
-        }
-
-        {
-            OPM_TIMEBLOCK(prepareFluidInPlace);
-
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-            for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-                const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
-                const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
-
-                this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
-            }
         }
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",

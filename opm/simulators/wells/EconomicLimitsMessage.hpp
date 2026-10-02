@@ -41,7 +41,8 @@ namespace Opm {
 inline std::string economicLimitDateString(const std::time_t start_time, const double sim_time)
 {
     const std::time_t cur_time = TimeService::advance(start_time, sim_time);
-    return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
+    // return fmt::format("{:%d-%b-%Y}", fmt::gmtime(cur_time));
+    return "placeholder"; // TODO: fix the fact that previous line does not compile with hipcc
 }
 
 //! \brief The "at time ... (date = ...)" clause shared by the well (WECON) and
