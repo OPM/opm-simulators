@@ -354,6 +354,15 @@ public:
                                        // after the groups have found their controls
                                        const bool update_wellgrouptarget);
 
+    /// @brief Recompute the group rates from the current well state.
+    /// @details updateAndCommunicateGroupData() computes the group rates from
+    ///   the NUPCOL well state, which is frozen after the first NUPCOL Newton
+    ///   iterations of a time step.  Once the step has converged, this computes
+    ///   them, and the group target reductions, from the converged well rates
+    ///   instead, e.g. for a reservoir coupling slave to send to its master at
+    ///   the end of a sync step.  Must be called on all ranks.
+    void updateGroupRatesFromWellState(const int reportStepIdx);
+
     const NewtonIterationContext& iterationContext() const
     { return iter_ctx_; }
 
@@ -706,6 +715,12 @@ protected:
 
 private:
     WellInterfaceGeneric<Scalar, IndexTraits>* getGenWell(const std::string& well_name);
+
+    /// @brief Compute the group rates (REIN, VREP, injection reservoir and
+    ///   surface, network leaf node and production rates) from the well state
+    ///   the group state helper currently uses.  Rank-local; the caller sums
+    ///   them over the ranks with GroupState::communicate_rates().
+    void updateGroupRates_(const Group& fieldGroup);
 
     template <typename Iter, typename Body>
     void wellUpdateLoop(Iter first, Iter last, const int timeStepIdx, Body&& body);

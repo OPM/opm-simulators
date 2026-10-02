@@ -454,30 +454,50 @@ collectGroupRatesForSummary() const
 
     const auto numSlaves = this->numSlaves();
     for (unsigned int i = 0; i < numSlaves; ++i) {
+        const auto& slaveName = this->slaveName(i);
         const auto& masterGroupNames = this->getMasterGroupNamesForSlave(i);
         for (const auto& groupName : masterGroupNames) {
+            const auto groupIdx = this->getMasterGroupCanonicalIdx(slaveName, groupName);
+            const auto& prodData = this->slave_group_production_data_.at(slaveName)[groupIdx];
+            const auto& injData = this->slave_group_injection_data_.at(slaveName)[groupIdx];
+
             // Production rates (positive values, SI units)
             data::ReservoirCouplingGroupRates::ProductionRates prod;
             prod.oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionSurface);
             prod.gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionSurface);
             prod.water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionSurface);
-            prod.resv =
-                this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir)
-                + this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir)
-                + this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
+            prod.resv_oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir);
+            prod.resv_gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir);
+            prod.resv_water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
+            prod.resv = prod.resv_oil + prod.resv_gas + prod.resv_water;
+            prod.gas_lift = prodData.gas_lift_rate;
+            prod.potential_oil = prodData.well_potentials[RcPhase::Oil];
+            prod.potential_gas = prodData.well_potentials[RcPhase::Gas];
+            prod.potential_water = prodData.well_potentials[RcPhase::Water];
+            prod.history_oil = prodData.history_rates[RcPhase::Oil];
+            prod.history_gas = prodData.history_rates[RcPhase::Gas];
+            prod.history_water = prodData.history_rates[RcPhase::Water];
             result.production[groupName] = prod;
 
             // Injection rates (positive values, SI units)
             for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
-                const double surfRate = this->getMasterGroupRate_(
-                    groupName, phase, RateKind::InjectionSurface);
-                const double resRate = this->getMasterGroupRate_(
-                    groupName, phase, RateKind::InjectionReservoir);
-                if (surfRate != 0.0 || resRate != 0.0) {
-                    const auto opmPhase = convertToOpmPhase(phase);
-                    result.injection[groupName][opmPhase] = {surfRate, resRate};
+                const data::ReservoirCouplingGroupRates::InjectionRates inj {
+                    .surface = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionSurface),
+                    .reservoir = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionReservoir),
+                    .potential = injData.well_potentials[phase],
+                    .history = injData.history_rates[phase],
+                };
+                if (inj.surface != 0.0 || inj.reservoir != 0.0
+                    || inj.potential != 0.0 || inj.history != 0.0)
+                {
+                    result.injection[groupName][convertToOpmPhase(phase)] = inj;
                 }
             }
+
+            result.flowing_wells[groupName] = {
+                .producers = prodData.num_flowing_producers,
+                .injectors = injData.num_flowing_injectors,
+            };
         }
     }
     return result;
