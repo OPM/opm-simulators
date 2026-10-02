@@ -137,8 +137,8 @@ private:
     Scalar collectSlaveGroupVoidageRate_(std::size_t group_idx) const;
 
     /// @brief Add the quantities that the master only needs for the summary
-    ///   output of its master group (lift gas, potentials, history rates,
-    ///   flowing producers) to the production data of a slave group.
+    ///   output of its master group (potentials, history rates, flowing
+    ///   producers) to the production data of a slave group.
     /// @details Summed over the producers below the group as the group summary
     ///   vectors of the slave run are: producers that are not shut, with the
     ///   efficiency factors of the wells and of the groups below the slave group,

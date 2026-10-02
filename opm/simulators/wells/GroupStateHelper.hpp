@@ -47,6 +47,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -262,6 +263,13 @@ public:
         return *this->deferred_logger_;
     }
 
+    /// @brief Gas lift limits of a group: maximum lift gas and maximum total gas.
+    /// @details The group's GLIFTOPT record, and for a reservoir coupling slave group
+    ///          the limits the master imposes; the smaller value applies.
+    /// @return (max lift gas, max total gas), each nullopt if there is no limit
+    std::pair<std::optional<Scalar>, std::optional<Scalar>>
+    getGasLiftGroupLimits(const Group& group) const;
+
     std::vector<Scalar> getGroupRatesAvailableForHigherLevelControl(const Group& group, const bool is_injector) const;
 
     Scalar getInjectionGroupTarget(const Group& group,
@@ -386,6 +394,11 @@ public:
 
     int phaseToActivePhaseIdx(const Phase phase) const;
 
+    /// @brief Lift gas rate the slave reported for a reservoir coupling master group.
+    /// @return The rate, or 0 if the group is not a master group (or in a non-MPI build).
+    ///         The value is the same on all ranks.
+    Scalar reservoirCouplingMasterGroupGasLiftRate(const Group& group, const bool network) const;
+
     const PhaseUsageInfo<IndexTraits>& phaseUsage() const {
         return this->phase_usage_info_;
     }
@@ -485,6 +498,14 @@ public:
 
     Scalar sumWellSurfaceRates(const Group& group, const int phase_pos, const bool injector) const;
 
+    /// @brief Sum how much more lift gas the gas lift wells below a group can take.
+    /// @details For each open producer with WLIFTOPT item 2 = YES: its maximum lift gas rate
+    ///          (WLIFTOPT item 3, or else the largest ALQ of its VFP table) minus its
+    ///          current lift gas rate.  A stopped well adds nothing, as it cannot take more
+    ///          lift gas.  Wells and efficiency factors are counted as in
+    ///          sumWellGasLiftRates(), and the sum is rank-local in the same way.
+    Scalar sumWellGasLiftHeadroom(const Group& group) const;
+
     Scalar sumWellPhaseRates(bool res_rates,
                              const Group& group,
                              const int phase_pos,
@@ -496,13 +517,10 @@ public:
     ///          type GRAT or if it has no VFP table.  Efficiency factors are applied as in
     ///          sumWellPhaseRates().  The sum is rank-local: only owned wells count, and,
     ///          as in sumWellPhaseRates(), a reservoir coupling master group contributes
-    ///          its slave's lift gas on rank 0 only.
+    ///          its slave's lift gas on rank 0 only.  The lift gas supply of satellite
+    ///          groups (GSATPROD) is added on rank 0 too, with the network efficiency
+    ///          factors of the groups if @p network is true.
     Scalar sumWellGasLiftRates(const Group& group, const bool network = false) const;
-
-    /// @brief Lift gas rate the slave reported for a reservoir coupling master group.
-    /// @return The rate, or 0 if the group is not a master group (or in a non-MPI build).
-    ///         The value is the same on all ranks.
-    Scalar reservoirCouplingMasterGroupGasLiftRate(const Group& group, const bool network) const;
 
     bool terminalOutput() const
     {
@@ -609,16 +627,6 @@ public:
                        const Group::ProductionCMode& offended_control) const;
 
 private:
-
-    //! \brief Sum value(well, well_state) times the efficiency factor over the open
-    //!        producers below a group whose lift gas is a gas rate (ALQ type GRAT, or no
-    //!        VFP table).  A reservoir coupling master group contributes master_value()
-    //!        on rank 0 only.  Rank-local: only owned wells count.
-    template <class WellValue, class MasterValue>
-    Scalar sumOverGasLiftWells_(const Group& group,
-                                const bool network,
-                                const WellValue& value,
-                                const MasterValue& master_value) const;
 
     //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
     //!
@@ -751,6 +759,16 @@ private:
         Phase injection_phase,
         Scalar base_reservoir_rate,
         const std::vector<Scalar>& group_injection_reservoir_rates) const;
+
+    //! \brief Sum value(well, well_state) times the efficiency factor over the open
+    //!        producers below a group whose lift gas is a gas rate (ALQ type GRAT, or no
+    //!        VFP table).  A reservoir coupling master group contributes master_value()
+    //!        on rank 0 only.  Rank-local: only owned wells count.
+    template <class WellValue, class MasterValue>
+    Scalar sumOverGasLiftWells_(const Group& group,
+                                const bool network,
+                                const WellValue& value,
+                                const MasterValue& master_value) const;
 
     Scalar sumProductionRateForControlMode_(const Group& group, Group::ProductionCMode cmode) const;
 

@@ -35,6 +35,7 @@
 #include <fmt/format.h>
 
 #include <stdexcept>
+#include <tuple>
 
 namespace Opm {
 
@@ -50,7 +51,7 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
                  const GroupState<Scalar>& group_state,
                  const Communication& comm,
                  bool glift_debug,
-                 const GroupStateHelper<Scalar, IndexTraits>* group_state_helper)
+                 const GroupStateHelper<Scalar, IndexTraits>& group_state_helper)
     : GasLiftCommon<Scalar, IndexTraits>(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
@@ -601,6 +602,38 @@ getProducerWellRates_(const Well* well, int well_index)
 }
 
 template<typename Scalar, typename IndexTraits>
+void
+GasLiftGroupInfo<Scalar, IndexTraits>::
+addSlaveRatesOfMasterGroup_([[maybe_unused]] const Group& group,
+                            [[maybe_unused]] std::array<Scalar, 7>& rates) const
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (!this->group_state_helper_.isReservoirCouplingMaster()
+        || !this->group_state_helper_.isReservoirCouplingMasterGroup(group))
+    {
+        return;
+    }
+    // A master group has no wells here: its rates are those of the slave group, as
+    // last reported by the slave.  They are the same on all ranks, so they are added
+    // after the communication of the rates of the wells.  With them, the master's own
+    // gas lift wells see what the slaves produce and use in the groups they share.
+    auto& [oil_rate, water_rate, gas_rate, oil_potential, water_potential, gas_potential, alq] = rates;
+    using RcPhase = ReservoirCoupling::Phase;
+    using RateKind = ReservoirCoupling::RateKind;
+    const auto& master = this->group_state_helper_.reservoirCouplingMaster();
+    const auto& name = group.name();
+    oil_rate += master.getMasterGroupRate(name, RcPhase::Oil, RateKind::ProductionSurface);
+    gas_rate += master.getMasterGroupRate(name, RcPhase::Gas, RateKind::ProductionSurface);
+    water_rate += master.getMasterGroupRate(name, RcPhase::Water, RateKind::ProductionSurface);
+    const auto& potentials = master.getSlaveGroupPotentials(name);
+    oil_potential += potentials[RcPhase::Oil];
+    gas_potential += potentials[RcPhase::Gas];
+    water_potential += potentials[RcPhase::Water];
+    alq += master.getMasterGroupGasLiftRate(name, /*network=*/false);
+#endif
+}
+
+template<typename Scalar, typename IndexTraits>
 std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
 GasLiftGroupInfo<Scalar, IndexTraits>::
 initializeGroupRatesRecursive_(const Group& group)
@@ -667,6 +700,8 @@ initializeGroupRatesRecursive_(const Group& group)
             }
         }
         this->comm_.sum(rates.data(), rates.size());
+        // A reservoir coupling master group is a leaf group: no child groups
+        this->addSlaveRatesOfMasterGroup_(group, rates);
     }
     else {
         for (const std::string& group_name : group.groups()) {
@@ -687,58 +722,15 @@ initializeGroupRatesRecursive_(const Group& group)
             alq += (gefac * sg_alq);
         }
     }
-#ifdef RESERVOIR_COUPLING_ENABLED
-    if (this->group_state_helper_
-        && this->group_state_helper_->isReservoirCouplingMaster()
-        && this->group_state_helper_->isReservoirCouplingMasterGroup(group))
-    {
-        // A master group has no wells here: its rates are those of the slave group, as
-        // last reported by the slave.  They are the same on all ranks, so they are added
-        // after the communication above.  With them, the master's own gas lift wells see
-        // what the slaves produce and use in the groups they share.
-        using RcPhase = ReservoirCoupling::Phase;
-        using RateKind = ReservoirCoupling::RateKind;
-        const auto& master = this->group_state_helper_->reservoirCouplingMaster();
-        const auto& name = group.name();
-        oil_rate += master.getMasterGroupRate(name, RcPhase::Oil, RateKind::ProductionSurface);
-        gas_rate += master.getMasterGroupRate(name, RcPhase::Gas, RateKind::ProductionSurface);
-        water_rate += master.getMasterGroupRate(name, RcPhase::Water, RateKind::ProductionSurface);
-        const auto& potentials = master.getSlaveGroupPotentials(name);
-        oil_potential += potentials[RcPhase::Oil];
-        gas_potential += potentials[RcPhase::Gas];
-        water_potential += potentials[RcPhase::Water];
-        alq += master.getMasterGroupGasLiftRate(name, /*network=*/false);
-    }
-#endif
     if (this->debug) debugEndInitializeGroup(group.name());
     std::optional<Scalar> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
-    if (this->group_state_helper_) {
-        const auto& helper = *this->group_state_helper_;
-        liquid_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::LRAT);
-        oil_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::ORAT);
-        gas_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::GRAT);
-        water_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::WRAT);
-    }
-    else {
-        const auto controls = group.productionControls(this->summary_state_);
-        if (group.has_control(Group::ProductionCMode::LRAT)) {
-            liquid_target = controls.liquid_target;
-        }
-        if (group.has_control(Group::ProductionCMode::ORAT)) {
-            oil_target = controls.oil_target;
-        }
-        if (group.has_control(Group::ProductionCMode::GRAT)) {
-            gas_target = controls.gas_target;
-        }
-        if (group.has_control(Group::ProductionCMode::WRAT)) {
-            water_target = controls.water_target;
-        }
-    }
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        max_alq = gl_group.max_lift_gas();
-        max_total_gas = gl_group.max_total_gas();
-    }
+    const auto& helper = this->group_state_helper_;
+    liquid_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::LRAT);
+    oil_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::ORAT);
+    gas_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::GRAT);
+    water_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::WRAT);
+    // GLIFTOPT, combined with the limits a reservoir coupling master imposes
+    std::tie(max_alq, max_total_gas) = helper.getGasLiftGroupLimits(group);
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
         this->group_rate_map_.try_emplace(group.name(),

@@ -298,9 +298,10 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxALQ_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_lift_gas();
+    // GasLiftGroupInfo holds the GLIFTOPT limit, combined with the limit a reservoir
+    // coupling master imposes on a slave group.
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxAlq(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
@@ -309,9 +310,9 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxTotalGas_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_total_gas();
+    // See getGroupMaxALQ_()
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxTotalGasRate(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
@@ -418,8 +419,9 @@ optimizeGroup_(const Group& group)
     const auto& group_name = group.name();
     if (!this->group_info_.hasGroup(group_name)) {
         // The group has no rate limit, no lift-gas limit and no total-gas limit that
-        // gas lift knows of (e.g. a group under GRUP or RESV control), so there is
-        // nothing to optimize at this level.
+        // gas lift knows of (e.g. a group under NONE or FLD control without limits of
+        // its own, or a group under RESV control), so there is nothing to optimize at
+        // this level.
         if (this->debug) {
             displayDebugMessage_("skipping (no limits relevant to gas lift)", group_name);
         }

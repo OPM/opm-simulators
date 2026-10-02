@@ -23,6 +23,7 @@
 #include <opm/simulators/flow/NewtonIterationContext.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
+#include <array>
 #include <map>
 #include <optional>
 #include <string>
@@ -74,7 +75,7 @@ public:
                      const GroupState<Scalar>& group_state,
                      const Parallel::Communication& comm,
                      bool glift_debug,
-                     const GroupStateHelper<Scalar, IndexTraits>* group_state_helper = nullptr);
+                     const GroupStateHelper<Scalar, IndexTraits>& group_state_helper);
 
     std::vector<std::pair<std::string,Scalar>>&
     getWellGroups(const std::string& well_name);
@@ -141,6 +142,11 @@ protected:
 
     std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
     getProducerWellRates_(const Well* well, const int index);
+
+    /// @brief Add the rates a slave reports for a reservoir coupling master group
+    /// @param rates Rates of the group, as in initializeGroupRatesRecursive_(), which have been
+    ///   summed over the ranks already: the slave's rates are the same on all ranks.
+    void addSlaveRatesOfMasterGroup_(const Group& group, std::array<Scalar, 7>& rates) const;
 
     std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
     initializeGroupRatesRecursive_(const Group &group);
@@ -244,7 +250,7 @@ protected:
     // Used for the group rate limits when available, so that the limits a reservoir
     // coupling master imposes on a slave group are seen.  Without it, only the
     // group's own GCONPROD limits are used.
-    const GroupStateHelper<Scalar, IndexTraits>* group_state_helper_;
+    const GroupStateHelper<Scalar, IndexTraits>& group_state_helper_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;
     GroupIdxMap group_idx_;

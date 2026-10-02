@@ -98,7 +98,7 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
             groupState,
             simulator.vanguard().grid().comm(),
             this->glift_debug,
-            &simulator.problem().wellModel().groupStateHelper()
+            simulator.problem().wellModel().groupStateHelper()
         };
         group_info.initialize();
 

@@ -2602,7 +2602,8 @@ namespace Opm
                 well_state,
                 group_state,
                 comm,
-                false
+                false,
+                simulator.problem().wellModel().groupStateHelper()
         };
 
         // Return GasLiftSingleWell object to use the wellTestALQ() function

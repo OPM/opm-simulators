@@ -115,6 +115,9 @@ public:
 
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
+    /// @brief Gas lift limits the master imposes on a slave group, or nullptr if none
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
     /// @brief Get the master-computed network-leaf node pressure for a master group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     Scalar masterGroupNodePressure(const std::string& gname) const;
@@ -144,7 +147,10 @@ public:
     ///   it via lastReceivedMasterGroupNodePressuresIsFinal().
     void receiveCoupledNetworkActiveStatusFromMaster();
     double receiveNextTimeStepFromMaster();
-    std::pair<std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+    /// @brief Receive the gas lift limits for the slave groups from master and store them
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
     /// @brief Receive injection group targets from master and store them locally
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);

@@ -59,6 +59,7 @@ class RescoupConstraintsCalculator {
 public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
+    using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
 
     /// @brief The constraints computed for the master groups, indexed by slave.
     /// @details Entry `slave_idx` of each vector holds the constraints for that
@@ -66,6 +67,7 @@ public:
     struct MasterGroupConstraints {
         std::vector<std::vector<InjectionGroupTarget>> injection_targets;
         std::vector<std::vector<ProductionGroupConstraints>> production_constraints;
+        std::vector<std::vector<GasLiftGroupLimits>> gas_lift_limits;
     };
 
     /// @brief Construct a calculator bound to the master's per-sync-step
@@ -103,6 +105,24 @@ public:
     MasterGroupConstraints calculateMasterGroupConstraints();
 
 private:
+    /// @brief Compute the gas lift limits (GLIFTOPT) for one slave's master groups.
+    /// @details A GLIFTOPT record on the master group itself is passed on as is.  A
+    ///   record on an ancestor A is shared among the master groups below A: each gets
+    ///   what its slave group uses now plus a share of the slack (limit minus what is
+    ///   used below A, master wells included), in proportion to how much more lift
+    ///   gas each slave group's wells can take
+    ///   (SlaveGroupProductionData::gas_lift_headroom).  If the use below A exceeds the
+    ///   limit, the master groups' current
+    ///   use is scaled down so that the total meets the limit.  The limits from all
+    ///   levels are combined by taking the minimum.
+    ///
+    ///   The share is not optimal in the sense of gas lift: the master does not know
+    ///   the slaves' well gradients, so lift gas is not moved between slaves in favour
+    ///   of the best wells.  Within a slave group, the slave's gas lift distributes it
+    ///   as usual.
+    /// @return One record per master group of the slave (-1 = no limit).
+    std::vector<GasLiftGroupLimits> calculateGasLiftGroupLimits_(std::size_t slave_idx) const;
+
     /// @brief Phase 1: compute initial guide-rate-distributed targets and
     ///   per-rate-type limits for one slave's master groups.
     /// @details Invoked once per activated slave by
@@ -132,6 +152,11 @@ private:
     /// @return One entry per (master group, phase) that has a target.
     std::vector<InjectionGroupTarget>
         calculateSlaveGroupInjectionTargets_(std::size_t slave_idx, GroupConstraintCalculator<Scalar, IndexTraits>& calculator) const;
+
+    /// @brief Product of the efficiency factors from @p group (included) up to
+    ///   @p ancestor (excluded), or nullopt if @p ancestor is not an ancestor of @p group.
+    std::optional<Scalar> efficiencyFactorToAncestor_(const std::string& group,
+                                                      const std::string& ancestor) const;
 
     /// @brief Phase 2: exclude master groups none of whose slave producers
     ///   are under group control from the guide-rate distribution, and
@@ -198,6 +223,34 @@ private:
         std::size_t group_idx,
         const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints);
 
+    /// @brief Limit for one master group from a GLIFTOPT limit on group @p limit_group.
+    /// @details Called by calculateGasLiftGroupLimits_() for each pair of a master group and
+    ///   a group @p limit_group, the master group itself or an ancestor of it, that has a
+    ///   limit.  @p limit and @p total_use belong to @p limit_group, not to the master group;
+    ///   @p total_use is everything used below @p limit_group, which includes the use of
+    ///   other master groups and of the master's own wells.  The slack is @p limit minus
+    ///   @p total_use, and the headroom of a master group is how much more lift gas its slave
+    ///   group's wells can take, up to their maximum rates.
+    ///
+    ///   Under the limit, the master group gets its own use plus a share of the slack in
+    ///   proportion to its headroom among the master groups below @p limit_group.  Over the
+    ///   limit, what is left of the limit after the use of the master's own wells is shared
+    ///   in proportion to the use of the master groups.  A limit on the master group itself
+    ///   is returned as it is.
+    ///
+    ///   The rates above are in the units of @p limit_group, that is, scaled by the
+    ///   efficiency factors of the groups between the master group and @p limit_group; the
+    ///   result is divided by them to give a limit in the master group's own units.
+    /// @param use_of Current use of the limited quantity (lift gas or total gas) of a
+    ///   master group, in the master group's own units.
+    /// @param total_use Current use of the limited quantity below @p limit_group, in
+    ///   @p limit_group units.
+    Scalar shareGasLiftLimit_(const Group& limit_group,
+                              const std::string& master_group,
+                              Scalar limit,
+                              Scalar total_use,
+                              const std::function<Scalar(const std::string&)>& use_of) const;
+
     /// @brief Phase 2, step 3b: share the unused part of each controlling
     ///   target or limit among the excluded master groups below it.
     /// @details Without this each excluded group is offered the whole unused
@@ -224,11 +277,14 @@ private:
     /// @param production_constraints Per-master-group production
     ///   constraint triples (target, cmode, per-rate-type limits) to
     ///   send.
+    /// @param gas_lift_limits Gas lift limits for the slave's master groups.
+    ///   They replace the limits the slave has received earlier, also when empty.
     void sendSlaveGroupConstraintsToSlave_(
         const ReservoirCouplingMaster<Scalar>& rescoup_master,
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets,
-        const std::vector<ProductionGroupConstraints>& production_constraints
+        const std::vector<ProductionGroupConstraints>& production_constraints,
+        const std::vector<GasLiftGroupLimits>& gas_lift_limits
     ) const;
 
     /// @brief Recompute the Group-Controlled-Wells count and the

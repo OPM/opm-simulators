@@ -130,7 +130,8 @@ BOOST_AUTO_TEST_CASE(G1)
             well_state,
             group_state,
             comm,
-            /*glift_debug=*/false
+            /*glift_debug=*/false,
+            well_model.groupStateHelper()
         };
         GLiftSyncGroups sync_groups;
         auto std_well_unconst = *std_well;
@@ -272,7 +273,8 @@ BOOST_AUTO_TEST_CASE(G2)
             well_state,
             group_state,
             comm,
-            /*glift_debug=*/false
+            /*glift_debug=*/false,
+            well_model.groupStateHelper()
         };
         group_info.initialize();
         GLiftSyncGroups sync_groups;
@@ -465,7 +467,8 @@ BOOST_AUTO_TEST_CASE(WellTestALQ)
     const auto& comm = simulator->vanguard().grid().comm();
     GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state,
                                  simulator->episodeIndex(), iterCtx, deferred_logger,
-                                 well_state, group_state, comm, /*glift_debug=*/false};
+                                 well_state, group_state, comm, /*glift_debug=*/false,
+                                 well_model.groupStateHelper()};
     group_info.initialize();
 
     const auto increment = schedule.glo(0).gaslift_increment();
@@ -620,7 +623,8 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMax)
         const auto& iterCtx = simulator->problem().iterationContext();
         GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, report_step, iterCtx,
                                      deferred_logger, well_state, group_state, comm,
-                                     /*glift_debug=*/false};
+                                     /*glift_debug=*/false,
+                                     well_model.groupStateHelper()};
         // the group info is not initialized when only used for a well test
         if (init_groups) {
             group_info.initialize();
@@ -657,7 +661,8 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMax)
         const auto& iterCtx = simulator->problem().iterationContext();
         GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, report_step, iterCtx,
                                      deferred_logger, well_state, group_state, comm,
-                                     /*glift_debug=*/false};
+                                     /*glift_debug=*/false,
+                                     well_model.groupStateHelper()};
         group_info.initialize();
         const double group_oil = group_info.oilRate("PLAT-A");
         Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
@@ -729,7 +734,8 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithWellTarget)
     const auto& iterCtx = simulator->problem().iterationContext();
     GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, report_step, iterCtx,
                                  deferred_logger, well_state, group_state, comm,
-                                 /*glift_debug=*/false};
+                                 /*glift_debug=*/false,
+                                 well_model.groupStateHelper()};
     group_info.initialize();
     const double group_oil = group_info.oilRate("PLAT-A");
     Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
@@ -805,7 +811,8 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithGroupTarget)
     const auto& iterCtx = simulator->problem().iterationContext();
     GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, report_step, iterCtx,
                                  deferred_logger, well_state, group_state, comm,
-                                 /*glift_debug=*/false};
+                                 /*glift_debug=*/false,
+                                 well_model.groupStateHelper()};
     group_info.initialize();
     const double target = *group_info.oilTarget("PLAT-A");
     const double initial_group_oil = group_info.oilRate("PLAT-A");
