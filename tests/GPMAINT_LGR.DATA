@@ -1,0 +1,174 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- GPMAINT on the average pressure of FIPNUM region 1 (I 1-2), with a local grid
+-- refinement inside that region: four cells of the bottom layer, each refined
+-- 2x2x1.  The refined cells take the region of their host cell.
+
+RUNSPEC
+
+DIMENS
+   5 5 3 /
+
+OIL
+WATER
+GAS
+DISGAS
+
+METRIC
+
+START
+ 1 'JAN' 2020 /
+
+WELLDIMS
+   1 5 2 1 /
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+-- =============================================================================
+GRID
+-- =============================================================================
+
+CARFIN
+-- NAME  I1-I2 J1-J2 K1-K2 NX NY NZ
+'LGR1'   1  2  1  2  3  3  4  4  1 /
+ENDFIN
+
+DXV
+5*100.0 /
+
+DYV
+5*100.0 /
+
+DZV
+3*10.0 /
+
+TOPS
+25*2000 /
+
+PORO
+75*0.25 /
+
+PERMX
+75*500 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+-- =============================================================================
+PROPS
+-- =============================================================================
+
+PVTW
+-- ref.pres  Bw      Cw          Vw    Vw.visc
+   250.0    1.02   4.0E-05      0.5    0.0 /
+
+ROCK
+-- ref.pres  compressibility
+   250.0    4.0E-05 /
+
+DENSITY
+-- oil    water   gas
+   850    1014    1.0 /
+
+PVDO
+-- P       Bo      Vo
+  100.0   1.05    2.0
+  250.0   1.02    2.5
+  400.0   1.00    3.0 /
+
+PVDG
+-- P       Bg       Vg
+  100.0   0.010    0.015
+  250.0   0.005    0.020
+  400.0   0.003    0.025 /
+
+SWOF
+-- Sw      Krw      Kro      Pcow
+  0.2     0.0      1.0      0.0
+  0.3     0.05     0.6      0.0
+  0.5     0.15     0.3      0.0
+  0.7     0.35     0.1      0.0
+  0.8     0.5      0.0      0.0 /
+
+SGOF
+-- Sg      Krg      Kro      Pcog
+  0.0     0.0      1.0      0.0
+  0.1     0.02     0.6      0.0
+  0.3     0.10     0.3      0.0
+  0.5     0.25     0.1      0.0
+  0.7     0.5      0.0      0.0 /
+
+-- =============================================================================
+REGIONS
+-- =============================================================================
+
+FIPNUM
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+ 2*1 3*2
+/
+
+-- =============================================================================
+SOLUTION
+-- =============================================================================
+
+EQUIL
+-- datum  pressure  OWC    Pc@OWC  GOC    Pc@GOC  RSVD  RVVD  SOLN
+   2000   250.0     2100   0.0     1900   0.0     1     0     0 /
+
+RSVD
+   1900   100.0
+   2100   100.0 /
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'G1' 'FIELD' /
+/
+
+-- The well is in region 2, before the refined cells.
+WELSPECS
+ 'P1' 'G1' 4 4 2005 'OIL' /
+/
+
+COMPDAT
+ 'P1' 4 4 1 2 'OPEN' 1* 1* 0.2 /
+/
+
+WCONPROD
+ 'P1' 'OPEN' 'GRUP' 1* 1* 1* 1* 1* 100.0 /
+/
+
+-- G1 produces to hold the average pressure of FIPNUM region 1 at 240 bar.
+GPMAINT
+-- group  control  region  FIP array  pressure  proportionality  integral time
+ 'G1'     'PROD'   1       1*         240       70               90 /
+/
+
+TSTEP
+1 /
+
+END
