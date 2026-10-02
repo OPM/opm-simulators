@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -48,7 +49,8 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
                  WellState<Scalar, IndexTraits>& well_state,
                  const GroupState<Scalar>& group_state,
                  const Communication& comm,
-                 bool glift_debug)
+                 bool glift_debug,
+                 const GroupStateHelper<Scalar, IndexTraits>* group_state_helper)
     : GasLiftCommon<Scalar, IndexTraits>(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
@@ -57,6 +59,7 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
     , iterCtx_{iterCtx}
     , phase_usage_{well_state.phaseUsageInfo()}
     , glo_{schedule_.glo(report_step_idx_)}
+    , group_state_helper_{group_state_helper}
 {}
 
 /****************************************
@@ -231,6 +234,13 @@ hasAnyTarget(const std::string& group_name) const
 {
     return oilTarget(group_name)   || gasTarget(group_name)
         || waterTarget(group_name) || liquidTarget(group_name);
+}
+
+template<typename Scalar, typename IndexTraits>
+bool GasLiftGroupInfo<Scalar, IndexTraits>::
+hasGroup(const std::string& group_name) const
+{
+    return this->group_rate_map_.count(group_name) == 1;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -679,18 +689,27 @@ initializeGroupRatesRecursive_(const Group& group)
     }
     if (this->debug) debugEndInitializeGroup(group.name());
     std::optional<Scalar> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
-    const auto controls = group.productionControls(this->summary_state_);
-    if (group.has_control(Group::ProductionCMode::LRAT)) {
-        liquid_target = controls.liquid_target;
+    if (this->group_state_helper_) {
+        const auto& helper = *this->group_state_helper_;
+        liquid_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::LRAT);
+        oil_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::ORAT);
+        gas_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::GRAT);
+        water_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::WRAT);
     }
-    if (group.has_control(Group::ProductionCMode::ORAT)) {
-        oil_target = controls.oil_target;
-    }
-    if (group.has_control(Group::ProductionCMode::GRAT)) {
-        gas_target = controls.gas_target;
-    }
-    if (group.has_control(Group::ProductionCMode::WRAT)) {
-        water_target = controls.water_target;
+    else {
+        const auto controls = group.productionControls(this->summary_state_);
+        if (group.has_control(Group::ProductionCMode::LRAT)) {
+            liquid_target = controls.liquid_target;
+        }
+        if (group.has_control(Group::ProductionCMode::ORAT)) {
+            oil_target = controls.oil_target;
+        }
+        if (group.has_control(Group::ProductionCMode::GRAT)) {
+            gas_target = controls.gas_target;
+        }
+        if (group.has_control(Group::ProductionCMode::WRAT)) {
+            water_target = controls.water_target;
+        }
     }
     if (this->glo_.has_group(group.name())) {
         const auto& gl_group = this->glo_.group(group.name());

@@ -209,10 +209,10 @@ protected:
                      Scalar water_rate_,
                      Scalar alq_,
                      Scalar min_eco_grad_,
-                     Scalar oil_target_,
-                     Scalar gas_target_,
-                     Scalar water_target_,
-                     Scalar liquid_target_,
+                     std::optional<Scalar> oil_target_,
+                     std::optional<Scalar> gas_target_,
+                     std::optional<Scalar> water_target_,
+                     std::optional<Scalar> liquid_target_,
                      std::optional<Scalar> max_glift_,
                      std::optional<Scalar> max_total_gas_)
             : parent{parent_}
@@ -240,10 +240,12 @@ protected:
         Scalar water_rate;
         Scalar alq;
         const Scalar min_eco_grad;
-        const Scalar oil_target;
-        const Scalar gas_target;
-        const Scalar water_target;
-        const Scalar liquid_target;
+        // Group targets as gas lift sees them (GasLiftGroupInfo): for a reservoir
+        // coupling slave group they include the targets imposed by the master.
+        const std::optional<Scalar> oil_target;
+        const std::optional<Scalar> gas_target;
+        const std::optional<Scalar> water_target;
+        const std::optional<Scalar> liquid_target;
         std::optional<Scalar> max_glift;
         std::optional<Scalar> max_total_gas;
         int it;
