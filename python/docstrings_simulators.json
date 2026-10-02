@@ -24,7 +24,7 @@
         },
         "objects_constructor": {
             "signature_template": "opm.simulators.{{name}}.__init__(Deck: Deck, EclipseState: EclipseState, Schedule: Schedule, SummaryConfig: SummaryConfig, args: list[str] = []) -> {{name}}",
-            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\n:param Deck: Deck object.\n:type Deck: Deck\n:param EclipseState: EclipseState object.\n:type EclipseState: EclipseState\n:param Schedule: Schedule object.\n:type Schedule: Schedule\n:param SummaryConfig: SummaryConfig object.\n:type SummaryConfig: SummaryConfig\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
+            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\n:param Deck: Deck object. Only its file name is used: the simulator reads the DATA file again itself, so changes made to this object in Python do not reach the simulation.\n:type Deck: Deck\n:param EclipseState: EclipseState object.\n:type EclipseState: EclipseState\n:param Schedule: Schedule object.\n:type Schedule: Schedule\n:param SummaryConfig: SummaryConfig object.\n:type SummaryConfig: SummaryConfig\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
         }
     },
     "common_methods": {
