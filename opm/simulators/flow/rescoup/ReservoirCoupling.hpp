@@ -249,6 +249,14 @@ struct SlaveGroupProductionData {
     ProductionRates<Scalar> reservoir_rates;  // Reservoir production rates by phase
     Scalar voidage_rate{0.0};               // Reservoir voidage replacement rate
     Scalar gas_reinjection_rate{0.0};       // Reinjection (surface) rate for the gas phase
+    // The following are only used for the summary output of the master group, which
+    // has no wells of its own.  They are summed over the slave group's producers as
+    // the group summary vectors of the slave run are (see the corresponding
+    // evaluators in opm-common's Summary.cpp).
+    Scalar gas_lift_rate{0.0};                // Lift gas rate (GGLIR)
+    ProductionRates<Scalar> well_potentials;  // Production potentials (GOPP, GWPP, GGPP)
+    ProductionRates<Scalar> history_rates;    // Production history rates (GOPRH, ...)
+    int num_flowing_producers{0};             // Number of flowing producers (GMWPR)
 };
 
 // Slave group injection data sent to the corresponding master group for target calculation.
@@ -259,6 +267,11 @@ struct SlaveGroupInjectionData {
     Potentials<Scalar> potentials;
     InjectionRates<Scalar> surface_rates;    // Surface injection rates by phase
     InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
+    // The following are only used for the summary output of the master group, as
+    // for SlaveGroupProductionData.
+    InjectionRates<Scalar> well_potentials;  // Injection potentials (GWPI, GGPI, GOPI)
+    InjectionRates<Scalar> history_rates;    // Injection history rates (GWIRH, ...)
+    int num_flowing_injectors{0};            // Number of flowing injectors (GMWIN)
 };
 
 template <class Scalar>
