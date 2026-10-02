@@ -135,6 +135,7 @@ void FlowLinearSolverParameters::registerParameters()
         ("Scale linear system according to equation scale and primary variable types");
     Parameters::Register<Parameters::LinearSolver>
         ("Configuration of solver. Valid options are: cprw (default), system_cpr (CPU-only), "
+         "system_cprw (CPU-only, system_cpr with the wells in the pressure stage), "
          "ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, "
          "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
          "Alternatively, you can request a configuration to be read from a "

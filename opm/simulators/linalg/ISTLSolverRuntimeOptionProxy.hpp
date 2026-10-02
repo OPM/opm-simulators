@@ -155,7 +155,7 @@ private:
     void createSolver(const Simulator& simulator, Args&&... args)
     {
         auto linSolverConf = Parameters::Get<Parameters::LinearSolver>();
-        bool useSystemCpr = (linSolverConf == "system_cpr");
+        bool useSystemCpr = (linSolverConf == "system_cpr") || (linSolverConf == "system_cprw");
         if (!useSystemCpr && linSolverConf.size() > 5
             && linSolverConf.ends_with(".json")
             && std::filesystem::exists(linSolverConf)) {
