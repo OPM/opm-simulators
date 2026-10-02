@@ -47,6 +47,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -474,6 +475,20 @@ public:
     ///          as in sumWellPhaseRates(), a reservoir coupling master group contributes
     ///          its slave's lift gas on rank 0 only.
     Scalar sumWellGasLiftRates(const Group& group, const bool network = false) const;
+
+    /// @brief Sum how much more lift gas the gas lift wells below a group can take.
+    /// @details For each producer with WLIFTOPT item 2 = YES: its maximum lift gas rate
+    ///          (WLIFTOPT item 3, or else the largest ALQ of its VFP table) minus its
+    ///          current lift gas rate.  Wells and efficiency factors are counted as in
+    ///          sumWellGasLiftRates(), and the sum is rank-local in the same way.
+    Scalar sumWellGasLiftHeadroom(const Group& group) const;
+
+    /// @brief Gas lift limits of a group: maximum lift gas and maximum total gas.
+    /// @details The group's GLIFTOPT record, and for a reservoir coupling slave group
+    ///          the limits the master imposes; the smaller value applies.
+    /// @return (max lift gas, max total gas), each nullopt if there is no limit
+    std::pair<std::optional<Scalar>, std::optional<Scalar>>
+    getGasLiftGroupLimits(const Group& group) const;
 
     /// @brief Lift gas rate the slave reported for a reservoir coupling master group.
     /// @return The rate, or 0 if the group is not a master group (or in a non-MPI build).

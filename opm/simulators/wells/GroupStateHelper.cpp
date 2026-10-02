@@ -1226,6 +1226,41 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
 }
 
 template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftHeadroom(const Group& group) const
+{
+    const auto& sched_state = this->schedule_[this->report_step_];
+    const auto& glo = this->schedule_.glo(this->report_step_);
+    return this->sumOverGasLiftWells_(
+        group, /*network=*/false,
+        [this, &sched_state, &glo](const Well& well_ecl,
+                                   const SingleWellState<Scalar, IndexTraits>& ws) -> Scalar {
+            if (!glo.has_well(well_ecl.name()) || !glo.well(well_ecl.name()).use_glo()) {
+                return 0.0;
+            }
+            Scalar max_rate = 0.0;
+            if (const auto& rate = glo.well(well_ecl.name()).max_rate(); rate.has_value()) {
+                max_rate = *rate;
+            }
+            else {
+                const int vfp_table = well_ecl.productionControls(this->summary_state_).vfp_table_number;
+                if (sched_state.vfpprod.has(vfp_table)) {
+                    max_rate = sched_state.vfpprod(vfp_table).getALQAxis().back();
+                }
+            }
+            return std::max(max_rate - ws.alq_state.get(), Scalar{0});
+        },
+        [this](const Group& master_group) -> Scalar {
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (this->isReservoirCouplingMaster()) {
+                return this->reservoirCouplingMaster().getMasterGroupGasLiftHeadroom(master_group.name());
+            }
+#endif
+            return 0.0;
+        });
+}
+
+template <typename Scalar, typename IndexTraits>
 template <class WellValue, class MasterValue>
 Scalar
 GroupStateHelper<Scalar, IndexTraits>::sumOverGasLiftWells_(const Group& group,
@@ -1267,6 +1302,40 @@ GroupStateHelper<Scalar, IndexTraits>::sumOverGasLiftWells_(const Group& group,
             * value(well_ecl, ws);
     }
     return rate;
+}
+
+template <typename Scalar, typename IndexTraits>
+std::pair<std::optional<Scalar>, std::optional<Scalar>>
+GroupStateHelper<Scalar, IndexTraits>::
+getGasLiftGroupLimits(const Group& group) const
+{
+    std::optional<Scalar> max_lift_gas, max_total_gas;
+    const auto& glo = this->schedule_.glo(this->report_step_);
+    if (glo.has_group(group.name())) {
+        const auto& gl_group = glo.group(group.name());
+        if (gl_group.max_lift_gas().has_value()) {
+            max_lift_gas = static_cast<Scalar>(*gl_group.max_lift_gas());
+        }
+        if (gl_group.max_total_gas().has_value()) {
+            max_total_gas = static_cast<Scalar>(*gl_group.max_total_gas());
+        }
+    }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave() && this->isReservoirCouplingSlaveGroup(group)) {
+        // GLIFTOPT has no GRUPSLAV filter flag, so both the slave's own limit and the
+        // master's apply.
+        if (const auto* limits = this->reservoirCouplingSlave().masterGasLiftLimits(group.name())) {
+            const auto combine = [](std::optional<Scalar>& local, const Scalar master) {
+                if (master >= 0) {
+                    local = local.has_value() ? std::min(*local, master) : master;
+                }
+            };
+            combine(max_lift_gas, limits->max_lift_gas);
+            combine(max_total_gas, limits->max_total_gas);
+        }
+    }
+#endif
+    return {max_lift_gas, max_total_gas};
 }
 
 template <typename Scalar, typename IndexTraits>

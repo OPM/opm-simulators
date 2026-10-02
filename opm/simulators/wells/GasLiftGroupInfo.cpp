@@ -35,6 +35,7 @@
 #include <fmt/format.h>
 
 #include <stdexcept>
+#include <tuple>
 
 namespace Opm {
 
@@ -734,7 +735,11 @@ initializeGroupRatesRecursive_(const Group& group)
             water_target = controls.water_target;
         }
     }
-    if (this->glo_.has_group(group.name())) {
+    if (this->group_state_helper_) {
+        // GLIFTOPT, combined with the limits a reservoir coupling master imposes
+        std::tie(max_alq, max_total_gas) = this->group_state_helper_->getGasLiftGroupLimits(group);
+    }
+    else if (this->glo_.has_group(group.name())) {
         const auto& gl_group = this->glo_.group(group.name());
         max_alq = gl_group.max_lift_gas();
         max_total_gas = gl_group.max_total_gas();

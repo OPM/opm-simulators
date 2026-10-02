@@ -44,12 +44,19 @@ receiveGroupConstraintsFromMaster()
     // NOTE: All ranks must call these functions because they contain broadcasts.
     //   The MPI_Recv parts inside the functions have their own rank 0 checks.
     auto& rescoup_slave = this->reservoir_coupling_slave_;
-    auto [num_inj_targets, num_prod_constraints] = rescoup_slave.receiveNumGroupConstraintsFromMaster();
+    auto [num_inj_targets, num_prod_constraints, num_gas_lift_limits] =
+        rescoup_slave.receiveNumGroupConstraintsFromMaster();
     if (num_inj_targets > 0) {
         rescoup_slave.receiveInjectionGroupTargetsFromMaster(num_inj_targets);
     }
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
+    }
+    // The master sends a record for every slave group with each full constraint
+    // update, and none when it only refreshes the injection targets; the limits
+    // received earlier then stay in force.
+    if (num_gas_lift_limits > 0) {
+        rescoup_slave.receiveGasLiftGroupLimitsFromMaster(num_gas_lift_limits);
     }
 }
 
