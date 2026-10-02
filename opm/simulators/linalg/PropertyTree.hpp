@@ -137,6 +137,31 @@ public:
     /// \return Vector of strings containing the names of all immediate children
     std::vector<std::string> get_child_keys() const;
 
+    /// Retrieve a node's children as sub trees, in order.
+    ///
+    /// For a JSON array of objects.  Such an array parses to a node whose
+    /// children all have an empty key, so they cannot be reached by name and
+    /// get_child_items_as_vector() cannot read them either -- that one reads
+    /// scalars.
+    ///
+    /// \param[in] child Property key.  Expected to be in hierarchical
+    /// notation for subtrees--i.e., using periods ('.') to separate
+    /// hierarchy levels.
+    ///
+    /// \return The child sub trees in the order they appear.  Nullopt if no
+    /// node named by \p child exists.
+    std::optional<std::vector<PropertyTree>>
+    get_child_list(const std::string& child) const;
+
+    /// Store a sequence of sub trees as a JSON array.
+    ///
+    /// \param[in] key Property key.  Expected to be in hierarchical
+    /// notation for subtrees--i.e., using periods ('.') to separate
+    /// hierarchy levels.
+    ///
+    /// \param[in] items Sub trees, stored in the order given.
+    void put_child_list(const std::string& key, const std::vector<PropertyTree>& items);
+
     /// Retrieve node items as linearised vector.
     ///
     /// Assumes that the node's child is an array type of homongeneous
