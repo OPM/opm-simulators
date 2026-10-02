@@ -203,6 +203,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    pvtnum_water
+  FILENAME
+    PVTNUM_WATER
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_equil
+  FILENAME
+    PVTNUM_EQUIL
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_rock
+  FILENAME
+    PVTNUM_ROCK
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
     spe12
   FILENAME
     SPE1CASE2
