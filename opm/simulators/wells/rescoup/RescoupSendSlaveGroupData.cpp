@@ -512,6 +512,12 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     // The master uses this for network nodes with NODEPROP item 4 = YES.
     production_data.network_gas_lift_rate =
         this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/true);
+    {
+        const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        production_data.gas_lift_headroom =
+            this->comm().sum(this->groupStateHelper_.sumWellGasLiftHeadroom(group));
+    }
     return production_data;
 }
 

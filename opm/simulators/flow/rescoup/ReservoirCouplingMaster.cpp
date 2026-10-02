@@ -542,10 +542,12 @@ void
 ReservoirCouplingMaster<Scalar>::
 sendNumGroupConstraintsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
-                           std::size_t num_production_constraints) const
+                           std::size_t num_production_constraints,
+                           std::size_t num_gas_lift_limits) const
 {
     assert(this->report_step_data_);
-    this->report_step_data_->sendNumGroupConstraintsToSlave(slave_idx, num_injection_targets, num_production_constraints);
+    this->report_step_data_->sendNumGroupConstraintsToSlave(
+        slave_idx, num_injection_targets, num_production_constraints, num_gas_lift_limits);
 }
 
 template <class Scalar>

@@ -231,6 +231,16 @@ struct MPITraits<
         &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::liquid_limit,
         &::Opm::ReservoirCoupling::ProductionGroupConstraints<Scalar>::resv_limit> { };
 
+// Trait for GasLiftGroupLimits
+template<class Scalar>
+struct MPITraits<
+        ::Opm::ReservoirCoupling::GasLiftGroupLimits<Scalar>>
+  : detail::StructMPITraits<
+        ::Opm::ReservoirCoupling::GasLiftGroupLimits<Scalar>,
+        &::Opm::ReservoirCoupling::GasLiftGroupLimits<Scalar>::group_name_idx,
+        &::Opm::ReservoirCoupling::GasLiftGroupLimits<Scalar>::max_lift_gas,
+        &::Opm::ReservoirCoupling::GasLiftGroupLimits<Scalar>::max_total_gas> { };
+
 // Trait for MasterGroupNodePressure
 template<class Scalar>
 struct MPITraits<
@@ -266,6 +276,7 @@ struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>>
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::num_group_controlled_producers,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_lift_rate,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::network_gas_lift_rate,
+          &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::gas_lift_headroom,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::well_potentials,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::history_rates,
           &::Opm::ReservoirCoupling::SlaveGroupProductionData<Scalar>::num_flowing_producers

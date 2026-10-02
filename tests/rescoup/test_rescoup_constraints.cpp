@@ -109,6 +109,7 @@ initMasterSimulator(const std::string& filename)
 const std::string flat_deck{"RC_MASTER_GROUP_EXCLUSION.DATA"};
 const std::string nested_deck{"RC_MASTER_GROUP_EXCLUSION_NESTED.DATA"};
 const std::string sibling_deck{"RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA"};
+const std::string gaslift_deck{"RC_MASTER_GROUP_EXCLUSION_GASLIFT.DATA"};
 const std::string ancestor_deck{"RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA"};
 const std::string efficiency_deck{"RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA"};
 const std::string water_gas_deck{"RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA"};
@@ -1176,6 +1177,63 @@ BOOST_AUTO_TEST_CASE(ExcludedGroupsWithoutGuideRatesOrPotentials)
     checkRate(result.productionTarget("M1") + result.productionTarget("M2")
                   + result.productionTarget("M3") + result.productionTarget("M4"),
               1000.0);
+}
+
+//! \brief The lift gas rate of a well without a VFP table is in SI units
+//!
+//! The ALQ of such a well is a rate in the input units (the deck is METRIC: Sm3/day), as for
+//! the summary vector GGLIR, so 86400 Sm3/day is 1 Sm3/s.
+BOOST_AUTO_TEST_CASE(GasLiftRateOfAWellWithoutVfpTableIsInSiUnits)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& group = schedule.getGroup("P", /*report_step=*/0);
+    checkClose(groupStateHelper().sumWellGasLiftRates(group), 1.0);
+    // The maximum of WLIFTOPT is twice the ALQ
+    checkClose(groupStateHelper().sumWellGasLiftHeadroom(group), 1.0);
+}
+
+//! \brief The lift gas rate of a group includes the lift gas supply of a satellite group
+//!
+//! As the group ALQ of the gas lift optimization (GasLiftGroupInfo) and GGLIR.  A satellite
+//! group has no wells, so it adds nothing to the headroom.
+BOOST_AUTO_TEST_CASE(GasLiftRateIncludesSatelliteGroups)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& gsh = groupStateHelper();
+    // 43200 Sm3/day is 0.5 Sm3/s
+    checkClose(gsh.sumWellGasLiftRates(schedule.getGroup("S", /*report_step=*/0)), 0.5);
+    // The well of P is 1.0 Sm3/s
+    checkClose(gsh.sumWellGasLiftRates(schedule.getGroup("FIELD", /*report_step=*/0)), 1.5);
+    checkClose(gsh.sumWellGasLiftHeadroom(schedule.getGroup("FIELD", /*report_step=*/0)), 1.0);
+}
+
+//! \brief The lift gas of the network is that of the open wells
+//!
+//! As in the lift gas of the network without reservoir coupling (NetworkPressureComputation), a
+//! stopped well, which keeps its ALQ, is left out.  GGLIR counts it, as it counts any well that
+//! is not shut.
+BOOST_AUTO_TEST_CASE(NetworkGasLiftRateLeavesOutStoppedWells)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& group = schedule.getGroup("P", /*report_step=*/0);
+    const auto& gsh = groupStateHelper();
+    checkClose(gsh.sumWellGasLiftRates(group, /*network=*/true), 1.0);
+
+    wellModel().wellState().well("W1").status = Opm::Well::Status::STOP;
+    BOOST_CHECK_SMALL(gsh.sumWellGasLiftRates(group, /*network=*/true), 1e-12);
+    checkClose(gsh.sumWellGasLiftRates(group, /*network=*/false), 1.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
