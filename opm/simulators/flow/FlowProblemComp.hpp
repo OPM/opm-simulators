@@ -195,6 +195,17 @@ public:
     }
 
     /*!
+     * \copydoc FvBaseProblem::initialSolutionApplied()
+     */
+    void initialSolutionApplied() override
+    {
+        FlowProblemType::initialSolutionApplied();
+
+        // Defaulted threshold pressures are taken from the initial solution.
+        this->thresholdPressures_.finishInit();
+    }
+
+    /*!
      * \brief Called by the simulator after each time integration.
      */
     void endTimeStep() override

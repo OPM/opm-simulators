@@ -68,6 +68,26 @@ add_test_compare_parallel_simulation(
     --enable-tuning=true
 )
 
+add_test_compare_parallel_simulation(
+  CASENAME
+    thpres_default_compositional
+  FILENAME
+    THPRES_DEFAULT
+  SIMULATOR
+    flow_comp
+  # The two equilibration regions end up on different ranks, so the defaulted
+  # threshold pressure is reduced over the ranks and applied at a face between
+  # them. Nothing crosses the boundary, so the runs agree exactly.
+  ABS_TOL
+    1e-6
+  REL_TOL
+    1e-6
+  DIR
+    compositional/thpres
+  MPI_PROCS
+    2
+)
+
 if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL 2)
   if(USE_DEV_SIMULATOR_IN_TESTS)
     set(_split_well_simulator flow_comp3_2p)
