@@ -22,7 +22,7 @@
 #include <fmt/format.h>
 #include <memory>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <tuple>
 #include <vector>

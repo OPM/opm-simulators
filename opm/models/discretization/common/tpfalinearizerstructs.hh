@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <opm/common/Exceptions.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 #include <opm/input/eclipse/Schedule/BCState.hpp>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>

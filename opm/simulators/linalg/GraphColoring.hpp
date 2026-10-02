@@ -21,7 +21,7 @@
 
 #include <opm/common/TimingMacros.hpp>
 
-#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/common/utility/SparseTable.hpp>
 
 #include <algorithm>
 #include <cstddef>
