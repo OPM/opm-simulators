@@ -93,6 +93,7 @@ void export_PyBlackOilSimulator(py::module& m)
             py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
         .def("get_primary_variable", &PyBaseSimulator<TypeTag>::getPrimaryVariable,
             py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
+        .def("get_schedule", &PyBaseSimulator<TypeTag>::getSchedule, getSchedule_docstring)
         .def("run", &PyBaseSimulator<TypeTag>::run, run_docstring)
         .def("set_porosity", &PyBaseSimulator<TypeTag>::setPorosity, setPorosity_docstring, py::arg("array"))
         .def("set_primary_variable", &PyBaseSimulator<TypeTag>::setPrimaryVariable,

@@ -185,6 +185,11 @@ public:
         return exitCode;
     }
 
+    //! \brief The Schedule object used by the simulation, shared with the
+    //! vanguard. Null until the deck has been read.
+    const std::shared_ptr<Schedule>& schedulePtr() const
+    { return schedule_; }
+
 protected:
     /// \brief Initialize
     /// \param exitCode The exitCode of the program.
