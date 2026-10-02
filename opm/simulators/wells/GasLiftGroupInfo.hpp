@@ -35,6 +35,7 @@ class DeferredLogger;
 class GasLiftOpt;
 class Group;
 template<class Scalar> class GroupState;
+template<typename Scalar, typename IndexTraits> class GroupStateHelper;
 template<typename IndexTraits> class PhaseUsageInfo;
 class Schedule;
 class SummaryState;
@@ -72,7 +73,8 @@ public:
                      WellState<Scalar, IndexTraits>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Parallel::Communication& comm,
-                     bool glift_debug);
+                     bool glift_debug,
+                     const GroupStateHelper<Scalar, IndexTraits>* group_state_helper = nullptr);
 
     std::vector<std::pair<std::string,Scalar>>&
     getWellGroups(const std::string& well_name);
@@ -90,6 +92,7 @@ public:
     std::optional<Scalar> getTarget(Rate rate_type, const std::string& group_name) const;
     const std::string& groupIdxToName(int group_idx) const;
     bool hasAnyTarget(const std::string& group_name) const;
+    bool hasGroup(const std::string& group_name) const;
     bool hasWell(const std::string& well_name);
     void initialize();
     std::optional<Scalar> liquidTarget(const std::string& group_name) const;
@@ -238,6 +241,10 @@ protected:
     const NewtonIterationContext& iterCtx_;
     const PhaseUsageInfo<IndexTraits>& phase_usage_;
     const GasLiftOpt& glo_;
+    // Used for the group rate limits when available, so that the limits a reservoir
+    // coupling master imposes on a slave group are seen.  Without it, only the
+    // group's own GCONPROD limits are used.
+    const GroupStateHelper<Scalar, IndexTraits>* group_state_helper_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;
     GroupIdxMap group_idx_;
