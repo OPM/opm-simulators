@@ -254,6 +254,9 @@ struct SlaveGroupProductionData {
 // Slave group injection data sent to the corresponding master group for target calculation.
 template <class Scalar>
 struct SlaveGroupInjectionData {
+    // Group injection potentials: the master caps a master group's injection
+    // target for a phase at the corresponding potential.
+    Potentials<Scalar> potentials;
     InjectionRates<Scalar> surface_rates;    // Surface injection rates by phase
     InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
 };

@@ -119,6 +119,7 @@ public:
         );
 
         bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
+        bool isReservoirCouplingSlave() const { return this->parent_.isReservoirCouplingSlave(); }
         ReservoirCouplingMaster<Scalar>& reservoirCouplingMaster() {
             return this->parent_.reservoirCouplingMaster();
         }
@@ -146,6 +147,22 @@ public:
          */
         void updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& pot);
         void updateGuideRatesForWells_();
+        /**
+         * @brief Aggregates per-phase group injection potentials recursively.
+         *
+         * Mirrors the production-side aggregation but sums injector wells only
+         * and stores the result via GroupState::update_group_injection_potential.
+         * It does not feed GuideRate::compute(), so the existing injection
+         * guide-rate behavior is unchanged. The stored potentials are shipped
+         * from a slave to the master in reservoir coupling, and are only
+         * computed on a slave (see update()).
+         *
+         * @param group The root group to update.
+         * @param pot Output parameter for the computed injection potentials.
+         */
+        void updateInjectionGroupPotentialFromSubGroups_(
+            const Group& group, std::vector<Scalar>& pot);
+        void updateInjectionGroupPotentials_(const Group& group, std::vector<Scalar>& pot);
 #ifdef RESERVOIR_COUPLING_ENABLED
         void updateProductionGroupPotentialFromSlaveGroup_(
             const Group& group, std::vector<Scalar>& pot);

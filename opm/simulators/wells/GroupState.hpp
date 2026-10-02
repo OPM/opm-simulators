@@ -27,6 +27,7 @@
 
 #include <opm/simulators/wells/WellContainer.hpp>
 
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <utility>
@@ -137,6 +138,12 @@ public:
     );
     const GroupPotential& get_production_group_potential(const std::string& gname) const;
 
+    bool has_injection_group_potential(const std::string& gname) const;
+    void update_group_injection_potential(
+        const std::string& gname, Scalar oil_rate, Scalar gas_rate, Scalar water_rate
+    );
+    const GroupPotential& get_injection_group_potential(const std::string& gname) const;
+
     std::size_t data_size() const;
     std::size_t collect(Scalar* data) const;
     std::size_t distribute(const Scalar* data);
@@ -215,6 +222,33 @@ public:
             throw std::logic_error("Internal size mismatch when distributing groupData");
     }
 
+    /// @brief Sum the production or the injection target reduction rates of
+    ///   all groups across the ranks of a communicator.
+    /// @details updateGroupTargetReduction() leaves per-rank partial sums
+    ///   (a well contributes on the rank that owns it, a reservoir-coupling
+    ///   master group only on rank 0).  communicate_rates() sums them together
+    ///   with all other group rates; this sums only the one kind of reduction
+    ///   rates, for code that recomputes them after communicate_rates() has
+    ///   already made the other group rates global.
+    /// @param comm The communicator to sum over.
+    /// @param is_injector True for the injection reduction rates, false for
+    ///   the production ones.
+    template<class Comm>
+    void communicate_reduction_rates(const Comm& comm, const bool is_injector)
+    {
+        auto& rates = is_injector ? this->inj_red_rates : this->prod_red_rates;
+        std::vector<Scalar> data;
+        for (const auto& [gname, v] : rates) {
+            data.insert(data.end(), v.begin(), v.end());
+        }
+        comm.sum(data.data(), data.size());
+        std::size_t pos = 0;
+        for (auto& [gname, v] : rates) {
+            std::copy_n(data.begin() + pos, v.size(), v.begin());
+            pos += v.size();
+        }
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -257,6 +291,7 @@ private:
     std::map<std::string, Scalar> m_gpmaint_target;
     std::map<std::string, Scalar> group_thp;
     std::map<std::string, GroupPotential> production_group_potentials;
+    std::map<std::string, GroupPotential> injection_group_potentials;
     std::map<std::string, int> m_number_of_wells_under_group_control;
     std::map<std::pair<Phase, std::string>, int> m_number_of_wells_under_inj_group_control;
 

@@ -986,6 +986,19 @@ bool GroupStateHelper<Scalar, IndexTraits>::isMasterGroupEligibleForGuideRate(
 }
 
 template <typename Scalar, typename IndexTraits>
+bool GroupStateHelper<Scalar, IndexTraits>::isMasterGroupEligibleForInjectionGuideRate(
+                                                                const std::string& group_name,
+                                                                const Phase injection_phase) const
+{
+    if (!this->rescoup_.isMasterGroup(group_name)) {
+        return false;
+    }
+    const auto& group = this->schedule_.getGroup(group_name, this->report_step_);
+    return group.hasInjectionControl(injection_phase)
+        && group.injectionGroupControlAvailable(injection_phase);
+}
+
+template <typename Scalar, typename IndexTraits>
 int
 GroupStateHelper<Scalar, IndexTraits>::phaseToActivePhaseIdx(const Phase phase) const
 {
@@ -2441,7 +2454,8 @@ getInjectionFilterFlag_(const std::string& group_name,
 template <typename Scalar, typename IndexTraits>
 int
 GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::string& group_name,
-                                                                   bool is_production_group) const
+                                                                   bool is_production_group,
+                                                                   const Phase injection_phase) const
 {
     const auto& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
@@ -2472,7 +2486,18 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             num_wells = 0;
         }
     } else {
-        num_wells = 1;  // injection: not yet handled
+        if (this->isMasterGroupEligibleForInjectionGuideRate(group_name, injection_phase)) {
+            // As for production: the group participates in the parent's injection
+            // guide-rate distribution for this phase whatever its injection control
+            // mode, and its weight is read from the rescoup master -- 1 when
+            // participating-and-uncapped, 0 when capped at the slave's injection
+            // potential or belonging to an inactive slave.  See
+            // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+            num_wells = this->reservoirCouplingMaster().effectiveInjectionGCW(
+                group_name, injection_phase);
+        } else {
+            num_wells = 1;
+        }
     }
     return num_wells;
 }
@@ -2761,7 +2786,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
     int num_wells = 0;
     if (this->isReservoirCouplingMasterGroup(group)) {
 #ifdef RESERVOIR_COUPLING_ENABLED
-        num_wells = this->getMasterGroupEffectiveGCW_(group_name, is_production_group);
+        num_wells = this->getMasterGroupEffectiveGCW_(group_name, is_production_group, injection_phase);
 #endif
     }
     else {
@@ -2783,6 +2808,10 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
             } else {
                 const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
                 included = (ctrl == Group::InjectionCMode::FLD || ctrl == Group::InjectionCMode::NONE);
+                // The injection counterpart of the production rule above: a participating
+                // master group (GCONINJE item 8 = YES) counts toward its parent's GCW for
+                // this phase even on individual control.
+                included |= this->isMasterGroupEligibleForInjectionGuideRate(child_group, injection_phase);
             }
 
             if (included) {
@@ -2863,9 +2892,17 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                     continue;
                 const Group::InjectionCMode& current_group_control
                     = this->groupState().injection_control(sub_group.name(), phase);
-                const bool individual_control = (current_group_control != Group::InjectionCMode::FLD
-                                                 && current_group_control != Group::InjectionCMode::NONE);
-            // NOTE: A reservoir coupling master group: will have GCW (group controlled wells) set to 1 by convention.
+                // A participating master group (GCONINJE item 8 = YES) has its target
+                // guide-rate distributed by the parent even while on individual control,
+                // so it is not individual here; a capped or inactive-slave group still
+                // has its rate reduced through the num_group_controlled_wells == 0 branch.
+                const bool individual_control =
+                    (current_group_control != Group::InjectionCMode::FLD
+                     && current_group_control != Group::InjectionCMode::NONE)
+                    && !this->isMasterGroupEligibleForInjectionGuideRate(sub_group.name(), phase);
+            // NOTE: A reservoir coupling master group eligible for injection guide-rate distribution
+            //   in this phase reports its effective injection GCW here, any other one reports 1,
+            //   see getMasterGroupEffectiveGCW_().
             const int num_group_controlled_wells
                     = this->groupControlledWells(sub_group.name(),
                                                  /*always_included_child=*/"",

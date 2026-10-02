@@ -21,9 +21,11 @@
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 
 #include <array>
+#include <set>
 #include <string>
-#include <vector>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 
@@ -120,18 +122,30 @@ RescoupConstraintsCalculator(
 //    GCW are reset at the start of the next sync step.  See
 //    capAndRedistributeProductionTargets_().
 //
+//  Phase 2b (injection cap-and-redistribute): the same idea per injection
+//    phase.  A master group whose injection target for a phase exceeds the
+//    injection potential its slave reported for that phase is capped at the
+//    potential and its effective injection GCW for the phase is set to 0, so
+//    its rate is subtracted from the parent's target instead of it holding a
+//    guide-rate share, and the remaining groups absorb the surplus.  Master
+//    groups available for higher-level injection control (GCONINJE item 8 =
+//    YES) take part in their parent's injection guide-rate distribution
+//    whatever their injection control mode, exactly as GCONPROD item 8 does
+//    for production.  See capAndRedistributeInjectionTargets_().
+//
 //  Phase 3: send the resulting (target, cmode, per-rate-type limits)
 //    triples to each activated slave via MPI.  Only rank 0 actually sends;
 //    other master ranks reach the send helpers but the underlying
 //    sendNum/Injection/Production functions in
 //    ReservoirCouplingMasterReportStep are gated by `if (comm.rank() == 0)`.
 //
-//  Post-phase: aggregate any per-rank-partial group rates written by the
-//    redistribution (production reduction rates) via
-//    GroupState::communicate_rates() so the post-redistribution state is
-//    consistent across ranks.  This is a no-op when the master has no local
-//    wells under FIELD, and matches the pattern at
-//    BlackoilWellModelGeneric.cpp:1326.
+//  Consistency across master ranks: the target reductions are per-rank
+//    partial sums (a master group's rate is added on rank 0 only).  Each time
+//    this calculator recomputes them (updateGCWAndTargetReductions_(),
+//    updateInjectionGCWAndTargetReductions_()) it sums them across the master's
+//    ranks at once, so every rank computes the same targets and cap decisions,
+//    and so makes the same collective calls.  All other group rates were
+//    already summed by the group-data update that precedes this calculation.
 //
 // Details on the target calculation (Phase 1):
 // --------------------------------------------
@@ -206,7 +220,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     //     GroupStateHelper which performs collective operations on the
     //     master's MPI communicator.
     auto& rescoup_master = this->reservoir_coupling_master_;
-    const auto& comm = rescoup_master.getComm();
     GroupConstraintCalculator calculator{
         this->well_model_,
         this->group_state_helper_
@@ -222,6 +235,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     // master groups are now on individual control with zero rates → excluded
     // from guide rate fractions via GCW=0.
     this->updateGCWAndTargetReductions_();
+    this->updateInjectionGCWAndTargetReductions_();
 
     // Phase 1: compute initial targets for all slaves
     const auto num_slaves = rescoup_master.numSlaves();
@@ -240,6 +254,10 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     // FractionCalculator machinery.
     this->capAndRedistributeProductionTargets_(calculator, all_production_constraints);
 
+    // Phase 2b: cap injection targets at slave injection potentials and
+    // redistribute the surplus to sibling master groups, per phase.
+    this->capAndRedistributeInjectionTargets_(calculator, all_injection_targets);
+
     // Phase 3: send to slaves.  The send functions are rank-0-only internally.
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (rescoup_master.slaveIsCoupled(slave_idx)) {
@@ -250,14 +268,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
             );
         }
     }
-
-    // Aggregate any per-rank-partial group rates that the redistribution
-    // wrote (most importantly the FIELD-level production reduction rates set
-    // by updateGroupTargetReduction).  For single-cell decks where the master
-    // has no wells the reduction has no per-rank partial component and this
-    // is a no-op, but it keeps the post-redistribution state correct on a
-    // master that owns wells under the FIELD hierarchy.
-    this->group_state_helper_.groupState().communicate_rates(comm);
 }
 
 // Recompute the injection targets against the slave rates the master holds now
@@ -277,17 +287,37 @@ recalculateInjectionTargetsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
+    // Decide the injection caps afresh from the latest slave data, exactly as
+    // the first calculation of the sync step does.  A cap kept from earlier in
+    // the sync step would leave its group with effective injection GCW 0, and
+    // such a group drops out of its own guide-rate share: its target would come
+    // out as 0, which the cap test (target > potential) cannot detect.  Only the
+    // injection caps are reset; the production caps decided earlier in the sync
+    // step stay in force.
+    rescoup_master.resetEffectiveInjectionGCW();
+    this->excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
+    // The slave injection rates have also changed since the targets were first
+    // computed this sync step, so refresh the injection target reductions.
+    this->updateInjectionGCWAndTargetReductions_();
     const auto num_slaves = rescoup_master.numSlaves();
+    std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
+            all_injection_targets[slave_idx] =
+                this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
+        }
+    }
+    this->capAndRedistributeInjectionTargets_(calculator, all_injection_targets);
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (!rescoup_master.slaveIsCoupled(slave_idx)) {
             continue;
         }
-        auto injection_targets = this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
         // An empty production-constraint list tells the slave that no production
         // constraints follow; the ones it received earlier this sync step stay in
         // force.
         this->sendSlaveGroupConstraintsToSlave_(
-            rescoup_master, slave_idx, injection_targets, /*production_constraints=*/{}
+            rescoup_master, slave_idx, all_injection_targets[slave_idx],
+            /*production_constraints=*/{}
         );
     }
 }
@@ -368,6 +398,100 @@ calculateSlaveGroupInjectionTargets_(std::size_t slave_idx, GroupConstraintCalcu
         }
     }
     return injection_targets;
+}
+
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+capAndRedistributeInjectionTargets_(
+    GroupConstraintCalculator<Scalar, IndexTraits>& calculator,
+    std::vector<std::vector<InjectionGroupTarget>>& all_injection_targets
+)
+{
+    // Cap each master group's injection target for a phase at its slave's
+    // reported injection potential for that phase, then redistribute the
+    // surplus to the sibling groups using the standard localReduction /
+    // FractionCalculator machinery.
+    //
+    // Without the cap a master group keeps a guide-rate share it cannot inject:
+    // the slave's wells run into their own limits, the shortfall is never taken
+    // up by anyone, and the parent's target is under-delivered.  This is the
+    // master-level counterpart of what happens to a well under group control
+    // that cannot meet its share: it drops out of the guide-rate distribution
+    // and its rate becomes a reduction on the parent's target instead.
+    //
+    // The steps are repeated until a pass caps nothing new: capping one group
+    // raises its siblings' shares, which can push another sibling over its own
+    // potential.  Every further pass caps at least one more (group, phase)
+    // pair, so the loop ends after at most as many passes as there are targets.
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto num_slaves = all_injection_targets.size();
+    std::set<std::pair<std::string, ReservoirCoupling::Phase>> capped;
+    while (true) {
+        // Step 1: identify targets that exceed the potential and cap them.
+        bool newly_capped = false;
+        for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+            for (auto& it : all_injection_targets[slave_idx]) {
+                const auto& group_name = master_groups[it.group_name_idx];
+                if (capped.count({group_name, it.phase}) > 0) {
+                    continue;  // already capped in an earlier pass
+                }
+                const auto& potentials = rescoup_master.getSlaveGroupInjectionPotentials(group_name);
+                const Scalar pot = this->potentialForInjectionPhase_(potentials, it.phase);
+                if (it.target > pot) {
+                    this->deferred_logger_.debug(fmt::format(
+                        "RC injection redistribution: {} phase {} target={:.4f} exceeds "
+                        "potential={:.4f}, capping",
+                        group_name, static_cast<int>(it.phase), it.target, pot));
+                    it.target = pot;
+                    capped.emplace(group_name, it.phase);
+                    newly_capped = true;
+                    // Drop the capped group from its siblings' injection guide-rate
+                    // sum for this phase, so its rate becomes a parent target
+                    // reduction on the recompute below.
+                    rescoup_master.setEffectiveInjectionGCW(
+                        group_name, ReservoirCoupling::convertToOpmPhase(it.phase), 0);
+                }
+            }
+        }
+
+        // If no group was capped in this pass, every target is within its
+        // potential.
+        if (!newly_capped) {
+            return;
+        }
+
+        // NOTE: updateGroupTargetReduction() below reads a capped master group's
+        // rate from the slave-reported injection surface rates.  As for production
+        // (see capAndRedistributeProductionTargets_()), a group whose target exceeds
+        // its potential has its injectors at their own limits, so the reported rate
+        // is close to the potential the target was capped at.
+
+        // Step 2: recompute the injection GCW and reductions with the capped groups
+        // excluded.
+        this->updateInjectionGCWAndTargetReductions_();
+
+        // Step 3: recompute the targets of the uncapped groups.
+        for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+            for (auto& it : all_injection_targets[slave_idx]) {
+                const auto& group_name = master_groups[it.group_name_idx];
+                if (capped.count({group_name, it.phase}) > 0) {
+                    continue;  // keep the capped target
+                }
+                const Scalar old_target = it.target;
+                const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+                const auto target_info = calculator.groupInjectionTarget(group, it.phase);
+                if (target_info.has_value()) {
+                    it.target = target_info->constraint;
+                }
+                this->deferred_logger_.debug(fmt::format(
+                    "RC injection redistribution: {} phase {} old_target={:.4f} new_target={:.4f}",
+                    group_name, static_cast<int>(it.phase), old_target, it.target));
+            }
+        }
+    }
 }
 
 template <class Scalar, class IndexTraits>
@@ -513,6 +637,48 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
             }
         }
     }
+    // Likewise for the injection guide-rate distribution of every phase.
+    this->excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
+}
+
+// Exclude the master groups of currently-uncoupled slaves from the injection
+// guide-rate distribution of every phase, by setting their effective injection
+// GCW to 0.  Split out from excludeInactiveSlaveMasterGroupsFromDistribution_()
+// so the injection caps can be recomputed within a sync step without touching
+// the production state.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+excludeInactiveSlaveMasterGroupsFromInjectionDistribution_()
+{
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (!rescoup_master.slaveIsCoupled(slave_idx)) {
+            for (const auto& group_name : rescoup_master.getMasterGroupNamesForSlave(slave_idx)) {
+                for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+                    rescoup_master.setEffectiveInjectionGCW(group_name, phase, 0);
+                }
+            }
+        }
+    }
+}
+
+template <class Scalar, class IndexTraits>
+Scalar
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+potentialForInjectionPhase_(
+    const ReservoirCoupling::Potentials<Scalar>& potentials,
+    ReservoirCoupling::Phase phase) const
+{
+    // The potentials are stored in display units by GuideRateHandler, so
+    // convert to SI for comparison with the (SI) target from
+    // GroupConstraintCalculator.
+    const auto& units = this->schedule_.getUnits();
+    const auto measure = (phase == ReservoirCoupling::Phase::Gas)
+        ? UnitSystem::measure::gas_surface_rate
+        : UnitSystem::measure::liquid_surface_rate;
+    return units.to_si(measure, potentials[phase]);
 }
 
 template <class Scalar, class IndexTraits>
@@ -580,6 +746,34 @@ updateGCWAndTargetReductions_()
         /*is_production_group=*/true, /*dummy_injection_phase=*/Phase::OIL);
     const Group& fieldGroup = this->schedule_.getGroup("FIELD", this->report_step_idx_);
     this->group_state_helper_.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
+    // The reduction rates are per-rank partial sums (a master group's rate is
+    // added on rank 0 only); sum them so every rank computes the same targets
+    // and cap decisions, see updateInjectionGCWAndTargetReductions_().
+    this->group_state_helper_.groupState().communicate_reduction_rates(
+        this->group_state_helper_.comm(), /*is_injector=*/false);
+}
+
+// Recompute the injection GCW for every phase and the FIELD-level injection
+// target reduction after effective injection GCW entries have changed.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+updateInjectionGCWAndTargetReductions_()
+{
+    for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+        this->group_state_helper_.updateGroupControlledWells(
+            /*is_production_group=*/false, phase);
+    }
+    const Group& fieldGroup = this->schedule_.getGroup("FIELD", this->report_step_idx_);
+    this->group_state_helper_.updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
+    // updateGroupTargetReduction() leaves per-rank partial sums: a master
+    // group's slave-reported rate is added on rank 0 only.  Sum them across the
+    // master's ranks before any target is computed from them.  Otherwise the
+    // targets, and with them the cap decisions, can differ between ranks, and
+    // the ranks then make different numbers of the collective calls inside the
+    // target computation (GroupStateHelper::getGroupRatesAvailableForHigherLevelControl()).
+    this->group_state_helper_.groupState().communicate_reduction_rates(
+        this->group_state_helper_.comm(), /*is_injector=*/true);
 }
 
 template class RescoupConstraintsCalculator<double, BlackOilDefaultFluidSystemIndices>;

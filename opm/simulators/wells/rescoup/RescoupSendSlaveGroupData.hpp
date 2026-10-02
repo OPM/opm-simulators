@@ -91,6 +91,11 @@ private:
     /// @return SlaveGroupInjectionData structure containing all injection rates
     SlaveGroupInjectionData collectSlaveGroupInjectionData_(std::size_t group_idx) const;
 
+    /// @brief Collect injection potentials for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return Potentials data structure containing oil, gas, and water injection potentials
+    Potentials collectSlaveGroupInjectionPotentials_(std::size_t group_idx) const;
+
     /// @brief Collect complete production data for a specific slave group
     /// @param group_idx Index of the slave group
     /// @return SlaveGroupProductionData structure containing rates, potentials, and voidage
