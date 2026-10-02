@@ -29,9 +29,12 @@
 #endif
 
 #include <fmt/format.h>
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <iterator>
 #include <numeric>
+#include <ranges>
 
 namespace Dune
 {
@@ -594,14 +597,43 @@ int ParallelWellInfo<Scalar>::globalPerfToLocalPerf(const int globalIndex) const
 template<class Scalar>
 void ParallelWellInfo<Scalar>::communicateFirstPerforation(bool hasFirst)
 {
-    int first = hasFirst ? 1 : 0;
-    std::vector<int> firstVec(comm_->size());
-    comm_->allgather(&first, 1, firstVec.data());
-    const auto found =
-        std::ranges::find_if(firstVec,
-                             [](int i) -> bool { return i != 0; });
-    if (found != firstVec.end())
-        rankWithFirstPerf_ = found - firstVec.begin();
+    // The same ParallelWellInfo is reused for all the report steps, so any process
+    // selected for an earlier one has to be forgotten. Otherwise a well that no
+    // longer has open connections would keep broadcasting from it.
+    rankWithFirstPerf_ = -1;
+
+    // Two flags per process: whether it holds the first open connection of the well,
+    // and whether it holds any of its open connections (those pushed with
+    // pushBackEclIndex()). The second one distinguishes "the well has no open
+    // connections anywhere", where broadcastFirstPerforationValue() returning each
+    // process its own value is the documented behaviour, from "the well has open
+    // connections, but no process claims the first one", where the processes are
+    // meant to agree on the values of that connection and silently would not.
+    const std::array<int, 2> local {
+        hasFirst ? 1 : 0,
+        commAboveBelow_->numLocalPerfs() > 0 ? 1 : 0
+    };
+    std::vector<int> allVec(2 * comm_->size());
+    comm_->allgather(local.data(), 2, allVec.data());
+
+    for (int rank = 0; rank < comm_->size(); ++rank) {
+        if (allVec[2 * rank] != 0) {
+            rankWithFirstPerf_ = rank;
+            return;
+        }
+    }
+
+    const bool wellHasOpenConnections =
+        std::ranges::any_of(std::views::iota(0, comm_->size()),
+                            [&allVec](const int rank)
+                            { return allVec[2 * rank + 1] != 0; });
+    if (wellHasOpenConnections) {
+        OPM_THROW(std::logic_error,
+                  fmt::format("Well {} has open connections, but none of its {} processes "
+                              "holds the first one, so the values of that connection cannot "
+                              "be made consistent across them.",
+                              name_, comm_->size()));
+    }
 }
 
 template<class Scalar>
