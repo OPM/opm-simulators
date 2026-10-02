@@ -143,6 +143,10 @@ public:
 
     Scalar getMasterGroupRate(
         const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind) const;
+    /// @brief Lift gas rate of the slave group of a master group, as last received from the slave
+    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const {
+        return this->report_step_data_->getMasterGroupGasLiftRate(group_name, network);
+    }
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
@@ -157,7 +161,7 @@ public:
     int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                                  ReservoirCoupling::Phase phase) const;
     int getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const;
-    const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
+    const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
     int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
     double getSlaveStartDate(int index) const { return this->slave_start_dates_[index]; }
