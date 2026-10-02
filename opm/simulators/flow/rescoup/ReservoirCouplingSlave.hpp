@@ -61,6 +61,15 @@ public:
     { return effective_injection_targets_; }
     std::map<std::string, std::map<Phase, Scalar>>& effectiveInjectionTargets()
     { return effective_injection_targets_; }
+    /// @brief The production rate limit in force for each slave group and rate
+    ///   type (ORAT, WRAT, GRAT, LRAT) this sync step (SI): the master's limit
+    ///   combined with the deck's own as the GRUPSLAV flag says.  Rebuilt every
+    ///   sync step by the well model; reported to the summary output as GOPRT,
+    ///   GWPRT, GGPRT and GLPRT.
+    const std::map<std::string, std::map<Group::ProductionCMode, Scalar>>& effectiveProductionTargets() const
+    { return effective_production_targets_; }
+    std::map<std::string, std::map<Group::ProductionCMode, Scalar>>& effectiveProductionTargets()
+    { return effective_production_targets_; }
 
     const Parallel::Communication& getComm() const { return comm_; }
     MPI_Comm getMasterComm() const { return slave_master_comm_; }
@@ -256,6 +265,8 @@ private:
     std::map<std::size_t, std::string> slave_group_order_;
     // See effectiveInjectionTargets().
     std::map<std::string, std::map<Phase, Scalar>> effective_injection_targets_;
+    // See effectiveProductionTargets().
+    std::map<std::string, std::map<Group::ProductionCMode, Scalar>> effective_production_targets_;
     // Stores data that changes for a single report step or for timesteps within a report step.
     std::unique_ptr<ReservoirCouplingSlaveReportStep<Scalar>> report_step_data_{nullptr};
 };

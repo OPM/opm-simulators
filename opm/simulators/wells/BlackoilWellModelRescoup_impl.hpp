@@ -308,16 +308,19 @@ receiveSlaveGroupData()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
-refreshSlaveGroupInjectionTargets()
+refreshSlaveGroupTargets()
 {
-    // The deck's own GCONINJE limit may be a UDA, resolved from the summary
-    // state, and the UDQ evaluation below may change it.  So prime, evaluate
-    // the selected UDQs, and work the targets in force out once more with
-    // the UDQs current, as the well control path will see them.  The second
-    // pass repeats the loop over the slave groups, not the UDQ evaluation.
+    // The deck's own GCONINJE and GCONPROD limits may be UDAs, resolved from
+    // the summary state, and the UDQ evaluation below may change them.  So
+    // prime, evaluate the selected UDQs, and work the targets in force out
+    // once more with the UDQs current, as the well control path will see
+    // them.  The second pass repeats the loops over the slave groups, not
+    // the UDQ evaluation.
     this->storeSlaveGroupInjectionTargets();
+    this->storeSlaveGroupProductionTargets();
     this->evalGroupAndFieldUDQs();
     this->storeSlaveGroupInjectionTargets();
+    this->storeSlaveGroupProductionTargets();
 }
 
 template<typename TypeTag>
@@ -525,6 +528,56 @@ storeSlaveGroupInjectionTargets()
     }
 }
 
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+storeSlaveGroupProductionTargets()
+{
+    const int reportStepIdx = this->groupStateHelper().reportStepIdx();
+    // As storeSlaveGroupInjectionTargets(), for the production rate limits.
+    // The master sends a slave group a limit for every rate type: the target
+    // of its active control mode, and its share of the other limits found up
+    // the master's group tree.  The GRUPSLAV flag says how each combines with
+    // the deck's own GCONPROD limit.  Work out the limit in force for each
+    // rate type, keep it on the slave for the summary writer, and prime the
+    // summary state for the UDQ evaluation that follows -- with the
+    // schedule's own limit when nothing is in force.
+    //
+    // The values are primed in the measures the summary evaluators use.
+    // RESV is left out: GVPRT does not report a group target, it adds up the
+    // reservoir volume rate targets of the group's wells.
+    using M = UnitSystem::measure;
+    using CMode = Group::ProductionCMode;
+    auto& summary_state = this->simulator_.vanguard().summaryState();
+    const auto& units = this->simulator_.vanguard().eclState().getUnits();
+    auto& slave = this->reservoirCouplingSlave();
+    const auto& rescoup = this->schedule()[reportStepIdx].rescoup();
+    const auto targets = std::array {
+        std::tuple { CMode::ORAT, std::string{"GOPRT"}, M::rate             },
+        std::tuple { CMode::WRAT, std::string{"GWPRT"}, M::rate             },
+        std::tuple { CMode::GRAT, std::string{"GGPRT"}, M::gas_surface_rate },
+        std::tuple { CMode::LRAT, std::string{"GLPRT"}, M::rate             },
+    };
+    auto& in_force = slave.effectiveProductionTargets();
+    in_force.clear();
+    for (std::size_t i = 0; i < slave.numSlaveGroups(); ++i) {
+        const auto& gname = slave.slaveGroupIdxToGroupName(i);
+        for (const auto& [cmode, keyword, unit] : targets) {
+            const auto effective = this->effectiveSlaveGroupProductionTarget_(
+                gname, cmode, reportStepIdx, rescoup, summary_state);
+            if (effective.has_value()) {
+                in_force[gname][cmode] = *effective;
+                summary_state.update_group_var(gname, keyword, units.from_si(unit, *effective));
+            }
+            else {
+                summary_state.update_group_var(
+                    gname, keyword,
+                    units.from_si(unit, this->scheduleProductionTarget_(gname, cmode, reportStepIdx, summary_state)));
+            }
+        }
+    }
+}
+
 // Private methods alphabetically
 // ------------------------------
 
@@ -569,6 +622,60 @@ effectiveSlaveGroupInjectionTarget_(const std::string& gname,
         }
     }
     return master_target;
+}
+
+template<typename TypeTag>
+std::optional<typename BlackoilWellModelRescoup<TypeTag>::Scalar>
+BlackoilWellModelRescoup<TypeTag>::
+effectiveSlaveGroupProductionTarget_(const std::string& gname,
+                                     const Group::ProductionCMode cmode,
+                                     const int reportStepIdx,
+                                     const ReservoirCoupling::CouplingInfo& rescoup,
+                                     const SummaryState& summary_state) const
+{
+    // The rule GroupStateHelper::getEffectiveProductionLimit_() applies in
+    // the control path, with one difference.  That method is only reached
+    // for a rate type the group has a GCONPROD limit of its own for, while
+    // a limit is reported here for every rate type, so the deck's own limit
+    // only takes part under BOTH when the group has one.
+    using CMode = Group::ProductionCMode;
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+    const auto& slave = this->reservoirCouplingSlave();
+    if (! slave.hasMasterProductionLimits(gname)) {
+        return std::nullopt;
+    }
+    const auto& limits = slave.masterProductionLimits(gname);
+    const Scalar master_limit = (cmode == CMode::ORAT) ? limits.oil_limit
+                              : (cmode == CMode::WRAT) ? limits.water_limit
+                              : (cmode == CMode::GRAT) ? limits.gas_limit
+                              : limits.liquid_limit;
+    if (master_limit < 0) {
+        // No limit of this type up the master's group tree: the deck's own
+        // limit applies, and the summary evaluator reads it from the schedule.
+        return std::nullopt;
+    }
+
+    // Same mapping and fallback as GroupStateHelper::getProductionFilterFlag_():
+    // the second production flag of GRUPSLAV covers both water and liquid, and
+    // a slave group without a GRUPSLAV record follows the master.
+    auto filter = FilterFlag::MAST;
+    if (rescoup.hasGrupSlav(gname)) {
+        const auto& grup_slav = rescoup.grupSlav(gname);
+        filter = (cmode == CMode::ORAT) ? grup_slav.oilProdFlag()
+               : (cmode == CMode::GRAT) ? grup_slav.gasProdFlag()
+               : grup_slav.liquidProdFlag();
+    }
+    if (filter == FilterFlag::SLAV) {
+        return std::nullopt;
+    }
+    if (filter == FilterFlag::BOTH) {
+        const auto& group = this->schedule().getGroup(gname, reportStepIdx);
+        if (group.has_control(cmode)) {
+            return std::min(master_limit,
+                            this->scheduleProductionTarget_(gname, cmode, reportStepIdx, summary_state));
+        }
+    }
+    return master_limit;
 }
 
 template<typename TypeTag>
@@ -622,6 +729,26 @@ scheduleInjectionTarget_(const std::string& gname,
         return Scalar{0};
     }
     return static_cast<Scalar>(group.injectionControls(phase, summary_state).surface_max_rate);
+}
+
+template<typename TypeTag>
+typename BlackoilWellModelRescoup<TypeTag>::Scalar
+BlackoilWellModelRescoup<TypeTag>::
+scheduleProductionTarget_(const std::string& gname,
+                          const Group::ProductionCMode cmode,
+                          const int reportStepIdx,
+                          const SummaryState& summary_state) const
+{
+    using CMode = Group::ProductionCMode;
+    const auto controls = this->schedule().getGroup(gname, reportStepIdx)
+        .productionControls(summary_state);
+    switch (cmode) {
+    case CMode::ORAT: return static_cast<Scalar>(controls.oil_target);
+    case CMode::WRAT: return static_cast<Scalar>(controls.water_target);
+    case CMode::GRAT: return static_cast<Scalar>(controls.gas_target);
+    case CMode::LRAT: return static_cast<Scalar>(controls.liquid_target);
+    default: return Scalar{0};
+    }
 }
 
 template<typename TypeTag>

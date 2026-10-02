@@ -170,13 +170,13 @@ public:
     /// from rescoupSyncSummaryData() when a slave has fresh data to deliver.
     void receiveSlaveGroupData();
 
-    /// \brief Slave-side: recompute the injection target in force for each
-    ///   slave group from the targets just received, and re-evaluate the
-    ///   group and field level UDQs that may read them.  Called after every
-    ///   receive of group constraints: the handshake at the start of a sync
-    ///   step and the replacement targets a master sends back during the
-    ///   cross-rescoup network iteration.
-    void refreshSlaveGroupInjectionTargets();
+    /// \brief Slave-side: recompute the injection targets and production
+    ///   limits in force for each slave group from the constraints just
+    ///   received, and re-evaluate the group and field level UDQs that may
+    ///   read them.  Called after every receive of group constraints: the
+    ///   handshake at the start of a sync step and the replacement targets a
+    ///   master sends back during the cross-rescoup network iteration.
+    void refreshSlaveGroupTargets();
 
     /// \brief End-of-substep summary-data synchronisation.
     ///
@@ -261,6 +261,14 @@ public:
     ///   deck's own applies, or no master target exists, the entry is erased.
     void storeSlaveGroupInjectionTargets();
 
+    /// \brief Slave-side: store each slave group's production limits in force
+    ///   as its GOPRT, GWPRT, GGPRT and GLPRT summary values, so that UDQs and
+    ///   the summary output can use them.  The limit in force for a rate type
+    ///   is the master's, the deck's own, or the smaller of the two, as the
+    ///   group's GRUPSLAV flag says; when the deck's own applies, or the
+    ///   master has no limit of that type, the entry is erased.
+    void storeSlaveGroupProductionTargets();
+
 private:
     /// \brief The injection target in force for a slave group and phase, in SI:
     ///   the master's, the deck's, or the smaller of the two, as the GRUPSLAV
@@ -272,6 +280,18 @@ private:
                                         const int reportStepIdx,
                                         const ReservoirCoupling::CouplingInfo& rescoup,
                                         const SummaryState& summary_state) const;
+
+    /// \brief The production limit in force for a slave group and rate type
+    ///   (ORAT, WRAT, GRAT or LRAT), in SI: the master's, the deck's, or the
+    ///   smaller of the two, as the GRUPSLAV flag says.  Empty when the
+    ///   deck's own limit applies or the master has no limit of that type --
+    ///   the summary evaluator then reads the schedule.
+    std::optional<Scalar>
+    effectiveSlaveGroupProductionTarget_(const std::string& gname,
+                                         const Group::ProductionCMode cmode,
+                                         const int reportStepIdx,
+                                         const ReservoirCoupling::CouplingInfo& rescoup,
+                                         const SummaryState& summary_state) const;
 
     /// \brief Per-slave variant of masterNetworkHasMasterGroupLeaves():
     ///   true iff at least one of the given slave's master groups is a
@@ -300,6 +320,14 @@ private:
                                     const Phase phase,
                                     const int reportStepIdx,
                                     const SummaryState& summary_state) const;
+
+    /// \brief The production rate limit the slave's own schedule gives a
+    ///   group for a rate type (SI), as the summary evaluator reads it.  What
+    ///   is reported for a group without a limit in force from the master.
+    Scalar scheduleProductionTarget_(const std::string& gname,
+                                     const Group::ProductionCMode cmode,
+                                     const int reportStepIdx,
+                                     const SummaryState& summary_state) const;
 
     /// \brief Send injection targets to each activated slave, replacing the
     ///   ones the slaves are currently holding.  Production constraints are
