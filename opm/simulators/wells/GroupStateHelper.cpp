@@ -37,6 +37,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <sstream>
 #include <stack>
 #include <set>
@@ -541,6 +542,39 @@ getProductionGroupTargetForMode(const Group& group,
                                 const Group::ProductionCMode cmode) const
 {
     return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<Scalar>
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupRateLimit(const Group& group,
+                            const Group::ProductionCMode rate_type) const
+{
+    std::optional<Scalar> limit;
+    if (group.has_control(rate_type)) {
+        const auto controls = group.productionControls(this->summaryState());
+        switch (rate_type) {
+        case Group::ProductionCMode::ORAT: limit = controls.oil_target; break;
+        case Group::ProductionCMode::WRAT: limit = controls.water_target; break;
+        case Group::ProductionCMode::GRAT: limit = controls.gas_target; break;
+        case Group::ProductionCMode::LRAT: limit = controls.liquid_target; break;
+        case Group::ProductionCMode::RESV: limit = controls.resv_target; break;
+        default: break;
+        }
+    }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave()
+        && this->isReservoirCouplingSlaveGroup(group))
+    {
+        // Use "no limit" as the slave-local target when the slave deck has none, so
+        // that the master limit is taken as is for both MAST and BOTH.
+        constexpr Scalar no_limit = std::numeric_limits<Scalar>::max();
+        const Scalar effective = this->getEffectiveProductionLimit_(
+            group.name(), rate_type, limit.value_or(no_limit));
+        limit = (effective < no_limit) ? std::optional<Scalar>{effective} : std::nullopt;
+    }
+#endif
+    return limit;
 }
 
 template<typename Scalar, typename IndexTraits>
