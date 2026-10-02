@@ -97,17 +97,28 @@ initFromState(const EclipseState& eclState)
 
     const std::size_t numPvtRegions = pvtsolTables.size();
 
-    BO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    BG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    X_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    Y_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    VISCO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    VISCG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    BO_.resize(numPvtRegions);
+    BG_.resize(numPvtRegions);
+    RS_.resize(numPvtRegions);
+    RV_.resize(numPvtRegions);
+    X_.resize(numPvtRegions);
+    Y_.resize(numPvtRegions);
+    VISCO_.resize(numPvtRegions);
+    VISCG_.resize(numPvtRegions);
 
-    PBUB_RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-    PBUB_RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    PBUB_RS_.resize(numPvtRegions);
+    PBUB_RV_.resize(numPvtRegions);
+
+    std::vector<Tabulated2DFunctionBuilder> BOBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> BGBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> RSBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> RVBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> XBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> YBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> VISCOBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> VISCGBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> PBUB_RSBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+    std::vector<Tabulated2DFunctionBuilder> PBUB_RVBuilder(numPvtRegions, Tabulated2DFunctionBuilder{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
 
     zLim_.resize(numPvtRegions);
 
@@ -131,20 +142,20 @@ initFromState(const EclipseState& eclState)
 
             zArg[outerIdx] = ZCO2;
 
-            BO_[regionIdx].appendXPos(ZCO2);
-            BG_[regionIdx].appendXPos(ZCO2);
+            BOBuilder[regionIdx].appendXPos(ZCO2);
+            BGBuilder[regionIdx].appendXPos(ZCO2);
 
-            RS_[regionIdx].appendXPos(ZCO2);
-            RV_[regionIdx].appendXPos(ZCO2);
+            RSBuilder[regionIdx].appendXPos(ZCO2);
+            RVBuilder[regionIdx].appendXPos(ZCO2);
 
-            X_[regionIdx].appendXPos(ZCO2);
-            Y_[regionIdx].appendXPos(ZCO2);
+            XBuilder[regionIdx].appendXPos(ZCO2);
+            YBuilder[regionIdx].appendXPos(ZCO2);
 
-            VISCO_[regionIdx].appendXPos(ZCO2);
-            VISCG_[regionIdx].appendXPos(ZCO2);
+            VISCOBuilder[regionIdx].appendXPos(ZCO2);
+            VISCGBuilder[regionIdx].appendXPos(ZCO2);
 
-            PBUB_RS_[regionIdx].appendXPos(ZCO2);
-            PBUB_RV_[regionIdx].appendXPos(ZCO2);
+            PBUB_RSBuilder[regionIdx].appendXPos(ZCO2);
+            PBUB_RVBuilder[regionIdx].appendXPos(ZCO2);
 
             const auto& underSaturatedTable = pvtsolTable.getUnderSaturatedTable(outerIdx);
             const std::size_t numRows = underSaturatedTable.numRows();
@@ -181,39 +192,50 @@ initFromState(const EclipseState& eclState)
                         //std::cout << "### cmpFactorGas: " << cmpFactor << "  zLim: " << zLim_[regionIdx] << std::endl;
                     }
 
-                    BO_[regionIdx].appendSamplePoint(outerIdx, po, bo);
-                    BG_[regionIdx].appendSamplePoint(outerIdx, po, bg);
-                    RS_[regionIdx].appendSamplePoint(outerIdx, po, rs);
-                    RV_[regionIdx].appendSamplePoint(outerIdx, po, rv);
-                    X_[regionIdx].appendSamplePoint(outerIdx, po, xv);
-                    Y_[regionIdx].appendSamplePoint(outerIdx, po, yv);
-                    VISCO_[regionIdx].appendSamplePoint(outerIdx, po, mo);
-                    VISCG_[regionIdx].appendSamplePoint(outerIdx, po, mg);
+                    BOBuilder[regionIdx].appendSamplePoint(outerIdx, po, bo);
+                    BGBuilder[regionIdx].appendSamplePoint(outerIdx, po, bg);
+                    RSBuilder[regionIdx].appendSamplePoint(outerIdx, po, rs);
+                    RVBuilder[regionIdx].appendSamplePoint(outerIdx, po, rv);
+                    XBuilder[regionIdx].appendSamplePoint(outerIdx, po, xv);
+                    YBuilder[regionIdx].appendSamplePoint(outerIdx, po, yv);
+                    VISCOBuilder[regionIdx].appendSamplePoint(outerIdx, po, mo);
+                    VISCGBuilder[regionIdx].appendSamplePoint(outerIdx, po, mg);
                     break;
                 }
 
                 bo0 = bo;
                 po0 = po;
 
-                BO_[regionIdx].appendSamplePoint(outerIdx, po, bo);
-                BG_[regionIdx].appendSamplePoint(outerIdx, po, bg);
+                BOBuilder[regionIdx].appendSamplePoint(outerIdx, po, bo);
+                BGBuilder[regionIdx].appendSamplePoint(outerIdx, po, bg);
 
-                RS_[regionIdx].appendSamplePoint(outerIdx, po, rs);
-                RV_[regionIdx].appendSamplePoint(outerIdx, po, rv);
+                RSBuilder[regionIdx].appendSamplePoint(outerIdx, po, rs);
+                RVBuilder[regionIdx].appendSamplePoint(outerIdx, po, rv);
 
-                X_[regionIdx].appendSamplePoint(outerIdx, po, xv);
-                Y_[regionIdx].appendSamplePoint(outerIdx, po, yv);
+                XBuilder[regionIdx].appendSamplePoint(outerIdx, po, xv);
+                YBuilder[regionIdx].appendSamplePoint(outerIdx, po, yv);
 
-                VISCO_[regionIdx].appendSamplePoint(outerIdx, po, mo);
-                VISCG_[regionIdx].appendSamplePoint(outerIdx, po, mg);
+                VISCOBuilder[regionIdx].appendSamplePoint(outerIdx, po, mo);
+                VISCGBuilder[regionIdx].appendSamplePoint(outerIdx, po, mg);
 
                        // rs,rv -> pressure
-                PBUB_RS_[regionIdx].appendSamplePoint(outerIdx, rs, po);
-                PBUB_RV_[regionIdx].appendSamplePoint(outerIdx, rv, po);
+                PBUB_RSBuilder[regionIdx].appendSamplePoint(outerIdx, rs, po);
+                PBUB_RVBuilder[regionIdx].appendSamplePoint(outerIdx, rv, po);
             }
         }
         oilCmp_[regionIdx].setXYContainers(zArg, oilCmp, /*sortInput=*/false);
         gasCmp_[regionIdx].setXYContainers(zArg, gasCmp, /*sortInput=*/false);
+
+        BO_[regionIdx] = std::move(BOBuilder[regionIdx]).build();
+        BG_[regionIdx] = std::move(BGBuilder[regionIdx]).build();
+        RS_[regionIdx] = std::move(RSBuilder[regionIdx]).build();
+        RV_[regionIdx] = std::move(RVBuilder[regionIdx]).build();
+        X_[regionIdx] = std::move(XBuilder[regionIdx]).build();
+        Y_[regionIdx] = std::move(YBuilder[regionIdx]).build();
+        VISCO_[regionIdx] = std::move(VISCOBuilder[regionIdx]).build();
+        VISCG_[regionIdx] = std::move(VISCGBuilder[regionIdx]).build();
+        PBUB_RS_[regionIdx] = std::move(PBUB_RSBuilder[regionIdx]).build();
+        PBUB_RV_[regionIdx] = std::move(PBUB_RVBuilder[regionIdx]).build();
     }
 
     // Reference density for pure z-component taken from kw SDENSITY
