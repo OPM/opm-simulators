@@ -268,6 +268,9 @@ struct SlaveGroupProductionData {
     // well_potentials are summed from the current well potentials with all the
     // efficiency factors, as GOPP etc. of the slave run.
     Scalar gas_lift_rate{0.0};                // Lift gas rate (GGLIR)
+    // Lift gas rate with the network efficiency factors (as network_surface_rates), for
+    // network nodes with NODEPROP item 4 = YES.
+    Scalar network_gas_lift_rate{0.0};
     ProductionRates<Scalar> well_potentials;  // Production potentials (GOPP, GWPP, GGPP)
     ProductionRates<Scalar> history_rates;    // Production history rates (GOPRH, ...)
     int num_flowing_producers{0};             // Number of flowing producers (GMWPR)

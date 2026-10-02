@@ -26,6 +26,8 @@
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupSatelliteInjection.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -1206,6 +1208,79 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
             well_name, phase_pos, res_rates, is_injector, network);
     }
     return rate;
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
+                                                          const bool network) const
+{
+    return this->sumOverGasLiftWells_(
+        group, network,
+        [](const Well&, const SingleWellState<Scalar, IndexTraits>& ws) {
+            return ws.alq_state.get();
+        },
+        [this, network](const Group& master_group) {
+            return this->reservoirCouplingMasterGroupGasLiftRate(master_group, network);
+        });
+}
+
+template <typename Scalar, typename IndexTraits>
+template <class WellValue, class MasterValue>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumOverGasLiftWells_(const Group& group,
+                                                           const bool network,
+                                                           const WellValue& value,
+                                                           const MasterValue& master_value) const
+{
+    if (this->isReservoirCouplingMasterGroup(group)) {
+        // Only obtain the slave's value once (on rank 0); see sumWellPhaseRates()
+        return this->isRank0() ? master_value(group) : Scalar{0};
+    }
+    Scalar rate = 0.0;
+    for (const std::string& group_name : group.groups()) {
+        const auto& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
+        rate += group_tmp.getGroupEfficiencyFactor(network)
+            * this->sumOverGasLiftWells_(group_tmp, network, value, master_value);
+    }
+
+    const auto& sched_state = this->schedule_[this->report_step_];
+    for (const std::string& well_name : group.wells()) {
+        const auto well_index = this->wellState().index(well_name);
+        if (!well_index.has_value()
+            || !this->wellState().wellIsOwned(well_index.value(), well_name))
+        {
+            continue;
+        }
+        const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_);
+        const auto& ws = this->wellState().well(well_index.value());
+        if (!well_ecl.isProducer() || ws.status == Well::Status::SHUT) {
+            continue;
+        }
+        const int vfp_table = well_ecl.productionControls(this->summary_state_).vfp_table_number;
+        if (sched_state.vfpprod.has(vfp_table)
+            && sched_state.vfpprod(vfp_table).getALQType() != VFPProdTable::ALQ_TYPE::ALQ_GRAT)
+        {
+            continue;
+        }
+        rate += well_ecl.getEfficiencyFactor(network) * ws.efficiency_scaling_factor
+            * value(well_ecl, ws);
+    }
+    return rate;
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+reservoirCouplingMasterGroupGasLiftRate([[maybe_unused]] const Group& group,
+                                        [[maybe_unused]] const bool network) const
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingMaster() && this->isReservoirCouplingMasterGroup(group)) {
+        return this->reservoirCouplingMaster().getMasterGroupGasLiftRate(group.name(), network);
+    }
+#endif
+    return 0.0;
 }
 
 template <typename Scalar, typename IndexTraits>

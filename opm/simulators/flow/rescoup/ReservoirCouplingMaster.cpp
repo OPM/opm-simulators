@@ -155,7 +155,7 @@ getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
 template <class Scalar>
 const ReservoirCoupling::Potentials<Scalar>&
 ReservoirCouplingMaster<Scalar>::
-getSlaveGroupPotentials(const std::string &master_group_name)
+getSlaveGroupPotentials(const std::string &master_group_name) const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->getSlaveGroupPotentials(master_group_name);

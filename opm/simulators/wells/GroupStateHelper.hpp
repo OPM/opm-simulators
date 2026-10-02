@@ -467,6 +467,19 @@ public:
                              const bool injector,
                              const bool network = false) const;
 
+    /// @brief Sum the lift gas rates (ALQ) of the open producers below a group.
+    /// @details Like the GGLIR summary vector, a well counts if its VFP table has ALQ
+    ///          type GRAT or if it has no VFP table.  Efficiency factors are applied as in
+    ///          sumWellPhaseRates().  The sum is rank-local: only owned wells count, and,
+    ///          as in sumWellPhaseRates(), a reservoir coupling master group contributes
+    ///          its slave's lift gas on rank 0 only.
+    Scalar sumWellGasLiftRates(const Group& group, const bool network = false) const;
+
+    /// @brief Lift gas rate the slave reported for a reservoir coupling master group.
+    /// @return The rate, or 0 if the group is not a master group (or in a non-MPI build).
+    ///         The value is the same on all ranks.
+    Scalar reservoirCouplingMasterGroupGasLiftRate(const Group& group, const bool network) const;
+
     bool terminalOutput() const
     {
          return this->terminal_output_;
@@ -572,6 +585,16 @@ public:
                        const Group::ProductionCMode& offended_control) const;
 
 private:
+
+    //! \brief Sum value(well, well_state) times the efficiency factor over the open
+    //!        producers below a group whose lift gas is a gas rate (ALQ type GRAT, or no
+    //!        VFP table).  A reservoir coupling master group contributes master_value()
+    //!        on rank 0 only.  Rank-local: only owned wells count.
+    template <class WellValue, class MasterValue>
+    Scalar sumOverGasLiftWells_(const Group& group,
+                                const bool network,
+                                const WellValue& value,
+                                const MasterValue& master_value) const;
 
     //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
     //!

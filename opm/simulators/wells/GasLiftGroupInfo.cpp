@@ -687,6 +687,29 @@ initializeGroupRatesRecursive_(const Group& group)
             alq += (gefac * sg_alq);
         }
     }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->group_state_helper_
+        && this->group_state_helper_->isReservoirCouplingMaster()
+        && this->group_state_helper_->isReservoirCouplingMasterGroup(group))
+    {
+        // A master group has no wells here: its rates are those of the slave group, as
+        // last reported by the slave.  They are the same on all ranks, so they are added
+        // after the communication above.  With them, the master's own gas lift wells see
+        // what the slaves produce and use in the groups they share.
+        using RcPhase = ReservoirCoupling::Phase;
+        using RateKind = ReservoirCoupling::RateKind;
+        const auto& master = this->group_state_helper_->reservoirCouplingMaster();
+        const auto& name = group.name();
+        oil_rate += master.getMasterGroupRate(name, RcPhase::Oil, RateKind::ProductionSurface);
+        gas_rate += master.getMasterGroupRate(name, RcPhase::Gas, RateKind::ProductionSurface);
+        water_rate += master.getMasterGroupRate(name, RcPhase::Water, RateKind::ProductionSurface);
+        const auto& potentials = master.getSlaveGroupPotentials(name);
+        oil_potential += potentials[RcPhase::Oil];
+        gas_potential += potentials[RcPhase::Gas];
+        water_potential += potentials[RcPhase::Water];
+        alq += master.getMasterGroupGasLiftRate(name, /*network=*/false);
+    }
+#endif
     if (this->debug) debugEndInitializeGroup(group.name());
     std::optional<Scalar> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
     if (this->group_state_helper_) {
