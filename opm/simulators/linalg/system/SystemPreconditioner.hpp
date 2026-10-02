@@ -20,13 +20,20 @@
 #define OPM_SYSTEMPRECONDITIONER_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/system/MultiComm.hpp>
+#include <opm/simulators/linalg/system/SystemCprwPressureStage.hpp>
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
+
+#include <functional>
+#include <memory>
+#include <stdexcept>
 
 namespace Opm {
 
@@ -65,7 +72,7 @@ public:
 
     // Sequential constructor (enabled only for non-parallel specializations).
     SystemPreconditioner(const SystemMatrix<Scalar>& S,
-                         const std::function<ResVector<Scalar>()>& weightsCalculator,
+                         const std::function<SystemVector<Scalar>()>& weightsCalculator,
                          int pressureIndex,
                          const Opm::PropertyTree& prm)
         requires (!isParallel)
@@ -78,7 +85,7 @@ public:
 
     // Parallel constructor (enabled only for parallel specializations).
     SystemPreconditioner(const SystemMatrix<Scalar>& S,
-                         const std::function<ResVector<Scalar>()>& weightsCalculator,
+                         const std::function<SystemVector<Scalar>()>& weightsCalculator,
                          int pressureIndex,
                          const Opm::PropertyTree& prm,
                          const ResComm& resComm)
@@ -109,14 +116,26 @@ public:
 
     void update() override
     {
-        resSolver_->preconditioner().update();
+        if (cprwStage_) {
+            weights_ = weightsCalculator_();
+            cprwStage_->update(weights_);
+        } else {
+            resSolver_->preconditioner().update();
+        }
         resSmoother_->preconditioner().update();
         wellSolver_->preconditioner().update();
     }
 
     void updateForChangedWellStructure()
     {
-        resSolver_->preconditioner().update();
+        if (cprwStage_) {
+            // The coarse system carries one unknown per well, so a changed
+            // well structure changes its dimension and pattern.
+            weights_ = weightsCalculator_();
+            cprwStage_->buildStructure(weights_);
+        } else {
+            resSolver_->preconditioner().update();
+        }
         resSmoother_->preconditioner().update();
         initWellSolver();
         resizeWellWorkVectors();
@@ -149,8 +168,27 @@ public:
         resSol_ = 0.0;
         wSol_ = 0.0;
 
-        // Stage 1: Reservoir CPR solve
-        {
+        // Stage 1: pressure solve.  Either reservoir-only CPR, or -- with
+        // add_wells -- CPRW on the full system, in which case the stage also
+        // produces a correction for the well unknowns.
+        if (cprwStage_) {
+            dresSol_ = 0.0;
+            dwSol_ = 0.0;
+            tmp_resRes_ = resRes_;
+            syncResVector(tmp_resRes_);
+            cprwStage_->apply(tmp_resRes_, wRes_, weights_, dresSol_, dwSol_);
+            resSol_ += dresSol_;
+            // resRes_ -= A * dresSol_
+            A.mmv(dresSol_, resRes_);
+            // wRes_ -= B * dresSol_
+            B.mmv(dresSol_, wRes_);
+            if (cprwStage_->prolongatesWellPressure()) {
+                wSol_ += dwSol_;
+                // resRes_ -= C * dwSol_ ;  wRes_ -= D * dwSol_
+                C.mmv(dwSol_, resRes_);
+                D.mmv(dwSol_, wRes_);
+            }
+        } else {
             Dune::InverseOperatorResult res_result;
             dresSol_ = 0.0;
             tmp_resRes_ = resRes_;
@@ -212,6 +250,13 @@ private:
     std::unique_ptr<ResFlexibleSolverType> resSmoother_;
     std::unique_ptr<WellFlexibleSolverType> wellSolver_;
 
+    // Non-null when the pressure stage includes the well unknowns (CPRW).
+    // Then resSolver_ is not built and stage 1 goes through cprwStage_.
+    using CprwStage = SystemCprwPressureStage<Scalar, ResComm>;
+    std::unique_ptr<CprwStage> cprwStage_;
+    std::function<SystemVector<Scalar>()> weightsCalculator_;
+    SystemVector<Scalar> weights_;
+
     WellVector<Scalar> wSol_;
     ResVector<Scalar> resSol_;
     ResVector<Scalar> dresSol_;
@@ -237,24 +282,66 @@ private:
     }
 
     void initSubSolvers(const Opm::PropertyTree& prm,
-                        const std::function<ResVector<Scalar>()>& weightsCalculator)
+                        const std::function<SystemVector<Scalar>()>& weightsCalculator)
     {
         auto resprm = prm.get_child("reservoir_solver");
         auto resprmsmoother = prm.get_child("reservoir_smoother");
         wellprm_ = prm.get_child("well_solver");
 
+        // add_wells is the same switch the classic CPR/CPRW pair uses: it
+        // promotes the pressure stage from reservoir-only CPR to CPRW over the
+        // full (reservoir, well) system.
+        const bool addWells = resprm.get("preconditioner.add_wells", false);
+
+        // The weights arrive from the outer layer for the whole system; the
+        // reservoir-only sub-solvers want just their own part of them.
+        std::function<ResVector<Scalar>()> resWeightCalc;
+        if (weightsCalculator) {
+            resWeightCalc = [weightsCalculator]() {
+                return weightsCalculator()[_0];
+            };
+        }
+
         if constexpr (isParallel) {
             rop_ = std::make_unique<ResOp>(S_[_0][_0], *resComm_);
-            resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, *resComm_, resprm, weightsCalculator, pressureIndex_);
             resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, *resComm_, resprmsmoother, weightsCalculator, pressureIndex_);
+                *rop_, *resComm_, resprmsmoother, resWeightCalc, pressureIndex_);
         } else {
             rop_ = std::make_unique<ResOp>(S_[_0][_0]);
-            resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, resprm, weightsCalculator, pressureIndex_);
             resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, resprmsmoother, weightsCalculator, pressureIndex_);
+                *rop_, resprmsmoother, resWeightCalc, pressureIndex_);
+        }
+
+        if (addWells) {
+            if (!weightsCalculator) {
+                OPM_THROW(std::invalid_argument,
+                          "The CPRW pressure stage (add_wells) needs a weights calculator, but "
+                          "none was configured. Set reservoir_solver.preconditioner.weight_type.");
+            }
+            weightsCalculator_ = weightsCalculator;
+            weights_ = weightsCalculator_();
+
+            auto coarseprm = resprm.get_child_optional("preconditioner.coarsesolver")
+                ? resprm.get_child("preconditioner.coarsesolver")
+                : PropertyTree();
+            const auto wellTransfer = wellTransferFromString(
+                // Same default as setupPropertyTree ships, so a JSON that omits
+                // the key gets the same preconditioner as the built-in setup.
+                prm.get("well_transfer", std::string{"classic"}));
+            const auto diagonal = wellCoarseDiagonalFromString(
+                prm.get("well_coarse_diagonal", std::string{"contract_d"}));
+            cprwStage_ = std::make_unique<CprwStage>(S_, coarseprm, pressureIndex_,
+                                                     wellTransfer, resComm_, diagonal,
+                                                     prm.get("verbosity", 0));
+            cprwStage_->buildStructure(weights_);
+        } else {
+            if constexpr (isParallel) {
+                resSolver_ = std::make_unique<ResFlexibleSolverType>(
+                    *rop_, *resComm_, resprm, resWeightCalc, pressureIndex_);
+            } else {
+                resSolver_ = std::make_unique<ResFlexibleSolverType>(
+                    *rop_, resprm, resWeightCalc, pressureIndex_);
+            }
         }
 
         initWellSolver();
