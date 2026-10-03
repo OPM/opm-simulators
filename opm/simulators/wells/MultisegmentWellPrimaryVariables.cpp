@@ -258,6 +258,8 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
     auto& segment_rates = segments.rates;
     auto& disgas = segments.dissolved_gas_rate;
     auto& vapoil = segments.vaporized_oil_rate;
+    auto& free_gas = segments.free_gas_rate;
+    auto& free_oil = segments.free_oil_rate;
     auto& segment_pressure = segments.pressure;
     auto& segment_temperature = segments.temperature;
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -354,6 +356,15 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         if ( (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) ||
                   (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))  ) {
             vapoil[seg] = disgas[seg] = 0.0;
+            // No dissolution/vaporization is possible without both
+            // hydrocarbon phases active, so whichever one is present is
+            // entirely free.
+            free_oil[seg] = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                ? segment_rates[seg * well_.numPhases() + FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx)]
+                : 0.0;
+            free_gas[seg] = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                ? segment_rates[seg * well_.numPhases() + FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx)]
+                : 0.0;
         }
         else {
             const auto* qs = &segment_rates[seg * well_.numPhases()];
@@ -362,6 +373,9 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
             const auto ig = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             disgas[seg] = Rs * (qs[io] - Rv*qs[ig]) / denom;
             vapoil[seg] = Rv * (qs[ig] - Rs*qs[io]) / denom;
+            // See PerforationRates::free_gas.
+            free_oil[seg] = (qs[io] - Rv*qs[ig]) / denom;
+            free_gas[seg] = (qs[ig] - Rs*qs[io]) / denom;
         }
 
         // 2) Local condition volume flow rates

@@ -54,6 +54,8 @@ SegmentState<Scalar>::SegmentState(int num_phases, const WellSegments& segments)
     : rates                    (segments.size() * num_phases)
     , dissolved_gas_rate       (segments.size())
     , vaporized_oil_rate       (segments.size())
+    , free_gas_rate            (segments.size())
+    , free_oil_rate            (segments.size())
     , phase_resv_rates         (segments.size() * num_phases)
     , phase_velocity           (segments.size() * num_phases)
     , phase_holdup             (segments.size() * num_phases)
@@ -74,6 +76,8 @@ SegmentState<Scalar> SegmentState<Scalar>::serializationTestObject()
     result.rates = {1.0, 2.0};
     result.dissolved_gas_rate = {3.0, 4.0, 5.0};
     result.vaporized_oil_rate = {6.0};
+    result.free_gas_rate = {6.1, 6.2};
+    result.free_oil_rate = {6.3};
     result.phase_resv_rates = {7.0, 8.0};
     result.phase_velocity = {9.0};
     result.phase_holdup = {10.0, 11.0};
@@ -132,6 +136,8 @@ bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
     return this->rates == rhs.rates &&
            this->dissolved_gas_rate == rhs.dissolved_gas_rate &&
            this->vaporized_oil_rate == rhs.vaporized_oil_rate &&
+           this->free_gas_rate == rhs.free_gas_rate &&
+           this->free_oil_rate == rhs.free_oil_rate &&
            this->phase_resv_rates == rhs.phase_resv_rates &&
            this->phase_velocity == rhs.phase_velocity &&
            this->phase_holdup == rhs.phase_holdup &&

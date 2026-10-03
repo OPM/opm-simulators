@@ -482,20 +482,31 @@ protected:
         const auto well_eff = well.wellEfficiencyFactor(); // Needed to convert ws.phase_mixing_rates to effective rates
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto I = ws.perf_data.cell_index[i];
-            const Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_); // Includes (accumulated) well efficiency factor
-            Scalar rate_s;
+            Scalar rate_f, rate_s;
 
-            if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+            // Injectors don't (yet) model dissolution/vaporization of their
+            // own injected fluid, so perf_data.phase_mixing_rates is never
+            // populated for them (only producer perforation rates, both
+            // normal production and producer-crossflow-as-injection, set
+            // it) -- fall back to the full connection rate as free for
+            // injectors, rather than reading an always-zero field.
+            if (well.isProducer() &&
+                tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                rate_f = ws.perf_data.phase_mixing_rates[i][ws.free_oil] * well_eff;
                 rate_s = ws.perf_data.phase_mixing_rates[i][ws.vaporized_oil] * well_eff;
             }
-            else if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+            else if (well.isProducer() &&
+                     tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                rate_f = ws.perf_data.phase_mixing_rates[i][ws.free_gas] * well_eff;
                 rate_s = ws.perf_data.phase_mixing_rates[i][ws.dissolved_gas] * well_eff;
             }
             else {
+                // Either no dissolution physics for this phase, or an
+                // injector: the whole connection rate is free.
+                rate_f = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
                 rate_s = 0.0;
             }
 
-            const Scalar rate_f = rate - rate_s;
             if (rate_f > 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                     const Scalar delta = rate_f * wtracer[tIdx];
@@ -1012,19 +1023,29 @@ protected:
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
                     const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_); // Includes (accumulated) well efficiency factor
+                    Scalar rate_f, rate_s;
 
-                    Scalar rate_s;
-                    if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                    // Injectors don't (yet) model dissolution/vaporization
+                    // of their own injected fluid, so phase_mixing_rates is
+                    // never populated for them -- fall back to the full
+                    // connection rate as free for injectors.
+                    if (wellPtr->isProducer() &&
+                        tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                        rate_f = ws.perf_data.phase_mixing_rates[i][ws.free_oil]*well_eff;
                         rate_s = ws.perf_data.phase_mixing_rates[i][ws.vaporized_oil]*well_eff;
                     }
-                    else if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                    else if (wellPtr->isProducer() &&
+                             tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                        rate_f = ws.perf_data.phase_mixing_rates[i][ws.free_gas]*well_eff;
                         rate_s = ws.perf_data.phase_mixing_rates[i][ws.dissolved_gas]*well_eff;
                     }
                     else {
+                        // Either no dissolution physics for this phase, or
+                        // an injector: the whole connection rate is free.
+                        rate_f = rate;
                         rate_s = 0.0;
                     }
 
-                    const Scalar rate_f = rate - rate_s;
                     assignRates<Free>(tr, eclWell, i, I, rate_f,
                                       tracerRate, mswTracerRate, freeTracerRate);
                     assignRates<Solution>(tr, eclWell, i, I, rate_s,

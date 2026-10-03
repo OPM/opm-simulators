@@ -658,6 +658,10 @@ report(const int*                            globalCellIdxMap,
         well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
         well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
 
+        // See WellInterface::consolidatePhaseMixingRates.
+        well.rates.set(rt::free_gas, ws.phase_mixing_rates[ws.free_gas]);
+        well.rates.set(rt::free_oil, ws.phase_mixing_rates[ws.free_oil]);
+
         {
             auto& curr = well.current_control;
 
@@ -1221,6 +1225,7 @@ reportSegmentResults(const int well_id,
 
         seg_res.rates.set(data::Rates::opt::oil, rate[io]);
         seg_res.rates.set(data::Rates::opt::vaporized_oil, segments.vaporized_oil_rate[seg_ix]);
+        seg_res.rates.set(data::Rates::opt::free_oil, segments.free_oil_rate[seg_ix]);
         seg_res.rates.set(data::Rates::opt::reservoir_oil, resv[io]);
         seg_res.velocity.set(PhaseQuant::Oil, velocity[io]);
         seg_res.holdup.set(PhaseQuant::Oil, holdup[io]);
@@ -1233,6 +1238,7 @@ reportSegmentResults(const int well_id,
 
         seg_res.rates.set(data::Rates::opt::gas, rate[ig]);
         seg_res.rates.set(data::Rates::opt::dissolved_gas, segments.dissolved_gas_rate[seg_ix]);
+        seg_res.rates.set(data::Rates::opt::free_gas, segments.free_gas_rate[seg_ix]);
         seg_res.rates.set(data::Rates::opt::reservoir_gas, resv[ig]);
         seg_res.velocity.set(PhaseQuant::Gas, velocity[ig]);
         seg_res.holdup.set(PhaseQuant::Gas, holdup[ig]);
@@ -1321,6 +1327,8 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
 
         connection.rates.set(rt::dissolved_gas, perf_data.phase_mixing_rates[i][ws.dissolved_gas]);
         connection.rates.set(rt::vaporized_oil, perf_data.phase_mixing_rates[i][ws.vaporized_oil]);
+        connection.rates.set(rt::free_gas, perf_data.phase_mixing_rates[i][ws.free_gas]);
+        connection.rates.set(rt::free_oil, perf_data.phase_mixing_rates[i][ws.free_oil]);
     }
 
     if (pu.hasPolymer()) {

@@ -99,7 +99,7 @@ public:
     std::vector<Scalar> temperature{};
     std::vector<Scalar> rates{};
     std::vector<Scalar> phase_rates{};
-    std::vector<std::array<Scalar,4>> phase_mixing_rates{};
+    std::vector<std::array<Scalar,6>> phase_mixing_rates{};
     std::vector<Scalar> solvent_rates{};
     std::vector<Scalar> polymer_rates{};
     std::vector<Scalar> brine_rates{};

@@ -333,6 +333,18 @@ public:
     bool updateWellOperabilityFromWellEq(const Simulator& simulator,
                                          const GroupStateHelperType& groupStateHelper);
 
+    // Sums perf_data.phase_mixing_rates into the well-level,
+    // cross-rank-reduced ws.phase_mixing_rates, feeding the WGPRS/WGPRF-family
+    // summary keywords (per-perforation phase_mixing_rates itself, which the
+    // tracer model reads directly, is unaffected -- it's set by assembly, not
+    // by this consolidation). free_gas/free_oil are accumulated directly
+    // alongside dis_gas/vap_oil at each perforation (free_gas + dis_gas ==
+    // cq_s[gasComp] by construction), so WGPRF is non-negative regardless of
+    // whether surface_rates is stale.
+    //
+    // Called once per timestep from BlackoilWellModel::timeStepSucceeded().
+    void consolidatePhaseMixingRates(WellStateType& well_state) const;
+
     // update perforation water throughput based on solved water rate
     virtual void updateWaterThroughput(const double dt,
                                        WellStateType& well_state) const = 0;
