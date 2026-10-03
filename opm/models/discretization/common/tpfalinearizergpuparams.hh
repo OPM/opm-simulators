@@ -197,6 +197,9 @@ public:
             std::vector<Scalar> alpha0(numCells);
             std::vector<Scalar> alpha1(numCells);
             std::vector<Scalar> alpha2(numCells);
+            std::vector<Scalar> alpha3(numCells);
+            std::vector<Scalar> alpha4(numCells);
+            std::vector<Scalar> alpha5(numCells);
             const auto& thermalHalfTransBoundary
                 = problem.eclTransmissibilities().getThermalHalfTransBoundary();
             for (const auto& [key, value] : thermalHalfTransBoundary) {
@@ -208,6 +211,12 @@ public:
                     alpha1[cell] = value;
                 } else if (dir == 2) {
                     alpha2[cell] = value;
+                } else if (dir == 3) {
+                    alpha3[cell] = value;
+                } else if (dir == 4) {
+                    alpha4[cell] = value;
+                } else if (dir == 5) {
+                    alpha5[cell] = value;
                 } else {
                     OPM_THROW(std::logic_error,
                               "Invalid direction for thermal half transmissibility: "
@@ -215,7 +224,7 @@ public:
                 }
             }
             ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
-                alpha0, alpha1, alpha2, problem.moduleParams());
+                alpha0, alpha1, alpha2, alpha3, alpha4, alpha5, problem.moduleParams());
             return gpuistl::copy_to_gpu(gpuFlowProblem);
         }())
         , boundaryInfoBuffer_(
