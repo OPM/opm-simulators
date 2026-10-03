@@ -1008,6 +1008,33 @@ BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
     BOOST_CHECK_GT(rhoWater, rhoHc);
 }
 
+BOOST_AUTO_TEST_CASE(GasZoneMeetingTheWaterAnchorsIt)
+{
+    // The vapour rows reach 2060 m, so the gas-oil contact at 2000 m moves down
+    // to 2060 m, below the water-oil contact at 2052.5 m. The gas zone then
+    // meets the water, which takes its pressure from the gas at the contact
+    // rather than from a liquid column extended above its own zone.
+    const WaterEquilFixture fix(waterDeckString(
+        "EQUIL\n 2010 150 2052.5 0 2000 0 /\n",
+        "COMPVD\n"
+        " 2000   0 0.95 0.05  0  150.0\n"
+        " 2060   0 0.95 0.05  0  150.0\n"
+        " 2070   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, connateSw),
+                                    std::vector<Scalar>(20, 1.0)).fluidStates();
+
+    // Cell 10 is centred on the water-oil contact, where the zero capillary
+    // pressure leaves the water and the gas at one pressure.
+    BOOST_REQUIRE_EQUAL(fix.depths[10], 2052.5);
+    BOOST_CHECK_CLOSE(states[10].pressure(WaterFluidSystem::waterPhaseIdx),
+                      states[10].pressure(WaterFluidSystem::gasPhaseIdx), 1e-8);
+    BOOST_CHECK_CLOSE(states[10].saturation(WaterFluidSystem::gasPhaseIdx),
+                      1.0 - connateSw, 1e-10);
+    BOOST_CHECK_CLOSE(states[11].saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
+}
+
 BOOST_AUTO_TEST_CASE(CoincidentContactsKeepTheGasRoot)
 {
     // Contacts that coincide leave no liquid: every hydrocarbon cell sits above

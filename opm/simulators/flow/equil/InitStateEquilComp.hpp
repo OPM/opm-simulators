@@ -810,7 +810,11 @@ private:
         if (!reg.oilPressure.has_value() && !reg.gasPressure.has_value()) {
             return;
         }
-        const auto& hcPressure = reg.oilPressure.has_value() ? reg.oilPressure : reg.gasPressure;
+        // The water meets the hydrocarbon zone just above its contact: the gas
+        // zone when the gas-oil contact lies at or below the water-oil contact.
+        const bool gasAtContact = reg.gasPressure.has_value()
+            && (!reg.oilPressure.has_value() || (reg.zwoc <= reg.zgoc));
+        const auto& hcPressure = gasAtContact ? reg.gasPressure : reg.oilPressure;
         const Scalar pcow = record.waterOilContactCapillaryPressure();
         const Scalar pContact = hcPressure->value(reg.zwoc) - pcow;
 
