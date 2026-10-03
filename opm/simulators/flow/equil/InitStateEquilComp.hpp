@@ -338,6 +338,10 @@ private:
         /// COMPVD naming both phases describes a gas zone over a liquid one,
         /// each with its own composition and its own hydrostatic column.
         bool twoZone{false};
+        /// Depth of the last vapour row of such a table. With EQUIL item 10 = 1
+        /// the rows decide the phase, so a cell at this depth stays in the gas
+        /// zone even when the contact lies on it.
+        Scalar lastVaporDepth{};
         /// Gas-zone composition for a COMPVD table that names both phases.
         std::vector<TabulatedFunction> vaporVdTable;
         /// Equilibrium vapour at the contact for type 3 without gas-zone rows.
@@ -679,6 +683,7 @@ private:
                 const auto liquidRows = rowsOfPhase(compvd, CompvdTable::Phase::Liquid);
                 reg.zgoc = zoneBoundary(compvd, vaporRows, liquidRows, reg, regionIdx);
                 reg.twoZone = true;
+                reg.lastVaporDepth = compvd.getDepthColumn()[vaporRows.back()];
                 setupComposition(reg.vaporVdTable, compvd, vaporRows);
                 setupComposition(reg.compositionVdTable, compvd, liquidRows);
             }
@@ -1040,10 +1045,23 @@ private:
                                 numSamplePoints, waterContactSpan(reg, span));
     }
 
+    /// Whether \p depth lies in the gas zone of a region that has one. A depth
+    /// on the gas-oil contact belongs to the liquid zone, except the last vapour
+    /// row of a two-zone COMPVD table with EQUIL item 10 = 1, whose rows decide
+    /// the phase. That row, not the contact, bounds the exception: a contact
+    /// moved down onto the first liquid row leaves that row liquid.
+    static bool isInGasZone(const Region& reg, const Scalar depth)
+    {
+        if (reg.twoZone && (reg.initType == 1) && (depth <= reg.lastVaporDepth)) {
+            return true;
+        }
+        return ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
+    }
+
     Scalar assignCell(FluidState& fs, const Region& reg, const Scalar depth,
                       const std::size_t cell) const
     {
-        const bool inGasZone = ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
+        const bool inGasZone = isInGasZone(reg, depth);
 
         const CompVec z = [&reg, depth, inGasZone]() {
             if (!inGasZone) {
