@@ -45,6 +45,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -936,12 +937,21 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneRejectsRowsAgainstContact)
                                     " 2040   0 0.60 0.40  1  150.0\n"
                                     " 2060   0 0.95 0.05  0  150.0\n"
                                     " 2100   0 0.40 0.60  1  150.0 /\n";
-    for (const auto& [equil, compvd] :
-         {std::pair{"EQUIL\n 2060 200 2300 0 2060 0 3* 3 /\n", gapAbove},
-          std::pair{"EQUIL\n 2072.5 200 2300 0 2050 0 /\n", interleaved}}) {
+    for (const auto& [equil, compvd, reason] :
+         {std::tuple {"EQUIL\n 2060 200 2300 0 2060 0 3* 3 /\n",
+                      gapAbove,
+                      "so the rows must agree with it"},
+          std::tuple {"EQUIL\n 2072.5 200 2300 0 2050 0 /\n",
+                      interleaved,
+                      "must lie above the liquid rows"}}) {
         BOOST_TEST_CONTEXT(equil << compvd) {
             const EquilFixture fix(deckString(equil, "EQLDIMS\n/\n", "", compvd));
-            BOOST_CHECK_THROW(fix.compute(std::vector<int>(20, 0)), std::runtime_error);
+            BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                  std::runtime_error,
+                                  [reason](const std::runtime_error& e) {
+                                      return std::string_view {e.what()}.find(reason)
+                                          != std::string_view::npos;
+                                  });
         }
     }
 }
