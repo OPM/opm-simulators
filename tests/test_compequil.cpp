@@ -894,6 +894,33 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneContactOutsideRowGap)
     }
 }
 
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneKeepsTheLastVapourRowGas)
+{
+    // A cell on the gas-oil contact belongs to the liquid zone, but with EQUIL
+    // item 10 = 1 the rows decide the phase. The cell at 2032.5 m sits on the
+    // last vapour row, both when the contact lies on that row and when it moves
+    // there from above.
+    for (const std::string goc : {"2032.5", "2020"}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const EquilFixture fix(deckString(
+                "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+                "COMPVD\n"
+                " 2000   0 0.95 0.05  0  150.0\n"
+                " 2032.5 0 0.95 0.05  0  150.0\n"
+                " 2051   0 0.60 0.40  1  150.0\n"
+                " 2100   0 0.40 0.60  1  150.0 /\n"));
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            BOOST_REQUIRE_EQUAL(fix.depths[6], 2032.5);
+            BOOST_CHECK_CLOSE(states[6].saturation(FluidSystem::gasPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[6].moleFraction(1) - 0.95, 1e-10);
+
+            // The cells below that row belong to the liquid zone.
+            BOOST_CHECK_CLOSE(states[7].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[7].moleFraction(1) - 0.60, 1e-10);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(CompvdTwoZoneRejectsRowsAgainstContact)
 {
     // Type 3 takes the gas-oil contact as its reference depth, so the rows may
