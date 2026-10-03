@@ -746,7 +746,8 @@ private:
                 numAquiferPvSumLocal += pvValue;
             }
 
-            model_.getMaxCoeff(cell_idx, intQuants, fs, modelResid, pvValue,
+            model_.getMaxCoeff(cell_idx, intQuants, fs, modelResid,
+                               std::max(pvValue, model_.cnvPvFloor()),
                                B_avg, R_sum, maxCoeff, maxCoeffCell);
         }
 
