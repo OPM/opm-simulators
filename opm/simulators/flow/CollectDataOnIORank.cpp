@@ -34,6 +34,18 @@
 
 namespace Opm {
 
+std::vector<int> levelZeroRanks(const Dune::CpGrid& grid,
+                                const std::vector<int>& leafRanks)
+{
+    const auto leafView = grid.leafGridView();
+    std::vector<int> ranks(grid.levelGridView(0).size(0), -1);
+    for (const auto& elem : elements(leafView)) {
+        ranks[elem.getOrigin().index()] = leafRanks[leafView.indexSet().index(elem)];
+    }
+
+    return ranks;
+}
+
 template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
