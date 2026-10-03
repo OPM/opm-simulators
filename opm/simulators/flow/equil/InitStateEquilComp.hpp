@@ -847,10 +847,13 @@ private:
             gasAtDatum ? FluidSystem::gasPhaseIdx : FluidSystem::oilPhaseIdx);
 
         // A gas-oil contact inside a single-zone region requires the composition
-        // to vary across it, so the flash can label the phases correctly.
-        if ((reg.zgoc > span[0]) && (reg.zgoc < span[1]) &&
+        // to vary across it, so the flash can label the phases correctly. Only
+        // the hydrocarbon above the water-oil contact needs labelling.
+        const Scalar hydrocarbonBottom = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+            ? std::min(span[1], reg.zwoc) : span[1];
+        if ((reg.zgoc > span[0]) && (reg.zgoc < hydrocarbonBottom) &&
             !compositionVariesBetween(reg, span[0], reg.zgoc) &&
-            !compositionVariesBetween(reg, reg.zgoc, span[1])) {
+            !compositionVariesBetween(reg, reg.zgoc, hydrocarbonBottom)) {
             OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact "
                                         "at {} m lies inside a type-1 region, but the "
                                         "composition does not vary across the contact. "
