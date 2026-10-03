@@ -45,6 +45,9 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -848,6 +851,111 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
     }
 }
 
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneContactOutsideRowGap)
+{
+    // With EQUIL item 10 = 1 the COMPVD rows give the composition versus depth,
+    // so a gas-oil contact outside the gap between the last vapour row (2049 m)
+    // and the first liquid row (2051 m) moves to the nearest edge of the gap.
+    const auto states = [](const std::string& goc) {
+        const EquilFixture fix(deckString(
+            "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+            "COMPVD\n"
+            " 2000   0 0.95 0.05  0  150.0\n"
+            " 2049   0 0.95 0.05  0  150.0\n"
+            " 2051   0 0.60 0.40  1  150.0\n"
+            " 2100   0 0.40 0.60  1  150.0 /\n"));
+        return fix.compute(std::vector<int>(20, 0)).fluidStates();
+    };
+
+    // The cell at 2057.5 m lies above a contact at 2060 m but below the first
+    // liquid row, and the one at 2042.5 m below a contact at 2030 m but above
+    // the last vapour row.
+    for (const auto& [goc, edge, cell, phaseIdx] :
+         {std::tuple{"2060", "2051", std::size_t{11}, FluidSystem::oilPhaseIdx},
+          std::tuple{"2030", "2049", std::size_t{8}, FluidSystem::gasPhaseIdx}}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const auto moved = states(goc);
+            BOOST_CHECK_CLOSE(moved[cell].saturation(phaseIdx), 1.0, 1e-10);
+
+            const auto expected = states(edge);
+            BOOST_REQUIRE_EQUAL(moved.size(), expected.size());
+            for (std::size_t c = 0; c < moved.size(); ++c) {
+                BOOST_TEST_CONTEXT("Cell " << c) {
+                    for (const auto p : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                        BOOST_CHECK_EQUAL(moved[c].pressure(p), expected[c].pressure(p));
+                        BOOST_CHECK_EQUAL(moved[c].saturation(p), expected[c].saturation(p));
+                    }
+                    for (int comp = 0; comp < 3; ++comp) {
+                        BOOST_CHECK_EQUAL(moved[c].moleFraction(comp),
+                                          expected[c].moleFraction(comp));
+                    }
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneKeepsTheLastVapourRowGas)
+{
+    // A cell on the gas-oil contact belongs to the liquid zone, but with EQUIL
+    // item 10 = 1 the rows decide the phase. The cell at 2032.5 m sits on the
+    // last vapour row, both when the contact lies on that row and when it moves
+    // there from above.
+    for (const std::string goc : {"2032.5", "2020"}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const EquilFixture fix(deckString(
+                "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+                "COMPVD\n"
+                " 2000   0 0.95 0.05  0  150.0\n"
+                " 2032.5 0 0.95 0.05  0  150.0\n"
+                " 2051   0 0.60 0.40  1  150.0\n"
+                " 2100   0 0.40 0.60  1  150.0 /\n"));
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            BOOST_REQUIRE_EQUAL(fix.depths[6], 2032.5);
+            BOOST_CHECK_CLOSE(states[6].saturation(FluidSystem::gasPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[6].moleFraction(1) - 0.95, 1e-10);
+
+            // The cells below that row belong to the liquid zone.
+            BOOST_CHECK_CLOSE(states[7].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[7].moleFraction(1) - 0.60, 1e-10);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneRejectsRowsAgainstContact)
+{
+    // Type 3 takes the gas-oil contact as its reference depth, so the rows may
+    // not put the phase change elsewhere. No item 10 accepts a vapour row below
+    // a liquid one.
+    const std::string gapAbove = "COMPVD\n"
+                                 " 2000   0 0.95 0.05  0  150.0\n"
+                                 " 2049   0 0.95 0.05  0  150.0\n"
+                                 " 2051   0 0.60 0.40  1  150.0\n"
+                                 " 2100   0 0.40 0.60  1  150.0 /\n";
+    const std::string interleaved = "COMPVD\n"
+                                    " 2000   0 0.95 0.05  0  150.0\n"
+                                    " 2040   0 0.60 0.40  1  150.0\n"
+                                    " 2060   0 0.95 0.05  0  150.0\n"
+                                    " 2100   0 0.40 0.60  1  150.0 /\n";
+    for (const auto& [equil, compvd, reason] :
+         {std::tuple {"EQUIL\n 2060 200 2300 0 2060 0 3* 3 /\n",
+                      gapAbove,
+                      "so the rows must agree with it"},
+          std::tuple {"EQUIL\n 2072.5 200 2300 0 2050 0 /\n",
+                      interleaved,
+                      "must lie above the liquid rows"}}) {
+        BOOST_TEST_CONTEXT(equil << compvd) {
+            const EquilFixture fix(deckString(equil, "EQLDIMS\n/\n", "", compvd));
+            BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                  std::runtime_error,
+                                  [reason](const std::runtime_error& e) {
+                                      return std::string_view {e.what()}.find(reason)
+                                          != std::string_view::npos;
+                                  });
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
 {
     // The water-oil contact at 2050 m lies inside the column. Above it the
@@ -882,6 +990,33 @@ BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
     const Scalar rhoWater = impliedDensity(states[15].pressure(WaterFluidSystem::waterPhaseIdx),
                                            states[16].pressure(WaterFluidSystem::waterPhaseIdx));
     BOOST_CHECK_GT(rhoWater, rhoHc);
+}
+
+BOOST_AUTO_TEST_CASE(GasZoneMeetingTheWaterAnchorsIt)
+{
+    // The vapour rows reach 2060 m, so the gas-oil contact at 2000 m moves down
+    // to 2060 m, below the water-oil contact at 2052.5 m. The gas zone then
+    // meets the water, which takes its pressure from the gas at the contact
+    // rather than from a liquid column extended above its own zone.
+    const WaterEquilFixture fix(waterDeckString(
+        "EQUIL\n 2010 150 2052.5 0 2000 0 /\n",
+        "COMPVD\n"
+        " 2000   0 0.95 0.05  0  150.0\n"
+        " 2060   0 0.95 0.05  0  150.0\n"
+        " 2070   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, connateSw),
+                                    std::vector<Scalar>(20, 1.0)).fluidStates();
+
+    // Cell 10 is centred on the water-oil contact, where the zero capillary
+    // pressure leaves the water and the gas at one pressure.
+    BOOST_REQUIRE_EQUAL(fix.depths[10], 2052.5);
+    BOOST_CHECK_CLOSE(states[10].pressure(WaterFluidSystem::waterPhaseIdx),
+                      states[10].pressure(WaterFluidSystem::gasPhaseIdx), 1e-8);
+    BOOST_CHECK_CLOSE(states[10].saturation(WaterFluidSystem::gasPhaseIdx),
+                      1.0 - connateSw, 1e-10);
+    BOOST_CHECK_CLOSE(states[11].saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
 }
 
 BOOST_AUTO_TEST_CASE(CoincidentContactsKeepTheGasRoot)
