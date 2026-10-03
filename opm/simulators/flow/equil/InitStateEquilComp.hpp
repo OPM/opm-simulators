@@ -491,8 +491,9 @@ private:
                                   regionIdx + 1, lastVapor, firstLiquid));
         }
 
-        if ((reg.zgoc >= lastVapor) && (reg.zgoc <= firstLiquid)) {
-            return reg.zgoc;
+        const Scalar boundary = std::clamp(reg.zgoc, lastVapor, firstLiquid);
+        if (boundary == reg.zgoc) {
+            return boundary;
         }
 
         if (reg.initType != 1) {
@@ -506,7 +507,6 @@ private:
                                   reg.initType));
         }
 
-        const Scalar boundary = std::clamp(reg.zgoc, lastVapor, firstLiquid);
         OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m lies "
                                     "outside the COMPVD phase change between the last vapour "
                                     "row at {} m and the first liquid row at {} m. With EQUIL "
@@ -934,10 +934,11 @@ private:
         const std::array<Scalar, 2> datumSpan{std::min(pressureSpan[0], reg.zgoc),
                                               std::max(pressureSpan[1], reg.zgoc)};
         if ((reg.zgoc < span[0]) || (reg.zgoc > span[1])) {
-            OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m "
-                                        "lies outside the cells of the region, so the COMPVD "
+            OpmLog::warning(fmt::format("Equilibration region {}: the gas zone ends at {} m, "
+                                        "outside the cells of the region, so the COMPVD "
                                         "rows of one phase describe no cell.",
-                                        regionIdx + 1, reg.zgoc));
+                                        regionIdx + 1,
+                                        reg.zgoc));
         }
 
         if (datum < reg.zgoc) {
@@ -959,9 +960,11 @@ private:
                                     numSamplePoints, pressureSpan);
         }
 
-        OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above the "
-                                 "contact at {} m and a liquid one below it "
-                                 "(EQUIL item 10 = 1).", regionIdx + 1, reg.zgoc));
+        OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above "
+                                 "{} m and a liquid one below it "
+                                 "(EQUIL item 10 = 1).",
+                                 regionIdx + 1,
+                                 reg.zgoc));
     }
 
     /// EQUIL item 10 type 3: the selected table supplies the liquid composition,
