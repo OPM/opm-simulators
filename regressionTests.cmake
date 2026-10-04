@@ -288,6 +288,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    pvtnum_equil_shared
+  FILENAME
+    PVTNUM_EQUIL_SHARED
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
     pvtnum_rock
   FILENAME
     PVTNUM_ROCK
