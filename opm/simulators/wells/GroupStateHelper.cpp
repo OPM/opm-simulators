@@ -1607,13 +1607,15 @@ GroupStateHelper<Scalar, IndexTraits>::wellRateContributionToGroup(const std::st
                                                                   const int phase_pos,
                                                                   const bool res_rates,
                                                                   const bool is_injector,
-                                                                  const bool network) const
+                                                                  const bool network,
+                                                                  const WellState<Scalar, IndexTraits>* well_state) const
 {
-    const auto well_index = this->wellState().index(well_name);
+    const auto& wstate = well_state ? *well_state : this->wellState();
+    const auto well_index = wstate.index(well_name);
     if (!well_index.has_value())
         return 0.0;
 
-    if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
+    if (!wstate.wellIsOwned(well_index.value(), well_name)) // Only sum once
     {
         return 0.0;
     }
@@ -1623,7 +1625,7 @@ GroupStateHelper<Scalar, IndexTraits>::wellRateContributionToGroup(const std::st
     if ((well_ecl.isProducer() && is_injector) || (well_ecl.isInjector() && !is_injector))
         return 0.0;
 
-    const auto& ws = this->wellState().well(well_index.value());
+    const auto& ws = wstate.well(well_index.value());
     if (ws.status == Opm::Well::Status::SHUT)
         return 0.0;
 

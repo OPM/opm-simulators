@@ -545,11 +545,14 @@ public:
     /// \param res_rates Use reservoir rates instead of surface rates
     /// \param is_injector Sum injectors rather than producers
     /// \param network Use the network efficiency factors (GEFAC/WEFAC item 3)
+    /// \param well_state The well state to take the well's rates from, or nullptr
+    ///        for the helper's current well state
     Scalar wellRateContributionToGroup(const std::string& well_name,
                                        const int phase_pos,
                                        const bool res_rates,
                                        const bool is_injector,
-                                       const bool network = false) const;
+                                       const bool network = false,
+                                       const WellState<Scalar, IndexTraits>* well_state = nullptr) const;
 
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar>
