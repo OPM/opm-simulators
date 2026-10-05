@@ -531,6 +531,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_SatfuncConsistencyChecks.cpp
   tests/test_SatfuncConsistencyChecks_parallel.cpp
   tests/test_SatfuncConsistencyCheckManager.cpp
+  tests/test_source_lgr.cpp
   tests/test_stoppedwells.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
   tests/test_timer.cpp
@@ -723,6 +724,7 @@ list (APPEND TEST_DATA_FILES
   tests/options_system_cpr_missing_well.json
   tests/options_system_cpr_res_precond_not_cpr.json
   tests/GCONSUMP.DATA
+  tests/SOURCE_LGR.DATA
   tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA
   tests/GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA
