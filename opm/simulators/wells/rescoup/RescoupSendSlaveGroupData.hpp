@@ -58,7 +58,10 @@ public:
 
     /// @brief Construct a sender for slave group data
     /// @param groupStateHelper Reference to the GroupStateHelper for accessing group state and schedule
-    RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper);
+    /// @param nupcol_well_state The NUPCOL well state, from which the group state
+    ///   rates are computed (see unsolvedNewWellProductionRates_())
+    RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper,
+                              const WellState<Scalar, IndexTraits>& nupcol_well_state);
 
     /// @brief Get the communication object
     /// @return Reference to the communication object for MPI communication
@@ -189,7 +192,8 @@ private:
     ///   groups, so a slave group that holds no wells of its own is handled too
     /// @param network True to use the network efficiency factors (GEFAC/WEFAC
     ///   item 3), matching the `network` argument of the rate sum being
-    ///   corrected
+    ///   corrected.  The network rates are summed from the current well state,
+    ///   the others from the NUPCOL well state, and the correction follows suit.
     /// @return Rates to subtract, all zero once the wells have been solved
     /// @note Before this sync step's well solve, such a well contributes the
     ///       rates updateWellStateWithTarget() derived from its WCONPROD
@@ -199,6 +203,9 @@ private:
 
     /// Reference to the GroupStateHelper for group state management
     const GroupStateHelperType& groupStateHelper_;
+
+    /// The NUPCOL well state, from which the group state rates are computed
+    const WellState<Scalar, IndexTraits>& nupcol_well_state_;
 
     /// Reference to the ReservoirCouplingSlave for MPI communication with master
     ReservoirCouplingSlave<Scalar>& reservoir_coupling_slave_;

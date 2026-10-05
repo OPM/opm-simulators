@@ -447,7 +447,7 @@ sendSlaveGroupDataToMaster()
     OPM_TIMEFUNCTION();
     assert(this->isReservoirCouplingSlave());
     RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{
-        this->groupStateHelper()};
+        this->groupStateHelper(), this->well_model_.nupcolWellState()};
     slave_group_data_sender.sendSlaveGroupDataToMaster();
 }
 

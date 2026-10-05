@@ -40,8 +40,10 @@ namespace Opm {
 // -------------------------------------------------------
 template <class Scalar, class IndexTraits>
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper)
+RescoupSendSlaveGroupData(GroupStateHelperType& groupStateHelper,
+                          const WellState<Scalar, IndexTraits>& nupcol_well_state)
     : groupStateHelper_{groupStateHelper}
+    , nupcol_well_state_{nupcol_well_state}
     , reservoir_coupling_slave_{groupStateHelper.reservoirCouplingSlave()}
     , schedule_{groupStateHelper.schedule()}
     , group_state_{groupStateHelper.groupState()}
@@ -610,7 +612,11 @@ sendSlaveGroupInjectionDataToMaster_() const
 // per-well step the sums themselves use, so it removes exactly what they added: only
 // producers, only wells this rank owns and that are not shut, with the same efficiency
 // factor and sign.  It is therefore rank-local, and each call site reduces it to match
-// whatever it is being subtracted from.
+// whatever it is being subtracted from.  It is also taken from the same well state as
+// the sum it corrects.  The surface rates are group state rates, which are computed
+// from the NUPCOL well state: a well whose target rates were set after the group state
+// was computed, e.g. in the first time step of a slave, is not in that sum and
+// contributes nothing.  The network rates are summed from the current well state.
 template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
@@ -655,7 +661,8 @@ unsolvedNewWellProductionRates_(const std::string& group_name, bool network) con
             return pu.phaseIsActive(canonical_phase_idx)
                 ? this->groupStateHelper_.wellRateContributionToGroup(
                       wname, pu.canonicalToActivePhaseIdx(canonical_phase_idx),
-                      /*res_rates=*/false, /*is_injector=*/false, network)
+                      /*res_rates=*/false, /*is_injector=*/false, network,
+                      network ? nullptr : &this->nupcol_well_state_)
                 : Scalar{0};
         };
         rates[ReservoirCoupling::Phase::Oil] += contribution(IndexTraits::oilPhaseIdx);
