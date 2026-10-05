@@ -164,6 +164,8 @@ class WellComparisonManager:
             legend = []
             unit = None
 
+            # Fixed colors: the reference is blue and the new simulation orange,
+            # also when only one of them has the curve.
             if ref is not None and len(ref) > 0:
                 unit = ref_file.units(curve_name)
                 legend.append(ref_name)
@@ -172,6 +174,7 @@ class WellComparisonManager:
                         'time': ref_time,
                         'values': ref,
                         'style': {
+                            'color': 'C0',
                             'linestyle': 'dashed',
                             'linewidth': 0.5,
                             'marker': 'o',
@@ -189,6 +192,7 @@ class WellComparisonManager:
                         'time': sim_time,
                         'values': sim,
                         'style': {
+                            'color': 'C1',
                             'linewidth': 0.5,
                             'marker': 'x',
                             'markersize': 1.0,
@@ -249,6 +253,7 @@ class WellComparisonManager:
                             'time': sim_time,
                             'values': sim,
                             'style': {
+                                'color': 'C1',
                                 'linewidth': 0.5,
                                 'marker': 'x',
                                 'markersize': 1.0,
