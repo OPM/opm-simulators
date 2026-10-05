@@ -2471,8 +2471,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // = YES], OR a plain FLD/NONE group: the group participates in the
             // parent's guide-rate distribution.  Its GCW is decoupled from the
             // production control mode and read from the rescoup master, which
-            // sets it to 1 when participating-and-uncapped and 0 when capped at
-            // the slave potential or belonging to an inactive slave.  See
+            // sets it to 1 when participating and 0 when none of its slave
+            // producers are under group control or it belongs to an inactive
+            // slave.  See
             // RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
             num_wells = this->reservoirCouplingMaster().effectiveGCW(group_name);
         } else {

@@ -690,18 +690,20 @@ bottomGroupHasIndividualControl_()
     // individual_control = false there.  Since its rate never entered the
     // reduction, the addback in calculateGroupConstraint() must not re-add it.
     // Mirror the reduction's treatment here so the addback is skipped,
-    // keeping the two consistent.
+    // keeping the two consistent.  An eligible group excluded from the
+    // distribution (effective GCW = 0, see
+    // RescoupConstraintsCalculator::capAndRedistributeProductionTargets_()) is
+    // however in the parent's reduction, so its rate must be added back for its
+    // own target, as for a group on individual control.
     if (this->isProductionConstraint()
         && this->groupStateHelper().isMasterGroupEligibleForGuideRate(
                this->bottom_group_.name())) {
-        return false;
+        return this->groupStateHelper().reservoirCouplingMaster().effectiveGCW(
+                   this->bottom_group_.name()) == 0;
     }
     // The same holds for injection, per phase, see
-    // GroupStateHelper::isMasterGroupEligibleForInjectionGuideRate().  An
-    // eligible group excluded from the distribution (effective injection GCW
-    // = 0, see RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_())
-    // is however in the parent's reduction, so its rate must be added back for
-    // its own target, as for a group on individual control.
+    // GroupStateHelper::isMasterGroupEligibleForInjectionGuideRate() and
+    // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
     if (this->isInjectionConstraint()
         && this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
                this->bottom_group_.name(), this->injectionPhase_())) {

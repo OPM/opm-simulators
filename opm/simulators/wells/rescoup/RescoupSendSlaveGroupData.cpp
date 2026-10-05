@@ -502,6 +502,10 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);
     production_data.voidage_rate = this->collectSlaveGroupVoidageRate_(group_idx);
     production_data.gas_reinjection_rate = this->collectSlaveGroupReinjectionRateForGasPhase_(group_idx);
+    // The group state holds the count summed over all ranks.
+    production_data.num_group_controlled_producers =
+        this->group_state_.number_of_wells_under_group_control(
+            this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx));
     // MAYBE TODO: The summary quantities are collected (with one comm().sum() per
     // slave group) on every send, but the master only uses them for its summary,
     // from the data sent at the end of a sync step.  If this ever shows up in

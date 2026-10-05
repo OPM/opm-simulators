@@ -160,6 +160,14 @@ public:
     int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                                  ReservoirCoupling::Phase phase) const;
 
+    /// @brief Get the number of a slave group's producers under group control
+    /// @param master_group_name Name of the master group
+    /// @return Number of producers following the group's target, as reported by the slave
+    /// @note Used to exclude a master group whose producers all run at their own
+    ///   limits from its parent's guide-rate distribution, see
+    ///   RescoupConstraintsCalculator::capAndRedistributeProductionTargets_().
+    int getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const;
+
     /// @brief Get the production potentials for a slave group
     /// @param master_group_name Name of the master group
     /// @return Reference to the potentials data for the specified group

@@ -223,22 +223,26 @@ groupControlledWells(const std::string& group_name,
     );
     // GroupStateHelper::groupControlledWells() honours always_included_child
     // only for wells, where it counts the well for every group above it.  A
-    // reservoir-coupling master group excluded from its parent's injection
-    // guide-rate distribution (effective injection GCW = 0) must likewise still
-    // count when its own target is computed, i.e. when it is the always-included
-    // child: for itself, so that its own guide rate enters its fraction, and for
-    // its ancestors, which may have no other group-controlled wells and would
-    // otherwise drop out of their own parents' distribution, giving it a zero
-    // fraction there.
-    if (!is_producer_ && num_wells == 0 && !always_included_child.empty()
-        && this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
-               always_included_child, injection_phase_)) {
-        auto ancestor = always_included_child;
-        while (ancestor != group_name && ancestor != "FIELD") {
-            ancestor = parent(ancestor);
-        }
-        if (ancestor == group_name) {
-            return 1;
+    // reservoir-coupling master group excluded from its parent's guide-rate
+    // distribution (effective GCW = 0) must likewise still count when its own
+    // target is computed, i.e. when it is the always-included child: for itself,
+    // so that its own guide rate enters its fraction, and for its ancestors, which
+    // may have no other group-controlled wells and would otherwise drop out of
+    // their own parents' distribution, giving it a zero fraction there.
+    if (num_wells == 0 && !always_included_child.empty()) {
+        const auto& helper = this->groupStateHelper();
+        const bool eligible = is_producer_
+            ? helper.isMasterGroupEligibleForGuideRate(always_included_child)
+            : helper.isMasterGroupEligibleForInjectionGuideRate(always_included_child,
+                                                                injection_phase_);
+        if (eligible) {
+            auto ancestor = always_included_child;
+            while (ancestor != group_name && ancestor != "FIELD") {
+                ancestor = parent(ancestor);
+            }
+            if (ancestor == group_name) {
+                return 1;
+            }
         }
     }
     return num_wells;

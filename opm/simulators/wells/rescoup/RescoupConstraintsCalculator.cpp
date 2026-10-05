@@ -56,6 +56,11 @@ RescoupConstraintsCalculator(
 
 // Calculates the constraints (target and per-rate-type limits) for each master group.
 //
+// Runs at the start of each sync step from the slave rates reported before the
+// slaves solve their wells, and again from the rates reported after the
+// slaves' initial well solve and at each network iteration; see
+// BlackoilWellModelRescoup::refreshAndSendGroupConstraints().
+//
 // A master group defines both an active control-mode target and limits for other rate types
 // (ORAT, WRAT, GRAT, LRAT, RESV). The active target alone is not sufficient for reservoir-coupling slaves:
 // a slave group must know every effective limit so that it can enforce the most restrictive
@@ -81,17 +86,18 @@ RescoupConstraintsCalculator(
 //    concerns:
 //      - static eligibility: GCONPROD item 8 RESPOND_TO_PARENT = YES
 //        (Group::productionGroupControlAvailable) — a deck property; from
-//      - dynamic weight this sync step: 1 if the group participates and is
-//        uncapped, 0 if capped at its slave potential (Phase 2) or if its
-//        slave is inactive (pre-phase).
+//      - dynamic weight this sync step: 1 if the group participates, 0 if
+//        none of its slave producers are under group control (Phase 2) or if
+//        its slave is inactive (pre-phase).
 //    An eligible group with effective GCW = 0 is excluded from the guide-rate
 //    sum and contributes its rate as a parent target reduction instead — which
-//    is precisely how a capped group's shortfall is redistributed to its
+//    is precisely how an excluded group's shortfall is redistributed to its
 //    siblings.  This decoupling is needed because the cmode (the natural
 //    dynamic control channel) is already taken by the slave-communication
 //    marker for master groups.
 //
-//  Pre-phase: restore master-group control modes from the Schedule, reset the
+//  Pre-phase: restore master-group production control modes from the
+//    Schedule (undoing the Phase 2 finalize of the previous calculation), reset the
 //    effective GCW (participating master groups default to 1), switch inactive
 //    slaves' master groups to individual control and set their effective GCW
 //    to 0 so they don't consume any share of the parent's target, then
@@ -106,25 +112,24 @@ RescoupConstraintsCalculator(
 //    traversal is reused once per non-active rate type (ORAT/WRAT/GRAT/LRAT/
 //    RESV) with an explicit cmode parameter; see the Phase 1 details below.
 //
-//  Phase 2 (cap-and-redistribute): if any master group's Phase-1 target
-//    exceeds its slave's reported production potential, cap the target at
-//    that potential and set the group's effective GCW to 0.  With effective
-//    GCW = 0 the group drops out of the parent's guide-rate sum, and on the
-//    recompute below its (capped) rate is subtracted as a FIELD target
-//    reduction instead; the remaining uncapped groups then absorb the
-//    shortfall through the standard localReduction / FractionCalculator
-//    machinery.  (The capped group is also switched to individual control,
-//    but for master groups the cmode is only a slave-communication marker —
-//    it is the effective GCW, not the cmode, that drives the guide-rate
-//    exclusion; see the effective-GCW note above.)  Finally all master groups
+//  Phase 2 (exclude-and-redistribute): if none of a master group's slave
+//    producers are under group control (e.g. all on their own THP or BHP
+//    limit), set the group's effective GCW to 0.  With effective GCW = 0 the
+//    group drops out of the parent's guide-rate sum, and on the recompute
+//    below its current rate is subtracted as a target reduction instead; the
+//    remaining groups then absorb the shortfall through the standard
+//    localReduction / FractionCalculator machinery, and the excluded group is
+//    sent the target it would get on returning to group control.  (The
+//    excluded group's control mode is left as it is: it is the effective GCW,
+//    not the cmode, that drives the guide-rate exclusion; see the
+//    effective-GCW note above.)  Finally all master groups
 //    are switched to individual control so the master completes its own time
-//    step assuming slave rates remain constant; the controls and effective
-//    GCW are reset at the start of the next sync step.  See
+//    step assuming slave rates remain constant; the effective GCW is reset
+//    at the start of the next calculation.  See
 //    capAndRedistributeProductionTargets_().
 //
 //  Phase 2b (injection exclude-and-redistribute): the same idea per
-//    injection phase, but decided from what the slave's injectors do rather
-//    than from potentials.  A master group none of whose slave injectors are
+//    injection phase.  A master group none of whose slave injectors are
 //    under group control for a phase (e.g. all on their own BHP limit) has
 //    its effective injection GCW for the phase set to 0, so its rate is
 //    subtracted from the parent's target instead of it holding a guide-rate
@@ -226,6 +231,13 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
+    // The previous calculation left every master group on individual control
+    // (see the Phase 2 finalize), so restore the control modes the Schedule
+    // gives them.  Otherwise a master group on FLD or NONE in the deck would be
+    // treated as being on individual control and get its own GCONPROD target
+    // for that mode, which is undefined, wherever its share of the parent's
+    // target is not binding.
+    this->restoreMasterGroupProductionControls_();
     // Reset effective-GCW entries from the previous sync step to GCW=1 before
     // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
     // Phase 2 cap) repopulate the 0-entries for this step.
@@ -251,9 +263,9 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         }
     }
 
-    // Phase 2: cap production targets at slave potentials and redistribute
-    // shortfall to sibling master groups via the standard localReduction /
-    // FractionCalculator machinery.
+    // Phase 2: exclude master groups without producers under group control and
+    // redistribute the shortfall to sibling master groups via the standard
+    // localReduction / FractionCalculator machinery.
     this->capAndRedistributeProductionTargets_(calculator, all_production_constraints);
 
     // Phase 2b: exclude master groups without injectors under group control
@@ -269,57 +281,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
                 all_production_constraints[slave_idx]
             );
         }
-    }
-}
-
-// Recompute the injection targets against the slave rates the master holds now
-// and ship them to the slaves, replacing the targets sent earlier in this sync
-// step.  See the declaration in the header for why this second send exists.
-template <class Scalar, class IndexTraits>
-void
-RescoupConstraintsCalculator<Scalar, IndexTraits>::
-recalculateInjectionTargetsAndSendToSlaves()
-{
-    // As in calculateMasterGroupConstraintsAndSendToSlaves(), the body must run
-    // on every rank of the master communicator: GroupConstraintCalculator relies
-    // on GroupStateHelper, which performs collective operations.  The MPI sends
-    // themselves are rank-0-only inside the send helpers.
-    auto& rescoup_master = this->reservoir_coupling_master_;
-    GroupConstraintCalculator calculator{
-        this->well_model_,
-        this->group_state_helper_
-    };
-    // Decide the injection exclusions afresh from the latest slave data,
-    // exactly as the first calculation of the sync step does: a group whose
-    // injectors have all left group control since then is excluded, and one
-    // whose injectors have returned to group control takes part again.  Only
-    // the injection exclusions are reset; the production caps decided earlier
-    // in the sync step stay in force.
-    rescoup_master.resetEffectiveInjectionGCW();
-    this->excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
-    // The slave injection rates have also changed since the targets were first
-    // computed this sync step, so refresh the injection target reductions.
-    this->updateInjectionGCWAndTargetReductions_();
-    const auto num_slaves = rescoup_master.numSlaves();
-    std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsCoupled(slave_idx)) {
-            all_injection_targets[slave_idx] =
-                this->calculateSlaveGroupInjectionTargets_(slave_idx, calculator);
-        }
-    }
-    this->capAndRedistributeInjectionTargets_(calculator, all_injection_targets);
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (!rescoup_master.slaveIsCoupled(slave_idx)) {
-            continue;
-        }
-        // An empty production-constraint list tells the slave that no production
-        // constraints follow; the ones it received earlier this sync step stay in
-        // force.
-        this->sendSlaveGroupConstraintsToSlave_(
-            rescoup_master, slave_idx, all_injection_targets[slave_idx],
-            /*production_constraints=*/{}
-        );
     }
 }
 
@@ -347,17 +308,7 @@ calculateSlaveGroupConstraints_(std::size_t slave_idx, GroupConstraintCalculator
             auto constraints = calculator.groupProductionConstraints(group);
             if (constraints.has_value()) {
                 production_constraints.push_back(
-                    ProductionGroupConstraints{
-                        group_idx,
-                        constraints->active_target,
-                        constraints->active_cmode,
-                        constraints->oil_limit,
-                        constraints->water_limit,
-                        constraints->gas_limit,
-                        constraints->liquid_limit,
-                        constraints->resv_limit
-                    }
-                );
+                    makeProductionGroupConstraints_(group_idx, *constraints));
             }
         }
     }
@@ -433,7 +384,7 @@ capAndRedistributeInjectionTargets_(
     // and is added back for its own target).  If its injectors can meet that
     // target they return to group control, and the group takes part in the
     // distribution again from the next recalculation, see
-    // recalculateInjectionTargetsAndSendToSlaves().
+    // BlackoilWellModelRescoup::refreshAndSendGroupConstraints().
     auto& rescoup_master = this->reservoir_coupling_master_;
     const auto num_slaves = all_injection_targets.size();
 
@@ -501,76 +452,86 @@ capAndRedistributeProductionTargets_(
     std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints
 )
 {
-    // Cap each master group's production target at its slave's reported
-    // potential, then redistribute the shortfall to sibling groups using
-    // the standard localReduction / FractionCalculator machinery.
+    // Drop each master group none of whose slave producers follow the group's
+    // target from the guide-rate distribution, and redistribute the shortfall
+    // to the sibling groups using the standard localReduction /
+    // FractionCalculator machinery.
     //
-    // Implementation: switch capped groups to individual control so that
-    // updateGroupTargetReduction includes their rates as reduction for the
-    // parent group.  Then recompute targets for uncapped groups — they get
-    // a larger share because the parent's available target increased.
+    // This is what Flow's group control does for a well or group that cannot
+    // meet its share: it runs at its own limit (e.g. THP or BHP), drops out of
+    // the guide-rate distribution, and its current rate becomes a reduction on
+    // the parent's target instead.  On the slave this shows as a group with no
+    // producers under group control, which the slave reports to the master.
+    // The excluded group is sent the target it would get on returning to group
+    // control (its own rate is in the parent's reduction and is added back for
+    // its own target), which leaves its wells at their own limits; if they can
+    // meet that target, they return to group control and the group takes part
+    // in the distribution again from the next recalculation.
+    //
+    // The excluded group's rate is the one the slave last reported.  The
+    // constraints are recalculated after the slaves' initial well solve of the
+    // sync step and at each network iteration (see
+    // BlackoilWellModelRescoup::refreshAndSendGroupConstraints()), but not
+    // over the Newton iterations, so if an excluded group's rate changes later
+    // in the step, e.g. while gas lift adds lift gas, the parent's target is
+    // met only to within that change until the next sync step.
+    //
+    // Implementation: set the effective GCW of the excluded groups to 0 so
+    // that updateGroupTargetReduction includes their rates as reduction for the
+    // parent group, then recompute the targets of all groups.
 
     auto& rescoup_master = this->reservoir_coupling_master_;
     const auto num_slaves = all_production_constraints.size();
 
-    // Step 1: identify groups where target > potential and cap them
-    std::set<std::string> capped_groups;
+    // Step 1: exclude the groups without producers under group control
+    std::set<std::string> excluded_groups;
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
-        for (auto& pc : all_production_constraints[slave_idx]) {
+        for (const auto& pc : all_production_constraints[slave_idx]) {
             const auto& group_name = master_groups[pc.group_name_idx];
-            const auto& potentials = rescoup_master.getSlaveGroupPotentials(group_name);
-            const auto pot = this->potentialForProductionCmode_(
-                potentials, pc.cmode);
-            if (pot >= 0 && pc.target > pot) {
-                pc.target = pot;
-                capped_groups.insert(group_name);
-                // Switch to individual control so updateGroupTargetReduction()
-                // includes this group's rate as reduction for the parent.
-                this->group_state_helper_.groupState().production_control(
-                    group_name, pc.cmode);
-                // Drop the capped group from guide-rate distribution to its
-                // siblings: set effective GCW=0 so it is excluded from
-                // FractionCalculator::guideRateSum on the recompute below.  This
-                // must happen before updateGCWAndTargetReductions_().
-                rescoup_master.setEffectiveGCW(group_name, 0);
+            // A group not available for higher-level control (GCONPROD item 8
+            // = NO) takes no part in the distribution in the first place.
+            if (!this->group_state_helper_.isMasterGroupEligibleForGuideRate(group_name)
+                || rescoup_master.getSlaveGroupNumGroupControlledProducers(group_name) > 0) {
+                continue;
             }
+            this->deferred_logger_.debug(fmt::format(
+                "RC redistribution: {} has no producers under group control, "
+                "excluding from guide-rate distribution", group_name));
+            excluded_groups.insert(group_name);
+            // Drop the group from guide-rate distribution to its siblings: set
+            // effective GCW=0 so it is excluded from
+            // FractionCalculator::guideRateSum, and its rate is included in the
+            // parent's target reduction, on the recompute below.  This must
+            // happen before updateGCWAndTargetReductions_().  The control mode
+            // is left alone: for an eligible master group the effective GCW,
+            // not the control mode, decides both (see
+            // GroupStateHelper::updateGroupTargetReductionRecursive_()), and
+            // individual control would make the recompute fall back to the
+            // group's own GCONPROD target.
+            rescoup_master.setEffectiveGCW(group_name, 0);
         }
     }
 
-    // If no groups are capped, no further action is needed.
-    if (capped_groups.empty()) return;
+    // If no groups are excluded, no further action is needed.
+    if (excluded_groups.empty()) return;
 
-    // Note: updateGroupTargetReduction() below calls sumWellSurfaceRates(), which
-    // for master groups reads from the MPI-received surface_rates in
-    // slave_group_production_data_ rather than from groupState().production_rates().
-    // No override is needed here: the cap condition (target > potential) implies
-    // the slave cannot meet the target, so its wells saturate at BHP and the
-    // group produces at its full potential.  Both surface_rates and potentials
-    // are reported by the slave from the same reservoir-state snapshot, so
-    // surface_rates ≈ potential for any capped group, i.e. the reduction computed
-    // below already reflects the capped rate.
-
-    // Step 2: recompute GCW and reduction rates with capped groups now
-    // individually controlled.
+    // Step 2: recompute GCW and reduction rates with the excluded groups now
+    // dropped from the distribution.
     this->updateGCWAndTargetReductions_();
 
-    // Step 3: recompute targets for uncapped groups using the updated reductions
+    // Step 3: recompute the targets of all groups using the updated reductions
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
         for (auto& pc : all_production_constraints[slave_idx]) {
             const auto& group_name = master_groups[pc.group_name_idx];
-            if (capped_groups.count(group_name) > 0) {
-                this->deferred_logger_.debug(fmt::format(
-                    "RC redistribution: {} capped at potential, target={:.4f}",
-                    group_name, pc.target));
-                continue;  // keep the capped target
-            }
             const Scalar old_target = pc.target;
             const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+            // The limits are shares of the parent's limits too, and change with
+            // the reductions, so replace them together with the target.
             auto constraints = calculator.groupProductionConstraints(group);
             if (constraints.has_value()) {
-                pc.target = constraints->active_target;
+                pc = makeProductionGroupConstraints_(pc.group_name_idx, *constraints);
             }
             this->deferred_logger_.debug(fmt::format(
                 "RC redistribution: {} old_target={:.4f} new_target={:.4f}",
@@ -586,11 +547,8 @@ capAndRedistributeProductionTargets_(
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
         for (auto& pc : all_production_constraints[slave_idx]) {
             const auto& group_name = master_groups[pc.group_name_idx];
-            if (capped_groups.count(group_name) == 0) {
-                // Uncapped groups: switch to individual control too
-                this->group_state_helper_.groupState().production_control(
-                    group_name, pc.cmode);
-            }
+            this->group_state_helper_.groupState().production_control(
+                group_name, pc.cmode);
         }
     }
     // Recompute GCW and reduction: all master groups are now individually
@@ -642,9 +600,8 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
 
 // Exclude the master groups of currently-uncoupled slaves from the injection
 // guide-rate distribution of every phase, by setting their effective injection
-// GCW to 0.  Split out from excludeInactiveSlaveMasterGroupsFromDistribution_()
-// so the injection exclusions can be recomputed within a sync step without
-// touching the production state.
+// GCW to 0.  The injection part of
+// excludeInactiveSlaveMasterGroupsFromDistribution_().
 template <class Scalar, class IndexTraits>
 void
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
@@ -663,33 +620,44 @@ excludeInactiveSlaveMasterGroupsFromInjectionDistribution_()
     }
 }
 
+// The constraints sent to a slave for one master group, from the target and
+// limits the calculator found for it.
 template <class Scalar, class IndexTraits>
-Scalar
+typename RescoupConstraintsCalculator<Scalar, IndexTraits>::ProductionGroupConstraints
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
-potentialForProductionCmode_(
-    const ReservoirCoupling::Potentials<Scalar>& potentials,
-    Group::ProductionCMode cmode) const
+makeProductionGroupConstraints_(
+    std::size_t group_idx,
+    const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints)
 {
-    // The potentials are stored in display units (e.g., SM3/DAY for METRIC)
-    // by GuideRateHandler, so we convert to SI (m3/s) for comparison with
-    // the target from GroupConstraintCalculator which is in SI.
-    using RcPhase = ReservoirCoupling::Phase;
-    const auto& units = this->schedule_.getUnits();
-    switch (cmode) {
-    case Group::ProductionCMode::ORAT:
-        return units.to_si(UnitSystem::measure::liquid_surface_rate,
-                           potentials[RcPhase::Oil]);
-    case Group::ProductionCMode::GRAT:
-        return units.to_si(UnitSystem::measure::gas_surface_rate,
-                           potentials[RcPhase::Gas]);
-    case Group::ProductionCMode::WRAT:
-        return units.to_si(UnitSystem::measure::liquid_surface_rate,
-                           potentials[RcPhase::Water]);
-    case Group::ProductionCMode::LRAT:
-        return units.to_si(UnitSystem::measure::liquid_surface_rate,
-                           potentials[RcPhase::Oil] + potentials[RcPhase::Water]);
-    default:
-        return -1;  // No capping for RESV, FLD, NONE, etc.
+    return ProductionGroupConstraints{
+        group_idx,
+        constraints.active_target,
+        constraints.active_cmode,
+        constraints.oil_limit,
+        constraints.water_limit,
+        constraints.gas_limit,
+        constraints.liquid_limit,
+        constraints.resv_limit
+    };
+}
+
+// Restore the production control mode the Schedule gives each master group.
+// The Phase 2 finalize of the previous calculation switched them all to
+// individual control for the master's own time step.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+restoreMasterGroupProductionControls_()
+{
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    for (std::size_t slave_idx = 0; slave_idx < rescoup_master.numSlaves(); ++slave_idx) {
+        for (const auto& group_name : rescoup_master.getMasterGroupNamesForSlave(slave_idx)) {
+            const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+            if (group.isProductionGroup()) {
+                this->group_state_helper_.groupState().production_control(
+                    group_name, group.productionControls(this->summary_state_).cmode);
+            }
+        }
     }
 }
 

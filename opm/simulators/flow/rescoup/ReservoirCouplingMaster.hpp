@@ -71,7 +71,8 @@ public:
     ///   calculation.  A participating master group (GCONPROD item 8
     ///   RESPOND_TO_PARENT = YES) defaults to 1 so it is counted in the parent's
     ///   guide-rate sum even while on individual control; it is set to 0
-    ///   when capped at its slave's potential or when its slave is inactive.  See
+    ///   when none of its slave producers are under group control or when its
+    ///   slave is inactive.  See
     ///   GroupStateHelper::updateGroupControlledWellsRecursive_ for the reader.
     /// @return The stored effective GCW, or 1 if the group has no explicit entry
     ///   (the participating-and-uncapped default).
@@ -159,6 +160,7 @@ public:
     const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name);
     int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                                  ReservoirCoupling::Phase phase) const;
+    int getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const;
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
     int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
