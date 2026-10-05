@@ -573,6 +573,7 @@ list (APPEND TEST_SOURCE_FILES
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES
     tests/test_ghostlastmatrixadapter.cpp
+    tests/test_parallel_transmissibility.cpp
     tests/test_parallelistlinformation.cpp
     tests/test_ParallelFieldProps.cpp
     tests/test_ParallelSerialization.cpp
@@ -720,6 +721,7 @@ list (APPEND TEST_DATA_FILES
   tests/include/comp_explicit_runspec.inc
   tests/include/comp_explicit_schedule.inc
   tests/include/comp_explicit_water.inc
+  tests/parallel_transmissibility.DATA
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data
