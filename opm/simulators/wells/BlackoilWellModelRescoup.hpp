@@ -170,12 +170,31 @@ public:
     /// from rescoupSyncSummaryData() when a slave has fresh data to deliver.
     void receiveSlaveGroupData();
 
+    /// \brief Slave-side counterpart of refreshAndSendGroupConstraints():
+    ///   receive the recomputed constraints and bring the slave group control
+    ///   modes and the targets and limits in force in line with them.
+    void receiveRefreshedGroupConstraintsFromMaster();
+
+    /// \brief Master-side: recompute the master's group state from the slave
+    ///   rates just received and send the resulting group constraints on,
+    ///   replacing the ones the slaves are holding.
+    ///
+    /// Called immediately after each receiveSlaveGroupData() within a sync
+    /// step: the one after the slaves' initial well solve in beginTimeStep(),
+    /// and each non-final one inside the network iteration.  This way a group
+    /// whose rate is subtracted from its parent's target, and a target derived
+    /// from slave production (GCONINJE REIN, SALE or VREP), keep up with the
+    /// rates the slaves report.  Its slave-side counterpart is
+    /// receiveRefreshedGroupConstraintsFromMaster().
+    void refreshAndSendGroupConstraints();
+
     /// \brief Slave-side: recompute the injection targets and production
     ///   limits in force for each slave group from the constraints just
     ///   received, and re-evaluate the group and field level UDQs that may
     ///   read them.  Called after every receive of group constraints: the
-    ///   handshake at the start of a sync step and the replacement targets a
-    ///   master sends back during the cross-rescoup network iteration.
+    ///   handshake at the start of a sync step and the replacement
+    ///   constraints a master sends later in the sync step (see
+    ///   receiveRefreshedGroupConstraintsFromMaster()).
     void refreshSlaveGroupTargets();
 
     /// \brief End-of-substep summary-data synchronisation.
@@ -201,10 +220,10 @@ public:
     /// \brief Master-side: compute per-master-group production targets and
     ///   injection limits, then dispatch them to each activated slave.
     ///
-    /// Runs once per sync step.  Drives the full master-side target-
-    /// distribution flow (pre-phase + Phase 1/2/3) via the constraint
-    /// calculator helper.  Called from the master's beginTimeStep
-    /// first-substep handshake.
+    /// Drives the full master-side target-distribution flow (pre-phase +
+    /// Phase 1/2/3) via the constraint calculator helper.  Called from the
+    /// master's beginTimeStep first-substep handshake, and again from
+    /// refreshAndSendGroupConstraints() later in the sync step.
     void sendMasterGroupConstraintsToSlaves();
 
     /// \brief Send master-computed network-leaf node pressures to each
@@ -301,17 +320,6 @@ private:
     ///   activated slaves and gates the master's own iteration.
     bool masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const;
 
-    /// \brief Master-side: recompute the master's group state from the slave
-    ///   rates just received and send the resulting injection targets on.
-    ///
-    /// Called immediately after each non-final receiveSlaveGroupData() inside
-    /// the network iteration, so that a target derived from slave production
-    /// (GCONINJE REIN, SALE or VREP) keeps up with the production the slaves
-    /// report as the network iteration proceeds.  Its slave-side counterpart
-    /// is the receiveGroupConstraintsFromMaster() in
-    /// BlackoilWellModel::maybeSendSlaveGroupFlowToMaster_().
-    void refreshAndSendInjectionTargets_();
-
     /// \brief The surface injection rate target the slave's own schedule gives
     ///   a group for a phase (SI), 0 when the group has no injection control
     ///   for that phase.  What the summary evaluator reports for a group
@@ -328,11 +336,6 @@ private:
                                      const Group::ProductionCMode cmode,
                                      const int reportStepIdx,
                                      const SummaryState& summary_state) const;
-
-    /// \brief Send injection targets to each activated slave, replacing the
-    ///   ones the slaves are currently holding.  Production constraints are
-    ///   not resent.  Only called by refreshAndSendInjectionTargets_().
-    void sendMasterGroupInjectionTargetsToSlaves_();
 
     /// \brief Slave-side: true iff this slave's own deck put the named group
     ///   into its own surface network as a fixed-pressure node.

@@ -570,12 +570,17 @@ namespace Opm {
             // Need to update group data based on new well solution.
             this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ false);
             this->rescoupHelper_.sendSlaveGroupDataToMaster();
+            // The master recomputes the constraints from the solved rates.
+            this->rescoupHelper_.receiveRefreshedGroupConstraintsFromMaster();
         }
         else if (this->isReservoirCouplingMaster()) {
             if (this->reservoirCouplingMaster().isFirstSubstepOfSyncTimestep()) {
                 this->rescoupHelper_.sendMasterGroupConstraintsToSlaves();
                 this->rescoupHelper_.sendCoupledNetworkActiveStatus();
                 this->rescoupHelper_.receiveSlaveGroupData();
+                // The rates just received are solved for this sync step, the
+                // ones the constraints above were computed from were not.
+                this->rescoupHelper_.refreshAndSendGroupConstraints();
             }
         }
 #endif
@@ -2550,13 +2555,10 @@ namespace Opm {
         if (!is_final) {
             this->updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget=*/false);
             this->rescoupHelper_.sendSlaveGroupDataToMaster();
-            // The master turns the rates just sent into fresh injection targets
-            // for the groups it controls through a derived GCONINJE mode, and
-            // sends them straight back.  See
-            // BlackoilWellModelRescoup::refreshAndSendInjectionTargets_().
-            this->rescoupHelper_.receiveGroupConstraintsFromMaster();
-            // The targets in force, and the UDQs built on them, follow suit.
-            this->rescoupHelper_.refreshSlaveGroupTargets();
+            // The master turns the rates just sent into fresh group constraints
+            // and sends them straight back.  See
+            // BlackoilWellModelRescoup::refreshAndSendGroupConstraints().
+            this->rescoupHelper_.receiveRefreshedGroupConstraintsFromMaster();
             return /*more_network_update=*/true;
         }
         return /*more_network_update=*/false;

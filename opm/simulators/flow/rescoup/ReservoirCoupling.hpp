@@ -249,6 +249,13 @@ struct SlaveGroupProductionData {
     ProductionRates<Scalar> reservoir_rates;  // Reservoir production rates by phase
     Scalar voidage_rate{0.0};               // Reservoir voidage replacement rate
     Scalar gas_reinjection_rate{0.0};       // Reinjection (surface) rate for the gas phase
+    // Number of the slave group's producers under group control.  Zero means that no
+    // producer follows the group's target, e.g. because all of them are on their own
+    // THP or BHP limit.  The master then excludes the master group from its parent's
+    // guide-rate distribution, see
+    // RescoupConstraintsCalculator::excludeAndRedistributeProductionTargets_().
+    int num_group_controlled_producers{0};
+
     // The following are only used for the summary output of the master group, which
     // has no wells of its own.  They are summed over the slave group's producers as
     // the group summary vectors of the slave run are (see the corresponding
@@ -276,7 +283,7 @@ struct SlaveGroupInjectionData {
     // target for the phase, e.g. because all of them are on their own BHP
     // limit.  The master then excludes the master group from its parent's
     // guide-rate distribution, see
-    // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+    // RescoupConstraintsCalculator::excludeAndRedistributeInjectionTargets_().
     std::array<int, static_cast<std::size_t>(Phase::Count)> num_group_controlled_injectors{};
 
     // The following are only used for the summary output of the master group, as

@@ -695,7 +695,7 @@ updateInjectionGroupPotentialFromSubGroups_(const Group& group, std::vector<Scal
         // guide rate.  They are only sent from a slave to the reservoir-coupling
         // master (see RescoupSendSlaveGroupData), which no longer uses them to
         // decide on injection targets (see
-        // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_()).
+        // RescoupConstraintsCalculator::excludeAndRedistributeInjectionTargets_()).
         const auto gefac = group_tmp.getGroupEfficiencyFactor();
         for (int phase = 0; phase < this->num_phases_; phase++) {
             pot[phase] += gefac*this_pot[phase];

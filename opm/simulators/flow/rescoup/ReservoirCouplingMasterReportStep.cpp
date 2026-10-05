@@ -102,6 +102,29 @@ getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCo
 template <class Scalar>
 int
 ReservoirCouplingMasterReportStep<Scalar>::
+getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
+{
+    auto it = this->getMasterGroupToSlaveNameMap().find(master_group_name);
+    if (it != this->getMasterGroupToSlaveNameMap().end()) {
+        auto& slave_name = it->second;
+        auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, master_group_name);
+        return this->slave_group_production_data_.at(slave_name)[group_idx]
+            .num_group_controlled_producers;
+    }
+    else {
+        RCOUP_LOG_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Master group name {} not found in master-to-slave-group-name mapping",
+                master_group_name
+            )
+        );
+    }
+}
+
+template <class Scalar>
+int
+ReservoirCouplingMasterReportStep<Scalar>::
 getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                          ReservoirCoupling::Phase phase) const
 {

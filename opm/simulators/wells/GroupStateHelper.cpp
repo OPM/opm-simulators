@@ -2471,8 +2471,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // = YES], OR a plain FLD/NONE group: the group participates in the
             // parent's guide-rate distribution.  Its GCW is decoupled from the
             // production control mode and read from the rescoup master, which
-            // sets it to 1 when participating-and-uncapped and 0 when capped at
-            // the slave potential or belonging to an inactive slave.  See
+            // sets it to 1 when participating and 0 when none of its slave
+            // producers are under group control or it belongs to an inactive
+            // slave.  See
             // RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
             num_wells = this->reservoirCouplingMaster().effectiveGCW(group_name);
         } else {
@@ -2494,7 +2495,7 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // mode, and its weight is read from the rescoup master -- 1 when
             // participating, 0 when none of its slave injectors are under group
             // control for the phase or it belongs to an inactive slave.  See
-            // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+            // RescoupConstraintsCalculator::excludeAndRedistributeInjectionTargets_().
             num_wells = this->reservoirCouplingMaster().effectiveInjectionGCW(
                 group_name, injection_phase);
         } else {
@@ -2932,7 +2933,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
             // RESPOND_TO_PARENT = YES) has its target guide-rate distributed by the
             // parent, so its rate must NOT also be subtracted from the parent's
             // available target.  Its control mode is set to individual control for
-            // slave communication, see RescoupConstraintsCalculator::capAndRedistributeProductionTargets_(),
+            // slave communication, see RescoupConstraintsCalculator::excludeAndRedistributeProductionTargets_(),
             // which would otherwise flag it as individual and
             // double-count it here. Treat it as group-controlled; a capped or inactive participating
             // group keeps effective GCW = 0 and is still reduced via the num==0 branch below.
