@@ -144,12 +144,16 @@ public:
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
-    /// @brief Get the injection potentials for a slave group
+    /// @brief Get the number of a slave group's injectors under group control for a phase
     /// @param master_group_name Name of the master group
-    /// @return Reference to the injection potentials data for the specified group
-    /// @note Used to cap a master group's injection target at what its slave group can
-    ///   inject, see RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
-    const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name) const;
+    /// @param phase Injection phase
+    /// @return Number of injectors following the group's target for the phase, as
+    ///   reported by the slave
+    /// @note Used to exclude a master group whose injectors all run at their own
+    ///   limits from its parent's guide-rate distribution, see
+    ///   RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+    int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
+                                                 ReservoirCoupling::Phase phase) const;
 
     /// @brief Get the production potentials for a slave group
     /// @param master_group_name Name of the master group

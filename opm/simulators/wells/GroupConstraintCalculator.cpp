@@ -697,11 +697,16 @@ bottomGroupHasIndividualControl_()
         return false;
     }
     // The same holds for injection, per phase, see
-    // GroupStateHelper::isMasterGroupEligibleForInjectionGuideRate().
+    // GroupStateHelper::isMasterGroupEligibleForInjectionGuideRate().  An
+    // eligible group excluded from the distribution (effective injection GCW
+    // = 0, see RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_())
+    // is however in the parent's reduction, so its rate must be added back for
+    // its own target, as for a group on individual control.
     if (this->isInjectionConstraint()
         && this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
                this->bottom_group_.name(), this->injectionPhase_())) {
-        return false;
+        return this->groupStateHelper().reservoirCouplingMaster().effectiveInjectionGCW(
+                   this->bottom_group_.name(), this->injectionPhase_()) == 0;
     }
     return !this->hasHigherLevelControlOrNoLimit(this->bottom_group_);
 }
