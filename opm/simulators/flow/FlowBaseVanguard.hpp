@@ -306,10 +306,9 @@ protected:
     {
         return [this, cartMapper, isCpGrid](int elemIdx) {
             std::array<double,dimensionworld> centroid;
-            const auto rank = this->gridView().comm().rank();
-            const auto maxLevel = this->gridView().grid().maxLevel();
-            bool useEclipse = !isCpGrid || (isCpGrid && (rank == 0) && (maxLevel == 0));
-            if (useEclipse)
+            // Grid processing can move a CpGrid cell's corners (MINPV merging), so
+            // take its centroid from the CpGrid itself, the same way on every rank.
+            if (!isCpGrid)
             {
                 centroid =  this->eclState().getInputGrid().getCellCenter(cartMapper.cartesianIndex(elemIdx));
             }

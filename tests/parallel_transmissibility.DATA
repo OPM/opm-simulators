@@ -1,0 +1,73 @@
+-- The top layer falls below MINPV.  On an edge-conformal grid its cells are
+-- merged into the bottom layer, whose corners then differ from the input
+-- grid's.  Every face between two ranks lies between merged cells.
+
+RUNSPEC
+
+DIMENS
+ 4 1 2 /
+
+OIL
+WATER
+
+METRIC
+
+TABDIMS
+/
+
+START
+ 1 JAN 2020 /
+
+GRID
+
+DX
+ 8*10 /
+DY
+ 8*10 /
+DZ
+ 8*1 /
+TOPS
+ 4*1000 /
+
+PORO
+ 4*0.0001 4*0.2 /
+PERMX
+ 8*100 /
+PERMY
+ 8*100 /
+PERMZ
+ 8*10 /
+
+MINPV
+ 0.5 /
+
+PROPS
+
+SWOF
+ 0.2 0.0 1.0 0.0
+ 1.0 1.0 0.0 0.0 /
+
+PVTW
+ 1.0 1.0 1.0e-5 0.5 0.0 /
+
+PVDO
+   1.0 1.00 1.0
+ 400.0 0.99 1.0 /
+
+DENSITY
+ 800 1000 1 /
+
+ROCK
+ 1.0 1.0e-5 /
+
+SOLUTION
+
+EQUIL
+ 1000 100 1100 0 /
+
+SCHEDULE
+
+TSTEP
+ 1 /
+
+END
