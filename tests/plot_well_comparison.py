@@ -41,6 +41,10 @@ class WellComparisonManager:
         return len(values) > 0 and np.any(values)
 
     def _write_pdf(self, test_name, plot_entries):
+        if not plot_entries:
+            print(f"No summary curves to plot for {test_name}")
+            return
+
         with PdfPages(f'{test_name}.pdf') as pdf:
             for entry in plot_entries:
                 fig, ax = plt.subplots()
