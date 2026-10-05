@@ -269,11 +269,18 @@ struct SlaveGroupProductionData {
 // Slave group injection data sent to the corresponding master group for target calculation.
 template <class Scalar>
 struct SlaveGroupInjectionData {
-    // Group injection potentials: the master caps a master group's injection
-    // target for a phase at the corresponding potential.
+    // Group injection potentials (summed from the injectors' potentials).
     Potentials<Scalar> potentials;
     InjectionRates<Scalar> surface_rates;    // Surface injection rates by phase
     InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
+    // Number of the slave group's injectors under group control, by phase
+    // (indexed by Phase).  Zero means that no injector follows the group's
+    // target for the phase, e.g. because all of them are on their own BHP
+    // limit.  The master then excludes the master group from its parent's
+    // guide-rate distribution, see
+    // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+    std::array<int, static_cast<std::size_t>(Phase::Count)> num_group_controlled_injectors{};
+
     // The following are only used for the summary output of the master group, as
     // for SlaveGroupProductionData, where it is also explained how well_potentials
     // differ from potentials.

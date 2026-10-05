@@ -88,8 +88,8 @@ public:
     /// @details The injection counterpart of effectiveGCW().  A master group that
     ///   is available for higher-level injection control (GCONINJE item 8 = YES)
     ///   defaults to 1, so it is counted in its parent's injection guide-rate sum
-    ///   for that phase even while on individual control; it is set to 0 when its
-    ///   target for the phase is capped at its slave's injection potential, or
+    ///   for that phase even while on individual control; it is set to 0 when
+    ///   none of its slave injectors are under group control for the phase, or
     ///   when its slave is inactive.
     /// @return The stored effective GCW, or 1 if the group has no explicit entry
     ///   for the phase (the participating-and-uncapped default).
@@ -112,6 +112,7 @@ public:
     /// @brief Clear the injection effective-GCW entries only, keeping the
     ///   production ones.  Used when the injection targets are recomputed within
     ///   a sync step while the production caps decided earlier stay in force.
+    ///   The injection exclusions are then decided afresh.
     void resetEffectiveInjectionGCW() { this->effective_injection_gcw_.clear(); }
 
     double getActivationDate() const { return this->activation_date_; }
@@ -156,6 +157,8 @@ public:
         return this->slave_name_to_master_groups_map_;
     }
     const Potentials& getSlaveGroupInjectionPotentials(const std::string &master_group_name);
+    int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
+                                                 ReservoirCoupling::Phase phase) const;
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
     int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }

@@ -289,6 +289,7 @@ struct MPITraits<::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>>
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::potentials,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::surface_rates,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::reservoir_rates,
+          &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::num_group_controlled_injectors,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::well_potentials,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::history_rates,
           &::Opm::ReservoirCoupling::SlaveGroupInjectionData<Scalar>::num_flowing_injectors

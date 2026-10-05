@@ -2490,8 +2490,8 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // As for production: the group participates in the parent's injection
             // guide-rate distribution for this phase whatever its injection control
             // mode, and its weight is read from the rescoup master -- 1 when
-            // participating-and-uncapped, 0 when capped at the slave's injection
-            // potential or belonging to an inactive slave.  See
+            // participating, 0 when none of its slave injectors are under group
+            // control for the phase or it belongs to an inactive slave.  See
             // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
             num_wells = this->reservoirCouplingMaster().effectiveInjectionGCW(
                 group_name, injection_phase);

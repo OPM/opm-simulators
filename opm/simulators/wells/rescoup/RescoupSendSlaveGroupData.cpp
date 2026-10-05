@@ -148,6 +148,14 @@ collectSlaveGroupInjectionData_(std::size_t group_idx) const
     );
     Potentials potentials = this->collectSlaveGroupInjectionPotentials_(group_idx);
     SlaveGroupInjectionData injection_data{potentials, surface_rates, reservoir_rates};
+    // The group state holds the counts summed over all ranks.
+    for (const auto phase : {ReservoirCoupling::Phase::Oil,
+                             ReservoirCoupling::Phase::Gas,
+                             ReservoirCoupling::Phase::Water}) {
+        injection_data.num_group_controlled_injectors[static_cast<std::size_t>(phase)] =
+            this->group_state_.number_of_wells_under_inj_group_control(
+                group.name(), ReservoirCoupling::convertToOpmPhase(phase));
+    }
     // MAYBE TODO: As for the production data in collectSlaveGroupProductionData_().
     this->collectSlaveGroupSummaryInjectionData_(group_idx, injection_data);
     return injection_data;

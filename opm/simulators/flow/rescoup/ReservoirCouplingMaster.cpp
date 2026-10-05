@@ -133,6 +133,16 @@ getMasterGroupRate(
 }
 
 template <class Scalar>
+int
+ReservoirCouplingMaster<Scalar>::
+getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
+                                         ReservoirCoupling::Phase phase) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupNumGroupControlledInjectors(master_group_name, phase);
+}
+
+template <class Scalar>
 const ReservoirCoupling::Potentials<Scalar>&
 ReservoirCouplingMaster<Scalar>::
 getSlaveGroupInjectionPotentials(const std::string &master_group_name)

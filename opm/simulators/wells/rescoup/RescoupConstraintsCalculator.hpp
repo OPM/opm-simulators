@@ -98,10 +98,11 @@ public:
     ///   wells against them, and they are what produced the rates this
     ///   recomputation is based on.
     ///
-    ///   The injection caps at the slaves' injection potentials are decided
-    ///   afresh here, from the latest slave data, in the same way as in the
-    ///   first calculation of the sync step (see
-    ///   capAndRedistributeInjectionTargets_()); the production caps are kept.
+    ///   The exclusion of master groups without injectors under group control
+    ///   from the injection distribution is decided afresh here, from the
+    ///   latest slave data, in the same way as in the first calculation of the
+    ///   sync step (see capAndRedistributeInjectionTargets_()); the production
+    ///   caps are kept.
     ///
     ///   The recomputation is unconditional: it runs for every master group of
     ///   every activated slave, whatever mode each one is under.  A `RATE`
@@ -115,6 +116,14 @@ public:
     ///   switches to `RATE` as soon as its target reaches the `GCONINJE`
     ///   maximum.  The filter would therefore have to be evaluated per refresh
     ///   over the whole chain.
+    ///
+    ///   The slave rates used here are solved at the start-of-step reservoir
+    ///   state, before the slaves' first Newton iteration.  A sibling group on
+    ///   its own limits (e.g. an injector on BHP control) is subtracted at that
+    ///   rate, which can differ from its rate at the end of the step, so a
+    ///   binding parent target is met only to within that change (about -2%
+    ///   in rescoup/t2a_injcap; using the previous step's end rates instead
+    ///   gives about +0.7% and misses switches to BHP control within the step).
     void recalculateInjectionTargetsAndSendToSlaves();
 
 private:
@@ -159,7 +168,7 @@ private:
     ///   groups via `GroupConstraintCalculator`.  Finally switches every
     ///   master group to individual control with its final allocated
     ///   target so the master completes its own time step assuming slave
-    ///   rates remain constant.  Injection targets are capped separately,
+    ///   rates remain constant.  Injection targets are handled separately,
     ///   see capAndRedistributeInjectionTargets_().
     /// @param calculator Group-constraint calculator (same instance as
     ///   used in Phase 1).
@@ -169,20 +178,21 @@ private:
         GroupConstraintCalculator<Scalar, IndexTraits>& calculator,
         std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints);
 
-    /// @brief Phase 2b: cap per-phase injection targets at the slave's
-    ///   reported injection potential and redistribute the surplus to
-    ///   sibling master groups.
+    /// @brief Phase 2b: exclude master groups none of whose slave injectors
+    ///   are under group control for a phase from the guide-rate
+    ///   distribution, and redistribute the surplus to sibling master groups.
     /// @details The injection counterpart of
-    ///   capAndRedistributeProductionTargets_().  A master group whose
-    ///   target for a phase exceeds its slave group's injection potential
-    ///   for that phase is capped at the potential and its effective
-    ///   injection GCW for the phase is set to 0, which drops it from the
-    ///   parent's injection guide-rate sum and makes its rate a parent
-    ///   target reduction instead.  The injection GCW and the injection
-    ///   target reductions are then recomputed and the uncapped groups'
-    ///   targets are re-evaluated, so they absorb the surplus.  This is
-    ///   repeated until no target exceeds its potential, since a larger
-    ///   share can push another group over its own potential.
+    ///   capAndRedistributeProductionTargets_(), but decided from the number
+    ///   of the slave group's injectors under group control (reported by the
+    ///   slave) rather than from potentials, which for injectors with
+    ///   cross-flow can be far from what the wells inject.  An excluded group
+    ///   has its effective injection GCW for the phase set to 0, which drops
+    ///   it from the parent's injection guide-rate sum and makes its rate a
+    ///   parent target reduction instead.  The injection GCW and the
+    ///   injection target reductions are then recomputed and all targets are
+    ///   re-evaluated, so the remaining groups absorb the surplus.  The
+    ///   excluded group gets the target it would get on returning to group
+    ///   control, as a well that cannot meet its share does.
     /// @param calculator Group-constraint calculator (same instance as
     ///   used for the initial targets).
     /// @param all_injection_targets In/out: per-slave injection targets,
@@ -205,7 +215,7 @@ private:
     /// @details Sets their effective injection GCW to 0.  The injection
     ///   part of excludeInactiveSlaveMasterGroupsFromDistribution_(),
     ///   separate so that recalculateInjectionTargetsAndSendToSlaves() can
-    ///   rebuild the injection caps without touching production state.
+    ///   rebuild the injection exclusions without touching production state.
     void excludeInactiveSlaveMasterGroupsFromInjectionDistribution_();
 
     /// @brief Project a slave-reported potentials triple onto a single
@@ -221,16 +231,6 @@ private:
     Scalar potentialForProductionCmode_(
         const ReservoirCoupling::Potentials<Scalar>& potentials,
         Group::ProductionCMode cmode) const;
-
-    /// @brief The slave-reported injection potential for one phase, in SI
-    ///   units, for comparison against an injection target.
-    /// @param potentials Slave-reported injection potentials (oil, gas,
-    ///   water), stored in display units.
-    /// @param phase The injection phase.
-    /// @return The potential for the phase in SI units.
-    Scalar potentialForInjectionPhase_(
-        const ReservoirCoupling::Potentials<Scalar>& potentials,
-        ReservoirCoupling::Phase phase) const;
 
     /// @brief Phase 3: send the computed constraints for one slave to
     ///   that slave over MPI.
