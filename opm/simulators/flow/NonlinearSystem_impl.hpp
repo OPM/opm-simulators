@@ -199,10 +199,9 @@ prepareStep(const SimulatorTimerInterface& timer)
     }
 
     if (lastStepFailed) {
+        // Keep the linear solver's reuse policy across timestep retries.
+        // Solver backends discard failed preconditioner setups themselves.
         simulator_.problem().updateFailed();
-        if (enable_state_rollback_) {
-            simulator_.model().newtonMethod().eraseMatrix();
-        }
     }
     else {
         simulator_.problem().advanceTimeLevel();
