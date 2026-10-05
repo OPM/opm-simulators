@@ -94,15 +94,16 @@ class WellComparisonManager:
         ref_time_in_secs = [(v - ref_time[0]).total_seconds() for v in ref_time]
         sim_time_in_secs = [(v - sim_time[0]).total_seconds() for v in sim_time]
 
-        # Attempt at sorting the graphs in descending eyeball norm order.
-        # - Normalize by inf-norm to get the same range in each graph, ie (0,1).
-        # - Convert graphs to probability distributions (ie integral under curve should be 1).
-        # - Use the wasserstein distance scaled by area under reference curve.
         ref_curve_names = {key for key in ref_file.keys() if self._is_curve_key(key)}
         sim_curve_names = {key for key in sim_file.keys() if self._is_curve_key(key)}
         curve_names = ref_curve_names | sim_curve_names
 
+        # Attempt at sorting the graphs in descending eyeball norm order.
+        # - Normalize by inf-norm to get the same range in each graph, ie (0,1).
+        # - Convert graphs to probability distributions (ie integral under curve should be 1).
+        # - Use the wasserstein distance scaled by area under reference curve.
         deviation = {}
+        one_sided = []
         curve_data = {}
         for curve_name in sorted(curve_names):
             try:
@@ -113,10 +114,12 @@ class WellComparisonManager:
 
             curve_data[curve_name] = (ref, sim)
 
+            # A curve in only one of the files has nothing to compare against.
+            # It is plotted after the compared curves and does not rank the test.
             if ref is None or sim is None:
                 values = sim if ref is None else ref
                 if self._has_nonzero_data(values):
-                    deviation[curve_name] = float('inf')
+                    one_sided.append(curve_name)
                 continue
 
             if len(ref) == 0 and len(sim) == 0:
@@ -151,7 +154,7 @@ class WellComparisonManager:
             deviation[curve_name] = stats.wasserstein_distance(ref_scaled / A_ref, sim_scaled / A_sim) * A_ref
 
         plot_entries = []
-        for curve_name in sorted(deviation, key=lambda x: deviation[x], reverse=True):
+        for curve_name in sorted(deviation, key=lambda x: deviation[x], reverse=True) + one_sided:
             ref, sim = curve_data[curve_name]
             series = []
             legend = []
@@ -204,7 +207,6 @@ class WellComparisonManager:
         self._write_pdf(test_name, plot_entries)
 
         # Deviation is infinite in the following cases:
-        # - A curve exists in only one of the files.
         # - One of the curves is empty and the other is not.
         # - One of the curves is zero and the other is not.
         #
