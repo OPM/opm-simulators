@@ -588,6 +588,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ecl_thermal_law_manager.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuTabulatedFunctions.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_smart_pointers.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_resources.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_pointer_attributes.cpp)
@@ -619,6 +620,7 @@ if(CUDA_FOUND OR hip_FOUND)
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
+      tests/gpuistl/test_gpuTabulatedFunctions.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
       tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_GpuSparseTable.cu
