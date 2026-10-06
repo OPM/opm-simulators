@@ -82,6 +82,16 @@ struct WellMatrixStructure
     {
         return !(*this == other);
     }
+
+    // Whether everything sized by the wells still has the same size.  A change
+    // that keeps these can be absorbed by rebuilding patterns; a change that
+    // does not introduces unknowns the initial build never saw.
+    bool hasSameDimensions(const WellMatrixStructure& other) const
+    {
+        return numResDofs == other.numResDofs
+            && totalWellBlocks == other.totalWellBlocks
+            && wellCells.size() == other.wellCells.size();
+    }
 };
 
 template<class Matrix>
