@@ -702,11 +702,6 @@ add_test_runSimulator(
     --enable-vtk-output=true
 )
 
-add_test_runSimulator(CASENAME 1dcompositional_flowexp_comp3_2p
-                      FILENAME 1D_COMP
-                      SIMULATOR flowexp_comp3_2p
-                      DIR compositional)
-
 add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       FILENAME 1D_COMP
                       SIMULATOR flow_comp3_2p
