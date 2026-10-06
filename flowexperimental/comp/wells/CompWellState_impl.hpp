@@ -180,6 +180,9 @@ report() const
         auto& well = res[ws.name];
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
+        well.current_control.isProducer = ws.producer;
+        well.current_control.prod = ws.production_cmode;
+        well.current_control.inj = ws.injection_cmode;
         const auto& surface_rates = ws.surface_phase_rates;
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             well.rates.set(rt::wat, surface_rates[FluidSystem::waterPhaseIdx]);
