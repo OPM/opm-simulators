@@ -79,8 +79,10 @@ namespace Opm
 // The classic PressureBhpTransferPolicy has no well unknowns on the fine level
 // at all (the wells are Schur-eliminated in the operator), so it can neither
 // restrict a well residual nor apply a coarse bhp correction.  Selecting
-// Classic here reproduces that, which makes the system solver and the classic
-// cprw differ only in numerics rather than in formulation.
+// Classic here uses the same restriction/prolongation as that policy, so the
+// system solver solves the same pressure system as the classic cprw path.
+// Any remaining mismatch between the two is then purely numerical (e.g.
+// floating-point summation order), not a difference in what is solved.
 enum class WellTransfer {
     Full,           // restrict the well residual and prolong the bhp correction
     NoProlongation, // restrict the well residual, discard the bhp correction
@@ -144,7 +146,7 @@ public:
                             const int verbosity = 0)
         : S_(S)
         , prm_(coarseSolverPrm)
-        , pressureIndex_(pressureIndex)
+        , reservoirPressureVariableIndex_(pressureIndex)
         , wellTransfer_(wellTransfer)
         , comm_(comm)
         , diagonal_(diagonal)
@@ -387,7 +389,7 @@ private:
         const auto& w1 = weights[_1];
 
         const std::size_t numRes = A.N();
-        const int p = pressureIndex_;
+        const int p = reservoirPressureVariableIndex_;
         const int q = layout.pressureVariableIndex;
 
         *coarseMatrix_ = 0.0;
@@ -412,9 +414,8 @@ private:
         // segment pressures, which is what MultisegmentWellEquations::
         // extractCPRPressureMatrix does (it accumulates over every segment
         // row).  Taking the top block alone instead loses every segment but
-        // the first: on Norne with one segment per connection that is most of
-        // the well, and it is what made the coarse system far weaker than the
-        // classic cprw one for multisegment wells.
+        // the first, which matters for multisegment wells -- see
+        // system/README.md.
         for (std::size_t c = 0; c < numRes; ++c) {
             const auto& bw = w0[c];
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
@@ -562,7 +563,7 @@ private:
 
         vRes = 0.0;
         for (std::size_t c = 0; c < numRes; ++c) {
-            vRes[c][pressureIndex_] = in[c][0];
+            vRes[c][reservoirPressureVariableIndex_] = in[c][0];
         }
 
         vWell = 0.0;
@@ -626,7 +627,8 @@ private:
 
     const SystemMatrix<Scalar>& S_;
     PropertyTree prm_;
-    int pressureIndex_ = 0;
+    // Index of the reservoir pressure variable in a reservoir block (A/C row).
+    int reservoirPressureVariableIndex_ = 0;
     WellTransfer wellTransfer_ = WellTransfer::Full;
     const Comm* comm_ = nullptr;
     WellCoarseDiagonal diagonal_ = WellCoarseDiagonal::ContractD;

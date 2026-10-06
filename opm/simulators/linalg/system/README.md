@@ -20,3 +20,7 @@ total linear iterations for the whole run.
   once the well solve is inexact.
 - `contract_d` also brings the classic CPRW path itself from 2716 to 2646 on the same
   case.
+- Summing a well's coarse column over every one of its blocks, rather than the top
+  block alone, matters for multisegment wells: on Norne with one segment per
+  connection, taking the top block alone loses every segment but the first -- most of
+  the well -- making the coarse system far weaker than the classic cprw one.
