@@ -757,7 +757,7 @@ scaledWellFractions(std::vector<Scalar>& fractions,
             fractions[oil_pos] -= fractions[gas_pos];
         }
     }
-    else if (has_wfrac_variable) {
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         fractions[water_pos] = 1.0;
 
