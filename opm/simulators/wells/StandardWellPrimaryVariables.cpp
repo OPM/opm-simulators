@@ -695,13 +695,8 @@ processFractions()
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 scaledWellFractions(std::vector<Scalar>& fractions,
-                    DeferredLogger& deferred_logger) const
+                    DeferredLogger& /* deferred_logger */) const
 {
-    if constexpr (Indices::enableSolvent) {
-        OPM_DEFLOG_THROW(std::runtime_error,
-                         "Function scaledWellFractions does not support solvent yet.",
-                         deferred_logger);
-    }
     fractions.resize(well_.numPhases(), 0.0);
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
@@ -715,6 +710,11 @@ scaledWellFractions(std::vector<Scalar>& fractions,
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             fractions[gas_pos] = value_[GFrac];
             fractions[oil_pos] -= fractions[gas_pos];
+            if constexpr (Indices::enableSolvent) {
+                // solvent counted as gas, as in copyToWellState()
+                fractions[gas_pos] += value_[SFrac];
+                fractions[oil_pos] -= value_[SFrac];
+            }
         }
     }
     else if (has_wfrac_variable) {
@@ -724,6 +724,10 @@ scaledWellFractions(std::vector<Scalar>& fractions,
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
             fractions[gas_pos] = value_[GFrac];
             fractions[water_pos] -= fractions[gas_pos];
+            if constexpr (Indices::enableSolvent) {
+                fractions[gas_pos] += value_[SFrac];
+                fractions[water_pos] -= value_[SFrac];
+            }
         }
     }
     else if (has_gfrac_variable) {
