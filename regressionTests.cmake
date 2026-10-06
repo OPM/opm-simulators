@@ -1463,6 +1463,26 @@ add_multiple_tests(
     gconprod
 )
 
+set(_gconprod_solvent_cases
+  GRUP_SOLVENT
+  GRUP_SOLVENT_FALLBACK
+)
+
+add_multiple_tests(
+  _gconprod_solvent_cases
+  gconprod_
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater_solvent
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gconprod
+)
+
 set(_pinch_cases
   PINCH_MULTZ_ALL
   PINCH_MULTZ-_ALL
