@@ -79,6 +79,73 @@ namespace Opm {
 
 template<class TypeTag> class NonlinearSystemBlackOilReservoir;
 
+namespace detail {
+
+/// Find the overlap cells of one NLDD subdomain.
+///
+/// Breadth-first search over face neighbours, starting from the owned cells:
+/// layer k consists of the neighbours of layer k-1 that are not yet in the
+/// subdomain. Only cells owned by this MPI rank are added, so the overlap
+/// stops at rank boundaries. The seeds of the overlap cells are appended to
+/// \p seeds, which on entry holds the seeds of the owned cells.
+///
+/// \p in_domain is scratch space with one entry per cell on this rank. An
+/// entry equal to \p mark means the cell is already in the subdomain; passing
+/// a new mark for each subdomain avoids clearing it in between.
+///
+/// \return The overlap cells, in the order they were found.
+template <class Grid, class ElementMapper, class EntitySeed>
+std::vector<int> findOverlapCells(const Grid& grid,
+                                  const ElementMapper& elementMapper,
+                                  const std::vector<int>& owned_cells,
+                                  std::vector<EntitySeed>& seeds,
+                                  const int num_layers,
+                                  const int mark,
+                                  std::vector<int>& in_domain)
+{
+    const auto& gridView = grid.leafGridView();
+    // The owned cells are in the subdomain from the start.
+    for (const int cell : owned_cells) {
+        in_domain[cell] = mark;
+    }
+
+    std::vector<int> overlap;
+    // seeds[layer_begin, layer_end) are the cells added by the previous layer,
+    // initially the owned cells.
+    std::size_t layer_begin = 0;
+    for (int layer = 0; layer < num_layers; ++layer) {
+        // seeds grows inside the loop; the new entries form the next layer.
+        const std::size_t layer_end = seeds.size();
+        for (std::size_t i = layer_begin; i < layer_end; ++i) {
+            const auto element = grid.entity(seeds[i]);
+            for (const auto& intersection : intersections(gridView, element)) {
+                // Skip faces without a neighbour cell (domain boundary).
+                if (!intersection.neighbor()) {
+                    continue;
+                }
+                // Skip cells owned by another MPI rank.
+                const auto outside = intersection.outside();
+                if (outside.partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+                // Skip cells that are already in the subdomain.
+                const int cell = elementMapper.index(outside);
+                if (in_domain[cell] == mark) {
+                    continue;
+                }
+                // A new overlap cell: it is also a seed for the next layer.
+                in_domain[cell] = mark;
+                overlap.push_back(cell);
+                seeds.push_back(outside.seed());
+            }
+        }
+        layer_begin = layer_end;
+    }
+    return overlap;
+}
+
+} // namespace detail
+
 /// A NLDD implementation used by the reservoir nonlinear system.
 template <class TypeTag>
 class NonlinearSystemNldd
@@ -163,22 +230,35 @@ public:
         assert(count == sizes);
 
         // Create the domains.
+        const int num_overlap_layers = model_.param().nldd_num_overlap_layers_;
+        const auto& elementMapper = model_.simulator().model().elementMapper();
+        // Scratch space for detail::findOverlapCells, shared by all domains.
+        std::vector<int> in_domain(num_overlap_layers > 0 ? partition_vector.size() : 0, -1);
         for (int index = 0; index < num_domains; ++index) {
             std::vector<bool> interior(partition_vector.size(), false);
             for (int ix : partitions[index]) {
                 interior[ix] = true;
             }
 
-            // The view holds exactly the cells of the local problem. The
-            // one-layer neighbour overlap that SubGridPart adds by default
-            // is not used by the local solves, which only touch cells
-            // reported as interior, so it is left out.
-            Dune::SubGridPart<Grid> view{grid, std::move(seeds[index]), /*overlap=*/false};
-
             // Mark the last domain for skipping if it contains isolated cells
             const bool skip = isolated_cells && (index == num_domains - 1);
+
+            std::vector<int> overlap_cells;
+            if (num_overlap_layers > 0 && !skip) {
+                overlap_cells = detail::findOverlapCells(grid, elementMapper, partitions[index],
+                                                         seeds[index], num_overlap_layers,
+                                                         index, in_domain);
+            }
+
+            // The view holds exactly the cells of the local problem, and
+            // reports all of them, overlap cells included, as interior since
+            // all of them are solved for. The one-layer neighbour overlap
+            // that SubGridPart adds by default is not used, so it is left out.
+            Dune::SubGridPart<Grid> view{grid, std::move(seeds[index]), /*overlap=*/false};
+
             this->domains_.emplace_back(index,
                                         std::move(partitions[index]),
+                                        std::move(overlap_cells),
                                         std::move(interior),
                                         std::move(view),
                                         skip);
@@ -725,6 +805,7 @@ private:
         const auto& gridView = domain.view;
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+        const auto& elementMapper = model.elementMapper();
 
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
@@ -734,6 +815,11 @@ private:
                 continue;
             }
             const auto& elem = *elemIt;
+            // Convergence is measured on the owned cells only. Overlap cells
+            // are owned, and checked, by another subdomain.
+            if (domain.hasOverlap() && !domain.interior[elementMapper.index(elem)]) {
+                continue;
+            }
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -758,7 +844,7 @@ private:
         const int bSize = B_avg.size();
         for ( int i = 0; i<bSize; ++i )
         {
-            B_avg[ i ] /= Scalar(domain.cells.size());
+            B_avg[ i ] /= Scalar(domain.interior_cells.size());
         }
 
         return {pvSumLocal, numAquiferPvSumLocal};
@@ -870,8 +956,10 @@ private:
         if (!converged_at_initial_state) {
             if (iterCtx.iteration() == 0) {
                 // Log header.
-                std::string msg = fmt::format("Domain {} on rank {}, size {}, containing cell {}\n| Iter",
-                                              domain.index, this->rank_, domain.cells.size(), domain.cells[0]);
+                std::string msg = fmt::format("Domain {} on rank {}, size {} (overlap {}), containing cell {}\n| Iter",
+                                              domain.index, this->rank_, domain.interior_cells.size(),
+                                              domain.cells.size() - domain.interior_cells.size(),
+                                              domain.interior_cells[0]);
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     msg += "    MB(";
                     msg += model_.compNames().name(compIdx)[0];
@@ -941,10 +1029,10 @@ private:
                 // Use average pressures to order domains.
                 for (const auto& domain : domains_) {
                     const Scalar press_sum =
-                        std::accumulate(domain.cells.begin(), domain.cells.end(), Scalar{0},
+                        std::accumulate(domain.interior_cells.begin(), domain.interior_cells.end(), Scalar{0},
                                         [&solution](const auto acc, const auto c)
                                         { return acc + solution[c][Indices::pressureSwitchIdx]; });
-                    const Scalar avgpress = press_sum / domain.cells.size();
+                    const Scalar avgpress = press_sum / domain.interior_cells.size();
                     measure_per_domain[domain.index] = avgpress;
                 }
                 break;
@@ -953,7 +1041,7 @@ private:
                 // Use max pressures to order domains.
                 for (const auto& domain : domains_) {
                     measure_per_domain[domain.index] =
-                        std::accumulate(domain.cells.begin(), domain.cells.end(), Scalar{0},
+                        std::accumulate(domain.interior_cells.begin(), domain.interior_cells.end(), Scalar{0},
                                         [&solution](const auto acc, const auto c)
                                         { return std::max(acc, solution[c][Indices::pressureSwitchIdx]); });
                 }
@@ -965,7 +1053,7 @@ private:
                 const int num_vars = residual[0].size();
                 for (const auto& domain : domains_) {
                     Scalar maxres = 0.0;
-                    for (const int c : domain.cells) {
+                    for (const int c : domain.interior_cells) {
                         for (int ii = 0; ii < num_vars; ++ii) {
                             maxres = std::max(maxres, std::fabs(residual[c][ii]));
                         }
@@ -998,8 +1086,9 @@ private:
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto convrep = solveDomain(domain, timer, local_report, logger, false);
         if (local_report.converged) {
-            auto local_solution = Details::extractVector(solution, domain.cells);
-            Details::setGlobal(local_solution, domain.cells, locally_solved);
+            // Each cell takes its value from the subdomain that owns it.
+            auto local_solution = Details::extractVector(solution, domain.interior_cells);
+            Details::setGlobal(local_solution, domain.interior_cells, locally_solved);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
@@ -1055,8 +1144,12 @@ private:
         }
         if (local_report.converged) {
             local_report.converged_domains += 1;
-            auto local_solution = Details::extractVector(solution, domain.cells);
-            Details::setGlobal(local_solution, domain.cells, locally_solved);
+            auto local_solution = Details::extractVector(solution, domain.interior_cells);
+            Details::setGlobal(local_solution, domain.interior_cells, locally_solved);
+            // The updated overlap values stay in the global solution vector,
+            // so subdomains solved later in the sweep start from them. An
+            // overlap cell ends the sweep with the value from the last
+            // subdomain that solved for it, which need not be its owner.
         } else {
             local_report.unconverged_domains += 1;
             wellModel_.setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
@@ -1074,7 +1167,7 @@ private:
         const auto& problem = simulator.problem();
         const auto& residual = simulator.model().linearizer().residual();
 
-        for (const int cell_idx : domain.cells) {
+        for (const int cell_idx : domain.interior_cells) {
             const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
                                    model.dofTotalVolume(cell_idx);
             const auto& cellResidual = residual[cell_idx];
@@ -1151,7 +1244,7 @@ private:
             return;
         }
         const auto numActivePhases = FluidSystem::numActivePhases();
-        for (const auto globalDofIdx : domain.cells) {
+        for (const auto globalDofIdx : domain.interior_cells) {
             const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
 
             for (unsigned activePhaseIdx = 0; activePhaseIdx < numActivePhases; ++activePhaseIdx) {
@@ -1191,8 +1284,10 @@ private:
     {
         const auto numActivePhases = FluidSystem::numActivePhases();
 
-        // Check mobility changes for all cells in the domain
-        for (const auto globalDofIdx : domain.cells) {
+        // Check mobility changes for the owned cells. Overlap cells change
+        // whenever a neighbouring subdomain is solved, which on its own is no
+        // reason to solve this subdomain again.
+        for (const auto globalDofIdx : domain.interior_cells) {
             const auto& intQuants = model_.simulator().model().intensiveQuantities(globalDofIdx, /* time_idx = */ 0);
 
             // Calculate average previous mobility for normalization
