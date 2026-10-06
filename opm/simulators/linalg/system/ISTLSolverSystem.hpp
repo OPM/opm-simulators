@@ -36,7 +36,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -283,9 +282,9 @@ private:
         }
 
         // Which wells are on pressure control.  Asking this is the outer
-        // layer's job; below here it is just a flag per well.  Index j is the
-        // position in this rank's BlackoilWellModel well container at this
-        // linear solve, the same loop addBCDMatrix uses to build the D blocks.
+        // layer's job; below here it is just a flag per well.  The
+        // pressureControlled array is in the same order as the locally present
+        // wells in the BlackoilWellModel, which addBCDMatrix also follows.
         wellLayout_.pressureControlled.clear();
         if (wellLayout_.identityOnPressureControl) {
             const auto& wellModel = this->simulator_.problem().wellModel();
@@ -311,64 +310,39 @@ private:
     WellVector<Scalar> computeWellWeights(const ResVector<Scalar>& resWeights) const
     {
         const std::size_t numBlocks = mergedD_.N();
-        const int q = wellLayout_.pressureDofIndex;
+        // See the assumptions about well variable and equation indices in SystemTypes.hpp.
+        const int q = wellLayout_.pressureVariableIndex;
 
         WellVector<Scalar> weights(numBlocks);
-        std::optional<std::size_t> cellavgWell;
+
+        if (wellWeightType_ == "cellavg") {
+            // Classic CPRW (use_well_weights = false): for every block b of
+            // well j, lambda_b = mean of the cell weights w_c over all cells c perforated by j.
+            for (std::size_t j = 0; j < wellLayout_.numWells(); ++j) {
+                const auto lambda = averagePerforatedCellWeights(
+                    resWeights, wellLayout_.firstBlock(j), wellLayout_.endBlock(j));
+                for (std::size_t wb = wellLayout_.firstBlock(j); wb < wellLayout_.endBlock(j); ++wb) {
+                    weights[wb] = lambda;
+                }
+            }
+            return weights;
+        }
+
+        if (wellWeightType_ == "cellblockavg") {
+            // lambda_b = mean of w_c over the cells c connected to block b only.
+            for (std::size_t wb = 0; wb < numBlocks; ++wb) {
+                weights[wb] = averagePerforatedCellWeights(resWeights, wb, wb + 1);
+            }
+            return weights;
+        }
+
         for (std::size_t wb = 0; wb < numBlocks; ++wb) {
             auto& lambda = weights[wb];
             lambda = 0.0;
 
             if (wellWeightType_ == "unit") {
-                // Pick the pressure row of the well equations as-is.
+                // Pick the control or pressure equation of the well as-is.
                 lambda[q] = 1.0;
-                continue;
-            }
-
-            if (wellWeightType_ == "cellavg" || wellWeightType_ == "cellblockavg") {
-                // The classic CPRW weighting (use_well_weights = false):
-                // average the reservoir weights over perforated cells and use
-                // them on the conservation equations only, weight zero on the
-                // control equation.
-                //
-                // "cellavg" averages over every perforation of the whole well
-                // and gives every block of that well the same weights, which is
-                // what MultisegmentWellEquations::extractCPRPressureMatrix
-                // does. "cellblockavg" averages per block row instead, which
-                // is a finer but non-classic variant.
-                const bool perWell = (wellWeightType_ == "cellavg");
-                const auto well = perWell ? wellLayout_.wellOfBlock(wb) : std::nullopt;
-                if (perWell && well.has_value() && well == cellavgWell) {
-                    // A well's blocks are contiguous and share one average.
-                    lambda = weights[wb - 1];
-                    continue;
-                }
-                cellavgWell = well;
-                const std::size_t first = perWell ? wellLayout_.firstBlock(*well) : wb;
-                const std::size_t last = perWell ? wellLayout_.endBlock(*well) : wb + 1;
-                int nperf = 0;
-                for (std::size_t b = first; b < last; ++b) {
-                    for (auto col = mergedB_[b].begin(), end = mergedB_[b].end();
-                         col != end; ++col) {
-                        const auto& cw = resWeights[col.index()];
-                        for (int i = 0; i < numResDofs; ++i) {
-                            lambda[i] += cw[i];
-                        }
-                        ++nperf;
-                    }
-                }
-                if (nperf > 0) {
-                    for (int i = 0; i < numResDofs; ++i) {
-                        lambda[i] /= nperf;
-                    }
-                } else {
-                    // No perforations of this well on this rank; regularise
-                    // rather than leaving an empty row.
-                    for (int i = 0; i < numResDofs; ++i) {
-                        lambda[i] = 1.0;
-                    }
-                }
-                lambda[q] = 0.0;
                 continue;
             }
 
@@ -403,6 +377,36 @@ private:
             }
         }
         return weights;
+    }
+
+    // Mean reservoir weight over the cells connected to well blocks [first, last),
+    // applied to the well conservation equations; zero on the control equation.
+    Dune::FieldVector<Scalar, numWellDofs>
+    averagePerforatedCellWeights(const ResVector<Scalar>& resWeights,
+                                 const std::size_t first,
+                                 const std::size_t last) const
+    {
+        Dune::FieldVector<Scalar, numWellDofs> lambda(0.0);
+        int numPerfs = 0;
+        for (std::size_t b = first; b < last; ++b) {
+            for (auto col = mergedB_[b].begin(), end = mergedB_[b].end(); col != end; ++col) {
+                const auto& cw = resWeights[col.index()];
+                for (int conservation_eq_index = 0; conservation_eq_index < numResDofs;
+                     ++conservation_eq_index) {
+                    lambda[conservation_eq_index] += cw[conservation_eq_index];
+                }
+                ++numPerfs;
+            }
+        }
+        for (int conservation_eq_index = 0; conservation_eq_index < numResDofs;
+             ++conservation_eq_index) {
+            // No perforations on this rank: regularise rather than leave an empty row.
+            lambda[conservation_eq_index] = numPerfs > 0
+                ? lambda[conservation_eq_index] / numPerfs
+                : Scalar{1.0};
+        }
+        lambda[wellLayout_.pressureVariableIndex] = 0.0;
+        return lambda;
     }
 
     void refreshSystemSolverForChangedWellStructure(const Opm::PropertyTree& prm)

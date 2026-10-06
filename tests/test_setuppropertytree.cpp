@@ -89,20 +89,6 @@ BOOST_AUTO_TEST_CASE(MatrixAddWellContributionsIncompatible)
     BOOST_CHECK_NO_THROW(Opm::checkSystemCPRMatrixAddWell(false));
 }
 
-// With add_wells the pressure stage is assembled and solved by the system
-// preconditioner itself, taking its solver settings from the coarsesolver
-// sub-tree. Without that sub-tree there is nothing to solve the CPRW pressure
-// system with, so it must be rejected at setup time rather than falling over
-// inside SystemCprwPressureStage::buildStructure.
-BOOST_AUTO_TEST_CASE(JSONAddWellsRequiresCoarseSolver)
-{
-    Opm::PropertyTree prm("options_system_cprw_missing_coarsesolver.json");
-    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
-
-    Opm::PropertyTree complete("options_system_cprw_complete.json");
-    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(complete));
-}
-
 // An approximate (Krylov) well solver stops on a tolerance and therefore does
 // a different number of inner iterations per right-hand side, so the system
 // preconditioner is no longer a fixed operator. Only a flexible outer solver

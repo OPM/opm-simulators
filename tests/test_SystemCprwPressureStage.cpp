@@ -139,7 +139,7 @@ struct Fixture
                                    {{2, 28.0}, {3, 29.0}}});
 
         layout.wellBlockOffsets = {0, 1, 4};
-        layout.pressureDofIndex = wellPressureIndex;
+        layout.pressureVariableIndex = wellPressureIndex;
 
         S.A = &A;
         S.C = &C;

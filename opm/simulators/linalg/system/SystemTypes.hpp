@@ -91,7 +91,9 @@ struct WellDofLayout
     // MultisegmentWellPrimaryVariables::SPres is
     // has_wfrac + has_gfrac + 1 + enable_energy == 3.  Carried as data so that
     // generalising later is a change in the outer layer only.
-    int pressureDofIndex = numWellDofs - 1;
+    // The wells define equation indices only, not separate variable indices;
+    // this relies on the two coinciding.
+    int pressureVariableIndex = numWellDofs - 1;
 
     // Per well: is it currently on pressure (bhp/thp) control?  Filled in the
     // outer layer, which is the only place that can ask.  When

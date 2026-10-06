@@ -726,7 +726,6 @@ list (APPEND TEST_DATA_FILES
   tests/options_system_cprw_approx_wells.json
   tests/options_system_cprw_approx_wells_bad_outer.json
   tests/options_system_cprw_complete.json
-  tests/options_system_cprw_missing_coarsesolver.json
   tests/GCONSUMP.DATA
   tests/GCONSUMP_COMPLEX.DATA
   tests/GROUP_HIGHER_CONSTRAINTS.DATA

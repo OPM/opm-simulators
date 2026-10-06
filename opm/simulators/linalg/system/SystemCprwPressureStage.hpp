@@ -388,7 +388,7 @@ private:
 
         const std::size_t numRes = A.N();
         const int p = pressureIndex_;
-        const int q = layout.pressureDofIndex;
+        const int q = layout.pressureVariableIndex;
 
         *coarseMatrix_ = 0.0;
 
@@ -558,7 +558,7 @@ private:
     {
         const auto& layout = wellLayout();
         const std::size_t numRes = vRes.size();
-        const int q = layout.pressureDofIndex;
+        const int q = layout.pressureVariableIndex;
 
         vRes = 0.0;
         for (std::size_t c = 0; c < numRes; ++c) {
