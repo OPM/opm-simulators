@@ -302,6 +302,27 @@ public:
 
     void addCellRates(std::map<int, RateVector>& cellRates_) const;
 
+    //! \brief Add the connection rates of the cells accepted by cellFilter
+    //! as constant sources, i.e. without derivatives.
+    template <class CellFilter>
+    void addConstantCellRates(std::map<int, RateVector>& cellRates,
+                              const CellFilter& cellFilter) const
+    {
+        if (!this->operability_status_.solvable) {
+            return;
+        }
+        for (int perfIdx = 0; perfIdx < this->number_of_local_perforations_; ++perfIdx) {
+            const auto cellIdx = this->cells()[perfIdx];
+            if (!cellFilter(cellIdx)) {
+                continue;
+            }
+            auto& rates = cellRates.try_emplace(cellIdx, 0.0).first->second;
+            for (auto i = 0*RateVector::dimension; i < RateVector::dimension; ++i) {
+                rates[i] += getValue(connectionRates_[perfIdx][i]);
+            }
+        }
+    }
+
     Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
 
     // TODO: theoretically, it should be a const function
