@@ -41,6 +41,10 @@ class WellComparisonManager:
         return len(values) > 0 and np.any(values)
 
     def _write_pdf(self, test_name, plot_entries):
+        if not plot_entries:
+            print(f"No summary curves to plot for {test_name}")
+            return
+
         with PdfPages(f'{test_name}.pdf') as pdf:
             for entry in plot_entries:
                 fig, ax = plt.subplots()
@@ -94,19 +98,32 @@ class WellComparisonManager:
         ref_time_in_secs = [(v - ref_time[0]).total_seconds() for v in ref_time]
         sim_time_in_secs = [(v - sim_time[0]).total_seconds() for v in sim_time]
 
+        ref_curve_names = {key for key in ref_file.keys() if self._is_curve_key(key)}
+        sim_curve_names = {key for key in sim_file.keys() if self._is_curve_key(key)}
+        curve_names = ref_curve_names | sim_curve_names
+
         # Attempt at sorting the graphs in descending eyeball norm order.
         # - Normalize by inf-norm to get the same range in each graph, ie (0,1).
         # - Convert graphs to probability distributions (ie integral under curve should be 1).
         # - Use the wasserstein distance scaled by area under reference curve.
         deviation = {}
-        for curve_name in ref_file.keys():
-            if not self._is_curve_key(curve_name):
+        one_sided = []
+        curve_data = {}
+        for curve_name in sorted(curve_names):
+            try:
+                ref = ref_file[curve_name] if curve_name in ref_curve_names else None
+                sim = sim_file[curve_name] if curve_name in sim_curve_names else None
+            except Exception:
                 continue
 
-            try:
-                ref = ref_file[curve_name]
-                sim = sim_file[curve_name]
-            except Exception:
+            curve_data[curve_name] = (ref, sim)
+
+            # A curve in only one of the files has nothing to compare against.
+            # It is plotted after the compared curves and does not rank the test.
+            if ref is None or sim is None:
+                values = sim if ref is None else ref
+                if self._has_nonzero_data(values):
+                    one_sided.append(curve_name)
                 continue
 
             if len(ref) == 0 and len(sim) == 0:
@@ -141,42 +158,57 @@ class WellComparisonManager:
             deviation[curve_name] = stats.wasserstein_distance(ref_scaled / A_ref, sim_scaled / A_sim) * A_ref
 
         plot_entries = []
-        for curve_name in sorted(deviation, key=lambda x: deviation[x], reverse=True):
-            try:
-                ref = ref_file[curve_name]
-                sim = sim_file[curve_name]
-            except Exception:
-                continue
+        for curve_name in sorted(deviation, key=lambda x: deviation[x], reverse=True) + one_sided:
+            ref, sim = curve_data[curve_name]
+            series = []
+            legend = []
+            unit = None
 
-            if len(ref) == 0 or len(sim) == 0:
+            # Fixed colors: the reference is blue and the new simulation orange,
+            # also when only one of them has the curve.
+            if ref is not None and len(ref) > 0:
+                unit = ref_file.units(curve_name)
+                legend.append(ref_name)
+                series.append(
+                    {
+                        'time': ref_time,
+                        'values': ref,
+                        'style': {
+                            'color': 'C0',
+                            'linestyle': 'dashed',
+                            'linewidth': 0.5,
+                            'marker': 'o',
+                            'markersize': 1.0,
+                        },
+                    }
+                )
+
+            if sim is not None and len(sim) > 0:
+                if unit is None:
+                    unit = sim_file.units(curve_name)
+                legend.append(sim_name)
+                series.append(
+                    {
+                        'time': sim_time,
+                        'values': sim,
+                        'style': {
+                            'color': 'C1',
+                            'linewidth': 0.5,
+                            'marker': 'x',
+                            'markersize': 1.0,
+                        },
+                    }
+                )
+
+            if not series:
                 continue
 
             plot_entries.append(
                 {
                     'name': curve_name,
-                    'unit': ref_file.units(curve_name),
-                    'legend': [ref_name, sim_name],
-                    'series': [
-                        {
-                            'time': ref_time,
-                            'values': ref,
-                            'style': {
-                                'linestyle': 'dashed',
-                                'linewidth': 0.5,
-                                'marker': 'o',
-                                'markersize': 1.0,
-                            },
-                        },
-                        {
-                            'time': sim_time,
-                            'values': sim,
-                            'style': {
-                                'linewidth': 0.5,
-                                'marker': 'x',
-                                'markersize': 1.0,
-                            },
-                        },
-                    ],
+                    'unit': unit,
+                    'legend': legend,
+                    'series': series,
                 }
             )
 
@@ -221,6 +253,7 @@ class WellComparisonManager:
                             'time': sim_time,
                             'values': sim,
                             'style': {
+                                'color': 'C1',
                                 'linewidth': 0.5,
                                 'marker': 'x',
                                 'markersize': 1.0,
