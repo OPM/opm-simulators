@@ -192,6 +192,25 @@ add_test_compare_restarted_simulation(
 
 add_test_compare_restarted_simulation(
   CASENAME
+    aquct_04_co2sol
+  FILENAME
+    AQUCT-04
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater_solvent
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    5
+  DIR
+    aquifers
+)
+
+add_test_compare_restarted_simulation(
+  CASENAME
     network_01_restart
   FILENAME
     NETWORK-01-RESTART
