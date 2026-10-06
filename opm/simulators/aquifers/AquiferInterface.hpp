@@ -99,6 +99,13 @@ protected:
         return rspec.co2Storage() || rspec.h2Storage();
     }
 
+    // Brine properties come from the internal brine model rather than PVTW/DENSITY
+    bool internal_brine_model_() const
+    {
+        const auto& rspec = simulator_.vanguard().eclState().runspec();
+        return rspec.co2Storage() || rspec.h2Storage() || rspec.co2Sol() || rspec.h2Sol();
+    }
+
     int phaseIdx_() const
     {
         // If OIL is used to model brine the aquifer should do the same
