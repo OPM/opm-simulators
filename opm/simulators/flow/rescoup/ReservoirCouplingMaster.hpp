@@ -202,8 +202,20 @@ public:
     void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
     const Schedule& schedule() const { return this->schedule_; }
     void sendNextTimeStepToSlaves(double next_time_step) {
+        this->report_step_data_->setSyncStepLength(next_time_step);
         this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
     }
+
+    /// @brief Save the master group flow rates at the start of the sync step
+    /// @details See ReservoirCouplingMasterReportStep::saveGroupFlowsAtStartOfSyncStep().
+    void saveGroupFlowsAtStartOfSyncStep() { this->report_step_data_->saveGroupFlowsAtStartOfSyncStep(); }
+
+    /// @brief Update the flow-change time step limit (GRUPMAST item 4) from the flows
+    ///   received at the end of the sync step
+    void updateFlowChangeTimeStepLimit() { this->report_step_data_->updateFlowChangeTimeStepLimit(); }
+
+    /// @brief Upper limit (in seconds) for the next sync step from GRUPMAST item 4, infinity if none
+    double flowChangeTimeStepLimit() const { return this->report_step_data_->flowChangeTimeStepLimit(); }
 
     /// @brief Send a single boolean to a slave telling it whether the master
     ///   will iterate the cross-rescoup network exchange this sync timestep.

@@ -340,7 +340,11 @@ rescoupSyncSummaryData()
     // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
     if (this->isReservoirCouplingMaster()) {
         if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
+            // The rates held before the receive are the slaves' start-of-step rates, which
+            // GRUPMAST item 4 compares with the end-of-step rates.
+            this->reservoirCouplingMaster().saveGroupFlowsAtStartOfSyncStep();
             this->receiveSlaveGroupData();
+            this->reservoirCouplingMaster().updateFlowChangeTimeStepLimit();
             this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
         }
     }
