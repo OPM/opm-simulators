@@ -83,6 +83,7 @@ compareResultFileContents () {
 #   ${testProperty["dir_name"]}  is the source directory in opm-tests.
 #   ${testProperty["file_name"]} is the base name of the simulation input file.
 #   ${testProperty["test_name"]} is the test suite's name of the particular test.
+#   ${testProperty["ref_sim"]}   is the simulator whose reference solutions the test uses.
 extractTestProperties () {
     local failed_test
 
@@ -103,6 +104,11 @@ extractTestProperties () {
     testProperty["test_name"]=$(awk -v test="${failed_test}" \
                                     -v prop="TESTNAME" -f "${dir}/getprop.awk" \
                                     "${BUILD_DIR}/CTestTestfile.cmake")
+
+    testProperty["ref_sim"]=$(awk -v test="${failed_test}" \
+                                  -v prop="REFERENCE_SIMULATOR" -f "${dir}/getprop.awk" \
+                                  "${BUILD_DIR}/CTestTestfile.cmake")
+    testProperty["ref_sim"]=${testProperty["ref_sim"]:-${testProperty["binary"]}}
 }
 
 # Copy results from a test run to reference dir
@@ -178,11 +184,13 @@ copyDamarisToReferenceDir () {
 # $2 is location of reference solutions in opm-tests
 # $3 is base name of simulation input file
 # $4 is test suite's name of test base run
+# $5 is name of simulator whose reference solutions are updated
 updateRestartResults () {
     local binary="${1}"
     local dir_name="${2}"
     local file_name="${3}"
     local test_name="${4}"
+    local ref_sim="${5}"
 
     local rst_steps
     local rst_step
@@ -197,7 +205,7 @@ updateRestartResults () {
     do
         copyToReferenceDir \
             "${BUILD_DIR}/tests/results/${binary}+${test_name}/restart/" \
-            "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${binary}/restart" \
+            "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${ref_sim}/restart" \
             "${file_name}_RESTART_${rst_step}" \
             EGRID INIT RFT SMSPEC UNRST UNSMRY
 
@@ -223,10 +231,11 @@ updateFullSimulationResults () {
     local dir_name=${testProperty["dir_name"]}
     local file_name=${testProperty["file_name"]}
     local test_name=${testProperty["test_name"]}
+    local ref_sim=${testProperty["ref_sim"]}
 
     if copyToReferenceDir \
            "${BUILD_DIR}/tests/results/${binary}+${test_name}" \
-           "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${binary}" \
+           "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${ref_sim}" \
            "${file_name}" \
            EGRID INIT RFT SMSPEC UNRST UNSMRY
     then
@@ -235,7 +244,7 @@ updateFullSimulationResults () {
 
     if [ -d "${BUILD_DIR}/tests/results/${binary}+${test_name}/restart" ]
     then
-        updateRestartResults "${binary}" "${dir_name}" "${file_name}" "${test_name}"
+        updateRestartResults "${binary}" "${dir_name}" "${file_name}" "${test_name}" "${ref_sim}"
     fi
 }
 

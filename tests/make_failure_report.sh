@@ -25,7 +25,8 @@ do
     dir_name=$(awk -v test="${failed_test}" -v prop="DIRNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
     file_name=$(awk -v test="${failed_test}" -v prop="FILENAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
     test_name=$(awk -v test="${failed_test}" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
-    JOBLIST+="-r $OPM_TESTS_ROOT/${dir_name}/opm-simulation-reference/${binary}/${file_name} -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name -c $test_name -o plot\\n"
+    ref_sim=$(awk -v test="${failed_test}" -v prop="REFERENCE_SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    JOBLIST+="-r $OPM_TESTS_ROOT/${dir_name}/opm-simulation-reference/${ref_sim:-$binary}/${file_name} -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name -c $test_name -o plot\\n"
   elif grep -q -E "compareSeparateECLFiles" <<< $failed_test
   then
     failed_test=$(echo "${failed_test}" | sed -e 's/.*://')

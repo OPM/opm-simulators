@@ -136,6 +136,7 @@ function(add_test_compareECLFiles)
                         DIRNAME ${PARAM_DIR}
                         FILENAME ${PARAM_FILENAME}
                         SIMULATOR ${PARAM_SIMULATOR}
+                        REFERENCE_SIMULATOR ${reference_simulator}
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
 
