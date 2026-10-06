@@ -174,6 +174,9 @@ private:
     const Scalar wellbore_volume_ {21.6*0.001};
     // hydrocarbon volume fraction below which the wellbore counts as holding water alone
     static constexpr Scalar min_hydrocarbon_fraction_ {1.e-8};
+    // pressure of each connection relative to the bhp: the hydrostatic head of
+    // the wellbore fluid, kept from the start of the time step
+    std::vector<Scalar> connection_pressure_diffs_;
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
@@ -191,6 +194,7 @@ private:
 
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,
+                                       const int con_idx,
                                        std::vector<EvalWell>& con_rates) const;
 
     void updateWellboreContents();
