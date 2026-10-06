@@ -27,6 +27,7 @@
 
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
 
+#include <span>
 #include <stdexcept>
 
 namespace Opm {
@@ -397,6 +398,9 @@ iterateWellEq(const Simulator& simulator,
 
         solveEqAndUpdateWellState(well_state);
     } while (it < max_iter);
+
+    // After convergence, the last assembly is at the current well state.
+    updateConnectionQuantities(well_state);
     return converged;
 }
 
@@ -473,6 +477,37 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
     } else { // injector
         // only gas injection yet
         surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+    }
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateConnectionQuantities(SingleWellState& well_state) const
+{
+    // Convert the connection mass rates to volume rates with the density of
+    // the well stream at surface conditions.
+    constexpr int np = FluidSystem::numPhases;
+    const auto& surface_cond = this->surface_conditions_;
+    const Scalar surface_density = getValue(surface_cond.density());
+    auto& conn_data = well_state.connection_data;
+    for (int con = 0; con < this->number_of_connection_; ++con) {
+        Scalar mass_rate = 0.;
+        for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+            mass_rate += getValue(this->connectionRates_[con][comp_idx]);
+        }
+        const Scalar surface_rate = mass_rate / surface_density;
+        const auto rates = std::span{conn_data.surface_phase_rates}.subspan(con * np, np);
+        if (well_state.producer) {
+            for (int p = 0; p < np; ++p) {
+                rates[p] = surface_rate * getValue(surface_cond.volume_fractions_[p]);
+            }
+        } else {
+            // only gas injection yet
+            rates[FluidSystem::gasPhaseIdx] = surface_rate;
+        }
+        // no pressure drop between the bottom hole and the connections
+        conn_data.pressure[con] = well_state.bhp;
     }
 }
 

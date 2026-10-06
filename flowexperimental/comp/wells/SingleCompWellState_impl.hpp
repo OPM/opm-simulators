@@ -31,6 +31,7 @@ CompConnectionData(std::size_t num_connection,
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
   , ecl_index(num_connection)
+  , global_index(num_connection)
 {
 }
 
@@ -46,6 +47,7 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
         this->satnum_id[con] = connections[con].satnum_id;
         this->ecl_index[con] = connections[con].cell_index;
+        this->global_index[con] = connections[con].global_index;
     }
 }
 
