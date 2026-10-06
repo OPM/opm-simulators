@@ -169,7 +169,11 @@ public:
                 interior[ix] = true;
             }
 
-            Dune::SubGridPart<Grid> view{grid, std::move(seeds[index])};
+            // The view holds exactly the cells of the local problem. The
+            // one-layer neighbour overlap that SubGridPart adds by default
+            // is not used by the local solves, which only touch cells
+            // reported as interior, so it is left out.
+            Dune::SubGridPart<Grid> view{grid, std::move(seeds[index]), /*overlap=*/false};
 
             // Mark the last domain for skipping if it contains isolated cells
             const bool skip = isolated_cells && (index == num_domains - 1);
