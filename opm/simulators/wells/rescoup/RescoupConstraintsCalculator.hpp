@@ -33,6 +33,7 @@
 
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -198,6 +199,19 @@ private:
     static ProductionGroupConstraints makeProductionGroupConstraints_(
         std::size_t group_idx,
         const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints);
+
+    /// @brief Phase 2, step 3b: share the unused part of each controlling
+    ///   target or limit among the excluded master groups below it.
+    /// @details Without this each excluded group is offered the whole unused
+    ///   part, so that with two or more excluded groups the targets add up to
+    ///   more than the controlling target.  See the implementation for the rule.
+    /// @param excluded_groups The master groups excluded in step 1.
+    /// @param all_production_constraints In/out: per-slave production
+    ///   constraints; the targets and limits of the excluded groups are
+    ///   modified in place.
+    void shareUnusedTargetAmongExcludedGroups_(
+        const std::set<std::string>& excluded_groups,
+        std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints);
 
     /// @brief Phase 3: send the computed constraints for one slave to
     ///   that slave over MPI.

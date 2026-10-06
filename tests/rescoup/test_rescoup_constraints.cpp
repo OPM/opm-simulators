@@ -344,7 +344,9 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
 //! the guide-rate distribution: M4's 50 (item 8 = NO) plus the excluded M1's 150.
 //! The master assumes that M1 keeps producing its reported 150, so M2 and M3 only
 //! need to produce the rest, 1000 - 200 = 800, which they share by 200 : 300.
-//! M1 is sent its share if it rejoined: (1000 - 50) * 100 / (100 + 200 + 300).
+//! M1 is sent its current rate, 150, plus its share of what FIELD leaves unused, which is
+//! nothing here (see shareUnusedTargetAmongExcludedGroups_()), and not the share
+//! (1000 - 50) * 100 / (100 + 200 + 300) it would get if it rejoined.
 BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 {
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
@@ -359,7 +361,7 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
     checkRate(result.productionTarget("M4"), 50.0);
 }
 
@@ -446,7 +448,7 @@ BOOST_AUTO_TEST_CASE(NestedExclusion)
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
 
     auto fcalc = productionFractionCalculator();
     checkClose(fcalc.fraction("M1", "FIELD", /*always_include_this=*/true), 100.0 / 600.0);
