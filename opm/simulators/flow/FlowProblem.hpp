@@ -1387,9 +1387,10 @@ protected:
 
         if (enableEclOutput) {
             // Parallel TRANX, TRANY, TRANZ and NNC output requires the global
-            // grid's transmissibilities on the I/O rank -- except with LGRs, below.
+            // grid's transmissibilities on the I/O rank -- with LGRs, only for the
+            // connections that no rank records, below.
             if (simulator.vanguard().grid().comm().size() > 1) {
-                bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
+                const bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
                 // Parallel LGR: reuse the simulator's own (distributed) transmissibilities for the
                 // INIT output -- each rank contributes its interior connections, gathered on the
                 // I/O rank and keyed by level-Cartesian indices so the output walk over the global
@@ -1412,9 +1413,9 @@ protected:
                                                  simulator.vanguard().gridView(),
                                                  [&localTrans](unsigned c1, unsigned c2)
                                                  { return static_cast<double>(localTrans.transmissibility(c1, c2)); }));
-                        // All output values (TRANX/Y/Z and NNC) come from the gathered records --
-                        // no whole-grid transmissibility object is needed on the I/O rank.
-                        wholeGridTransNeeded = false;
+                        // The output values (TRANX/Y/Z and NNC) come from the gathered records.
+                        // The whole-grid transmissibilities set below tell, for a connection
+                        // that no rank records, whether its face is sealed.
                     }
                 }
                 if (wholeGridTransNeeded) {
