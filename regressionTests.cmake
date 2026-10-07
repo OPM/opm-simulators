@@ -2847,6 +2847,26 @@ add_test_compareECLFiles(
     --enable-tuning=true
 )
 
+# Actions timed at fractions of a second: one must trigger within the same
+# whole second as its report step starts, the other must repeat exactly its
+# minimum wait after its first run.
+add_test_compareECLFiles(
+  CASENAME
+    actionx_fractional_second
+  FILENAME
+    ACTIONX_FRACTIONAL_SECOND
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    actionx
+)
+
 add_test_compareECLFiles(
   CASENAME
     wvfpexp_02
