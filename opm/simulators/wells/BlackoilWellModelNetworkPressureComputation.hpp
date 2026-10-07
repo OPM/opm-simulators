@@ -271,7 +271,7 @@ public:
 #ifdef OPM_NETWORK_PRESSURE_TRACE
             // Off unless the macro is defined: this builds a string per node per
             // sub-iteration per domain, whether or not the log keeps it.
-            OpmLog::debug("Network pressure computation completed for root " + root.get().name() + ". Node pressures:");
+            OpmLog::debug("Network pressure computation completed for root " + root + ". Node pressures:");
             for (const auto& [node, pressure] : node_pressures_) {
                 OpmLog::debug("Network node " + node + " pressure: " + std::to_string(pressure/1e5) + " bar");
             }
