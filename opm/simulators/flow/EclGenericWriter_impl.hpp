@@ -866,6 +866,27 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     std::vector<NNCdata> inputedNnc{};
     const auto generatedNnc = outputNnc_[0];
 
+    // A deck NNC names level-zero cells, while globalTrans() is indexed by leaf
+    // cell: the leaf index of each level-zero cell that is not refined.
+    std::unordered_map<int, int> levelZeroToLeaf;
+    if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+        if (maxLevel > 0) {
+            for (const auto& elem : elements(globalGridView)) {
+                if (elem.level() == 0) {
+                    levelZeroToLeaf.emplace(elem.getOrigin().index(), globalElemMapper.index(elem));
+                }
+            }
+        }
+    }
+    const auto leafIndex = [&levelZeroToLeaf, maxLevel](const int levelZeroIdx)
+    {
+        if (maxLevel == 0) {
+            return levelZeroIdx;
+        }
+        const auto leaf = levelZeroToLeaf.find(levelZeroIdx);
+        return (leaf != levelZeroToLeaf.end()) ? leaf->second : -1;
+    };
+
     // The NNC keyword in the deck is defined only for faces in the level-0 grid.
     // The same limitation applies to aquifer data.
     for (const auto& entry : nncData) {
@@ -912,10 +933,12 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 const auto key = std::array{0, static_cast<int>(entry.cell1),
                                             static_cast<int>(entry.cell2)};
                 const double* gathered = this->findGatheredTrans_(key);
-                if (!this->gatheredLgrTrans_.has_value() || gathered != nullptr) {
+                const int leaf1 = leafIndex(c1);
+                const int leaf2 = leafIndex(c2);
+                if (this->gatheredLgrTrans_.has_value() ? (gathered != nullptr) : ((leaf1 >= 0) && (leaf2 >= 0))) {
                     trans = (gathered != nullptr)
                         ? *gathered
-                        : this->globalTrans().transmissibility(c1, c2);
+                        : this->globalTrans().transmissibility(leaf1, leaf2);
 
                     if (! generatedNnc.empty()) {
                         for (const auto& generated : generatedNnc) {
