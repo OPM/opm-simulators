@@ -206,6 +206,9 @@ public:
             prepareSolver();
         }
         catch (const Dune::MatrixBlockError&) {
+            // Construction or update may have left a partial preconditioner.
+            // Rebuild it on the next attempt, independently of state rollback.
+            eraseMatrix();
             // A singular matrix block found while building the
             // preconditioner is recoverable: rethrow it unchanged so that
             // the adaptive time stepping can chop the time step instead of

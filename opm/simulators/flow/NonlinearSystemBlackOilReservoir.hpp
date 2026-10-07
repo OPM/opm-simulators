@@ -312,7 +312,6 @@ private:
     Scalar drMaxRel() const { return this->param_.dr_max_rel_; }
     Scalar maxResidualAllowed() const { return this->param_.max_residual_allowed_; }
     double linear_solve_setup_time_;
-    std::vector<bool> wasSwitched_;
 };
 
 } // namespace Opm

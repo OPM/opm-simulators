@@ -94,10 +94,15 @@ public:
         wasSwitched_.resize(this->model().numTotalDof(), false);
     }
 
-    void resetPrimaryVariableSwitches()
+    void capturePrimaryVariableSwitches()
     {
-        numPriVarsSwitched_ = 0;
-        std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+        // Preserve the switching history across retries of this timestep.
+        wasSwitchedAtStepStart_ = wasSwitched_;
+    }
+
+    void restorePrimaryVariableSwitches()
+    {
+        wasSwitched_ = wasSwitchedAtStepStart_;
     }
 
     /*!
@@ -474,6 +479,7 @@ private:
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
     std::vector<bool> wasSwitched_{};
+    std::vector<bool> wasSwitchedAtStepStart_{};
 };
 
 } // namespace Opm

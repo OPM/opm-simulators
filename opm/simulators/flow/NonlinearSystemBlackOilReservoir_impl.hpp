@@ -107,17 +107,21 @@ NonlinearSystemBlackOilReservoir<TypeTag>::
 prepareStep(const SimulatorTimerInterface& timer)
 {
     OPM_TIMEFUNCTION();
+    if (this->enable_state_rollback_) {
+        auto& newtonMethod = this->simulator_.model().newtonMethod();
+        if (timer.lastStepFailed()) {
+            // Discard switching decisions made by the failed attempt.
+            newtonMethod.restorePrimaryVariableSwitches();
+        }
+        else {
+            newtonMethod.capturePrimaryVariableSwitches();
+        }
+    }
+
     auto report = ParentType::prepareStep(timer);
 
     Dune::Timer perfTimer;
     perfTimer.start();
-
-    unsigned numDof = this->simulator_.model().numGridDof();
-    wasSwitched_.resize(numDof);
-    std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
-    if (this->enable_state_rollback_) {
-        this->simulator_.model().newtonMethod().resetPrimaryVariableSwitches();
-    }
 
     if (this->param_.update_equations_scaling_) {
         OpmLog::error("Equation scaling not supported");
