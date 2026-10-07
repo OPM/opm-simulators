@@ -662,9 +662,10 @@ getRcMasterSyncStepLength_(double prev_step,
         current_step_length = std::min({suggestedNextTimestep_(), maxTimeStep_(), remaining, flow_limit});
         if (current_step_length == flow_limit) {
             // Like AdaptiveSimulatorTimer::provideTimeStepEstimate(), but against the next slave
-            // report date: avoid a very short step in front of it.
+            // report date: avoid a very short step in front of it. The step is only lengthened to
+            // reach the report date if it is already within the limits chosen above.
             const double to_slave_report = reservoirCouplingMaster_().maybeChopSubStep(remaining, current_time);
-            if (1.05 * current_step_length > to_slave_report) {
+            if (current_step_length >= to_slave_report) {
                 current_step_length = to_slave_report;
             }
             else if (1.5 * current_step_length > to_slave_report) {
