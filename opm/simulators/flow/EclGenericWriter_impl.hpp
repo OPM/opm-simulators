@@ -1023,13 +1023,19 @@ doWriteOutput(const int                          reportStepNum,
     }
 
     std::vector<Opm::RestartValue> restartValues{};
-    // only serial, only CpGrid (for now)
-    if ( !isParallel && !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
+    // only CpGrid (for now)
+    if ( !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
         // Level cells that appear on the leaf grid view get the data::Solution values from there.
         // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
         // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
         // not modified in this method.
-        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+        if (isParallel) {
+            // The I/O rank holds the collected solution in the leaf order of the global grid.
+            Opm::Lgr::extractRestartValueLevelGrids<EquilGrid>(*this->equilGrid_, restartValue, restartValues);
+        }
+        else {
+            Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+        }
     }
     else {
         restartValues.reserve(1); // minimum size
