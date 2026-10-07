@@ -106,7 +106,7 @@ public:
         aquCT->dimensionless_pressure = this->dimensionless_pressure_;
         aquCT->influxConstant = this->aquct_data_.influxConstant();
 
-        if (!this->co2store_or_h2store_()) {
+        if (!this->internal_brine_model_()) {
             aquCT->timeConstant = this->aquct_data_.timeConstant();
             aquCT->waterDensity = this->aquct_data_.waterDensity();
             aquCT->waterViscosity = this->aquct_data_.waterViscosity();
@@ -219,7 +219,7 @@ protected:
 
     void calculateAquiferConstants() override
     {
-        this->Tc_ = this->co2store_or_h2store_()
+        this->Tc_ = this->internal_brine_model_()
             ? this->timeConstantCO2Store()
             : this->aquct_data_.timeConstant();
 
@@ -247,7 +247,7 @@ protected:
             this->Ta0_ = this->aquct_data_.initial_temperature.value();
         }
 
-        this->rhow_ = this->co2store_or_h2store_()
+        this->rhow_ = this->internal_brine_model_()
             ? this->waterDensityCO2Store()
             : this->aquct_data_.waterDensity();
     }
@@ -264,7 +264,8 @@ private:
         const auto temp = this->reservoirTemperatureCO2Store();
 
         auto waterViscosity = Scalar { 0 };
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        // oil models brine only for CO2STORE/H2STORE, see phaseIdx_()
+        if (this->phaseIdx_() == FluidSystem::oilPhaseIdx) {
             const auto rs = Scalar { 0 }; // no dissolved CO2
             waterViscosity = FluidSystem::oilPvt()
                 .viscosity(pvtRegionIdx(), temp, press, rs);
@@ -290,7 +291,7 @@ private:
         const Scalar press = this->aquct_data_.initial_pressure.value();
         const auto temp = this->reservoirTemperatureCO2Store();
 
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        if (this->phaseIdx_() == FluidSystem::oilPhaseIdx) {
             const auto& pvt = FluidSystem::oilPvt();
             const auto reg = this->pvtRegionIdx();
 

@@ -1055,9 +1055,12 @@ public:
                 }
             }
 
-            // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
+            // For CO2STORE, H2STORE, CO2SOL and H2SOL we need to set the initial temperature
+            // for isothermal simulations
             if constexpr (energyModuleType != EnergyModules::NoTemperature) {
-                bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
+                const auto& rspec = eclState.runspec();
+                bool needTemperature = rspec.co2Storage() || rspec.h2Storage()
+                    || rspec.co2Sol() || rspec.h2Sol();
                 if (needTemperature) {
                     const auto& fp = simulator.vanguard().eclState().fieldProps();
                     elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);

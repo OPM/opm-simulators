@@ -792,6 +792,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    aquct_04_co2sol
+  FILENAME
+    AQUCT-04
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater_solvent
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    aquifers
+)
+
+add_test_compareECLFiles(
+  CASENAME
     aquflux_03_gaswater
   FILENAME
     AQUFLUX-03
