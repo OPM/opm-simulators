@@ -353,7 +353,7 @@ private:
         // Well column: every cell whose C row references any block of the well.
         for (std::size_t c = 0; c < numRes; ++c) {
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
-                const auto j = wellLayout().wellOfBlock(col.index());
+                const auto j = layout.wellOfBlock(col.index());
                 if (j.has_value()) {
                     coarseMatrix_->entry(c, numRes + *j) = 0.0;
                 }
@@ -419,7 +419,7 @@ private:
         for (std::size_t c = 0; c < numRes; ++c) {
             const auto& bw = w0[c];
             for (auto col = C[c].begin(), colEnd = C[c].end(); col != colEnd; ++col) {
-                const auto j = wellLayout().wellOfBlock(col.index());
+                const auto j = layout.wellOfBlock(col.index());
                 if (!j.has_value() || layout.isPressureControlled(*j)) {
                     continue;
                 }
@@ -476,7 +476,7 @@ private:
                 // segment-to-segment coupling rather than just the top
                 // segment's column.
                 for (auto col = D[wb].begin(), colEnd = D[wb].end(); col != colEnd; ++col) {
-                    const auto k = wellLayout().wellOfBlock(col.index());
+                    const auto k = layout.wellOfBlock(col.index());
                     if (!k.has_value()) {
                         continue;
                     }
