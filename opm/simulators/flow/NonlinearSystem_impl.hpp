@@ -28,12 +28,15 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace Opm {
@@ -91,6 +94,25 @@ updateSolution(const GlobalEqVector& dx)
 
     if (shouldStore) {
         storeSolutionUpdate(dx);
+    }
+}
+
+template <class TypeTag>
+void
+NonlinearSystem<TypeTag>::
+postSolutionUpdate()
+{
+    if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+#if HAVE_MPI
+        // Use CpGrid's owner-to-all exchange to avoid syncOverlap()'s large buffer allocations.
+        if (isParallel()) {
+            auto& solution = simulator_.model().solution(/*timeIdx=*/0);
+            grid_.cellCommunication().copyOwnerToAll(solution, solution);
+        }
+#endif // HAVE_MPI
+    }
+    else {
+        simulator_.model().syncOverlap();
     }
 }
 

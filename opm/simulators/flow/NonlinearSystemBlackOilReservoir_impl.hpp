@@ -164,7 +164,7 @@ initialLinearization(SimulatorReportSingle& report,
     ParentType::initialLinearization(report,
                                      minIter,
                                      maxIter,
-                                     timer);                                 
+                                     timer);
 
     // -----------   Check if converged   -----------
     std::vector<Scalar> residual_norms;

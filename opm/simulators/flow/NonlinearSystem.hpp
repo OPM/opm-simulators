@@ -136,8 +136,7 @@ protected:
 
     /// Synchronize primary variables in overlap and ghost cells before
     /// recomputing intensive quantities.
-    virtual void postSolutionUpdate()
-    { simulator_.model().syncOverlap(); }
+    virtual void postSolutionUpdate();
 
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
