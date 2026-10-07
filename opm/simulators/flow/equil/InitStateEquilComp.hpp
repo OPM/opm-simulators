@@ -62,6 +62,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -148,9 +149,11 @@ public:
 
     WaterDensityODE(const TabulatedFunction& tempVdTable,
                     const CompositionalConfig::EOSType eosType,
+                    const unsigned pvtRegion,
                     const Scalar normGrav)
         : tempVdTable_(tempVdTable)
         , eosType_(eosType)
+        , pvtRegion_(pvtRegion)
         , g_(normGrav)
     {}
 
@@ -162,6 +165,7 @@ public:
         fs.setPressure(FluidSystem::waterPhaseIdx, press);
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+        paramCache.setRegionIndex(pvtRegion_);
 
         return FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx) * g_;
     }
@@ -169,6 +173,7 @@ public:
 private:
     const TabulatedFunction& tempVdTable_;
     CompositionalConfig::EOSType eosType_;
+    unsigned pvtRegion_;
     Scalar g_;
 };
 
@@ -201,11 +206,18 @@ private:
  *
  * The COMPVD phase column selects the EOS root. If its rows name both phases,
  * the vapour rows define the gas zone above the gas-oil contact and the liquid
- * rows define the liquid zone below it.
+ * rows define the liquid zone below it. For type 1 a contact outside the gap
+ * between the last vapour row and the first liquid row moves to the nearest
+ * edge of that gap.
  *
  * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
  * a single pressure for all phases.
+ *
+ * Each PVT region among the cells of an equilibration region has a water column
+ * of its own, integrated with its water, and each cell takes the column of its
+ * PVT region. A datum below the water-oil contact gives the pressure of all of
+ * these waters, so there they must reach the contact at the same pressure.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -219,6 +231,8 @@ public:
     /// \param[in] eosType         Equation of state used by the fluid system.
     /// \param[in] cellCenterDepth Depth of each cell centre.
     /// \param[in] eqlnum          Zero-based equilibration region of each cell.
+    /// \param[in] pvtnum          Zero-based PVT region of each cell, or empty
+    ///                            for a single PVT region.
     /// \param[in] comm            Communicator for parallel runs.
     /// \param[in] gravity         Norm of the gravity vector.
     /// \param[in] numSamplePoints Sample points in each pressure integration.
@@ -230,6 +244,7 @@ public:
                          const CompositionalConfig::EOSType eosType,
                          const std::vector<Scalar>& cellCenterDepth,
                          const std::vector<int>& eqlnum,
+                         const std::vector<int>& pvtnum,
                          const Parallel::Communication& comm,
                          const Scalar gravity,
                          const int numSamplePoints,
@@ -248,6 +263,7 @@ public:
                       "versus depth from the ZMFVD or the COMPVD keyword.");
         }
 
+        const auto numPvtRegions = tables.getTabdims().getNumPVTTables();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if (eqlnum.size() != cellCenterDepth.size()) {
             OPM_THROW(std::runtime_error,
@@ -263,6 +279,20 @@ public:
                                       cell, region + 1, records.size()));
             }
         }
+        if (!pvtnum.empty() && (pvtnum.size() != cellCenterDepth.size())) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("PVTNUM contains {} entries for {} cell depths.",
+                                  pvtnum.size(), cellCenterDepth.size()));
+        }
+        for (std::size_t cell = 0; cell < pvtnum.size(); ++cell) {
+            const auto region = pvtnum[cell];
+            if (region < 0 || std::cmp_greater_equal(region, numPvtRegions)) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cell {} has PVTNUM {} outside the {} "
+                                      "PVT regions.",
+                                      cell, region + 1, numPvtRegions));
+            }
+        }
         // The endpoint vectors are optional, but a non-empty one is indexed for
         // every cell.
         for (const auto& [name, limits] : {std::pair{"connate water", std::cref(connateWater)},
@@ -276,18 +306,22 @@ public:
         }
         OPM_END_PARALLEL_TRY_CATCH("Invalid equilibration input: ", comm);
 
+        const auto pvtRegions =
+            pvtRegionsOfEachRegion(eqlnum, pvtnum, records.size(), numPvtRegions, comm);
         std::vector<Region> regions;
         regions.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
-            regions.push_back(setupRegion(records.getRecord(r), tables, cellCenterDepth,
-                                          eqlnum, comm, gravity, numSamplePoints, r));
+            regions.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
+                                          cellCenterDepth, eqlnum, comm, gravity,
+                                          numSamplePoints, r));
         }
 
         fluidStates_.resize(cellCenterDepth.size());
         referencePressures_.resize(cellCenterDepth.size());
         for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
-            referencePressures_[cell] =
-                assignCell(fluidStates_[cell], regions[eqlnum[cell]], cellCenterDepth[cell], cell);
+            const auto pvtRegion = pvtnum.empty() ? 0u : static_cast<unsigned>(pvtnum[cell]);
+            referencePressures_[cell] = assignCell(fluidStates_[cell], regions[eqlnum[cell]],
+                                                   pvtRegion, cellCenterDepth[cell], cell);
         }
     }
 
@@ -325,6 +359,9 @@ private:
     /// The equilibrated vertical distributions within one region.
     struct Region {
         int initType{1};                            // EQUIL item 10
+        /// Zero-based PVT regions of the region's cells on all processes.
+        std::vector<unsigned> pvtRegions;
+        /// Gas-oil contact. A two-zone COMPVD table may move it, see zoneBoundary().
         Scalar zgoc{};
         /// Name of the selected composition keyword, used in diagnostics.
         std::string_view compositionKeyword;
@@ -335,6 +372,10 @@ private:
         /// COMPVD naming both phases describes a gas zone over a liquid one,
         /// each with its own composition and its own hydrostatic column.
         bool twoZone{false};
+        /// Depth of the last vapour row of such a table. With EQUIL item 10 = 1
+        /// the rows decide the phase, so a cell at this depth stays in the gas
+        /// zone even when the contact lies on it.
+        Scalar lastVaporDepth{};
         /// Gas-zone composition for a COMPVD table that names both phases.
         std::vector<TabulatedFunction> vaporVdTable;
         /// Equilibrium vapour at the contact for type 3 without gas-zone rows.
@@ -351,7 +392,8 @@ private:
         /// anchored at the water-oil contact instead. The fluid there is the one
         /// just above the contact, which the EOS root has to follow.
         bool anchoredAtWaterContact{false};
-        std::optional<WaterPressFunc> waterPressure;
+        /// The water column of each PVT region in pvtRegions.
+        std::map<unsigned, WaterPressFunc> waterPressure;
     };
 
     /// Each pressure column must reach the water-oil contact before another
@@ -455,13 +497,17 @@ private:
         return rows;
     }
 
-    /// Verify that vapour rows are at or above the gas-oil contact and liquid
-    /// rows are at or below it.
-    static void checkZonesStraddleContact(const CompvdTable& compvd,
-                                          const std::vector<std::size_t>& vaporRows,
-                                          const std::vector<std::size_t>& liquidRows,
-                                          const Scalar zgoc,
-                                          const std::size_t regionIdx)
+    /// Depth at which the gas zone of a COMPVD table naming both phases meets
+    /// its liquid zone: the gas-oil contact when it lies between the last
+    /// vapour row and the first liquid row. With EQUIL item 10 = 1 the rows
+    /// give the composition versus depth, so a contact outside that gap moves
+    /// to its nearest edge and every row keeps the phase it names. Type 3 uses
+    /// the contact as its reference depth, so there the rows must agree with it.
+    static Scalar zoneBoundary(const CompvdTable& compvd,
+                               const std::vector<std::size_t>& vaporRows,
+                               const std::vector<std::size_t>& liquidRows,
+                               const Region& reg,
+                               const std::size_t regionIdx)
     {
         if (vaporRows.empty() || liquidRows.empty()) {
             OPM_THROW(std::runtime_error,
@@ -470,14 +516,39 @@ private:
         }
 
         const auto& depth = compvd.getDepthColumn();
-        if ((depth[vaporRows.back()] > zgoc) || (depth[liquidRows.front()] < zgoc)) {
+        const Scalar lastVapor = depth[vaporRows.back()];
+        const Scalar firstLiquid = depth[liquidRows.front()];
+        if (lastVapor > firstLiquid) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("The COMPVD table of region {} has a vapour row at {} m "
+                                  "below its liquid row at {} m. All vapour rows must lie "
+                                  "above the liquid rows.",
+                                  regionIdx + 1, lastVapor, firstLiquid));
+        }
+
+        const Scalar boundary = std::clamp(reg.zgoc, lastVapor, firstLiquid);
+        if (boundary == reg.zgoc) {
+            return boundary;
+        }
+
+        if (reg.initType != 1) {
             OPM_THROW(std::runtime_error,
                       fmt::format("The COMPVD table of region {} puts its vapour rows down to "
                                   "{} m and its liquid rows from {} m, which do not meet at "
-                                  "the gas-oil contact at {} m.",
-                                  regionIdx + 1, depth[vaporRows.back()],
-                                  depth[liquidRows.front()], zgoc));
+                                  "the gas-oil contact at {} m. EQUIL item 10 = {} takes the "
+                                  "contact as the reference depth, so the rows must agree "
+                                  "with it.",
+                                  regionIdx + 1, lastVapor, firstLiquid, reg.zgoc,
+                                  reg.initType));
         }
+
+        OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m lies "
+                                    "outside the COMPVD phase change between the last vapour "
+                                    "row at {} m and the first liquid row at {} m. With EQUIL "
+                                    "item 10 = 1 the rows give the composition versus depth, "
+                                    "so the gas zone ends at {} m instead.",
+                                    regionIdx + 1, reg.zgoc, lastVapor, firstLiquid, boundary));
+        return boundary;
     }
 
     /// The COMPVD rows carrying \p phase.
@@ -532,8 +603,39 @@ private:
         });
     }
 
+    /// The zero-based PVT regions of the cells of each equilibration region, on
+    /// all processes. A region without cells has none.
+    static std::vector<std::vector<unsigned>>
+    pvtRegionsOfEachRegion(const std::vector<int>& eqlnum,
+                           const std::vector<int>& pvtnum,
+                           const std::size_t numRegions,
+                           const std::size_t numPvtRegions,
+                           const Parallel::Communication& comm)
+    {
+        // Whether equilibration region r holds a cell of PVT region p, at
+        // r * numPvtRegions + p.
+        std::vector<int> present(numRegions * numPvtRegions, 0);
+        for (std::size_t cell = 0; cell < eqlnum.size(); ++cell) {
+            const auto pvtRegion = pvtnum.empty() ? 0 : pvtnum[cell];
+            present[static_cast<std::size_t>(eqlnum[cell]) * numPvtRegions
+                    + static_cast<std::size_t>(pvtRegion)] = 1;
+        }
+        comm.max(present.data(), static_cast<int>(present.size()));
+
+        std::vector<std::vector<unsigned>> pvtRegions(numRegions);
+        for (std::size_t r = 0; r < numRegions; ++r) {
+            for (std::size_t p = 0; p < numPvtRegions; ++p) {
+                if (present[r * numPvtRegions + p] != 0) {
+                    pvtRegions[r].push_back(static_cast<unsigned>(p));
+                }
+            }
+        }
+        return pvtRegions;
+    }
+
     Region setupRegion(const EquilRecord& record,
                        const TableManager& tables,
+                       const std::vector<unsigned>& pvtRegions,
                        const std::vector<Scalar>& cellCenterDepth,
                        const std::vector<int>& eqlnum,
                        const Parallel::Communication& comm,
@@ -543,6 +645,7 @@ private:
     {
         Region reg;
 
+        reg.pvtRegions = pvtRegions;
         reg.initType = record.compositionalInitType();
         if (reg.initType != 1 && reg.initType != 3) {
             OPM_THROW(std::runtime_error,
@@ -645,9 +748,9 @@ private:
                 // the liquid rows the one below the contact.
                 const auto vaporRows = rowsOfPhase(compvd, CompvdTable::Phase::Vapor);
                 const auto liquidRows = rowsOfPhase(compvd, CompvdTable::Phase::Liquid);
-                checkZonesStraddleContact(compvd, vaporRows, liquidRows,
-                                          record.gasOilContactDepth(), regionIdx);
+                reg.zgoc = zoneBoundary(compvd, vaporRows, liquidRows, reg, regionIdx);
                 reg.twoZone = true;
+                reg.lastVaporDepth = compvd.getDepthColumn()[vaporRows.back()];
                 setupComposition(reg.vaporVdTable, compvd, vaporRows);
                 setupComposition(reg.compositionVdTable, compvd, liquidRows);
             }
@@ -715,7 +818,7 @@ private:
             integrateWaterPressure(reg, span, gravity, numSamplePoints,
                                    record.datumDepth(), record.datumDepthPressure());
             hcDatum = reg.zwoc;
-            hcPressure = reg.waterPressure->value(reg.zwoc)
+            hcPressure = waterContactPressure(reg, record.datumDepth(), regionIdx)
                        + record.waterOilContactCapillaryPressure();
             OpmLog::info(fmt::format("Equilibration region {}: the datum at {} m lies below the "
                                      "water-oil contact at {} m, so it gives the water pressure; "
@@ -774,7 +877,11 @@ private:
         if (!reg.oilPressure.has_value() && !reg.gasPressure.has_value()) {
             return;
         }
-        const auto& hcPressure = reg.oilPressure.has_value() ? reg.oilPressure : reg.gasPressure;
+        // The water meets the hydrocarbon zone just above its contact: the gas
+        // zone when the gas-oil contact lies at or below the water-oil contact.
+        const bool gasAtContact = reg.gasPressure.has_value()
+            && (!reg.oilPressure.has_value() || (reg.zwoc <= reg.zgoc));
+        const auto& hcPressure = gasAtContact ? reg.gasPressure : reg.oilPressure;
         const Scalar pcow = record.waterOilContactCapillaryPressure();
         const Scalar pContact = hcPressure->value(reg.zwoc) - pcow;
 
@@ -784,8 +891,8 @@ private:
                                  "is at {} m.", regionIdx + 1, reg.zwoc));
     }
 
-    /// Integrates the water pressure over \p span from \p depth, where it is
-    /// \p pressure.
+    /// Integrates the water pressure of each PVT region of \p reg over \p span
+    /// from \p depth, where it is \p pressure.
     void integrateWaterPressure(Region& reg,
                                 const std::array<Scalar, 2>& span,
                                 const Scalar gravity,
@@ -793,10 +900,43 @@ private:
                                 const Scalar depth,
                                 const Scalar pressure) const
     {
-        const WaterODE ode(reg.tempVdTable, eosType_, gravity);
-        reg.waterPressure.emplace(ode,
-                                  typename WaterPressFunc::InitCond{depth, pressure},
-                                  numSamplePoints, waterContactSpan(reg, span));
+        for (const auto pvtRegion : reg.pvtRegions) {
+            const WaterODE ode(reg.tempVdTable, eosType_, pvtRegion, gravity);
+            reg.waterPressure.try_emplace(pvtRegion, ode,
+                                          typename WaterPressFunc::InitCond{depth, pressure},
+                                          numSamplePoints, waterContactSpan(reg, span));
+        }
+    }
+
+    /// The water pressure at the water-oil contact when the datum at \p datum,
+    /// below the contact, gives it. The datum states the pressure of the water
+    /// of every PVT region in the region, so their columns must reach the
+    /// contact at one pressure for the hydrocarbon to be anchored there.
+    static Scalar waterContactPressure(const Region& reg,
+                                       const Scalar datum,
+                                       const std::size_t regionIdx)
+    {
+        // Waters that differ physically part by more than this round-off
+        // tolerance between the datum and the contact.
+        constexpr Scalar samePressure{1.0e-10};
+
+        const auto& [firstPvtRegion, firstColumn] = *reg.waterPressure.begin();
+        const Scalar pressure = firstColumn.value(reg.zwoc);
+        for (const auto& [pvtRegion, column] : reg.waterPressure) {
+            const Scalar other = column.value(reg.zwoc);
+            if (std::abs(other - pressure) > samePressure * pressure) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Equilibration region {} places the datum at {} m, below "
+                                      "the water-oil contact at {} m, but the water of its PVT "
+                                      "regions {} and {} reaches the contact at {:.6g} and "
+                                      "{:.6g} bar. Put the datum in the hydrocarbon column.",
+                                      regionIdx + 1, datum, reg.zwoc,
+                                      firstPvtRegion + 1, pvtRegion + 1,
+                                      unit::convert::to(pressure, unit::barsa),
+                                      unit::convert::to(other, unit::barsa)));
+            }
+        }
+        return pressure;
     }
 
     /// A per-cell saturation endpoint, or \p fallback when the caller supplied
@@ -894,10 +1034,11 @@ private:
         const std::array<Scalar, 2> datumSpan{std::min(pressureSpan[0], reg.zgoc),
                                               std::max(pressureSpan[1], reg.zgoc)};
         if ((reg.zgoc < span[0]) || (reg.zgoc > span[1])) {
-            OpmLog::warning(fmt::format("Equilibration region {}: the gas-oil contact at {} m "
-                                        "lies outside the cells of the region, so the COMPVD "
+            OpmLog::warning(fmt::format("Equilibration region {}: the gas zone ends at {} m, "
+                                        "outside the cells of the region, so the COMPVD "
                                         "rows of one phase describe no cell.",
-                                        regionIdx + 1, reg.zgoc));
+                                        regionIdx + 1,
+                                        reg.zgoc));
         }
 
         if (datum < reg.zgoc) {
@@ -919,9 +1060,11 @@ private:
                                     numSamplePoints, pressureSpan);
         }
 
-        OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above the "
-                                 "contact at {} m and a liquid one below it "
-                                 "(EQUIL item 10 = 1).", regionIdx + 1, reg.zgoc));
+        OpmLog::info(fmt::format("Equilibration region {}: COMPVD gives a gas zone above "
+                                 "{} m and a liquid one below it "
+                                 "(EQUIL item 10 = 1).",
+                                 regionIdx + 1,
+                                 reg.zgoc));
     }
 
     /// EQUIL item 10 type 3: the selected table supplies the liquid composition,
@@ -1009,10 +1152,22 @@ private:
                                 numSamplePoints, waterContactSpan(reg, span));
     }
 
-    Scalar assignCell(FluidState& fs, const Region& reg, const Scalar depth,
-                      const std::size_t cell) const
+    /// Whether \p depth lies in the gas zone of a region that has one. A depth
+    /// on the gas-oil contact belongs to the liquid zone, except the last vapour
+    /// row of a two-zone COMPVD table with EQUIL item 10 = 1, whose rows decide
+    /// the phase.
+    static bool isInGasZone(const Region& reg, const Scalar depth)
     {
-        const bool inGasZone = ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
+        if (reg.twoZone && (reg.initType == 1) && (depth <= reg.lastVaporDepth)) {
+            return true;
+        }
+        return ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
+    }
+
+    Scalar assignCell(FluidState& fs, const Region& reg, const unsigned pvtRegion,
+                      const Scalar depth, const std::size_t cell) const
+    {
+        const bool inGasZone = isInGasZone(reg, depth);
 
         const CompVec z = [&reg, depth, inGasZone]() {
             if (!inGasZone) {
@@ -1033,8 +1188,12 @@ private:
         // saturation leaves some residual hydrocarbon. Keep this separate from
         // the phase pressures so equilibration retains the capillary offset.
         const Scalar hydrocarbonPressure = pressFunc->value(depth);
-        const bool inWaterZone = (depth > reg.zwoc) && reg.waterPressure.has_value();
-        const Scalar press = inWaterZone ? reg.waterPressure->value(depth)
+        // The water column of the cell's own PVT region.
+        const auto water = reg.waterPressure.find(pvtRegion);
+        const WaterPressFunc* waterPressure =
+            (water != reg.waterPressure.end()) ? &water->second : nullptr;
+        const bool inWaterZone = (depth > reg.zwoc) && (waterPressure != nullptr);
+        const Scalar press = inWaterZone ? waterPressure->value(depth)
                                          : hydrocarbonPressure;
 
         fs.setTemperature(Details::evalDepthTable(reg.tempVdTable, depth));
@@ -1055,8 +1214,8 @@ private:
             sWat = (depth > reg.zwoc) ? waterLimit(maxWater_, cell, Scalar{1})
                                       : waterLimit(connateWater_, cell, Scalar{0});
             fs.setSaturation(FluidSystem::waterPhaseIdx, sWat);
-            if (reg.waterPressure.has_value()) {
-                fs.setPressure(FluidSystem::waterPhaseIdx, reg.waterPressure->value(depth));
+            if (waterPressure != nullptr) {
+                fs.setPressure(FluidSystem::waterPhaseIdx, waterPressure->value(depth));
             }
         }
 

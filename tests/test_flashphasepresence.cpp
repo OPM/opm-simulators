@@ -59,11 +59,18 @@ struct TestFluidSystem
         void updatePhase(const FluidState&, unsigned) {}
         Eval molarVolume(unsigned) const { return Eval{1.0}; }
         Eval correctedMolarVolume(unsigned) const { return Eval{1.0}; }
+        void setRegionIndex(unsigned region) { regionIdx = region; }
+        unsigned regionIndex() const { return regionIdx; }
+        unsigned regionIdx = 0;
     };
 
+    // Water is 100 kg/m3 denser in each further PVT region.
     template<class FluidState, class Cache>
-    static auto density(const FluidState&, const Cache&, unsigned)
-    { return typename FluidState::ValueType{1000.0}; }
+    static auto density(const FluidState&, const Cache& cache, unsigned phase)
+    {
+        return typename FluidState::ValueType{
+            phase == waterPhaseIdx ? 1000.0 + 100.0 * cache.regionIndex() : 1000.0};
+    }
 
     template<class FluidState, class Cache>
     static auto viscosity(const FluidState&, const Cache&, unsigned)
@@ -176,6 +183,15 @@ struct TestProblem
     template<class Context>
     double porosity(const Context&, unsigned, unsigned) const { return 0.2; }
     template<class Context>
+    double rockCompressibility(const Context&, unsigned, unsigned) const { return compressibility; }
+    template<class Context>
+    double rockReferencePressure(const Context&, unsigned, unsigned) const { return 5.0e6; }
+    template<class Context>
+    unsigned pvtRegionIndex(const Context&, unsigned, unsigned) const { return pvtRegion; }
+
+    double compressibility = 0.0; // 1/Pa
+    unsigned pvtRegion = 0;
+    template<class Context>
     Dune::FieldMatrix<double, 3, 3> intrinsicPermeability(const Context&, unsigned, unsigned) const
     { return Dune::FieldMatrix<double, 3, 3>{1.0}; }
 };
@@ -282,4 +298,38 @@ BOOST_AUTO_TEST_CASE(PresenceIsRefreshedWhenHydrocarbonEntersAndLeaves)
     BOOST_CHECK(!iq.hasHydrocarbon());
     BOOST_CHECK(!iq.phaseIsPresent(1));
     BOOST_CHECK_EQUAL(iq.saturationForOutput(2), 1.0);
+}
+
+BOOST_AUTO_TEST_CASE(PorosityFollowsTheRockCompressibility)
+{
+    // The pore volume grows with the pressure over the reference pressure,
+    // with the second-order expansion of exp(x) the black-oil model uses.
+    TestContext<true> context;
+    context.problem_.compressibility = 1.0e-9;
+    context.priVars.values[2] = 0.5;
+    IntensiveQuantities<true> iq;
+    iq.update(context, 0, 0);
+
+    const double x = 1.0e-9 * (1.0e7 - 5.0e6);
+    BOOST_CHECK_CLOSE(iq.porosity().value(), 0.2 * (1.0 + x + 0.5 * x * x), 1e-12);
+    BOOST_CHECK_CLOSE(iq.porosity().derivative(0), 0.2 * 1.0e-9 * (1.0 + x), 1e-10);
+
+    context.problem_.compressibility = 0.0;
+    iq.update(context, 0, 0);
+    BOOST_CHECK_EQUAL(iq.porosity().value(), 0.2);
+    BOOST_CHECK_EQUAL(iq.porosity().derivative(0), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(WaterPropertiesTakeTheCellsPvtRegion)
+{
+    TestContext<true> context;
+    context.priVars.values[2] = 0.5;
+    IntensiveQuantities<true> iq;
+    iq.update(context, 0, 0);
+    BOOST_CHECK_EQUAL(iq.fluidState().density(2).value(), 1000.0);
+
+    context.problem_.pvtRegion = 1;
+    iq.update(context, 0, 0);
+    BOOST_CHECK_EQUAL(iq.fluidState().density(2).value(), 1100.0);
+    BOOST_CHECK_EQUAL(iq.fluidState().density(0).value(), 1000.0);
 }

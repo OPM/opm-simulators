@@ -220,6 +220,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    equil_1d_compvd_water_gascap_contact_mismatch
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_CONTACT_MISMATCH
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
     equil_1d_compvd_oil
   FILENAME
     EQUIL_1D_COMPVD_OIL
@@ -233,6 +250,74 @@ add_test_compareECLFiles(
     ${rel_tol}
   DIR
     compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_water
+  FILENAME
+    PVTNUM_WATER
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_equil
+  FILENAME
+    PVTNUM_EQUIL
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_equil_shared
+  FILENAME
+    PVTNUM_EQUIL_SHARED
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    pvtnum_rock
+  FILENAME
+    PVTNUM_ROCK
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/pvt_regions
 )
 
 add_test_compareECLFiles(
