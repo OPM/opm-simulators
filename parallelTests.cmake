@@ -1129,6 +1129,26 @@ add_test_compare_parallel_simulation(
     --parsing-strictness=low
 )
 
+# The full run of the same deck: serial and parallel SMRY, UNRST, INIT and EGRID.
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1case1_carfin_full
+  FILENAME
+    SPE1CASE1_CARFIN
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  TEST_ARGS
+    --parsing-strictness=low
+)
+
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 
 add_test_compareSeparateECLFiles(
