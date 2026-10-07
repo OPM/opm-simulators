@@ -246,14 +246,13 @@ public:
     using IndexTraits = GenericWellModel::IndexTraits;
     std::pair<std::map<std::string, Scalar>, std::map<std::string, data::BranchData>> run()
     {
-        const auto roots = network_.roots();
-        for (const auto& root : roots) {
+        for (const auto& root : topRoots()) {
             // Fixed pressure nodes of the network are the roots of trees.
             // Leaf nodes must correspond to groups in the group structure.
             // Let us first find all leaf nodes of the network. We also
             // create a vector of all nodes, ordered so that a child is
             // always after its parent.
-            const auto [root_to_child_nodes, leaf_nodes] = collectTreeNodes(root.get().name());
+            const auto [root_to_child_nodes, leaf_nodes] = collectTreeNodes(root);
 
             // Starting with the leaf nodes of the network, get the flow rates
             // from the corresponding groups.
@@ -272,7 +271,7 @@ public:
 #ifdef OPM_NETWORK_PRESSURE_TRACE
             // Off unless the macro is defined: this builds a string per node per
             // sub-iteration per domain, whether or not the log keeps it.
-            OpmLog::debug("Network pressure computation completed for root " + root.get().name() + ". Node pressures:");
+            OpmLog::debug("Network pressure computation completed for root " + root + ". Node pressures:");
             for (const auto& [node, pressure] : node_pressures_) {
                 OpmLog::debug("Network node " + node + " pressure: " + std::to_string(pressure/1e5) + " bar");
             }
@@ -297,6 +296,36 @@ public:
     }
 
 private:
+    /// Fixed pressure nodes from which to start the pressure computation.
+    ///
+    /// A fixed pressure node may itself be downtree of another fixed
+    /// pressure node.  Starting from the uppermost fixed pressure node of
+    /// each chain ensures that the pressure of a node is known before the
+    /// branches below it are processed.  Nodes above the uppermost fixed
+    /// pressure node carry no flow of consequence and are not visited.
+    std::vector<std::string> topRoots() const
+    {
+        std::vector<std::string> top_roots;
+        for (const auto& root : network_.roots()) {
+            auto top = root.get().name();
+            auto visited = std::set<std::string>{top};
+            auto node = top;
+            while (const auto upbranch = network_.uptree_branch(node)) {
+                node = upbranch->uptree_node();
+                if (!visited.insert(node).second) {
+                    break; // Loop of branches, rejected at parse time.
+                }
+                if (network_.node(node).terminal_pressure().has_value()) {
+                    top = node;
+                }
+            }
+            if (std::ranges::find(top_roots, top) == top_roots.end()) {
+                top_roots.push_back(top);
+            }
+        }
+        return top_roots;
+    }
+
     std::pair<std::vector<std::string>, std::set<std::string>>
     collectTreeNodes(const std::string& root) const
     {
@@ -431,9 +460,12 @@ private:
 
             if (terminal_pressure) {
                 node_pressures_[node] = *terminal_pressure;
-                if (upbranch) {
+                const auto up_it = upbranch
+                    ? node_pressures_.find((*upbranch).uptree_node())
+                    : node_pressures_.end();
+                if (up_it != node_pressures_.end()) {
                     // If terminal pressure is specified on a non-root node, we still want to calculate the branch data for the uptree branch.
-                    const Scalar up_press = node_pressures_[(*upbranch).uptree_node()];
+                    const Scalar up_press = up_it->second;
                     auto rates = node_inflows.at(node);
                     branch_data_.try_emplace(node,
                                              *terminal_pressure - up_press,
@@ -441,7 +473,8 @@ private:
                                              rates[IndexTraits::waterPhaseIdx],
                                              rates[IndexTraits::gasPhaseIdx]);
                 } else {
-                    // Root node with terminal pressure and no uptree branch, inserting a zero-valued placeholder.
+                    // Root node with terminal pressure and either no uptree branch or an uptree
+                    // node without a pressure of its own, inserting a zero-valued placeholder.
                     branch_data_.emplace(node, data::BranchData{0.0, 0.0, 0.0, 0.0});
                 }
                 continue;
