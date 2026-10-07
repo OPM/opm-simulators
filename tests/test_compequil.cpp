@@ -43,8 +43,12 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -59,6 +63,37 @@ using CompVec = std::array<Scalar, 3>;
 
 constexpr Scalar barsa = 1.0e5;
 constexpr Scalar gravity = 9.80665;
+
+// The records of the single reservoir EOS region of deckString().
+const std::string eosRecords =
+    "EOS\nPR /\n"
+    "BIC\n0\n0\n0\n/\n"
+    "ACF\n0.22394\n0.01142\n0.4884\n/\n"
+    "PCRIT\n73.773\n45.992\n21.03\n/\n"
+    "TCRIT\n304.128\n190.564\n617.7\n/\n"
+    "MW\n44.00\n16.04\n142.28\n/\n"
+    "VCRIT\n0.09412\n0.09863\n0.60980\n/\n";
+
+// Two reservoir EOS regions: the first repeats eosRecords, the second uses SRK
+// and a higher critical temperature of decane.
+const std::string twoEosRegions =
+    "EOS\nPR /\nSRK /\n"
+    "BIC\n0 0 0 /\n0 0 0 /\n"
+    "ACF\n0.22394 0.01142 0.4884 /\n0.22394 0.01142 0.4884 /\n"
+    "PCRIT\n73.773 45.992 21.03 /\n73.773 45.992 21.03 /\n"
+    "TCRIT\n304.128 190.564 617.7 /\n304.128 190.564 640.0 /\n"
+    "MW\n44.00 16.04 142.28 /\n44.00 16.04 142.28 /\n"
+    "VCRIT\n0.09412 0.09863 0.60980 /\n0.09412 0.09863 0.60980 /\n";
+
+// The second EOS region of twoEosRegions on its own.
+const std::string secondEosRegion =
+    "EOS\nSRK /\n"
+    "BIC\n0 0 0 /\n"
+    "ACF\n0.22394 0.01142 0.4884 /\n"
+    "PCRIT\n73.773 45.992 21.03 /\n"
+    "TCRIT\n304.128 190.564 640.0 /\n"
+    "MW\n44.00 16.04 142.28 /\n"
+    "VCRIT\n0.09412 0.09863 0.60980 /\n";
 
 // A 1x1x20 vertical column from 2000 m to 2100 m in 5 m cells, filled with a
 // CO2/methane/decane mixture that grades from methane-rich at the top to
@@ -97,14 +132,8 @@ std::string deckString(const std::string& equil,
         "CNAMES\nCO2\nMETHANE\nDECANE\n/\n"
         "ROCK\n68.9476 0 /\n"
         + zmfvd
-        + rtemp +
-        "EOS\nPR /\n"
-        "BIC\n0\n0\n0\n/\n"
-        "ACF\n0.22394\n0.01142\n0.4884\n/\n"
-        "PCRIT\n73.773\n45.992\n21.03\n/\n"
-        "TCRIT\n304.128\n190.564\n617.7\n/\n"
-        "MW\n44.00\n16.04\n142.28\n/\n"
-        "VCRIT\n0.09412\n0.09863\n0.60980\n/\n"
+        + rtemp
+        + eosRecords +
         "STCOND\n15.0 1.0 /\n"
         + propsExtra
         + regions +
@@ -131,12 +160,14 @@ struct BasicEquilFixture
 
     /// \param connateWater, maxWater  Per-cell water saturation endpoints, as
     ///        the simulator reads them from the scaled saturation functions.
+    /// \param eosnum  Zero-based EOS region of each cell, empty for one region.
     Computer compute(const std::vector<int>& eqlnum,
                      const std::vector<Scalar>& connateWater = {},
-                     const std::vector<Scalar>& maxWater = {}) const
+                     const std::vector<Scalar>& maxWater = {},
+                     const std::vector<int>& eosnum = {}) const
     {
         return Computer(eclState,
-                        eclState.compositionalConfig().eosType(0),
+                        eosnum,
                         {depths.begin(), depths.end()},
                         eqlnum,
                         Opm::Parallel::Communication{},
@@ -154,6 +185,24 @@ struct BasicEquilFixture
 
 using EquilFixture = BasicEquilFixture<FluidSystem>;
 using WaterEquilFixture = BasicEquilFixture<WaterFluidSystem>;
+
+/// A deck from deckString() with other EOS records for \p numEosRegions regions.
+std::string withEosRecords(std::string deck,
+                           const std::string& records,
+                           const std::size_t numEosRegions)
+{
+    const std::array replacements{
+        std::pair{eosRecords, records},
+        std::pair{std::string{"TABDIMS\n/\n"},
+                  "TABDIMS\n8* " + std::to_string(numEosRegions) + " /\n"},
+    };
+    for (const auto& [from, to] : replacements) {
+        const auto pos = deck.find(from);
+        BOOST_REQUIRE(pos != std::string::npos);
+        deck.replace(pos, from.size(), to);
+    }
+    return deck;
+}
 
 // The mixture composition the ZMFVD table prescribes at a depth.
 CompVec tableComposition(const Scalar depth)
@@ -568,6 +617,81 @@ BOOST_AUTO_TEST_CASE(MismatchedEqlnumSizeFailsOnAllRanks)
     }
 }
 
+BOOST_AUTO_TEST_CASE(EachRegionTakesTheEquationOfStateOfItsCells)
+{
+    // Two equilibration regions, each in its own EOS region. Each must
+    // equilibrate exactly as in a deck holding its EOS region alone.
+    const auto deck = [](const std::string& eosnum) {
+        return deckString("EQUIL\n"
+                          " 2010 150 2300 0 2000 0 /\n"
+                          " 2060 200 2300 0 2050 0 /\n",
+                          "EQLDIMS\n2 /\n"
+                          "REGDIMS\n2 1 0 0 /\n",
+                          "REGIONS\n"
+                          "EQLNUM\n10*1 10*2 /\n" + eosnum,
+                          "ZMFVD\n"
+                          " 2000   0 0.7 0.3\n"
+                          " 2100   0 0.3 0.7  /\n"
+                          " 2000   0 0.7 0.3\n"
+                          " 2100   0 0.3 0.7  /\n");
+    };
+    std::vector<int> regions(20, 0);
+    std::fill(regions.begin() + 10, regions.end(), 1);
+
+    // The fluid system is static, so each fixture computes before the next one
+    // initializes it.
+    const auto pressures = [&regions](const EquilFixture& fix, const std::vector<int>& eosnum) {
+        const auto states = fix.compute(regions, {}, {}, eosnum).fluidStates();
+        std::vector<Scalar> result;
+        std::ranges::transform(states, std::back_inserter(result), [](const auto& fs) {
+            return Opm::getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+        });
+        return result;
+    };
+    const auto both = pressures(
+        EquilFixture(withEosRecords(deck("EOSNUM\n10*1 10*2 /\n"), twoEosRegions, 2)), regions);
+    const auto first = pressures(EquilFixture(deck("")), {});
+    const auto second = pressures(EquilFixture(withEosRecords(deck(""), secondEosRegion, 1)), {});
+
+    for (std::size_t c = 0; c < both.size(); ++c) {
+        BOOST_TEST_CONTEXT("cell " << c) {
+            BOOST_CHECK_CLOSE(both[c], c < 10 ? first[c] : second[c], 1e-10);
+        }
+    }
+    // The second EOS region changes the column it holds.
+    BOOST_CHECK_GT(std::abs(second.back() - first.back()), 0.01 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(RegionAcrossEosRegionsIsRejected)
+{
+    const EquilFixture fix(withEosRecords(
+        deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n", "EQLDIMS\n/\n",
+                   "REGIONS\nEOSNUM\n10*1 10*2 /\n"),
+        twoEosRegions, 2));
+    std::vector<int> eosnum(20, 0);
+    std::fill(eosnum.begin() + 10, eosnum.end(), 1);
+
+    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0), {}, {}, eosnum),
+                          std::runtime_error,
+                          [](const std::runtime_error& error) {
+                              return std::string_view{error.what()}.find(
+                                  "Equilibration region 1 holds cells of EOS regions 1 and 2")
+                                  != std::string_view::npos;
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(InvalidEosnumFailsOnAllRanks)
+{
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    std::vector<int> eosnum(20, 0);
+    const Opm::Parallel::Communication comm;
+    if (comm.rank() == 0) {
+        eosnum.back() = 1;
+    }
+
+    BOOST_CHECK_THROW(fix.compute(std::vector<int>(20, 0), {}, {}, eosnum), std::runtime_error);
+}
+
 BOOST_AUTO_TEST_CASE(ConstantTemperatureFromRtempvd)
 {
     // A depth-independent reservoir temperature is a single-row RTEMPVD
@@ -848,6 +972,111 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
     }
 }
 
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneContactOutsideRowGap)
+{
+    // With EQUIL item 10 = 1 the COMPVD rows give the composition versus depth,
+    // so a gas-oil contact outside the gap between the last vapour row (2049 m)
+    // and the first liquid row (2051 m) moves to the nearest edge of the gap.
+    const auto states = [](const std::string& goc) {
+        const EquilFixture fix(deckString(
+            "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+            "COMPVD\n"
+            " 2000   0 0.95 0.05  0  150.0\n"
+            " 2049   0 0.95 0.05  0  150.0\n"
+            " 2051   0 0.60 0.40  1  150.0\n"
+            " 2100   0 0.40 0.60  1  150.0 /\n"));
+        return fix.compute(std::vector<int>(20, 0)).fluidStates();
+    };
+
+    // The cell at 2057.5 m lies above a contact at 2060 m but below the first
+    // liquid row, and the one at 2042.5 m below a contact at 2030 m but above
+    // the last vapour row.
+    for (const auto& [goc, edge, cell, phaseIdx] :
+         {std::tuple{"2060", "2051", std::size_t{11}, FluidSystem::oilPhaseIdx},
+          std::tuple{"2030", "2049", std::size_t{8}, FluidSystem::gasPhaseIdx}}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const auto moved = states(goc);
+            BOOST_CHECK_CLOSE(moved[cell].saturation(phaseIdx), 1.0, 1e-10);
+
+            const auto expected = states(edge);
+            BOOST_REQUIRE_EQUAL(moved.size(), expected.size());
+            for (std::size_t c = 0; c < moved.size(); ++c) {
+                BOOST_TEST_CONTEXT("Cell " << c) {
+                    for (const auto p : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                        BOOST_CHECK_EQUAL(moved[c].pressure(p), expected[c].pressure(p));
+                        BOOST_CHECK_EQUAL(moved[c].saturation(p), expected[c].saturation(p));
+                    }
+                    for (int comp = 0; comp < 3; ++comp) {
+                        BOOST_CHECK_EQUAL(moved[c].moleFraction(comp),
+                                          expected[c].moleFraction(comp));
+                    }
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneKeepsTheLastVapourRowGas)
+{
+    // A cell on the gas-oil contact belongs to the liquid zone, but with EQUIL
+    // item 10 = 1 the rows decide the phase. The cell at 2032.5 m sits on the
+    // last vapour row, both when the contact lies on that row and when it moves
+    // there from above.
+    for (const std::string goc : {"2032.5", "2020"}) {
+        BOOST_TEST_CONTEXT("Contact at " << goc << " m") {
+            const EquilFixture fix(deckString(
+                "EQUIL\n 2072.5 200 2300 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+                "COMPVD\n"
+                " 2000   0 0.95 0.05  0  150.0\n"
+                " 2032.5 0 0.95 0.05  0  150.0\n"
+                " 2051   0 0.60 0.40  1  150.0\n"
+                " 2100   0 0.40 0.60  1  150.0 /\n"));
+            const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
+            BOOST_REQUIRE_EQUAL(fix.depths[6], 2032.5);
+            BOOST_CHECK_CLOSE(states[6].saturation(FluidSystem::gasPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[6].moleFraction(1) - 0.95, 1e-10);
+
+            // The cells below that row belong to the liquid zone.
+            BOOST_CHECK_CLOSE(states[7].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
+            BOOST_CHECK_SMALL(states[7].moleFraction(1) - 0.60, 1e-10);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneRejectsRowsAgainstContact)
+{
+    // Type 3 takes the gas-oil contact as its reference depth, so the rows may
+    // not put the phase change elsewhere. No item 10 accepts a vapour row below
+    // a liquid one.
+    const std::string gapAbove = "COMPVD\n"
+                                 " 2000   0 0.95 0.05  0  150.0\n"
+                                 " 2049   0 0.95 0.05  0  150.0\n"
+                                 " 2051   0 0.60 0.40  1  150.0\n"
+                                 " 2100   0 0.40 0.60  1  150.0 /\n";
+    const std::string interleaved = "COMPVD\n"
+                                    " 2000   0 0.95 0.05  0  150.0\n"
+                                    " 2040   0 0.60 0.40  1  150.0\n"
+                                    " 2060   0 0.95 0.05  0  150.0\n"
+                                    " 2100   0 0.40 0.60  1  150.0 /\n";
+    for (const auto& [equil, compvd, reason] :
+         {std::tuple {"EQUIL\n 2060 200 2300 0 2060 0 3* 3 /\n",
+                      gapAbove,
+                      "so the rows must agree with it"},
+          std::tuple {"EQUIL\n 2072.5 200 2300 0 2050 0 /\n",
+                      interleaved,
+                      "must lie above the liquid rows"}}) {
+        BOOST_TEST_CONTEXT(equil << compvd) {
+            const EquilFixture fix(deckString(equil, "EQLDIMS\n/\n", "", compvd));
+            BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)),
+                                  std::runtime_error,
+                                  [reason](const std::runtime_error& e) {
+                                      return std::string_view {e.what()}.find(reason)
+                                          != std::string_view::npos;
+                                  });
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
 {
     // The water-oil contact at 2050 m lies inside the column. Above it the
@@ -882,6 +1111,33 @@ BOOST_AUTO_TEST_CASE(WaterZoneBelowContact)
     const Scalar rhoWater = impliedDensity(states[15].pressure(WaterFluidSystem::waterPhaseIdx),
                                            states[16].pressure(WaterFluidSystem::waterPhaseIdx));
     BOOST_CHECK_GT(rhoWater, rhoHc);
+}
+
+BOOST_AUTO_TEST_CASE(GasZoneMeetingTheWaterAnchorsIt)
+{
+    // The vapour rows reach 2060 m, so the gas-oil contact at 2000 m moves down
+    // to 2060 m, below the water-oil contact at 2052.5 m. The gas zone then
+    // meets the water, which takes its pressure from the gas at the contact
+    // rather than from a liquid column extended above its own zone.
+    const WaterEquilFixture fix(waterDeckString(
+        "EQUIL\n 2010 150 2052.5 0 2000 0 /\n",
+        "COMPVD\n"
+        " 2000   0 0.95 0.05  0  150.0\n"
+        " 2060   0 0.95 0.05  0  150.0\n"
+        " 2070   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"));
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, connateSw),
+                                    std::vector<Scalar>(20, 1.0)).fluidStates();
+
+    // Cell 10 is centred on the water-oil contact, where the zero capillary
+    // pressure leaves the water and the gas at one pressure.
+    BOOST_REQUIRE_EQUAL(fix.depths[10], 2052.5);
+    BOOST_CHECK_CLOSE(states[10].pressure(WaterFluidSystem::waterPhaseIdx),
+                      states[10].pressure(WaterFluidSystem::gasPhaseIdx), 1e-8);
+    BOOST_CHECK_CLOSE(states[10].saturation(WaterFluidSystem::gasPhaseIdx),
+                      1.0 - connateSw, 1e-10);
+    BOOST_CHECK_CLOSE(states[11].saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
 }
 
 BOOST_AUTO_TEST_CASE(CoincidentContactsKeepTheGasRoot)
