@@ -509,6 +509,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_networkpressure.cpp
+  tests/test_lgr_summary.cpp
   tests/test_nonnc.cpp
   tests/test_norne_pvt.cpp
   tests/test_OilSatfuncConsistencyChecks.cpp
@@ -752,6 +753,7 @@ list (APPEND TEST_DATA_FILES
   tests/rescoup/slave_parse_error/RC_MASTER.DATA
   tests/rescoup/slave_parse_error/run_test.sh
   tests/rescoup/slave_parse_error/slave/RC_SLAVE.DATA
+  tests/LGR_SUMMARY.DATA
   tests/test10.partition
   tests/parametersystem.ini
   tests/data/co2injection.dgf
