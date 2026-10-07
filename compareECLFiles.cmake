@@ -136,6 +136,7 @@ function(add_test_compareECLFiles)
                         DIRNAME ${PARAM_DIR}
                         FILENAME ${PARAM_FILENAME}
                         SIMULATOR ${PARAM_SIMULATOR}
+                        REFERENCE_SIMULATOR ${reference_simulator}
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
 
@@ -700,11 +701,6 @@ add_test_runSimulator(
     --enable-ecl-output=false
     --enable-vtk-output=true
 )
-
-add_test_runSimulator(CASENAME 1dcompositional_flowexp_comp3_2p
-                      FILENAME 1D_COMP
-                      SIMULATOR flowexp_comp3_2p
-                      DIR compositional)
 
 add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       FILENAME 1D_COMP

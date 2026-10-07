@@ -32,6 +32,10 @@ BEGIN {
 
     # Unquoted test names must be followed by at least one blank/space
     unquoted_target = test " "
+
+    # Match whole property names only, e.g., SIMULATOR must not match
+    # the tail of REFERENCE_SIMULATOR
+    prop_name = "(^|[[:space:]])" prop
 }
 
 {
@@ -47,19 +51,19 @@ BEGIN {
     # 2. Extract target property value while inside the target block
     if (in_target_block && index($0, prop)) {
         # Match standard quoted string: PROPERTY "value" (e.g., SIMULATOR "flow")
-        if (match($0, prop "[[:space:]]+\"[^\"]+\"")) {
+        if (match($0, prop_name "[[:space:]]+\"[^\"]+\"")) {
             split(substr($0, RSTART, RLENGTH), parts, "\"")
             print parts[2]
             exit
         }
         # Match CMake bracket argument: PROPERTY [=[value]=] (e.g., SIMULATOR [=[flow]=])
-        else if (match($0, prop "[[:space:]]+\\[=\\[[^\\]]+\\]=\\]")) {
+        else if (match($0, prop_name "[[:space:]]+\\[=\\[[^\\]]+\\]=\\]")) {
             split(substr($0, RSTART, RLENGTH), parts, /\[=\[|\]=\]/)
             print parts[2]
             exit
         }
         # Match unquoted argument: PROPERTY value (e.g., SIMULATOR flow)
-        else if (match($0, prop "[[:space:]]+[^[:space:]]+")) {
+        else if (match($0, prop_name "[[:space:]]+[^[:space:]]+")) {
             # Split on FS--i.e., whitespace.
             split(substr($0, RSTART, RLENGTH), parts)
             print parts[2]

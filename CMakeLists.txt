@@ -885,6 +885,8 @@ macro(opm-simulators_targets_hook)
   # this will be used in a template argument pack.
   string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
 
+  # Only flowexp_comp3_2p is in the default build; build the other
+  # flowexp_comp variants by name.
   opm_add_executable(
     TARGET
       flowexp_comp
@@ -894,6 +896,7 @@ macro(opm-simulators_targets_hook)
       $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
+    EXCLUDE_FROM_ALL
   )
   target_compile_definitions(flowexp_comp
     PRIVATE
@@ -908,6 +911,7 @@ macro(opm-simulators_targets_hook)
       $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
+    EXCLUDE_FROM_ALL
   )
 
   opm_add_executable(
@@ -1015,7 +1019,6 @@ macro(opm-simulators_targets_hook)
 
   if(NOT BUILD_FLOW_VARIANTS)
     foreach(target flowexp_blackoil
-                   flowexp_comp
                    flow_blackoil_alugrid
                    flow_blackoil_float
                    flow_blackoil_polyhedralgrid
