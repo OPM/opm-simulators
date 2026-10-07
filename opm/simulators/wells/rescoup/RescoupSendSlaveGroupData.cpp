@@ -24,6 +24,7 @@
 
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <array>
 #include <string>
@@ -238,6 +239,7 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
     const auto& summary_state = this->groupStateHelper_.summaryState();
     const auto& sched_state = this->schedule_[this->report_step_idx_];
+    const auto& unit_system = this->schedule_.getUnits();
     constexpr std::array rc_phases{RcPhase::Oil, RcPhase::Gas, RcPhase::Water};
 
     // Per phase: potential, history rate; then the lift gas rate and the number
@@ -267,11 +269,19 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
                       summary_state, ReservoirCoupling::convertToOpmPhase(rc_phases[i]))));
             flowing = flowing || (ws.surface_rates[pos] != 0.0);
         }
-        // As GGLIR: lift gas of the wells with an ALQ of type GRAT or no VFP table.
+        // As GGLIR, but only the lift gas rate of the wells with an ALQ of type
+        // GRAT or no VFP table.  Wells with an ALQ of type IGLR are left out:
+        // glir() counts them as glr * (oil + water rate), but an IGLR value is
+        // a ratio, not a rate.  The master's GGLIR therefore differs from the
+        // slave's own GGLIR for such wells.
         const int vfp_table = well_ecl.productionControls(summary_state).vfp_table_number;
-        if (!sched_state.vfpprod.has(vfp_table)
-            || sched_state.vfpprod(vfp_table).getALQType() == VFPProdTable::ALQ_TYPE::ALQ_GRAT)
-        {
+        if (!sched_state.vfpprod.has(vfp_table)) {
+            // Without a VFP table the unit of the ALQ is not known to the
+            // input, so alq_state is in input units.  As in glir().
+            sums[lift_gas] += efficiency * unit_system.to_si(UnitSystem::measure::gas_surface_rate,
+                                                             ws.alq_state.get());
+        }
+        else if (sched_state.vfpprod(vfp_table).getALQType() == VFPProdTable::ALQ_TYPE::ALQ_GRAT) {
             sums[lift_gas] += efficiency * ws.alq_state.get();
         }
         if (flowing && ws.status == Well::Status::OPEN) {
