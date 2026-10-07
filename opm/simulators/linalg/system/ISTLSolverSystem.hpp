@@ -27,6 +27,19 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 namespace Opm
 {
 
@@ -96,6 +109,15 @@ public:
         OPM_TIMEBLOCK(istlSolverSolve);
         ++this->solveCount_;
 
+        // Same fine-system dump as ISTLSolver::solve(), which this overrides,
+        // so the reservoir matrix and rhs can be diffed against the classic path.
+        if (this->prm_[this->activeSolverNum_].get("verbosity", 0) > 10) {
+            Helper::writeSystem(this->simulator_,
+                                this->getMatrix(),
+                                *Parent::rhs_,
+                                this->comm_.get());
+        }
+
         const std::size_t numRes = Parent::matrix_->N();
         const std::size_t numWell = cachedWellStructure_.totalWellBlocks;
 
@@ -121,6 +143,13 @@ public:
 private:
     bool sysInitialized_ = false;
     WellMatrixStructure cachedWellStructure_;
+
+    // Aggregation of merged well block rows into wells, and the well weights
+    // used by the CPRW pressure stage.  Both are produced here, in the outer
+    // layer, from data already extracted from the well model; the
+    // preconditioner consumes them as plain numbers.
+    WellDofLayout wellLayout_;
+    std::string wellWeightType_ = "quasiimpes";
 
     // Current per-well B/C/D blocks for the explicit 2x2 system matrix.
     std::vector<WRMatrix<Scalar>> wellBMatrices_;
@@ -163,6 +192,24 @@ private:
     {
         OPM_TIMEBLOCK(flexibleSolverPrepare);
 
+        // Read before buildWellDofLayout(), which consults
+        // wellLayout_.identityOnPressureControl to decide whether to
+        // populate wellLayout_.pressureControlled: reading it afterwards
+        // would leave that flag one call stale.
+        const auto& prm = this->prm_[this->activeSolverNum_];
+        wellWeightType_ = prm.get("preconditioner.well_weight_type", std::string{"cellavg"});
+        if (wellWeightType_ != "unit" && wellWeightType_ != "cellavg"
+            && wellWeightType_ != "cellblockavg" && wellWeightType_ != "quasiimpes") {
+            OPM_THROW(std::invalid_argument,
+                      "Unknown preconditioner.well_weight_type '" + wellWeightType_
+                          + "'. Valid values are 'unit', 'cellavg', "
+                            "'cellblockavg' and 'quasiimpes'.");
+        }
+        // Give a pressure-controlled well a trivial coarse equation, as the
+        // classic CPRW does.  Off keeps the contracted equation for every well.
+        wellLayout_.identityOnPressureControl
+            = prm.get("preconditioner.well_identity_on_pressure_control", false);
+
         wellBMatrices_.clear();
         wellCMatrices_.clear();
         wellDMatrices_.clear();
@@ -170,6 +217,8 @@ private:
 
         this->simulator_.problem().wellModel().addBCDMatrix(
             wellBMatrices_, wellCMatrices_, wellDMatrices_, wellCells_);
+
+        buildWellDofLayout();
 
         const Opm::WellMatrixMerger<Scalar> merger(
             Parent::matrix_->N(), wellBMatrices_, wellCMatrices_, wellDMatrices_, wellCells_);
@@ -188,8 +237,6 @@ private:
 #endif
         const bool needStructureRefresh = !sysInitialized_ || globalStructureChanged;
 
-        const auto& prm = this->prm_[this->activeSolverNum_];
-
         if (needStructureRefresh) {
             OPM_TIMEBLOCK(flexibleSolverCreate);
             merger.buildMatrices(mergedB_, mergedC_, mergedD_);
@@ -197,6 +244,7 @@ private:
             sysMatrix_.B = &mergedB_;
             sysMatrix_.C = &mergedC_;
             sysMatrix_.D = &mergedD_;
+            sysMatrix_.wellLayout = &wellLayout_;
             cachedWellStructure_ = merger.buildStructure();
 
             refreshSystemSolverForChangedWellStructure(prm);
@@ -212,8 +260,153 @@ private:
             sysMatrix_.B = &mergedB_;
             sysMatrix_.C = &mergedC_;
             sysMatrix_.D = &mergedD_;
+            sysMatrix_.wellLayout = &wellLayout_;
             sysPrecond_->update();
         }
+    }
+
+    // Which merged well block rows belong to which well.  The merged D matrix
+    // is the per-well D blocks concatenated, so this is a plain prefix sum
+    // over their dimensions: one block for a standard well, one per segment
+    // for a multisegment well.
+    void buildWellDofLayout()
+    {
+        auto& offsets = wellLayout_.wellBlockOffsets;
+        offsets.clear();
+        offsets.reserve(wellDMatrices_.size() + 1);
+        offsets.push_back(0);
+        std::size_t total = 0;
+        for (const auto& d : wellDMatrices_) {
+            total += d.N();
+            offsets.push_back(total);
+        }
+
+        // Which wells are on pressure control.  Asking this is the outer
+        // layer's job; below here it is just a flag per well.  The
+        // pressureControlled array is in the same order as the locally present
+        // wells in the BlackoilWellModel, which addBCDMatrix also follows.
+        wellLayout_.pressureControlled.clear();
+        if (wellLayout_.identityOnPressureControl) {
+            const auto& wellModel = this->simulator_.problem().wellModel();
+            const auto& wellState = wellModel.wellState();
+            wellLayout_.pressureControlled.reserve(wellDMatrices_.size());
+            for (const auto& well : wellModel) {
+                wellLayout_.pressureControlled.push_back(
+                    well->isPressureControlled(wellState) ? 1 : 0);
+            }
+            if (wellLayout_.pressureControlled.size() != wellDMatrices_.size()) {
+                OPM_THROW(std::logic_error,
+                          "System CPRW: the well container and the extracted well "
+                          "matrices disagree on the number of wells.");
+            }
+        }
+    }
+
+    // Weights used to contract each well's equations down to the single scalar
+    // the CPRW pressure system carries for that well.  Computed here rather
+    // than inside the preconditioner so that the linear-solver core never sees
+    // anything well-specific, and so that this can later be replaced by a
+    // value obtained from the well model without touching the core.
+    WellVector<Scalar> computeWellWeights(const ResVector<Scalar>& resWeights) const
+    {
+        const std::size_t numBlocks = mergedD_.N();
+        // See the assumptions about well variable and equation indices in SystemTypes.hpp.
+        const int q = wellLayout_.pressureVariableIndex;
+
+        WellVector<Scalar> weights(numBlocks);
+
+        if (wellWeightType_ == "cellavg") {
+            // Classic CPRW (use_well_weights = false): for every block b of
+            // well j, lambda_b = mean of the cell weights w_c over all cells c perforated by j.
+            for (std::size_t j = 0; j < wellLayout_.numWells(); ++j) {
+                const auto lambda = averagePerforatedCellWeights(
+                    resWeights, wellLayout_.firstBlock(j), wellLayout_.endBlock(j));
+                for (std::size_t wb = wellLayout_.firstBlock(j); wb < wellLayout_.endBlock(j); ++wb) {
+                    weights[wb] = lambda;
+                }
+            }
+            return weights;
+        }
+
+        if (wellWeightType_ == "cellblockavg") {
+            // lambda_b = mean of w_c over the cells c connected to block b only.
+            for (std::size_t wb = 0; wb < numBlocks; ++wb) {
+                weights[wb] = averagePerforatedCellWeights(resWeights, wb, wb + 1);
+            }
+            return weights;
+        }
+
+        for (std::size_t wb = 0; wb < numBlocks; ++wb) {
+            auto& lambda = weights[wb];
+            lambda = 0.0;
+
+            if (wellWeightType_ == "unit") {
+                // Pick the control or pressure equation of the well as-is.
+                lambda[q] = 1.0;
+                continue;
+            }
+
+            // Quasi-IMPES well weights: lambda = D_ii^-T e_q, scaled to unit
+            // max norm.  This is the analogue of the use_well_weights=true
+            // branch of StandardWellEquations::extractCPRPressureMatrix, and
+            // it needs no knowledge of the well's control mode.
+            Dune::FieldVector<Scalar, numWellDofs> rhs(0.0);
+            rhs[q] = 1.0;
+            bool ok = false;
+            if (mergedD_.exists(wb, wb)) {
+                try {
+                    const auto dt = mergedD_[wb][wb].transposed();
+                    dt.solve(lambda, rhs);
+                    Scalar absMax = 0.0;
+                    for (int i = 0; i < numWellDofs; ++i) {
+                        absMax = std::max(absMax, std::abs(lambda[i]));
+                    }
+                    if (absMax > 0.0 && std::isfinite(absMax)) {
+                        lambda /= absMax;
+                        ok = true;
+                    }
+                } catch (const Dune::FMatrixError&) {
+                    ok = false;
+                }
+            }
+            if (!ok) {
+                // Singular or degenerate well block: fall back to the plain
+                // pressure row rather than poisoning the coarse system.
+                lambda = 0.0;
+                lambda[q] = 1.0;
+            }
+        }
+        return weights;
+    }
+
+    // Mean reservoir weight over the cells connected to well blocks [first, last),
+    // applied to the well conservation equations; zero on the control equation.
+    Dune::FieldVector<Scalar, numWellDofs>
+    averagePerforatedCellWeights(const ResVector<Scalar>& resWeights,
+                                 const std::size_t first,
+                                 const std::size_t last) const
+    {
+        Dune::FieldVector<Scalar, numWellDofs> lambda(0.0);
+        int numPerfs = 0;
+        for (std::size_t b = first; b < last; ++b) {
+            for (auto col = mergedB_[b].begin(), end = mergedB_[b].end(); col != end; ++col) {
+                const auto& cw = resWeights[col.index()];
+                for (int conservation_eq_index = 0; conservation_eq_index < numResDofs;
+                     ++conservation_eq_index) {
+                    lambda[conservation_eq_index] += cw[conservation_eq_index];
+                }
+                ++numPerfs;
+            }
+        }
+        for (int conservation_eq_index = 0; conservation_eq_index < numResDofs;
+             ++conservation_eq_index) {
+            // No perforations on this rank: regularise rather than leave an empty row.
+            lambda[conservation_eq_index] = numPerfs > 0
+                ? lambda[conservation_eq_index] / numPerfs
+                : Scalar{1.0};
+        }
+        lambda[wellLayout_.pressureVariableIndex] = 0.0;
+        return lambda;
     }
 
     void refreshSystemSolverForChangedWellStructure(const Opm::PropertyTree& prm)
@@ -250,11 +443,15 @@ private:
         std::function<ResVector<Scalar>()> resWeightCalc
             = this->getWeightsCalculator(resSolverPrm, this->getMatrix(), pressureIndex);
 
+        // The well part of the weights is filled here too: the CPRW pressure
+        // stage restricts the well rows with it, and re-reads it on every
+        // update, so it has to track the current merged D.
         std::function<SystemVector<Scalar>()> sysWeightCalc;
         if (resWeightCalc) {
-            sysWeightCalc = [resWeightCalc]() {
+            sysWeightCalc = [this, resWeightCalc]() {
                 SystemVector<Scalar> w;
                 w[_0] = resWeightCalc();
+                w[_1] = this->computeWellWeights(w[_0]);
                 return w;
             };
         }
