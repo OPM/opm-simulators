@@ -24,25 +24,31 @@
 #if HAVE_CUDA
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 
 #include <cstddef>
 #include <memory>
-
-namespace Opm::Parameters {
-
-// Experimental: route the per-element BlackOilIntensiveQuantities update through the
-// GPU dispatcher instead of computing it on the CPU. This currently supports
-// only the gas-water energy configuration.
-struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
+#include <vector>
 
 namespace Opm::Properties::TTag {
     struct FlowGasWaterEnergyProblem;
     struct FlowGasWaterEnergyProblemGPU;
+    template <template <class> class Storage>
+    struct FlowGasWaterEnergyDeviceTypeTag;
 }
 
 namespace Opm::gpuistl {
+
+template <class T>
+class GpuView;
+template <class T>
+class GpuVector;
+
+template <class CpuTypeTag,
+          class DeviceTypeTag =
+              Properties::TTag::FlowGasWaterEnergyDeviceTypeTag<GpuView>>
+class GpuFlowGasWaterEnergyBridge;
 
 /// Compile-time predicate: does this CPU \c TypeTag describe the specific
 /// CO2STORE configuration (FlowGasWaterEnergyProblem) that the GPU
@@ -71,13 +77,15 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 };
 
 /// Runs the supported BlackOil intensive-quantities update on the GPU for all
-/// grid degrees of freedom. Each dispatcher instance owns its GPU-side state
-/// and lazily constructs the \c GpuFlowProblem from the supplied CPU problem
-/// on the first call.
+/// grid degrees of freedom. Each dispatcher instance owns a persistent,
+/// typed property/assembly bridge which is lazily constructed from the CPU
+/// problem on the first call.
 ///
 /// On every call, primary variables for the requested DoFs are uploaded to
-/// the device, the per-cell update kernel is launched (one thread per DoF),
-/// and the resulting intensive quantities are read back to host memory.
+/// reusable device storage and the per-cell update kernel is launched (one
+/// thread per DoF). The resulting intensive quantities remain device-resident
+/// until an explicit CPU materialization request. Device allocations are
+/// rebuilt only if the number of DoFs changes.
 /// The supported gas-water thermal configuration computes the complete
 /// intensive-quantity state needed by this dispatcher, including mobility.
 ///
@@ -87,9 +95,12 @@ template <class CpuTypeTag>
 class GpuBlackoilIntensiveQuantitiesDispatcher
 {
 public:
+    using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
     using Problem            = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
-    using PrimaryVariables   = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
+    using PrimaryVariables = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
+    using SolutionVector = Opm::GetPropType<CpuTypeTag, Opm::Properties::SolutionVector>;
     using IntensiveQuantities = Opm::GetPropType<CpuTypeTag, Opm::Properties::IntensiveQuantities>;
+    using Bridge = GpuFlowGasWaterEnergyBridge<CpuTypeTag>;
 
     GpuBlackoilIntensiveQuantitiesDispatcher();
     ~GpuBlackoilIntensiveQuantitiesDispatcher();
@@ -98,17 +109,40 @@ public:
     GpuBlackoilIntensiveQuantitiesDispatcher&
     operator=(const GpuBlackoilIntensiveQuantitiesDispatcher&) = delete;
 
-    /// Run the per-cell intensive-quantities update kernel on all
-    /// \p numDof DoFs. \p numDof must equal the CPU problem's number of grid
-    /// DoFs because the GPU problem data is indexed from zero. Each
-    /// \p cpuPriVars[i] points at the CPU primary variables for DoF \c i.
-    /// The GPU-owned BlackOil intensive-quantity fields are written onto
-    /// \p outIQ[i] field-by-field via
-    /// \c BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom.
+    /// Run the per-cell intensive-quantities update kernel on the complete
+    /// CPU solution. The primary-variable transfer and kernel are ordered on
+    /// the bridge stream, and the typed device-IQ result is recorded there.
     void update(const Problem& cpuProblem,
-                const PrimaryVariables* const* cpuPriVars,
-                IntensiveQuantities* const* outIQ,
-                std::size_t numDof);
+                const SolutionVector& solution,
+                unsigned timeIdx);
+
+    void evaluateResident(unsigned timeIdx);
+    unsigned applyNewtonUpdate(const Problem& problem,
+                               const BlackoilNewtonParams<Scalar>& params,
+                               Scalar relaxation, bool useSOR, bool stabilize,
+                               bool validate);
+    bool hasBridge() const;
+    std::vector<Scalar> compactConvergenceFactors();
+    std::vector<Scalar> compactRelativeChange();
+    std::vector<Scalar> compactRockCompactionState();
+    void reportTransferCounters() const;
+
+    /// Explicit CPU-boundary materialization for legacy CPU consumers.
+    void materializeHostIntensiveQuantities(unsigned timeIdx,
+                                            IntensiveQuantities* const* destination,
+                                            std::size_t numDof);
+
+    /// Materialize one source cell without downloading the complete IQ slot.
+    void materializeHostIntensiveQuantity(unsigned timeIdx, unsigned globalIdx,
+                                         IntensiveQuantities& destination);
+
+    /// Form true-IMPES CPR weights directly from resident storage derivatives.
+    /// Return false for a singular block so the CPU path retains its diagnostics.
+    bool computeTrueImpesWeights(GpuVector<Scalar>& weights, Scalar timeStepSize);
+
+    bool hasDeviceModelView() const;
+    const Bridge& bridge() const;
+    Bridge& bridge();
 
 private:
     struct Impl;

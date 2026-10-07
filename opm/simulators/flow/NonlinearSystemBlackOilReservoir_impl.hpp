@@ -35,6 +35,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/linalg/LinearSolverAcceleratorType.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -164,7 +165,7 @@ initialLinearization(SimulatorReportSingle& report,
     ParentType::initialLinearization(report,
                                      minIter,
                                      maxIter,
-                                     timer);                                 
+                                     timer);
 
     // -----------   Check if converged   -----------
     std::vector<Scalar> residual_norms;
@@ -219,6 +220,14 @@ nonlinearIteration(const SimulatorTimerInterface& timer,
         this->conv_monitor_.reset();
         this->current_relaxation_ = 1.0;
         this->dx_old_ = 0.0;
+#if HAVE_CUDA
+        ++newtonAttemptCount_;
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (this->simulator_.model().hasGpuPropertyAssemblyBridge()) {
+                this->simulator_.model().gpuNewtonDispatcher().bridge().resetCorrectionHistory();
+            }
+        }
+#endif
         this->convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
         this->convergence_reports_.back().report.reserve(11);
     }
@@ -261,14 +270,62 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         report.total_newton_iterations = 1;
 
         const unsigned nc = this->simulator_.model().numGridDof();
-        BVector x(nc);
+        bool residentUpdate = false;
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                      && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            auto& model = this->simulator_.model();
+            const auto& solver = model.newtonMethod().linearSolver();
+            residentUpdate = Parameters::Get<Parameters::ExperimentalGpuNewtonUpdate>()
+                && model.hasGpuPropertyAssemblyBridge() && solver.hasGpuSolver()
+                && this->grid_.comm().size() == 1
+                && this->wellModel().numLocalWellsEnd() == 0
+                && this->param_.nonlinear_solver_ != "nldd"
+                && !Parameters::Get<Parameters::UseHybridNewton>()
+                && !getPropValue<TypeTag, Properties::EnableConstraints>();
+            if (!residentNewtonAnnounced_) {
+                OpmLog::info(residentUpdate ? "[GPU Newton] resident path active"
+                    : "[GPU Newton] resident path inactive: requires enabled GPU properties/assembly, gpuISTL, one rank, no wells, ordinary unconstrained Newton");
+                residentNewtonAnnounced_ = true;
+            }
+            if (residentUpdate && !residentNewtonActive_) {
+                model.gpuNewtonDispatcher().bridge().importSwitchHistory(model.newtonMethod().switchHistory());
+                model.gpuNewtonDispatcher().bridge().importPreviousCorrection(this->dx_old_);
+            } else if (!residentUpdate && residentNewtonActive_) {
+                model.ensureHostPrimaryVariables(0);
+                model.newtonMethod().setSwitchHistory(model.gpuNewtonDispatcher().bridge().materializeSwitchHistory());
+                model.gpuNewtonDispatcher().bridge().materializeHostPreviousCorrection(this->dx_old_);
+            }
+            residentNewtonActive_ = residentUpdate;
+        }
+#endif
+        BVector x(residentUpdate && !shouldStoreSolutionUpdate() ? 0 : nc);
 
         linear_solve_setup_time_ = 0.0;
         try {
             this->wellModel().linearize(this->simulator().model().linearizer().jacobian(),
                                         this->simulator().model().linearizer().residual());
 
-            solveJacobianSystem(x);
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                          && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+                if (residentUpdate) {
+                    auto& model = this->simulator_.model();
+                    auto& bridge = model.gpuNewtonDispatcher().bridge();
+                    auto& solver = model.newtonMethod().linearSolver();
+                    bridge.orderSolverAfterProperties();
+                    solver.prepareGpu(model.linearizer().gpuJacobian(), model.linearizer().flattenedGpuResidual());
+                    bridge.correction() = Scalar{0};
+                    solver.solveGpu(bridge.correction());
+                    bridge.orderUpdateAfterSolver();
+                } else {
+                    solveJacobianSystem(x);
+                }
+            } else
+#endif
+            {
+                solveJacobianSystem(x);
+            }
 
             report.linear_solve_setup_time += linear_solve_setup_time_;
             report.linear_solve_time += perfTimer.stop();
@@ -286,7 +343,9 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
         perfTimer.reset();
         perfTimer.start();
 
-        this->wellModel().postSolve(x);
+        if (!residentUpdate) {
+            this->wellModel().postSolve(x);
+        }
 
         if (this->param_.use_update_stabilization_) {
             bool isOscillate = false;
@@ -316,10 +375,46 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                                  + std::to_string(this->current_relaxation_));
                 }
             }
-            nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
+            if (!residentUpdate) {
+                nonlinear_solver.stabilizeNonlinearUpdate(x, this->dx_old_, this->current_relaxation_);
+            }
         }
 
-        this->updateSolution(x);
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                      && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (residentUpdate) {
+                auto& model = this->simulator_.model();
+                if (shouldStoreSolutionUpdate()) {
+                    prepareSolutionUpdate();
+                }
+                const auto switched = model.gpuNewtonDispatcher().applyNewtonUpdate(
+                    this->simulator_.problem(), model.newtonMethod().params(),
+                    this->current_relaxation_, nonlinear_solver.relaxType() == NonlinearRelaxType::SOR,
+                    this->param_.use_update_stabilization_,
+                    Parameters::Get<Parameters::ExperimentalGpuNewtonValidation>());
+                model.newtonMethod().setNumPriVarsSwitched(switched);
+                model.evaluateResidentProperties(0);
+                if (shouldStoreSolutionUpdate()) {
+                    OpmLog::debug("[GPU Newton] correction download: solution-update diagnostic");
+                    model.gpuNewtonDispatcher().bridge().materializeHostCorrection(x);
+                    storeSolutionUpdate(x);
+                }
+            } else {
+                this->updateSolution(x);
+            }
+        } else
+#endif
+        {
+            this->updateSolution(x);
+        }
+#if HAVE_CUDA
+        if (Parameters::Get<Parameters::ExperimentalGpuNewtonRejectOnce>()
+            && newtonAttemptCount_ == 2 && !validationRejected_) {
+            validationRejected_ = true;
+            OPM_THROW_PROBLEM(NumericalProblem, "Validation-only one-shot timestep rejection after Newton update");
+        }
+#endif
         report.update_time += perfTimer.stop();
     }
 
@@ -333,6 +428,26 @@ relativeChange() const
 {
     Scalar resultDelta = 0.0;
     Scalar resultDenom = 0.0;
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                  && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+        auto& model = this->simulator_.model();
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            const auto contributions = model.gpuNewtonDispatcher().compactRelativeChange();
+            const auto& elemMapper = model.elementMapper();
+            const auto& gridView = this->simulator_.gridView();
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                const unsigned cell = elemMapper.index(elem);
+                resultDelta += contributions[cell * 2];
+                resultDenom += contributions[cell * 2 + 1];
+            }
+            resultDelta = gridView.comm().sum(resultDelta);
+            resultDenom = gridView.comm().sum(resultDenom);
+            return resultDenom > 0.0 ? resultDelta / resultDenom : 0.0;
+        }
+    }
+#endif
 
     const auto& elemMapper = this->simulator_.model().elementMapper();
     const auto& gridView = this->simulator_.gridView();
@@ -425,6 +540,33 @@ solveJacobianSystem(BVector& x)
     auto& jacobian = this->simulator_.model().linearizer().jacobian().istlMatrix();
     auto& residual = this->simulator_.model().linearizer().residual();
     auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+        const auto globalWells = this->grid_.comm().sum(
+            this->simulator_.problem().wellModel().numLocalWellsEnd());
+        if (Parameters::linearSolverAcceleratorTypeFromCLI()
+                == Parameters::LinearSolverAcceleratorType::GPU
+            && globalWells == 0)
+        {
+            auto& linearizer = this->simulator_.model().linearizer();
+            if (linSolver.prepareGpu(linearizer.gpuJacobian(),
+                                     linearizer.flattenedGpuResidual()))
+            {
+                x = 0.0;
+                linSolver.solveGpu(x);
+                if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+                    auto& model = this->simulator_.model();
+                    if (model.hasGpuPropertyAssemblyBridge()) {
+                        model.gpuNewtonDispatcher().bridge().recordCompatibilityCorrectionDownload(
+                            x.dim() * sizeof(Scalar));
+                    }
+                }
+                return;
+            }
+        }
+    }
+#endif
 
     const int numSolvers = linSolver.numAvailableSolvers();
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {
@@ -614,6 +756,43 @@ localConvergenceData(std::vector<Scalar>& R_sum,
     const auto& problem = this->simulator_.problem();
 
     const auto& residual = this->simulator_.model().linearizer().residual();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                  && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            const auto factors = this->simulator_.model().gpuNewtonDispatcher()
+                                     .compactConvergenceFactors();
+            constexpr unsigned compactNumEq = getPropValue<TypeTag, Properties::NumEq>();
+            const auto& gridView = this->simulator().gridView();
+            const auto& elemMapper = model.elementMapper();
+            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                const unsigned cell_idx = elemMapper.index(elem);
+                const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0)
+                                     * model.dofTotalVolume(cell_idx);
+                pvSumLocal += pvValue;
+                if (isNumericalAquiferCell(elem)) {
+                    numAquiferPvSumLocal += pvValue;
+                }
+                for (unsigned compIdx = 0; compIdx < compactNumEq; ++compIdx) {
+                    B_avg[compIdx] += factors[cell_idx * compactNumEq + compIdx];
+                    const Scalar r = residual[cell_idx][compIdx];
+                    R_sum[compIdx] += r;
+                    const Scalar coeff = std::abs(r) / pvValue;
+                    if (coeff > maxCoeff[compIdx]) {
+                        maxCoeff[compIdx] = coeff;
+                        maxCoeffCell[compIdx] = cell_idx;
+                    }
+                }
+            }
+            for (unsigned compIdx = 0; compIdx < compactNumEq; ++compIdx) {
+                B_avg[compIdx] /= Scalar(this->global_nc_);
+            }
+            return {pvSumLocal, numAquiferPvSumLocal};
+        }
+    }
+#endif
 
     ElementContext elemCtx(this->simulator_);
     const auto& gridView = this->simulator().gridView();

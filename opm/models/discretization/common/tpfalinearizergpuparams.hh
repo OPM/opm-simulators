@@ -32,8 +32,11 @@
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
+#include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
@@ -53,22 +56,38 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
 
 #include <opm/models/discretization/common/tpfalinearizerstructs.hh>
 
 namespace Opm {
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+template <class MatrixBlock, class VectorBlock>
+__global__ void apply_source_deltas(const unsigned* indices,
+                                    const VectorBlock* residualDeltas,
+                                    const MatrixBlock* jacobianDeltas,
+                                    VectorBlock* residual,
+                                    MatrixBlock** diagonal,
+                                    unsigned count)
+{
+    const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < count) {
+        const unsigned cell = indices[i];
+        residual[cell] += residualDeltas[i];
+        *diagonal[cell] += jacobianDeltas[i];
+    }
+}
+#endif
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
- * \brief Manages GPU buffer allocation and view setup for one linearization pass.
+ * \brief Manages persistent GPU buffer ownership and per-linearization refresh.
  *
- * Constructed once per call to TpfaLinearizer::linearize_() when the GPU assembly
- * path is active.  The constructor performs all CPU-to-GPU copies and stores the
- * resulting GPU buffers as members.  Callers retrieve lightweight GpuView objects
- * via the accessor methods and pass them directly to the GPU kernels.  After the
- * kernels complete, copyResidualToHost() and copyJacobianToHost() transfer the
- * computed results back to the CPU.
+ * The topology and other invariant owners are uploaded once.  Subsequent
+ * linearizations retain their addresses and only clear mutable storage and
+ * refresh genuinely changing source contributions.
  */
 template <class TypeTag>
 class TpfaLinearizerGpuParams
@@ -123,25 +142,35 @@ private:
 
     using GpuModelBufferType = SimpleFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>;
     using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
-
-    using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+    using PropertyAssemblyBridge =
+        gpuistl::GpuFlowGasWaterEnergyBridge<TypeTag, CorrectTypeTagView>;
 
     FullDomain<gpuistl::GpuBuffer<int>> domainBuffer_;
     SparseTable<NeighborInfoGPU, gpuistl::GpuBuffer> neighborInfoBuffer_;
     // diagMatAddressView_ is non-owning: the underlying buffer lives in TpfaLinearizer.
     gpuistl::GpuView<MatrixBlockGPU*> diagMatAddressView_;
+    // Non-owning: the matrix is owned by TpfaLinearizer and kept alive for
+    // the lifetime of this parameter object.
+    gpuistl::GpuSparseMatrixWrapper<Scalar>* gpuJacobian_;
     gpuistl::GpuBuffer<VectorBlockGPU> residualBuffer_;
     gpuistl::GpuView<VectorBlockGPU>
         residualView_; // stored as lvalue because mutable ref must be provided
-    // dynamicGpuFluidSystemBuffer_ must be declared before dynamicGpuFluidSystemPtr_
-    // because the ptr holds a GpuView into the buffer's GPU memory.
-    GpuFluidSystemBuffer dynamicGpuFluidSystemBuffer_;
-    // The fluid-system ptr is kept alive because gpuModelBuffer_ and
-    // boundaryInfoBuffer_ store raw GPU pointers into it.
+    // gpuISTL consumes a flat vector. MiniVector is contiguous, so this is a
+    // device-to-device flattening copy with no host staging.
+    gpuistl::GpuVector<Scalar> flattenedResidual_;
+    gpuistl::GpuBuffer<unsigned> sourceIndices_;
+    gpuistl::GpuBuffer<VectorBlockGPU> sourceResidualDeltas_;
+    gpuistl::GpuBuffer<MatrixBlockGPU> sourceJacobianDeltas_;
+    // Fallback-only owners. In the direct property/assembly path these stay
+    // empty and all three device views come from propertyAssemblyBridge_.
+    std::optional<GpuFluidSystemBuffer> dynamicGpuFluidSystemBuffer_;
     GpuFluidSystemPtr dynamicGpuFluidSystemPtr_;
-    GpuModelBufferType gpuModelBuffer_;
-    GpuFlowProblemBufferType gpuFlowProblemBuffer_;
+    std::optional<GpuModelBufferType> gpuModelBuffer_;
+    std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
+    const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
     gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
+    std::size_t sourceCapacity_{0};
+    unsigned numCells_{0};
 
 public:
     /*!
@@ -178,22 +207,16 @@ public:
         , neighborInfoBuffer_(
               gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo, gpuJacobian, cpuJacobian))
         , diagMatAddressView_(gpuistl::make_view(gpuBufferDiagMatAddress))
+        , gpuJacobian_(&gpuJacobian)
         , residualBuffer_(gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual))
         , residualView_(gpuistl::make_view(residualBuffer_))
-        , dynamicGpuFluidSystemBuffer_(
-              ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()))
-        , dynamicGpuFluidSystemPtr_(
-              gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer_)))
-        , gpuModelBuffer_([&]() -> GpuModelBufferType {
-            std::vector<Scalar> volumes(numCells);
-            for (unsigned i = 0; i < numCells; ++i) {
-                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
-            }
-            GpuModel gpuModel(
-                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
-            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
-        }())
-        , gpuFlowProblemBuffer_([&]() -> GpuFlowProblemBufferType {
+        , flattenedResidual_(residualBuffer_.size() * numEq)
+        , numCells_(numCells)
+    {
+        static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
+                                     CorrectTypeTagView>);
+
+        gpuFlowProblemBuffer_.emplace([&]() -> GpuFlowProblemBufferType {
             std::vector<Scalar> alpha0(numCells);
             std::vector<Scalar> alpha1(numCells);
             std::vector<Scalar> alpha2(numCells);
@@ -217,11 +240,56 @@ public:
             ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
                 alpha0, alpha1, alpha2, problem.moduleParams());
             return gpuistl::copy_to_gpu(gpuFlowProblem);
-        }())
-        , boundaryInfoBuffer_(
-              gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                  boundaryInfo, *dynamicGpuFluidSystemPtr_.get()))
+        }());
+
+        if (model.hasGpuPropertyAssemblyBridge()) {
+            propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_
+                = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+            return;
+        }
+
+        // CPU IQ data is needed only by the legacy CPU-IQ-to-GPU assembly
+        // fallback. The fully GPU path above never materializes it.
+        model.ensureHostIntensiveQuantities(/*timeIdx=*/0);
+        model.ensureHostIntensiveQuantities(/*timeIdx=*/1);
+
+        dynamicGpuFluidSystemBuffer_.emplace(
+            ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+        dynamicGpuFluidSystemPtr_ =
+            gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+        gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
+            std::vector<Scalar> volumes(numCells);
+            for (unsigned i = 0; i < numCells; ++i) {
+                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
+            }
+            SimpleFIBlackOilModel<TypeTag> gpuModel(
+                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
+        }());
+        boundaryInfoBuffer_ =
+            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
+    }
+
+    void refreshForLinearization(unsigned numCells)
     {
+        if (numCells != numCells_) {
+            OPM_THROW(std::logic_error,
+                      "Persistent GPU assembly parameters cannot be reused after a topology change");
+        }
+        if (propertyAssemblyBridge_) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+        }
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipMemset(residualBuffer_.data(), 0,
+                                    residualBuffer_.size() * sizeof(VectorBlockGPU)));
+#else
+        OPM_GPU_SAFE_CALL(cudaMemset(residualBuffer_.data(), 0,
+                                     residualBuffer_.size() * sizeof(VectorBlockGPU)));
+#endif
     }
 
     auto domainView()
@@ -239,6 +307,117 @@ public:
         return diagMatAddressView_;
     }
 
+    auto& gpuJacobian()
+    {
+        return *gpuJacobian_;
+    }
+
+    auto& residualBuffer()
+    {
+        return residualBuffer_;
+    }
+
+    auto& flattenedResidual()
+    {
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipMemcpy(flattenedResidual_.data(),
+                                    residualBuffer_.data(),
+                                    flattenedResidual_.dim() * sizeof(Scalar),
+                                    hipMemcpyDeviceToDevice));
+#else
+        OPM_GPU_SAFE_CALL(cudaMemcpy(flattenedResidual_.data(),
+                                     residualBuffer_.data(),
+                                     flattenedResidual_.dim() * sizeof(Scalar),
+                                     cudaMemcpyDeviceToDevice));
+#endif
+        return flattenedResidual_;
+    }
+
+    void copyResidualFromHost(const GlobalEqVector& residual)
+    {
+        std::vector<VectorBlockGPU> blocks;
+        blocks.reserve(residual.size());
+        for (const auto& block : residual) {
+            blocks.emplace_back(block);
+        }
+        residualBuffer_.copyFromHost(blocks);
+    }
+
+    void applySourceDeltas(const GlobalEqVector& beforeResidual,
+                           const GlobalEqVector& afterResidual,
+                           const std::vector<MatrixBlockCPU>& beforeDiagonal,
+                           const std::vector<MatrixBlockCPU*>& afterDiagonal)
+    {
+        std::vector<unsigned> indices;
+        std::vector<VectorBlockGPU> residualDeltas;
+        std::vector<MatrixBlockGPU> jacobianDeltas;
+        for (unsigned cell = 0; cell < afterResidual.size(); ++cell) {
+            VectorBlockCPU residualDelta = afterResidual[cell] - beforeResidual[cell];
+            MatrixBlockCPU jacobianDelta(0.0);
+            for (unsigned row = 0; row < numEq; ++row) {
+                for (unsigned column = 0; column < numEq; ++column) {
+                    jacobianDelta[row][column]
+                        = (*afterDiagonal[cell])[row][column] - beforeDiagonal[cell][row][column];
+                }
+            }
+            if (residualDelta != VectorBlockCPU(0.0) || jacobianDelta != MatrixBlockCPU(0.0)) {
+                indices.push_back(cell);
+                residualDeltas.emplace_back(residualDelta);
+                jacobianDeltas.emplace_back(jacobianDelta);
+            }
+        }
+        sourceIndices_ = gpuistl::GpuBuffer<unsigned>(indices);
+        sourceResidualDeltas_ = gpuistl::GpuBuffer<VectorBlockGPU>(residualDeltas);
+        sourceJacobianDeltas_ = gpuistl::GpuBuffer<MatrixBlockGPU>(jacobianDeltas);
+        if (indices.empty()) {
+            return;
+        }
+        constexpr unsigned blockSize = 256;
+        apply_source_deltas<<<(indices.size() + blockSize - 1) / blockSize, blockSize>>>(
+            sourceIndices_.data(),
+            sourceResidualDeltas_.data(),
+            sourceJacobianDeltas_.data(),
+            residualBuffer_.data(),
+            diagMatAddressView_.data(),
+            indices.size());
+    }
+
+    void applySourceContributions(const std::vector<unsigned>& indices,
+                                  const std::vector<VectorBlockCPU>& residualContributions,
+                                  const std::vector<MatrixBlockCPU>& jacobianContributions)
+    {
+        // To avoid scary-looking casts we use emplace_back to construct the GPU vectors
+        // This can probably be avoided by extending some classes or by using the types smarter
+        std::vector<VectorBlockGPU> gpuResidualContributions;
+        std::vector<MatrixBlockGPU> gpuJacobianContributions;
+        gpuResidualContributions.reserve(indices.size());
+        gpuJacobianContributions.reserve(indices.size());
+        for (std::size_t i = 0; i < indices.size(); ++i) {
+            gpuResidualContributions.emplace_back(residualContributions[i]);
+            gpuJacobianContributions.emplace_back(jacobianContributions[i]);
+        }
+        if (indices.empty()) {
+            return;
+        }
+        if (sourceCapacity_ < indices.size()) {
+            sourceCapacity_ = std::max<std::size_t>(20, indices.size());
+            sourceIndices_ = gpuistl::GpuBuffer<unsigned>(sourceCapacity_);
+            sourceResidualDeltas_ = gpuistl::GpuBuffer<VectorBlockGPU>(sourceCapacity_);
+            sourceJacobianDeltas_ = gpuistl::GpuBuffer<MatrixBlockGPU>(sourceCapacity_);
+        }
+        sourceIndices_.copyFromHost(indices.data(), indices.size());
+        sourceResidualDeltas_.copyFromHost(gpuResidualContributions.data(), indices.size());
+        sourceJacobianDeltas_.copyFromHost(gpuJacobianContributions.data(), indices.size());
+        constexpr unsigned blockSize = 256;
+        apply_source_deltas<<<(indices.size() + blockSize - 1) / blockSize, blockSize>>>(
+            sourceIndices_.data(),
+            sourceResidualDeltas_.data(),
+            sourceJacobianDeltas_.data(),
+            residualBuffer_.data(),
+            diagMatAddressView_.data(),
+            indices.size());
+    }
+
     auto& residualView()
     {
         return residualView_;
@@ -246,12 +425,15 @@ public:
 
     auto modelView()
     {
-        return gpuistl::make_view(gpuModelBuffer_);
+        if (propertyAssemblyBridge_) {
+            return propertyAssemblyBridge_->modelView();
+        }
+        return gpuistl::make_view(*gpuModelBuffer_);
     }
 
     auto flowProblemView()
     {
-        return gpuistl::make_view(gpuFlowProblemBuffer_);
+        return gpuistl::make_view(*gpuFlowProblemBuffer_);
     }
 
     auto boundaryInfoView()
@@ -272,8 +454,20 @@ public:
      */
     void copyResidualToHost(GlobalEqVector& residual, unsigned numCells)
     {
-        auto cpuResidualFromGpu = residualBuffer_.asStdVector();
-        std::memcpy(residual.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
+        static_assert(sizeof(typename GlobalEqVector::block_type) == numEq * sizeof(Scalar));
+        static_assert(sizeof(VectorBlockGPU) == numEq * sizeof(Scalar));
+        if (residual.size() != numCells || residualBuffer_.size() != numCells) {
+            OPM_THROW(std::logic_error, "GPU residual download has mismatched cell counts");
+        }
+        // The existing CPU residual is already contiguous. Download into it
+        // directly instead of allocating, filling and copying a staging vector.
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipMemcpy(residual.data(), residualBuffer_.data(),
+                                   numCells * sizeof(VectorBlockGPU), hipMemcpyDeviceToHost));
+#else
+        OPM_GPU_SAFE_CALL(cudaMemcpy(residual.data(), residualBuffer_.data(),
+                                    numCells * sizeof(VectorBlockGPU), cudaMemcpyDeviceToHost));
+#endif
     }
 
     /*!
