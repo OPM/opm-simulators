@@ -164,7 +164,7 @@ initialLinearization(SimulatorReportSingle& report,
     ParentType::initialLinearization(report,
                                      minIter,
                                      maxIter,
-                                     timer);                                 
+                                     timer);
 
     // -----------   Check if converged   -----------
     std::vector<Scalar> residual_norms;
@@ -524,6 +524,22 @@ storeSolutionUpdate(const GlobalEqVector& dx)
         // Transfer update from dx to solution update container (SolutionVector type)
         std::ranges::copy(update, value.begin());
     }
+}
+
+template <class TypeTag>
+void
+NonlinearSystemBlackOilReservoir<TypeTag>::
+postSolutionUpdate()
+{
+#if HAVE_MPI
+    // Same result as syncOverlap(), which goes through the grid's
+    // communicator and allocates large message buffers on every call.
+    if (this->isParallel()) {
+        const auto* comm = this->simulator_.model().newtonMethod().linearSolver().comm();
+        auto& solution = this->simulator_.model().solution(/*timeIdx=*/0);
+        comm->copyOwnerToAll(solution, solution);
+    }
+#endif // HAVE_MPI
 }
 
 template <class TypeTag>

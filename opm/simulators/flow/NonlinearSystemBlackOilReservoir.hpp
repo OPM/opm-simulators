@@ -194,6 +194,7 @@ public:
     bool shouldStoreSolutionUpdate() const override;
     void prepareSolutionUpdate() override;
     void storeSolutionUpdate(const GlobalEqVector& dx) override;
+    void postSolutionUpdate() override;
     MaxSolutionUpdateData getMaxSolutionUpdate(const std::vector<unsigned>& ixCells);
 
     std::tuple<Scalar,Scalar>
