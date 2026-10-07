@@ -134,18 +134,16 @@ protected:
     const TransmissibilityType& globalTrans() const;
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;
 
-    // Value for `key` from the gathered records, or nullptr when the key is
-    // absent or no gathered records are set. N = 3 selects the same-level
-    // records, N = 4 the level-crossing (NNC) ones -- see GatheredLgrOutputTrans.
-    template <std::size_t N>
-    const double* findGatheredTrans_(const std::array<int,N>& key) const;
+    // Value for `key` (see lgrTransKey) from the gathered records, or nullptr
+    // when the key is absent or no gathered records are set.
+    const double* findGatheredTrans_(const std::array<int,2>& key) const;
 
-    // Output transmissibility value for a connection: from the gathered per-rank
-    // simulator transmissibilities when set (parallel LGR runs; a missing key is
-    // a hard error), otherwise from the whole-grid transmissibility object
-    // (c1, c2). Key shape as in findGatheredTrans_.
-    template <std::size_t N>
-    double gatheredOrGlobalTrans_(const std::array<int,N>& key,
+    // Output transmissibility value for the connection `is` of the global grid:
+    // from the gathered per-rank simulator transmissibilities when set (parallel
+    // LGR runs; a missing connection is a hard error), otherwise from the
+    // whole-grid transmissibility object (c1, c2).
+    template <class Intersection>
+    double gatheredOrGlobalTrans_(const Intersection& is,
                                   unsigned c1,
                                   unsigned c2) const;
 

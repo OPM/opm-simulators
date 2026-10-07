@@ -1392,8 +1392,8 @@ protected:
                 bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
                 // Parallel LGR: reuse the simulator's own (distributed) transmissibilities for the
                 // INIT output -- each rank contributes its interior connections, gathered on the
-                // I/O rank and keyed by level-Cartesian indices so the output walk over the global
-                // (equil) grid can look them up directly. This reuses the values already computed
+                // I/O rank and keyed by the global ids of their cells so the output walk over the
+                // global (equil) grid can look them up directly. This reuses the values already computed
                 // in parallel for the simulation itself instead of recomputing a whole-grid
                 // transmissibility. The local transmissibilities are built here, before the INIT
                 // write, and reported as finished so that they are not built again.

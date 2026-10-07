@@ -26,8 +26,8 @@
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/partitionset.hh>
 
+#include <opm/grid/CpGrid.hpp>
 #include <opm/grid/common/CommunicationUtils.hpp>
-#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <algorithm>
 #include <array>
@@ -42,8 +42,8 @@ namespace Opm {
 ///
 /// The I/O rank holds every connection of the global grid and looks each one up
 /// once per output pass. The records are sorted on their key only and searched
-/// with std::lower_bound. The key is the level-Cartesian index tuple (see
-/// GatheredLgrOutputTrans); values are transmissibilities.
+/// with std::lower_bound. The key is the pair of global cell ids of a
+/// connection (see lgrTransKey); values are transmissibilities.
 template <std::size_t N>
 class LgrTransIndex
 {
@@ -76,38 +76,36 @@ private:
     std::vector<std::pair<Key, double>> records_;
 };
 
-/// Connection transmissibilities gathered for parallel LGR INIT output.
-///
-/// Held on the I/O rank as key-indexed tables (see LgrTransIndex); empty on all
-/// other ranks.
-///
-/// sameLevel:  key (level, min level-Cartesian index, max level-Cartesian index)
-///             -- every connection between two cells of the same level grid
-///                (TRANX/TRANY/TRANZ and same-level NNCs).
-/// crossLevel: key (smaller level, its level-Cartesian index,
-///                  larger level, its level-Cartesian index)
-///             -- every connection between cells of different level grids
-///                (global<->LGR and LGR<->LGR NNCs; TRANGL/TRANLL).
-struct GatheredLgrOutputTrans
+/// Connection transmissibilities gathered for parallel LGR INIT output, keyed by
+/// lgrTransKey. Held on the I/O rank; empty on all other ranks.
+using GatheredLgrOutputTrans = LgrTransIndex<2>;
+
+/// Key of the connection between two cells of a CpGrid: their global ids,
+/// smaller first. Every rank and the global grid on the I/O rank agree on
+/// these ids. A global id is the cell's level index plus the entity counts of
+/// the levels before it, so it fits in int as those counts do.
+template <class Element>
+std::array<int,2> lgrTransKey(const Dune::CpGrid& grid,
+                              const Element& cell1,
+                              const Element& cell2)
 {
-    LgrTransIndex<3> sameLevel;
-    LgrTransIndex<4> crossLevel;
-};
+    const int id1 = static_cast<int>(grid.globalIdSet().id(cell1));
+    const int id2 = static_cast<int>(grid.globalIdSet().id(cell2));
+    return {std::min(id1, id2), std::max(id1, id2)};
+}
 
 /// Gather the simulator's own (distributed) transmissibilities for parallel LGR INIT output.
 ///
 /// Each rank walks its interior leaf cells and records every connection it owns, keyed by
-/// level-Cartesian indices (see GatheredLgrOutputTrans), then the records are gathered on the
-/// I/O rank (rank 0). The level-Cartesian key is geometrically canonical -- defined by the LGR
-/// specification, identical on the distributed grid and the undistributed (equil) copy -- so
-/// the I/O rank's output walk over the equil grid can look values up directly.
+/// the global ids of its two cells (see lgrTransKey), then the records are gathered on the
+/// I/O rank (rank 0), whose output walk over the equil grid looks values up by the same ids.
 ///
-/// Every connection is recorded exactly once. A same-level connection is recorded by the rank
-/// that owns the cell with the smaller level-Cartesian index; that comparison is
-/// rank-independent, so at a rank boundary only one of the two owner ranks records the
-/// connection -- which it can, because its partner cell is present in its overlap layer (this
-/// requires at least one overlap layer; the caller guards --num-overlap). A cross-level
-/// connection is recorded from the smaller-level side only.
+/// Every connection is recorded exactly once, by the rank that owns the cell with the smaller
+/// global id; that comparison is rank-independent, so at a rank boundary only one of the two
+/// owner ranks records the connection -- which it can, because its partner cell is present in
+/// its overlap layer (this requires at least one overlap layer). The ids of a level come
+/// after those of the levels before it, so a connection between two levels is recorded from
+/// the smaller-level side.
 ///
 /// This reuses the values the simulation itself computed in parallel instead of recomputing a
 /// whole-grid transmissibility on the I/O rank.
@@ -121,18 +119,15 @@ gatherLgrOutputTrans(const Dune::CpGrid& grid,
 {
     // Build the final (key, value) records directly -- no separate flat key/value
     // buffers, no zip pass afterwards.
-    std::vector<std::pair<std::array<int,3>, double>> same;   // level, minCart, maxCart
-    std::vector<std::pair<std::array<int,4>, double>> cross;  // smallLevel, smallCart, largeLevel, largeCart
+    std::vector<std::pair<std::array<int,2>, double>> records;
 
-    const LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
     const Dune::MultipleCodimMultipleGeomTypeMapper<GridView>
         elemMapper(gridView, Dune::mcmgElementLayout());
 
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         // The inside cell is the same for every intersection of this element.
-        const int levelIn = elem.level();
-        const int cartIn = levelCartMapp.cartesianIndex(elem.getLevelElem().index(), levelIn);
         const auto idxIn = elemMapper.index(elem);
+        const int idIn = static_cast<int>(grid.globalIdSet().id(elem));
 
         for (const auto& is : intersections(gridView, elem)) {
             if (!is.neighbor()) {
@@ -140,51 +135,23 @@ gatherLgrOutputTrans(const Dune::CpGrid& grid,
             }
 
             const auto outside = is.outside();
-            const int levelOut = outside.level();
+            const auto key = lgrTransKey(grid, elem, outside);
 
-            if (levelIn != levelOut) {
-                if (levelIn > levelOut) {
-                    continue; // recorded exactly once, from the smaller-level side
-                }
-
-                cross.emplace_back(
-                    std::array<int,4>{levelIn, cartIn, levelOut,
-                                      levelCartMapp.cartesianIndex(outside.getLevelElem().index(), levelOut)},
-                    transFn(idxIn, elemMapper.index(outside)));
-                continue;
+            if (key[0] != idIn) {
+                continue; // recorded by the owner of the cell with the smaller id
             }
 
-            const int cartOut = levelCartMapp.cartesianIndex(
-                outside.getLevelElem().index(), levelIn);
-
-            if (cartIn > cartOut) {
-                // Record each connection once, in canonical direction. The comparison
-                // is rank-independent, so at a rank boundary exactly one of the two
-                // owner ranks records the connection.
-                continue;
-            }
-
-            same.emplace_back(std::array<int,3>{levelIn, cartIn, cartOut},
-                              transFn(idxIn, elemMapper.index(outside)));
+            records.emplace_back(key, transFn(idxIn, elemMapper.index(outside)));
         }
     }
 
-    // Gather each record vector directly to the I/O rank -- one collective per kind.
-    // gatherv is generic; Dune's
+    // Gather the records directly to the I/O rank. gatherv is generic; Dune's
     // MPITraits<std::pair<std::array<int,N>,double>> composes a byte-blob array with
     // MPI_DOUBLE, so the record moves as a single MPI datatype. gatherv is collective
-    // and returns empty vectors on the non-root ranks. MPI's int counts/displacements
+    // and returns an empty vector on the non-root ranks. MPI's int counts/displacements
     // bound the total record count across ALL ranks at ~2^31 records -- a shared
     // MPI-wide ceiling, not a per-rank one.
-    const auto& comm = grid.comm();
-    auto allSame  = gatherv(same,  comm, 0).first;
-    auto allCross = gatherv(cross, comm, 0).first;
-
-    // Index the gathered records on the I/O rank; empty on the others.
-    GatheredLgrOutputTrans gathered;
-    gathered.sameLevel  = LgrTransIndex<3>(std::move(allSame));
-    gathered.crossLevel = LgrTransIndex<4>(std::move(allCross));
-    return gathered;
+    return GatheredLgrOutputTrans(gatherv(records, grid.comm(), 0).first);
 }
 
 } // namespace Opm

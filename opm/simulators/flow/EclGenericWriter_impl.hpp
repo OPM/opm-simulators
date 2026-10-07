@@ -599,13 +599,13 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
 
             if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
                 outputTrans_->at(level).at("TRANX").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(is, c1, c2);
                 continue; // skip other if clauses as they are false, last one needs some computation
             }
 
             if (maxLevelCartIdx - minLevelCartIdx == levelCartDims[0] && levelCartDims[1] > 1) {
                 outputTrans_->at(level).at("TRANY").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(is, c1, c2);
                 continue; // skipt next if clause as it needs some computation
             }
 
@@ -615,7 +615,7 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
                                          minLevelCartIdx,
                                          maxLevelCartIdx)) {
                 outputTrans_->at(level).at("TRANZ").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(is, c1, c2);
             }
         }
     }
@@ -747,9 +747,7 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 const auto& [smallerLevel, smallerLevelCartIdx] = smallerPair;
                 const auto& [largerLevel, largerLevelCartIdx] = largerPair;
 
-                auto t = this->gatheredOrGlobalTrans_(std::array{smallerLevel, smallerLevelCartIdx,
-                                                                 largerLevel, largerLevelCartIdx},
-                                                      c1, c2);
+                auto t = this->gatheredOrGlobalTrans_(is, c1, c2);
 
                 // ECLIPSE ignores NNCs with zero transmissibility
                 // (different threshold than for NNC with corresponding
@@ -811,8 +809,7 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                     // We need to check whether an NNC for this face was also
                     // specified via the NNC keyword in the deck.
                     // (levelCartIdxIn/Out are already swapped into min/max order above.)
-                    auto t = this->gatheredOrGlobalTrans_(std::array{level, levelCartIdxIn, levelCartIdxOut},
-                                                          c1, c2);
+                    auto t = this->gatheredOrGlobalTrans_(is, c1, c2);
 
                     if (level == 0) {
                         auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
@@ -871,6 +868,20 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     std::vector<NNCdata> inputedNnc{};
     const auto generatedNnc = outputNnc_[0];
 
+    // Global id of each level-zero cell that is not refined, to look deck NNCs
+    // up in the gathered records.
+    std::unordered_map<int, int> levelZeroIds;
+    if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+        if (this->gatheredLgrTrans_.has_value()) {
+            for (const auto& elem : elements(globalGridView)) {
+                if (elem.level() == 0) {
+                    levelZeroIds.emplace(elem.getOrigin().index(),
+                                         static_cast<int>(this->equilGrid_->globalIdSet().id(elem)));
+                }
+            }
+        }
+    }
+
     // The NNC keyword in the deck is defined only for faces in the level-0 grid.
     // The same limitation applies to aquifer data.
     for (const auto& entry : nncData) {
@@ -914,9 +925,13 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 // refined by an LGR the pair is no longer a leaf connection, so the
                 // gathered records (correctly) hold no value for it -- keep the
                 // deck-specified transmissibility in that case.
-                const auto key = std::array{0, static_cast<int>(entry.cell1),
-                                            static_cast<int>(entry.cell2)};
-                const double* gathered = this->findGatheredTrans_(key);
+                const double* gathered = nullptr;
+                const auto id1 = levelZeroIds.find(c1);
+                const auto id2 = levelZeroIds.find(c2);
+                if ((id1 != levelZeroIds.end()) && (id2 != levelZeroIds.end())) {
+                    const auto [idMin, idMax] = std::minmax(id1->second, id2->second);
+                    gathered = this->findGatheredTrans_({idMin, idMax});
+                }
                 if (!this->gatheredLgrTrans_.has_value() || gathered != nullptr) {
                     trans = (gathered != nullptr)
                         ? *gathered
@@ -1147,46 +1162,37 @@ evalSummary(const int                                            reportStepNum,
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
-template<std::size_t N>
 const double*
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-findGatheredTrans_(const std::array<int,N>& key) const
+findGatheredTrans_(const std::array<int,2>& key) const
 {
-    static_assert(N == 3 || N == 4, "unknown gathered LGR record shape");
-
-    if (!gatheredLgrTrans_.has_value()) {
-        return nullptr;
-    }
-
-    if constexpr (N == 3) {
-        return gatheredLgrTrans_->sameLevel.find(key);
-    } else {
-        return gatheredLgrTrans_->crossLevel.find(key);
-    }
+    return gatheredLgrTrans_.has_value() ? gatheredLgrTrans_->find(key) : nullptr;
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
-template<std::size_t N>
+template<class Intersection>
 double
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-gatheredOrGlobalTrans_(const std::array<int,N>& key,
+gatheredOrGlobalTrans_(const Intersection& is,
                        unsigned c1,
                        unsigned c2) const
 {
-    if (!gatheredLgrTrans_.has_value()) {
-        return this->globalTrans().transmissibility(c1, c2);
+    if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+        if (gatheredLgrTrans_.has_value()) {
+            const auto key = lgrTransKey(*this->equilGrid_, is.inside(), is.outside());
+            if (const double* value = this->findGatheredTrans_(key); value != nullptr) {
+                return *value;
+            }
+
+            throw std::logic_error {
+                "Gathered LGR transmissibilities: no value for the connection between "
+                "the cells with global ids " + std::to_string(key[0]) +
+                " and " + std::to_string(key[1])
+            };
+        }
     }
 
-    if (const double* value = this->findGatheredTrans_(key); value != nullptr) {
-        return *value;
-    }
-
-    std::string msg = "Gathered LGR transmissibilities: no value for connection key (";
-    for (std::size_t j = 0; j < N; ++j) {
-        msg += std::to_string(key[j]);
-        msg += (j + 1 < N) ? ", " : ")";
-    }
-    throw std::logic_error { msg };
+    return this->globalTrans().transmissibility(c1, c2);
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
