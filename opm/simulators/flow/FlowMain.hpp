@@ -347,10 +347,16 @@ namespace Opm {
                 int omp_num_threads = -1;
                 auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
                 if (result.ec == std::errc() && omp_num_threads > 0) {
-                    if (isSet && threads > omp_num_threads) {
-                        OpmLog::warning("Requested threads via --threads-per-process commandline argument is "
-                                        "larger then value of "
-                                        "environment variable OMP_NUM_THREADS. Using specified value anyway.");
+                    std::string warn;
+                    if (isSet) {
+                        warn = "Requested threads via --threads-per-process commandline argument";
+                    } else {
+                        warn = "Will use default value 2 for --threads-per-process commandline argument, but it";
+                    }
+
+                    if (requested_threads != -1 && threads > omp_num_threads) {
+                        OpmLog::warning(fmt::format("{} is larger than the value of "
+                                                    "environment variable OMP_NUM_THREADS. Using it anyway.", warn));
                     }
                 } else {
                     OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
