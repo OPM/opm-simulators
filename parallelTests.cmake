@@ -285,9 +285,13 @@ add_test_compare_parallel_simulation(
     1e-5
   MPI_PROCS
     4
+  # Require two Newton iterations to reduce the risk of serial and parallel
+  # runs using different iteration counts, which changes the next time step
+  # size stored in OPMEXTRA.
   TEST_ARGS
     --solver-max-time-step-in-days=15
     --allow-distributed-wells=true
+    --newton-min-iterations=2
 )
 
 # A test for distributed multisegment wells.
@@ -934,6 +938,10 @@ foreach(templ_case RANGE 1 6)
       ${rel_tol_parallel}
     DIR
       actionx
+    # Tighter mass balance tolerance so that serial and parallel runs do not
+    # end up on different sides of the convergence criterion.
+    TEST_ARGS
+      --tolerance-mb=1e-8
   )
 endforeach()
 
