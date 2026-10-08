@@ -233,6 +233,12 @@ assembleWellEq(const Simulator& simulator,
         con_rates[comp_idx] = PrimaryVariables::restrictEval(connection_rates[comp_idx]);
     }
 
+    // C holds derivatives of the reservoir equations, which are per unit of
+    // cell volume when the residual is volumetric
+    const Scalar res_eq_scale = getPropValue<TypeTag, Properties::UseVolumetricResidual>()
+        ? 1.0 / simulator.model().dofTotalVolume(this->well_cells_[0])
+        : 1.0;
+
     // here we use perf index, need to check how the things are done in the StandardWellAssemble
     // assemble the well equations related to the production/injection mass rates for each component
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
@@ -240,7 +246,7 @@ assembleWellEq(const Simulator& simulator,
         this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             // C, needs the cell_idx
-            this->well_equations_.C()[0][0][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.C()[0][0][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq) * res_eq_scale;
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
         }
 
