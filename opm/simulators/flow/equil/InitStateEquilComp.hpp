@@ -189,9 +189,9 @@ private:
  *    table uses one EOS root throughout the region. When the gas-oil contact
  *    lies inside such a region, the composition must vary over the region for
  *    the downstream flash to label phases correctly. A COMPVD table naming
- *    both phases instead defines separate gas and liquid zones; the zone
- *    containing the datum is anchored at the datum pressure and the other at
- *    the contact;
+ *    both phases instead integrates a gas zone above the contact with the gas
+ *    root and a liquid zone below it with the liquid root; the zone containing
+ *    the datum is anchored at the datum pressure and the other at the contact;
  *  - type 3: the table provides the liquid composition below the gas-oil
  *    contact. The contact becomes the reference depth, where the pressure
  *    is the saturation (bubble-point) pressure of the contact liquid unless
@@ -200,10 +200,12 @@ private:
  *    of the contact liquid otherwise.
  *
  * The COMPVD phase column selects the EOS root. If its rows name both phases,
- * the vapour rows define the gas zone above the gas-oil contact and the liquid
- * rows define the liquid zone below it. For type 1 a contact outside the gap
- * between the last vapour row and the first liquid row moves to the nearest
- * edge of that gap.
+ * for type 1 they still give the total composition, which is interpolated
+ * across the gap between the last vapour row and the first liquid row as well,
+ * so the flash may split the cells in that gap. A contact outside the gap
+ * moves to its nearest edge. For type 3 the vapour rows give the gas
+ * composition above the contact and the liquid rows the liquid composition
+ * below it.
  *
  * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
@@ -336,18 +338,17 @@ private:
         /// Nominal phase assigned to cells in a single-zone region.
         unsigned nominalPhaseIdx{FluidSystem::oilPhaseIdx};
         /// COMPVD naming both phases describes a gas zone over a liquid one,
-        /// each with its own composition and its own hydrostatic column.
+        /// each with its own EOS root and its own hydrostatic column.
         bool twoZone{false};
         /// Depth of the last vapour row of such a table. With EQUIL item 10 = 1
         /// the rows decide the phase, so a cell at this depth stays in the gas
         /// zone even when the contact lies on it.
         Scalar lastVaporDepth{};
-        /// Gas-zone composition for a COMPVD table that names both phases.
+        /// Gas-zone composition of a type 3 region whose COMPVD names both phases.
         std::vector<TabulatedFunction> vaporVdTable;
         /// Equilibrium vapour at the contact for type 3 without gas-zone rows.
         CompVec vaporComposition{};
-        /// Overall composition for a single-zone type 1 region, liquid composition
-        /// for type 3, or liquid-zone composition when vaporVdTable stores the gas zone.
+        /// Overall composition for type 1, or liquid composition for type 3.
         std::vector<TabulatedFunction> compositionVdTable;
         TabulatedFunction tempVdTable;
         std::optional<PressFunc> oilPressure;
@@ -372,7 +373,7 @@ private:
         return span;
     }
 
-    /// Normalized vapour-zone composition of a two-zone COMPVD region at a given depth.
+    /// Normalized gas-zone composition of a type 3 two-zone COMPVD region at a given depth.
     static CompVec vaporComposition(const Region& reg, const Scalar depth)
     {
         CompVec z{};
@@ -677,15 +678,24 @@ private:
                                  allRows(compvd.getDepthColumn().size()));
             }
             else {
-                // Both phases named: the vapour rows describe the gas zone and
-                // the liquid rows the one below the contact.
+                // Both phases named: the gas root applies above the contact and
+                // the liquid root below it. For type 1 all rows give the total
+                // composition, so it is interpolated across the gap between the
+                // two phases as well. Type 3 takes the gas from the vapour rows
+                // and the liquid from the liquid rows.
                 const auto vaporRows = rowsOfPhase(compvd, CompvdTable::Phase::Vapor);
                 const auto liquidRows = rowsOfPhase(compvd, CompvdTable::Phase::Liquid);
                 reg.zgoc = zoneBoundary(compvd, vaporRows, liquidRows, reg, regionIdx);
                 reg.twoZone = true;
                 reg.lastVaporDepth = compvd.getDepthColumn()[vaporRows.back()];
-                setupComposition(reg.vaporVdTable, compvd, vaporRows);
-                setupComposition(reg.compositionVdTable, compvd, liquidRows);
+                if (reg.initType == 1) {
+                    setupComposition(reg.compositionVdTable, compvd,
+                                     allRows(compvd.getDepthColumn().size()));
+                }
+                else {
+                    setupComposition(reg.vaporVdTable, compvd, vaporRows);
+                    setupComposition(reg.compositionVdTable, compvd, liquidRows);
+                }
             }
         }
 
@@ -853,9 +863,9 @@ private:
     /// subsequent flash determines the phase split.
     ///
     /// A COMPVD table naming both phases describes two zones instead, each with
-    /// its own composition, EOS root and hydrostatic column. The column holding
-    /// the datum is anchored there and the other picks its pressure up at the
-    /// contact, so the datum pressure is honoured whichever zone it lies in.
+    /// its own EOS root and hydrostatic column. The column holding the datum is
+    /// anchored there and the other picks its pressure up at the contact, so the
+    /// datum pressure is honoured whichever zone it lies in.
     ///
     /// For a single zone the EOS root is the phase COMPVD names, or, when the
     /// table does not name one, the root implied by the datum's side of the
@@ -912,8 +922,8 @@ private:
     }
 
     /// A COMPVD region naming both phases: a gas zone above the gas-oil contact
-    /// and a liquid one below, each integrated with its own composition and EOS
-    /// root.
+    /// and a liquid one below. Both take the total composition of the rows, but
+    /// each is integrated with its own EOS root.
     void setupTwoZoneRegion(Region& reg,
                             const std::array<Scalar, 2>& span,
                             const Scalar gravity,
@@ -922,10 +932,9 @@ private:
                             const Scalar datum,
                             const Scalar datumPressure) const
     {
-        const ODE liquidOde([&reg](const Scalar depth) { return composition(reg, depth); },
-                            reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
-        const ODE gasOde([&reg](const Scalar depth) { return vaporComposition(reg, depth); },
-                         reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+        const auto z = [&reg](const Scalar depth) { return composition(reg, depth); };
+        const ODE liquidOde(z, reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
+        const ODE gasOde(z, reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
 
         // The datum-side pressure function must reach the actual contact even
         // when it lies outside the cell span, because the other pressure function
@@ -1071,7 +1080,8 @@ private:
         const bool inGasZone = isInGasZone(reg, depth);
 
         const CompVec z = [&reg, depth, inGasZone]() {
-            if (!inGasZone) {
+            // Type 1 takes the total composition on either side of the contact.
+            if (!inGasZone || (reg.initType == 1)) {
                 return composition(reg, depth);
             }
             // Type 3 holds the contact vapour above the contact; a two-zone

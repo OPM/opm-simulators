@@ -430,27 +430,29 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneContactOutsideTheCells)
     // The contact can lie below every cell with the datum beyond it. The
     // column carrying the datum is then integrated to the contact before the
     // other one starts, so the interval between the contact and the cells
-    // keeps the density of its own phase.
+    // keeps the EOS root of its own zone. All rows hold one mixture, whose two
+    // roots differ by an order of magnitude in density at 10 bar.
     const auto bottomCellPressure = [](const std::string& goc) {
         const EquilFixture fix(deckString(
-            "EQUIL\n 2300 300 2400 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
+            "EQUIL\n 2150 10 2400 0 " + goc + " 0 /\n", "EQLDIMS\n/\n", "",
             "COMPVD\n"
-            " 2000   0 0.95 0.05  0  150.0\n"
-            " 2100   0 0.95 0.05  0  150.0\n"
-            " 2250   0 0.60 0.40  1  150.0\n"
-            " 2400   0 0.40 0.60  1  150.0 /\n"));
+            " 2000   0 0.5 0.5  0  10.0\n"
+            " 2100   0 0.5 0.5  0  10.0\n"
+            " 2140   0 0.5 0.5  1  10.0\n"
+            " 2200   0 0.5 0.5  1  10.0 /\n"));
         const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
         // Every cell lies above either contact, so the whole column is gas.
         BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
         return states.back().pressure(FluidSystem::gasPhaseIdx);
     };
 
-    // Moving the contact down turns part of the path from the datum from
-    // liquid into gas, which is lighter, so the cells gain pressure. Pinning
-    // the contact onto the cells would make the two runs identical instead.
+    // Moving the contact down turns part of the path from the datum from the
+    // liquid root into the gas root, which is lighter, so the cells gain
+    // pressure. Pinning the contact onto the cells would make the two runs
+    // identical instead.
     const Scalar shallowContact = bottomCellPressure("2100");
-    const Scalar deepContact = bottomCellPressure("2250");
-    BOOST_CHECK_GT(deepContact - shallowContact, 3.0 * barsa);
+    const Scalar deepContact = bottomCellPressure("2140");
+    BOOST_CHECK_GT(deepContact - shallowContact, 1.0 * barsa);
 }
 
 BOOST_AUTO_TEST_CASE(NonzeroContactCapillaryPressureIsAnError)
@@ -752,7 +754,8 @@ BOOST_AUTO_TEST_CASE(CompvdStatedPhaseSelectsEosRoot)
 BOOST_AUTO_TEST_CASE(CompvdTwoZoneGasOverLiquid)
 {
     // COMPVD naming both phases describes a gas zone over a liquid one meeting
-    // at the gas-oil contact. Each zone takes the composition of its own rows.
+    // at the gas-oil contact. No cell lies between the last vapour row and the
+    // first liquid row, so each zone takes the composition of its own rows.
     // Here the liquid column is anchored at the datum and the gas column at the
     // contact, making pressure continuous while the gradient changes there.
     const EquilFixture fix(deckString(
@@ -830,23 +833,83 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneDatumInGasZone)
 
 BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
 {
-    // The vapour rows cover 2020 m to 2040 m only. Gas cells outside that band
-    // take the endpoint composition rather than a continued slope, as the
-    // ZMFVD tables do.
+    // The rows cover 2020 m to 2080 m only. Cells outside that band take the
+    // endpoint composition rather than a continued slope, as the ZMFVD tables
+    // do.
     const EquilFixture fix(deckString(
         "EQUIL\n 2062.5 200 2300 0 2050 0 /\n", "EQLDIMS\n/\n", "",
         "COMPVD\n"
         " 2020   0 0.99 0.01  0  150.0\n"
         " 2040   0 0.90 0.10  0  150.0\n"
         " 2051   0 0.60 0.40  1  150.0\n"
-        " 2100   0 0.40 0.60  1  150.0 /\n"));
+        " 2080   0 0.40 0.60  1  150.0 /\n"));
     const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
 
-    for (std::size_t c = 0; c < 10; ++c) {
+    for (std::size_t c = 0; c < states.size(); ++c) {
         BOOST_TEST_CONTEXT("Cell " << c << " at " << fix.depths[c] << " m") {
-            const Scalar t = std::clamp((fix.depths[c] - 2020.0) / 20.0, 0.0, 1.0);
-            BOOST_CHECK_SMALL(states[c].moleFraction(1) - (0.99 - 0.09 * t), 1e-10);
-            BOOST_CHECK_SMALL(states[c].moleFraction(2) - (0.01 + 0.09 * t), 1e-10);
+            if (fix.depths[c] < 2040.0) {
+                const Scalar t = std::clamp((fix.depths[c] - 2020.0) / 20.0, 0.0, 1.0);
+                BOOST_CHECK_SMALL(states[c].moleFraction(1) - (0.99 - 0.09 * t), 1e-10);
+                BOOST_CHECK_SMALL(states[c].moleFraction(2) - (0.01 + 0.09 * t), 1e-10);
+            }
+            else if (fix.depths[c] > 2080.0) {
+                BOOST_CHECK_SMALL(states[c].moleFraction(1) - 0.40, 1e-10);
+                BOOST_CHECK_SMALL(states[c].moleFraction(2) - 0.60, 1e-10);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneInterpolatesAcrossTheRowGap)
+{
+    // With EQUIL item 10 = 1 the rows give the total composition also between
+    // the last vapour row (2030 m) and the first liquid row (2070 m), where the
+    // flash then splits it. The contact at 2050 m only decides the EOS root
+    // and the nominal phase on either side of it.
+    const auto states = [](const std::string& datum,
+                           const std::string& vaporFlag,
+                           const std::string& liquidFlag) {
+        const EquilFixture fix(deckString(
+            "EQUIL\n " + datum + " 200 2300 0 2050 0 /\n", "EQLDIMS\n/\n", "",
+            "COMPVD\n"
+            " 2000   0 0.95 0.05  " + vaporFlag + "  150.0\n"
+            " 2030   0 0.95 0.05  " + vaporFlag + "  150.0\n"
+            " 2070   0 0.60 0.40  " + liquidFlag + "  150.0\n"
+            " 2100   0 0.40 0.60  " + liquidFlag + "  150.0 /\n"));
+        return fix.compute(std::vector<int>(20, 0)).fluidStates();
+    };
+    const auto depth = [](const std::size_t c) { return 2002.5 + 5.0 * static_cast<Scalar>(c); };
+
+    const auto twoZone = states("2072.5", "0", "1");
+    BOOST_REQUIRE_EQUAL(twoZone.size(), std::size_t{20});
+    for (std::size_t c = 0; c < twoZone.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c << " at " << depth(c) << " m") {
+            const Scalar d = depth(c);
+            const Scalar methane = (d < 2070.0)
+                ? 0.95 - 0.35 * std::clamp((d - 2030.0) / 40.0, 0.0, 1.0)
+                : 0.60 - 0.20 * (d - 2070.0) / 30.0;
+            BOOST_CHECK_SMALL(twoZone[c].moleFraction(1) - methane, 1e-10);
+            BOOST_CHECK_SMALL(twoZone[c].moleFraction(2) - (1.0 - methane), 1e-10);
+            BOOST_CHECK_CLOSE(twoZone[c].saturation(d < 2050.0 ? FluidSystem::gasPhaseIdx
+                                                               : FluidSystem::oilPhaseIdx),
+                              1.0, 1e-10);
+        }
+    }
+
+    // The zone holding the datum therefore matches a region whose rows all
+    // name its phase.
+    for (const auto& [datum, flag, phaseIdx] :
+         {std::tuple{"2072.5", "1", FluidSystem::oilPhaseIdx},
+          std::tuple{"2012.5", "0", FluidSystem::gasPhaseIdx}}) {
+        BOOST_TEST_CONTEXT("Datum at " << datum << " m") {
+            const auto zones = states(datum, "0", "1");
+            const auto onePhase = states(datum, flag, flag);
+            for (std::size_t c = 0; c < zones.size(); ++c) {
+                if ((depth(c) < 2050.0) == (phaseIdx == FluidSystem::gasPhaseIdx)) {
+                    BOOST_CHECK_CLOSE(zones[c].pressure(phaseIdx),
+                                      onePhase[c].pressure(phaseIdx), 1e-10);
+                }
+            }
         }
     }
 }
@@ -915,9 +978,11 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneKeepsTheLastVapourRowGas)
             BOOST_CHECK_CLOSE(states[6].saturation(FluidSystem::gasPhaseIdx), 1.0, 1e-10);
             BOOST_CHECK_SMALL(states[6].moleFraction(1) - 0.95, 1e-10);
 
-            // The cells below that row belong to the liquid zone.
+            // The cells below that row belong to the liquid zone, with the
+            // composition interpolated towards the first liquid row.
             BOOST_CHECK_CLOSE(states[7].saturation(FluidSystem::oilPhaseIdx), 1.0, 1e-10);
-            BOOST_CHECK_SMALL(states[7].moleFraction(1) - 0.60, 1e-10);
+            BOOST_CHECK_SMALL(states[7].moleFraction(1)
+                              - (0.95 - 0.35 * (2037.5 - 2032.5) / (2051.0 - 2032.5)), 1e-10);
         }
     }
 }
