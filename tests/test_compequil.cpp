@@ -24,8 +24,8 @@
 
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
-#include <opm/common/OpmLog/CounterLog.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -47,6 +47,7 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -938,20 +939,21 @@ BOOST_AUTO_TEST_CASE(CoincidentContactsNeedNoPhaseLabelling)
     // Below coinciding contacts there is only water, so a composition that does
     // not vary across the gas-oil contact needs no warning. With the contact
     // above the water the hydrocarbon spans it, and the warning remains.
-    const auto warnings = [](const std::string& equil) {
+    const auto warnsAboutLabelling = [](const std::string& equil) {
         const WaterEquilFixture fix(waterDeckString(equil, "COMPVD\n 2000 0 0.5 0.5 0 10.0 /\n"));
-        const auto counter = std::make_shared<Opm::CounterLog>(Opm::Log::DefaultMessageTypes);
-        Opm::OpmLog::addBackend("COUNTER", counter);
+        std::ostringstream log;
+        const auto warnings = std::make_shared<Opm::StreamLog>(log, Opm::Log::MessageType::Warning);
+        Opm::OpmLog::addBackend("WARNINGS", warnings);
         const auto states = fix.compute(std::vector<int>(20, 0),
                                         std::vector<Scalar>(20, connateSw),
                                         std::vector<Scalar>(20, 1.0)).fluidStates();
-        Opm::OpmLog::removeBackend("COUNTER");
+        Opm::OpmLog::removeBackend("WARNINGS");
         BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
-        return counter->numMessages(Opm::Log::MessageType::Warning);
+        return log.str().find("phase labeling") != std::string::npos;
     };
 
-    BOOST_CHECK_EQUAL(warnings("EQUIL\n 2060 10 2050 0 2050 0 /\n"), std::size_t{0});
-    BOOST_CHECK_EQUAL(warnings("EQUIL\n 2060 10 2050 0 2030 0 /\n"), std::size_t{1});
+    BOOST_CHECK(!warnsAboutLabelling("EQUIL\n 2060 10 2050 0 2050 0 /\n"));
+    BOOST_CHECK(warnsAboutLabelling("EQUIL\n 2060 10 2050 0 2030 0 /\n"));
 }
 
 BOOST_AUTO_TEST_CASE(WaterEndpointsAreReadPerCell)
