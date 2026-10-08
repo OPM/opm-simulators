@@ -737,6 +737,25 @@ add_test_runSimulator(
     "$<TARGET_FILE:test_comp_explicit_swat_init> normalized"
 )
 
+# Check the normalized initial SWAT of the probe decks cell by cell.
+foreach(case SGAS SOIL SSHIFT XMF_YMF)
+  string(TOLOWER ${case} test)
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_probes_${test}
+    FILENAME
+      EXPLICIT_SWAT_PROBES_${case}
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    TEST_ARGS
+      --normalize-explicit-swat=true
+    POST_COMMAND
+      "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_PROBES_${case}"
+  )
+endforeach()
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe
