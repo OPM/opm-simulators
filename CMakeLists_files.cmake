@@ -109,6 +109,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/CO2H2Container.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/CompositionalContainer.cpp
+  opm/simulators/flow/CompositionalModelParameters.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtboContainer.cpp
@@ -1031,6 +1032,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
   opm/simulators/flow/CompositionalContainer.hpp
+  opm/simulators/flow/CompositionalModelParameters.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/CpGridVanguard.hpp

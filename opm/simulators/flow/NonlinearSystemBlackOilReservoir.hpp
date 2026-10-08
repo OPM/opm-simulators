@@ -298,9 +298,6 @@ protected:
     static constexpr bool has_bioeffects_ = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool has_micp_ = Indices::enableMICP;
 
-    /// \brief The number of cells of the global grid.
-    long int global_nc_;
-
     SolutionVector solUpd_;
 
     std::unique_ptr<NonlinearSystemNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
