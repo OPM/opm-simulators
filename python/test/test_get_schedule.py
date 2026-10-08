@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 from pathlib import Path
 from opm.io.ecl import ESmry
@@ -47,8 +48,15 @@ class TestGetSchedule(unittest.TestCase):
             self.assertEqual(fopr[4], 0.0)
 
     def test_03_objects_constructor(self):
-        # The simulator must return the Schedule object it was given, not a copy
-        with pushd(self.data_dir):
+        # The simulator must return the Schedule object it was given, not a copy.
+        # Run from a copy of the deck in a directory of its own: with an
+        # EclipseState given, the simulator clears old result files and writes
+        # the .PRT and .DBG files next to the deck the EclipseState was built
+        # from, whatever --output-dir says, and test_schedule.py uses this deck.
+        run_dir = self.data_dir / "03_get_schedule"
+        run_dir.mkdir(exist_ok=True)
+        shutil.copy(self.data_dir / "SPE1CASE1.DATA", run_dir)
+        with pushd(run_dir):
             deck = Parser().parse("SPE1CASE1.DATA")
             state = EclipseState(deck)
             schedule = Schedule(deck, state)
