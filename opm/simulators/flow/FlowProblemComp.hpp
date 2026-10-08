@@ -41,7 +41,11 @@
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <functional>
@@ -643,11 +647,16 @@ protected:
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
         const auto eos_type = getEosType();
         constexpr Scalar flash_tolerance = 1e-8;
+        int zmf_oil_and_gas_cells = 0;
 
         for (auto& fs : initialFluidStates_) {
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
+            }
+            if (zmf_initialization_ && fs.saturation(FluidSystem::oilPhaseIdx) > 0.0
+                && fs.saturation(FluidSystem::gasPhaseIdx) > 0.0) {
+                ++zmf_oil_and_gas_cells;
             }
 
             typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
@@ -707,6 +716,14 @@ protected:
                 fs.setSaturation(FluidSystem::oilPhaseIdx,
                                  fs.saturation(FluidSystem::oilPhaseIdx) * hc_scale);
             }
+        }
+
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        zmf_oil_and_gas_cells = comm.sum(zmf_oil_and_gas_cells);
+        if (zmf_oil_and_gas_cells > 0 && comm.rank() == 0) {
+            OpmLog::warning(fmt::format("ZMF is given with both SGAS and SOIL in {} cells; both "
+                                        "phases take the ZMF composition when SWAT is normalized.",
+                                        zmf_oil_and_gas_cells));
         }
     }
 
