@@ -865,9 +865,9 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneClampsCompositionOutsideRows)
 BOOST_AUTO_TEST_CASE(CompvdTwoZoneInterpolatesAcrossTheRowGap)
 {
     // With EQUIL item 10 = 1 the rows give the total composition also between
-    // the last vapour row (2030 m) and the first liquid row (2070 m), where the
-    // flash then splits it. The contact at 2050 m only decides the EOS root
-    // and the nominal phase on either side of it.
+    // the last vapour row (2030 m) and the first liquid row (2070 m). The
+    // downstream flash may split cells in this gap. The contact at 2050 m
+    // selects the EOS root and nominal phase on either side of it.
     const auto states = [](const std::string& datum,
                            const std::string& vaporFlag,
                            const std::string& liquidFlag) {
