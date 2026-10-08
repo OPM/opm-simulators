@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/amgcpr.hh>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
@@ -40,6 +41,7 @@
 
 #include <array>
 #include <exception>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -402,6 +404,54 @@ BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
     }
     amg.post(x);
 }
+
+#if HAVE_SUITESPARSE_UMFPACK
+BOOST_AUTO_TEST_CASE(UmfpackRequiresSequentialSolve)
+{
+    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+    using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+    using ParallelOperator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
+    using SequentialOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+
+    Communication comm(Dune::MPIHelper::getCommunicator());
+    Matrix matrix(1, 1, Matrix::row_wise);
+    for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
+        row.insert(row.index());
+    }
+    matrix[0][0] = 2.0;
+    const auto prm = Opm::PropertyTree::fromJsonString(R"({"solver":"umfpack"})");
+
+    auto checkSolution = [](auto& solver) {
+        Vector x(1), rhs(1);
+        x = 0.0;
+        rhs = 4.0;
+        Dune::InverseOperatorResult result;
+        solver.apply(x, rhs, result);
+        BOOST_CHECK(result.converged);
+        BOOST_CHECK_EQUAL(x[0][0], 2.0);
+    };
+
+    ParallelOperator parallelOp(matrix, comm);
+    if (comm.communicator().size() > 1) {
+        BOOST_CHECK_EXCEPTION(
+            (Dune::FlexibleSolver<ParallelOperator>(parallelOp, comm, prm, {}, 0)),
+            std::invalid_argument,
+            [](const auto& error) {
+                return std::string{error.what()}.find("UMFPACK is only supported for sequential linear solves")
+                    != std::string::npos;
+            });
+    } else {
+        Dune::FlexibleSolver<ParallelOperator> solver(parallelOp, comm, prm, {}, 0);
+        checkSolution(solver);
+    }
+
+    // A sequential solve remains available on each rank of an MPI run.
+    SequentialOperator sequentialOp(matrix);
+    Dune::FlexibleSolver<SequentialOperator> solver(sequentialOp, prm, {}, 0);
+    checkSolution(solver);
+}
+#endif
 
 bool init_unit_test_func()
 {

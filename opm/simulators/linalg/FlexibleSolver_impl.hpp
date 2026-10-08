@@ -154,6 +154,11 @@ namespace Dune
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
         auto child = prm.get_child_optional("preconditioner");
         if (solver_type == "umfpack") {
+            if (comm.communicator().size() > 1) {
+                OPM_THROW(std::invalid_argument,
+                          "UMFPACK is only supported for sequential linear solves. "
+                          "Please use an iterative solver for distributed matrices.");
+            }
             preconditioner_ = std::make_shared<Dune::DirectSolverUpdatePreconditioner<VectorType, VectorType>>(
                 linearoperator_for_solver_->category());
         } else {

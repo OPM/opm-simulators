@@ -67,7 +67,7 @@ opm_add_test(test_blackoil_amg_np2
   DRIVER_ARGS
     -n 2
   TEST_ARGS
-    --run_test=IsolatedRowsHaveConsistentInitialSolution
+    --run_test=IsolatedRowsHaveConsistentInitialSolution,UmfpackRequiresSequentialSolve
   PROCESSORS
     2
 )
