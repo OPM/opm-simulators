@@ -617,8 +617,10 @@ private:
             local_report.assemble_time += tt2;
             local_report.assemble_time_well += tt2;
 
-            // Check if we should dampen. Only do so if wells are converged.
-            if (!convreport.converged() && !convreport.wellFailed()) {
+            // Check if we should dampen, also when the wells are not
+            // converged. Waiting for the wells would tie the start of the
+            // damping to the iteration where the well tolerances are relaxed.
+            if (!convreport.converged()) {
                 bool oscillate = false;
                 bool stagnate = false;
                 const auto num_residuals = convergence_history.front().size();
