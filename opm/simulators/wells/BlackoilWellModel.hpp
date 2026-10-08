@@ -384,6 +384,13 @@ template<class Scalar> class WellContributions;
             void updateCellRatesForDomain(int domainIndex,
                                           const std::map<std::string, int>& well_domain_map);
 
+            // Add the rates of wells outside a domain that perforate its
+            // overlap cells, as constant sources, to cellRates_.
+            void addConstantCellRatesForOverlap(int domainIndex,
+                                                const std::map<std::string, int>& well_domain_map,
+                                                const std::vector<int>& domain_cells,
+                                                const std::vector<bool>& interior);
+
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
 

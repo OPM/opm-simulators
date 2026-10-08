@@ -125,7 +125,7 @@ void writeNonlinearIterationsPerCell(
         const int iterations = report.success.total_newton_iterations +
                               report.failure.total_newton_iterations;
 
-        for (const int cell_idx : domain.cells) {
+        for (const int cell_idx : domain.interior_cells) {
             cell_iterations[cell_idx] = iterations;
         }
     }
@@ -247,8 +247,8 @@ void printDomainDistributionSummary(
     for (auto i = 0*dr_size; i < dr_size; ++i) {
         auto& domain_report = domain_reports_accumulated[i];
         domain_report.success.num_domains = 1;
-        domain_report.success.num_overlap_cells = 0;
-        domain_report.success.num_owned_cells = domains[i].cells.size();
+        domain_report.success.num_overlap_cells = domains[i].cells.size() - domains[i].interior_cells.size();
+        domain_report.success.num_owned_cells = domains[i].interior_cells.size();
     }
 
     // Gather data from all ranks
@@ -290,7 +290,7 @@ std::vector<int> reconstitutePartitionVector(
 
     auto d = numD[rank];
     for (const auto& domain : domains) {
-        for (const auto& cell : domain.cells) {
+        for (const auto& cell : domain.interior_cells) {
             p[cell] = d;
             if (cell > maxCellIdx) {
                 maxCellIdx = cell;

@@ -1588,6 +1588,29 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addConstantCellRatesForOverlap(int domainIndex,
+                                   const std::map<std::string, int>& well_domain_map,
+                                   const std::vector<int>& domain_cells,
+                                   const std::vector<bool>& interior)
+    {
+        // A well owned by another domain keeps its current connection
+        // rates while this domain is solved, like any other value outside
+        // the domain's owned cells.
+        const auto in_overlap = [&domain_cells, &interior](const int cell)
+        {
+            return !interior[cell] && std::ranges::binary_search(domain_cells, cell);
+        };
+        for (const auto& well : well_container_) {
+            const auto it = well_domain_map.find(well->name());
+            if (it != well_domain_map.end() && it->second != domainIndex) {
+                well->addConstantCellRates(cellRates_, in_overlap);
+            }
+        }
+    }
+
 #if COMPILE_GPU_BRIDGE
     template<typename TypeTag>
     void

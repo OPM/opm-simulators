@@ -97,6 +97,13 @@ assemble(const double dt,
 
     // Update cellRates_ with current contributions from wells in this domain for reservoir linearization
     wellModel_.updateCellRatesForDomain(domain.index, this->well_domain());
+    // Wells of other domains may perforate this domain's overlap cells. Keep
+    // their current rates as fixed sources there, as for any other value
+    // outside the owned cells.
+    if (domain.hasOverlap()) {
+        wellModel_.addConstantCellRatesForOverlap(domain.index, this->well_domain(),
+                                                  domain.cells, domain.interior);
+    }
 }
 
 template<typename TypeTag>
