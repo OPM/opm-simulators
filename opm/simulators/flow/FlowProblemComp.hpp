@@ -49,8 +49,8 @@
 
 namespace Opm::Parameters {
 
-// Scale explicit SWAT during compositional ZMF initialization by the
-// hydrocarbon volume change on flashing. By default, keep the input SWAT.
+// Treat explicit compositional saturations as given before the hydrocarbon
+// flash and rescale SWAT accordingly. By default, keep the input SWAT.
 struct NormalizeExplicitSwat { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
@@ -113,12 +113,13 @@ public:
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
 
-        Parameters::Register<Parameters::NormalizeExplicitSwat>
-            ("Scale explicit SWAT during compositional ZMF initialization "
-             "by the hydrocarbon volume change on flashing: the unflashed "
-             "mixture fills 1 - SWAT of the pore volume, and water and the "
-             "flashed phases are then rescaled to fill it. When disabled "
-             "(the default), the input SWAT is retained.");
+        Parameters::Register<Parameters::NormalizeExplicitSwat>(
+            "Treat explicit SWAT, SGAS and SOIL in compositional runs as "
+            "saturations before the hydrocarbon flash: each given oil or "
+            "gas saturation holds its input composition at the liquid or "
+            "vapour equation-of-state root, and water and the flashed "
+            "phases are then rescaled to fill the pore volume. When "
+            "disabled (the default), the input SWAT is retained.");
     }
 
     Opm::CompositionalConfig::EOSType getEosType() const
@@ -625,18 +626,18 @@ protected:
             }
         }
 
-        if (water_active && zmf_initialization_ &&
-            Parameters::Get<Parameters::NormalizeExplicitSwat>())
-        {
+        if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
             normalizeExplicitSwat_();
         }
     }
 
-    // With explicit SWAT and ZMF, the unflashed hydrocarbon mixture fills
-    // (1 - SWAT) of the pore volume. After flashing, the water and phase
-    // volumes are rescaled to fill the pore volume, so that
+    // The explicit saturations describe the cell before the hydrocarbon
+    // flash. Each given oil or gas saturation holds its input composition at
+    // the liquid or vapour EOS root, whatever the stable state, and with
+    // volume shift applied. After flashing the total, water and the flashed
+    // phases are rescaled to fill the pore volume:
     //
-    //   Sw / (1 - Sw) = [SWAT / (1 - SWAT)] * Vm_single(z) / Vm_flash(z)
+    //   Sw = SWAT / (SWAT + n * Vm_flash),  n = SOIL / Vm_oil + SGAS / Vm_gas
     void normalizeExplicitSwat_()
     {
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
@@ -649,40 +650,52 @@ protected:
                 continue;
             }
 
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
+
+            // Hydrocarbon moles per unit pore volume as given.
+            Dune::FieldVector<Scalar, numComponents> moles(0.0);
+            Scalar total_moles = 0.0;
+            for (const unsigned phaseIdx : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                const Scalar saturation = fs.saturation(phaseIdx);
+                if (!FluidSystem::phaseIsActive(phaseIdx) || saturation <= 0.0) {
+                    continue;
+                }
+                param_cache.updatePhase(fs, phaseIdx);
+                const Scalar phase_moles = saturation / param_cache.correctedMolarVolume(phaseIdx);
+                for (unsigned c = 0; c < numComponents; ++c) {
+                    moles[c] += phase_moles * fs.moleFraction(phaseIdx, c);
+                }
+                total_moles += phase_moles;
+            }
+            if (total_moles <= 0.0) {
+                continue;
+            }
+
             InitialFluidState flash_fs;
             flash_fs.setTemperature(fs.temperature(0));
             flash_fs.setPressure(FluidSystem::oilPhaseIdx, fs.pressure(FluidSystem::oilPhaseIdx));
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
-                flash_fs.setMoleFraction(c, fs.moleFraction(c));
+                flash_fs.setMoleFraction(c, moles[c] / total_moles);
                 flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
             }
             flash_fs.setLvalue(-1.0);
-            const bool single_phase = FlashSolver::flash_solve_scalar_(
+            FlashSolver::flash_solve_scalar_(
                 flash_fs, PTFlashMethod::Ssi, flash_tolerance, eos_type);
-            if (single_phase) {
-                continue; // No correction for a single-phase flash.
-            }
 
-            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
-
-            // Use the liquid EOS root for the unflashed overall composition.
-            InitialFluidState single_fs(flash_fs);
-            for (unsigned c = 0; c < numComponents; ++c) {
-                single_fs.setMoleFraction(FluidSystem::oilPhaseIdx, c, fs.moleFraction(c));
-            }
-            param_cache.updatePhase(single_fs, FluidSystem::oilPhaseIdx);
-            const Scalar vm_single = param_cache.molarVolume(FluidSystem::oilPhaseIdx);
-
-            param_cache.updatePhase(flash_fs, FluidSystem::oilPhaseIdx);
-            const Scalar vm_oil = param_cache.molarVolume(FluidSystem::oilPhaseIdx);
-            param_cache.updatePhase(flash_fs, FluidSystem::gasPhaseIdx);
-            const Scalar vm_gas = param_cache.molarVolume(FluidSystem::gasPhaseIdx);
+            // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();
-            const Scalar vm_flash = L * vm_oil + (1.0 - L) * vm_gas;
+            Scalar vm_flash = 0.0;
+            if (L > 0.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::oilPhaseIdx);
+                vm_flash += L * param_cache.correctedMolarVolume(FluidSystem::oilPhaseIdx);
+            }
+            if (L < 1.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::gasPhaseIdx);
+                vm_flash += (1.0 - L) * param_cache.correctedMolarVolume(FluidSystem::gasPhaseIdx);
+            }
 
-            const Scalar ratio = sw_in / (1.0 - sw_in) * vm_single / vm_flash;
-            const Scalar sw = ratio / (1.0 + ratio);
+            const Scalar sw = sw_in / (sw_in + total_moles * vm_flash);
             const Scalar hc_scale = (1.0 - sw) / (1.0 - sw_in);
 
             fs.setSaturation(FluidSystem::waterPhaseIdx, sw);
