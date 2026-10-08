@@ -82,6 +82,10 @@ static constexpr bool is_gpu_operator_v = is_gpu_operator<T>::value;
  template <typename T>
  static constexpr bool is_gpu_matrix_v = is_gpu_matrix<T>::value;
 
+ /// Largest block size of a CPU matrix that the GPU preconditioners and the
+ /// gpubicgstab solver are instantiated for, see the instantiations in gpuistl/.
+ inline constexpr int max_gpu_instantiated_block_size = 7;
+
 } // namespace Opm
 
 #endif // OPM_IS_GPU_OPERATOR_HEADER

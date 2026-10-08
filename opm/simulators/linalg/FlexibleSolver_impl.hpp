@@ -311,15 +311,20 @@ namespace Dune
 #endif
 #if HAVE_CUDA
                 } else if (solver_type == "gpubicgstab") {
-                    linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
-                        *linearoperator_for_solver_,
-                        *scalarproduct_,
-                        preconditioner_,
-                        tol, // desired residual reduction factor
-                        maxiter, // maximum number of iterations
-                        verbosity,
-                        comm));
-        #endif
+                    if constexpr (VectorType::block_type::dimension
+                                  <= Opm::max_gpu_instantiated_block_size) {
+                        linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator,
+                                                                         Dune::BiCGSTABSolver,
+                                                                         VectorType>(
+                            *linearoperator_for_solver_,
+                            *scalarproduct_,
+                            preconditioner_,
+                            tol, // desired residual reduction factor
+                            maxiter, // maximum number of iterations
+                            verbosity,
+                            comm));
+                    }
+#endif
                }
             }
         }
