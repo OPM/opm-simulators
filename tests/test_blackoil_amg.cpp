@@ -23,7 +23,9 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/amgcpr.hh>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -36,6 +38,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
 
+#include <array>
 #include <exception>
 #include <string>
 #include <utility>
@@ -310,6 +313,96 @@ void runBlackoilAmgLaplace()
 
 }
 
+BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
+{
+    const auto& ccomm = Dune::MPIHelper::getCommunication();
+    if (ccomm.size() > 2) {
+        BOOST_TEST_MESSAGE("This test uses one or two MPI processes.");
+        return;
+    }
+
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+    using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+    using Operator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
+    using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Communication>;
+    using Criterion = Dune::Amg::CoarsenCriterion<
+        Dune::Amg::UnSymmetricCriterion<Matrix, Dune::Amg::FirstDiagonal>>;
+
+    constexpr int numRows = 6;
+    const std::array<std::array<int, 2>, numRows> neighbours
+        = {{{1, -1}, {0, 2}, {1, 5}, {4, -1}, {3, 5}, {2, 4}}};
+    auto isOwner = [&ccomm](int row) { return ccomm.size() == 1 || row / 3 == ccomm.rank(); };
+
+    Communication comm(ccomm);
+    auto& indices = comm.indexSet();
+    indices.beginResize();
+    for (int row = 0; row < numRows; ++row) {
+        indices.add(
+            row,
+            LocalIndex(row, isOwner(row) ? GridAttributes::owner : GridAttributes::copy, true));
+    }
+    indices.endResize();
+    comm.remoteIndices().template rebuild<false>();
+
+    Matrix matrix(numRows, numRows, Matrix::row_wise);
+    for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
+        row.insert(row.index());
+        for (const auto neighbour : neighbours[row.index()]) {
+            if (neighbour >= 0) {
+                row.insert(neighbour);
+            }
+        }
+    }
+    matrix = 0.0;
+    for (int row = 0; row < numRows; ++row) {
+        matrix[row][row] = isOwner(row) ? (row == 0 ? 2.0 : 4.0) : 1.0;
+        if (isOwner(row) && row != 0 && row != 3) {
+            for (const auto neighbour : neighbours[row]) {
+                if (neighbour >= 0) {
+                    matrix[row][neighbour] = -1.0;
+                }
+            }
+        }
+    }
+
+    Criterion criterion;
+    criterion.setMaxLevel(2);
+    criterion.setCoarsenTarget(2);
+    criterion.setMinAggregateSize(2);
+    criterion.setMaxAggregateSize(3);
+    criterion.setAccumulate(false);
+    criterion.setSkipIsolated(false);
+    criterion.setDebugLevel(0);
+    Operator op(matrix, comm);
+    Opm::ParallelOverlappingILU0Args<double> smootherArgs;
+    Dune::Amg::AMGCPR<Operator, Vector, Smoother, Communication> amg(
+        op, criterion, smootherArgs, comm);
+
+    // A one-level hierarchy uses AMG's own copyOwnerToAll(), bypassing the
+    // smoother whose pre() must make the locally solved isolated rows consistent.
+    BOOST_REQUIRE_GE(ccomm.min(amg.levels()), 2u);
+    Vector x(numRows), rhs(numRows);
+    x = 1.0;
+    rhs = 0.0;
+    if (isOwner(0)) {
+        rhs[0] = 14.0;
+    }
+    if (isOwner(3)) {
+        rhs[3] = 44.0;
+    }
+
+    // Owner rows 0 and 3 are isolated and become 7 and 11. Their identity
+    // copy rows have zero right hand sides, so AMG locally sets those copies
+    // to zero before calling the ILU smoother's pre().
+    amg.pre(x, rhs);
+    const std::array<double, numRows> expected = {7.0, 1.0, 1.0, 11.0, 1.0, 1.0};
+    for (int row = 0; row < numRows; ++row) {
+        BOOST_CHECK_EQUAL(x[row][0], expected[row]);
+    }
+    amg.post(x);
+}
+
 bool init_unit_test_func()
 {
     return true;
@@ -318,8 +411,7 @@ bool init_unit_test_func()
 int main(int argc, char** argv)
 {
     [[maybe_unused]] const auto& helper = Dune::MPIHelper::instance(argc, argv);
-    boost::unit_test::unit_test_main(&init_unit_test_func,
-                                     argc, argv);
+    return boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }
 #else
 int main () { return 0; }

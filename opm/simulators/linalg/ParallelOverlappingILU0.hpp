@@ -299,8 +299,14 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    void pre (Domain&, Range&) override
-    {}
+    void pre(Domain& x, Range&) override
+    {
+        // AMG solves rows without off-diagonal entries locally before calling
+        // this, so copy the owner's values to all ranks.
+        if (comm_) {
+            comm_->copyOwnerToAll(x, x);
+        }
+    }
 
     /*!
       \brief Apply the preconditoner.
