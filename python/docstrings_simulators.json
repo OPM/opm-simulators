@@ -70,7 +70,7 @@
         },
         "getSchedule": {
             "signature_template": "opm.simulators.{{name}}.get_schedule() -> Schedule",
-            "doc": "Gets the Schedule object the simulator uses. Changes made to it, for example with ``shut_well()``, take effect in the simulation from the report step they are made for. This works with both constructors: with the objects constructor it returns the Schedule object that was passed in. Can only be called after ``step_init()``.\n\nIn a parallel run every MPI rank has its own copy of the Schedule, so a change must be made in the same way on every rank.\n\n:return: The Schedule object used by the simulator.\n:type return: Schedule"
+            "doc": "Gets the Schedule object the simulator uses. Changes made to it take effect in the simulation. This works with both constructors: with the objects constructor it returns the Schedule object that was passed in. Can only be called after ``step_init()``.\n\nIn a parallel run every MPI rank has its own copy of the Schedule, so a change must be made in the same way on every rank.\n\n:return: The Schedule object used by the simulator.\n:type return: Schedule"
         },
         "run": {
             "signature_template": "opm.simulators.{{name}}.run() -> int",
