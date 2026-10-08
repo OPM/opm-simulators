@@ -71,6 +71,9 @@ public:
 
     virtual void apply(BVector& r) const = 0;
 
+    /// Ax = Ax - C^T D^-1 B x, the well part of the reservoir operator
+    virtual void apply(const BVector& x, BVector& Ax) const = 0;
+
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,

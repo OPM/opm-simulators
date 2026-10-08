@@ -89,6 +89,8 @@ public:
 
     void apply(BVector& r) const;
 
+    void apply(const BVector& x, BVector& Ax) const;
+
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
 private:

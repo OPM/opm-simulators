@@ -114,6 +114,8 @@ public:
 
     void apply(BVector& r) const override;
 
+    void apply(const BVector& x, BVector& Ax) const override;
+
     void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                SingleWellState& well_state) override;
 
