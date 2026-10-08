@@ -426,6 +426,14 @@ apply(BVector& r) const
     this->well_equations_.apply(r);
 }
 
+template<typename TypeTag>
+void
+CompWell<TypeTag>::
+apply(const BVector& x, BVector& Ax) const
+{
+    this->well_equations_.apply(x, Ax);
+}
+
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
