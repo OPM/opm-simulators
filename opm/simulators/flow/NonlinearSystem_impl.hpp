@@ -82,8 +82,6 @@ updateSolution(const GlobalEqVector& dx)
                              /*update=*/dx,
                              /*resid=*/dx);
 
-    postSolutionUpdate();
-
     {
         OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);

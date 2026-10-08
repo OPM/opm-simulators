@@ -134,9 +134,6 @@ protected:
     virtual void storeSolutionUpdate(const GlobalEqVector&)
     {}
 
-    virtual void postSolutionUpdate()
-    {}
-
     SimulatorReportSingle prepareStep(const SimulatorTimerInterface& timer);
 
     template <class WellModelType>
