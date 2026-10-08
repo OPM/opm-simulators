@@ -218,6 +218,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    equil_1d_compvd_water_gascap_contact_mismatch
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_CONTACT_MISMATCH
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
     equil_1d_compvd_oil
   FILENAME
     EQUIL_1D_COMPVD_OIL
