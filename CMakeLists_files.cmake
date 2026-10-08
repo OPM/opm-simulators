@@ -158,6 +158,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/FlexibleSolver7.cpp
+  opm/simulators/linalg/FlexibleSolver8.cpp
+  opm/simulators/linalg/FlexibleSolver9.cpp
+  opm/simulators/linalg/FlexibleSolver10.cpp
+  opm/simulators/linalg/FlexibleSolver11.cpp
   opm/simulators/linalg/FlowLinearSolverParameters.cpp
   opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
@@ -170,6 +174,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory5.cpp
   opm/simulators/linalg/PreconditionerFactory6.cpp
   opm/simulators/linalg/PreconditionerFactory7.cpp
+  opm/simulators/linalg/PreconditionerFactory8.cpp
+  opm/simulators/linalg/PreconditionerFactory9.cpp
+  opm/simulators/linalg/PreconditionerFactory10.cpp
+  opm/simulators/linalg/PreconditionerFactory11.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/linalg/system/SystemPreconditioner.cpp
