@@ -61,6 +61,17 @@ opm_add_test(test_parallelwellinfo_mpi
     4
 )
 
+opm_add_test(test_blackoil_amg_np2
+  EXE_TARGET
+    test_blackoil_amg
+  DRIVER_ARGS
+    -n 2
+  TEST_ARGS
+    --run_test=IsolatedRowsHaveConsistentInitialSolution
+  PROCESSORS
+    2
+)
+
 foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_wbp_sourcevalues_np${NPROC}
     EXE_TARGET
