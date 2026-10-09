@@ -51,7 +51,9 @@
 
 #include <opm/models/utils/start.hh>
 
+#include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
@@ -90,14 +92,15 @@ struct EnableDiffusion<TypeTag, TTag::WellModelTestTypeTag>
 }
 
 using StandardWell = Opm::StandardWell<Opm::Properties::TTag::WellModelTestTypeTag>;
+using MultisegmentWell = Opm::MultisegmentWell<Opm::Properties::TTag::WellModelTestTypeTag>;
 
 struct SetupTest {
 
     using Grid = UnstructuredGrid;
 
-    SetupTest()
+    explicit SetupTest(const std::string& deckFile = "TESTWELLMODEL.DATA")
     {
-        const auto deck = Opm::Parser{}.parseFile("TESTWELLMODEL.DATA");
+        const auto deck = Opm::Parser{}.parseFile(deckFile);
         this->ecl_state = std::make_unique<const Opm::EclipseState>(deck);
 
         const Opm::TableManager table(deck);
@@ -291,4 +294,148 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK(StandardWell::Indices::numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
     }
+}
+
+BOOST_AUTO_TEST_CASE(TestPrimaryVariableScaling) {
+    // The scaling must appear in the derivative only: the stored value and the
+    // Evaluation's value stay physical. Set the parameters before the first
+    // varScale() call - the scales are cached statically.
+    Opm::Parameters::SetDefault<Opm::Parameters::WellBhpScaling<double>>(8388608.0); // 2^23
+    Opm::Parameters::SetDefault<Opm::Parameters::WellRateScaling<double>>(0.25);   // 2^-2
+
+    const SetupTest setup_test;
+    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
+    const Opm::BlackoilModelParameters<double> param;
+
+    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+    // Just enough initialisation for phase-usage queries to work
+    // (same device as test_rftcontainer.cpp).
+    FluidSystem::initBegin(/*numPvtRegions=*/1);
+    using RateConverterType = Opm::RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    RateConverterType rateConverter(std::vector<int>(10, 0));
+
+    const auto& well_ecl = wells_ecl[0]; // PROD1
+    Opm::PerforationData<double> dummy;
+    std::vector<Opm::PerforationData<double>> pdata(well_ecl.getConnections().size(), dummy);
+    for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
+        pdata[c].ecl_index = c;
+    }
+    Opm::ParallelWellInfo<double> pinfo{well_ecl.name()};
+    const StandardWell well(well_ecl, pinfo, setup_test.current_timestep,
+                            param, rateConverter, 0, 3, 3, 0, pdata);
+
+    constexpr double pv_bhp_scale = 8388608.0;
+    using PV = std::decay_t<decltype(well.primaryVariables())>;
+    PV pv(well);
+    pv.resize(well.numStaticWellEq);
+
+    // Zero Newton update through the public interface triggers
+    // setEvaluationsFromValues(); the bhp lands on its lower limit.
+    typename PV::BVectorWell dwells(1);
+    dwells[0].resize(well.numStaticWellEq);
+    dwells[0] = 0.0;
+    Opm::DeferredLogger logger;
+    pv.updateNewton(dwells, /*stop_or_zero_rate_target=*/false,
+                    /*dFLimit=*/0.2, /*dBHPLimit=*/0.1, logger);
+
+    constexpr int numEq = StandardWell::Indices::numEq;
+
+    // Values are physical, with and without scaling.
+    BOOST_CHECK_EQUAL(pv.eval(PV::Bhp).value(), pv.value(PV::Bhp));
+    BOOST_CHECK_EQUAL(pv.eval(PV::WQTotal).value(), pv.value(PV::WQTotal));
+
+    // The derivatives carry the scale: d(x)/d(x/s) = s. These fail without the
+    // scaling support (both were hard-coded 1.0).
+    BOOST_CHECK_EQUAL(pv.eval(PV::Bhp).derivative(numEq + PV::Bhp), pv_bhp_scale);
+    BOOST_CHECK_EQUAL(pv.eval(PV::WQTotal).derivative(numEq + PV::WQTotal), 0.25);
+
+    // The dimensionless fractions stay unscaled.
+    BOOST_CHECK_EQUAL(pv.eval(PV::WFrac).derivative(numEq + PV::WFrac), 1.0);
+    BOOST_CHECK_EQUAL(pv.eval(PV::GFrac).derivative(numEq + PV::GFrac), 1.0);
+
+    // Every slot: the stored value and the Evaluation agree, and only the own
+    // column carries a derivative. This is the assertion a forgotten conversion
+    // in setEvaluationsFromValues would break.
+    for (int i = 0; i < well.numStaticWellEq; ++i) {
+        BOOST_CHECK_EQUAL(pv.eval(i).value(), pv.value(i));
+        for (int j = 0; j < well.numStaticWellEq; ++j) {
+            if (i != j) {
+                BOOST_CHECK_EQUAL(pv.eval(i).derivative(numEq + j), 0.0);
+            }
+        }
+    }
+
+    // value()/setValue() must be exact inverses, or the getPrimaryVars round
+    // trip used by NLDD would rescale on every save/restore.
+    const double bhp_phys = 300.0 * Opm::unit::barsa;
+    pv.setValue(PV::Bhp, bhp_phys);
+    BOOST_CHECK_EQUAL(pv.value(PV::Bhp), bhp_phys);
+
+    // Newton step with the absolute bhp floor ACTIVE. The limit is physical, the
+    // increment arrives scaled; a missing conversion on either side lands
+    // somewhere other than exactly the floor. The unscaled test above never
+    // reaches this branch because its increment is zero.
+    constexpr double bhp_floor = 1.0 * Opm::unit::barsa - 1.0 * Opm::unit::Pascal;
+    pv.setValue(PV::Bhp, 1.5 * Opm::unit::barsa);
+    dwells[0][PV::Bhp] = (1.0 * Opm::unit::barsa) / pv_bhp_scale; // scaled: drives well below the floor
+    pv.updateNewton(dwells, false, 0.2, 1.0, logger);
+    BOOST_CHECK_EQUAL(pv.value(PV::Bhp), bhp_floor);
+}
+
+BOOST_AUTO_TEST_CASE(TestMultisegmentPrimaryVariableScaling) {
+    // Same contract as the standard well, for segment pressure and total rate.
+    Opm::Parameters::SetDefault<Opm::Parameters::WellBhpScaling<double>>(8388608.0); // 2^23
+    Opm::Parameters::SetDefault<Opm::Parameters::WellRateScaling<double>>(0.25);   // 2^-2
+
+    const SetupTest setup_test("msw.data");
+    const auto& well_ecl = setup_test.schedule->getWell("PROD01", setup_test.current_timestep);
+    BOOST_REQUIRE(well_ecl.isMultiSegment());
+    const Opm::BlackoilModelParameters<double> param;
+
+    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+    FluidSystem::initBegin(/*numPvtRegions=*/1);
+    using RateConverterType = Opm::RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    RateConverterType rateConverter(std::vector<int>(10, 0));
+
+    std::vector<Opm::PerforationData<double>> pdata(well_ecl.getConnections().size());
+    for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
+        pdata[c].ecl_index = c;
+    }
+    Opm::ParallelWellInfo<double> pinfo{well_ecl.name()};
+    const MultisegmentWell well(well_ecl, pinfo, setup_test.current_timestep,
+                                param, rateConverter, 0, 3, 3, 0, pdata);
+
+    constexpr double bhp_scale = 8388608.0;
+    constexpr double rate_scale = 0.25;
+    using PV = std::decay_t<decltype(well.primaryVariables())>;
+    const int nseg = well_ecl.getSegments().size();
+    PV pv(well);
+    pv.resize(nseg);
+
+    typename PV::BVectorWell dwells(nseg);
+    dwells = 0.0;
+    Opm::DeferredLogger logger;
+    pv.updateNewton(dwells, /*relaxation_factor=*/1.0, /*dFLimit=*/0.2,
+                    /*stop_or_zero_rate_target=*/false, /*max_pressure_change=*/1.0e10);
+
+    constexpr int numEq = MultisegmentWell::Indices::numEq;
+    for (int seg = 0; seg < nseg; ++seg) {
+        for (int i = 0; i < PV::numWellEq; ++i) {
+            BOOST_CHECK_EQUAL(pv.eval(seg)[i].value(), pv.value(seg)[i]);
+        }
+        BOOST_CHECK_EQUAL(pv.eval(seg)[PV::SPres].derivative(numEq + PV::SPres), bhp_scale);
+        BOOST_CHECK_EQUAL(pv.eval(seg)[PV::WQTotal].derivative(numEq + PV::WQTotal), rate_scale);
+        BOOST_CHECK_EQUAL(pv.eval(seg)[PV::WFrac].derivative(numEq + PV::WFrac), 1.0);
+    }
+
+    // Scaled increments must arrive as physical changes.
+    const auto p0 = pv.value(0)[PV::SPres];
+    const auto q0 = pv.value(0)[PV::WQTotal];
+    dwells[0][PV::SPres] = -(10.0 * Opm::unit::barsa) / bhp_scale;
+    dwells[0][PV::WQTotal] = 4.0;
+    pv.updateNewton(dwells, 1.0, 0.2, false, 1.0e10);
+    BOOST_CHECK_EQUAL(pv.value(0)[PV::SPres], p0 + 10.0 * Opm::unit::barsa);
+    BOOST_CHECK_EQUAL(pv.value(0)[PV::WQTotal], q0 - 4.0 * rate_scale);
 }

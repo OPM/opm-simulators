@@ -35,6 +35,9 @@
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
@@ -385,6 +388,15 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // Add for coupling from well to reservoir
     const int number_cells = weights.size();
     const int welldof_ind = number_cells + well.indexOfWell();
+
+    // The coarse well unknown stays the physical segment pressure. C
+    // differentiates w.r.t. the scaled one, so divide the factor out as that
+    // column enters here; the pressure stage is then the same matrix as for an
+    // unscaled run. The row-sum diagonal below comes from B and is physical
+    // already.
+    static const Scalar bhp_scale =
+        Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
+
     if (!well.isPressureControlled(well_state)) {
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
@@ -397,7 +409,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
                 }
-                jacobian[row_index][welldof_ind][0][0] += matel;
+                jacobian[row_index][welldof_ind][0][0] += matel / bhp_scale;
             }
         }
     }
