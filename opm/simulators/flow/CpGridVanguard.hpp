@@ -278,6 +278,7 @@ public:
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
 
             this->updateGridView_();
+            this->updateCartesianToCompressedMapping_();
             this->updateCellDepths_();
             this->updateCellThickness_();
 

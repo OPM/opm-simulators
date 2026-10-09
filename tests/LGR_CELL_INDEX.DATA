@@ -1,0 +1,117 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Test case for the cell index of unrefined cells in a grid with an LGR.
+-- A 3x1x1 grid whose first cell is refined into 2x1x1.  The two refined cells
+-- come first in the leaf grid, so the leaf index of cells (2,1,1) and (3,1,1)
+-- differs from their level-0 index.  Well PROD sits in (3,1,1), outside the LGR.
+-- Fluid and rock data from SPE1.
+
+RUNSPEC
+
+TITLE
+LGR_CELL_INDEX
+
+DIMENS
+  3 1 1 /
+
+EQLDIMS
+/
+
+TABDIMS
+/
+
+OIL
+GAS
+WATER
+DISGAS
+
+FIELD
+
+START
+  1 'JAN' 2015 /
+
+WELLDIMS
+  1 1 1 1 /
+
+GRID
+
+CARFIN
+'LGR1'  1  1  1  1  1  1  2  1  1 /
+ENDFIN
+
+DX
+  3*1000 /
+DY
+  3*1000 /
+DZ
+  3*50 /
+TOPS
+  3*8325 /
+PORO
+  3*0.3 /
+PERMX
+  3*500 /
+PERMY
+  3*500 /
+PERMZ
+  3*50 /
+
+PROPS
+
+PVTW
+  4017.55 1.038 3.22E-6 0.318 0.0 /
+ROCK
+  14.7 3E-6 /
+SWOF
+  0.12  0        1      0
+  0.36  7.44E-7  0.7    0
+  0.72  4.65E-6  0.001  0
+  1     0.00001  0      0 /
+SGOF
+  0     0      1      0
+  0.05  0.005  0.980  0
+  0.3   0.190  0.090  0
+  0.88  0.984  0.000  0 /
+DENSITY
+  53.66 64.49 0.0533 /
+PVDG
+  14.700  166.666  0.008000
+  1014.7  3.19700  0.014000
+  4014.7  0.81100  0.026800
+  9014.7  0.38600  0.047000 /
+PVTO
+  0.0010   14.7  1.0620  1.0400 /
+  0.3710 1014.7  1.2950  0.8300 /
+  1.2700 4014.7  1.6950  0.5100
+         9014.7  1.5790  0.7400 /
+  1.6180 5014.7  1.8270  0.4490
+         9014.7  1.7370  0.6310 /
+/
+
+SOLUTION
+
+EQUIL
+  8400 4800 8450 0 8300 0 1 0 0 /
+RSVD
+  8300 1.270
+  8450 1.270 /
+
+SCHEDULE
+
+WELSPECS
+  'PROD' 'G1' 3 1 8400 'OIL' /
+/
+COMPDAT
+  'PROD' 3 1 1 1 'OPEN' 1* 1* 0.5 /
+/
+WCONPROD
+  'PROD' 'OPEN' 'ORAT' 1000 4* 1000 /
+/
+
+TSTEP
+  1 /
+
+END
