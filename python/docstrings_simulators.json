@@ -19,12 +19,12 @@
     },
     "constructors": {
         "filename_constructor": {
-            "signature_template": "opm.simulators.{{name}}.__init__(deck_filename: str) -> {{name}}",
-            "doc": "Constructor using a deck file name.\n\n:param deck_filename: The file name of the deck to be used for the simulation.\n:type deck_filename: str\n:return: The {{name}}.\n:type return: {{name}}"
+            "signature_template": "opm.simulators.{{name}}.__init__(filename: str, args: list[str] = []) -> {{name}}",
+            "doc": "Constructor using a deck file name.\n\n:param filename: The file name of the deck to be used for the simulation.\n:type filename: str\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
         },
         "objects_constructor": {
-            "signature_template": "opm.simulators.{{name}}.__init__(deck: Deck, state: EclipseState, schedule: Schedule, summary_config: SummaryConfig) -> {{name}}",
-            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\n:param deck: Deck object.\n:type deck: Deck\n:param state: EclipseState object.\n:type state: EclipseState\n:param schedule: Schedule object.\n:type schedule: Schedule\n:param summary_config: SummaryConfig object.\n:type summary_config: SummaryConfig\n:return: The {{name}}.\n:type return: {{name}}"
+            "signature_template": "opm.simulators.{{name}}.__init__(Deck: Deck, EclipseState: EclipseState | None, Schedule: Schedule, SummaryConfig: SummaryConfig, args: list[str] = []) -> {{name}}",
+            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\nThe simulator uses the Schedule and SummaryConfig objects as they are, so a schedule or a summary configuration built or changed in Python takes effect in the simulation. A given EclipseState is also used as it is. Everything else the simulator reads from the DATA file again. To change well controls during a run, the filename constructor together with ``get_schedule()`` is simpler.\n\nIn a parallel run (more than one MPI process), every process passes its own objects. Any change made to them from Python must be made in the same way on every process, both before and after ``step_init()``.\n\n:param Deck: Deck object. Only its file name is used, and only when EclipseState is None; otherwise the file name comes from the EclipseState. Changes made to this object in Python do not reach the simulation.\n:type Deck: Deck\n:param EclipseState: EclipseState object, or None (recommended). When given, the simulator uses it as it is, including its grid and properties, instead of building its own, and it takes the name of the DATA file to read from it. Build it from that same DATA file. In a parallel run it must be None.\n:type EclipseState: EclipseState | None\n:param Schedule: Schedule object. From ``step_init()`` on, the simulator uses this object as its own schedule, and ``get_schedule()`` returns it.\n:type Schedule: Schedule\n:param SummaryConfig: SummaryConfig object. The simulator uses it to decide which summary vectors to write.\n:type SummaryConfig: SummaryConfig\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
         }
     },
     "common_methods": {
@@ -67,6 +67,10 @@
         "getPrimaryVarMeaningMap": {
             "signature_template": "opm.simulators.{{name}}.get_primary_variable_meaning_map(variable: str) -> dict[str, int]",
             "doc": "Retrieves the primary variable meaning map for each primary variable.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: A dictionary of primary variable meanings. The keys are the primary variable meanings and the values are the corresponding integer codes. The integer codes are used to represent the primary variable meanings in the simulation grid. For variable name 'pressure', the valid keys are: 'Po', 'Pg', and 'Pw', for variable name 'water', the valid keys are: 'Sw', 'Rvw', 'Rsw', and 'Disabled', for variable name 'gas', the valid keys are: 'Sg', 'Rs', 'Rv', and 'Disabled', for variable name 'brine', the valid keys are: 'Cs', 'Sp', and 'Disabled'.\n:type return: dict[str, int]"
+        },
+        "getSchedule": {
+            "signature_template": "opm.simulators.{{name}}.get_schedule() -> Schedule",
+            "doc": "Gets the Schedule object the simulator uses. Changes made to it take effect in the simulation. This works with both constructors: with the objects constructor it returns the Schedule object that was passed in. Can only be called after ``step_init()``.\n\nIn a parallel run every MPI rank has its own copy of the Schedule, so a change must be made in the same way on every rank.\n\n:return: The Schedule object used by the simulator.\n:type return: Schedule"
         },
         "run": {
             "signature_template": "opm.simulators.{{name}}.run() -> int",

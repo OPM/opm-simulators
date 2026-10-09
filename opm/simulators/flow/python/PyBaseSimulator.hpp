@@ -82,6 +82,8 @@ public:
     std::map<std::string, int>
     getPrimaryVarMeaningMap(const std::string& variable) const;
 
+    std::shared_ptr<Schedule> getSchedule() const;
+
     int run();
 
     using PyCArray = py::array_t<double, py::array::c_style | py::array::forcecast>;
