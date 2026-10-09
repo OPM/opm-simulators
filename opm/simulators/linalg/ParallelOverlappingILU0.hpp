@@ -299,14 +299,11 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    void pre(Domain& x, Range&) override
-    {
-        // AMG solves rows without off-diagonal entries locally before calling
-        // this, so copy the owner's values to all ranks.
-        if (comm_) {
-            comm_->copyOwnerToAll(x, x);
-        }
-    }
+    // Leaves x alone to save a halo exchange per call, so callers must pass a
+    // consistent initial guess, such as zero. AMGCPR makes x consistent after
+    // its optional pre-solve; Dune's own AMG would need this to copy instead.
+    void pre (Domain&, Range&) override
+    {}
 
     /*!
       \brief Apply the preconditoner.

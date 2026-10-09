@@ -379,8 +379,8 @@ BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
     Dune::Amg::AMGCPR<Operator, Vector, Smoother, Communication> amg(
         op, criterion, smootherArgs, comm);
 
-    // A one-level hierarchy uses AMG's own copyOwnerToAll(), bypassing the
-    // smoother whose pre() must make the locally solved isolated rows consistent.
+    // A one-level hierarchy has no smoother, which the isolated rows rely on
+    // without the pre-solve.
     BOOST_REQUIRE_GE(ccomm.min(amg.levels()), 2u);
     Vector x(numRows), rhs(numRows);
     x = 1.0;
@@ -392,12 +392,25 @@ BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
         rhs[3] = 44.0;
     }
 
-    // Owner rows 0 and 3 are isolated and become 7 and 11. Their identity
-    // copy rows have zero right hand sides, so AMG locally sets those copies
-    // to zero before calling the ILU smoother's pre().
+    // Owner rows 0 and 3 are isolated and become 7 and 11. The pre-solve sets
+    // their identity copy rows, which have zero right hand sides, to zero
+    // locally, so AMG must copy the owners' values afterwards.
+    amg.setDirichletPresolve(true);
     amg.pre(x, rhs);
     const std::array<double, numRows> expected = {7.0, 1.0, 1.0, 11.0, 1.0, 1.0};
     for (int row = 0; row < numRows; ++row) {
+        BOOST_CHECK_EQUAL(x[row][0], expected[row]);
+    }
+    amg.post(x);
+
+    // The factory turns the pre-solve off. Then pre() leaves x alone and the
+    // ILU0 smoothing in apply() solves the isolated rows on every rank.
+    amg.setDirichletPresolve(false);
+    x = 0.0;
+    amg.pre(x, rhs);
+    BOOST_CHECK_EQUAL(x.infinity_norm(), 0.0);
+    amg.apply(x, rhs);
+    for (const int row : {0, 3}) {
         BOOST_CHECK_EQUAL(x[row][0], expected[row]);
     }
     amg.post(x);
