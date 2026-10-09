@@ -1193,8 +1193,10 @@ template<class FluidSystem>
 void GenericOutputModule<FluidSystem>::
 setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
 {
+    // LB* nodes name a cell of an LGR: setupLgrBlockData() allocates them.
     for (const auto& node : summaryConfig_) {
         if ((node.category() == SummaryConfigNode::Category::Block) &&
+            !node.lgr_name().has_value() &&
             isCartIdxOnThisRank(node.number() - 1))
         {
             this->blockData_.emplace(std::piecewise_construct,
