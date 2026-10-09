@@ -14,13 +14,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HEADER_INCLUDED
+#define OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HEADER_INCLUDED
+
 #include <algorithm>
+#include <cctype>
 #include <stdexcept>
 #include <string>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/linalgparameters.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 
 namespace Opm::Parameters
@@ -89,3 +92,5 @@ linearSolverAcceleratorTypeFromCLI()
 }
 
 } // namespace Opm::Parameters
+
+#endif // OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HEADER_INCLUDED
