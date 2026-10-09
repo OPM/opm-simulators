@@ -35,6 +35,8 @@
  *   recoverSolutionWell    ->  x_w = D^-1 (res_well - B x)
  *   apply(r)               ->  r  -= C^T D^-1 res_well
  *
+ * It checks extract(jacobian), A -= C^T D^-1 B, against apply(x, Ax).
+ *
  * It also exercises the singular-matrix fallback (inverse replaced by the
  * identity) for both the 4x4 block size (which signals singularity by throwing
  * Opm::NumericalProblem) and the 3x3 block size (which does not throw but
@@ -54,7 +56,9 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -113,6 +117,18 @@ void checkClose(const ResVec& a, const ResVec& b, const std::string& what)
                             what << "[" << i << "]: got " << a[i] << " expected " << b[i]);
     }
 }
+
+// Stands in for the reservoir matrix: sums the blocks added per (row, column) cell.
+struct BlockCollector {
+    using MatrixBlock = Dune::FieldMatrix<Scalar, ne, ne>;
+
+    void addToBlock(std::size_t row, std::size_t col, const MatrixBlock& value)
+    {
+        blocks.try_emplace({row, col}, 0.0).first->second += value;
+    }
+
+    std::map<std::pair<std::size_t, std::size_t>, MatrixBlock> blocks;
+};
 
 } // anonymous namespace
 
@@ -215,6 +231,57 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
             expected -= ctx;
             checkClose(r[c], expected, "apply conn " + std::to_string(c));
         }
+    }
+}
+
+// The blocks added to the matrix must act as the well operator, so summing them
+// times x gives apply(x, Ax) from Ax = 0. The connection cells are not 0, 1, so
+// this also checks that the blocks land in the cells' rows and columns.
+BOOST_AUTO_TEST_CASE(MatrixContributionsMatchOperator)
+{
+    const DiagMat D = makeD();
+    const std::array<OffDiagMat, num_conn> B{makeOffDiag(0.10, 0.05), makeOffDiag(0.20, 0.03)};
+    const std::array<OffDiagMat, num_conn> C{makeOffDiag(0.30, 0.04), makeOffDiag(-0.10, 0.07)};
+    const std::vector<std::size_t> cells{5, 2};
+
+    Eqns eqns;
+    eqns.init(num_conn, cells);
+    eqns.clear();
+    for (int i = 0; i < nw; ++i) {
+        for (int j = 0; j < nw; ++j) {
+            eqns.D()[0][0][i][j] = D[i][j];
+        }
+        for (int c = 0; c < num_conn; ++c) {
+            for (int j = 0; j < ne; ++j) {
+                eqns.B()[0][c][i][j] = B[c][i][j];
+                eqns.C()[0][c][i][j] = C[c][i][j];
+            }
+        }
+    }
+    eqns.invert();
+
+    BlockCollector jacobian;
+    eqns.extract(jacobian);
+    BOOST_CHECK_EQUAL(jacobian.blocks.size(), std::size_t{num_conn * num_conn});
+
+    Eqns::BVector x(num_conn);
+    for (int c = 0; c < num_conn; ++c) {
+        for (int j = 0; j < ne; ++j) {
+            x[c][j] = 1.0 - 0.2 * j + 0.5 * c;
+        }
+    }
+    Eqns::BVector Ax(num_conn);
+    Ax = 0.0;
+    eqns.apply(x, Ax);
+
+    for (int r = 0; r < num_conn; ++r) {
+        ResVec y(0.0);
+        for (int c = 0; c < num_conn; ++c) {
+            const auto it = jacobian.blocks.find({cells[r], cells[c]});
+            BOOST_REQUIRE(it != jacobian.blocks.end());
+            it->second.umv(x[c], y);
+        }
+        checkClose(y, Ax[r], "extract conn " + std::to_string(r));
     }
 }
 

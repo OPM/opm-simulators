@@ -17,9 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <cmath>
+#include <type_traits>
 
 namespace Opm {
 
@@ -156,6 +158,25 @@ apply(const BVector& x, BVector& Ax) const
     invDuneD_.mv(Bx_, invDBx);
     // Ax = Ax - duneC_^T * invDBx
     duneC_.mmtv(invDBx, Ax);
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+template <class SparseMatrixAdapter>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+extract(SparseMatrixAdapter& jacobian) const
+{
+    // B and C have one block per connection, which couples every pair of
+    // connection cells
+    OffDiagMatrixBlockWellType invDB;
+    typename SparseMatrixAdapter::MatrixBlock block;
+    for (auto colB = duneB_[0].begin(); colB != duneB_[0].end(); ++colB) {
+        detail::multMatrixImpl(invDuneD_[0][0], *colB, invDB, std::true_type());
+        for (auto colC = duneC_[0].begin(); colC != duneC_[0].end(); ++colC) {
+            detail::negativeMultMatrixTransposed(*colC, invDB, block);
+            jacobian.addToBlock(cells_[colC.index()], cells_[colB.index()], block);
+        }
+    }
 }
 
 template <typename Scalar, int numWellEq, int numEq>

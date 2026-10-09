@@ -144,8 +144,9 @@ public:
     // xw to update Well State
     void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
+    bool addMatrixContributions() const { return add_matrix_contributions_; }
+
     // some functions to compile
-    bool addMatrixContributions() const { return false; }
     const Schedule& schedule() const { return schedule_; }
     auto begin() const { return well_container_.begin(); }
     auto end() const { return well_container_.end(); }
@@ -186,7 +187,8 @@ public:
 
     bool getWellConvergence() const;
 
-    // the following functions are not used while added to avoid modifying WellConnectionAuxiliaryModule.hpp
+    // WellConnectionAuxiliaryModule uses these to put the connection cells into
+    // the sparsity pattern
     int compressedIndexForInterior(std::size_t cartesian_cell_idx) const;
 
     std::vector<int> getCellsForConnections(const Well& well) const;
@@ -197,6 +199,7 @@ private:
      const SummaryState& summary_state_;
      const EclipseState& ecl_state_;
      const Parallel::Communication& comm_;
+     const bool add_matrix_contributions_;
 
      // we might need something lighter
      const CompositionalConfig& comp_config_;

@@ -534,9 +534,9 @@ getConvergence() const
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-addWellContributions(SparseMatrixAdapter&) const
+addWellContributions(SparseMatrixAdapter& jacobian) const
 {
-    assert(false);
+    this->well_equations_.extract(jacobian);
 }
 
 template <typename TypeTag>
