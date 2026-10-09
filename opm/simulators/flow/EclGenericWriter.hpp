@@ -89,7 +89,12 @@ public:
                      const Dune::CartesianIndexMapper<Grid>& cartMapper,
                      const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                      bool enableAsyncOutput,
-                     bool enableEsmry);
+                     bool enableEsmry,
+                     // I/O-rank reference grid for the cell-data gather.  Differs
+                     // from equilGrid only for a parallel run with LGRs, where it
+                     // is the refined output grid; null falls back to equilGrid.
+                     const EquilGrid* collectGrid = nullptr,
+                     const Dune::CartesianIndexMapper<EquilGrid>* collectCartMapper = nullptr);
 
     const EclipseIO& eclIO() const;
 
@@ -201,7 +206,12 @@ protected:
     std::optional<GatheredLgrOutputTrans> gatheredLgrTrans_;
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;
     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper_;
+    // Mapper of collectGrid_; equals equilCartMapper_ outside a parallel LGR run.
+    const Dune::CartesianIndexMapper<EquilGrid>* collectCartMapper_;
     const EquilGrid* equilGrid_;
+    // Refined I/O-rank reference grid used to gather and split cell data in a
+    // parallel LGR run; equals equilGrid_ otherwise.
+    const EquilGrid* collectGrid_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
 

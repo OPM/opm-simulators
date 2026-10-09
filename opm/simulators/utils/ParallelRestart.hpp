@@ -43,6 +43,17 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
                                  const std::vector<RestartKey>& extraKeys,
                                  Parallel::Communication comm);
 
+/// Hand rank 0's solution to every rank.
+void broadcastSolution(data::Solution& sol, Parallel::Communication comm);
+
+/// One solution per grid level (global grid first, then each LGR in deck
+/// order), as the restart file stores them when the deck declares LGRs.
+std::vector<data::Solution>
+loadParallelRestartSolutionLevels(const EclipseIO* eclIO,
+                                  const std::vector<Opm::RestartKey>& solutionKeys,
+                                  Parallel::Communication comm,
+                                  int step);
+
 data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
                                            const std::vector<RestartKey>& solutionKeys,
                                            Parallel::Communication comm,
