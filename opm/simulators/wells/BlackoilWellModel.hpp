@@ -102,6 +102,7 @@ template<class Scalar> class WellContributions;
         public:
             // ---------      Types      ---------
             using Grid = GetPropType<TypeTag, Properties::Grid>;
+            using GridView = GetPropType<TypeTag, Properties::GridView>;
             using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
             using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
             using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
