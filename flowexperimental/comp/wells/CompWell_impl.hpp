@@ -399,7 +399,7 @@ iterateWellEq(const Simulator& simulator,
         solveEqAndUpdateWellState(well_state);
     } while (it < max_iter);
 
-    // After convergence, the last assembly is at the current well state.
+    // When converged, the last assembly is at the current well state.
     updateConnectionQuantities(well_state);
     return converged;
 }
