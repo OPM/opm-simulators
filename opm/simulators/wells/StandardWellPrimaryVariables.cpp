@@ -25,6 +25,11 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+
+#include <cmath>
+
 #include <dune/common/dynvector.hh>
 #include <dune/istl/bvector.hh>
 
@@ -96,17 +101,40 @@ Scalar relaxationFactorFraction(const Scalar old_value,
 namespace Opm {
 
 template<class FluidSystem, class Indices>
+typename FluidSystem::Scalar
+StandardWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx)
+{
+    // A per-well scale derived from the current bhp was tried and rejected: it
+    // improves the median conditioning of D but is ~8x worse in the tail
+    // (stopped and zero-rate wells are not scaled by their bhp magnitude), and
+    // the tail is what the scaling exists for.
+    if (eqIdx == WQTotal) {
+        static const Scalar s = Parameters::Get<Parameters::WellRateScaling<Scalar>>();
+        return s;
+    }
+    if (eqIdx == Bhp) {
+        static const Scalar s = Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
+        return s;
+    }
+    return Scalar{1}; // the fractions are dimensionless
+}
+
+template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 setEvaluationsFromValues()
 {
     // total number of equations/derivatives (well + reservoir)
     const int totalNumEq = numWellEq_ + Indices::numEq;
     for (int eqIdx = 0; eqIdx < numWellEq_; ++eqIdx) {
+        // value_ stays in physical units; only the derivative is scaled, so the
+        // Jacobian column is that of X = x/s while update(), copyToWellState(),
+        // the absolute bhp limit and the convergence checks keep working on
+        // physical values. Newton increments are converted in updateNewton().
+        const Scalar s = varScale(eqIdx);
         evaluation_[eqIdx] =
             EvalWell::createVariable(totalNumEq,
-                                     value_[eqIdx],
-                                     Indices::numEq + eqIdx);
-
+                                     value_[eqIdx] / s,
+                                     Indices::numEq + eqIdx) * s;
     }
 }
 
@@ -295,7 +323,7 @@ updateNewton(const BVectorWell& dwells,
     this->processFractions();
 
     // updating the total rates Q_t
-    value_[WQTotal] -= dwells[0][WQTotal];
+    value_[WQTotal] -= this->physicalIncrement(dwells, WQTotal);
 
     // here, we make sure it is zero for wells with zero rate target(including stopped wells)
     if (stop_or_zero_rate_target) {
@@ -310,8 +338,9 @@ updateNewton(const BVectorWell& dwells,
     }
 
     // updating the bottom hole pressure
-    const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-    const Scalar dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
+    const Scalar dbhp = this->physicalIncrement(dwells, Bhp);
+    const int sign1 = dbhp > 0 ? 1: -1;
+    const Scalar dx1_limited = sign1 * std::min(std::abs(dbhp),
                                                 std::abs(value_[Bhp]) * dBHPLimit);
     // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
     // so that bhp constaint can be an active control when needed.
