@@ -73,6 +73,19 @@ opm_add_test(test_blackoil_amg_np2
 )
 
 foreach(NPROC 2 3 4)
+  opm_add_test(test_LevelZeroRanks_np${NPROC}
+    EXE_TARGET
+      test_LevelZeroRanks
+    DRIVER_ARGS
+      -n ${NPROC}
+    TEST_ARGS
+      --run_test=CollectedRanksGiveBackTheDistributionOfAGridWithLgrs
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
+
+foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_wbp_sourcevalues_np${NPROC}
     EXE_TARGET
       test_parallel_wbp_sourcevalues
