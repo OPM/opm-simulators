@@ -299,8 +299,9 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    // Leaves x alone. AMGCPR makes it consistent after its optional pre-solve;
-    // Dune's own AMG would need this to copy the owner values instead.
+    // Leaves x alone to save a halo exchange per call, so callers must pass a
+    // consistent initial guess, such as zero. AMGCPR makes x consistent after
+    // its optional pre-solve; Dune's own AMG would need this to copy instead.
     void pre (Domain&, Range&) override
     {}
 
