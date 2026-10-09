@@ -32,7 +32,24 @@
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif // HAVE_DUNE_FEM
 
+#include <cassert>
+#include <cstddef>
+
 namespace Opm {
+
+std::vector<int> levelZeroRanks(const Dune::CpGrid& grid,
+                                const std::vector<int>& leafRanks)
+{
+    const auto leafView = grid.leafGridView();
+    assert(leafRanks.size() == static_cast<std::size_t>(leafView.size(0)));
+
+    std::vector<int> ranks(grid.levelGridView(0).size(0), -1);
+    for (const auto& elem : elements(leafView)) {
+        ranks[elem.getOrigin().index()] = leafRanks[leafView.indexSet().index(elem)];
+    }
+
+    return ranks;
+}
 
 template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,

@@ -1102,6 +1102,32 @@ add_test_compare_parallel_simulation(
     --linear-solver-reduction=1e-7
 )
 
+# Parallel LGR INIT/EGRID regression across a sealed fault: four LGRs along a fault with
+# zero transmissibility. No rank records the connection of the refined cells on the two
+# sides of a sealed face, so the INIT output takes its zero from the level-zero face.
+add_test_compare_parallel_simulation(
+  CASENAME
+    spe1case1_carfin_faults
+  FILENAME
+    SPE1CASE1_CARFIN_FAULTS
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    lgr
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-5
+  MPI_PROCS
+    2
+  COMPARE_MODE
+    init
+  TEST_ARGS
+    --parsing-strictness=low
+)
+
 # Parallel LGR INIT/EGRID regression: reuses the existing SPE1CASE1_CARFIN deck (opm-tests/lgr,
 # already registered for spe1case1_carfin/spe1case1_carfin_parallel in compareECLFiles.cmake) and
 # the existing run-parallel-regressionTest.sh driver (COMPARE_MODE init: dry-run, compares
