@@ -162,6 +162,14 @@ protected:
     }
 
 public:
+    /// Whether the primary variables of a degree of freedom were switched in the
+    /// current time step, which makes switching them back harder.
+    bool wasSwitched(const unsigned globalDofIdx) const
+    { return wasSwitched_[globalDofIdx]; }
+
+    void setWasSwitched(const unsigned globalDofIdx, const bool switched)
+    { wasSwitched_[globalDofIdx] = switched; }
+
     void update_(SolutionVector& nextSolution,
                  const SolutionVector& currentSolution,
                  const GlobalEqVector& solutionUpdate,
