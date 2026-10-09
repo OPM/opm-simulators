@@ -626,6 +626,14 @@ public:
             if (this->refineBeforeRedistribute() && this->grid_->comm().size() > 1) {
                 return;
             }
+            if (this->grid_->lgrBackend() == Opm::Refinement::Backend::Trilinear) {
+                for (std::size_t l = 0; l < lgrs.size(); ++l) {
+                    if (!lgrs.getLgr(l).blockValues().empty()) {
+                        OPM_THROW(std::invalid_argument, "LGR '" + lgrs.getLgr(l).NAME() + "' sets its own "
+                                  "property values; only --lgr-backend=conforming applies them.");
+                    }
+                }
+            }
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             // Each rank refines its own boxes; a refusal on one must stop all of them.
             std::exception_ptr refineError;
@@ -669,9 +677,7 @@ public:
 
             // A COMPDAT connection inside a box moves into the innermost LGR covering it
             // by index, with its connection factor rescaled; the same on every rank.
-            if (this->grid_->lgrBackend() == Opm::Refinement::Backend::Conforming) {
-                this->schedule().refineConnectionsIntoLgrs(lgrs);
-            }
+            this->schedule().refineConnectionsIntoLgrs(lgrs);
         }
     }
 
