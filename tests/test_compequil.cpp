@@ -24,6 +24,9 @@
 
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
@@ -44,6 +47,7 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -1089,6 +1093,28 @@ BOOST_AUTO_TEST_CASE(DatumOnCoincidentContactsKeepsTheGasRoot)
     const Scalar inferred = hydrocarbonDensity("ZMFVD\n 2000 0 0.5 0.5 /\n");
     BOOST_CHECK_LT(stated, 60.0);
     BOOST_CHECK_CLOSE(inferred, stated, 1e-8);
+}
+
+BOOST_AUTO_TEST_CASE(CoincidentContactsNeedNoPhaseLabelling)
+{
+    // Below coinciding contacts there is only water, so a composition that does
+    // not vary across the gas-oil contact needs no warning. With the contact
+    // above the water the hydrocarbon spans it, and the warning remains.
+    const auto warnsAboutLabelling = [](const std::string& equil) {
+        const WaterEquilFixture fix(waterDeckString(equil, "COMPVD\n 2000 0 0.5 0.5 0 10.0 /\n"));
+        std::ostringstream log;
+        const auto warnings = std::make_shared<Opm::StreamLog>(log, Opm::Log::MessageType::Warning);
+        Opm::OpmLog::addBackend("WARNINGS", warnings);
+        const auto states = fix.compute(std::vector<int>(20, 0),
+                                        std::vector<Scalar>(20, connateSw),
+                                        std::vector<Scalar>(20, 1.0)).fluidStates();
+        Opm::OpmLog::removeBackend("WARNINGS");
+        BOOST_REQUIRE_EQUAL(states.size(), std::size_t{20});
+        return log.str().find("phase labeling") != std::string::npos;
+    };
+
+    BOOST_CHECK(!warnsAboutLabelling("EQUIL\n 2060 10 2050 0 2050 0 /\n"));
+    BOOST_CHECK(warnsAboutLabelling("EQUIL\n 2060 10 2050 0 2030 0 /\n"));
 }
 
 BOOST_AUTO_TEST_CASE(WaterEndpointsAreReadPerCell)
