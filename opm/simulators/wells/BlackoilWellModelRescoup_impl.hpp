@@ -338,6 +338,14 @@ rescoupSyncSummaryData()
     // Slave side: on the last substep of the sync step, the slave sends its
     // production data to the master.  The master is already waiting at this
     // point (blocked on MPI_Recv from its first substep's timeStepSucceeded).
+    // The group rates are first recomputed from the converged well rates: the
+    // group state holds the rates of the NUPCOL well state, which is frozen
+    // after the first NUPCOL Newton iterations of the step.  The step has
+    // converged, so there is nothing for NUPCOL to stabilise any more, and the
+    // master uses these rates for its summary output and for its own substeps
+    // until the next sync step.  (The data sent at the start of a sync step is
+    // computed in the first Newton iteration, where the NUPCOL well state is the
+    // current one.)
     if (this->isReservoirCouplingMaster()) {
         if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
             this->receiveSlaveGroupData();
@@ -346,6 +354,8 @@ rescoupSyncSummaryData()
     }
     if (this->isReservoirCouplingSlave()) {
         if (this->reservoirCouplingSlave().isLastSubstepOfSyncTimestep()) {
+            this->well_model_.updateGroupRatesFromWellState(
+                this->well_model_.simulator().episodeIndex());
             this->sendSlaveGroupDataToMaster();
         }
     }

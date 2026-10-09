@@ -22,6 +22,10 @@
 #include <opm/simulators/wells/rescoup/RescoupSendSlaveGroupData.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingSlave.hpp>
 
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
 #include <array>
 #include <string>
 #include <vector>
@@ -143,7 +147,10 @@ collectSlaveGroupInjectionData_(std::size_t group_idx) const
         this->group_state_.injection_reservoir_rates(group.name())
     );
     Potentials potentials = this->collectSlaveGroupInjectionPotentials_(group_idx);
-    return SlaveGroupInjectionData{potentials, surface_rates, reservoir_rates};
+    SlaveGroupInjectionData injection_data{potentials, surface_rates, reservoir_rates};
+    // MAYBE TODO: As for the production data in collectSlaveGroupProductionData_().
+    this->collectSlaveGroupSummaryInjectionData_(group_idx, injection_data);
+    return injection_data;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -174,6 +181,166 @@ collectSlaveGroupPotentials_(std::size_t group_idx) const
     potentials[ReservoirCoupling::Phase::Gas] = gr_pot.gas_rate;
     potentials[ReservoirCoupling::Phase::Water] = gr_pot.water_rate;
     return potentials;
+}
+
+template<typename Scalar, typename IndexTraits>
+void
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupSummaryInjectionData_(std::size_t group_idx,
+                                       SlaveGroupInjectionData& injection_data) const
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& summary_state = this->groupStateHelper_.summaryState();
+    constexpr std::array rc_phases{RcPhase::Oil, RcPhase::Gas, RcPhase::Water};
+
+    // Per phase: potential, history rate; then the number of flowing injectors.
+    constexpr auto np = rc_phases.size();
+    std::array<Scalar, 2 * np + 1> sums{};
+    this->visitGroupWells_(group, Scalar{1},
+        [&](const Well& well_ecl, const SingleWellState<Scalar, IndexTraits>& ws, const Scalar efficiency)
+    {
+        if (!well_ecl.isInjector()) {
+            return;
+        }
+        bool flowing = false;
+        for (std::size_t i = 0; i < np; ++i) {
+            const int pos = this->activePhaseIdx_(rc_phases[i]);
+            if (pos < 0) {
+                continue;
+            }
+            sums[i] += efficiency * ws.well_potentials[pos];
+            sums[np + i] += efficiency
+                * well_ecl.injection_rate(summary_state, ReservoirCoupling::convertToOpmPhase(rc_phases[i]));
+            flowing = flowing || (ws.surface_rates[pos] != 0.0);
+        }
+        if (flowing && ws.status == Well::Status::OPEN) {
+            sums.back() += 1;
+        }
+    });
+    this->comm().sum(sums.data(), sums.size());
+
+    for (std::size_t i = 0; i < np; ++i) {
+        injection_data.well_potentials[rc_phases[i]] = sums[i];
+        injection_data.history_rates[rc_phases[i]] = sums[np + i];
+    }
+    injection_data.num_flowing_injectors = static_cast<int>(sums.back());
+}
+
+template<typename Scalar, typename IndexTraits>
+void
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
+                                        SlaveGroupProductionData& production_data) const
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& summary_state = this->groupStateHelper_.summaryState();
+    const auto& sched_state = this->schedule_[this->report_step_idx_];
+    const auto& unit_system = this->schedule_.getUnits();
+    constexpr std::array rc_phases{RcPhase::Oil, RcPhase::Gas, RcPhase::Water};
+
+    // Per phase: potential, history rate; then the lift gas rate and the number
+    // of flowing producers.
+    constexpr auto np = rc_phases.size();
+    std::array<Scalar, 2 * np + 2> sums{};
+    const auto lift_gas = 2 * np;
+    const auto num_flowing = lift_gas + 1;
+    this->visitGroupWells_(group, Scalar{1},
+        [&](const Well& well_ecl, const SingleWellState<Scalar, IndexTraits>& ws, const Scalar efficiency)
+    {
+        if (!well_ecl.isProducer()) {
+            return;
+        }
+        bool flowing = false;
+        for (std::size_t i = 0; i < np; ++i) {
+            const int pos = this->activePhaseIdx_(rc_phases[i]);
+            if (pos < 0) {
+                continue;
+            }
+            sums[i] += efficiency * ws.well_potentials[pos];
+            // As GOPRH etc.: the scheduled (WCONHIST) rate in the history period,
+            // the simulated rate in the prediction period.
+            sums[np + i] += efficiency * (well_ecl.predictionMode()
+                ? -ws.surface_rates[pos]
+                : static_cast<Scalar>(well_ecl.production_rate(
+                      summary_state, ReservoirCoupling::convertToOpmPhase(rc_phases[i]))));
+            flowing = flowing || (ws.surface_rates[pos] != 0.0);
+        }
+        // As GGLIR, but only the lift gas rate of the wells with an ALQ of type
+        // GRAT or no VFP table.  Wells with an ALQ of type IGLR are left out:
+        // glir() counts them as glr * (oil + water rate), but an IGLR value is
+        // a ratio, not a rate.  The master's GGLIR therefore differs from the
+        // slave's own GGLIR for such wells.
+        const int vfp_table = well_ecl.productionControls(summary_state).vfp_table_number;
+        if (!sched_state.vfpprod.has(vfp_table)) {
+            // Without a VFP table the unit of the ALQ is not known to the
+            // input, so alq_state is in input units.  As in glir().
+            sums[lift_gas] += efficiency * unit_system.to_si(UnitSystem::measure::gas_surface_rate,
+                                                             ws.alq_state.get());
+        }
+        else if (sched_state.vfpprod(vfp_table).getALQType() == VFPProdTable::ALQ_TYPE::ALQ_GRAT) {
+            sums[lift_gas] += efficiency * ws.alq_state.get();
+        }
+        if (flowing && ws.status == Well::Status::OPEN) {
+            sums[num_flowing] += 1;
+        }
+    });
+    this->comm().sum(sums.data(), sums.size());
+
+    for (std::size_t i = 0; i < np; ++i) {
+        production_data.well_potentials[rc_phases[i]] = sums[i];
+        production_data.history_rates[rc_phases[i]] = sums[np + i];
+    }
+    production_data.gas_lift_rate = sums[lift_gas];
+    production_data.num_flowing_producers = static_cast<int>(sums[num_flowing]);
+}
+
+template<typename Scalar, typename IndexTraits>
+int
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+activePhaseIdx_(ReservoirCoupling::Phase phase) const
+{
+    const auto& pu = this->phase_usage_;
+    const int canonical = [phase]() {
+        switch (phase) {
+        case ReservoirCoupling::Phase::Oil:   return static_cast<int>(IndexTraits::oilPhaseIdx);
+        case ReservoirCoupling::Phase::Gas:   return static_cast<int>(IndexTraits::gasPhaseIdx);
+        case ReservoirCoupling::Phase::Water: return static_cast<int>(IndexTraits::waterPhaseIdx);
+        default: return -1;
+        }
+    }();
+    if (canonical < 0 || !pu.phaseIsActive(canonical)) {
+        return -1;
+    }
+    return pu.canonicalToActivePhaseIdx(canonical);
+}
+
+template<typename Scalar, typename IndexTraits>
+template <typename Visitor>
+void
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+visitGroupWells_(const Group& group, const Scalar efficiency, const Visitor& visit) const
+{
+    for (const std::string& child_name : group.groups()) {
+        const Group& child = this->schedule_.getGroup(child_name, this->report_step_idx_);
+        this->visitGroupWells_(child, efficiency * child.getGroupEfficiencyFactor(), visit);
+    }
+    const auto& well_state = this->groupStateHelper_.wellState();
+    for (const std::string& well_name : group.wells()) {
+        const auto well_index = well_state.index(well_name);
+        if (!well_index.has_value() || !well_state.wellIsOwned(well_index.value(), well_name)) {
+            continue;
+        }
+        const auto& ws = well_state.well(well_index.value());
+        if (ws.status == Well::Status::SHUT) {
+            continue;
+        }
+        const Well& well_ecl = this->schedule_.getWell(well_name, this->report_step_idx_);
+        visit(well_ecl, ws, efficiency * well_ecl.getEfficiencyFactor() * ws.efficiency_scaling_factor);
+    }
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -325,6 +492,13 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);
     production_data.voidage_rate = this->collectSlaveGroupVoidageRate_(group_idx);
     production_data.gas_reinjection_rate = this->collectSlaveGroupReinjectionRateForGasPhase_(group_idx);
+    // MAYBE TODO: The summary quantities are collected (with one comm().sum() per
+    // slave group) on every send, but the master only uses them for its summary,
+    // from the data sent at the end of a sync step.  If this ever shows up in
+    // profiling, skip them for the other sends.  Note that the master replaces its
+    // stored slave group data on every receive, so it would then also have to keep
+    // the summary fields of the last end-of-sync-step message.
+    this->collectSlaveGroupSummaryProductionData_(group_idx, production_data);
     return production_data;
 }
 

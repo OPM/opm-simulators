@@ -1505,6 +1505,34 @@ reportIntervalConnectionOilProduction(const double              dt,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateGroupRates_(const Group& fieldGroup)
+{
+    GroupStateHelperType& group_state_helper = this->groupStateHelper();
+    group_state_helper.updateREINForGroups(fieldGroup, /*sum_rank=*/comm_.rank() == 0);
+    group_state_helper.updateVREPForGroups(fieldGroup);
+    group_state_helper.updateReservoirRatesInjectionGroups(fieldGroup);
+    group_state_helper.updateSurfaceRatesInjectionGroups(fieldGroup);
+    group_state_helper.updateNetworkLeafNodeRates();
+    group_state_helper.updateGroupProductionRates(fieldGroup);
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+updateGroupRatesFromWellState(const int reportStepIdx)
+{
+    OPM_TIMEFUNCTION();
+    const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+    // GroupState::communicate_rates() sums all the group rates, including the
+    // target reductions, over the ranks, so all of them must be recomputed
+    // rank-locally first, as in updateAndCommunicateGroupData().
+    this->groupStateHelper().updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
+    this->groupStateHelper().updateGroupTargetReduction(fieldGroup, /*is_injector=*/true);
+    this->updateGroupRates_(fieldGroup);
+    this->groupState().communicate_rates(comm_);
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const bool update_wellgrouptarget)
 {
@@ -1606,12 +1634,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
         // Temporarily use the nupcol well state for all helper functions
         // At the end of this scope, the well state will be restored to its original value
         auto guard = group_state_helper.pushWellState(this->nupcolWellState());
-        group_state_helper.updateREINForGroups(fieldGroup, /*sum_rank=*/comm_.rank() == 0);
-        group_state_helper.updateVREPForGroups(fieldGroup);
-        group_state_helper.updateReservoirRatesInjectionGroups(fieldGroup);
-        group_state_helper.updateSurfaceRatesInjectionGroups(fieldGroup);
-        group_state_helper.updateNetworkLeafNodeRates();
-        group_state_helper.updateGroupProductionRates(fieldGroup);
+        this->updateGroupRates_(fieldGroup);
     }
     group_state_helper.updateWellRates(fieldGroup, this->nupcolWellState(), this->wellState());
     this->wellState().communicateGroupRates(comm_);

@@ -132,6 +132,40 @@ private:
     /// @return Voidage rate (volume removed from reservoir)
     Scalar collectSlaveGroupVoidageRate_(std::size_t group_idx) const;
 
+    /// @brief Add the quantities that the master only needs for the summary
+    ///   output of its master group (lift gas, potentials, history rates,
+    ///   flowing producers) to the production data of a slave group.
+    /// @details Summed over the producers below the group as the group summary
+    ///   vectors of the slave run are: producers that are not shut, with the
+    ///   efficiency factors of the wells and of the groups below the slave group,
+    ///   see visitGroupWells_().
+    /// @param group_idx Index of the slave group
+    /// @param production_data In/out: the group's production data
+    void collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
+                                                 SlaveGroupProductionData& production_data) const;
+
+    /// @brief The injection counterpart of collectSlaveGroupSummaryProductionData_()
+    ///   (potentials, history rates, flowing injectors).
+    /// @param group_idx Index of the slave group
+    /// @param injection_data In/out: the group's injection data
+    void collectSlaveGroupSummaryInjectionData_(std::size_t group_idx,
+                                                SlaveGroupInjectionData& injection_data) const;
+
+    /// @brief Visit the wells below a group that are owned by this rank and not
+    ///   shut, with the efficiency factor a group summary vector applies to them.
+    /// @details The efficiency factor is the well's WEFAC times its efficiency
+    ///   scaling factor times the GEFAC of the groups between the well and
+    ///   @p group, excluding @p group itself.  The visitor's results are
+    ///   rank-local; the caller sums them over the ranks.
+    /// @param group The group whose wells to visit
+    /// @param efficiency The efficiency factor accumulated above (1 at the top)
+    /// @param visit Called as visit(well_ecl, ws, efficiency) for each well
+    template <typename Visitor>
+    void visitGroupWells_(const Group& group, Scalar efficiency, const Visitor& visit) const;
+
+    /// @brief The active phase index of a phase, or -1 if the phase is not active
+    int activePhaseIdx_(ReservoirCoupling::Phase phase) const;
+
     /// @brief Convert a rate vector to InjectionRates structure
     /// @param rate_vector Vector of injection rates indexed by phase
     /// @return InjectionRates structure containing oil, gas, and water injection rates
