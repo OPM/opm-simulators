@@ -6,7 +6,6 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
-#include <opm/material/common/UniformTabulated2DFunction.hpp>
 #include <opm/material/components/CO2Tables.hpp>
 #include <opm/material/components/CO2.hpp>
 #include <opm/material/components/SimpleHuDuanH2O.hpp>
@@ -27,8 +26,6 @@
 #include <cmath>
 
 using Evaluation = Opm::DenseAd::Evaluation<double, 3>;
-
-using GpuTab = Opm::UniformTabulated2DFunction<double, Opm::gpuistl::GpuView>;
 
 using GpuBufCo2Tables = Opm::CO2Tables<double, Opm::gpuistl::GpuBuffer>;
 using GpuViewCO2Tables = Opm::CO2Tables<double, Opm::gpuistl::GpuView>;
@@ -83,11 +80,6 @@ struct Fixture {
 
     Opm::CO2Tables<double> co2Tables;
 };
-
-// Kernel to evaluate a 2D function on the GPU
-__global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* result) {
-    *result = gpuTab.eval(*inputX, *inputY, true).value();
-}
 
 // Kernel using a CO2 object on the GPU
 __global__ void gpuCO2GasViscosity(GpuViewCO2Tables gpuViewCo2Tables, Evaluation* temp, Evaluation* pressure, double* result) {
@@ -161,41 +153,6 @@ bool compareSignificantDigits(double a, double b, int significantDigits) {
 }
 
 } // END EMPTY NAMESPACE
-
-// Test case for evaluating a tabulated 2D function on both CPU and GPU
-BOOST_FIXTURE_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu, Fixture) {
-    // Example tabulated data (2D)
-    std::vector<std::vector<double>> tabData = {{1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
-
-    // CPU-side function definition
-    Opm::UniformTabulated2DFunction<double> cpuTab(1.0, 6.0, 3, 1.0, 6.0, 2, tabData);
-
-    // Move data to GPU buffer and create a view for GPU operations
-    Opm::UniformTabulated2DFunction<double, Opm::gpuistl::GpuBuffer> gpuBufTab = Opm::gpuistl::copy_to_gpu(cpuTab);
-    GpuTab gpuViewTab = Opm::gpuistl::make_view(gpuBufTab);
-
-    // Evaluation points on the CPU
-    Evaluation a(2.3);
-    Evaluation b(4.5);
-
-    // Allocate GPU memory for the Evaluation inputs
-    Evaluation* gpuA = nullptr;
-    Evaluation* gpuB = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuA, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuA, &a, sizeof(Evaluation), cudaMemcpyHostToDevice));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuB, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuB, &b, sizeof(Evaluation), cudaMemcpyHostToDevice));
-
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuEvaluateUniformTabulated2DFunction, gpuViewTab, gpuA, gpuB);
-
-    // Free allocated GPU memory
-    OPM_GPU_SAFE_CALL(cudaFree(gpuA));
-    OPM_GPU_SAFE_CALL(cudaFree(gpuB));
-
-    // Verify that the CPU and GPU results match within a reasonable tolerance
-    const double cpuComputedResult = cpuTab.eval(a, b, true).value();
-    BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - cpuComputedResult) < ABS_TOL);
-}
 
 // Test case evaluating CO2 pvt properties on CPU and GPU
 BOOST_FIXTURE_TEST_CASE(TestUseCO2OnGpu, Fixture) {

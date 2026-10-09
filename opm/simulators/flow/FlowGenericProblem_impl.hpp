@@ -285,8 +285,8 @@ readRockCompactionParameters_()
         // for REVERS/IRREVERS, so it is stored in the very same tables.
         rockCompPoroMult_.resize(numRocktabTables);
         rockCompTransMult_.resize(numRocktabTables);
-        rockCompPoroMultElastic_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme));
-        rockCompTransMultElastic_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme));
+        rockCompPoroMultElastic_.resize(numRocktabTables);
+        rockCompTransMultElastic_.resize(numRocktabTables);
         for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
             const auto& rocktabhTable = rocktabhTables[regionIdx];
 
@@ -294,6 +294,8 @@ readRockCompactionParameters_()
             rockCompPoroMult_[regionIdx].setXYContainers(deflation.getColumn(0), deflation.getColumn(1));
             rockCompTransMult_[regionIdx].setXYContainers(deflation.getColumn(0), deflation.getColumn(2));
 
+            TabulatedTwoDFunctionBuilder poroBuilder{TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme};
+            TabulatedTwoDFunctionBuilder transBuilder{TabulatedTwoDFunction::InterpolationPolicy::LeftExtreme};
             const std::size_t numCurves = rocktabhTable.numElasticCurves();
             for (std::size_t curveIdx = 0; curveIdx < numCurves; ++curveIdx) {
                 const auto& curve = rocktabhTable.elasticCurve(curveIdx);
@@ -301,13 +303,15 @@ readRockCompactionParameters_()
                 const auto& poro = curve.getColumn(1);
                 const auto& trans = curve.getColumn(2);
 
-                rockCompPoroMultElastic_[regionIdx].appendXPos(pressure[0]);
-                rockCompTransMultElastic_[regionIdx].appendXPos(pressure[0]);
+                poroBuilder.appendXPos(pressure[0]);
+                transBuilder.appendXPos(pressure[0]);
                 for (std::size_t rowIdx = 0; rowIdx < curve.numRows(); ++rowIdx) {
-                    rockCompPoroMultElastic_[regionIdx].appendSamplePoint(curveIdx, pressure[rowIdx], poro[rowIdx]);
-                    rockCompTransMultElastic_[regionIdx].appendSamplePoint(curveIdx, pressure[rowIdx], trans[rowIdx]);
+                    poroBuilder.appendSamplePoint(curveIdx, pressure[rowIdx], poro[rowIdx]);
+                    transBuilder.appendSamplePoint(curveIdx, pressure[rowIdx], trans[rowIdx]);
                 }
             }
+            rockCompPoroMultElastic_[regionIdx] = std::move(poroBuilder).build();
+            rockCompTransMultElastic_[regionIdx] = std::move(transBuilder).build();
         }
     } else if (!waterCompaction) {
         const auto& rocktabTables = eclState_.getTableManager().getRocktabTables();
@@ -341,7 +345,7 @@ readRockCompactionParameters_()
                                                  " {} ROCKWNOD tables is expected, but {} is provided",
                                                  numRocktabTables, rockwnodTables.size()));
         //TODO check size match
-        rockCompPoroMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+        rockCompPoroMultWc_.resize(numRocktabTables);
         for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
             const RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<RockwnodTable>(regionIdx);
             const auto& rock2dTable = rock2dTables[regionIdx];
@@ -349,17 +353,19 @@ readRockCompactionParameters_()
             if (rockwnodTable.getSaturationColumn().size() != rock2dTable.sizeMultValues())
                 throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2D needs to match.");
 
+            TabulatedTwoDFunctionBuilder builder{TabulatedTwoDFunction::InterpolationPolicy::Vertical};
             for (std::size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
-                rockCompPoroMultWc_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
+                builder.appendXPos(rock2dTable.getPressureValue(xIdx));
                 for (std::size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
-                    rockCompPoroMultWc_[regionIdx].appendSamplePoint(xIdx,
-                                                                       rockwnodTable.getSaturationColumn()[yIdx],
-                                                                       rock2dTable.getPvmultValue(xIdx, yIdx));
+                    builder.appendSamplePoint(xIdx,
+                                              rockwnodTable.getSaturationColumn()[yIdx],
+                                              rock2dTable.getPvmultValue(xIdx, yIdx));
             }
+            rockCompPoroMultWc_[regionIdx] = std::move(builder).build();
         }
 
         if (!rock2dtrTables.empty()) {
-            rockCompTransMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+            rockCompTransMultWc_.resize(numRocktabTables);
             for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                 const RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<RockwnodTable>(regionIdx);
                 const auto& rock2dtrTable = rock2dtrTables[regionIdx];
@@ -367,13 +373,15 @@ readRockCompactionParameters_()
                 if (rockwnodTable.getSaturationColumn().size() != rock2dtrTable.sizeMultValues())
                     throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2DTR needs to match.");
 
+                TabulatedTwoDFunctionBuilder builder{TabulatedTwoDFunction::InterpolationPolicy::Vertical};
                 for (std::size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
-                    rockCompTransMultWc_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
+                    builder.appendXPos(rock2dtrTable.getPressureValue(xIdx));
                     for (std::size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
-                        rockCompTransMultWc_[regionIdx].appendSamplePoint(xIdx,
-                                                                                 rockwnodTable.getSaturationColumn()[yIdx],
-                                                                                 rock2dtrTable.getTransMultValue(xIdx, yIdx));
+                        builder.appendSamplePoint(xIdx,
+                                                  rockwnodTable.getSaturationColumn()[yIdx],
+                                                  rock2dtrTable.getTransMultValue(xIdx, yIdx));
                 }
+                rockCompTransMultWc_[regionIdx] = std::move(builder).build();
             }
         }
     }
