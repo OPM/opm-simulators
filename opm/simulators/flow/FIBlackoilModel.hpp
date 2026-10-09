@@ -53,6 +53,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 namespace Opm {
 
@@ -93,6 +94,15 @@ public:
                 Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
         }
 #endif
+
+        // Without the cache, only a model whose intensiveQuantities() returns by value works.
+        using Model = GetPropType<TypeTag, Properties::Model>;
+        using Result = decltype(std::declval<const Model&>().intensiveQuantities(0u, 0u));
+        if (std::is_reference_v<Result> && !this->enableIntensiveQuantityCache_) {
+            OPM_THROW(std::invalid_argument,
+                      "--enable-intensive-quantity-cache=false is not supported "
+                      "by this simulator.");
+        }
     }
 
     static void registerParameters()
@@ -109,6 +119,9 @@ public:
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
+        if (!this->enableIntensiveQuantityCache_) {
+            return;
+        }
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         if constexpr (gridIsUnchanging) {
             if constexpr (avoidElementContext) {
@@ -158,6 +171,9 @@ public:
 
     void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned timeIdx) const
     {
+        if (!this->enableIntensiveQuantityCache_) {
+            return;
+        }
         // loop over all elements
         ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(this->gridView_);
         OPM_BEGIN_PARALLEL_TRY_CATCH()
@@ -190,6 +206,9 @@ public:
     template <class GridSubDomain>
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx, const GridSubDomain& gridSubDomain) const
     {
+        if (!this->enableIntensiveQuantityCache_) {
+            return;
+        }
         // loop over all elements in the subdomain
         using GridViewType = decltype(gridSubDomain.view);
         ThreadedEntityIterator<GridViewType, /*codim=*/0> threadedElemIt(gridSubDomain.view);
@@ -237,8 +256,8 @@ public:
     {
         if (!this->enableIntensiveQuantityCache_) {
             OPM_THROW(std::logic_error,
-                      "Run without intensive quantites not enabled: "
-                      "Use --enable-intensive-quantity=true");
+                      "Intensive quantity cache is disabled; "
+                      "use --enable-intensive-quantity-cache=true");
         }
 
         assert(timeIdx < this->cachedIntensiveQuantityHistorySize());
