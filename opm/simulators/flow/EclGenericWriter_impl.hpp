@@ -282,11 +282,16 @@ writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        // globalRanks() is empty when the I/O-rank cell collection is not set up
-        // (parallel runs with LGRs). Passing it on would write a zero-length
-        // MPI_RANK, which the per-LGR INIT sections then index by father cell.
         if (collectOnIORank_.isParallel() && !collectOnIORank_.globalRanks().empty()) {
-            integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
+            auto ranks = collectOnIORank_.globalRanks();
+            if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+                // MPI_RANK holds one value per level-0 cell, globalRanks() one
+                // per leaf cell.
+                if (this->equilGrid_->maxLevel() > 0) {
+                    ranks = levelZeroRanks(*this->equilGrid_, ranks);
+                }
+            }
+            integerVectors.emplace("MPI_RANK", std::move(ranks));
         }
 
         if (const auto& lgrs = this->eclState_.getLgrs(); lgrs.size() > 0) {
@@ -1018,13 +1023,19 @@ doWriteOutput(const int                          reportStepNum,
     }
 
     std::vector<Opm::RestartValue> restartValues{};
-    // only serial, only CpGrid (for now)
-    if ( !isParallel && !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
+    // only CpGrid (for now)
+    if ( !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
         // Level cells that appear on the leaf grid view get the data::Solution values from there.
         // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
         // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
         // not modified in this method.
-        Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+        if (isParallel) {
+            // The I/O rank holds the collected solution in the leaf order of the global grid.
+            Opm::Lgr::extractRestartValueLevelGrids<EquilGrid>(*this->equilGrid_, restartValue, restartValues);
+        }
+        else {
+            Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
+        }
     }
     else {
         restartValues.reserve(1); // minimum size
