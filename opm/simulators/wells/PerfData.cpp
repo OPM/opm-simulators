@@ -82,7 +82,7 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
     result.temperature = {345.};
     result.rates = {5.0, 6.0};
     result.phase_rates = {7.0};
-    result.phase_mixing_rates = { {1.0, 2.0, 3.0, 4.0}};
+    result.phase_mixing_rates = { {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}};
     result.solvent_rates = {8.0, 9.0};
     result.polymer_rates = {10.0, 11.0, 12.0};
     result.brine_rates = {13.0};

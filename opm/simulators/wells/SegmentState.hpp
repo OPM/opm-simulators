@@ -51,6 +51,8 @@ public:
         serializer(rates);
         serializer(dissolved_gas_rate);
         serializer(vaporized_oil_rate);
+        serializer(free_gas_rate);
+        serializer(free_oil_rate);
         serializer(phase_resv_rates);
         serializer(phase_velocity);
         serializer(phase_holdup);
@@ -69,6 +71,9 @@ public:
     std::vector<Scalar> rates;
     std::vector<Scalar> dissolved_gas_rate;
     std::vector<Scalar> vaporized_oil_rate;
+    // See PerforationRates::free_gas.
+    std::vector<Scalar> free_gas_rate;
+    std::vector<Scalar> free_oil_rate;
 
     /// Segment condition volume flow rates through segment (per phase)
     std::vector<Scalar> phase_resv_rates;

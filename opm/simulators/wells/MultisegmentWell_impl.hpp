@@ -1070,6 +1070,23 @@ namespace Opm
                 // dissolved of gas in oil
                 // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
                 perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                // free_oil = q_or * b_o, free_gas = q_gr * b_g; by
+                // construction free_gas + dis_gas == cq_s[gasCompIdx] and
+                // free_oil + vap_oil == cq_s[oilCompIdx].
+                perf_rates.free_oil = (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                perf_rates.free_gas = (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+            } else {
+                // No dissolution/vaporization is possible without both
+                // phases active, so whichever hydrocarbon phase is present
+                // is entirely free.
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const unsigned oilCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::oilCompIdx);
+                    perf_rates.free_oil = getValue(cq_s[oilCompIdx]);
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const unsigned gasCompIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx);
+                    perf_rates.free_gas = getValue(cq_s[gasCompIdx]);
+                }
             }
         }
     }
@@ -1896,7 +1913,8 @@ namespace Opm
         this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.phase_mixing_rates.fill(0.0);
+        // ws.phase_mixing_rates (well-level, cross-rank-reduced) is built by
+        // consolidatePhaseMixingRates() instead of here; see below.
         if constexpr (has_energy) {
             ws.energy_rate = 0.0;
         }
@@ -1940,12 +1958,14 @@ namespace Opm
                 computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
                                 allow_cf, cq_s, perf_press, perfRates, deferred_logger);
 
-                // updating the solution gas rate and solution oil rate
+                // Record the free/dissolved split for this perforation --
+                // the same dis_gas/vap_oil just folded into cq_s above, so
+                // needed regardless of reporting.
                 if (this->isProducer()) {
-                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
-                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
                     perf_data.phase_mixing_rates[local_perf_index][ws.dissolved_gas] = perfRates.dis_gas;
                     perf_data.phase_mixing_rates[local_perf_index][ws.vaporized_oil] = perfRates.vap_oil;
+                    perf_data.phase_mixing_rates[local_perf_index][ws.free_gas] = perfRates.free_gas;
+                    perf_data.phase_mixing_rates[local_perf_index][ws.free_oil] = perfRates.free_oil;
                 }
 
                 // store the perf pressure and rates
@@ -1979,13 +1999,11 @@ namespace Opm
                 }
             }
         }
-        // Accumulate dissolved gas and vaporized oil flow rates across all ranks sharing this well.
-        {
+        // Dissolved gas/vaporized oil are reduced across ranks once per
+        // timestep in consolidatePhaseMixingRates(), not here.
+        if constexpr (has_energy) {
             const auto& comm = this->parallel_well_info_.communication();
-            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
-            if constexpr (has_energy) {
-                ws.energy_rate = comm.sum(ws.energy_rate);
-            }
+            ws.energy_rate = comm.sum(ws.energy_rate);
         }
 
         if (this->parallel_well_info_.communication().size() > 1) {
