@@ -1303,6 +1303,15 @@ public:
         return trans_mult;
     }
 
+    //! \brief Index of the BCCON region applied to the given face of a cell, 0 if none.
+    int boundaryConditionIndex(const unsigned int globalSpaceIdx, const int directionId) const
+    {
+        if (!nonTrivialBoundaryConditions_) {
+            return 0;
+        }
+        return bcindex_(FaceDir::FromIntersectionIndex(directionId))[globalSpaceIdx];
+    }
+
     std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
         OPM_TIMEBLOCK_LOCAL(boundaryCondition, Subsystem::Assembly);

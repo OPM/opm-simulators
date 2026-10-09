@@ -32,6 +32,8 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -48,9 +50,11 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -202,6 +206,7 @@ public:
         }
 
         this->buildAquiferTracerConnections_(local_deferredLogger);
+        this->checkBoundaryTracers_(local_deferredLogger);
 
         const auto& comm = simulator_.vanguard().grid().comm();
         auto global_logger = gatherDeferredLogger(local_deferredLogger, comm);
@@ -541,6 +546,151 @@ protected:
         }
     }
 
+    /*!
+     * \brief Boundary conditions for the tracer equations.
+     *
+     * The flow of the tracer phase across a boundary face of type RATE, FREE or
+     * DIRICHLET (BCCON + BCPROP) is the one given by the flow equations, i.e. the
+     * boundary flux of the local residual evaluated at the current state. The
+     * concentration of the fluid entering through the face is taken from BCTRACER,
+     * and fluid leaving the cell carries the tracer concentration of the cell. As
+     * for BCPROP, a positive rate is a flow out of the domain and a negative rate
+     * is a flow into the domain. Other boundary types carry no mass flow.
+     *
+     * For oil and gas tracers, outflow is split in a free and a solution part, as for
+     * producer wells.
+     */
+    template<class TrRe>
+    void assembleTracerEquationBoundary(TrRe& tr,
+                                        const ElementContext& elemCtx,
+                                        const unsigned I,
+                                        const Scalar dt)
+    {
+        if (tr.numTracer() == 0) {
+            return;
+        }
+
+        const auto& problem = simulator_.problem();
+        if (!problem.nonTrivialBoundaryConditions()) {
+            return;
+        }
+
+        int compIdx;
+        if (tr.phaseIdx_ == FluidSystem::waterPhaseIdx) {
+            compIdx = FluidSystem::waterCompIdx;
+        }
+        else if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx) {
+            compIdx = FluidSystem::oilCompIdx;
+        }
+        else {
+            compIdx = FluidSystem::gasCompIdx;
+        }
+
+        if (!elemCtx.onBoundary()) {
+            return;
+        }
+
+        // The boundary flux of the flow equations, per unit area, is obtained from the
+        // problem for each boundary face, as done when assembling the flow equations.
+        using BoundaryContext = GetPropType<TypeTag, Properties::BoundaryContext>;
+        using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+        BoundaryContext boundaryCtx(elemCtx);
+        if (boundaryCtx.intersection(0).neighbor()) {
+            // move the iterator to the first boundary
+            boundaryCtx.increment();
+        }
+
+        const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
+        const auto& bcstate = simulator_.vanguard().schedule()[problem.episodeIndex()].bcstate;
+        const unsigned numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
+        for (unsigned bfIdx = 0; bfIdx < numBoundaryFaces; ++bfIdx, boundaryCtx.increment()) {
+            const auto& bf = stencil.boundaryFace(bfIdx);
+            const int dirId = bf.dirId();
+            if (dirId < 0) { // not for NNCs
+                continue;
+            }
+
+            const int bcIndex = problem.boundaryConditionIndex(I, dirId);
+            if (bcIndex == 0) {
+                continue;
+            }
+
+            const BCType type = problem.boundaryCondition(I, dirId).first;
+            if (type != BCType::RATE && type != BCType::FREE && type != BCType::DIRICHLET) {
+                continue;
+            }
+
+            BoundaryRateVector bdyFlux;
+            problem.boundary(bdyFlux, boundaryCtx, bfIdx, /*timeIdx=*/0);
+            const unsigned pvtRegionIdx = problem.pvtRegionIndex(I);
+            const Scalar boundaryArea = bf.area() * decay<Scalar>(elemCtx.intensiveQuantities(0, 0).extrusionFactor());
+
+            // Surface volume rate out of the cell of the component of the tracer phase. This is
+            // zero if the BCPROP component is not the phase of the tracer.
+            const auto compFlux = [&](const int comp)
+            {
+                Scalar flux = decay<Scalar>(bdyFlux[FluidSystem::canonicalToActiveCompIdx(comp)]) * boundaryArea;
+                if constexpr (!getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                    flux /= FluidSystem::referenceDensity(tr.phaseIdx_, pvtRegionIdx);
+                }
+                return flux;
+            };
+            const Scalar rateOut = compFlux(compIdx);
+            if (rateOut == Scalar{0}) {
+                continue;
+            }
+
+            // Outflow is split in a free part and a solution part (vaporized oil in the gas
+            // phase for oil tracers, dissolved gas in the oil phase for gas tracers), as for
+            // producer wells. The component fluxes are F_o + Rv F_g (oil) and F_g + Rs F_o
+            // (gas) in terms of the free phase fluxes F_o and F_g. Inflow is free only.
+            Scalar rateFree = rateOut;
+            Scalar rateSol = 0.0;
+            const bool oilSolution = tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil();
+            const bool gasSolution = tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas();
+            if (rateOut > 0 && (oilSolution || gasSolution)) {
+                const auto& fs = simulator_.model().intensiveQuantities(I, /*timeIdx=*/0).fluidState();
+                const Scalar Rs = FluidSystem::enableDissolvedGas() ? decay<Scalar>(fs.Rs()) : Scalar{0};
+                const Scalar Rv = FluidSystem::enableVaporizedOil() ? decay<Scalar>(fs.Rv()) : Scalar{0};
+                const Scalar Qo = compFlux(FluidSystem::oilCompIdx);
+                const Scalar Qg = compFlux(FluidSystem::gasCompIdx);
+                const Scalar det = 1.0 - Rs * Rv;
+                const Scalar Fo = (Qo - Rv * Qg) / det;
+                const Scalar Fg = (Qg - Rs * Qo) / det;
+                if (oilSolution) {
+                    rateFree = Fo;
+                    rateSol = Rv * Fg;
+                }
+                else {
+                    rateFree = Fg;
+                    rateSol = Rs * Fo;
+                }
+            }
+
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                if (rateOut < 0) {
+                    // Inflow: concentration from BCTRACER, no tracer if not specified
+                    const auto bcConc = bcstate.tracerConcentration(bcIndex,
+                                                                    this->name(tr.idx_[tIdx]));
+                    tr.residual_[tIdx][I][Free] += rateOut * bcConc.value_or(0.0);
+                }
+                else {
+                    // Outflow: tracer leaves with the concentrations of the cell
+                    tr.residual_[tIdx][I][Free] += rateFree * tr.concentration_[tIdx][I][Free];
+                    tr.residual_[tIdx][I][Solution] += rateSol * tr.concentration_[tIdx][I][Solution];
+                }
+            }
+            dVol_[Free][tr.phaseIdx_][I] += rateFree * dt;
+            dVol_[Solution][tr.phaseIdx_][I] += rateSol * dt;
+
+            if (rateOut > 0) {
+                // Derivative matrix for outflow
+                (*tr.mat)[I][I][Free][Free] += rateFree * variable<TracerEvaluation>(1.0, 0).derivative(0);
+                (*tr.mat)[I][I][Solution][Solution] += rateSol * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            }
+        }
+    }
+
     template<class TrRe>
     void assembleTracerEquationSource(TrRe& tr,
                                       const Scalar dt,
@@ -702,6 +852,11 @@ protected:
                         }
                     }
 
+                    // Boundary conditions (BCCON + BCPROP + BCTRACER)
+                    for (auto& tr : tbatch) {
+                        this->assembleTracerEquationBoundary(tr, elemCtx, I, dt);
+                    }
+
                      // Source terms (mass transfer between free and solution tracer)
                     for (auto& tr : tbatch) {
                         if (tr.numTracer() == 0) {
@@ -838,6 +993,74 @@ protected:
                         item.second *= inv_well_eff_factor;
                     });
                 });
+            }
+        }
+    }
+
+    /*!
+     * \brief Cross-reference the boundary conditions of the schedule with the tracers.
+     *
+     * This can not be done when parsing the schedule since the tracers are not known
+     * there. A BCTRACER entry for an undeclared tracer is an error. The phase of a
+     * BCTRACER entry is the BCPROP component of the face, so a warning is given if that
+     * differs from the phase of the tracer (the tracer will then not enter).
+     *
+     * Tracers are transported across boundaries of type RATE, FREE and DIRICHLET. A
+     * warning is given for BCTRACER entries on faces that are never of one of these
+     * types (they are ignored).
+     */
+    void checkBoundaryTracers_(DeferredLogger& deferredLogger) const
+    {
+        std::unordered_map<std::string, int> tracer_name_to_idx;
+        for (int tracerIdx = 0; tracerIdx < this->numTracers(); ++tracerIdx) {
+            tracer_name_to_idx.emplace(this->name(tracerIdx), tracerIdx);
+        }
+
+        const bool logging = simulator_.vanguard().grid().comm().rank() == 0;
+        const auto& schedule = simulator_.vanguard().schedule();
+        std::set<std::pair<int, std::string>> warned;
+        std::set<int> flowIndices; // RATE, FREE or DIRICHLET
+        std::set<int> tracerIndices;
+        for (std::size_t step = 0; step < schedule.size(); ++step) {
+            for (const auto& face : schedule[step].bcstate) {
+                if (face.bctype == BCType::RATE || face.bctype == BCType::FREE ||
+                    face.bctype == BCType::DIRICHLET) {
+                    flowIndices.insert(face.index);
+                }
+
+                for (const auto& tracerbc : face.tracerbcvalues) {
+                    tracerIndices.insert(face.index);
+                    const auto pos = tracer_name_to_idx.find(tracerbc.tracer);
+                    if (pos == tracer_name_to_idx.end()) {
+                        throw std::runtime_error(fmt::format("BCTRACER: tracer {} (INDEX {}) is not declared in TRACER",
+                                                             tracerbc.tracer, face.index));
+                    }
+
+                    const int phaseIdx = this->tracerPhaseIdx_[pos->second];
+                    const bool samePhase =
+                        (face.component == BCComponent::WATER && phaseIdx == FluidSystem::waterPhaseIdx) ||
+                        (face.component == BCComponent::OIL && phaseIdx == FluidSystem::oilPhaseIdx) ||
+                        (face.component == BCComponent::GAS && phaseIdx == FluidSystem::gasPhaseIdx);
+                    // Faces without a BCPROP component (yet), or with a non-phase component, are not checked
+                    const bool isPhaseComponent = face.component == BCComponent::WATER ||
+                                                  face.component == BCComponent::OIL ||
+                                                  face.component == BCComponent::GAS;
+                    if (isPhaseComponent && !samePhase &&
+                        warned.emplace(face.index, tracerbc.tracer).second && logging)
+                    {
+                        deferredLogger.warning(fmt::format("BCTRACER: the BCPROP component of INDEX {} is not the phase "
+                                                           "of tracer {}, so the tracer will not enter through this "
+                                                           "boundary", face.index, tracerbc.tracer));
+                    }
+                }
+            }
+        }
+
+        for (const int index : tracerIndices) {
+            if (!flowIndices.contains(index) && logging) {
+                deferredLogger.warning(fmt::format("BCTRACER: INDEX {} has no BCPROP of type RATE, FREE or DIRICHLET. "
+                                                   "BCTRACER is only used for boundaries with a flow and is ignored.",
+                                                   index));
             }
         }
     }
