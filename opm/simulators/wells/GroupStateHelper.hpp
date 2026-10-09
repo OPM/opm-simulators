@@ -426,10 +426,14 @@ public:
 
     void setCmodeGroup(const Group& group);
 
+    /// \param regionArray Returns a named FIP region array indexed the same way
+    ///        the pressure calculator will index it -- per simulation cell.  A
+    ///        refined grid must map the input-grid array onto the leaf first, so
+    ///        the caller supplies it rather than the FieldPropsManager.
     template <class AverageRegionalPressureType>
     void
     setRegionAveragePressureCalculator(const Group& group,
-                                       const FieldPropsManager& fp,
+                                       const std::function<std::vector<int>(const std::string&)>& regionArray,
                                        std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>&
                                            regional_average_pressure_calculator) const;
 
@@ -818,13 +822,13 @@ template <class AverageRegionalPressureType>
 void
 GroupStateHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
     const Group& group,
-    const FieldPropsManager& fp,
+    const std::function<std::vector<int>(const std::string&)>& regionArray,
     std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regional_average_pressure_calculator)
     const
 {
     for (const std::string& groupName : group.groups()) {
         this->setRegionAveragePressureCalculator(this->schedule_.getGroup(groupName, this->report_step_),
-                                                 fp,
+                                                 regionArray,
                                                  regional_average_pressure_calculator);
     }
     const auto& gpm = group.gpmaint();
@@ -837,9 +841,8 @@ GroupStateHelper<Scalar, IndexTraits>::setRegionAveragePressureCalculator(
 
     if (regional_average_pressure_calculator.count(reg->first) == 0) {
         const std::string name = (reg->first.rfind("FIP", 0) == 0) ? reg->first : "FIP" + reg->first;
-        const auto& fipnum = fp.get_int(name);
         regional_average_pressure_calculator[reg->first]
-            = std::make_unique<AverageRegionalPressureType>(fipnum);
+            = std::make_unique<AverageRegionalPressureType>(regionArray(name));
     }
 }
 

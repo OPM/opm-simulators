@@ -40,6 +40,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
@@ -230,6 +231,14 @@ Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>
 transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 {
     return this->lookupTrans_(trans_, elemIdx1, elemIdx2, "transmissibility");
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+std::optional<Scalar> Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+findTransmissibility(unsigned elemIdx1, unsigned elemIdx2) const
+{
+    const auto entry = trans_.find(details::isId(elemIdx1, elemIdx2));
+    return (entry == trans_.end()) ? std::nullopt : std::optional<Scalar>{entry->second};
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -634,7 +643,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     // In contrast to the name this will also apply
                     applyAllZMultipliers_(trans, inside, outside, transMult, cartDims);
                 }
-                else {
+                else if (!this->conformingLgr_() || inside.cartElemIdx != outside.cartElemIdx) {
+                    // Same reasoning as in applyAllZMultipliers_: equal Cartesian
+                    // indices mean both cells refine one coarse cell, and its
+                    // MULT[XYZ] belong to its own faces, not to the faces the
+                    // refinement introduces inside it.
                     applyMultipliers_(trans, inside.faceIdx, inside.cartElemIdx, transMult);
                     // ... and outside elements
                     applyMultipliers_(trans, outside.faceIdx, outside.cartElemIdx, transMult);
@@ -716,17 +729,28 @@ update(bool global, const TransUpdateQuantities update_quantities,
         halfTransMap.finalize();
     }
 
+    if (this->conformingLgr_()) {
+        this->computeHostLevelTrans_();
+    }
+
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
 
     // Create mapping from global to local index
     std::unordered_map<std::size_t,int> globalToLocal;
 
+    // A refined leaf cell's Cartesian index is its father's, so all children of
+    // one deck cell collide on a single key.  Keep the last-one-wins map for the
+    // paths that need one cell, and a father-to-children map for EDITNNC, whose
+    // multiplier belongs to every face the coarse connection became.
+    CartesianToLeaf globalToChildren;
+
     // Loop over all elements (global grid) and store Cartesian index
     for (const auto& elem : elements(grid_.leafGridView())) {
         int elemIdx = elemMapper.index(elem);
         int cartElemIdx =  cartMapper_.cartesianIndex(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
+        globalToChildren[cartElemIdx].push_back(elemIdx);
     }
 
     if (!disableNNC) {
@@ -735,12 +759,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // when computing the gobal transmissibilities and all warnings will
         // be seen in a parallel. Unfortunately, when we do not use transmissibilities
         // we will only see warnings for the partition of process 0 and also false positives.
-        this->applyPinchNncToGridTrans_(globalToLocal, applyNncMultregT);
-        this->applyNncToGridTrans_(globalToLocal);
-        this->applyEditNncToGridTrans_(globalToLocal);
-        this->applyEditNncrToGridTrans_(globalToLocal);
+        this->applyPinchNncToGridTrans_(globalToChildren, applyNncMultregT);
+        this->applyNncToGridTrans_(globalToChildren);
+        this->applyEditNncToGridTrans_(globalToChildren);
+        this->applyEditNncrToGridTrans_(globalToChildren);
         if (applyNncMultregT) {
-            this->applyNncMultreg_(globalToLocal);
+            this->applyNncMultreg_(globalToChildren);
         }
         warnEditNNC_ = false;
     }
@@ -917,20 +941,26 @@ applyAllZMultipliers_(Scalar& trans,
                       const TransMult& transMult,
                       const std::array<int, dimWorld>& cartDims)
 {
-    if (grid_.maxLevel() > 0) {
+    // Both cells refine the same coarse cell, so this face is interior to it.
+    // MULT[XYZ] describe that coarse cell's own faces, which the refinement
+    // inherits on its outer boundary; an interior face has no coarse face to
+    // take a multiplier from, and the pillar walk below -- which steps through
+    // coarse cells -- has nothing to walk. Taking the coarse cell's own
+    // Z+ times Z- here, as this did before refusing LGRs outright, would damp
+    // every interior face by a multiplier meant for the coarse cell's top and
+    // bottom.
+    if (grid_.maxLevel() > 0 && !this->conformingLgr_()) {
         OPM_THROW(std::invalid_argument, "MULTZ not support with LGRS, yet.");
     }
+    if (inside.cartElemIdx == outside.cartElemIdx) {
+        return;
+    }
+
     if (inside.faceIdx > 3) { // top or or bottom
         assert(inside.faceIdx == 5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
         // For CpGrid with LGRs, insideCartElemIdx == outsideCartElemIdx when cells on the leaf have the same parent cell on level zero.
         assert(outside.cartElemIdx >= inside.cartElemIdx);
-        unsigned lastCartElemIdx;
-        if (outside.cartElemIdx == inside.cartElemIdx) {
-            lastCartElemIdx = outside.cartElemIdx;
-        }
-        else {
-            lastCartElemIdx = outside.cartElemIdx - cartDims[0]*cartDims[1];
-        }
+        const unsigned lastCartElemIdx = outside.cartElemIdx - cartDims[0]*cartDims[1];
         // Last multiplier using (Z+)*(Z-)
         Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
             transMult.getMultiplier(outside.cartElemIdx , FaceDir::ZMinus);
@@ -970,20 +1000,125 @@ updateFromEclState_(bool global)
     }
 
     std::array<std::string, 3> keywords {"TRANX", "TRANY", "TRANZ"};
-    std::array<std::vector<double>,3> trans = createTransmissibilityArrays_(is_tran);
-    auto key = keywords.begin();
-    auto perform = is_tran.begin();
 
-    for (auto it = trans.begin(); it != trans.end(); ++it, ++key, ++perform) {
-        if (*perform) {
-            if (grid_.maxLevel() > 0) {
-                OPM_THROW(std::invalid_argument, "Calculations on TRANX/TRANY/TRANZ arrays are not support with LGRS, yet.");
+    if (grid_.maxLevel() == 0) {
+        std::array<std::vector<double>,3> trans = createTransmissibilityArrays_(is_tran);
+        for (int dir = 0; dir < 3; ++dir) {
+            if (is_tran[dir]) {
+                fp->apply_tran(keywords[dir], trans[dir]);
             }
-            fp->apply_tran(*key, *it);
+        }
+        resetTransmissibilityFromArrays_(is_tran, trans);
+        return;
+    }
+
+    // A refined grid has several faces per cell and direction, so work on a
+    // list of faces, each with the coarse cell whose TRAN* modifier applies.
+    struct RefinedFace { std::uint64_t id; int action; };
+    std::array<std::vector<RefinedFace>,3> faces;
+    std::array<std::vector<double>,3> values;
+    std::array<std::vector<int>,3> index;
+    // The coarse face each modifier belongs to, as a pair of Cartesian cells.
+    std::array<std::map<int, std::pair<int,int>>,3> coarseFace;
+    {
+        const auto& cartDims = cartMapper_.cartesianDimensions();
+        ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+        for (const auto& elem : elements(gridView_)) {
+            for (const auto& is : intersections(gridView_, elem)) {
+                if (!is.neighbor()) {
+                    continue;
+                }
+                const unsigned c1 = elemMapper.index(is.inside());
+                const unsigned c2 = elemMapper.index(is.outside());
+                const int gc1 = cartMapper_.cartesianIndex(c1);
+                const int gc2 = cartMapper_.cartesianIndex(c2);
+                if (std::tie(gc1, c1) > std::tie(gc2, c2)) {
+                    continue;
+                }
+                const auto f = is.indexInInside();
+                int dir = -1;
+                if ((gc2 - gc1 == 1 || (gc2 == gc1 && (f == 0 || f == 1))) && cartDims[0] > 1) {
+                    dir = 0;
+                }
+                else if ((gc2 - gc1 == cartDims[0] || (gc2 == gc1 && (f == 2 || f == 3))) && cartDims[1] > 1) {
+                    dir = 1;
+                }
+                else if (gc2 - gc1 == cartDims[0]*cartDims[1] || (gc2 == gc1 && (f == 4 || f == 5))) {
+                    dir = 2;
+                }
+                if ((dir < 0) || !is_tran[dir]) {
+                    continue;
+                }
+                // A face interior to one coarse cell has no coarse face of its own.
+                const int action = (gc1 == gc2) ? -1
+                    : static_cast<int>(lookUpData_.template getFieldPropIdx<Grid>(static_cast<int>(c1)));
+                const auto id = details::isId(c1, c2);
+                if (action >= 0) {
+                    coarseFace[dir].emplace(action, std::make_pair(gc1, gc2));
+                }
+                faces[dir].push_back({id, action});
+                values[dir].push_back(trans_[id]);
+                index[dir].push_back(action);
+            }
         }
     }
 
-    resetTransmissibilityFromArrays_(is_tran, trans);
+    for (int dir = 0; dir < 3; ++dir) {
+        if (!is_tran[dir]) {
+            continue;
+        }
+        const auto& key = keywords[dir];
+        auto& value = values[dir];
+        const auto numCoarse = static_cast<std::size_t>(grid_.levelGridView(0).size(0));
+
+        // Each coarse face's own transmissibility: the host-level value where a
+        // box refines it, else the sum of its (one) leaf face.
+        auto coarse = std::vector<double>(numCoarse, 0.0);
+        for (std::size_t e = 0; e < value.size(); ++e) {
+            if (index[dir][e] >= 0) {
+                coarse[index[dir][e]] += value[e];
+            }
+        }
+        for (const auto& [c, cells] : coarseFace[dir]) {
+            if (const auto host = hostLevelTrans_.find(cells); host != hostLevelTrans_.end()) {
+                coarse[c] = host->second;
+            }
+        }
+        auto edited = coarse;
+        fp->apply_tran(key, edited);
+        for (const auto& [c, cells] : coarseFace[dir]) {
+            if (auto host = hostLevelTrans_.find(cells); host != hostLevelTrans_.end()) {
+                host->second = edited[c];
+            }
+        }
+
+        const auto ops = fp->tran_operations(key);
+        if (!ops.count(Fieldprops::ScalarOperation::EQUAL) &&
+            !ops.count(Fieldprops::ScalarOperation::ADD))
+        {
+            // MUL, MIN and MAX carry over to each refined face of a coarse face.
+            fp->apply_tran(key, index[dir], value);
+        }
+        else {
+            // EQUALS and ADD state the coarse face's transmissibility; its refined
+            // faces scale by the coarse face's change.
+            auto count = std::vector<int>(numCoarse, 0);
+            for (const auto c : index[dir]) {
+                if (c >= 0) {
+                    ++count[c];
+                }
+            }
+            for (std::size_t e = 0; e < value.size(); ++e) {
+                if (const auto c = index[dir][e]; c >= 0) {
+                    value[e] = (coarse[c] > 0.0) ? value[e] * (edited[c] / coarse[c])
+                                                 : edited[c] / count[c];
+                }
+            }
+        }
+        for (std::size_t e = 0; e < value.size(); ++e) {
+            trans_[faces[dir][e].id] = value[e];
+        }
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -1178,31 +1313,30 @@ computeFaceProperties(const Intersection& intersection,
     }
     else {
         if ((intersection.inside().level() != intersection.outside().level())) {
-            // For CpGrid with LGRs, intersection laying on the boundary of an LGR, having two neighboring cells:
-            // one coarse neighboring cell and one refined neighboring cell, we get the corresponding parent
-            // intersection (from level 0), and use the center of the parent intersection for the coarse
-            // neighboring cell.
-
-            // Get parent intersection and its geometry
-            const auto& parentIntersection =
-                grid_.getParentIntersectionFromLgrBoundaryFace(intersection);
-            const auto& parentIntersectionGeometry = parentIntersection.geometry();
-
-            // For the coarse neighboring cell, take the center of the parent intersection.
-            // For the refined neighboring cell, take the 'usual' center.
+            // The coarse cell measures to its whole face's corner average, as the reference.
+            auto coarseFaceCenter = [](const auto& element, const int face) {
+                DimVector center(0.0);
+                const auto& geometry = element.geometry();
+                for (int corner = 0; corner < 8; ++corner) {
+                    if (((corner >> (face / 2)) & 1) == face % 2) {
+                        for (int d = 0; d < 3; ++d) {
+                            center[d] += geometry.corner(corner)[d] / 4.0;
+                        }
+                    }
+                }
+                return center;
+            };
+            // The Trilinear backend measures the coarse cell to its parent intersection instead.
+            const bool conforming = this->conformingLgr_();
+            const auto parentCenter = conforming ? DimVector(0.0)
+                : DimVector(grid_.getParentIntersectionFromLgrBoundaryFace(intersection).geometry().center());
             inside.faceCenter =  (intersection.inside().level() == 0)
-                ? parentIntersectionGeometry.center()
+                ? (conforming ? coarseFaceCenter(intersection.inside(), inside.faceIdx) : parentCenter)
                 : grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection);
             outside.faceCenter = (intersection.outside().level() == 0)
-                ?  parentIntersectionGeometry.center()
+                ? (conforming ? coarseFaceCenter(intersection.outside(), outside.faceIdx) : parentCenter)
                 : grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection);
 
-            // For some computations, it seems to be benefitial to replace the actual area of the refined face, by
-            // the area of its parent face.
-            // faceAreaNormal = parentIntersection.centerUnitOuterNormal();
-            // faceAreaNormal *= parentIntersectionGeometry.volume();
-
-            /// Alternatively, the actual area of the refined face can be computed as follows:
             faceAreaNormal = intersection.centerUnitOuterNormal();
             faceAreaNormal *= intersection.geometry().volume();
         }
@@ -1227,67 +1361,107 @@ computeFaceProperties(const Intersection& intersection,
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed,
+applyPinchNncToGridTrans_(const CartesianToLeaf& cartesianToCompressed,
                           const bool applyNncMultregT)
 {
     const auto& pinchNnc = eclState_.getPinchNNC();
     const auto& transMult = this->eclState_.getTransMult();
+
+    constexpr std::size_t maxReported = 5;
+    std::vector<std::pair<std::size_t,std::size_t>> dropped{};
+    std::size_t numDropped = 0;
 
     for (const auto& nncEntry : pinchNnc) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
         auto lowIt = cartesianToCompressed.find(c1);
         auto highIt = cartesianToCompressed.find(c2);
-        int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
-        int high = (highIt == cartesianToCompressed.end())? -1 : highIt->second;
 
-        if (low > high) {
-            std::swap(low, high);
-        }
-
-        if (low == -1 && high == -1) {
-            // Silently discard as it is not between active cells
-            continue;
-        }
-
-        if (low == -1 || high == -1) {
-            // We can end up here if one of the cells is overlap/ghost, because those
-            // are lacking connections to other cells in the ghost/overlap.
-            // Hence discard the NNC if it is between active cell and inactive cell
-            continue;
-        }
-
+        if ((lowIt == cartesianToCompressed.end()) ||
+            (highIt == cartesianToCompressed.end()))
         {
-            auto candidate = trans_.find(details::isId(low, high));
-            if (candidate != trans_.end()) {
-                // the correctly calculated transmissibility is stored in
-                // the NNC. Overwrite previous value with it.
-                // taking the region multiplier into account.
-                candidate->second = nncEntry.trans;
-                if (applyNncMultregT) {
-                    const auto mult = transMult.getRegionMultiplierNNC(c1, c2);
-                    candidate->second *= mult;
+            // Not between two active cells, or one end is an overlap/ghost cell
+            // that carries no connections. Discard, as before.
+            continue;
+        }
+
+        // Under refinement the coarse connection became a connection between each
+        // pair of the two cells' children that the grid actually joined. The
+        // transmissibility is an absolute one, so it has to be divided among them:
+        // n pairs each take r_d/n of it, r_d being the refinement in the connection's
+        // own direction, which is the children-per-cell over the pair count. Without
+        // refinement there is one child each and this is the single face as before.
+        auto faces = std::vector<decltype(trans_.begin())>{};
+        for (const auto childLow : lowIt->second) {
+            for (const auto childHigh : highIt->second) {
+                auto low = childLow, high = childHigh;
+                if (low > high) {
+                    std::swap(low, high);
+                }
+                auto candidate = trans_.find(details::isId(low, high));
+                if (candidate != trans_.end()) {
+                    faces.push_back(candidate);
                 }
             }
         }
+
+        if (faces.empty()) {
+            if (dropped.size() < maxReported) {
+                dropped.push_back(std::make_pair(c1, c2));
+            }
+            ++numDropped;
+            continue;
+        }
+
+        const auto n = static_cast<Scalar>(faces.size());
+        const auto children = static_cast<Scalar>(std::max(lowIt->second.size(),
+                                                           highIt->second.size()));
+        auto value = nncEntry.trans * (children / (n * n));
+        if (applyNncMultregT) {
+            value *= transMult.getRegionMultiplierNNC(c1, c2);
+        }
+
+        for (auto& face : faces) {
+            face->second = value;
+        }
+    }
+
+    if (numDropped > 0) {
+        OpmLog::warning(fmt::format(
+            "{} PINCH connection(s) were computed but the grid holds no face to "
+            "carry them -- with refinement, no face between any pair of the two "
+            "cells' children -- so the pinched-out layers they bridge are not "
+            "bridged.{}",
+            numDropped, this->describeDroppedNnc_(dropped, numDropped)));
     }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
+applyNncToGridTrans_(const CartesianToLeaf& cartesianToCompressed)
 {
     // First scale NNCs with EDITNNC.
     const auto& nnc_input = eclState_.getInputNNC().input();
+
+    constexpr std::size_t maxReported = 5;
+    std::vector<std::pair<std::size_t,std::size_t>> unconnectedNnc{};
+    std::size_t numUnconnectedNnc = 0;
+
+    // A deck cell that several leaf cells descend from is inside a refinement box.
+    auto refined = [&cartesianToCompressed](const std::size_t cart)
+    {
+        const auto it = cartesianToCompressed.find(cart);
+        return (it != cartesianToCompressed.end()) && (it->second.size() > 1);
+    };
 
     for (const auto& nncEntry : nnc_input) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
         auto lowIt = cartesianToCompressed.find(c1);
         auto highIt = cartesianToCompressed.find(c2);
-        int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
-        int high = (highIt == cartesianToCompressed.end())? -1 : highIt->second;
+        int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second.front();
+        int high = (highIt == cartesianToCompressed.end())? -1 : highIt->second.front();
 
         if (low > high) {
             std::swap(low, high);
@@ -1307,11 +1481,37 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
             continue;
         }
 
+        if (refined(c1) || refined(c2)) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("An explicit connection -- the NNC keyword or a "
+                                  "numerical aquifer -- names cell {} or {}, which "
+                                  "a refinement box covers. Its transmissibility is "
+                                  "an absolute one and there is no rule yet for "
+                                  "dividing it among the faces the connection became, "
+                                  "so it would be applied to one arbitrary pair of "
+                                  "children or to none. Move the box off the "
+                                  "connection.",
+                                  ijkString_(c1), ijkString_(c2)));
+        }
+
         if (auto candidate = trans_.find(details::isId(low, high)); candidate != trans_.end()) {
             // NNC is represented by the grid and might be a neighboring connection
             // In this case the transmissibilty is added to the value already
             // set or computed.
             candidate->second += nncEntry.trans;
+        }
+        else {
+            // Both cells are active, yet the grid holds no connection between
+            // them, so this entry's transmissibility goes nowhere.  Under
+            // refinement that is the normal outcome for a connection naming a
+            // cell inside a CARFIN box: the coarse cell is gone from the leaf
+            // and its NNC face with it.  Silence here reads as a working
+            // connection, which for a numerical aquifer means it quietly stops
+            // feeding the reservoir.
+            if (unconnectedNnc.size() < maxReported) {
+                unconnectedNnc.push_back(std::make_pair(c1, c2));
+            }
+            ++numUnconnectedNnc;
         }
         // if (enableEnergy_) {
         //     auto candidate = thermalHalfTrans_.find(details::directionalIsId(low, high));
@@ -1339,11 +1539,236 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         //     }
         // }
     }
+
+    if (numUnconnectedNnc > 0) {
+        const auto cells = this->describeDroppedNnc_(unconnectedNnc, numUnconnectedNnc);
+
+        OpmLog::warning(fmt::format
+                        ("{} explicit connection(s) -- NNC, EDITNNC or a numerical aquifer -- "
+                         "name a cell pair the grid does not join, so their transmissibility is "
+                         "not applied and no flow passes through them. With local grid refinement "
+                         "this is what happens when a connection names a cell inside a CARFIN box: "
+                         "the coarse cell is not on the leaf grid and neither is its connection. "
+                         "A numerical aquifer in that position stops feeding the reservoir "
+                         "entirely.{}", numUnconnectedNnc, cells));
+    }
+}
+
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+bool Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+conformingLgr_() const
+{
+    if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+        return grid_.lgrBackend() == Opm::Refinement::Backend::Conforming;
+    }
+    else {
+        return false;
+    }
+}
+
+// The level-zero hosts' own connections as the unrefined grid has them: plain
+// geometry, as in the reference's global section, and what TRAN* edits act on.
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+computeHostLevelTrans_()
+{
+    if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+        if (grid_.maxLevel() == 0) {
+            return;
+        }
+
+        using LevelView = std::remove_const_t<decltype(grid_.levelGridView(0))>;
+        const LevelView level0 = grid_.levelGridView(0);
+        const auto levelMapper = Dune::MultipleCodimMultipleGeomTypeMapper<LevelView>
+            { level0, Dune::mcmgElementLayout() };
+
+        const auto& fp = eclState_.fieldProps();
+        const auto permx = fp.get_double("PERMX");
+        const auto permy = fp.has_double("PERMY") ? fp.get_double("PERMY") : permx;
+        const auto permz = fp.has_double("PERMZ") ? fp.get_double("PERMZ") : permx;
+        const auto ntgArr = fp.has_double("NTG")
+            ? fp.get_double("NTG") : std::vector<double>(permx.size(), 1.0);
+
+        const auto numHost = static_cast<std::size_t>(level0.size(/*codim=*/0));
+        if (permx.size() < numHost) {
+            OPM_THROW(std::invalid_argument,
+                      "The level-zero grid has more cells than the field properties "
+                      "describe; the host cells' transmissibilities cannot be computed.");
+        }
+
+        // Per neighbouring host pair: the half-transmissibility and face area. A
+        // faulted host face is several intersections, so accumulate the pieces.
+        struct Face { Scalar half{0}, area{0}; };
+        auto isHost = std::vector<bool>(numHost, false);
+        for (const auto& elem : elements(gridView_)) {
+            if (elem.level() > 0) {
+                isHost[levelMapper.index(elem.getOrigin())] = true;
+            }
+        }
+        auto hostPair = std::map<std::tuple<std::size_t,int,std::size_t>, Face>{};
+
+
+        auto level0Cart = std::vector<int>(numHost);
+        for (const auto& elem : elements(level0)) {
+            const auto idx = levelMapper.index(elem);
+            level0Cart[idx] = elem.getLevelCartesianIdx();
+
+            // The unrefined grid's convention: centres are corner averages.
+            const auto& cellGeom = elem.geometry();
+            DimVector centre(0.0);
+            for (int c = 0; c < 8; ++c) {
+                centre += cellGeom.corner(c);
+            }
+            centre /= 8.0;
+            auto faceCentre = [&cellGeom](const int f) {
+                DimVector fc(0.0);
+                for (int c = 0; c < 8; ++c) {
+                    if (((c >> (f / 2)) & 1) == (f % 2)) {
+                        fc += cellGeom.corner(c);
+                    }
+                }
+                fc /= 4.0;
+                return fc;
+            };
+
+            DimMatrix K(0.0);
+            K[0][0] = permx[idx]; K[1][1] = permy[idx]; K[2][2] = permz[idx];
+
+            for (const auto& is : intersections(level0, elem)) {
+                const auto f = is.indexInInside();
+                if ((f < 0) || (f > 5)) {
+                    continue;               // NNC: no face of the reference element
+                }
+
+                const auto& geom = is.geometry();
+                // The unrefined grid's area convention, as the main loop uses on level zero.
+                DimVector areaNormal = grid_.faceAreaNormalEcl(is.id(), 0);
+
+                DimVector d = faceCentre(f);
+                d -= centre;
+
+                auto half = computeHalfTrans_(areaNormal, f, d, K);
+                if (f < 4) {                // lateral faces carry NTG
+                    half *= ntgArr[idx];
+                }
+
+                if (is.neighbor() && (isHost[idx] || isHost[levelMapper.index(is.outside())])) {
+                    auto& pair = hostPair[{idx, f, levelMapper.index(is.outside())}];
+                    pair.half += half;
+                    pair.area += geom.volume();
+                }
+            }
+        }
+
+        // The deck's face and region multipliers, applied as the main loop does.
+        const auto& transMult = eclState_.getTransMult();
+        const auto& nncInput = eclState_.getInputNNC().input();
+        auto multiplier = [&](const int c1, const int f1, const int c2, const int f2)
+        {
+            Scalar mult = 1.0;
+            if (c1 != c2) {
+                mult *= transMult.getMultiplier(c1, FaceDir::FromIntersectionIndex(f1))
+                      * transMult.getMultiplier(c2, FaceDir::FromIntersectionIndex(f2));
+            }
+            const auto it = std::lower_bound(nncInput.begin(), nncInput.end(),
+                                             NNCdata { static_cast<std::size_t>(c1),
+                                                       static_cast<std::size_t>(c2), 0.0 });
+            const bool isInputNnc = (it != nncInput.end()) &&
+                (it->cell1 == static_cast<std::size_t>(c1)) &&
+                (it->cell2 == static_cast<std::size_t>(c2));
+            if (!isInputNnc) {
+                mult *= transMult.getRegionMultiplier(c1, c2, (f1 < 2) ? FaceDir::XPlus
+                                                            : (f1 < 4) ? FaceDir::YPlus
+                                                                       : FaceDir::ZPlus);
+            }
+            return mult;
+        };
+
+        // The hosts' own connections as the unrefined grid has them, for the
+        // output's global section; as in the reference, without EDITNNC.
+        hostLevelTrans_.clear();
+        {
+            auto pinchAll = std::map<std::pair<std::size_t,std::size_t>, Scalar>{};
+            for (const auto& nnc : eclState_.getPinchNNC()) {
+                pinchAll[{std::min(nnc.cell1, nnc.cell2), std::max(nnc.cell1, nnc.cell2)}] = nnc.trans;
+            }
+            auto halves = std::map<std::pair<std::size_t,std::size_t>, std::pair<Scalar,int>>{};
+            for (const auto& [key, face] : hostPair) {
+                auto& half = halves[{std::get<0>(key), std::get<2>(key)}];
+                half.first += face.half;
+                half.second = std::get<1>(key);
+            }
+            for (const auto& [key, half] : halves) {
+                const auto [a, b] = key;
+                const auto reverse = halves.find({b, a});
+                if ((a > b) || (reverse == halves.end()) ||
+                    !(half.first > 0.0) || !(reverse->second.first > 0.0)) {
+                    continue;
+                }
+                auto ca = level0Cart[a], cb = level0Cart[b];
+                auto fa = half.second, fb = reverse->second.second;
+                if (ca > cb) {
+                    std::swap(ca, cb);
+                    std::swap(fa, fb);
+                }
+                Scalar t = multiplier(ca, fa, cb, fb) / (1.0 / half.first + 1.0 / reverse->second.first);
+                const auto pair = std::make_pair(static_cast<std::size_t>(ca), static_cast<std::size_t>(cb));
+                if (const auto pinch = pinchAll.find(pair); pinch != pinchAll.end()) {
+                    t = pinch->second * transMult.getRegionMultiplierNNC(pair.first, pair.second);
+                }
+                hostLevelTrans_[{ca, cb}] = t;
+            }
+        }
+    }
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+std::array<int,3>
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+ijkFromCartesian_(const std::size_t cartIdx) const
+{
+    const auto& dims = eclState_.getInputGrid().getNXYZ();
+    const auto i = cartIdx % dims[0];
+    const auto j = (cartIdx / dims[0]) % dims[1];
+    const auto k = cartIdx / (static_cast<std::size_t>(dims[0]) * dims[1]);
+
+    return { static_cast<int>(i), static_cast<int>(j), static_cast<int>(k) };
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+std::string
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+ijkString_(const std::size_t cartIdx) const
+{
+    const auto ijk = ijkFromCartesian_(cartIdx);
+    return fmt::format("({},{},{})", ijk[0] + 1, ijk[1] + 1, ijk[2] + 1);
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+std::string
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+describeDroppedNnc_(const std::vector<std::pair<std::size_t,std::size_t>>& sample,
+                    const std::size_t total) const
+{
+    auto cells = std::string{};
+    for (const auto& [c1, c2] : sample) {
+        const auto ijk1 = ijkFromCartesian_(c1);
+        const auto ijk2 = ijkFromCartesian_(c2);
+        cells += fmt::format("\n  ({},{},{}) -- ({},{},{})",
+                             ijk1[0] + 1, ijk1[1] + 1, ijk1[2] + 1,
+                             ijk2[0] + 1, ijk2[1] + 1, ijk2[2] + 1);
+    }
+    if (total > sample.size()) {
+        cells += fmt::format("\n  ... and {} more", total - sample.size());
+    }
+
+    return cells;
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+applyEditNncToGridTrans_(const CartesianToLeaf& globalToLocal)
 {
     const auto& input = eclState_.getInputNNC();
     applyEditNncToGridTransHelper_(globalToLocal, "EDITNNC",
@@ -1356,7 +1781,7 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+applyEditNncrToGridTrans_(const CartesianToLeaf& globalToLocal)
 {
     const auto& input = eclState_.getInputNNC();
     applyEditNncToGridTransHelper_(globalToLocal, "EDITNNCR",
@@ -1369,7 +1794,7 @@ applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoc
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
+applyEditNncToGridTransHelper_(const CartesianToLeaf& globalToLocal,
                                const std::string& keyword,
                                const std::vector<NNCdata>& nncs,
                                const std::function<KeywordLocation(const NNCdata&)>& getLocation,
@@ -1399,6 +1824,17 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         OpmLog::warning(keyword, warning);
     };
 
+    // As in the reference, a record does not reach a connection of a refined
+    // cell: it names the coarse cells, and their connection is replaced.
+    std::unordered_set<std::size_t> refined;
+    const ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+    for (const auto& elem : elements(gridView_)) {
+        if (elem.level() > 0) {
+            refined.insert(cartMapper_.cartesianIndex(elemMapper.index(elem)));
+        }
+    }
+    std::size_t skipped = 0;
+
     // editNnc is supposed to only reference non-neighboring connections and not
     // neighboring connections. Use all entries for scaling if there is an NNC.
     // variable nnc incremented in loop body.
@@ -1408,6 +1844,11 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
     while (nnc != end) {
         auto c1 = nnc->cell1;
         auto c2 = nnc->cell2;
+        if (refined.count(c1) || refined.count(c2)) {
+            ++skipped;
+            ++nnc;
+            continue;
+        }
         auto lowIt = globalToLocal.find(c1);
         auto highIt = globalToLocal.find(c2);
 
@@ -1421,22 +1862,35 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
             continue;
         }
 
-        auto low = lowIt->second, high = highIt->second;
+        // Collect the faces first: a record may be repeated, and each repeat
+        // must act on each face exactly once.
+        auto faces = std::vector<decltype(trans_.begin())>{};
+        for (const auto childLow : lowIt->second) {
+            for (const auto childHigh : highIt->second) {
+                auto low = childLow, high = childHigh;
+                if (low > high) {
+                    std::swap(low, high);
+                }
 
-        if (low > high) {
-            std::swap(low, high);
+                auto candidate = trans_.find(details::isId(low, high));
+                if (candidate != trans_.end()) {
+                    faces.push_back(candidate);
+                }
+            }
         }
 
-        auto candidate = trans_.find(details::isId(low, high));
-        if (candidate == trans_.end() && warnEditNNC_) {
-            print_warning(*nnc);
+        if (faces.empty()) {
+            if (warnEditNNC_) {
+                print_warning(*nnc);
+                warning_count++;
+            }
             ++nnc;
-            warning_count++;
         }
         else {
-            // NNC exists
             while (nnc != end && c1 == nnc->cell1 && c2 == nnc->cell2) {
-                apply(candidate->second, nnc->trans);
+                for (auto& face : faces) {
+                    apply(face->second, nnc->trans);
+                }
                 ++nnc;
             }
         }
@@ -1447,12 +1901,16 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
                                    "A total of {} connections not defined in grid", keyword, warning_count);
         OpmLog::warning(warning);
     }
+    if ((skipped > 0) && warnEditNNC_) {
+        OpmLog::info(fmt::format("{} {} record(s) name a refined cell and are not applied "
+                                 "to the refined connections.", skipped, keyword));
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
+applyNncMultreg_(const CartesianToLeaf& cartesianToCompressed)
 {
     const auto& inputNNC = this->eclState_.getInputNNC();
     const auto& transMult = this->eclState_.getTransMult();
@@ -1460,8 +1918,19 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
     auto compressedIdx = [&cartesianToCompressed](const std::size_t globIdx)
     {
         auto ixPos = cartesianToCompressed.find(globIdx);
-        return (ixPos == cartesianToCompressed.end()) ? -1 : ixPos->second;
+        return (ixPos == cartesianToCompressed.end()) ? -1 : ixPos->second.front();
     };
+
+    // A deck cell that several leaf cells descend from is inside a refinement box.
+    auto refined = [&cartesianToCompressed](const std::size_t cart)
+    {
+        const auto it = cartesianToCompressed.find(cart);
+        return (it != cartesianToCompressed.end()) && (it->second.size() > 1);
+    };
+
+    constexpr std::size_t maxReported = 5;
+    std::vector<std::pair<std::size_t,std::size_t>> dropped{};
+    std::size_t numDropped = 0;
 
     // Apply region-based transmissibility multipliers (i.e., the MULTREGT
     // keyword) to those transmissibilities that are directly assigned from
@@ -1485,16 +1954,46 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
             if ((low == -1) || (high == -1)) {
                 continue;
             }
+            // As in applyEditNncrToGridTrans_, EDITNNCR does not reach a refined cell.
+            if ((nncList == &NNC::editr) && (refined(c1) || refined(c2))) {
+                continue;
+            }
 
             if (low > high) {
                 std::swap(low, high);
             }
 
+            const auto mult = transMult.getRegionMultiplierNNC(c1, c2);
+            if ((mult != Scalar{1}) && (refined(c1) || refined(c2))) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("MULTREGT gives the connection {} -- {} a "
+                                      "multiplier of {}, and a refinement box covers "
+                                      "one of those cells. The connection became "
+                                      "several faces there and the multiplier reaches "
+                                      "at most one of them, so the region boundary "
+                                      "would be left open. Move the box off the "
+                                      "connection, or set the multiplier to 1.",
+                                      ijkString_(c1), ijkString_(c2), mult));
+            }
+
             auto candidate = this->trans_.find(details::isId(low, high));
             if (candidate != this->trans_.end()) {
-                candidate->second *= transMult.getRegionMultiplierNNC(c1, c2);
+                candidate->second *= mult;
+            }
+            else if (mult != Scalar{1}) {
+                if (dropped.size() < maxReported) {
+                    dropped.push_back(std::make_pair(c1, c2));
+                }
+                ++numDropped;
             }
         }
+    }
+
+    if (numDropped > 0) {
+        OpmLog::warning(fmt::format(
+            "{} MULTREGT multiplier(s) name a connection the grid does not hold, so "
+            "the region boundary they seal is left open.{}",
+            numDropped, this->describeDroppedNnc_(dropped, numDropped)));
     }
 }
 

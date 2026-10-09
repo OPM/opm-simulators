@@ -29,6 +29,8 @@
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/RegionSetMatcher.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/NNC.hpp>
@@ -64,6 +66,8 @@
 #include <mpi.h>
 #endif
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -78,6 +82,64 @@
 #include <vector>
 
 namespace {
+
+/*!
+ * \brief Restart values for a declared LGR that the current grid does not refine.
+ *
+ * The EGRID and INIT describe every LGR the *deck* declares, whether or not the
+ * simulation grid refines it. A restart step that omits the corresponding
+ * solution section therefore covers fewer cells than the grid has, and
+ * post-processors that size results from the grid reject the result outright --
+ * ResInsight requires each keyword's total value count to be a whole multiple of
+ * the active cell count (RifEclipseOutputFileTools::validKeywordsForPorosityModel).
+ *
+ * So emit a section for the unrefined LGR too, giving every refined cell the
+ * value of its father coarse cell: the same father mapping, and the same
+ * father-replication, that the INIT writer already applies to the static
+ * properties in this situation (WriteInit.cpp, the !fullProperties branch).
+ */
+Opm::data::Solution
+fatherReplicatedSolution(const Opm::EclipseGrid&     inputGrid,
+                         const std::string&          lgrName,
+                         const Opm::data::Solution&  coarse)
+{
+    const auto& lgrGrid = inputGrid.getLGRCell(lgrName);
+    // The coarse solution is active-sized, so the father mapping must be too.
+    const auto fathers = lgrGrid.getLGRCell_active_father(inputGrid);
+    const auto nActive = inputGrid.getNumActive();
+
+    // Copy first: keeps the keys, units, targets and the SI flag of the
+    // coarse solution, so only the per-cell arrays need replacing.
+    auto refined = coarse;
+
+    for (const auto& [key, cellData] : coarse) {
+        cellData.visit([&refined, &key = key, &cellData, &fathers, nActive](const auto& src)
+        {
+            using Vector = std::decay_t<decltype(src)>;
+            if constexpr (! std::is_same_v<Vector, std::monostate>) {
+                if (src.size() != nActive) {
+                    return;     // not per-cell data; leave it alone
+                }
+                Vector dst(fathers.size());
+                for (auto i = 0*fathers.size(); i < fathers.size(); ++i) {
+                    dst[i] = src[fathers[i]];
+                }
+                if constexpr (std::is_same_v<Vector, std::vector<double>>) {
+                    refined[key] = Opm::data::CellData {
+                        cellData.dim, std::move(dst), cellData.target
+                    };
+                }
+                else {
+                    refined[key] = Opm::data::CellData {
+                        std::move(dst), cellData.target
+                    };
+                }
+            }
+        });
+    }
+
+    return refined;
+}
 
 /*!
  * \brief Detect whether two cells are direct vertical neighbours.
@@ -233,12 +295,14 @@ EclGenericWriter(const Schedule& schedule,
                  const Dune::CartesianIndexMapper<Grid>& cartMapper,
                  const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                  bool enableAsyncOutput,
-                 bool enableEsmry )
+                 bool enableEsmry,
+                 const EquilGrid* collectGrid,
+                 const Dune::CartesianIndexMapper<EquilGrid>* collectCartMapper )
     : collectOnIORank_(grid,
-                       equilGrid,
+                       collectGrid ? collectGrid : equilGrid,
                        gridView,
                        cartMapper,
-                       equilCartMapper,
+                       collectCartMapper ? collectCartMapper : equilCartMapper,
                        summaryConfig.fip_regions_interreg_flow())
     , grid_           (grid)
     , gridView_       (gridView)
@@ -246,7 +310,9 @@ EclGenericWriter(const Schedule& schedule,
     , eclState_       (eclState)
     , cartMapper_     (cartMapper)
     , equilCartMapper_(equilCartMapper)
+    , collectCartMapper_(collectCartMapper ? collectCartMapper : equilCartMapper)
     , equilGrid_      (equilGrid)
+    , collectGrid_    (collectGrid ? collectGrid : equilGrid)
 {
     // Make sure outputNnc_ vector has at least 1 entry in all ranks.
     outputNnc_.resize(1);
@@ -282,11 +348,35 @@ writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        // globalRanks() is empty when the I/O-rank cell collection is not set up
-        // (parallel runs with LGRs). Passing it on would write a zero-length
-        // MPI_RANK, which the per-LGR INIT sections then index by father cell.
+        // globalRanks() is empty when the I/O-rank cell collection is not set up.
         if (collectOnIORank_.isParallel() && !collectOnIORank_.globalRanks().empty()) {
-            integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
+            const auto& leafRanks = collectOnIORank_.globalRanks();
+            if (collectGrid_ != nullptr && collectGrid_->maxLevel() > 0) {
+                // For a refined grid the gather reference (collectGrid_) is the
+                // leaf grid, so globalRanks_ is leaf-sized.  MPI_RANK in the INIT
+                // belongs to the level-zero (main) grid, so reduce it: each leaf
+                // cell contributes its owning rank to its level-zero origin (all
+                // children of a refined cell share one rank - the box is
+                // rank-interior).  Without this MPI_RANK is written at leaf size
+                // into the main-grid slot, mismatching the main grid.
+                std::vector<int> mpiRank(collectGrid_->currentData().front()->size(0), 0);
+                const auto leafView = collectGrid_->leafGridView();
+                Dune::MultipleCodimMultipleGeomTypeMapper<std::decay_t<decltype(leafView)>>
+                    leafMapper(leafView, Dune::mcmgElementLayout());
+                for (const auto& elem : elements(leafView)) {
+                    const auto leafIdx = leafMapper.index(elem);
+                    const auto originIdx = elem.getOrigin().index();
+                    if (originIdx >= 0
+                        && static_cast<std::size_t>(originIdx) < mpiRank.size()
+                        && static_cast<std::size_t>(leafIdx) < leafRanks.size()) {
+                        mpiRank[originIdx] = leafRanks[leafIdx];
+                    }
+                }
+                integerVectors.emplace("MPI_RANK", std::move(mpiRank));
+            }
+            else {
+                integerVectors.emplace("MPI_RANK", leafRanks);
+            }
         }
 
         if (const auto& lgrs = this->eclState_.getLgrs(); lgrs.size() > 0) {
@@ -324,8 +414,8 @@ extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
         const auto levelCartMapp = this->createLevelCartMapp_<equilGridIsCpGrid>();
         const auto levelCartToLevelCompressed = this->createCartesianToActiveMaps_<equilGridIsCpGrid>(levelCartMapp);
         auto computeLevelIndices = this->computeLevelIndices_<equilGridIsCpGrid>();
-        auto computeLevelCartIdx = this->computeLevelCartIdx_<equilGridIsCpGrid>(levelCartMapp, *(this->equilCartMapper_));
-        auto computeLevelCartDimensions = this->computeLevelCartDimensions_<equilGridIsCpGrid>(levelCartMapp, *(this->equilCartMapper_));
+        auto computeLevelCartIdx = this->computeLevelCartIdx_<equilGridIsCpGrid>(levelCartMapp, *(this->collectCartMapper_));
+        auto computeLevelCartDimensions = this->computeLevelCartDimensions_<equilGridIsCpGrid>(levelCartMapp, *(this->collectCartMapper_));
         auto computeOriginIndices = this->computeOriginIndices_<equilGridIsCpGrid>();
 
         computeTrans_(levelCartToLevelCompressed, map, computeLevelIndices,
@@ -374,9 +464,9 @@ EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 createLevelCartMapp_() const
 {
     if constexpr (equilGridIsCpGrid) {
-        return Opm::LevelCartesianIndexMapper<EquilGrid>(*this->equilGrid_);
+        return Opm::LevelCartesianIndexMapper<EquilGrid>(*this->collectGrid_);
     } else {
-        return Opm::LevelCartesianIndexMapper<EquilGrid>(*equilCartMapper_); }
+        return Opm::LevelCartesianIndexMapper<EquilGrid>(*collectCartMapper_); }
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
@@ -386,13 +476,13 @@ EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 createCartesianToActiveMaps_(const Opm::LevelCartesianIndexMapper<EquilGrid>& levelCartMapp) const
 {
     if constexpr (equilGridIsCpGrid) {
-        if (this->equilGrid_->maxLevel()) {
-            return Opm::Lgr::levelCartesianToLevelCompressedMaps(*this->equilGrid_, levelCartMapp); }
+        if (this->collectGrid_->maxLevel()) {
+            return Opm::Lgr::levelCartesianToLevelCompressedMaps(*this->collectGrid_, levelCartMapp); }
         else {
-            return std::vector<std::unordered_map<int,int>>{ cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_)) };
+            return std::vector<std::unordered_map<int,int>>{ cartesianToCompressed(collectGrid_->size(0), UgGridHelpers::globalCell(*collectGrid_)) };
         }
     }
-    return std::vector<std::unordered_map<int,int>>{ cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_)) };
+    return std::vector<std::unordered_map<int,int>>{ cartesianToCompressed(collectGrid_->size(0), UgGridHelpers::globalCell(*collectGrid_)) };
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
@@ -526,11 +616,11 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
-    const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
+    const GlobalGridView& globalGridView = this->collectGrid_->leafGridView();
     const GlobElementMapper globalElemMapper { globalGridView, Dune::mcmgElementLayout() };
 
     // Refinement supported only for CpGrid for now.
-    int maxLevel = this->equilGrid_->maxLevel();
+    int maxLevel = this->collectGrid_->maxLevel();
 
     outputTrans_->resize(maxLevel+1); // including level zero grid
 
@@ -612,6 +702,26 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
                 outputTrans_->at(level).at("TRANZ").template data<double>()[minLevelCartIdx] =
                     gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
             }
+        }
+    }
+
+    // A refined cell's host keeps its unrefined connections in the global section.
+    const auto& dims0 = computeLevelCartDims(0);
+    for (const auto& [cells, t] : globalTrans().hostLevelTransmissibilities()) {
+        const auto [cell1, cell2] = cells;
+        const char* name = nullptr;
+        if ((cell2 - cell1 == 1) && (dims0[0] > 1)) {
+            name = "TRANX";
+        }
+        else if ((cell2 - cell1 == dims0[0]) && (dims0[1] > 1)) {
+            name = "TRANY";
+        }
+        else if ((cell2 - cell1 == dims0[0]*dims0[1]) ||
+                 directVerticalNeighbors(dims0, levelCartToLevelCompressed[0], cell1, cell2)) {
+            name = "TRANZ";
+        }
+        if (name != nullptr) {
+            outputTrans_->at(0).at(name).template data<double>()[cell1] = t;
         }
     }
 }
@@ -698,16 +808,16 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     const auto& transMult = this->eclState_.getTransMult();
 
     // Cartesian index mapper for the serial I/O grid
-    const auto& equilCartMapper = *equilCartMapper_;
+    const auto& equilCartMapper = *collectCartMapper_;
 
     const auto& level0CartDims = equilCartMapper.cartesianDimensions();
 
-    int maxLevel = this->equilGrid_->maxLevel();
+    int maxLevel = this->collectGrid_->maxLevel();
     allocateAllNncs_(maxLevel);
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
-    const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
+    const GlobalGridView& globalGridView = this->collectGrid_->leafGridView();
     const GlobElementMapper globalElemMapper { globalGridView, Dune::mcmgElementLayout() };
 
     for (const auto& elem : elements(globalGridView)) {
@@ -863,8 +973,37 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     }
 
     // Do not include the generated NNCs transsmisibilities in the input NNCs
+    // The hosts' unrefined connections that are not Cartesian neighbours.
+    for (const auto& [cells, t] : this->globalTrans().hostLevelTransmissibilities()) {
+        const auto [cell1, cell2] = cells;
+        if (isDirectNeighbours_(levelCartToLevelCompressed[0], level0CartDims, cell1, cell2)) {
+            continue;
+        }
+        const auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, t);
+        if (std::isnormal(tt) && (tt > 1.0e-12)) {
+            this->outputNnc_[0].emplace_back(cell1, cell2, t);
+        }
+    }
+
     std::vector<NNCdata> inputedNnc{};
     const auto generatedNnc = outputNnc_[0];
+
+    // Deck NNCs and numerical-aquifer connections name level-zero cells, but
+    // globalTrans() is indexed on the leaf.  Refinement separates the two, so
+    // translate; a refined coarse cell has no single leaf cell and drops out.
+    std::unordered_map<int,int> level0CartToLeaf{};
+    if (maxLevel > 0) {
+        for (const auto& elem : elements(globalGridView)) {
+            if (elem.level() == 0) {
+                const auto leafIdx = globalElemMapper.index(elem);
+                level0CartToLeaf.emplace(equilCartMapper.cartesianIndex(leafIdx), leafIdx);
+            }
+        }
+    }
+    const auto& cartToLeaf = (maxLevel > 0)
+        ? level0CartToLeaf
+        : levelCartToLevelCompressed[/* level */ 0];
+    int nncInRefinedBlock = 0;
 
     // The NNC keyword in the deck is defined only for faces in the level-0 grid.
     // The same limitation applies to aquifer data.
@@ -896,12 +1035,20 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 // Pick up transmissibility value from 'globalTrans()' since
                 // multiplier keywords like MULTREGT might have impacted the
                 // values entered in primary sources like NNC/EDITNNC/EDITNNCR.
-                const auto c1 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell1);
-                const auto c2 = activeCell_(levelCartToLevelCompressed[/* level */0], entry.cell2);
+                const auto c1 = activeCell_(cartToLeaf, entry.cell1);
+                const auto c2 = activeCell_(cartToLeaf, entry.cell2);
 
                 if ((c1 < 0) || (c2 < 0)) {
                     // Connection between inactive cells?  Unexpected at this
                     // level.  Might consider 'throw'ing if this happens...
+                    // Under refinement it also means a refined cell, which the
+                    // deck cannot name -- counted and reported below.
+                    if ((maxLevel > 0) &&
+                        (activeCell_(levelCartToLevelCompressed[/* level */ 0], entry.cell1) >= 0) &&
+                        (activeCell_(levelCartToLevelCompressed[/* level */ 0], entry.cell2) >= 0))
+                    {
+                        ++nncInRefinedBlock;
+                    }
                     continue;
                 }
 
@@ -913,11 +1060,17 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                                             static_cast<int>(entry.cell2)};
                 const double* gathered = this->findGatheredTrans_(key);
                 if (!this->gatheredLgrTrans_.has_value() || gathered != nullptr) {
-                    trans = (gathered != nullptr)
-                        ? *gathered
-                        : this->globalTrans().transmissibility(c1, c2);
+                    // The refined output grid of a parallel run does not carry the
+                    // numerical aquifer's connections; keep the input value there.
+                    const auto found = (gathered != nullptr)
+                        ? std::optional<double>{*gathered}
+                        : std::optional<double>{this->globalTrans().findTransmissibility(c1, c2)};
+                    if (!found.has_value() && (maxLevel == 0)) {
+                        trans = this->globalTrans().transmissibility(c1, c2);   // reports the miss
+                    }
+                    trans = found.value_or(trans);
 
-                    if (! generatedNnc.empty()) {
+                    if (found.has_value() && ! generatedNnc.empty()) {
                         for (const auto& generated : generatedNnc) {
                             if (entry.cell1 == generated.cell1 && entry.cell2 == generated.cell2) {
                                 trans -= generated.trans;
@@ -938,6 +1091,12 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
             }
         }
     }
+    if (nncInRefinedBlock > 0) {
+        OpmLog::warning(fmt::format("{} explicit NNC/aquifer connection(s) reach a cell inside "
+                                    "a refined block and are omitted from the NNC output arrays.",
+                                    nncInRefinedBlock));
+    }
+
     // Write first the inputed NNCs and after the internally computed NNCs
     this->outputNnc_[0].insert(this->outputNnc_[0].begin(), inputedNnc.begin(), inputedNnc.end());
     return this->outputNnc_;
@@ -1018,17 +1177,59 @@ doWriteOutput(const int                          reportStepNum,
     }
 
     std::vector<Opm::RestartValue> restartValues{};
-    // only serial, only CpGrid (for now)
-    if ( !isParallel && !needsReordering && (this->eclState_.getLgrs().size()>0) && (this->grid_.maxLevel()>0) ) {
-        // Level cells that appear on the leaf grid view get the data::Solution values from there.
-        // Other cells (i.e., parent cells that vanished due to refinement) get rubbish values for now.
-        // Only data::Solution is restricted to the level grids. Well, GroupAndNetwork, Aquifer are
-        // not modified in this method.
+    const bool haveLgrCellOutput = !needsReordering
+        && (this->eclState_.getLgrs().size() > 0)
+        // The leaf solution is split onto the per-level grids using a grid that
+        // carries the level hierarchy. That is the simulation grid in serial /
+        // the rank-interior path, but with refine-before-redistribute the
+        // distributed simulation grid is the flat leaf (maxLevel() == 0); there
+        // the I/O-rank reference grid (collectGrid_) holds the hierarchy and the
+        // parallel branch below splits on it instead. So accept either.
+        && ( (this->grid_.maxLevel() > 0)
+             || (this->collectGrid_ != nullptr && this->collectGrid_->maxLevel() > 0) );
+    // Split the leaf solution onto the per-level grids.  Level cells that appear
+    // on the leaf grid view get the data::Solution values from there; other
+    // cells (parent cells that vanished due to refinement) get rubbish values
+    // for now.  Only data::Solution is restricted to the level grids; well,
+    // group/network and aquifer data are not modified here.
+    if ( !isParallel && haveLgrCellOutput ) {
         Opm::Lgr::extractRestartValueLevelGrids<Grid>(this->grid_, restartValue, restartValues);
     }
+    else if ( isParallel && haveLgrCellOutput
+              && this->collectOnIORank_.isIORank()
+              && (this->collectGrid_ != nullptr)
+              && (this->collectGrid_->maxLevel() > 0) ) {
+        // In parallel the leaf solution has been gathered onto the I/O rank's
+        // refined output grid (collectGrid_); split it there.
+        Opm::Lgr::extractRestartValueLevelGrids<EquilGrid>(*this->collectGrid_, restartValue, restartValues);
+    }
     else {
-        restartValues.reserve(1); // minimum size
+        const auto& deckLgrs = this->eclState_.getLgrs();
+        restartValues.reserve(1 + deckLgrs.size());
         restartValues.push_back(std::move(restartValue)); // no LGRs-> only one restart value
+
+        // The deck declares LGRs but this grid refines none of them (LGROFF on
+        // every one). They are still in the EGRID/INIT, so write a solution
+        // section for each, father-replicated from the coarse solution, and
+        // keep every report step covering the same cells.
+        //
+        // Restricted to a genuinely unrefined grid: the other way into this
+        // branch is the reordering path, where refined data does exist and has
+        // simply not been split onto the levels -- replicating there would
+        // overwrite real values with coarse ones.
+        const bool noRefinementAtAll = (this->grid_.maxLevel() == 0)
+            && ((this->collectGrid_ == nullptr) || (this->collectGrid_->maxLevel() == 0));
+
+        for (std::size_t lgr = 0; noRefinementAtAll && lgr < deckLgrs.size(); ++lgr) {
+            const auto& name = deckLgrs.getLgr(lgr).NAME();
+            restartValues.emplace_back(fatherReplicatedSolution(this->eclState_.getInputGrid(),
+                                                                name,
+                                                                restartValues.front().solution),
+                                       restartValues.front().wells,
+                                       restartValues.front().grp_nwrk,
+                                       restartValues.front().aquifer,
+                                       static_cast<int>(lgr) + 1);
+        }
     }
 
     // make sure that the previous I/O request has been completed

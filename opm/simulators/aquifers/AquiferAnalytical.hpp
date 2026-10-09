@@ -25,8 +25,11 @@
 #include <dune/grid/common/partitionset.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+
+#include <fmt/format.h>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/densead/Evaluation.hpp>
@@ -38,6 +41,7 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
+#include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -47,6 +51,7 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <vector>
 
 namespace Opm
@@ -93,7 +98,9 @@ public:
                       const std::vector<Aquancon::AquancCell>& connections,
                       const Simulator& simulator)
         : AquiferInterface<TypeTag>(aqID, simulator)
-        , connections_(connections)
+        , leaf_(aquiferConnectionsOnLeaf(connections, simulator))
+        , connections_(leaf_.connections)
+        , numDeckConnections_(connections.size())
     {
         this->initializeConnectionMappings();
     }
@@ -292,12 +299,13 @@ protected:
         this->total_face_area_ = Scalar{0};
         this->cellToConnectionIdx_.resize(this->simulator_.gridView().size(/*codim=*/0), -1);
         const auto& gridView = this->simulator_.vanguard().gridView();
+        auto resolved = std::set<std::size_t>{};
         for (std::size_t idx = 0; idx < this->size(); ++idx) {
-            const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->simulator_.vanguard().compressedIndex(global_index);
+            const int cell_index = this->cellIndex_(idx);
             if (cell_index < 0) {
                 continue;
             }
+            resolved.insert(this->leaf_.origin[idx]);
 
             auto elemIt = gridView.template begin</*codim=*/ 0>();
             std::advance(elemIt, cell_index);
@@ -308,6 +316,25 @@ protected:
             }
 
             this->cellToConnectionIdx_[cell_index] = idx;
+        }
+
+        // A connection on no leaf cell (a refined host without a child face on
+        // its side) would otherwise drop out without a trace.
+        {
+            const auto& comm = this->simulator_.vanguard().grid().comm();
+            const auto found = comm.sum(static_cast<int>(resolved.size()));
+            const auto deck = static_cast<int>(this->numDeckConnections_);
+            if ((found < deck) && (comm.rank() == 0)) {
+                OpmLog::warning(fmt::format
+                                ("Analytical aquifer {}: {} of {} AQUANCON connection(s) name a "
+                                 "cell that is not in the simulation grid and are dropped. "
+                                 "A refined host with no child face on that side is the usual cause. "
+                                 "{}",
+                                 this->aquiferID(), deck - found, deck,
+                                 (found == 0)
+                                 ? "No connection is left, so this aquifer contributes nothing."
+                                 : "The aquifer acts through the connections that remain."));
+            }
         }
 
         // Translate the C face tag into the enum used by opm-parser's TransMult class
@@ -370,8 +397,7 @@ protected:
 
         const auto& gridView = this->simulator_.vanguard().gridView();
         for (std::size_t idx = 0; idx < this->size(); ++idx) {
-            const int cell_index = this->simulator_.vanguard()
-                .compressedIndex(this->connections_[idx].global_index);
+            const int cell_index = this->cellIndex_(idx);
             if (cell_index < 0) {
                 continue;
             }
@@ -431,7 +457,16 @@ protected:
         return vals[1] / vals[0];
     }
 
-    const std::vector<Aquancon::AquancCell> connections_;
+    LeafAquiferConnections leaf_;
+    const std::vector<Aquancon::AquancCell>& connections_;
+    std::size_t numDeckConnections_{};
+
+    int cellIndex_(const std::size_t idx) const
+    {
+        return (this->leaf_.leafCell[idx] >= 0)
+            ? this->leaf_.leafCell[idx]
+            : this->simulator_.vanguard().compressedIndex(this->connections_[idx].global_index);
+    }
 
     // Grid variables
     std::vector<Scalar> faceArea_connected_;

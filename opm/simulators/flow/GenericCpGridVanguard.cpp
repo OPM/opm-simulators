@@ -35,6 +35,8 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
+#include <opm/grid/cpgrid/refinement/GridStateWriter.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -55,9 +57,11 @@
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif //HAVE_DUNE_FEM
 
+#include <algorithm>
 #include <cassert>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -221,14 +225,46 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                 : schedule.getWellsatEnd()
             : std::vector<Well>{};
 
-        const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
-                // Mechanics couples cells across zero-transmissibility faces,
-                // so the overlap layer must not be pruned by transmissibility
-                // in mechanical runs (same reasoning as for thermal runs).
-                const bool useTransToFilterOverlap =
-                        !(eclState1.getSimulationConfig().isThermal() ||
-                            eclState1.getSimulationConfig().isTemp() ||
-                            eclState1.runspec().mech());
+        // NOTE: a mutable copy (upstream takes a const&): the LGR well
+        // anchoring below inserts additional entries.
+        auto possibleFutureConnections = schedule.getPossibleFutureConnections();
+        // Mechanics couples cells across zero-transmissibility faces,
+        // so the overlap layer must not be pruned by transmissibility
+        // in mechanical runs (same reasoning as for thermal runs).
+        const bool useTransToFilterOverlap =
+                !(eclState1.getSimulationConfig().isThermal() ||
+                    eclState1.getSimulationConfig().isTemp() ||
+                    eclState1.runspec().mech());
+        // Wells completed inside an LGR (COMPDATL) carry LGR-local connection
+        // (i,j,k) that WellConnections cannot place in the level-zero load-
+        // balance graph, so it skips them and the well is left unanchored. The
+        // partitioner may then put the well on a different rank than the one
+        // owning its (rank-interior) refinement box; the box's connection cells
+        // are then not found on the well's rank (ParallelWellInfo "cells not
+        // found", surfacing as a deadlock/failure at higher rank counts - works
+        // at np<=4 only by partition coincidence). Anchor each such well to its
+        // box's coarse parent cells (which the LGR partition cell groups keep on
+        // one rank) so the well lands on the box's rank.
+        if (mpiSize > 1) {
+            const auto& lgrs = eclState1.getLgrs();
+            if (lgrs.size() > 0) {
+                const auto cartDims = this->grid_->logicalCartesianSize();
+                for (const auto& well : wells) {
+                    auto& anchors = possibleFutureConnections[well.name()];
+                    for (const auto& conn : well.getConnections()) {
+                        // A connection carries its own LGR (deck number); a
+                        // coarse connection is already in the graph.
+                        const int n = conn.get_lgr_level();
+                        if (n <= 0 || static_cast<std::size_t>(n) > lgrs.size()) {
+                            continue;
+                        }
+                        const auto ijk = lgrs.levelZeroIJK(static_cast<std::size_t>(n),
+                                                           { conn.getI(), conn.getJ(), conn.getK() });
+                        anchors.insert(ijk[0] + cartDims[0] * (ijk[1] + cartDims[1] * ijk[2]));
+                    }
+                }
+            }
+        }
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
             this->distributeGrid(edgeWeightsMethod, ownersFirst,
@@ -467,7 +503,7 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
 
 template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::
-doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
+doCreateGrids_(const bool edge_conformal, const bool conformingLgr, EclipseState& eclState)
 {
     const auto isRoot = this->mpiRank == 0;
 
@@ -490,6 +526,10 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
 #else
     this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
+    // Chosen before processing, which keeps the corner-point input the Conforming builder needs.
+    if (conformingLgr) {
+        this->grid_->setLgrBackend(Opm::Refinement::Backend::Conforming);
+    }
 
     // Note: removed_cells is guaranteed to be empty on ranks other than 0.
     auto removed_cells = this->grid_
@@ -565,6 +605,9 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
     // simulation grid is distributed before the initial condition is
     // calculated.
     //
+    // Raised by the I/O reference grid's refinement, which runs on rank 0 alone.
+    std::string outputGridError{};
+
     // After loadbalance, grid_ will contain a global and distribute view.
     // equilGrid_ being a shallow copy only the global view.
     if (isRoot) {
@@ -572,9 +615,75 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
         this->equilCartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->equilGrid_);
 
+#if HAVE_MPI
+        // For a parallel run with LGRs, the simulation grid is refined only
+        // after distribution (rank-interior refinement) and equilGrid_ stays
+        // coarse.  ECL output gathers cell data onto the I/O rank using a
+        // reference grid, which must therefore carry the refined leaf cells.
+        // Build a self-communicator copy of the global grid and refine it
+        // locally - getCommunicator() in the refinement builder follows the
+        // grid's own communicator, so this is collective-free - giving the
+        // I/O rank the same full refined grid a serial run would have.
+        // equilGrid_ is left coarse for EQUIL; this is a separate grid used
+        // only for output.
+        if (this->grid_->comm().size() > 1 && input_grid != nullptr && conformingLgr) {
+            if (const auto& lgrs = eclState.getLgrs(); lgrs.size() > 0) {
+                // This backend refines from a retained corner-point
+                // description rather than from the grid itself, so hand the
+                // fresh grid the copy that grid_ (still undistributed here)
+                // is holding.  Without it there is nothing to refine from and
+                // the I/O rank is left without a refined reference grid.
+                auto retained = Opm::Refinement::GridStateWriter::retainedCornerPointInput(
+                    *this->grid_->currentData().front());
+                if (retained) try {
+                    auto outGrid = std::make_unique<Dune::CpGrid>(Dune::MPIHelper::getLocalCommunicator());
+                    outGrid->setLgrBackend(Opm::Refinement::Backend::Conforming);
+                    // Build it from the corner-point description grid_ was
+                    // built from, not from the input grid again: MINPV works by
+                    // collapsing ZCORN, and re-processing without an
+                    // EclipseState skips MINPV and PINCH altogether (their whole
+                    // block is gated on it). The reference grid then keeps cells
+                    // the simulation grid does not have, and gathering onto the
+                    // I/O rank leaves them claimed by no rank -- 399 of them on
+                    // Norne, being the 496 MINPV removed less the 97 inside the
+                    // refinement box, which the box refines away.
+                    const grdecl raw {
+                        { retained->dims[0], retained->dims[1], retained->dims[2] },
+                        retained->coord.data(),
+                        retained->zcorn.data(),
+                        retained->actnum.empty() ? nullptr : retained->actnum.data()
+                    };
+                    outGrid->processEclipseFormat(raw, retained->pinchNnc,
+                                                  retained->pinchActive,
+                                                  retained->edgeConformal);
+                    Opm::Refinement::GridStateWriter::setRetainedCornerPointInput(
+                        *outGrid->currentData().front(), retained);
+                    this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *outGrid);
+                    this->outputGrid_ = std::move(outGrid);
+                    this->outputCartesianIndexMapper_ =
+                        std::make_unique<CartesianIndexMapper>(*this->outputGrid_);
+                }
+                catch (const std::exception& e) {
+                    outputGridError = e.what();
+                }
+            }
+        }
+#endif
+
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*this->grid_));
         eclState.set_active_indices(this->grid_->globalCell());
     }
+
+#if HAVE_MPI
+    // Rank 0's refusal must stop every rank, which would otherwise wait below.
+    if (this->grid_->comm().size() > 1) {
+        Parallel::MpiSerializer ser(this->grid_->comm());
+        ser.broadcast(Parallel::RootRank{0}, outputGridError);
+        if (!outputGridError.empty()) {
+            OPM_THROW(std::invalid_argument, outputGridError);
+        }
+    }
+#endif
 
     {
         auto size = removed_cells.size();
@@ -601,10 +710,22 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
     std::vector<std::array<int,3>> startIJK_vec;
     std::vector<std::array<int,3>> endIJK_vec;
     std::vector<std::string> lgrName_vec;
+    std::vector<std::string> lgrParentName_vec;
     cells_per_dim_vec.reserve(lgrsSize);
     startIJK_vec.reserve(lgrsSize);
     endIJK_vec.reserve(lgrsSize);
     lgrName_vec.reserve(lgrsSize);
+    lgrParentName_vec.reserve(lgrsSize);
+    // A graded box (N*FIN/H*FIN) has no single subdivision factor, so it goes
+    // through the request-taking overload with its column tables. Boxes are
+    // graded per direction, and a direction the deck did not grade is left
+    // empty so it keeps the uniform path.
+    std::vector<Opm::Refinement::AxisSubdivision> subdivisions;
+    subdivisions.reserve(3*lgrsSize);
+    std::vector<std::vector<int>> minpvRemoved;
+    minpvRemoved.reserve(lgrsSize);
+    bool anyGraded = false;
+
     for (int lgr = 0; lgr < lgrsSize; ++lgr)
     {
         const auto lgrCarfin = lgrCollection.getLgr(lgr);
@@ -613,8 +734,103 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
         startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
         endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
         lgrName_vec.emplace_back(lgrCarfin.NAME());
+        lgrParentName_vec.emplace_back(lgrCarfin.PARENT_NAME());
+
+        anyGraded = anyGraded || lgrCarfin.isGraded();
+        minpvRemoved.push_back(lgrCarfin.minpvRemoved());
+        for (std::size_t dim = 0; dim < 3; ++dim) {
+            auto columns = lgrCarfin.refinedColumns(dim);
+            subdivisions.push_back(Opm::Refinement::AxisSubdivision{
+                std::move(columns.parentOffset),
+                std::move(columns.fracLo),
+                std::move(columns.fracHi) });
+        }
     }
-    grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+
+    // Common case: no nesting (every CARFIN refines GLOBAL). Take the exact
+    // original code path - the 4-arg call, no reordering, no parent vector -
+    // so single-level decks are completely unaffected by the nested-LGR
+    // machinery below.
+    const bool anyNested = std::any_of(lgrParentName_vec.begin(), lgrParentName_vec.end(),
+                                       [](const std::string& p) { return p != "GLOBAL"; });
+    // Build the requests from the pieces above; only a graded deck carries the
+    // column tables, so a uniform deck reaches the builder exactly as before.
+    const auto makeRequests = [&](const std::vector<int>& order) {
+        std::vector<Opm::Refinement::BlockRefinement> requests;
+        requests.reserve(order.size());
+        for (const int lgr : order) {
+            Opm::Refinement::BlockRefinement request;
+            request.name = lgrName_vec[lgr];
+            request.parentGridName = lgrParentName_vec[lgr];
+            request.cellsPerDim = cells_per_dim_vec[lgr];
+            request.startIJK = startIJK_vec[lgr];
+            request.endIJK = endIJK_vec[lgr];
+            if (anyGraded) {
+                for (std::size_t dim = 0; dim < 3; ++dim) {
+                    request.subdivision[dim] = subdivisions[3*lgr + dim];
+                }
+            }
+            request.minpvRemoved = minpvRemoved[lgr];
+            request.pillarsFromBoxLayer = lgrCollection.pillarsFromBoxLayer();
+            requests.push_back(std::move(request));
+        }
+        return requests;
+    };
+
+    if (!anyNested) {
+        std::vector<int> deckOrder(lgrsSize);
+        std::iota(deckOrder.begin(), deckOrder.end(), 0);
+        grid.addLgrsUpdateLeafView(makeRequests(deckOrder));
+        return;
+    }
+
+    // Order the LGRs so a parent grid is always added before its children: the
+    // conforming builder appends level grids in request order and resolves each
+    // box's parent by name, so a child must follow its parent. Use a STABLE
+    // topological order that preserves the deck order otherwise - a child is
+    // only deferred until after its parent. This matters because the level
+    // numbering produced here (CpGrid level = position in this order) must match
+    // opm-common's LGR numbering, which is the deck order: the per-LGR ECL
+    // output pairs each level's data with the LGR at the same position, so a
+    // depth-grouping sort (which reorders sibling top-level LGRs around a nested
+    // one) would mispair the output. A valid deck (parent before child) is left
+    // exactly in deck order.
+    std::map<std::string,int> indexOfName;
+    for (int i = 0; i < lgrsSize; ++i) {
+        indexOfName[lgrName_vec[i]] = i;
+    }
+    const auto parentIndex = [&](int i) -> int {
+        if (lgrParentName_vec[i] == "GLOBAL") {
+            return -1;
+        }
+        const auto it = indexOfName.find(lgrParentName_vec[i]);
+        return (it == indexOfName.end()) ? -1 : it->second;  // unknown parent: builder reports it
+    };
+    std::vector<int> order;
+    order.reserve(lgrsSize);
+    std::vector<char> placed(lgrsSize, 0);
+    bool progress = true;
+    while (static_cast<int>(order.size()) < lgrsSize && progress) {
+        progress = false;
+        for (int i = 0; i < lgrsSize; ++i) {           // deck order within each pass
+            if (placed[i]) {
+                continue;
+            }
+            const int p = parentIndex(i);
+            if (p < 0 || placed[p]) {                  // parent is GLOBAL/unknown or already placed
+                order.push_back(i);
+                placed[i] = 1;
+                progress = true;
+            }
+        }
+    }
+    for (int i = 0; i < lgrsSize; ++i) {               // any leftovers (cycle): builder reports it
+        if (!placed[i]) {
+            order.push_back(i);
+        }
+    }
+
+    grid.addLgrsUpdateLeafView(makeRequests(order));
 };
 
 template<class ElementMapper, class GridView, class Scalar>
@@ -646,6 +862,23 @@ GenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilCartesianIndexMapper(
     assert(mpiRank == 0);
     assert(equilCartesianIndexMapper_);
     return *equilCartesianIndexMapper_;
+}
+
+template<class ElementMapper, class GridView, class Scalar>
+const Dune::CpGrid&
+GenericCpGridVanguard<ElementMapper,GridView,Scalar>::eclOutputGrid() const
+{
+    assert(mpiRank == 0);
+    return outputGrid_ ? *outputGrid_ : *equilGrid_;
+}
+
+template<class ElementMapper, class GridView, class Scalar>
+const Dune::CartesianIndexMapper<Dune::CpGrid>&
+GenericCpGridVanguard<ElementMapper,GridView,Scalar>::eclOutputCartesianIndexMapper() const
+{
+    assert(mpiRank == 0);
+    return outputCartesianIndexMapper_ ? *outputCartesianIndexMapper_
+                                       : *equilCartesianIndexMapper_;
 }
 
 template<class ElementMapper, class GridView, class Scalar>

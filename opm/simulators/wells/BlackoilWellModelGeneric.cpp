@@ -522,9 +522,7 @@ initializeWellPerfData()
 
         for (const auto& connection : well.getConnections()) {
 
-            const int active_index = well.is_lgr_well()
-                ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
-                : this->compressedIndexForInterior(connection.global_index());
+            const int active_index = this->compressedIndexForConnection(connection);
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 
@@ -577,7 +575,10 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        checker.checkAllConnectionsFound();
+        // The verdict is reduced over the ranks, so every rank stops together.
+        if (const auto [found, msg] = checker.checkAllConnectionsFound(); !found) {
+            OPM_THROW(std::runtime_error, msg);
+        }
 
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
@@ -2006,9 +2007,7 @@ getCellsForConnections(const Well& well) const
 
     for (const auto& connection : connectionSet)
     {
-        int compressed_idx = well.is_lgr_well()
-            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
-            : this->compressedIndexForInterior(connection.global_index());
+        int compressed_idx = this->compressedIndexForConnection(connection);
 
         if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
             wellCells.push_back(compressed_idx);

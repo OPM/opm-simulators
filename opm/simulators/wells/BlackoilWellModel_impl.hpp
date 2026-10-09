@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #endif
 
+#include <opm/grid/LookUpData.hh>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/Actions.hpp>
@@ -320,9 +321,19 @@ namespace Opm {
             // Define per region average pressure calculators for use by
             // pressure maintenance groups (GPMAINT keyword).
             if (this->schedule()[reportStepIdx].has_gpmaint()) {
+                // The calculator indexes its region array by simulation cell,
+                // so map the input-grid array onto the leaf first -- identity
+                // without LGRs, but a refined grid is longer than the array.
+                const auto& fp = this->eclState_.fieldProps();
+                using LeafGridView = GetPropType<TypeTag, Properties::GridView>;
+                const LookUpData<Grid, LeafGridView> lookUpData(simulator_.gridView());
                 this->groupStateHelper().setRegionAveragePressureCalculator(
                     fieldGroup,
-                    this->eclState_.fieldProps(),
+                    [&fp, &lookUpData](const std::string& name)
+                    {
+                        return lookUpData.template assignFieldPropsIntOnLeaf<int>
+                            (fp, name, /*needsTranslation=*/false);
+                    },
                     this->regionalAveragePressureCalculator_
                 );
             }
@@ -1763,6 +1774,25 @@ namespace Opm {
             for (int perfcell : perfcells) {
                 jacobian.entry(wdof, perfcell) = 0.0;
                 jacobian.entry(perfcell, wdof) = 0.0;
+            }
+        }
+
+        // The reservation above keys on getMaxWellConnections(), whose
+        // schedule-derived cell indices can differ from a well's *actual*
+        // perforation cells when those were recomputed against a refined (LGR)
+        // leaf — e.g. WELTRAJ/COMPTRAJ wells on a CARFIN grid. The value phase
+        // (StandardWellEquations::extractCPRPressureMatrix) writes the coupling
+        // at well->cells() and (local_num_cells_ + well->indexOfWell()), so
+        // reserve exactly those entries here too. Otherwise extract writes an
+        // entry the sparsity never reserved -> "index N not in compressed
+        // array". Reserving extra (possibly already-present) entries is a no-op
+        // for non-LGR/COMPDATL wells.
+        for (const auto& well : well_container_) {
+            const int wdof = rdofs + well->indexOfWell();
+            jacobian.entry(wdof, wdof) = 0.0;
+            for (const int cell : well->cells()) {
+                jacobian.entry(wdof, cell) = 0.0;
+                jacobian.entry(cell, wdof) = 0.0;
             }
         }
     }
