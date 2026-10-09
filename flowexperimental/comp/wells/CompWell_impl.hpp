@@ -499,7 +499,8 @@ updateConnectionQuantities(SingleWellState& well_state) const
         const Scalar surface_rate = mass_rate / surface_density;
         const auto rates = std::span{conn_data.surface_phase_rates}.subspan(con * np, np);
         if (well_state.producer) {
-            for (int p = 0; p < np; ++p) {
+            // the surface conditions cover the oil and gas phases only
+            for (int p = 0; p < SurfaceConditons::num_phases; ++p) {
                 rates[p] = surface_rate * getValue(surface_cond.volume_fractions_[p]);
             }
         } else {
