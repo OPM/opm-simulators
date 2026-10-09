@@ -279,6 +279,22 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             });
 
 #if HAVE_CUDA
+        if constexpr (V::block_type::dimension <= max_gpu_instantiated_block_size) {
+            addGpuPreconditioners();
+        }
+#endif // HAVE_CUDA
+    }
+
+#if HAVE_CUDA
+    static void addGpuPreconditioners()
+    {
+        using O = Operator;
+        using C = Dune::Amg::SequentialInformation;
+        using F = PreconditionerFactory<O, C>;
+        using M = typename F::Matrix;
+        using V = typename F::Vector;
+        using P = PropertyTree;
+
         // Here we create the *wrapped* GPU preconditioners
         // meaning they will act as CPU preconditioners on the outside,
         // but copy data back and forth to the GPU as needed.
@@ -378,8 +394,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
-#endif // HAVE_CUDA
     }
+#endif // HAVE_CUDA
 };
 
 

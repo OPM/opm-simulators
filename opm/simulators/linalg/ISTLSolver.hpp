@@ -167,11 +167,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         using ElementChunksType = ElementChunks<GridView, Dune::Partitions::All>;
+        using FluidState = typename GetPropType<TypeTag, Properties::IntensiveQuantities>::FluidState;
 
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
         static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
         constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
+
+        // The analytic true-IMPES weights are built from black-oil formation volume factors.
+        constexpr static bool hasAnalyticImpesWeights = requires (const FluidState& fs) { fs.invB(0); };
 
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
@@ -663,20 +667,26 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                             return weights;
                         };
                 } else if  (weightsType == "trueimpesanalytic" ) {
-                    weightsCalculator =
-                        [this, pressIndex, enableThreadParallel]
-                        {
-                            Vector weights(rhs_->size());
-                            ElementContext elemCtx(simulator_);
-                            Amg::getTrueImpesWeightsAnalytic(pressIndex,
-                                                             weights,
-                                                             elemCtx,
-                                                             simulator_.model(),
-                                                             *element_chunks_,
-                                                             enableThreadParallel
-                            );
-                            return weights;
-                        };
+                    if constexpr (hasAnalyticImpesWeights) {
+                        weightsCalculator =
+                            [this, pressIndex, enableThreadParallel]
+                            {
+                                Vector weights(rhs_->size());
+                                ElementContext elemCtx(simulator_);
+                                Amg::getTrueImpesWeightsAnalytic(pressIndex,
+                                                                 weights,
+                                                                 elemCtx,
+                                                                 simulator_.model(),
+                                                                 *element_chunks_,
+                                                                 enableThreadParallel
+                                );
+                                return weights;
+                            };
+                    } else {
+                        OPM_THROW(std::invalid_argument,
+                                  "Weights type trueimpesanalytic needs the black-oil model."
+                                  " Please use quasiimpes or trueimpes.");
+                    }
                 } else {
                     OPM_THROW(std::invalid_argument,
                               "Weights type " + weightsType +

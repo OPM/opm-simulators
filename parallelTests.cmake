@@ -35,7 +35,9 @@ add_test_compare_parallel_simulation(
   DEV_SIMULATOR
     flow_comp3_2p
   # Check explicit ZMF distribution and wells owned by different ranks.
-  # Use the compositional tolerances for summary and restart comparisons.
+  # Use the compositional tolerances for summary and restart comparisons,
+  # and a linear reduction tight enough for the parallel run to take the
+  # same Newton iterations as the sequential one.
   ABS_TOL
     1e-3
   REL_TOL
@@ -44,6 +46,8 @@ add_test_compare_parallel_simulation(
     compositional
   MPI_PROCS
     2
+  TEST_ARGS
+    --linear-solver-reduction=1e-3
 )
 
 add_test_compare_parallel_simulation(
@@ -55,7 +59,8 @@ add_test_compare_parallel_simulation(
     flow_comp
   # Hydrocarbon flowing into cells that hold water alone, with the column cut into
   # four parts so that the linear solve is inexact. With the TUNING minimum time step,
-  # a stalled Newton iteration aborts the run.
+  # a stalled Newton iteration aborts the run. The linear reduction is tight enough
+  # for the parallel run to take the same Newton iterations as the sequential one.
   ABS_TOL
     1e-3
   REL_TOL
@@ -66,6 +71,7 @@ add_test_compare_parallel_simulation(
     4
   TEST_ARGS
     --enable-tuning=true
+    --linear-solver-reduction=1e-3
 )
 
 add_test_compare_parallel_simulation(

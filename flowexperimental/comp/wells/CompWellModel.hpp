@@ -20,6 +20,7 @@
 #ifndef OPM_COMPOSITIONAL_WELL_MODEL_HPP
 #define OPM_COMPOSITIONAL_WELL_MODEL_HPP
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
@@ -40,6 +41,8 @@
 
 #include <cstddef>
 #include <map>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -146,6 +149,27 @@ public:
     const Schedule& schedule() const { return schedule_; }
     auto begin() const { return well_container_.begin(); }
     auto end() const { return well_container_.end(); }
+    bool empty() const { return well_container_.empty(); }
+
+    // For the linear solver's well operator. The wells add no equations to
+    // the CPR pressure system, so cprw works as cpr.
+    int numLocalWellsEnd() const { return 0; }
+
+    template <class PressureMatrix, class Vector>
+    void addWellPressureEquations(PressureMatrix&, const Vector&, const bool) const {}
+
+    template <class PressureMatrix>
+    void addWellPressureEquationsStruct(PressureMatrix&) const {}
+
+    template <class PressureMatrix, class Vector>
+    void addWellPressureEquationsDomain(PressureMatrix&, const Vector&, const bool, const int) const
+    { OPM_THROW(std::logic_error, "NLDD is not supported for compositional wells"); }
+
+    const std::vector<std::vector<int>>& well_local_cells() const
+    { OPM_THROW(std::logic_error, "NLDD is not supported for compositional wells"); }
+
+    const std::map<std::string, int>& well_domain() const
+    { OPM_THROW(std::logic_error, "NLDD is not supported for compositional wells"); }
 
     const SimulatorReportSingle& lastReport() const { return last_report_; }
     void prepareDeserialize(const int) {}

@@ -31,7 +31,7 @@
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
 
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+#include <opm/simulators/linalg/ISTLSolver.hpp>
 
 #include <flowexperimental/comp/EmptyModel.hpp>
 #include <flowexperimental/comp/wells/CompWellModel.hpp>
@@ -79,6 +79,16 @@ private:
 public:
     using type = typename Linear::IstlSparseMatrixAdapter<Block>;
 };
+
+template<class TypeTag, int NumComp, bool EnableWater>
+struct LinearSolverSplice<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ using type = TTag::FlowIstlSolver; };
+
+// ISTLSolver itself: the runtime proxy would also instantiate the black-oil
+// system solver for the configurations with three equations.
+template<class TypeTag, int NumComp, bool EnableWater>
+struct LinearSolverBackend<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ using type = ISTLSolver<TypeTag>; };
 
 // NOTE: Do NOT override NewtonMethod here.
 // The inherited model configuration decides the solver implementation.

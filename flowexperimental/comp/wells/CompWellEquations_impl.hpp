@@ -147,6 +147,20 @@ apply(BVector& r) const
 template <typename Scalar, int numWellEq, int numEq>
 void
 CompWellEquations<Scalar, numWellEq, numEq>::
+apply(const BVector& x, BVector& Ax) const
+{
+    // Bx_ = duneB_ * x
+    duneB_.mv(x, Bx_);
+    // invDBx = invDuneD_ * Bx_, reusing invDrw_ as scratch
+    auto& invDBx = invDrw_;
+    invDuneD_.mv(Bx_, invDBx);
+    // Ax = Ax - duneC_^T * invDBx
+    duneC_.mmtv(invDBx, Ax);
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
