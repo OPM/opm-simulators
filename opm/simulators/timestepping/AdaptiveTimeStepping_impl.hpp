@@ -657,7 +657,21 @@ getRcMasterSyncStepLength_(double prev_step,
         current_step_length = prev_step;
     } else {
         const double remaining = step_end_time - current_time;
-        current_step_length = std::min({suggestedNextTimestep_(), maxTimeStep_(), remaining});
+        // GRUPMAST item 4: the previous sync step's flow changes may restrict this step
+        const double flow_limit = reservoirCouplingMaster_().flowChangeTimeStepLimit();
+        current_step_length = std::min({suggestedNextTimestep_(), maxTimeStep_(), remaining, flow_limit});
+        if (current_step_length == flow_limit) {
+            // Like AdaptiveSimulatorTimer::provideTimeStepEstimate(), but against the next slave
+            // report date: avoid a very short step in front of it. The step is only lengthened to
+            // reach the report date if it is already within the limits chosen above.
+            const double to_slave_report = reservoirCouplingMaster_().maybeChopSubStep(remaining, current_time);
+            if (current_step_length >= to_slave_report) {
+                current_step_length = to_slave_report;
+            }
+            else if (1.5 * current_step_length > to_slave_report) {
+                current_step_length = 0.5 * to_slave_report;
+            }
+        }
         // NOTE: The substep timer is later constructed (in the caller) with
         //  current_step_length as its span, and after construction,
         //  substep_timer.currentStepLength() should return the same as
@@ -723,8 +737,9 @@ reservoirCouplingSlave_()
 //       Provided as a developer escape hatch.
 //
 // In both modes the sync step is also limited so as not to overshoot the next slave report date
-// (`maybeChopSubStep`).  A second, drift-based limit (GRUPMAST item 4 / RCMASTS) is parsed but not
-// yet honored — tracked as a follow-up PR.
+// (`maybeChopSubStep`).  A second, drift-based limit (GRUPMAST item 4 / RCMASTS) restricts the next
+// sync step from the previous sync step's group flow changes (TSYNC only).  It is retrospective: a step
+// that exceeds the limit is not chopped.
 //
 // Per sync step:
 //   - Master receives each activated slave's next report date (`receiveNextReportDateFromSlaves`).

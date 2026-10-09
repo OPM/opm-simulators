@@ -29,6 +29,10 @@
 
 #include <mpi.h>
 
+#include <array>
+#include <limits>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -263,6 +267,28 @@ public:
     /// being processed.
     void setReportStepIdx(int report_step_idx);
 
+    /// @brief Remember the flow rates of the master groups as they stand now
+    /// @details Called just before the end-of-sync-step slave data is received. The rates then
+    ///   held are the ones the slaves reported after their initial well solve at the start of
+    ///   the sync step, so well changes at the start of the step do not count as flow changes.
+    void saveGroupFlowsAtStartOfSyncStep();
+
+    /// @brief Set the length of the sync step that is about to be taken
+    void setSyncStepLength(Scalar length) { sync_step_length_ = length; }
+
+    /// @brief Update the flow-change time step limit (GRUPMAST item 4, RCMASTS)
+    /// @details Compares the master group flow rates received at the end of the sync step with
+    ///   those saved by saveGroupFlowsAtStartOfSyncStep(). For each master group with a limiting
+    ///   fraction, the next sync step is limited to the step length times the limiting fraction
+    ///   divided by the largest fractional change of the group's reservoir production rate and
+    ///   phase injection rates, but never below the RCMASTS minimum or the TUNING TSMINZ. The step just taken is not
+    ///   redone.
+    void updateFlowChangeTimeStepLimit();
+
+    /// @brief Upper limit for the next sync step length from GRUPMAST item 4 (in seconds)
+    /// @return Infinity if no group limits the flow change
+    Scalar flowChangeTimeStepLimit() const { return flow_change_time_step_limit_; }
+
     /// @brief Collect production/injection rates for all master groups.
     /// @return ReservoirCouplingGroupRates struct with per-group rates.
     data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
@@ -280,6 +306,15 @@ public:
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
 private:
+    /// Flow rates of a master group used for the flow-change time step limit
+    struct GroupFlows {
+        Scalar production_reservoir{};
+        std::array<Scalar, 3> injection_surface{};
+    };
+
+    /// @brief Get the flow rates of a master group
+    GroupFlows getMasterGroupFlows_(const std::string& group_name) const;
+
     /// @brief Get a rate for a master group (helper for the public rate getters)
     /// @param group_name Name of the master group
     /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
@@ -310,6 +345,15 @@ private:
     /// on the first converged substep, so that the data is available for
     /// evalSummaryState() and all subsequent substeps of the same sync step.
     bool needs_slave_data_receive_{false};
+
+    /// Group flows saved by saveGroupFlowsAtStartOfSyncStep() (map key: master group name)
+    std::map<std::string, GroupFlows> group_flows_at_start_of_sync_step_;
+
+    /// Length of the current sync step (in seconds)
+    Scalar sync_step_length_{0};
+
+    /// Limit on the next sync step length from the flow change (in seconds)
+    Scalar flow_change_time_step_limit_{std::numeric_limits<Scalar>::infinity()};
 };
 } // namespace Opm
 #endif // OPM_RESERVOIR_COUPLING_MASTER_REPORT_STEP_HPP
