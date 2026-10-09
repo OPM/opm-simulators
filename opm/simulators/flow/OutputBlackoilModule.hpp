@@ -70,8 +70,11 @@
 #include <functional>
 #include <limits>
 #include <map>
+#include <fmt/format.h>
+
 #include <set>
 #include <span>
+#include <unordered_set>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -185,6 +188,10 @@ public:
         // region - before anything looks at them.  Identity without LGRs.
         this->mapRegionsOntoLeaf_();
 
+        // Before createLocalRegion_ zeroes the non-interior cells: a flow
+        // across the process boundary needs the region of both cells.
+        this->setupInterRegionFlowsOnLeaf_(simulator_.gridView().size(0));
+
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
         }
@@ -194,6 +201,7 @@ public:
         };
 
         this->setupBlockData(isCartIdxOnThisRank);
+        this->warnBlockDataInsideLgr_();
 
         // Allocate slots for LB* summary nodes that name a cell inside an LGR.
         // Runs per-rank (serial and parallel): each rank allocates only the LGR
@@ -224,6 +232,64 @@ public:
             [&ownedLgrCells](const int level, const int levelCart) {
                 return ownedLgrCells.count(std::make_pair(level, levelCart)) > 0;
             });
+
+        // A plain B* block vector addressing a coarse cell that a CARFIN box
+        // refined away cannot be evaluated: that cell no longer exists on the
+        // leaf grid, so the vector would silently stay at zero.  Drop the
+        // slot and warn (the warning is also recorded in the .DBG file);
+        // cells inside an LGR are addressed with the LB* keyword form.
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            if (simulator.vanguard().grid().maxLevel() > 0) {
+                const auto& lgrs = simulator.vanguard().eclState().getLgrs();
+                // The input grid exists on rank 0 only.
+                const auto& dims = simulator.vanguard().cartesianDimensions();
+                const int nx = dims[0];
+                const int ny = dims[1];
+                // Deck-declared boxes are replicated on every rank, so this
+                // classification is identical everywhere (nested LGR boxes
+                // address their parent LGR's local space and are inside the
+                // parent's global box anyway).
+                const auto refinedBy = [&lgrs, nx, ny](const int cartIdx) -> std::string {
+                    const int i = cartIdx % nx;
+                    const int j = (cartIdx / nx) % ny;
+                    const int k = cartIdx / (nx * ny);
+                    for (std::size_t l = 0; l < lgrs.size(); ++l) {
+                        const auto& box = lgrs.getLgr(l);
+                        if (box.PARENT_NAME() != "GLOBAL") {
+                            continue;
+                        }
+                        if (i >= box.I1() && i <= box.I2()
+                            && j >= box.J1() && j <= box.J2()
+                            && k >= box.K1() && k <= box.K2()) {
+                            return box.NAME();
+                        }
+                    }
+                    return {};
+                };
+                for (const auto& node : smryCfg) {
+                    if (node.category() != SummaryConfigNode::Category::Block
+                        || node.lgr_name().has_value()) {
+                        continue;
+                    }
+                    const int cartIdx = node.number() - 1;
+                    const auto lgrName = refinedBy(cartIdx);
+                    if (lgrName.empty()) {
+                        continue;
+                    }
+                    this->blockData_.erase({node.keyword(), node.number()});
+                    if (collectOnIORank.isIORank()) {
+                        OpmLog::warning("Summary block vector " + node.keyword()
+                            + " at cell (" + std::to_string(cartIdx % nx + 1)
+                            + "," + std::to_string((cartIdx / nx) % ny + 1)
+                            + "," + std::to_string(cartIdx / (nx * ny) + 1)
+                            + ") addresses a cell refined away by CARFIN LGR '" + lgrName
+                            + "'; the vector is skipped and will report zero. "
+                              "Use the LGR block form (LB*) to address cells "
+                              "inside the refinement.");
+                    }
+                }
+            }
+        }
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
@@ -918,6 +984,53 @@ private:
 
         if (this->computeFip_) {
             this->updatePhaseInplaceVolumes_(globalDofIdx, intQuants, totVolume);
+        }
+    }
+
+    // A B* vector naming a cell inside a CARFIN box reads zero for the whole run:
+    // the coarse cell is not on the leaf grid, so nothing ever writes its slot,
+    // and the refined cells that took its place are reachable only through the
+    // LB* vectors.  A flat zero curve is easy to mistake for a physical result.
+    void warnBlockDataInsideLgr_()
+    {
+        if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+            if (this->simulator_.vanguard().grid().maxLevel() == 0) {
+                return;
+            }
+
+            const auto& vanguard = this->simulator_.vanguard();
+            auto onLeaf = std::unordered_set<int>{};
+            const auto& gv = this->simulator_.gridView();
+            const auto mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>
+                { gv, Dune::mcmgElementLayout() };
+            for (const auto& elem : elements(gv)) {
+                if (elem.level() == 0) {
+                    onLeaf.insert(vanguard.cartesianIndex(mapper.index(elem)));
+                }
+            }
+
+            auto refined = std::set<std::pair<std::string,int>>{};
+            for (const auto& [key, value] : this->blockData_) {
+                if (onLeaf.find(key.second - 1) == onLeaf.end()) {
+                    refined.insert(key);
+                }
+            }
+            if (refined.empty()) {
+                return;
+            }
+
+            auto names = std::string{};
+            const auto& dims = vanguard.cartesianDimensions();
+            for (const auto& [kw, num] : refined) {
+                const int c = num - 1;
+                names += fmt::format("\n  {}:{},{},{}", kw, c % dims[0] + 1,
+                                     (c / dims[0]) % dims[1] + 1, c / (dims[0] * dims[1]) + 1);
+            }
+            OpmLog::warning(fmt::format
+                            ("{} block summary vector(s) name a cell inside a refined (CARFIN) "
+                             "box. That cell is not part of the simulation grid, so these "
+                             "vectors stay zero for the whole run; use the LB* vectors with the "
+                             "LGR name and its local IJK instead.{}", refined.size(), names));
         }
     }
 

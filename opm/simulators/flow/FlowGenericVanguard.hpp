@@ -79,6 +79,11 @@ struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
 struct EdgeConformal { static constexpr bool value = false; };
 
+/// Refine a CpGrid's LGRs with upstream's trilinear code or the corner-point conforming builder.
+struct LgrBackend { static constexpr auto value = "trilinear"; };
+/// Conforming backend only: refine before load balancing and distribute the refined leaf.
+struct RefineBeforeRedistribute { static constexpr bool value = false; };
+
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
 
@@ -257,6 +262,12 @@ public:
     bool edgeConformal() const
     { return edgeConformal_; }
 
+    bool refineBeforeRedistribute() const
+    { return refineBeforeRedistribute_; }
+
+    const std::string& lgrBackend() const
+    { return lgrBackend_; }
+
 #if HAVE_MPI
     bool addCorners() const
     { return addCorners_; }
@@ -371,6 +382,8 @@ protected:
 
     bool ownersFirst_;
     bool edgeConformal_;
+    bool refineBeforeRedistribute_;
+    std::string lgrBackend_;
 
 #if HAVE_MPI
     bool addCorners_;

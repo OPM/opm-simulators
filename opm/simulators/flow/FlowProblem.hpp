@@ -1436,6 +1436,15 @@ protected:
             // grid's transmissibilities on the I/O rank -- except with LGRs, below.
             if (simulator.vanguard().grid().comm().size() > 1) {
                 bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
+                // A parallel LGR run writes from the I/O rank's refined
+                // reference grid; the transmissibility must live there too.
+                if constexpr (requires { simulator.vanguard().eclOutputTransmissibility(); }) {
+                    if (wholeGridTransNeeded) {
+                        eclWriter.setTransmissibilities(&simulator.vanguard().eclOutputTransmissibility());
+                    }
+                    wholeGridTransNeeded = false;
+                }
+                else
                 // Parallel LGR: reuse the simulator's own (distributed) transmissibilities for the
                 // INIT output -- each rank contributes its interior connections, gathered on the
                 // I/O rank and keyed by level-Cartesian indices so the output walk over the global

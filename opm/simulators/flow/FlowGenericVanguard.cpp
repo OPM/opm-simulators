@@ -137,6 +137,13 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
     ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
     edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
+    refineBeforeRedistribute_ = Parameters::Get<Parameters::RefineBeforeRedistribute>();
+    lgrBackend_ = Parameters::Get<Parameters::LgrBackend>();
+    if (lgrBackend_ != "trilinear" && lgrBackend_ != "conforming") {
+        throw std::invalid_argument(fmt::format("Unknown value for --lgr-backend: '{}'. "
+                                                "Accepted values are 'trilinear' and 'conforming'.",
+                                                lgrBackend_));
+    }
 
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
@@ -479,6 +486,14 @@ void FlowGenericVanguard::registerParameters_()
         ("Order cells owned by rank before ghost/overlap cells.");
     Parameters::Register<Parameters::EdgeConformal>
         ("Edge conformal cornerpoint processing.");
+    Parameters::Register<Parameters::LgrBackend>
+        ("How LGRs are refined: 'trilinear' (default) or 'conforming', the "
+         "corner-point builder that also handles graded boxes, block MINPV, "
+         "faults and LGRPILLR.");
+    Parameters::Register<Parameters::RefineBeforeRedistribute>
+        ("With --lgr-backend=conforming: refine the grid before load "
+         "balancing and distribute the refined cells, balanced by refined "
+         "cell count, instead of refining each box on its owning rank.");
 
 #if HAVE_MPI
     Parameters::Register<Parameters::AddCorners>

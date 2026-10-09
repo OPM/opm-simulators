@@ -36,6 +36,8 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
+#include <opm/grid/LookUpData.hh>
+
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
@@ -444,14 +446,12 @@ public:
         // also updated.
         this->eclWriter().mutableOutputModule().invalidateLocalData();
 
-        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
-        const auto& grid = this->simulator().vanguard().gridView().grid();
-
-        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
-        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        if (!isCpGrid || (grid.maxLevel() == 0)) {
-            this->eclWriter_->evalSummaryState(!this->episodeWillBeOver());
-        }
+        // Evaluate the summary state for CpGrid with LGRs as well.  In serial
+        // the CollectDataOnIORank maps are the identity and the leaf-grid data
+        // is written directly; in parallel the name-keyed summary data (wells,
+        // groups, region values) is gathered to the I/O rank while cell-based
+        // restart/block output on refined grids is still being wired up.
+        this->eclWriter_->evalSummaryState(!this->episodeWillBeOver());
 
         {
             OPM_TIMEBLOCK(applyActions);
@@ -561,16 +561,10 @@ public:
         // the initial solution.
         this->thresholdPressures_.finishInit();
 
-        // For CpGrid with LGRs, ecl-output is not supported yet.
-        const auto& grid = this->simulator().vanguard().gridView().grid();
-
-        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
-        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        // Skip - for now -  calculate the initial fip values for CpGrid with LGRs.
-        if (!isCpGrid || (grid.maxLevel() == 0)) {
-            if (this->simulator().episodeIndex() == 0) {
-                eclWriter_->writeInitialFIPReport();
-            }
+        // Compute the initial FIP report (also for CpGrid with LGRs) so the
+        // in-place reference values are available for the summary balance.
+        if (this->simulator().episodeIndex() == 0) {
+            eclWriter_->writeInitialFIPReport();
         }
     }
 
@@ -1030,6 +1024,19 @@ public:
             this->bioeffects_ = this->eclWriter_->outputModule().getBioeffects().getSolution();
         }
 
+        // TEMPI is given on the input grid while the loop below indexes by leaf
+        // cell; map it across once (identity without LGRs) rather than reading
+        // past the end of the input-grid array for every refined cell.
+        std::vector<double> tempiOnLeaf{};
+        if constexpr (energyModuleType != EnergyModules::NoTemperature) {
+            if (eclState.runspec().co2Storage() || eclState.runspec().h2Storage()) {
+                using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
+                const LookUpData<LeafGrid, GridView> lookUpData(simulator.gridView());
+                tempiOnLeaf = lookUpData
+                    .assignFieldPropsDoubleOnLeaf(eclState.fieldProps(), "TEMPI");
+            }
+        }
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = this->initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
@@ -1062,8 +1069,7 @@ public:
                 bool needTemperature = rspec.co2Storage() || rspec.h2Storage()
                     || rspec.co2Sol() || rspec.h2Sol();
                 if (needTemperature) {
-                    const auto& fp = simulator.vanguard().eclState().fieldProps();
-                    elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+                    elemFluidState.setTemperature(tempiOnLeaf[elemIdx]);
                 }
             }
 
@@ -1228,9 +1234,18 @@ protected:
 
     void readEclRestartSolution_()
     {
-        // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.
-        if(this->simulator().vanguard().grid().maxLevel() > 0) {
-            throw std::invalid_argument("Refined grids are not yet supported for restart ");
+        // Restarting a refined run reads the solution section each level was
+        // written to and puts the leaf back together. In parallel the reference
+        // grid holding that leaf ordering exists only on the I/O rank, and
+        // handing the assembled solution to the others is not solved yet, so
+        // say so rather than fail somewhere further in.
+        if ((this->simulator().vanguard().grid().maxLevel() > 0) &&
+            (this->simulator().vanguard().grid().comm().size() > 1))
+        {
+            throw std::invalid_argument {
+                "Restarting a run with LGRs is supported on a single MPI process "
+                "only. Run the restart in serial, or drop the refinement."
+            };
         }
 
         // Set the start time of the simulation
@@ -1322,6 +1337,18 @@ protected:
 
         initialFluidStates_.resize(numDof);
 
+        // The arrays below are given on the (unrefined) input grid but are read
+        // per leaf cell.  Refinement makes the leaf longer, so map them across --
+        // a refined cell inherits its parent cell's value.  Reading the input-grid
+        // array by leaf index instead runs off its end, and the refined cells come
+        // up initialised from whatever follows in memory; the run then fails to
+        // converge on step one, which reads as a solver problem rather than an
+        // initialisation one.  LookUpData is the identity without LGRs.
+        using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
+        const LookUpData<LeafGrid, GridView> lookUpData(this->simulator().gridView());
+        const auto onLeaf = [&lookUpData, &fp](const std::string& kw)
+        { return lookUpData.assignFieldPropsDoubleOnLeaf(fp, kw); };
+
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
         std::vector<double> pressureData;
@@ -1334,38 +1361,38 @@ protected:
         std::vector<double> saltpData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-            waterSaturationData = fp.get_double("SWAT");
+            waterSaturationData = onLeaf("SWAT");
         else
             waterSaturationData.resize(numDof);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = fp.get_double("SGAS");
+            gasSaturationData = onLeaf("SGAS");
         else
             gasSaturationData.resize(numDof);
 
-        pressureData = fp.get_double("PRESSURE");
+        pressureData = onLeaf("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_double("RS");
+            rsData = onLeaf("RS");
 
         if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
-            rswData = fp.get_double("RSW");
+            rswData = onLeaf("RSW");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_double("RV");
+            rvData = onLeaf("RV");
 
         if (FluidSystem::enableVaporizedWater())
-            rvwData = fp.get_double("RVW");
+            rvwData = onLeaf("RVW");
 
         // initial reservoir temperature
-        tempiData = fp.get_double("TEMPI");
+        tempiData = onLeaf("TEMPI");
 
         // initial salt concentration data
         if constexpr (enableBrine)
-            saltData = fp.get_double("SALT");
+            saltData = onLeaf("SALT");
 
         // initial precipitated salt saturation data
         if constexpr (enableSaltPrecipitation)
-            saltpData = fp.get_double("SALTP");
+            saltpData = onLeaf("SALTP");
 
         // calculate the initial fluid states
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
@@ -1705,6 +1732,26 @@ protected:
     HybridNewton hybridNewton_;
 
 private:
+    /// Whether ECL summary/FIP evaluation is wired up for this grid
+    /// configuration.
+    ///
+    /// The only unsupported case is a *distributed* CpGrid with LGRs:
+    /// CollectDataOnIORank does not build its index maps for a distributed
+    /// refined grid yet.  In serial the index maps are the identity and the
+    /// leaf-grid well/cell data is written directly, so refined serial runs
+    /// are fine.  Kept in one place so no call site can miss a condition.
+    bool eclOutputEvalSupported_() const
+    {
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+
+        return !isCpGrid
+            || (grid.maxLevel() == 0)
+            || (grid.comm().size() == 1);
+    }
+
     /// Whether or not the current epsiode will end at the end of the
     /// current time step.
     ///

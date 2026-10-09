@@ -113,6 +113,16 @@ public:
                              const NewtonIterationContext& iter_ctx);
 
     virtual ~BlackoilWellModelGeneric() = default;
+    /// Leaf cell of a connection: its own LGR when it carries a grid number,
+    /// the global grid otherwise.
+    virtual int compressedIndexForConnection(const Connection& conn) const
+    {
+        if (conn.get_lgr_level() > 0) {
+            throw std::runtime_error("compressedIndexForConnection: LGR connections need a CpGrid vanguard");
+        }
+        return this->compressedIndexForInterior(conn.global_index());
+    }
+
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
                                               [[maybe_unused]] const Connection& conn) const
     {

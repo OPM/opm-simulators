@@ -507,6 +507,10 @@ protected:
 
     static Scalar sum(const ScalarBuffer& v);
 
+    // Rebuild the inter-region flow map from regions_ once those are on the
+    // leaf grid; the constructor built it from the input-grid arrays.
+    void setupInterRegionFlowsOnLeaf_(const std::size_t numLeafCells);
+
     void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
     void setupExtraBlockData(const std::size_t        reportStepNum,
                              std::function<bool(int)> isCartIdxOnThisRank);

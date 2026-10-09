@@ -20,6 +20,7 @@
 #ifndef OPM_AQUIFERCONSTANTFLUX_HPP
 #define OPM_AQUIFERCONSTANTFLUX_HPP
 
+#include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
@@ -51,7 +52,8 @@ public:
                         const Simulator&                         simulator,
                         const SingleAquiferFlux&                 aquifer)
         : AquiferInterface<TypeTag>(aquifer.id, simulator)
-        , connections_             (connections)
+        , leaf_                    (aquiferConnectionsOnLeaf(connections, simulator))
+        , connections_             (leaf_.connections)
         , aquifer_data_            (aquifer)
         , connection_flux_         (connections_.size(), Eval{0})
     {
@@ -156,6 +158,7 @@ public:
     }
 
 private:
+    LeafAquiferConnections leaf_;
     const std::vector<Aquancon::AquancCell>& connections_;
 
     SingleAquiferFlux aquifer_data_;
@@ -174,9 +177,10 @@ private:
             .resize(this->simulator_.gridView().size(/*codim=*/0), -1);
 
         for (std::size_t idx = 0; idx < this->connections_.size(); ++idx) {
-            const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->simulator_.vanguard()
-                .compressedIndexForInterior(global_index);
+            const int cell_index = (this->leaf_.leafCell[idx] >= 0)
+                ? this->leaf_.leafCell[idx]
+                : this->simulator_.vanguard()
+                      .compressedIndexForInterior(this->connections_[idx].global_index);
 
             if (cell_index < 0) {
                 continue;
