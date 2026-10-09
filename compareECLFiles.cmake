@@ -664,6 +664,27 @@ add_test_runSimulator(
     --enable-vtk-output=true
 )
 
+# LGRs whose host cells are inactive: in the input (ACTNUM, zero pore volume)
+# or turned off by the simulator (MINPVV).
+foreach(deck ACTNUM00 ACTNUM01 ACTNUM02 MINPV00 MINPV01 MINPV02)
+  string(TOLOWER ${deck} case)
+  add_test_runSimulator(
+    CASENAME
+      spe1case1_carfin_${case}
+    FILENAME
+      SPE1CASE1_CARFIN_${deck}
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    DIR
+      lgr
+    TEST_ARGS
+      --parsing-strictness=low
+      --enable-ecl-output=true
+  )
+endforeach()
+
 if(MPI_FOUND)
   add_test_runSimulator(
     CASENAME
