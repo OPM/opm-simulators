@@ -174,6 +174,10 @@ private:
     // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
     void updateWellStateFromPrimaryVariables(SingleWellState& well_state) const;
 
+    // store the connection rates at surface conditions and the connection
+    // pressures in the well state
+    void updateConnectionQuantities(SingleWellState& well_state) const;
+
     void updateWellState(const BVectorWell& dwells,
                          SingleWellState& well_state);
 

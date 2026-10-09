@@ -54,6 +54,8 @@ public:
     std::vector<Scalar> transmissibility_factor {};
     std::vector<int> satnum_id {};
     std::vector<std::size_t> ecl_index {};
+    // global Cartesian index of the connection cell
+    std::vector<std::size_t> global_index {};
 };
 
 template <typename FluidSystem>
