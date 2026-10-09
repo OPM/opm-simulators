@@ -168,7 +168,7 @@ maybeExchangeNetworkOuterIterationWithSlaves(bool more_network_update)
         if (!is_final) {
             // receive slaves' updated network_surface_rates for the next outer iteration.
             this->receiveSlaveGroupData();
-            this->refreshAndSendInjectionTargets_();
+            this->refreshAndSendGroupConstraints();
         }
     }
 }
@@ -204,7 +204,7 @@ maybeExchangeNetworkSubIterationWithSlaves()
     }
     this->sendMasterGroupNodePressuresToSlaves(/*is_final=*/false);
     this->receiveSlaveGroupData();
-    this->refreshAndSendInjectionTargets_();
+    this->refreshAndSendGroupConstraints();
 }
 
 template<typename TypeTag>
@@ -295,6 +295,20 @@ receiveMasterGroupNodePressuresFromMaster()
 template<typename TypeTag>
 void
 BlackoilWellModelRescoup<TypeTag>::
+receiveRefreshedGroupConstraintsFromMaster()
+{
+    // The counterpart of refreshAndSendGroupConstraints() on the master.  The
+    // constraints received replace the ones in force, so the slave group
+    // control modes, the targets and limits in force and the UDQs built on
+    // them follow suit.
+    this->receiveGroupConstraintsFromMaster();
+    this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+    this->refreshSlaveGroupTargets();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
 receiveSlaveGroupData()
 {
     OPM_TIMEFUNCTION();
@@ -303,6 +317,31 @@ receiveSlaveGroupData()
         this->groupStateHelper(),
     };
     slave_group_data_receiver.receiveSlaveGroupData();
+}
+
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+refreshAndSendGroupConstraints()
+{
+    // Called right after a receiveSlaveGroupData() within a sync step: after
+    // the slaves' initial well solve at the start of the step, and inside the
+    // network iteration.  Fold the rates just received into the master's group
+    // state and ship constraints recomputed from them to the slaves, replacing
+    // the ones they are currently holding.  The constraints sent first in the
+    // sync step are computed from the slave rates before the slaves solved
+    // their wells, which lag behind in two ways:
+    //  - a group whose producers are not under group control has its current
+    //    rate subtracted from the parent's target (see
+    //    RescoupConstraintsCalculator::capAndRedistributeProductionTargets_()),
+    //    and for wells that open this step that rate is not known before the
+    //    solve, so the siblings would share the full parent target;
+    //  - a target derived from slave production (GCONINJE REIN, SALE or VREP)
+    //    would be built from the previous sync step's production.
+    const int report_step_idx = this->well_model_.simulator().episodeIndex();
+    this->well_model_.updateAndCommunicateGroupData(
+        report_step_idx, /*update_wellgrouptarget=*/false);
+    this->sendMasterGroupConstraintsToSlaves();
 }
 
 template<typename TypeTag>
@@ -447,7 +486,7 @@ sendSlaveGroupDataToMaster()
     OPM_TIMEFUNCTION();
     assert(this->isReservoirCouplingSlave());
     RescoupSendSlaveGroupData<Scalar, IndexTraits> slave_group_data_sender{
-        this->groupStateHelper()};
+        this->groupStateHelper(), this->well_model_.nupcolWellState()};
     slave_group_data_sender.sendSlaveGroupDataToMaster();
 }
 
@@ -709,24 +748,6 @@ masterNetworkHasMasterGroupLeavesForSlave_(std::size_t slave_idx) const
 }
 
 template<typename TypeTag>
-void
-BlackoilWellModelRescoup<TypeTag>::
-refreshAndSendInjectionTargets_()
-{
-    // Called right after a receiveSlaveGroupData() inside the network iteration.
-    // Fold the rates just received into the master's group state -- that is what
-    // recomputes the reinjection and voidage rates that a GCONINJE REIN, SALE
-    // or VREP target is built from -- and ship the resulting targets to the
-    // slaves, replacing the ones they are currently holding.  Without this the
-    // targets stay at the values computed in beginTimeStep(), from slave
-    // production of the previous sync step.
-    const int report_step_idx = this->well_model_.simulator().episodeIndex();
-    this->well_model_.updateAndCommunicateGroupData(
-        report_step_idx, /*update_wellgrouptarget=*/false);
-    this->sendMasterGroupInjectionTargetsToSlaves_();
-}
-
-template<typename TypeTag>
 typename BlackoilWellModelRescoup<TypeTag>::Scalar
 BlackoilWellModelRescoup<TypeTag>::
 scheduleInjectionTarget_(const std::string& gname,
@@ -759,19 +780,6 @@ scheduleProductionTarget_(const std::string& gname,
     case CMode::LRAT: return static_cast<Scalar>(controls.liquid_target);
     default: return Scalar{0};
     }
-}
-
-template<typename TypeTag>
-void
-BlackoilWellModelRescoup<TypeTag>::
-sendMasterGroupInjectionTargetsToSlaves_()
-{
-    OPM_TIMEFUNCTION();
-    RescoupConstraintsCalculator<Scalar, IndexTraits> constraints_calculator{
-        this->well_model_.guideRateHandler(),
-        this->groupStateHelper()
-    };
-    constraints_calculator.recalculateInjectionTargetsAndSendToSlaves();
 }
 
 template<typename TypeTag>
