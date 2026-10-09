@@ -18,12 +18,12 @@
 #define OPM_LINEAR_SOLVER_ACCELERATOR_TYPE_HEADER_INCLUDED
 
 #include <algorithm>
+#include <cctype>
 #include <stdexcept>
 #include <string>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/linalgparameters.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 
 namespace Opm::Parameters
