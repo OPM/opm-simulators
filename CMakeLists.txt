@@ -715,6 +715,7 @@ macro(opm-simulators_targets_hook)
   target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+    target_sources(test_parallel_transmissibility PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()
 
   set(FLOW_MODELS
