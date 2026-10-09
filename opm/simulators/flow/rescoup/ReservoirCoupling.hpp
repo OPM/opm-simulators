@@ -271,14 +271,14 @@ template <class Scalar>
 struct SlaveGroupInjectionData {
     // Group injection potentials: the master caps a master group's injection
     // target for a phase at the corresponding potential.
-    Potentials<Scalar> potentials;
-    InjectionRates<Scalar> surface_rates;    // Surface injection rates by phase
-    InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
+    Potentials<Scalar> potentials{};
+    InjectionRates<Scalar> surface_rates{};    // Surface injection rates by phase
+    InjectionRates<Scalar> reservoir_rates{};  // Reservoir injection rates by phase
     // The following are only used for the summary output of the master group, as
     // for SlaveGroupProductionData, where it is also explained how well_potentials
     // differ from potentials.
-    InjectionRates<Scalar> well_potentials;  // Injection potentials (GWPI, GGPI, GOPI)
-    InjectionRates<Scalar> history_rates;    // Injection history rates (GWIRH, ...)
+    InjectionRates<Scalar> well_potentials{};  // Injection potentials (GWPI, GGPI, GOPI)
+    InjectionRates<Scalar> history_rates{};    // Injection history rates (GWIRH, ...)
     int num_flowing_injectors{0};            // Number of flowing injectors (GMWIN)
 };
 
