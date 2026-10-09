@@ -555,6 +555,14 @@ protected:
     //! \brief Temperature and salt concentration of the first perforated cell,
     //! broadcast so that all processes of a distributed well get the values.
     FSInfo getFirstPerfCellConditions(const Simulator& simulator) const;
+
+    //! \brief Opens a stopped producer with a thp limit if it can flow within its bhp and
+    //! thp limits, with the well state set to the flowing solution. Returns false, leaving
+    //! the well stopped, otherwise.
+    bool tryOpenProducerWithThpLimit(const Simulator& simulator,
+                                     const GroupStateHelperType& groupStateHelper,
+                                     const Scalar bhp_limit,
+                                     WellStateType& well_state);
 };
 
 } // namespace Opm

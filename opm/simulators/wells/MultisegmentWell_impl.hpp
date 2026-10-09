@@ -2251,6 +2251,7 @@ namespace Opm
             // approximation.
             std::vector<Scalar> rates(3);
             computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            this->adaptRatesForVFP(rates);
             return rates;
         };
 
@@ -2275,6 +2276,7 @@ namespace Opm
            // solution
            std::vector<Scalar> rates(3);
            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, rates);
+           this->adaptRatesForVFP(rates);
            return rates;
        };
 
