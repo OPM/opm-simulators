@@ -58,6 +58,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm {
@@ -311,6 +312,7 @@ public:
         FlowProblemType::finishInit();
 
         auto& simulator = this->simulator();
+        this->initHostVolume_();
         const bool transmissibilitiesFinished =
             this->prepareTransmissibilityOutput_(*eclWriter_, enableEclOutput_);
 
@@ -586,6 +588,7 @@ public:
         this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
 
         if (source.hasSource(ijk)) {
+            const Scalar volume = sourceVolume_(globalDofIdx);
             const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
             static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
             static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
@@ -598,7 +601,7 @@ public:
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
                 }
-                Scalar mass_rate = source.rate(ijk, sourceComp) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate(ijk, sourceComp) / volume;
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
                 }
@@ -606,7 +609,7 @@ public:
             }
 
             if constexpr (enableSolvent) {
-                Scalar mass_rate = source.rate(ijk, SourceComponent::SOLVENT) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate(ijk, SourceComponent::SOLVENT) / volume;
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     const auto& solventPvt = SolventModule::solventPvt();
                     mass_rate /= solventPvt.referenceDensity(pvtRegionIdx);
@@ -614,12 +617,12 @@ public:
                 rate[Indices::contiSolventEqIdx] += mass_rate;
             }
             if constexpr (enablePolymer) {
-                rate[Indices::polymerConcentrationIdx] += source.rate(ijk, SourceComponent::POLYMER) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::polymerConcentrationIdx] += source.rate(ijk, SourceComponent::POLYMER) / volume;
             }
             if constexpr (enableMICP) {
-                rate[Indices::microbialConcentrationIdx] += source.rate(ijk, SourceComponent::MICR) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::oxygenConcentrationIdx] += source.rate(ijk, SourceComponent::OXYG) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::ureaConcentrationIdx] += source.rate(ijk, SourceComponent::UREA) / (this->model().dofTotalVolume(globalDofIdx));
+                rate[Indices::microbialConcentrationIdx] += source.rate(ijk, SourceComponent::MICR) / volume;
+                rate[Indices::oxygenConcentrationIdx] += source.rate(ijk, SourceComponent::OXYG) / volume;
+                rate[Indices::ureaConcentrationIdx] += source.rate(ijk, SourceComponent::UREA) / volume;
             }
             if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
@@ -630,7 +633,7 @@ public:
                     const auto sourceComp = sc_map[i];
                     const auto source_hrate = source.hrate(ijk, sourceComp);
                     if (source_hrate) {
-                        rate[Indices::contiEnergyEqIdx] += source_hrate.value() / this->model().dofTotalVolume(globalDofIdx);
+                        rate[Indices::contiEnergyEqIdx] += source_hrate.value() / volume;
                     } else {
                         const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
                         auto fs = intQuants.fluidState();
@@ -641,7 +644,7 @@ public:
                             fs.setTemperature(temperature);
                         }
                         const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
-                        Scalar mass_rate = source.rate(ijk, sourceComp)/ this->model().dofTotalVolume(globalDofIdx);
+                        Scalar mass_rate = source.rate(ijk, sourceComp)/ volume;
                         Scalar energy_rate = getValue(h)*mass_rate;
                         rate[Indices::contiEnergyEqIdx] += energy_rate;
                     }
@@ -1703,6 +1706,33 @@ protected:
     ActionHandler<Scalar, IndexTraits> actionHandler_;
 
     HybridNewton hybridNewton_;
+
+    // Total volume of the refined cells of each refined host, by Cartesian index.
+    std::unordered_map<int, Scalar> hostVolume_;
+
+    // The refined cells of a host share its Cartesian index, and so its SOURCE
+    // entry: keep their total volume to share the rate by volume.
+    void initHostVolume_()
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        if (vanguard.grid().maxLevel() == 0) {
+            return;
+        }
+        for (const auto& elem : elements(vanguard.gridView())) {
+            if (elem.level() > 0) {
+                const unsigned elemIdx = this->elementMapper().index(elem);
+                hostVolume_[vanguard.cartesianIndex(elemIdx)] += this->model().dofTotalVolume(elemIdx);
+            }
+        }
+    }
+
+    // The volume a SOURCE rate is spread over: the cell's own volume, or the
+    // total volume of its host's refined cells.
+    Scalar sourceVolume_(const unsigned globalDofIdx) const
+    {
+        const auto host = hostVolume_.find(this->simulator().vanguard().cartesianIndex(globalDofIdx));
+        return (host != hostVolume_.end()) ? host->second : this->model().dofTotalVolume(globalDofIdx);
+    }
 
 private:
     /// Whether or not the current epsiode will end at the end of the
