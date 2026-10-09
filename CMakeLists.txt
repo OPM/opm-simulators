@@ -659,6 +659,15 @@ macro(opm-simulators_targets_hook)
       Boost::unit_test_framework
   )
 
+  opm_add_executable(
+    TARGET
+      test_comp_explicit_swat_init
+    SOURCES
+      tests/test_comp_explicit_swat_init.cpp
+    LIBRARIES
+      opmcommon
+  )
+
   if(QuadMath_FOUND)
     foreach(tapp co2injection_flash_ni_ecfv
                  co2injection_flash_ni_vcfv

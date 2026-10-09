@@ -41,11 +41,23 @@
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <functional>
 #include <vector>
+
+namespace Opm::Parameters {
+
+// Treat explicit compositional saturations as given before the hydrocarbon
+// flash and rescale SWAT accordingly. By default, keep the input SWAT.
+struct NormalizeExplicitSwat { static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -104,6 +116,14 @@ public:
 
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
+
+        Parameters::Register<Parameters::NormalizeExplicitSwat>(
+            "Treat explicit SWAT, SGAS and SOIL in compositional runs as "
+            "saturations before the hydrocarbon flash: each given oil or "
+            "gas saturation holds its input composition at the liquid or "
+            "vapour equation-of-state root, and water and the flashed "
+            "phases are then rescaled to fill the pore volume. When "
+            "disabled (the default), the input SWAT is retained.");
     }
 
     Opm::CompositionalConfig::EOSType getEosType() const
@@ -608,6 +628,102 @@ protected:
                     }
                 }
             }
+        }
+
+        if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
+            normalizeExplicitSwat_();
+        }
+    }
+
+    // The explicit saturations describe the cell before the hydrocarbon
+    // flash. Each given oil or gas saturation holds its input composition at
+    // the liquid or vapour EOS root, whatever the stable state, and with
+    // volume shift applied. After flashing the total, water and the flashed
+    // phases are rescaled to fill the pore volume:
+    //
+    //   Sw = SWAT / (SWAT + n * Vm_flash),  n = SOIL / Vm_oil + SGAS / Vm_gas
+    void normalizeExplicitSwat_()
+    {
+        using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
+        const auto eos_type = getEosType();
+        constexpr Scalar flash_tolerance = 1e-8;
+        int zmf_oil_and_gas_cells = 0;
+
+        for (auto& fs : initialFluidStates_) {
+            const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
+            if (sw_in <= 0.0 || sw_in >= 1.0) {
+                continue;
+            }
+            if (zmf_initialization_ && fs.saturation(FluidSystem::oilPhaseIdx) > 0.0
+                && fs.saturation(FluidSystem::gasPhaseIdx) > 0.0) {
+                ++zmf_oil_and_gas_cells;
+            }
+
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
+
+            // Hydrocarbon moles per unit pore volume as given.
+            Dune::FieldVector<Scalar, numComponents> moles(0.0);
+            Scalar total_moles = 0.0;
+            for (const unsigned phaseIdx : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                const Scalar saturation = fs.saturation(phaseIdx);
+                if (!FluidSystem::phaseIsActive(phaseIdx) || saturation <= 0.0) {
+                    continue;
+                }
+                param_cache.updatePhase(fs, phaseIdx);
+                const Scalar phase_moles = saturation / param_cache.correctedMolarVolume(phaseIdx);
+                for (unsigned c = 0; c < numComponents; ++c) {
+                    moles[c] += phase_moles * fs.moleFraction(phaseIdx, c);
+                }
+                total_moles += phase_moles;
+            }
+            if (total_moles <= 0.0) {
+                continue;
+            }
+
+            InitialFluidState flash_fs;
+            flash_fs.setTemperature(fs.temperature(0));
+            flash_fs.setPressure(FluidSystem::oilPhaseIdx, fs.pressure(FluidSystem::oilPhaseIdx));
+            flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
+            for (unsigned c = 0; c < numComponents; ++c) {
+                flash_fs.setMoleFraction(c, moles[c] / total_moles);
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
+            }
+            flash_fs.setLvalue(-1.0);
+            FlashSolver::flash_solve_scalar_(
+                flash_fs, PTFlashMethod::Ssi, flash_tolerance, eos_type);
+
+            // A single-phase result has L = 0 or 1, so only one phase counts.
+            const Scalar L = flash_fs.L();
+            Scalar vm_flash = 0.0;
+            if (L > 0.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::oilPhaseIdx);
+                vm_flash += L * param_cache.correctedMolarVolume(FluidSystem::oilPhaseIdx);
+            }
+            if (L < 1.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::gasPhaseIdx);
+                vm_flash += (1.0 - L) * param_cache.correctedMolarVolume(FluidSystem::gasPhaseIdx);
+            }
+
+            const Scalar sw = sw_in / (sw_in + total_moles * vm_flash);
+            const Scalar hc_scale = (1.0 - sw) / (1.0 - sw_in);
+
+            fs.setSaturation(FluidSystem::waterPhaseIdx, sw);
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                fs.setSaturation(FluidSystem::gasPhaseIdx,
+                                 fs.saturation(FluidSystem::gasPhaseIdx) * hc_scale);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                fs.setSaturation(FluidSystem::oilPhaseIdx,
+                                 fs.saturation(FluidSystem::oilPhaseIdx) * hc_scale);
+            }
+        }
+
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        zmf_oil_and_gas_cells = comm.sum(zmf_oil_and_gas_cells);
+        if (zmf_oil_and_gas_cells > 0 && comm.rank() == 0) {
+            OpmLog::warning(fmt::format("ZMF is given with both SGAS and SOIL in {} cells; both "
+                                        "phases take the ZMF composition when SWAT is normalized.",
+                                        zmf_oil_and_gas_cells));
         }
     }
 

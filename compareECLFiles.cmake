@@ -708,6 +708,54 @@ add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       DIR compositional)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
+# Check explicit SWAT initialization in both modes without reference files.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_default
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> default"
+)
+
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_normalized
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> normalized"
+)
+
+# Check the normalized initial SWAT of the probe decks cell by cell.
+foreach(case SGAS SOIL SSHIFT XMF_YMF)
+  string(TOLOWER ${case} test)
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_probes_${test}
+    FILENAME
+      EXPLICIT_SWAT_PROBES_${case}
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    TEST_ARGS
+      --normalize-explicit-swat=true
+    POST_COMMAND
+      "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_PROBES_${case}"
+  )
+endforeach()
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe
