@@ -474,6 +474,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
   tests/test_aquifergridutils.cpp
   tests/test_aqantrc_flow_keyword.cpp
+  tests/test_bccon_lgr.cpp
   tests/test_blackoil_amg.cpp
   tests/test_blackoilprimaryvariables.cpp
   tests/test_compequil.cpp
@@ -705,6 +706,7 @@ list (APPEND TEST_DATA_FILES
   tests/wells_group.data
   tests/wells_stopped.data
   tests/relpermDiagnostics.DATA
+  tests/BCCON_LGR.DATA
   tests/norne_pvt.data
   tests/norne_pvt_expected.txt
   tests/wells_no_perforation.data

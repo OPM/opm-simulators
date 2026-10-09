@@ -1,0 +1,115 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- A boundary condition on the Y- face of cell (2,1,1), which is refined 3x3x3:
+-- the nine refined cells on that face carry the condition.
+
+RUNSPEC
+
+DIMENS
+   3 1 1 /
+
+OIL
+WATER
+
+METRIC
+
+START
+ 1 'JAN' 2020 /
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+-- =============================================================================
+GRID
+-- =============================================================================
+
+CARFIN
+-- NAME  I1-I2 J1-J2 K1-K2 NX NY NZ
+'LGR1'   2  2  1  1  1  1  3  3  3 /
+ENDFIN
+
+DXV
+3*100.0 /
+
+DYV
+100.0 /
+
+DZV
+10.0 /
+
+TOPS
+3*2000 /
+
+PORO
+3*0.25 /
+
+PERMX
+3*500 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+BCCON
+-- INDEX I1 I2 J1 J2 K1 K2 DIRECTION
+   1     2  2  1  1  1  1  'Y-' /
+/
+
+-- =============================================================================
+PROPS
+-- =============================================================================
+
+PVTW
+-- ref.pres  Bw      Cw          Vw    Vw.visc
+   250.0    1.02   4.0E-05      0.5    0.0 /
+
+ROCK
+-- ref.pres  compressibility
+   250.0    4.0E-05 /
+
+DENSITY
+-- oil    water   gas
+   850    1014    1.0 /
+
+PVDO
+-- P       Bo      Vo
+  100.0   1.05    2.0
+  250.0   1.02    2.5
+  400.0   1.00    3.0 /
+
+SWOF
+-- Sw      Krw      Kro      Pcow
+  0.2     0.0      1.0      0.0
+  0.3     0.05     0.6      0.0
+  0.5     0.15     0.3      0.0
+  0.7     0.35     0.1      0.0
+  0.8     0.5      0.0      0.0 /
+
+-- =============================================================================
+SOLUTION
+-- =============================================================================
+
+EQUIL
+-- datum  pressure  OWC    Pc@OWC
+   2000   250.0     2100   0.0 /
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+BCPROP
+-- INDEX TYPE      COMPONENT RATE PRESSURE
+   1     DIRICHLET WATER     1*   350 /
+/
+
+TSTEP
+1 /
+
+END
