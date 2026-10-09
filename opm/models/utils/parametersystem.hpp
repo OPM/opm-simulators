@@ -219,9 +219,17 @@ void SetDefault(decltype(Param::value) new_value)
     const std::string paramName = detail::getParamName<Param>();
     std::ostringstream oss;
     // full precision: the default stream setting of 6 significant digits
-    // silently corrupts values on the text round trip
-    if constexpr (std::is_floating_point_v<decltype(Param::value)>) {
-        oss.precision(std::numeric_limits<decltype(Param::value)>::max_digits10);
+    // silently corrupts values on the text round trip. Only for the standard
+    // floating point types; std::is_floating_point is also true for extended
+    // types such as __float128 with newer compilers, which are not streamed
+    // at their own precision (quad goes through double and throws if asked
+    // for more).
+    using ValueType = decltype(Param::value);
+    if constexpr (std::is_same_v<ValueType, float> ||
+                  std::is_same_v<ValueType, double> ||
+                  std::is_same_v<ValueType, long double>)
+    {
+        oss.precision(std::numeric_limits<ValueType>::max_digits10);
     }
     oss << new_value;
     detail::SetDefault_(paramName, oss.str());
