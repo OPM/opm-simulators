@@ -112,6 +112,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    nnc_shortcut_compositional
+  FILENAME
+    NNC_SHORTCUT
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/transmissibility
+)
+
+add_test_compareECLFiles(
+  CASENAME
     thpres_50bar_compositional
   FILENAME
     THPRES_50BAR
