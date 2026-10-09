@@ -115,7 +115,8 @@ public:
                                   const bool use_well_weights,
                                   const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                   const int bhp_var_index,
-                                  const WellState<Scalar, IndexTraits>& well_state) const;
+                                  const WellState<Scalar, IndexTraits>& well_state,
+                                  const int nrWells) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;

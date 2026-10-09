@@ -375,7 +375,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const bool /*use_well_weights*/,
                          const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                          const int seg_pressure_var_ind,
-                         const WellState<Scalar, IndexTraits>& well_state) const
+                         const WellState<Scalar, IndexTraits>& well_state,
+                         const int nrWells) const
 {
     using BlockType = PressureMatrix::block_type;
     static_assert(BlockType::rows == 1);
@@ -384,14 +385,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 
     // Add for coupling from well to reservoir
     const int number_cells = weights.size();
-    const int welldof_ind = number_cells + well.indexOfWell();
+    const int welldof_ind = well.indexOfWell();
     if (!well.isPressureControlled(well_state)) {
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
                       endC = duneC_[rowC].end(); colC != endC; ++colC) {
                 // map the well perforated cell index to global cell index
-                const auto row_index = cells_[colC.index()];
-                const auto& bw = weights[row_index];
+                const auto row_index = cells_[colC.index()] + nrWells;
+                const auto& bw = weights[row_index - nrWells];
                 Scalar matel = 0.0;
 
                 for (std::size_t i = 0; i< bw.size(); ++i) {
@@ -428,7 +429,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
                 // map the well perforated cell index to global cell index
-                const auto col_index = cells_[colB.index()];
+                const auto col_index = cells_[colB.index()] + nrWells;
                 Scalar matel = 0.0;
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i] *(*colB)[i][pressureVarIndex];
@@ -476,7 +477,8 @@ sumDistributed(Parallel::Communication comm)
                                  const bool,                                                   \
                                  const WellInterfaceGeneric<T,BlackOilDefaultFluidSystemIndices>&,                               \
                                  const int,                                                    \
-                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&) const;
+                                 const WellState<T,BlackOilDefaultFluidSystemIndices>&,        \
+                                 const int) const;
 
 #define INSTANTIATE_TYPE(T) \
     INSTANTIATE(T,2,1)      \
