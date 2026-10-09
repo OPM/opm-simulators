@@ -30,9 +30,14 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <stdexcept>
 
 namespace Opm {
 
@@ -44,6 +49,18 @@ NonlinearSystemCompositional(Simulator& simulator,
                              const bool terminalOutput)
     : ParentType(simulator, param, wellModel, terminalOutput)
 {
+    if (param.matrix_add_well_contributions_) {
+        OPM_THROW(std::invalid_argument,
+                  "Compositional wells do not add their contributions to the matrix."
+                  " Please use --matrix-add-well-contributions=false.");
+    }
+    if (Parameters::linearSolverAcceleratorTypeFromCLI() != Parameters::LinearSolverAcceleratorType::CPU
+        || Parameters::Get<Parameters::AcceleratorMode>() != "none") {
+        OPM_THROW(std::invalid_argument,
+                  "Compositional runs solve the linear systems on the CPU only."
+                  " Please use --linear-solver-accelerator=cpu and --accelerator-mode=none.");
+    }
+
     this->convergence_reports_.reserve(64);
 }
 
