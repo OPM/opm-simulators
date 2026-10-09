@@ -8,7 +8,8 @@ RESULT_DIR=$3
 SOURCE_DIR=`dirname "$0"`
 JOBS=${BUILDTHREADS:-16}
 
-FAILED_TESTS=`cat $BUILD_DIR/Testing/Temporary/LastTestsFailed*.log`
+# ctest only writes this log when tests fail
+FAILED_TESTS=$(cat $BUILD_DIR/Testing/Temporary/LastTestsFailed*.log 2>/dev/null)
 
 mkdir -p $BUILD_DIR/failure_report
 cd $BUILD_DIR/failure_report
@@ -40,9 +41,10 @@ do
   fi
 done
 
-echo -e $JOBLIST | xargs -L1 -P${JOBS} $SOURCE_DIR/plot_well_comparison.py
-
-if test -n "$FAILED_TESTS"
+if test -n "$JOBLIST"
 then
+  echo -e $JOBLIST | xargs -L1 -P${JOBS} $SOURCE_DIR/plot_well_comparison.py
   $SOURCE_DIR/plot_well_comparison.py  -o rename
+else
+  echo "No failed regression tests to report"
 fi
