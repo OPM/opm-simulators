@@ -27,10 +27,11 @@
  *     [ B    D   ] [ x_well ] = [ res_well ]
  *
  * and eliminates the well unknowns via a Schur complement. This test fills the
- * blocks B, C, D and the well residual with known values and checks the three
+ * blocks B, C, D and the well residual with known values and checks the four
  * operations the model relies on against independent dense reference
  * computations (using plain Dune::FieldMatrix algebra):
  *
+ *   apply(x, Ax)           ->  Ax -= C^T D^-1 B x
  *   solve(dx)              ->  dx  = D^-1 res_well
  *   recoverSolutionWell    ->  x_w = D^-1 (res_well - B x)
  *   apply(r)               ->  r  -= C^T D^-1 res_well
@@ -175,6 +176,39 @@ BOOST_AUTO_TEST_CASE(SchurComplementOperations)
     }
 
     eqns.invert();
+
+    // --- apply: Ax -= C^T D^-1 B x -----------------------------------------
+    // It reuses the storage of D^-1 res_well as scratch, so it runs first and
+    // the checks below also cover the operations that follow it in a solve.
+    {
+        Eqns::BVector x(num_conn);
+        Eqns::BVector Ax(num_conn);
+        std::array<ResVec, num_conn> Ax_in;
+        for (int c = 0; c < num_conn; ++c) {
+            x[c] = xres[c];
+            for (int j = 0; j < ne; ++j) {
+                Ax_in[c][j] = 0.7 - c + 0.1 * j;
+            }
+            Ax[c] = Ax_in[c];
+        }
+
+        eqns.apply(x, Ax);
+
+        // invDBx = D^-1 sum_c B_c x_c ; Ax_c = Ax_in_c - C_c^T invDBx
+        WellVec bx(0.0);
+        for (int c = 0; c < num_conn; ++c) {
+            Bref[c].umv(xres[c], bx);
+        }
+        WellVec invDBx;
+        Dinv.mv(bx, invDBx);
+        for (int c = 0; c < num_conn; ++c) {
+            ResVec ctx;
+            Cref[c].mtv(invDBx, ctx); // C_c^T invDBx
+            ResVec expected = Ax_in[c];
+            expected -= ctx;
+            checkClose(Ax[c], expected, "apply(x, Ax) conn " + std::to_string(c));
+        }
+    }
 
     // --- solve: dx = D^-1 res_well ----------------------------------------
     {
