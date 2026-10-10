@@ -159,6 +159,11 @@ public:
                 (*block)[pressure_var_index_] = this->lhs_[block - begin][0];
             }
         }
+        if (transpose) {
+            // Weights computed from local rows can differ on overlap and copy
+            // rows, so these take the correction of their owner.
+            communication_->copyOwnerToAll(fine, fine);
+        }
     }
 
     PressureTransferPolicy* clone() const override
