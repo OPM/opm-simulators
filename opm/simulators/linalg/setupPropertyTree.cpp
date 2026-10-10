@@ -777,5 +777,18 @@ void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions)
     }
 }
 
+void checkUmfpackMatrixAddWell(const PropertyTree& prm,
+                               const bool matrixAddWellContributions,
+                               const bool hasWells)
+{
+    if (hasWells && !matrixAddWellContributions
+        && prm.get<std::string>("solver", "bicgstab") == "umfpack") {
+        OPM_THROW(std::invalid_argument,
+                  "UMFPACK factorizes the matrix alone, which lacks the well coupling with "
+                  "--matrix-add-well-contributions=false. Please use an iterative linear solver "
+                  "or --matrix-add-well-contributions=true.");
+    }
+}
+
 
 } // namespace Opm

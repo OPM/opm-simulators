@@ -33,6 +33,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/setupPropertyTree.hpp>
 
 #include <algorithm>
 #include <array>
@@ -294,6 +295,11 @@ solveJacobianSystem(BVector& x)
     auto& jacobian = this->simulator_.model().linearizer().jacobian();
     auto& residual = this->simulator_.model().linearizer().residual();
     auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+
+    // Checked per solve, since wells can open during the run.
+    checkUmfpackMatrixAddWell(linSolver.activeSolverPrm(),
+                              this->param_.matrix_add_well_contributions_,
+                              !this->wellModel().empty());
 
     x = 0.0;
 

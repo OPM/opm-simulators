@@ -494,6 +494,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             return parameters_[activeSolverNum_].is_nldd_local_solver_;
         }
 
+        const PropertyTree& activeSolverPrm() const
+        {
+            return prm_[activeSolverNum_];
+        }
+
     protected:
 #if HAVE_MPI
         using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;

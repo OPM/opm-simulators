@@ -46,6 +46,12 @@ void validateSystemCPRTree(const PropertyTree& prm);
 // Throws std::invalid_argument when system_cpr is combined with
 // --matrix-add-well-contributions=true. Call this after detecting system_cpr is active.
 void checkSystemCPRMatrixAddWell(bool matrixAddWellContributions);
+
+// Throws std::invalid_argument when UMFPACK is the solver of prm while the well
+// coupling is applied outside the matrix, since UMFPACK only factorizes the matrix.
+void checkUmfpackMatrixAddWell(const PropertyTree& prm,
+                               bool matrixAddWellContributions,
+                               bool hasWells);
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupTpsa(std::string conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
