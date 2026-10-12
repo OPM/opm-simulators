@@ -31,6 +31,7 @@
 #include <config.h>
 
 #define BOOST_TEST_MODULE TestGpuLiveOilPvt
+#include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
@@ -51,6 +52,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -61,21 +63,34 @@
 
 namespace {
 
-using Evaluation = Opm::DenseAd::Evaluation<double, 3>;
+template <class Scalar>
+using Evaluation = Opm::DenseAd::Evaluation<Scalar, 3>;
 
-using CpuPvt = Opm::LiveOilPvt<double>;
-using GpuBufPvt = Opm::LiveOilPvt<double, Opm::gpuistl::GpuBuffer, Opm::gpuistl::GpuView>;
-using GpuViewPvt = Opm::LiveOilPvt<double, Opm::gpuistl::GpuView, Opm::gpuistl::GpuView>;
+template <class Scalar>
+using CpuPvt = Opm::LiveOilPvt<Scalar>;
+template <class Scalar>
+using GpuBufPvt = Opm::LiveOilPvt<Scalar, Opm::gpuistl::GpuBuffer, Opm::gpuistl::GpuView>;
+template <class Scalar>
+using GpuViewPvt = Opm::LiveOilPvt<Scalar, Opm::gpuistl::GpuView, Opm::gpuistl::GpuView>;
 
-// The views in an owning object point into its own device buffers, so a copy would
-// have views into the buffers of the original. The owning object must be move-only.
-static_assert(!std::is_copy_constructible_v<GpuBufPvt>);
-static_assert(!std::is_copy_assignable_v<GpuBufPvt>);
-static_assert(std::is_move_constructible_v<GpuBufPvt>);
-static_assert(std::is_move_assignable_v<GpuBufPvt>);
-// The CPU object is still copied by OilPvtMultiplexer, and the view is passed by value.
-static_assert(std::is_copy_constructible_v<CpuPvt>);
-static_assert(std::is_trivially_copyable_v<GpuViewPvt>);
+// LiveOilPvt<float> is explicitly instantiated in opm-common independently of
+// FLOW_INSTANTIATE_FLOAT, so both types are always tested.
+using Scalars = boost::mpl::list<double, float>;
+
+template <class Scalar>
+struct CheckCopySemantics {
+    // The views in an owning object point into its own device buffers, so a copy would
+    // have views into the buffers of the original. The owning object must be move-only.
+    static_assert(!std::is_copy_constructible_v<GpuBufPvt<Scalar>>);
+    static_assert(!std::is_copy_assignable_v<GpuBufPvt<Scalar>>);
+    static_assert(std::is_move_constructible_v<GpuBufPvt<Scalar>>);
+    static_assert(std::is_move_assignable_v<GpuBufPvt<Scalar>>);
+    // The CPU object is still copied by OilPvtMultiplexer, and the view is passed by value.
+    static_assert(std::is_copy_constructible_v<CpuPvt<Scalar>>);
+    static_assert(std::is_trivially_copyable_v<GpuViewPvt<Scalar>>);
+};
+template struct CheckCopySemantics<double>;
+template struct CheckCopySemantics<float>;
 
 // Two PVT regions with different numbers of Rs rows (3 and 5) and different numbers
 // of undersaturated points per row. Rows with only the saturated point are extended
@@ -132,133 +147,143 @@ constexpr unsigned numRegions = 2;
 // [K], not used by LiveOilPvt. A function rather than a constexpr variable: the PVT
 // methods take the temperature by reference, which would require the variable to
 // exist in device memory.
-OPM_HOST_DEVICE constexpr double temperature()
+template <class Scalar>
+OPM_HOST_DEVICE constexpr Scalar temperature()
 { return 350.0; }
-constexpr double relTol = 1e-10;
 
-CpuPvt makeCpuPvt()
+// Relative tolerance for comparing CPU and GPU results. The GPU may contract
+// multiplications and additions into FMAs, so results can differ in the last bits.
+template <class Scalar>
+constexpr Scalar relTol = std::is_same_v<Scalar, float> ? 1e-4 : 1e-10;
+
+template <class Scalar>
+CpuPvt<Scalar> makeCpuPvt()
 {
     const auto deck = Opm::Parser{}.parseString(deckString);
     const Opm::EclipseState eclState(deck);
     const Opm::Schedule schedule(deck, eclState, std::make_shared<Opm::Python>());
 
-    CpuPvt pvt;
+    CpuPvt<Scalar> pvt;
     pvt.initFromState(eclState, schedule);
     return pvt;
 }
 
 //! One evaluation point. Pressure in [Pa], Rs in [sm3/sm3].
+template <class Scalar>
 struct TestPoint {
     unsigned regionIdx;
-    double p;
-    double rs;
-    double sg;
-    double so;
-    double soMax;
+    Scalar p;
+    Scalar rs;
+    Scalar sg;
+    Scalar so;
+    Scalar soMax;
 };
 
 //! The parts of a fluid state used by LiveOilPvt::inverseFormationVolumeFactorAndViscosity().
+template <class Scalar>
 struct TestFluidState {
-    using ValueType = Evaluation;
+    using ValueType = Evaluation<Scalar>;
     static constexpr int oilPhaseIdx = 0;
     static constexpr int gasPhaseIdx = 1;
 
-    OPM_HOST_DEVICE const Evaluation& pressure(unsigned) const
+    OPM_HOST_DEVICE const ValueType& pressure(unsigned) const
     { return p; }
 
-    OPM_HOST_DEVICE Evaluation Rs() const
+    OPM_HOST_DEVICE ValueType Rs() const
     { return rs; }
 
-    OPM_HOST_DEVICE const Evaluation& saturation(unsigned phaseIdx) const
+    OPM_HOST_DEVICE const ValueType& saturation(unsigned phaseIdx) const
     { return phaseIdx == static_cast<unsigned>(gasPhaseIdx) ? sg : so; }
 
-    Evaluation p;
-    Evaluation rs;
-    Evaluation sg;
-    Evaluation so;
+    ValueType p;
+    ValueType rs;
+    ValueType sg;
+    ValueType so;
 };
 
 //! Result of inverseFormationVolumeFactorAndViscosity(). A plain struct instead of
 //! std::pair, because it is copied between host and device with memcpy.
+template <class Scalar>
 struct InvBAndMu {
-    Evaluation invB;
-    Evaluation mu;
+    Evaluation<Scalar> invB;
+    Evaluation<Scalar> mu;
 };
 
 // Functors evaluating one LiveOilPvt method. They are templated on the PVT type, so the
 // same functor is used for the CPU reference and in the kernel.
 
 struct InverseFormationVolumeFactor {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.inverseFormationVolumeFactor(pt.regionIdx, temperature(), pt.p, pt.rs); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.inverseFormationVolumeFactor(pt.regionIdx, temperature<Scalar>(), pt.p, pt.rs); }
 };
 
 struct Viscosity {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.viscosity(pt.regionIdx, temperature(), pt.p, pt.rs); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.viscosity(pt.regionIdx, temperature<Scalar>(), pt.p, pt.rs); }
 };
 
 struct SaturatedInverseFormationVolumeFactor {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, temperature(), pt.p); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, temperature<Scalar>(), pt.p); }
 };
 
 struct SaturatedViscosity {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.saturatedViscosity(pt.regionIdx, temperature(), pt.p); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.saturatedViscosity(pt.regionIdx, temperature<Scalar>(), pt.p); }
 };
 
 struct SaturatedGasDissolutionFactor {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature(), pt.p); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature<Scalar>(), pt.p); }
 };
 
 struct SaturatedGasDissolutionFactorVappars {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
-    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature(), pt.p, pt.so, pt.soMax); }
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature<Scalar>(), pt.p, pt.so, pt.soMax); }
 };
 
 struct GasReferenceDensity {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
     { return pvt.gasReferenceDensity(pt.regionIdx); }
 };
 
 struct OilReferenceDensity {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint& pt) const
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
     { return pvt.oilReferenceDensity(pt.regionIdx); }
 };
 
 struct VapPar2 {
-    template <class Pvt>
-    OPM_HOST_DEVICE double operator()(const Pvt& pvt, const TestPoint&) const
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>&) const
     { return pvt.vapPar2(); }
 };
 
 //! The hot path, with pressure, Rs and Sg as AD variables.
 struct InverseFormationVolumeFactorAndViscosity {
-    template <class Pvt>
-    OPM_HOST_DEVICE InvBAndMu operator()(const Pvt& pvt, const TestPoint& pt) const
+    template <class Pvt, class Scalar>
+    OPM_HOST_DEVICE InvBAndMu<Scalar> operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
     {
-        TestFluidState fs;
-        fs.p = Evaluation::createVariable(pt.p, 0);
-        fs.rs = Evaluation::createVariable(pt.rs, 1);
-        fs.sg = Evaluation::createVariable(pt.sg, 2);
-        fs.so = Evaluation(pt.so);
+        using Eval = Evaluation<Scalar>;
+        TestFluidState<Scalar> fs;
+        fs.p = Eval::createVariable(pt.p, 0);
+        fs.rs = Eval::createVariable(pt.rs, 1);
+        fs.sg = Eval::createVariable(pt.sg, 2);
+        fs.so = Eval(pt.so);
         const auto [invB, mu] = pvt.inverseFormationVolumeFactorAndViscosity(fs, pt.regionIdx);
         return {invB, mu};
     }
 };
 
-template <class Functor, class Result>
-__global__ void evaluateKernel(Functor f, GpuViewPvt pvt, const TestPoint* points, Result* results, std::size_t n)
+template <class Functor, class Pvt, class Point, class Result>
+__global__ void evaluateKernel(Functor f, Pvt pvt, const Point* points, Result* results, std::size_t n)
 {
     const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
@@ -266,8 +291,8 @@ __global__ void evaluateKernel(Functor f, GpuViewPvt pvt, const TestPoint* point
     }
 }
 
-template <class Functor>
-auto evaluateOnCpu(Functor f, const CpuPvt& pvt, const std::vector<TestPoint>& points)
+template <class Functor, class Pvt, class Point>
+auto evaluateOnCpu(Functor f, const Pvt& pvt, const std::vector<Point>& points)
 {
     using Result = decltype(f(pvt, points.front()));
     std::vector<Result> results;
@@ -278,11 +303,11 @@ auto evaluateOnCpu(Functor f, const CpuPvt& pvt, const std::vector<TestPoint>& p
     return results;
 }
 
-template <class Functor>
-auto evaluateOnGpu(Functor f, GpuViewPvt pvt, const std::vector<TestPoint>& points)
+template <class Functor, class Pvt, class Point>
+auto evaluateOnGpu(Functor f, Pvt pvt, const std::vector<Point>& points)
 {
     using Result = decltype(f(pvt, points.front()));
-    const Opm::gpuistl::GpuBuffer<TestPoint> gpuPoints(points);
+    const Opm::gpuistl::GpuBuffer<Point> gpuPoints(points);
     Opm::gpuistl::GpuBuffer<Result> gpuResults(points.size());
 
     constexpr unsigned threadsPerBlock = 128;
@@ -294,26 +319,29 @@ auto evaluateOnGpu(Functor f, GpuViewPvt pvt, const std::vector<TestPoint>& poin
     return gpuResults.asStdVector();
 }
 
-bool isClose(double a, double b)
+template <std::floating_point Scalar>
+bool isClose(Scalar a, Scalar b)
 {
     if (a == b) {
         return true;
     }
-    return std::abs(a - b) <= relTol * std::max(std::abs(a), std::abs(b));
+    return std::abs(a - b) <= relTol<Scalar> * std::max(std::abs(a), std::abs(b));
 }
 
-bool isClose(const Evaluation& a, const Evaluation& b)
+template <class Scalar>
+bool isClose(const Evaluation<Scalar>& a, const Evaluation<Scalar>& b)
 {
     bool close = isClose(a.value(), b.value());
-    for (int varIdx = 0; varIdx < Evaluation::numVars; ++varIdx) {
+    for (int varIdx = 0; varIdx < Evaluation<Scalar>::numVars; ++varIdx) {
         close = close && isClose(a.derivative(varIdx), b.derivative(varIdx));
     }
     return close;
 }
 
-void checkResults(const std::vector<double>& cpu,
-                  const std::vector<double>& gpu,
-                  const std::vector<TestPoint>& points,
+template <std::floating_point Scalar>
+void checkResults(const std::vector<Scalar>& cpu,
+                  const std::vector<Scalar>& gpu,
+                  const std::vector<TestPoint<Scalar>>& points,
                   const std::string& name)
 {
     BOOST_REQUIRE_EQUAL(cpu.size(), gpu.size());
@@ -325,9 +353,10 @@ void checkResults(const std::vector<double>& cpu,
     }
 }
 
-void checkResults(const std::vector<InvBAndMu>& cpu,
-                  const std::vector<InvBAndMu>& gpu,
-                  const std::vector<TestPoint>& points,
+template <class Scalar>
+void checkResults(const std::vector<InvBAndMu<Scalar>>& cpu,
+                  const std::vector<InvBAndMu<Scalar>>& gpu,
+                  const std::vector<TestPoint<Scalar>>& points,
                   const std::string& name)
 {
     BOOST_REQUIRE_EQUAL(cpu.size(), gpu.size());
@@ -341,30 +370,34 @@ void checkResults(const std::vector<InvBAndMu>& cpu,
     }
 }
 
-template <class Functor>
+template <class Functor, class Scalar>
 void compareCpuAndGpu(Functor f,
-                      const CpuPvt& cpuPvt,
-                      GpuViewPvt gpuPvt,
-                      const std::vector<TestPoint>& points,
+                      const CpuPvt<Scalar>& cpuPvt,
+                      GpuViewPvt<Scalar> gpuPvt,
+                      const std::vector<TestPoint<Scalar>>& points,
                       const std::string& name)
 {
     checkResults(evaluateOnCpu(f, cpuPvt, points), evaluateOnGpu(f, gpuPvt, points), points, name);
 }
 
 //! Points inside the tables, between the Rs rows and outside the tables (extrapolation).
-std::vector<TestPoint> gridPoints()
+template <class Scalar>
+std::vector<TestPoint<Scalar>> gridPoints()
 {
-    constexpr double bar = 1e5;
-    const std::vector<double> pressures = {10 * bar, 45 * bar, 75 * bar, 100 * bar, 125 * bar,
+    constexpr Scalar bar = 1e5;
+    const std::vector<Scalar> pressures = {10 * bar, 45 * bar, 75 * bar, 100 * bar, 125 * bar,
                                            180 * bar, 240 * bar, 320 * bar};
-    const std::vector<double> rsValues = {0.0, 15.0, 35.0, 55.0, 80.0, 110.0, 140.0};
+    // None of the Rs values is on the saturated curve at any of the pressures, so that
+    // the branch in inverseFormationVolumeFactorAndViscosity() is not decided by the
+    // last bits of RsSat (switchPoints() tests the switch with suitable margins).
+    const std::vector<Scalar> rsValues = {0.0, 15.0, 37.0, 55.0, 80.0, 110.0, 140.0};
 
-    std::vector<TestPoint> points;
+    std::vector<TestPoint<Scalar>> points;
     for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-        for (const double p : pressures) {
-            for (const double rs : rsValues) {
-                for (const double sg : {0.0, 0.3}) {
-                    points.push_back({regionIdx, p, rs, sg, 1.0 - sg, 1.0});
+        for (const Scalar p : pressures) {
+            for (const Scalar rs : rsValues) {
+                for (const Scalar sg : {Scalar{0.0}, Scalar{0.3}}) {
+                    points.push_back({regionIdx, p, rs, sg, 1 - sg, 1});
                 }
             }
         }
@@ -375,121 +408,135 @@ std::vector<TestPoint> gridPoints()
 //! Points at and just below the saturated curve, where
 //! inverseFormationVolumeFactorAndViscosity() switches between its saturated
 //! (Sg > 0 and Rs >= (1 - 1e-10) * RsSat) and undersaturated branch.
-std::vector<TestPoint> switchPoints(const CpuPvt& cpuPvt)
+template <class Scalar>
+std::vector<TestPoint<Scalar>> switchPoints(const CpuPvt<Scalar>& cpuPvt)
 {
-    constexpr double bar = 1e5;
-    std::vector<TestPoint> points;
+    // Rs relative to RsSat. In float, (1 - 1e-10) rounds to 1, so the switch is at
+    // Rs >= RsSat. A point exactly on the curve could then take different branches on
+    // the CPU and the GPU if RsSat differs in the last bit, so for float the points
+    // keep a safe distance from the curve.
+    const std::vector<Scalar> rsFactors = std::is_same_v<Scalar, float>
+        ? std::vector<Scalar>{1.0 + 1e-4, 1.0 - 1e-4, 0.5}
+        : std::vector<Scalar>{1.0, 1.0 - 1e-11, 1.0 - 1e-9, 0.5};
+
+    constexpr Scalar bar = 1e5;
+    std::vector<TestPoint<Scalar>> points;
     for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-        for (const double p : {60 * bar, 120 * bar, 190 * bar}) {
-            const double rsSat = cpuPvt.saturatedGasDissolutionFactor(regionIdx, temperature(), p);
-            for (const double rs : {rsSat, rsSat * (1.0 - 1e-11), rsSat * (1.0 - 1e-9), 0.5 * rsSat}) {
-                points.push_back({regionIdx, p, rs, 0.3, 0.7, 1.0});
-                points.push_back({regionIdx, p, rs, 0.0, 1.0, 1.0});
+        for (const Scalar p : {60 * bar, 120 * bar, 190 * bar}) {
+            const Scalar rsSat = cpuPvt.saturatedGasDissolutionFactor(regionIdx, temperature<Scalar>(), p);
+            for (const Scalar factor : rsFactors) {
+                points.push_back({regionIdx, p, factor * rsSat, 0.3, 0.7, 1});
+                points.push_back({regionIdx, p, factor * rsSat, 0, 1, 1});
             }
         }
     }
     return points;
 }
 
+template <class Scalar>
 struct Fixture {
     Fixture()
-        : cpuPvt(makeCpuPvt())
+        : cpuPvt(makeCpuPvt<Scalar>())
         , gpuBufPvt(Opm::gpuistl::copy_to_gpu(cpuPvt))
         , gpuViewPvt(Opm::gpuistl::make_view(gpuBufPvt))
     {}
 
-    CpuPvt cpuPvt;
-    GpuBufPvt gpuBufPvt;
-    GpuViewPvt gpuViewPvt;
+    CpuPvt<Scalar> cpuPvt;
+    GpuBufPvt<Scalar> gpuBufPvt;
+    GpuViewPvt<Scalar> gpuViewPvt;
 };
 
 } // anonymous namespace
 
-BOOST_FIXTURE_TEST_CASE(SizesAfterCopyToGpu, Fixture)
+BOOST_AUTO_TEST_CASE_TEMPLATE(SizesAfterCopyToGpu, Scalar, Scalars)
 {
-    BOOST_REQUIRE_EQUAL(cpuPvt.numRegions(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.numRegions(), numRegions);
-    BOOST_CHECK_EQUAL(gpuViewPvt.numRegions(), numRegions);
+    const Fixture<Scalar> fx;
+
+    BOOST_REQUIRE_EQUAL(fx.cpuPvt.numRegions(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.numRegions(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuViewPvt.numRegions(), numRegions);
 
     // Only sizes are safe to read on the host; the elements live in device memory.
-    BOOST_CHECK_EQUAL(gpuBufPvt.inverseOilBTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.oilMuTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.inverseOilBMuTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.saturatedOilMuTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.inverseSaturatedOilBTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.inverseSaturatedOilBMuTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.saturatedGasDissolutionFactorTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuBufPvt.saturationPressure().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.inverseOilBTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.oilMuTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.inverseOilBMuTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.saturatedOilMuTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.inverseSaturatedOilBTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.inverseSaturatedOilBMuTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.saturatedGasDissolutionFactorTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuBufPvt.saturationPressure().size(), numRegions);
 
-    BOOST_CHECK_EQUAL(gpuViewPvt.inverseOilBTable().size(), numRegions);
-    BOOST_CHECK_EQUAL(gpuViewPvt.saturationPressure().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuViewPvt.inverseOilBTable().size(), numRegions);
+    BOOST_CHECK_EQUAL(fx.gpuViewPvt.saturationPressure().size(), numRegions);
 }
 
-BOOST_AUTO_TEST_CASE(CopyToGpuRejectsUninitializedPvt)
+BOOST_AUTO_TEST_CASE_TEMPLATE(CopyToGpuRejectsUninitializedPvt, Scalar, Scalars)
 {
-    CpuPvt uninitialized;
+    CpuPvt<Scalar> uninitialized;
     BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu(uninitialized), std::logic_error);
 }
 
-BOOST_FIXTURE_TEST_CASE(ScalarMethodsMatchCpu, Fixture)
+BOOST_AUTO_TEST_CASE_TEMPLATE(ScalarMethodsMatchCpu, Scalar, Scalars)
 {
-    const auto points = gridPoints();
-    compareCpuAndGpu(InverseFormationVolumeFactor{}, cpuPvt, gpuViewPvt, points, "inverseFormationVolumeFactor");
-    compareCpuAndGpu(Viscosity{}, cpuPvt, gpuViewPvt, points, "viscosity");
-    compareCpuAndGpu(SaturatedInverseFormationVolumeFactor{}, cpuPvt, gpuViewPvt, points, "saturatedInverseFormationVolumeFactor");
-    compareCpuAndGpu(SaturatedViscosity{}, cpuPvt, gpuViewPvt, points, "saturatedViscosity");
-    compareCpuAndGpu(SaturatedGasDissolutionFactor{}, cpuPvt, gpuViewPvt, points, "saturatedGasDissolutionFactor");
-    compareCpuAndGpu(GasReferenceDensity{}, cpuPvt, gpuViewPvt, points, "gasReferenceDensity");
-    compareCpuAndGpu(OilReferenceDensity{}, cpuPvt, gpuViewPvt, points, "oilReferenceDensity");
-    compareCpuAndGpu(VapPar2{}, cpuPvt, gpuViewPvt, points, "vapPar2");
+    const Fixture<Scalar> fx;
+    const auto points = gridPoints<Scalar>();
+    compareCpuAndGpu(InverseFormationVolumeFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "inverseFormationVolumeFactor");
+    compareCpuAndGpu(Viscosity{}, fx.cpuPvt, fx.gpuViewPvt, points, "viscosity");
+    compareCpuAndGpu(SaturatedInverseFormationVolumeFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedInverseFormationVolumeFactor");
+    compareCpuAndGpu(SaturatedViscosity{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedViscosity");
+    compareCpuAndGpu(SaturatedGasDissolutionFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedGasDissolutionFactor");
+    compareCpuAndGpu(GasReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "gasReferenceDensity");
+    compareCpuAndGpu(OilReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "oilReferenceDensity");
+    compareCpuAndGpu(VapPar2{}, fx.cpuPvt, fx.gpuViewPvt, points, "vapPar2");
 }
 
-BOOST_FIXTURE_TEST_CASE(InverseFormationVolumeFactorAndViscosityMatchesCpu, Fixture)
+BOOST_AUTO_TEST_CASE_TEMPLATE(InverseFormationVolumeFactorAndViscosityMatchesCpu, Scalar, Scalars)
 {
-    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, cpuPvt, gpuViewPvt,
-                     gridPoints(), "inverseFormationVolumeFactorAndViscosity (grid)");
+    const Fixture<Scalar> fx;
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, fx.gpuViewPvt,
+                     gridPoints<Scalar>(), "inverseFormationVolumeFactorAndViscosity (grid)");
 
-    const auto points = switchPoints(cpuPvt);
+    const auto points = switchPoints(fx.cpuPvt);
 
     // Make sure that both branches are exercised: In the saturated branch, the result
     // equals the saturated tables. In the undersaturated branch, it comes from the 2D
     // tables and differs from the saturated tables away from the saturated curve.
-    const auto cpuResults = evaluateOnCpu(InverseFormationVolumeFactorAndViscosity{}, cpuPvt, points);
+    const auto cpuResults = evaluateOnCpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, points);
     for (std::size_t i = 0; i < points.size(); ++i) {
         const auto& pt = points[i];
-        const double satInvB = cpuPvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, temperature(), pt.p);
-        const double rsSat = cpuPvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature(), pt.p);
-        if (pt.sg > 0.0 && pt.rs >= rsSat * (1.0 - 1e-10)) {
+        const Scalar satInvB = fx.cpuPvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, temperature<Scalar>(), pt.p);
+        const Scalar rsSat = fx.cpuPvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature<Scalar>(), pt.p);
+        if (pt.sg > 0 && pt.rs >= Scalar(1.0 - 1e-10) * rsSat) {
             BOOST_CHECK_EQUAL(cpuResults[i].invB.value(), satInvB);
-        } else if (pt.rs < 0.9 * rsSat) {
+        } else if (pt.rs < Scalar(0.9) * rsSat) {
             BOOST_CHECK_NE(cpuResults[i].invB.value(), satInvB);
         }
     }
 
-    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, cpuPvt, gpuViewPvt,
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, fx.gpuViewPvt,
                      points, "inverseFormationVolumeFactorAndViscosity (branch switch)");
 }
 
-BOOST_AUTO_TEST_CASE(SaturatedGasDissolutionFactorWithVappars)
+BOOST_AUTO_TEST_CASE_TEMPLATE(SaturatedGasDissolutionFactorWithVappars, Scalar, Scalars)
 {
-    auto cpuPvt = makeCpuPvt();
+    auto cpuPvt = makeCpuPvt<Scalar>();
     cpuPvt.setVapPars(2.0, 0.1);
     auto gpuBufPvt = Opm::gpuistl::copy_to_gpu(cpuPvt);
     const auto gpuViewPvt = Opm::gpuistl::make_view(gpuBufPvt);
 
-    constexpr double p = 120e5;
-    std::vector<TestPoint> points;
+    constexpr Scalar p = 120e5;
+    std::vector<TestPoint<Scalar>> points;
     for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
         // So < SoMax: the VAPPARS correction pow(So/SoMax, vapPar2) is applied
-        points.push_back({regionIdx, p, 0.0, 0.0, 0.3, 0.8});
-        points.push_back({regionIdx, p, 0.0, 0.0, 0.0005, 0.8}); // So below the cut-off eps
+        points.push_back({regionIdx, p, 0, 0, 0.3, 0.8});
+        points.push_back({regionIdx, p, 0, 0, 0.0005, 0.8}); // So below the cut-off eps
         // So >= SoMax, and SoMax <= 0.01: no correction
-        points.push_back({regionIdx, p, 0.0, 0.0, 0.8, 0.8});
-        points.push_back({regionIdx, p, 0.0, 0.0, 0.005, 0.009});
+        points.push_back({regionIdx, p, 0, 0, 0.8, 0.8});
+        points.push_back({regionIdx, p, 0, 0, 0.005, 0.009});
     }
 
     // The correction is active for the first point of each region
-    const double uncorrected = cpuPvt.saturatedGasDissolutionFactor(0, temperature(), p);
+    const Scalar uncorrected = cpuPvt.saturatedGasDissolutionFactor(0, temperature<Scalar>(), p);
     BOOST_CHECK_LT(SaturatedGasDissolutionFactorVappars{}(cpuPvt, points[0]), uncorrected);
 
     compareCpuAndGpu(SaturatedGasDissolutionFactorVappars{}, cpuPvt, gpuViewPvt, points,
@@ -497,39 +544,43 @@ BOOST_AUTO_TEST_CASE(SaturatedGasDissolutionFactorWithVappars)
     compareCpuAndGpu(VapPar2{}, cpuPvt, gpuViewPvt, points, "vapPar2 (VAPPARS)");
 }
 
-BOOST_FIXTURE_TEST_CASE(RegionsAreIndexedCorrectly, Fixture)
+BOOST_AUTO_TEST_CASE_TEMPLATE(RegionsAreIndexedCorrectly, Scalar, Scalars)
 {
+    const Fixture<Scalar> fx;
+
     // The same (p, Rs) in both regions must give different values (the regions have
     // different tables), and each region must match its CPU counterpart.
-    constexpr double p = 150e5;
-    constexpr double rs = 40.0;
-    const std::vector<TestPoint> points = {{0, p, rs, 0.0, 1.0, 1.0},
-                                           {1, p, rs, 0.0, 1.0, 1.0}};
+    constexpr Scalar p = 150e5;
+    constexpr Scalar rs = 40.0;
+    const std::vector<TestPoint<Scalar>> points = {{0, p, rs, 0, 1, 1},
+                                                   {1, p, rs, 0, 1, 1}};
 
-    const auto cpuInvB = evaluateOnCpu(InverseFormationVolumeFactor{}, cpuPvt, points);
-    const auto cpuMu = evaluateOnCpu(Viscosity{}, cpuPvt, points);
+    const auto cpuInvB = evaluateOnCpu(InverseFormationVolumeFactor{}, fx.cpuPvt, points);
+    const auto cpuMu = evaluateOnCpu(Viscosity{}, fx.cpuPvt, points);
     BOOST_CHECK_NE(cpuInvB[0], cpuInvB[1]);
     BOOST_CHECK_NE(cpuMu[0], cpuMu[1]);
 
-    checkResults(cpuInvB, evaluateOnGpu(InverseFormationVolumeFactor{}, gpuViewPvt, points), points,
+    checkResults(cpuInvB, evaluateOnGpu(InverseFormationVolumeFactor{}, fx.gpuViewPvt, points), points,
                  "inverseFormationVolumeFactor (regions)");
-    checkResults(cpuMu, evaluateOnGpu(Viscosity{}, gpuViewPvt, points), points,
+    checkResults(cpuMu, evaluateOnGpu(Viscosity{}, fx.gpuViewPvt, points), points,
                  "viscosity (regions)");
-    compareCpuAndGpu(GasReferenceDensity{}, cpuPvt, gpuViewPvt, points, "gasReferenceDensity (regions)");
-    compareCpuAndGpu(OilReferenceDensity{}, cpuPvt, gpuViewPvt, points, "oilReferenceDensity (regions)");
+    compareCpuAndGpu(GasReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "gasReferenceDensity (regions)");
+    compareCpuAndGpu(OilReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "oilReferenceDensity (regions)");
 }
 
-BOOST_FIXTURE_TEST_CASE(ViewsStayValidAfterMovingOwner, Fixture)
+BOOST_AUTO_TEST_CASE_TEMPLATE(ViewsStayValidAfterMovingOwner, Scalar, Scalars)
 {
+    Fixture<Scalar> fx;
+
     // Moving the owning object moves the GpuBuffers, which keeps their device memory.
     // Both a view created before the move and one created after it must stay valid.
-    const auto viewBeforeMove = gpuViewPvt;
-    GpuBufPvt movedPvt = std::move(gpuBufPvt);
+    const auto viewBeforeMove = fx.gpuViewPvt;
+    GpuBufPvt<Scalar> movedPvt = std::move(fx.gpuBufPvt);
     const auto viewAfterMove = Opm::gpuistl::make_view(movedPvt);
 
-    const auto points = gridPoints();
-    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, cpuPvt, viewBeforeMove, points,
+    const auto points = gridPoints<Scalar>();
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, viewBeforeMove, points,
                      "inverseFormationVolumeFactorAndViscosity (view before move)");
-    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, cpuPvt, viewAfterMove, points,
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, viewAfterMove, points,
                      "inverseFormationVolumeFactorAndViscosity (view after move)");
 }
