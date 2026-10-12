@@ -505,7 +505,7 @@ protected:
     void updateCachedIntQuants(const unsigned timeIdx) const
     {
         // Runtime dispatch on three-phase approach to compile-time fixed approach.
-        switch (this->simulator_.problem().materialLawManager()->threePhaseApproach()) {
+        switch (this->simulator_.problem().materialLawManager().threePhaseApproach()) {
         case EclMultiplexerApproach::Stone1:
             updateCachedIntQuants1<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
             break;
@@ -532,7 +532,7 @@ protected:
     void updateCachedIntQuants1(const unsigned timeIdx) const
     {
         // Runtime dispatch on using piecewise linear saturation curves to compile-time fixed approach.
-        if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
+        if (this->simulator_.problem().materialLawManager().satCurveIsAllPiecewiseLinear()) {
             using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
             updateCachedIntQuantsLoop<EMDArg, PL>(timeIdx);
         } else {
