@@ -523,7 +523,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                         flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
                     }
                 }
-                std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
+                std::function<Vector()> weightCalculator
+                    = this->getWeightsCalculator(prm_[activeSolverNum_], pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),
                                                          isParallel(),
@@ -622,7 +623,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
         std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
-                                                     const Matrix& matrix,
                                                      std::size_t pressIndex) const
         {
             std::function<Vector()> weightsCalculator;
@@ -638,14 +638,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const bool enableThreadParallel = this->parameters_[0].cpr_weights_thread_parallel_;
                 const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {
-                    // weights will be created as default in the solver
-                    // assignment p = pressureIndex prevent compiler warning about
-                    // capturing variable with non-automatic storage duration
-                    weightsCalculator = [matrix, transpose, pressIndex, enableThreadParallel]() {
-                        return Amg::getQuasiImpesWeights<Matrix, Vector>(matrix,
-                                                                         pressIndex,
-                                                                         transpose,
-                                                                         enableThreadParallel);
+                    // Use the current matrix: preconditioner updates call this
+                    // without rebuilding the solver.
+                    weightsCalculator = [this, transpose, pressIndex, enableThreadParallel]() {
+                        return Amg::getQuasiImpesWeights<Matrix, Vector>(
+                            getMatrix(), pressIndex, transpose, enableThreadParallel);
                     };
                 } else if ( weightsType == "trueimpes" ) {
                     weightsCalculator =
