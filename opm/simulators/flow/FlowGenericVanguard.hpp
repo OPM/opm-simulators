@@ -246,13 +246,7 @@ public:
      * \brief Number of blocks in the Block-Jacobi preconditioner.
      */
     int numJacobiBlocks() const
-    {
-#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        return numJacobiBlocks_;
-#else
-        return 0;
-#endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-    }
+    { return numJacobiBlocks_; }
 
     /*!
      * \brief Parameter that decide if cells owned by rank are ordered before ghost cells.
@@ -371,9 +365,9 @@ protected:
     std::string fileName_;
     Dune::EdgeWeightMethod edgeWeightsMethod_;
 
-#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
+    // Not guarded by the GPU defines: those are private to the library, and
+    // the class layout must be the same wherever this header is compiled.
     int numJacobiBlocks_{0};
-#endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
     bool ownersFirst_;
     bool edgeConformal_;
