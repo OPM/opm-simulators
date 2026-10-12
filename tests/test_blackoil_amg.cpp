@@ -313,6 +313,106 @@ void runBlackoilAmgLaplace()
 
 }
 
+BOOST_AUTO_TEST_CASE(TransposedCprKeepsCopiesConsistent)
+{
+    const auto& ccomm = Dune::MPIHelper::getCommunication();
+    if (ccomm.size() > 2) {
+        BOOST_TEST_MESSAGE("This test uses one or two MPI processes.");
+        return;
+    }
+
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 2, 2>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, 2>>;
+    using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+    using Operator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
+
+    // A chain of four cells, each process owning two. The other two are
+    // copies with identity rows, as the linear solver leaves them, so their
+    // quasi-IMPES weights hold pressure only.
+    constexpr int numRows = 4;
+    auto isOwner = [&ccomm](int row) { return ccomm.size() == 1 || row / 2 == ccomm.rank(); };
+
+    Communication comm(ccomm);
+    auto& indices = comm.indexSet();
+    indices.beginResize();
+    for (int row = 0; row < numRows; ++row) {
+        indices.add(
+            row,
+            LocalIndex(row, isOwner(row) ? GridAttributes::owner : GridAttributes::copy, true));
+    }
+    indices.endResize();
+    comm.remoteIndices().template rebuild<false>();
+
+    Matrix matrix(numRows, numRows, Matrix::row_wise);
+    for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
+        row.insert(row.index());
+        if (row.index() > 0) {
+            row.insert(row.index() - 1);
+        }
+        if (row.index() + 1 < numRows) {
+            row.insert(row.index() + 1);
+        }
+    }
+    matrix = 0.0;
+    for (int row = 0; row < numRows; ++row) {
+        auto& diag = matrix[row][row];
+        if (!isOwner(row)) {
+            diag[0][0] = 1.0;
+            diag[1][1] = 1.0;
+            continue;
+        }
+        diag[0][0] = 2.0;
+        diag[0][1] = 0.5;
+        diag[1][0] = 1.0;
+        diag[1][1] = 3.0;
+        for (const int col : {row - 1, row + 1}) {
+            if (col >= 0 && col < numRows) {
+                matrix[row][col][0][0] = -1.0;
+                matrix[row][col][1][1] = -0.5;
+            }
+        }
+    }
+
+    const auto prm = Opm::PropertyTree::fromJsonString(R"({
+        "type": "cprt",
+        "pre_smooth": 0,
+        "post_smooth": 1,
+        "finesmoother": {"type": "paroverilu0"},
+        "coarsesolver": {
+            "solver": "loopsolver",
+            "maxiter": 1,
+            "tol": 0.1,
+            "preconditioner": {"type": "paroverilu0"}
+        }
+    })");
+    const std::function<Vector()> weights = [&matrix]() {
+        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 0, true, false);
+    };
+    Operator op(matrix, comm);
+    auto cpr
+        = Opm::PreconditionerFactory<Operator, Communication>::create(op, prm, weights, comm, 0);
+
+    Vector v(numRows), d(numRows);
+    v = 0.0;
+    d = 0.0;
+    for (int row = 0; row < numRows; ++row) {
+        if (isOwner(row)) {
+            d[row] = 1.0;
+        }
+    }
+    cpr->pre(v, d);
+    cpr->apply(v, d);
+    cpr->post(v);
+
+    Vector owned = v;
+    comm.copyOwnerToAll(owned, owned);
+    for (int row = 0; row < numRows; ++row) {
+        for (int var = 0; var < 2; ++var) {
+            BOOST_CHECK_EQUAL(v[row][var], owned[row][var]);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
 {
     const auto& ccomm = Dune::MPIHelper::getCommunication();
