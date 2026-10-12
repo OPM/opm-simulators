@@ -157,6 +157,12 @@ namespace Dune
 
       ~AMGCPR();
 
+      /** @brief Solve rows without off-diagonal entries directly in pre(), then copy x from the owners. */
+      void setDirichletPresolve(bool on)
+      {
+        dirichletPresolve_ = on;
+      }
+
       /** \copydoc Preconditioner::pre */
       void pre(Domain& x, Range& b) override;
 
@@ -388,6 +394,7 @@ namespace Dune
       SolverCategory::Category category_;
       /** @brief The verbosity level. */
       std::size_t verbosity_;
+      bool dirichletPresolve_ = false;
     };
 
     template<class M, class X, class S, class PI, class A>
@@ -401,7 +408,8 @@ namespace Dune
       additive(amg.additive), coarsesolverconverged(amg.coarsesolverconverged),
       coarseSmoother_(amg.coarseSmoother_),
       category_(amg.category_),
-      verbosity_(amg.verbosity_)
+      verbosity_(amg.verbosity_),
+      dirichletPresolve_(amg.dirichletPresolve_)
     {
       if(amg.rhs_)
         rhs_.reset( new Hierarchy<Range,A>(*amg.rhs_) );
@@ -619,46 +627,47 @@ namespace Dune
     void AMGCPR<M,X,S,PI,A>::pre(Domain& x, Range& b)
     {
       OPM_TIMEBLOCK(pre);
-      // Detect Matrix rows where all offdiagonal entries are
-      // zero and set x such that  A_dd*x_d=b_d
-      // Thus users can be more careless when setting up their linear
-      // systems.
-      typedef typename M::matrix_type Matrix;
-      typedef typename Matrix::ConstRowIterator RowIter;
-      typedef typename Matrix::ConstColIterator ColIter;
-      typedef typename Matrix::block_type Block;
-      Block zero;
-      zero=typename Matrix::field_type();
+      if (dirichletPresolve_) {
+        // Detect Matrix rows where all offdiagonal entries are
+        // zero and set x such that  A_dd*x_d=b_d
+        // Thus users can be more careless when setting up their linear
+        // systems.
+        typedef typename M::matrix_type Matrix;
+        typedef typename Matrix::ConstRowIterator RowIter;
+        typedef typename Matrix::ConstColIterator ColIter;
+        typedef typename Matrix::block_type Block;
+        Block zero;
+        zero=typename Matrix::field_type();
 
-      const Matrix& mat=matrices_->matrices().finest()->getmat();
-      for(RowIter row=mat.begin(); row!=mat.end(); ++row) {
-        bool isDirichlet = true;
-        bool hasDiagonal = false;
-        Block diagonal;
-        for(ColIter col=row->begin(); col!=row->end(); ++col) {
-          if(row.index()==col.index()) {
-            if (*col != zero) {
-              diagonal = *col;
-              hasDiagonal = true;
-            } else {
+        const Matrix& mat=matrices_->matrices().finest()->getmat();
+        for(RowIter row=mat.begin(); row!=mat.end(); ++row) {
+          bool isDirichlet = true;
+          bool hasDiagonal = false;
+          Block diagonal;
+          for(ColIter col=row->begin(); col!=row->end(); ++col) {
+            if(row.index()==col.index()) {
+              if (*col != zero) {
+                diagonal = *col;
+                hasDiagonal = true;
+              } else {
+                  break;
+              }
+            }else{
+              if (*col != zero) {
+                isDirichlet = false;
                 break;
-            }
-          }else{
-            if (*col != zero) {
-              isDirichlet = false;
-              break;
+              }
             }
           }
+          if(isDirichlet && hasDiagonal)
+            diagonal.solve(x[row.index()], b[row.index()]);
         }
-        if(isDirichlet && hasDiagonal)
-          diagonal.solve(x[row.index()], b[row.index()]);
+        // The rows above are solved per rank.
+        matrices_->parallelInformation().finest()->copyOwnerToAll(x,x);
       }
 
       if(smoothers_->levels()>0)
         smoothers_->finest()->pre(x,b);
-      else
-        // No smoother to make x consistent! Do it by hand
-        matrices_->parallelInformation().coarsest()->copyOwnerToAll(x,x);
 
 
       typedef std::shared_ptr< Range  >  RangePtr ;

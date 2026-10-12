@@ -32,6 +32,7 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #if HAVE_AVX2_EXTENSION
 #include <opm/simulators/linalg/mixed/PreconditionerWrapper.hpp>
@@ -89,6 +90,14 @@ void setUseFixedOrder(C&, ...)
     // do nothing, since the function setUseFixedOrder does not exist yet
 }
 
+template <class Amg, class... Args>
+std::shared_ptr<Amg> makeAmgCpr(const PropertyTree& prm, Args&&... args)
+{
+    auto amg = std::make_shared<Amg>(std::forward<Args>(args)...);
+    amg->setDirichletPresolve(prm.get<bool>("dirichlet_presolve", false));
+    return amg;
+}
+
 template <class Operator, class Comm, class Matrix, class Vector>
 typename AMGHelper<Operator, Comm, Matrix, Vector>::Criterion
 AMGHelper<Operator, Comm, Matrix, Vector>::criterion(const PropertyTree& prm)
@@ -130,7 +139,7 @@ AMGHelper<Operator, Comm, Matrix, Vector>::makeAmgPreconditioner(const Operator&
             op, crit, sargs, prm.get<std::size_t>("max_krylov", 1), prm.get<double>("min_reduction", 1e-1));
     } else {
         using Type = Dune::Amg::AMGCPR<Operator, Vector, Smoother>;
-        return std::make_shared<Type>(op, crit, sargs);
+        return makeAmgCpr<Type>(prm, op, crit, sargs);
     }
 }
 
@@ -224,7 +233,7 @@ struct StandardPreconditioners
                     using Smoother = ParallelOverlappingILU0<M, V, V, C>;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "dilu") {
                     using SeqSmoother = Dune::MultithreadDILU<M, V, V>;
@@ -232,7 +241,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "jac") {
                     using SeqSmoother = SeqJac<M, V, V>;
@@ -240,7 +249,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "gs") {
                     using SeqSmoother = SeqGS<M, V, V>;
@@ -248,7 +257,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "sor") {
                     using SeqSmoother = SeqSOR<M, V, V>;
@@ -256,7 +265,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "ssor") {
                     using SeqSmoother = SeqSSOR<M, V, V>;
@@ -264,7 +273,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else if (smoother == "ilun") {
                     using SeqSmoother = SeqILU<M, V, V>;
@@ -272,7 +281,7 @@ struct StandardPreconditioners
                     using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
                     SmootherArgs sargs;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                    PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                    PrecPtr prec = makeAmgCpr<Dune::Amg::AMGCPR<O, V, Smoother, C>>(prm, op, crit, sargs, comm);
                     return prec;
                 } else {
                     OPM_THROW(std::invalid_argument, "Properties: No smoother with name " + smoother + ".");
