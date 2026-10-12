@@ -189,6 +189,10 @@ public:
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
+    //! Count every control switch of the well towards the limit on the number of
+    //! well switches, also before NUPCOL iterations.
+    void setLogAllControlSwitches(const bool value) { this->log_all_control_switches_ = value; }
+
     //! \param ws Well state
     //! \param simulationTime Simulation time
     //! \param writeMessageToOPMLog True to write message to the OPM log
@@ -576,6 +580,12 @@ protected:
     const GuideRate* guide_rate_;
 
     std::vector<std::string> well_control_log_;
+
+    // Count every control switch of the well towards max_number_of_well_switches_,
+    // also before NUPCOL iterations.  Set for a reservoir coupling slave's wells while
+    // the master exchanges network pressures with the slave, see
+    // BlackoilWellModelRescoup::receiveMasterGroupNodePressuresFromMaster().
+    bool log_all_control_switches_ = false;
 
     bool changed_to_open_this_step_ = true;
 

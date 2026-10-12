@@ -123,6 +123,21 @@ public:
 
     void setFromRestart(const std::optional<std::map<std::string, double>>& restart_pressures);
 
+    //! \brief Pressures that a reservoir coupling master imposes on nodes of the
+    //!        production network, by node (group) name.
+    //!
+    //! A reservoir coupling slave takes the pressure of a node that is a master
+    //! group's leaf in the master's network from the master.  The pressure
+    //! computation uses it as the fixed pressure of the node, instead of the one
+    //! in the deck, and the nodes below it follow from it with the pressure drops
+    //! in their branches.  So the THP limits of the slave's wells are the master's pressure
+    //! plus those drops whenever they are set, and not only after the master's
+    //! message is received.  The node itself is not damped by updatePressures().
+    //! Only production network nodes with a fixed pressure in the deck are
+    //! overridden.
+    void setNodePressureOverrides(std::map<std::string, Scalar> overrides)
+    { node_pressure_overrides_ = std::move(overrides); }
+
     //! \brief Initialize wells according to network configuration.
     void initialize(const int report_step);
 
@@ -185,6 +200,9 @@ public:
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
+    /// See setNodePressureOverrides().
+    std::map<std::string, Scalar> node_pressure_overrides_;
+
     //! \brief Apply a network THP limit and retain it across well
     //! reconstruction or network detachment.
     void imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well,

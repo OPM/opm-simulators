@@ -318,6 +318,12 @@ updatePressures(const int reportStepIdx,
 
         if (!previous_domain_pressures.empty()) {
             for (auto& [name, new_pressure]: domain_pressures) {
+                if (network.domain == details::NetworkDomain::Production
+                    && this->node_pressure_overrides_.count(name) > 0) {
+                    // Imposed by a reservoir coupling master: neither damped nor part of
+                    // the imbalance, which only measures this network's own iteration.
+                    continue;
+                }
                 if (previous_domain_pressures.count(name) <= 0) {
                     if (std::abs(new_pressure) > network_imbalance) {
                         network_imbalance = std::abs(new_pressure);
@@ -570,7 +576,8 @@ computePressures(const Network::ExtNetwork& network,
     NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
                                VFPProdProperties<Scalar>>
         network_pressure_computation(
-            well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm);
+            well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm,
+            &this->node_pressure_overrides_);
 
     auto [node_pressures, branch_data] = network_pressure_computation.run();
     return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};
