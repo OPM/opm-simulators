@@ -1263,6 +1263,130 @@ assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) co
     limits.set(rateItem, ctrl.surface_rate);
 }
 
+namespace {
+
+/// Rate which a production group target in mode \p cmode controls for
+/// each well under that target.
+WellProducerCMode groupTargetRate(const Group::ProductionCMode cmode)
+{
+    switch (cmode) {
+    case Group::ProductionCMode::ORAT: return WellProducerCMode::ORAT;
+    case Group::ProductionCMode::WRAT: return WellProducerCMode::WRAT;
+    case Group::ProductionCMode::GRAT: return WellProducerCMode::GRAT;
+    case Group::ProductionCMode::LRAT: return WellProducerCMode::LRAT;
+    case Group::ProductionCMode::RESV: return WellProducerCMode::RESV;
+    default: return WellProducerCMode::CMODE_UNDEFINED;
+    }
+}
+
+/// Rate which an injection group target in mode \p cmode controls for
+/// each well under that target.  Reinjection and sales targets are
+/// surface rates, voidage replacement targets are reservoir rates.
+WellInjectorCMode groupTargetRate(const Group::InjectionCMode cmode)
+{
+    switch (cmode) {
+    case Group::InjectionCMode::RATE:
+    case Group::InjectionCMode::REIN:
+    case Group::InjectionCMode::SALE:
+        return WellInjectorCMode::RATE;
+
+    case Group::InjectionCMode::RESV:
+    case Group::InjectionCMode::VREP:
+        return WellInjectorCMode::RESV;
+
+    default:
+        return WellInjectorCMode::CMODE_UNDEFINED;
+    }
+}
+
+/// Group which sets the target of a well in group \p wellGroup that is
+/// under the target of group \p targetGroup.  This is the first group on
+/// the way up from the well that receives its share of the target by a
+/// guide rate of its own, or the target group itself if no group below it
+/// has a guide rate.
+template <typename HasGuideRate>
+std::string controllingGroup(const Schedule&    schedule,
+                             const int          reportStepIdx,
+                             const std::string& wellGroup,
+                             const std::string& targetGroup,
+                             HasGuideRate&&     hasGuideRate)
+{
+    auto gname = wellGroup;
+    while ((gname != targetGroup) && (gname != "FIELD")) {
+        const auto& group = schedule.getGroup(gname, reportStepIdx);
+        if (hasGuideRate(group)) {
+            return gname;
+        }
+
+        gname = group.parent();
+    }
+
+    return targetGroup;
+}
+
+} // Anonymous namespace
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+assignGroupTargetControl(data::Wells& wsrpt,
+                         const int reportStepIndex) const
+{
+    this->loopOwnedWells([this, reportStepIndex, &wsrpt]
+                         ([[maybe_unused]] const auto wellIndex,
+                          const Well&                 well)
+    {
+        if (! this->wellState().has(well.name())) {
+            return;
+        }
+
+        const auto& ws = this->wellState().well(well.name());
+
+        // A producer follows the target in its group's original control
+        // mode while the group's current mode is infeasible.
+        const auto& target = (ws.producer && ws.use_group_target_fallback)
+            ? ws.group_target_fallback
+            : ws.group_target;
+
+        const auto underGroupControl = ws.producer
+            ? ws.production_cmode == Well::ProducerCMode::GRUP
+            : ws.injection_cmode == Well::InjectorCMode::GRUP;
+
+        if (! underGroupControl || ! target.has_value()) {
+            return;
+        }
+
+        auto& curr = wsrpt[well.name()].current_control;
+
+        if (ws.producer) {
+            curr.groupTargetProd = groupTargetRate(target->production_cmode);
+            curr.controllingGroup =
+                controllingGroup(this->schedule(), reportStepIndex,
+                                 well.groupName(), target->group_name,
+                                 [](const Group& group)
+                                 {
+                                     return group.productionProperties().guide_rate_def
+                                         != Group::GuideRateProdTarget::NO_GUIDE_RATE;
+                                 });
+        }
+        else {
+            const auto phase = well.wellType().injection_phase();
+
+            curr.groupTargetInj = groupTargetRate(target->injection_cmode);
+            curr.controllingGroup =
+                controllingGroup(this->schedule(), reportStepIndex,
+                                 well.groupName(), target->group_name,
+                                 [phase](const Group& group)
+                                 {
+                                     const auto& props = group.injectionProperties();
+                                     const auto pos = props.find(phase);
+                                     return (pos != props.end())
+                                         && (pos->second.guide_rate_def
+                                             != Group::GuideRateInjTarget::NO_GUIDE_RATE);
+                                 });
+        }
+    });
+}
+
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 assignDynamicWellStatus(data::Wells& wsrpt) const

@@ -239,6 +239,8 @@ template<class Scalar> class WellContributions;
 
                 this->assignWellTargets(wsrpt);
 
+                this->assignGroupTargetControl(wsrpt, this->reportStepIndex());
+
                 this->assignDynamicWellStatus(wsrpt);
 
                 this->assignWellPerformanceEventTracker(wsrpt);
