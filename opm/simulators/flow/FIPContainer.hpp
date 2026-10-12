@@ -31,7 +31,6 @@
 #include <array>
 #include <cstddef>
 #include <map>
-#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -47,7 +46,8 @@ template<class FluidSystem>
 class FIPContainer {
 public:
     using Scalar = typename FluidSystem::Scalar;
-    using FIPMap = std::unordered_map<Inplace::Phase, std::vector<Scalar>>;
+    using FIPArray = std::array<std::vector<Scalar>,
+                                static_cast<std::size_t>(Inplace::Phase::NumberOfEnumerators)>;
 
     static constexpr auto numPhases = FluidSystem::numPhases;
     static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
@@ -134,7 +134,17 @@ public:
     void outputRestart(data::Solution& sol);
 
 private:
-    FIPMap fip_{};
+    std::vector<Scalar>& phaseData(const Inplace::Phase phase)
+    {
+        return fip_[static_cast<std::size_t>(phase)];
+    }
+
+    const std::vector<Scalar>& phaseData(const Inplace::Phase phase) const
+    {
+        return fip_[static_cast<std::size_t>(phase)];
+    }
+
+    FIPArray fip_{};
     std::size_t bufferSize_ = 0;
 
     struct OutputRestart
