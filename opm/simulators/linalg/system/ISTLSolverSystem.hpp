@@ -441,7 +441,7 @@ private:
         // Derive weights from the reservoir sub-block config (which uses CPR internally)
         auto resSolverPrm = prm.get_child("preconditioner.reservoir_solver");
         std::function<ResVector<Scalar>()> resWeightCalc
-            = this->getWeightsCalculator(resSolverPrm, this->getMatrix(), pressureIndex);
+            = this->getWeightsCalculator(resSolverPrm, pressureIndex);
 
         // The well part of the weights is filled here too: the CPRW pressure
         // stage restricts the well rows with it, and re-reads it on every

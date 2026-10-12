@@ -501,6 +501,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_injection_topup_phase_validation.cpp
   tests/test_interregflows.cpp
   tests/test_invert.cpp
+  tests/test_istlsolver_quasiimpes.cpp
   tests/test_keyword_validator.cpp
   tests/test_LgrBlockData.cpp
   tests/test_LgrTransIndex.cpp
