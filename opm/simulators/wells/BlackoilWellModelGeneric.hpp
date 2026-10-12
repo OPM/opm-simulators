@@ -534,6 +534,17 @@ protected:
     void assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const;
     void assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const;
 
+    /// Assign the controlling group, and the rate its target controls, of
+    /// each well under group control owned by the current rank.
+    ///
+    /// \param[in,out] wsrpt Well solution object.  On exit, holds these in
+    /// \code data::Well::current_control \endcode for wells under group
+    /// control.
+    ///
+    /// \param[in] reportStepIndex Zero-based index of current report step.
+    void assignGroupTargetControl(data::Wells& wsrpt,
+                                  const int reportStepIndex) const;
+
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
