@@ -623,16 +623,29 @@ updateStatus_(const Simulator& simulator,
               const SingleWellState& well_state)
 {
     // As the black-oil wells do by default, decide at the start of each time
-    // step whether the well can flow at its bhp limit. With a single
-    // connection, it can while the cell pressure is beyond the limit.
+    // step whether the well can flow at its bhp limit: whether its
+    // connections, each at the limit plus its hydrostatic head, give a net
+    // flow in the direction of the well.
     const auto& summary_state = simulator.vanguard().summaryState();
-    const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[0], 0);
-    assert(int_quantities);
-    const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
     const bool producer = this->well_ecl_.isProducer();
-    this->stopped_ = producer
-        ? cell_pressure <= this->well_ecl_.productionControls(summary_state).bhp_limit
-        : cell_pressure >= this->well_ecl_.injectionControls(summary_state).bhp_limit;
+    const Scalar bhp_limit = producer
+        ? this->well_ecl_.productionControls(summary_state).bhp_limit
+        : this->well_ecl_.injectionControls(summary_state).bhp_limit;
+    Scalar potential = 0.;
+    std::vector<EvalWell> mob(FluidSystem::numPhases, 0.);
+    for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
+        const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[con_idx], 0);
+        assert(int_quantities);
+        const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
+        getMobility(simulator, con_idx, mob);
+        Scalar total_mobility = 0.;
+        for (const auto& m : mob) {
+            total_mobility += getValue(m);
+        }
+        potential += this->well_index_[con_idx] * total_mobility
+            * (cell_pressure - bhp_limit - this->connection_pressure_diffs_[con_idx]);
+    }
+    this->stopped_ = producer ? potential <= 0. : potential >= 0.;
 
     const bool had_rate = well_state.get_total_surface_rate() != 0.;
     if (this->stopped_ && had_rate) {
