@@ -296,6 +296,32 @@ add_test_compare_restarted_simulation(
     --enable-tuning=true
 )
 
+# Restart run which appends a tracer to TRACER and raises the TRACERS
+# dimension.  The appended tracer is injected from the restart step on,
+# so the run of APPEND_WT_TRACER from the start is the reference.
+add_test_compare_restarted_simulation(
+  CASENAME
+    append_wt_tracer
+  FILENAME
+    APPEND_WT_TRACER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    4
+  RESTART_FROM
+    APPEND_WT_TRACER_BASE
+  DIR
+    tracer
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
