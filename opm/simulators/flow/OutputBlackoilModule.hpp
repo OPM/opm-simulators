@@ -2838,7 +2838,7 @@ private:
                                 // RegionPhasePoreVolAverage.
 
                                 // Subtract one to convert FIPNUM to region index.
-                                const auto datum = simConfig.datumDepths()(regions["FIPNUM"][ectx.dofIdx] - 1);
+                                const auto datum = simConfig.datumDepths()(std::as_const(regions).at("FIPNUM")[ectx.dofIdx] - 1);
 
                                 // Add one to convert region index to region ID.
                                 const auto region = RegionPhasePoreVolAverage::Region {

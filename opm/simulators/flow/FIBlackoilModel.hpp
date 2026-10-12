@@ -51,6 +51,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -88,6 +89,11 @@ public:
                           Dune::Partitions::all,
                           ThreadManager::maxThreads())
     {
+        if constexpr (gridIsUnchanging) {
+            interior_element_chunks_.emplace(this->gridView_,
+                                             Dune::Partitions::interior,
+                                             ThreadManager::maxThreads());
+        }
 #if HAVE_CUDA
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             useGpuIntensiveQuantitiesDispatcher_ =
@@ -102,6 +108,22 @@ public:
             OPM_THROW(std::invalid_argument,
                       "--enable-intensive-quantity-cache=false is not supported "
                       "by this simulator.");
+        }
+    }
+
+    // Reuse interior iterators on the fixed CpGrid. Rebuild them for grids
+    // whose element iterators can be invalidated by adaptation.
+    template <class Func>
+    void withInteriorElementChunks(Func&& func) const
+    {
+        if constexpr (gridIsUnchanging) {
+            std::forward<Func>(func)(*interior_element_chunks_);
+        } else {
+            // A changing grid invalidates stored element iterators.
+            const auto chunks = ElementChunks(this->simulator_.gridView(),
+                                              Dune::Partitions::interior,
+                                              ThreadManager::maxThreads());
+            std::forward<Func>(func)(chunks);
         }
     }
 
@@ -339,6 +361,7 @@ protected:
     }
 
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+    std::optional<ElementChunks<GridView, Dune::Partitions::Interior>> interior_element_chunks_;
 
 #if HAVE_CUDA
     bool useGpuIntensiveQuantitiesDispatcher_{false};
