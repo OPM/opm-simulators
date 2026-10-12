@@ -272,6 +272,31 @@ add_test_compare_restarted_simulation(
     spe1
 )
 
+# Restart runs with a well which has not been given a control mode.  The
+# well is shut at report step 2, and stopped from report step 3.
+foreach(step 2 3)
+  add_test_compare_restarted_simulation(
+    CASENAME
+      spe1_stop_without_control_${step}
+    FILENAME
+      SPE1CASE1_STOP_WITHOUT_CONTROL
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    TEST_NAME
+      compareRestartedSim_${RESTART_SIM}+SPE1CASE1_STOP_WITHOUT_CONTROL_${step}
+    ABS_TOL
+      ${abs_tol_restart}
+    REL_TOL
+      ${rel_tol_restart}
+    RESTART_STEP
+      ${step}
+    DIR
+      spe1
+  )
+endforeach()
+
 # Restart run in which a UDQ defining expression has exactly 128
 # characters.  Verifies that we don't overflow the ZUDL character
 # limit in restart files.
