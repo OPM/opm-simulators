@@ -24,7 +24,9 @@
 #ifndef OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
 #define OPM_NONLINEAR_SYSTEM_NLDD_HEADER_INCLUDED
 
+#include <dune/common/fvector.hh>
 #include <dune/common/timer.hh>
+#include <dune/istl/bvector.hh>
 #include <dune/istl/istlexception.hh>
 
 #include <opm/common/Exceptions.hpp>
@@ -467,15 +469,21 @@ public:
             // Copy numerical values from primary vars.
             ccomm->copyOwnerToAll(solution, solution);
 
-            // Copy flags from primary vars.
+            // Copy flags from primary vars, together with whether the cell switched
+            // primary variables in this time step. The local solves update that only
+            // on owned cells, and the global Newton update must treat a cell and its
+            // copies on other processes alike.
+            auto& newton = model_.simulator().model().newtonMethod();
             const std::size_t num = solution.size();
-            Dune::BlockVector<std::size_t> allmeanings(num);
+            Dune::BlockVector<Dune::FieldVector<std::size_t, 2>> flags(num);
             for (std::size_t ii = 0; ii < num; ++ii) {
-                allmeanings[ii] = PVUtil::pack(solution[ii]);
+                flags[ii][0] = PVUtil::pack(solution[ii]);
+                flags[ii][1] = newton.wasSwitched(ii);
             }
-            ccomm->copyOwnerToAll(allmeanings, allmeanings);
+            ccomm->copyOwnerToAll(flags, flags);
             for (std::size_t ii = 0; ii < num; ++ii) {
-                PVUtil::unPack(solution[ii], allmeanings[ii]);
+                PVUtil::unPack(solution[ii], flags[ii][0]);
+                newton.setWasSwitched(ii, flags[ii][1] != 0);
             }
 
             // Update intensive quantities for our overlap values.
