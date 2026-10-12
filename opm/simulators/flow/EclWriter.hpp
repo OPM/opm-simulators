@@ -60,6 +60,8 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -615,13 +617,11 @@ public:
         {
             const auto& tracers = simulator_.vanguard().eclState().tracer();
 
+            // Optional, since TRACER may have entries appended since the
+            // restart file was written.
             for (const auto& tracer : tracers) {
-                const auto enableSolTracer =
-                    ((tracer.phase == Phase::GAS) && FluidSystem::enableDissolvedGas()) ||
-                    ((tracer.phase == Phase::OIL) && FluidSystem::enableVaporizedOil());
-
-                solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, true);
-                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, enableSolTracer);
+                solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, false);
+                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, false);
             }
         }
 
@@ -694,6 +694,36 @@ public:
 
             auto& tracer_model = simulator_.problem().tracerModel();
             for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); ++tracer_index) {
+                const auto enableSolTracer =
+                    (tracer_model.phase(tracer_index) == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil());
+
+                // A tracer appended to TRACER since the restart file was
+                // written is not in it, and keeps its initial values from the
+                // SOLUTION section.
+                if (! restartValues.solution.has(tracer_model.fname(tracer_index))) {
+                    const auto& tracer = simulator_.vanguard().eclState().tracer()[tracer_index];
+
+                    if (tracer.free_concentration.has_value() || tracer.free_tvdp.has_value()) {
+                        OpmLog::info(fmt::format("Tracer {} is not in the restart file and is "
+                                                 "initialised from the SOLUTION section", tracer.name));
+                    }
+                    else {
+                        OpmLog::warning(fmt::format("Tracer {} is not in the restart file, and no TBLKF "
+                                                    "or TVDPF is given for it. Initial values set to zero.",
+                                                    tracer.name));
+                    }
+
+                    if (enableSolTracer && !tracer.solution_concentration.has_value() &&
+                        !tracer.solution_tvdp.has_value())
+                    {
+                        OpmLog::warning(fmt::format("No TBLKS or TVDPS given for solution tracer {}. "
+                                                    "Initial values set to zero. ", tracer.name));
+                    }
+
+                    continue;
+                }
+
                 // Free tracers
                 {
                     const auto& free_tracer_name = tracer_model.fname(tracer_index);
@@ -708,12 +738,18 @@ public:
                 }
 
                 // Solution tracer (only if DISGAS/VAPOIL are active for gas/oil tracers)
-                if ((tracer_model.phase(tracer_index) == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
-                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil()))
+                if (enableSolTracer)
                 {
                     tracer_model.setEnableSolTracers(tracer_index, true);
 
                     const auto& sol_tracer_name = tracer_model.sname(tracer_index);
+                    if (! restartValues.solution.has(sol_tracer_name)) {
+                        throw std::runtime_error {
+                            fmt::format("Requisite restart vector '{}' is not "
+                                        "available in restart file", sol_tracer_name)
+                        };
+                    }
+
                     const auto& sol_tracer_solution = restartValues.solution
                         .template data<double>(sol_tracer_name);
 
