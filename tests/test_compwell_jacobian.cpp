@@ -34,7 +34,8 @@
  *   - the per-component mass fractions, and
  *   - the wellbore fluid density,
  * against central finite differences computed by perturbing the scalar primary
- * variables and re-flashing.
+ * variables and re-flashing. It also checks the surface phase rates of a
+ * connection stream.
  */
 #include "config.h"
 
@@ -46,6 +47,7 @@
 #include <opm/material/components/C1.hpp>
 #include <opm/material/components/C10.hpp>
 #include <opm/material/components/SimpleCO2.hpp>
+#include <opm/material/Constants.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -321,4 +323,63 @@ BOOST_AUTO_TEST_CASE(WellboreFlashDerivativesWithVolumeShift)
     BOOST_REQUIRE_GT(std::abs(shifted.fluid_density - unshifted.fluid_density), 1.0e-3);
 
     checkWellboreFlashDerivatives();
+}
+
+BOOST_AUTO_TEST_CASE(ConnectionStreamSurfaceRates)
+{
+    // A connection stream is split into surface phases by flashing its own
+    // composition, whatever the wellbore holds.
+    registerFluidSystemComponents();
+
+    using MassRates = std::array<Scalar, numComponents>;
+    constexpr Scalar surface_pressure = 1.0e5;     // Pa
+    constexpr Scalar surface_temperature = 288.15; // K
+    constexpr int oil = FluidSystem::oilPhaseIdx;
+    constexpr int gas = FluidSystem::gasPhaseIdx;
+
+    const auto surfaceRates = [](const MassRates& mass_rates)
+    {
+        return Opm::surfacePhaseRates<FluidSystem>(mass_rates, surface_pressure, surface_temperature);
+    };
+
+    const auto none = surfaceRates(MassRates{});
+    BOOST_CHECK_EQUAL(none[oil], 0.0);
+    BOOST_CHECK_EQUAL(none[gas], 0.0);
+
+    // CO2 and methane stay vapour at surface conditions, close to the
+    // ideal-gas volume at this low pressure.
+    {
+        const MassRates injected{1.0, 0.5, 0.0}; // kg/s
+        const auto rates = surfaceRates(injected);
+        const Scalar moles = injected[0] / FluidSystem::molarMass(0)
+                           + injected[1] / FluidSystem::molarMass(1);
+        const Scalar ideal_volume = moles * Opm::Constants<Scalar>::R * surface_temperature / surface_pressure;
+        BOOST_CHECK_SMALL(rates[oil], 1.e-10);
+        BOOST_CHECK_CLOSE(rates[gas], ideal_volume, 1.0); // percent
+    }
+
+    // A produced two-phase stream: the phase volumes carry the mass of each
+    // component, with the sign of production.
+    {
+        const MassRates produced{-0.2, -0.3, -1.5}; // kg/s
+        const auto rates = surfaceRates(produced);
+        BOOST_REQUIRE_LT(rates[oil], 0.0);
+        BOOST_REQUIRE_LT(rates[gas], 0.0);
+
+        Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
+        Scalar moles = 0.;
+        for (int c = 0; c < numComponents; ++c) {
+            moles += produced[c] / FluidSystem::molarMass(c);
+        }
+        for (int c = 0; c < numComponents; ++c) {
+            fs.setMoleFraction(c, produced[c] / FluidSystem::molarMass(c) / moles);
+        }
+        Opm::flashAtSurfaceConditions(fs, surface_pressure, surface_temperature);
+
+        for (int c = 0; c < numComponents; ++c) {
+            const Scalar mass = rates[oil] * fs.density(oil) * fs.massFraction(oil, c)
+                              + rates[gas] * fs.density(gas) * fs.massFraction(gas, c);
+            BOOST_CHECK_CLOSE(mass, produced[c], 1.e-6); // percent
+        }
+    }
 }

@@ -28,6 +28,7 @@
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 
+#include <algorithm>
 #include <array>
 #include <type_traits>
 
@@ -106,6 +107,65 @@ void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_stat
 
     fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
     fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
+}
+
+/// Flash a fluid state, holding an overall composition, at the given surface
+/// pressure and temperature.
+template <typename FluidSystem, typename T>
+void flashAtSurfaceConditions(CompositionalFluidState<T, FluidSystem>& fluid_state,
+                              const typename FluidSystem::Scalar pressure,
+                              const typename FluidSystem::Scalar temperature)
+{
+    fluid_state.setTemperature(temperature);
+    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
+    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+    }
+
+    flashWellboreFluidState(fluid_state);
+}
+
+/// Volume rate of each phase of a component stream at surface conditions [m^3/s],
+/// from flashing the stream's own composition. The rates take the sign of the
+/// component mass rates [kg/s]; a stream without flow gives zero rates.
+template <typename FluidSystem>
+std::array<typename FluidSystem::Scalar, FluidSystem::numPhases>
+surfacePhaseRates(const std::array<typename FluidSystem::Scalar, FluidSystem::numComponents>& component_mass_rates,
+                  const typename FluidSystem::Scalar pressure,
+                  const typename FluidSystem::Scalar temperature)
+{
+    using Scalar = typename FluidSystem::Scalar;
+    constexpr int num_comp = FluidSystem::numComponents;
+
+    std::array<Scalar, FluidSystem::numPhases> rates{};
+
+    std::array<Scalar, num_comp> molar_rates{};
+    Scalar mass_rate = 0.;
+    Scalar molar_rate = 0.;
+    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        molar_rates[comp_idx] = component_mass_rates[comp_idx] / FluidSystem::molarMass(comp_idx);
+        mass_rate += component_mass_rates[comp_idx];
+        molar_rate += molar_rates[comp_idx];
+    }
+    if (molar_rate == 0.) {
+        return rates;
+    }
+
+    CompositionalFluidState<Scalar, FluidSystem> fluid_state;
+    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        fluid_state.setMoleFraction(comp_idx, std::max(molar_rates[comp_idx] / molar_rate, Scalar{1.e-10}));
+    }
+    flashAtSurfaceConditions(fluid_state, pressure, temperature);
+
+    const Scalar so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
+    const Scalar sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+    const Scalar density = so * fluid_state.density(FluidSystem::oilPhaseIdx)
+                         + sg * fluid_state.density(FluidSystem::gasPhaseIdx);
+    rates[FluidSystem::oilPhaseIdx] = mass_rate / density * so;
+    rates[FluidSystem::gasPhaseIdx] = mass_rate / density * sg;
+    return rates;
 }
 
 /// Mass [kg] of each component held in the wellbore control volume, given an

@@ -176,7 +176,8 @@ private:
 
     // store the connection rates at surface conditions and the connection
     // pressures in the well state
-    void updateConnectionQuantities(SingleWellState& well_state) const;
+    void updateConnectionQuantities(const Simulator& simulator,
+                                    SingleWellState& well_state) const;
 
     void updateWellState(const BVectorWell& dwells,
                          SingleWellState& well_state);

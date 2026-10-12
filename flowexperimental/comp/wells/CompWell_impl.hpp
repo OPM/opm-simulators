@@ -27,7 +27,8 @@
 
 #include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
 
-#include <span>
+#include <algorithm>
+#include <array>
 #include <stdexcept>
 
 namespace Opm {
@@ -400,7 +401,7 @@ iterateWellEq(const Simulator& simulator,
     } while (it < max_iter);
 
     // When converged, the last assembly is at the current well state.
-    updateConnectionQuantities(well_state);
+    updateConnectionQuantities(simulator, well_state);
     return converged;
 }
 
@@ -483,30 +484,22 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateConnectionQuantities(SingleWellState& well_state) const
+updateConnectionQuantities(const Simulator& simulator,
+                           SingleWellState& well_state) const
 {
-    // Convert the connection mass rates to volume rates with the density of
-    // the well stream at surface conditions.
+    // A connection stream can differ in composition from the wellbore fluid,
+    // e.g. while the wellbore fluid changes, so it is flashed on its own.
+    const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
     constexpr int np = FluidSystem::numPhases;
-    const auto& surface_cond = this->surface_conditions_;
-    const Scalar surface_density = getValue(surface_cond.density());
     auto& conn_data = well_state.connection_data;
     for (int con = 0; con < this->number_of_connection_; ++con) {
-        Scalar mass_rate = 0.;
-        for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-            mass_rate += getValue(this->connectionRates_[con][comp_idx]);
+        std::array<Scalar, num_comp> mass_rates{};
+        for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            mass_rates[comp_idx] = getValue(this->connectionRates_[con][comp_idx]);
         }
-        const Scalar surface_rate = mass_rate / surface_density;
-        const auto rates = std::span{conn_data.surface_phase_rates}.subspan(con * np, np);
-        if (well_state.producer) {
-            // the surface conditions cover the oil and gas phases only
-            for (int p = 0; p < SurfaceConditons::num_phases; ++p) {
-                rates[p] = surface_rate * getValue(surface_cond.volume_fractions_[p]);
-            }
-        } else {
-            // only gas injection yet
-            rates[FluidSystem::gasPhaseIdx] = surface_rate;
-        }
+        const auto rates = surfacePhaseRates<FluidSystem>(mass_rates, surface_cond.pressure,
+                                                          surface_cond.temperature);
+        std::ranges::copy(rates, conn_data.surface_phase_rates.begin() + con * np);
         // no pressure drop between the bottom hole and the connections
         conn_data.pressure[con] = well_state.bhp;
     }
@@ -633,15 +626,7 @@ updateSurfaceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_s
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
-    fluid_state.setTemperature(surface_cond.temperature);
-    fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
-    fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
-
-    for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-    }
-
-    flashFluidState_(fluid_state);
+    flashAtSurfaceConditions(fluid_state, surface_cond.pressure, surface_cond.temperature);
 
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
