@@ -34,6 +34,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -874,8 +875,6 @@ private:
                          isSubStep && !writeAllSolutions,
                          log, forceRestartFieldAllocation);
 
-        ElementContext elemCtx(simulator_);
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         {
@@ -883,23 +882,35 @@ private:
 
             this->outputModule_->prepareDensityAccumulation();
             this->outputModule_->setupExtractors(isSubStep, reportStepNum);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            // Each element writes only its own cell's output entries.
+            simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+                for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
+                    auto chunkIterator = chunks.begin();
+                    chunkIterator += chunkIdx;
+                    const auto chunk = *chunkIterator;
+                    ElementContext elemCtx(simulator_);
+                    for (const auto& elem : chunk) {
+                        elemCtx.updatePrimaryStencil(elem);
+                        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                this->outputModule_->processElement(elemCtx);
-                this->outputModule_->processElementBlockData(elemCtx);
+                        this->outputModule_->processElement(elemCtx);
+                        this->outputModule_->processElementBlockData(elemCtx);
 
-                // Reuse the IQs already loaded into the element context. A
-                // separate parallel FIP traversal reloads the whole cache and,
-                // on GPU models, serializes cell lookups on the host-cache mutex.
-                for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                    const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                    this->outputModule_->updateFluidInPlace(
-                        globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
-                        simulator_.model().dofTotalVolume(globalIdx));
+                        // Reuse the IQs already loaded into the element context. A
+                        // separate parallel FIP traversal reloads the whole cache and,
+                        // on GPU models, serializes cell lookups on the host-cache mutex.
+                        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                            const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                            this->outputModule_->updateFluidInPlace(
+                                globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
+                                simulator_.model().dofTotalVolume(globalIdx));
+                        }
+                    }
                 }
-            }
+            });
             this->outputModule_->clearExtractors();
         }
 
