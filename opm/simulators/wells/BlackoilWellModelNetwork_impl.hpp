@@ -295,9 +295,9 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                         ? well->computeWellRatesAtThpLimitProd(simulator, group_state_helper,
                                                                well_state, thp)
                         : ws.surface_rates;
-                    if (well_state.wellIsOwned(well->indexOfWell(), well->name())) {
+                    if (rates.has_value() && well_state.wellIsOwned(well->indexOfWell(), well->name())) {
                         rate -= well->wellEcl().getEfficiencyFactor() * ws.efficiency_scaling_factor
-                            * tcalc.calcModeRateFromRates(rates);
+                            * tcalc.calcModeRateFromRates(*rates);
                     }
                 }
                 return comm.sum(rate);

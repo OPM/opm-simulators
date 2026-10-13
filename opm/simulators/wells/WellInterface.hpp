@@ -217,8 +217,8 @@ public:
 
     /// Surface rates of a producer against the given THP limit, from its
     /// inflow at the current reservoir state, honouring its BHP and rate
-    /// limits. Zero if the well cannot flow against that THP.
-    std::vector<Scalar>
+    /// limits. None if the well cannot flow against that THP.
+    std::optional<std::vector<Scalar>>
     computeWellRatesAtThpLimitProd(const Simulator& simulator,
                                    const GroupStateHelperType& groupStateHelper,
                                    const WellStateType& well_state,
