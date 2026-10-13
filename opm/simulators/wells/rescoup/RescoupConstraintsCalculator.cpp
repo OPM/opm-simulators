@@ -78,9 +78,10 @@ RescoupConstraintsCalculator(
 //    GCW (group controlled wells) gates whether a group participates in its
 //    parent's guide-rate distribution (GCW>0) or instead has its own rate
 //    subtracted as a parent target reduction (GCW=0).  For ordinary groups GCW
-//    is derived from the control mode.  Master groups, however, carry the individual control mode
-//    purely as a slave-communication signal (see the Phase 2 finalize), so their cmode cannot
-//    be used to decide participation. The master therefore maintains a per-master-group "effective GCW"
+//    is derived from the control mode.  A master group that is available for higher-level
+//    control takes part in its parent's distribution whatever its cmode (it can be on its own
+//    ORAT limit, from the deck or by group control), so its cmode cannot be used to decide
+//    participation. The master therefore maintains a per-master-group "effective GCW"
 //    (ReservoirCouplingMaster::effectiveGCW), set in this routine and read by
 //    GroupStateHelper::updateGroupControlledWellsRecursive_.  It separates two
 //    concerns:
@@ -92,16 +93,15 @@ RescoupConstraintsCalculator(
 //    An eligible group with effective GCW = 0 is excluded from the guide-rate
 //    sum and contributes its rate as a parent target reduction instead — which
 //    is precisely how an excluded group's shortfall is redistributed to its
-//    siblings.  This decoupling is needed because the cmode (the natural
-//    dynamic control channel) is already taken by the slave-communication
-//    marker for master groups.
+//    siblings.  The control mode of such a group is not touched by this routine:
+//    it is the Schedule's, or the one group control has switched it to, and the
+//    calculator and the master's own group control read it.
 //
-//  Pre-phase: restore master-group production control modes from the
-//    Schedule (undoing the Phase 2 finalize of the previous calculation), reset the
-//    effective GCW (participating master groups default to 1), switch inactive
-//    slaves' master groups to individual control and set their effective GCW
-//    to 0 so they don't consume any share of the parent's target, then
-//    recompute GCW + FIELD target reductions with the resulting state.
+//  Pre-phase: reset the effective GCW (participating master groups default to
+//    1), set the effective GCW of inactive slaves' master groups to 0 (and put
+//    those not available for higher-level control on individual control) so
+//    they don't consume any share of the parent's target, then recompute GCW +
+//    FIELD target reductions with the resulting state.
 //
 //  Phase 1 (per-slave per-master-group): compute initial guide-rate-
 //    distributed targets and per-rate-type limits via
@@ -133,10 +133,9 @@ RescoupConstraintsCalculator(
 //         they return to group control and the group takes part in the
 //         distribution again from the next recalculation (see
 //         BlackoilWellModelRescoup::refreshAndSendGroupConstraints()).
-//    Finally all master groups are switched to individual control so the master
-//    completes its own time step assuming slave rates remain constant; the
-//    effective GCW is reset at the start of the next calculation.  See
-//    excludeAndRedistributeProductionTargets_().
+//    Finally the master completes its own time step assuming slave rates remain
+//    constant; the effective GCW is reset at the start of the next calculation.
+//    See excludeAndRedistributeProductionTargets_().
 //
 //  Phase 2b (injection exclude-and-redistribute): the same three steps per
 //    injection phase.  A master group none of whose slave injectors are under
@@ -238,13 +237,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
         this->well_model_,
         this->group_state_helper_
     };
-    // The previous calculation left every master group on individual control
-    // (see the Phase 2 finalize), so restore the control modes the Schedule
-    // gives them.  Otherwise a master group on FLD or NONE in the deck would be
-    // treated as being on individual control and get its own GCONPROD target
-    // for that mode, which is undefined, wherever its share of the parent's
-    // target is not binding.
-    this->restoreMasterGroupProductionControls_();
     // Reset effective-GCW entries from the previous sync step to GCW=1 before
     // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
     // Phase 2 cap) repopulate the 0-entries for this step.
@@ -539,21 +531,28 @@ excludeAndRedistributeProductionTargets_(
         }
     }
 
-    // Step 4: switch ALL master groups to individual control with their
-    // allocated targets. I.e. the master completes its own time step, assuming
-    // that the production and injection rates of the slave groups remain constant
-    // over the time step.
+    // Step 4: the master completes its own time step, assuming that the
+    // production and injection rates of the slave groups remain constant over
+    // the time step.  A master group not available for higher-level control
+    // (GCONPROD item 8 = NO) is put on the control mode of its allocated target,
+    // which is what excludes it from the parent's distribution.  The control
+    // mode of the other master groups is left as it is: their share of the
+    // parent's target is decided by their effective GCW, and the mode is what
+    // the calculator and the master's own group control read, so it must stay
+    // the one the Schedule or group control gives, not a marker of this step.
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
         for (auto& pc : all_production_constraints[slave_idx]) {
             const auto& group_name = master_groups[pc.group_name_idx];
+            if (this->group_state_helper_.isMasterGroupEligibleForGuideRate(group_name)) {
+                continue;
+            }
             this->group_state_helper_.groupState().production_control(
                 group_name, pc.cmode);
         }
     }
-    // Recompute GCW and reduction: all master groups are now individually
-    // controlled, so GCW=0 for all of them and FIELD's reduction sums every
-    // master group's slave-reported rate.
+    // Recompute GCW and reduction with the final state: the groups excluded
+    // above have GCW=0, and their slave-reported rates are in the reductions.
     this->updateGCWAndTargetReductions_();
 }
 
@@ -577,19 +576,23 @@ excludeInactiveSlaveMasterGroupsFromDistribution_()
     // The choice of ORAT here is arbitrary, any non-FLD/NONE control mode works
     // because GroupStateHelper::updateGroupControlledWells() assigns GCW=0 for
     // any master group whose control is not FLD/NONE. ORAT is just a conventional
-    // rate mode used here as a marker.
+    // rate mode used here as a marker.  It is only needed for a master group not
+    // available for higher-level control (GCONPROD item 8 = NO); the others are
+    // excluded through their effective GCW below, and their control mode is left
+    // as it is, see Step 4 of excludeAndRedistributeProductionTargets_().
     const Group::ProductionCMode individual_cmode = Group::ProductionCMode::ORAT;
     for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
         if (!rescoup_master.slaveIsCoupled(slave_idx)) {
             const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
             for (const auto& group_name : master_groups) {
-                this->group_state_helper_.groupState().production_control(
-                    group_name, individual_cmode);
-                // For a participating master group (GCONPROD item 8 = YES) the
-                // ORAT marker above no longer forces GCW=0 — its GCW now comes
-                // from effectiveGCW().  Force it to 0 here so an inactive slave's
-                // groups are excluded from guide-rate distribution regardless of
-                // item 8.
+                if (!this->group_state_helper_.isMasterGroupEligibleForGuideRate(group_name)) {
+                    this->group_state_helper_.groupState().production_control(
+                        group_name, individual_cmode);
+                }
+                // For a participating master group (GCONPROD item 8 = YES) the GCW
+                // comes from effectiveGCW(), not from the control mode.  Force it
+                // to 0 here so an inactive slave's groups are excluded from
+                // guide-rate distribution regardless of item 8.
                 rescoup_master.setEffectiveGCW(group_name, 0);
             }
         }
@@ -639,26 +642,6 @@ makeProductionGroupConstraints_(
         constraints.liquid_limit,
         constraints.resv_limit
     };
-}
-
-// Restore the production control mode the Schedule gives each master group.
-// The Phase 2 finalize of the previous calculation switched them all to
-// individual control for the master's own time step.
-template <class Scalar, class IndexTraits>
-void
-RescoupConstraintsCalculator<Scalar, IndexTraits>::
-restoreMasterGroupProductionControls_()
-{
-    auto& rescoup_master = this->reservoir_coupling_master_;
-    for (std::size_t slave_idx = 0; slave_idx < rescoup_master.numSlaves(); ++slave_idx) {
-        for (const auto& group_name : rescoup_master.getMasterGroupNamesForSlave(slave_idx)) {
-            const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-            if (group.isProductionGroup()) {
-                this->group_state_helper_.groupState().production_control(
-                    group_name, group.productionControls(this->summary_state_).cmode);
-            }
-        }
-    }
 }
 
 template <class Scalar, class IndexTraits>

@@ -2462,8 +2462,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
     const auto& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
     // NOTE: If "group" is a reservoir coupling master group, it should have no child groups or wells.
-    //   During master group constraint calculation, we will set individual control on master groups
-    //   to exclude them from guide rate distribution, see
+    //   During master group constraint calculation, a master group that is available for
+    //   higher-level control is excluded from guide rate distribution through its effective GCW,
+    //   and one that is not is put on individual control, see
     //   RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
     if (is_production_group) {
         if (group.productionGroupControlAvailable()) {
@@ -2932,11 +2933,11 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
             // A participating reservoir-coupling master group (GCONPROD item 8
             // RESPOND_TO_PARENT = YES) has its target guide-rate distributed by the
             // parent, so its rate must NOT also be subtracted from the parent's
-            // available target.  Its control mode is set to individual control for
-            // slave communication, see RescoupConstraintsCalculator::excludeAndRedistributeProductionTargets_(),
-            // which would otherwise flag it as individual and
-            // double-count it here. Treat it as group-controlled; a capped or inactive participating
-            // group keeps effective GCW = 0 and is still reduced via the num==0 branch below.
+            // available target.  Its control mode can be an individual one, from the deck
+            // or switched to by group control for a limit of its own, which would otherwise
+            // flag it as individual and double-count it here.  Treat it as group-controlled;
+            // an excluded or inactive-slave group keeps effective GCW = 0 and is still
+            // reduced via the num==0 branch below.
             if (this->isMasterGroupEligibleForGuideRate(sub_group.name())) {
                 individual_control = false;
             }

@@ -682,8 +682,8 @@ GroupConstraintCalculator<Scalar, IndexTraits>::
 TopToBottomCalculator::
 bottomGroupHasIndividualControl_()
 {
-    // An eligible master group (GCONPROD item 8 = YES) on individual (ORAT/RATE
-    // marker) control participates in its parent's guide-rate distribution and is
+    // An eligible master group (GCONPROD item 8 = YES) on individual (e.g. ORAT)
+    // control participates in its parent's guide-rate distribution and is
     // therefore NOT subtracted from the parent's target reduction -- see the
     // isMasterGroupEligibleForGuideRate override in
     // GroupStateHelper::updateGroupTargetReductionRecursive_, which sets

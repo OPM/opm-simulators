@@ -119,10 +119,11 @@ private:
     ///   rate a reduction on the parent group (their control mode is left as
     ///   it is), recomputes the reductions, then re-evaluates all groups via
     ///   `GroupConstraintCalculator` (the steps are described in the overview
-    ///   in RescoupConstraintsCalculator.cpp).  Finally switches every
-    ///   master group to individual control with its final allocated
-    ///   target so the master completes its own time step assuming slave
-    ///   rates remain constant.  Injection targets are handled separately,
+    ///   in RescoupConstraintsCalculator.cpp).  Finally the master completes
+    ///   its own time step assuming slave rates remain constant; a master
+    ///   group not available for higher-level control is put on the control
+    ///   mode of its allocated target, the control mode of the others is
+    ///   left as it is.  Injection targets are handled separately,
     ///   see excludeAndRedistributeInjectionTargets_().
     /// @param calculator Group-constraint calculator (same instance as
     ///   used in Phase 1).
@@ -174,16 +175,6 @@ private:
     static ProductionGroupConstraints makeProductionGroupConstraints_(
         std::size_t group_idx,
         const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints);
-
-    /// @brief Pre-phase: restore the production control mode the Schedule
-    ///   gives each master group.
-    /// @details The Phase 2 finalize of the previous calculation leaves every
-    ///   master group on individual control for the master's own time step.
-    ///   Left in place, a master group on FLD or NONE in the deck would be
-    ///   treated as being on individual control, and fall back to its own,
-    ///   undefined, GCONPROD target where its share of the parent's target is
-    ///   not binding.
-    void restoreMasterGroupProductionControls_();
 
     /// @brief Phase 3: send the computed constraints for one slave to
     ///   that slave over MPI.

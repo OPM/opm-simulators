@@ -733,9 +733,10 @@ private:
     /// @brief Effective group-controlled-wells (GCW) count for a reservoir-coupling
     ///   master group, decoupled from its production control mode.
     /// @details Only called for master groups (see updateGroupControlledWellsRecursive_).
-    ///   A master group carries the ORAT marker control mode purely for slave
-    ///   communication, so its real participation in the parent's guide-rate
-    ///   distribution cannot be read off the cmode.  Instead:
+    ///   The participation of a master group in the parent's guide-rate
+    ///   distribution is not read off its cmode, which can be an individual one
+    ///   (from the deck, or switched to by group control for a limit of its own)
+    ///   while the group still takes part.  Instead:
     ///   - If the group is available for higher-level control (GCONPROD item 8
     ///     RESPOND_TO_PARENT = YES, or a plain FLD group): return the effective GCW
     ///     maintained by the rescoup master — 1 when participating-and-uncapped, 0
