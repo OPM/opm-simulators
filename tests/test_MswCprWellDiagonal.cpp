@@ -75,6 +75,31 @@ BOOST_AUTO_TEST_CASE(ContractionSumsEveryBlockOfD)
     BOOST_CHECK_CLOSE(diag, 4.25 * weightSum, 1e-12);
 }
 
+BOOST_AUTO_TEST_CASE(ContractionUsesEachRowsWeightAndOnlyThePressureColumn)
+{
+    auto D = makeD(0.0, 0.0, 0.0, 0.0);
+    // Non-pressure columns and the pressure/control equation must not enter
+    // the contraction. Give them nonzero values to expose accidental reads.
+    D = 1024.0;
+    const WellWeight d00 {2.0, 3.0, 5.0};
+    const WellWeight d01 {-7.0, 11.0, 13.0};
+    const WellWeight d10 {17.0, -19.0, 23.0};
+    const WellWeight d11 {29.0, 31.0, -37.0};
+    for (std::size_t i = 0; i < d00.size(); ++i) {
+        D[0][0][i][pressureColumn] = d00[i];
+        D[0][1][i][pressureColumn] = d01[i];
+        D[1][0][i][pressureColumn] = d10[i];
+        D[1][1][i][pressureColumn] = d11[i];
+    }
+    const WellWeight lambda {0.5, -0.25, 2.0};
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    // Conservation-row sums are 41, 26 and 4, respectively:
+    // 0.5 * 41 - 0.25 * 26 + 2 * 4 = 22.
+    BOOST_CHECK_CLOSE(diag, 22.0, 1e-12);
+}
+
 BOOST_AUTO_TEST_CASE(OffDiagonalSegmentCouplingIsKept)
 {
     // Same diagonal, different segment-to-segment coupling. The row-sum
