@@ -265,7 +265,6 @@ struct MockWellModel
             {
                 return toSI(production_rates_sm3_day);
             }
-            Scalar well_group_thp(const std::string&) const { return convert::from(100.0, bars); }
         };
 
         MockGroupState groupState() const { return {}; }
@@ -421,6 +420,43 @@ BOOST_AUTO_TEST_CASE(production_pressure_computation)
     BOOST_REQUIRE(pressures.find("G1") != pressures.end());
     const auto expected_pressure = convert::from(31.0, bars);
     BOOST_CHECK_CLOSE(pressures.at("G1"), expected_pressure, 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(manifold_group_node_pressure_is_unchoked)
+{
+    // G1 is a sub-sea manifold group.  The common THP of its wells sits on
+    // top of the node pressure, so the node itself keeps the pressure the
+    // network gives it, with or without a VFP table on its outlet branch.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    Network::Node manifold{"G1"};
+    manifold.as_choke("G1");
+    s.network.update_node(manifold);
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    {
+        // No pressure loss along the 9999 branch: G1 is at the M5S pressure.
+        NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+            s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
+        const auto [pressures, branch_data] = comp.run();
+        BOOST_CHECK_CLOSE(pressures.at("M5S"), convert::from(31.0, bars), 1e-7);
+        BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(31.0, bars), 1e-7);
+        BOOST_CHECK_SMALL(branch_data.at("G1").pressure_drop, 1e-7);
+    }
+    {
+        // The outlet flow line has its own VFP table.  At 1000 Sm3/d liquid
+        // and WCT 0.5 the table gives 21 bar at THP 10 and 41 bar at THP 30,
+        // so the M5S pressure of 31 bar extrapolates to 42 bar.
+        s.network.add_or_replace_branch(Network::Branch{"G1", "M5S", 3, 0.0});
+        NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+            s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm);
+        const auto [pressures, branch_data] = comp.run();
+        BOOST_CHECK_CLOSE(pressures.at("M5S"), convert::from(31.0, bars), 1e-7);
+        BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(42.0, bars), 1e-7);
+        BOOST_CHECK_CLOSE(branch_data.at("G1").pressure_drop, convert::from(11.0, bars), 1e-7);
+        BOOST_CHECK(comp.invalidNodes().empty());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(production_rate_beyond_flow_axis_is_extrapolated)
