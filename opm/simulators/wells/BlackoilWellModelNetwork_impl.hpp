@@ -41,7 +41,10 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
+#include <array>
 #include <optional>
+#include <tuple>
 
 namespace Opm {
 
@@ -217,31 +220,39 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             //TODO: Auto choke combined with RESV control is not supported
             std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
 
-            const auto ctrl = group.productionControls(summary_state);
-            auto cmode_tmp = ctrl.cmode;
+            // The group's wells are on THP control, so its current control mode
+            // may have been reset to NONE; the mode set in GCONPROD then applies.
+            auto cmode = group_state.production_control(nodeName);
+            if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
+                cmode = group.productionControls(summary_state).cmode;
+            }
             Scalar target_tmp{0.0};
-            bool fld_none = false;
-            if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
-                fld_none = true;
+            if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
                 // Target is set for an ancestor group. Target for autochoke group to be
                 // derived via group guide rates
                 const Scalar efficiencyFactor = 1.0;
                 const Group& parentGroup = well_model_.schedule().getGroup(group.parent(), reportStepIdx);
-                auto target = well_model_.groupStateHelper().
+                std::tie(target_tmp, cmode) = well_model_.groupStateHelper().
                     getAutoChokeGroupProductionTargetRate(group,
                                                           parentGroup,
                                                           resv_coeff,
                                                           efficiencyFactor);
-                target_tmp = target.first;
-                cmode_tmp = target.second;
+            }
+            else {
+                // Target is set for the autochoke group itself
+                target_tmp = well_model_.groupStateHelper().getProductionGroupTargetForMode(group, cmode);
+            }
+            constexpr auto rate_modes = std::array{Group::ProductionCMode::ORAT,
+                                                   Group::ProductionCMode::WRAT,
+                                                   Group::ProductionCMode::GRAT,
+                                                   Group::ProductionCMode::LRAT,
+                                                   Group::ProductionCMode::RESV};
+            if (target_tmp <= 0.0 || std::ranges::find(rate_modes, cmode) == rate_modes.end()) {
+                // No rate target to choke the group back to.
+                continue;
             }
             using TargetCalculatorType =  GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
-            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, group};
-            if (!fld_none)
-            {
-                // Target is set for the autochoke group itself
-                target_tmp = well_model_.groupStateHelper().getProductionGroupTarget(group);
-            }
+            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, cmode};
 
             const Scalar orig_target = target_tmp;
 

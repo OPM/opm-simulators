@@ -1313,7 +1313,8 @@ updateNONEProductionGroups()
         return;
     }
 
-    const auto targeted = this->collectTargetedProductionGroups_();
+    auto targeted = this->collectTargetedProductionGroups_();
+    targeted.merge(this->collectManifoldTargetGroups_());
 
     const std::size_t num_gpc = prod_group_controls.size();
     std::vector<std::string> gnames;
@@ -1898,6 +1899,40 @@ collectTargetedProductionGroups_() const
                                 "group target assigned.", ws.name),
                     this->deferredLogger());
             }
+        }
+    }
+    return targeted;
+}
+
+// Called from updateNONEProductionGroups().
+// - For each sub-sea manifold group in the production network, follows the
+//   groups without a rate target of their own up to the one whose target the
+//   manifold's common THP honours, as getAutoChokeGroupProductionTargetRate() does.
+template <typename Scalar, typename IndexTraits>
+std::unordered_set<std::string>
+GroupStateHelper<Scalar, IndexTraits>::
+collectManifoldTargetGroups_() const
+{
+    std::unordered_set<std::string> targeted;
+    const auto& network = this->schedule_[this->report_step_].network();
+    if (!network.active()) {
+        return targeted;
+    }
+    const auto no_target = [](const Group::ProductionCMode cmode) {
+        return cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE;
+    };
+    for (const auto& node : network.node_names()) {
+        if (!network.node(node).as_choke() || !this->schedule_.hasGroup(node, this->report_step_)) {
+            continue;
+        }
+        const Group* group = &this->schedule_.getGroup(node, this->report_step_);
+        while (no_target(group->productionControls(this->summary_state_).cmode)
+               && group->productionGroupControlAvailable())
+        {
+            group = &this->schedule_.getGroup(group->parent(), this->report_step_);
+        }
+        if (!no_target(group->productionControls(this->summary_state_).cmode)) {
+            targeted.insert(group->name());
         }
     }
     return targeted;
@@ -2738,7 +2773,9 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
         const auto child_ctrl = this->groupState().production_control(child);
         if (child_ctrl == Group::ProductionCMode::FLD
             || child_ctrl == Group::ProductionCMode::NONE) {
-            if (this->guide_rate_.has(child)) {
+            // A group has no rates before its first group data update, e.g.
+            // after a chopped first time step.
+            if (this->guide_rate_.has(child) && this->groupState().has_production_rates(child)) {
                 control_group_guide_rate += this->guide_rate_.get(
                     child, this->getProductionGuideTargetMode(control_group),
                     this->getProductionGroupRateVector(child));
