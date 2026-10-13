@@ -609,6 +609,15 @@ private:
     /// @return Set of group names targeted by wells on this rank
     std::unordered_set<std::string> collectTargetedProductionGroups_() const;
 
+    /// @brief Collect groups whose production targets sub-sea manifold groups follow.
+    ///
+    /// The wells of a manifold group are on THP control, so no well targets
+    /// the group whose target the manifold's common THP honours: the manifold
+    /// group itself, or the ancestor passing a share of its target down to it.
+    ///
+    /// @return Set of group names, the same on all ranks
+    std::unordered_set<std::string> collectManifoldTargetGroups_() const;
+
     //! \brief Compute partial efficiency factor for addback calculation.
     //!
     //! The addback in constraint checking must use the partial efficiency factor
