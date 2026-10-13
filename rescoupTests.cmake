@@ -100,3 +100,8 @@ add_test(NAME rc_slave_parsing_err_2slaves
   CONFIGURATIONS Integration
 )
 set_tests_properties(rc_slave_parsing_err_2slaves PROPERTIES TIMEOUT 40)
+
+# Regression tests comparing coupled runs with reference results.
+if(HAVE_OPM_TESTS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/rescoupRegressionTests.cmake)
+endif()
