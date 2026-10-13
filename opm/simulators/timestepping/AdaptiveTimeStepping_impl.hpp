@@ -653,11 +653,30 @@ getRcMasterSyncStepLength_(double prev_step,
 {
     const bool sync_at_report_steps = reservoirCouplingMaster_().syncAtReportSteps();
     double current_step_length;
+    std::string flow_limited_by;  // The master group that limits the step (GRUPMAST item 4), if any
     if (sync_at_report_steps) {
         current_step_length = prev_step;
     } else {
         const double remaining = step_end_time - current_time;
+        // GRUPMAST item 4: the previous sync step's flow changes may restrict this step
+        const double flow_limit = reservoirCouplingMaster_().flowChangeTimeStepLimit();
         current_step_length = std::min({suggestedNextTimestep_(), maxTimeStep_(), remaining});
+        if (flow_limit < current_step_length) {
+            current_step_length = flow_limit;
+            const auto& [group, change, fraction] = reservoirCouplingMaster_().flowChangeLimitingGroup();
+            flow_limited_by = group;
+            OpmLog::debug(fmt::format(
+                "Sync step limited by GRUPMAST item 4: flow rate of master group {} changed by {:.3g} "
+                "(limit {:.3g}) in the previous sync step",
+                group, change, fraction));
+            // Like AdaptiveSimulatorTimer::provideTimeStepEstimate(), but against the next slave
+            // report date: split the time left in two to avoid a very short step in front of it.
+            // A step that reaches the report date is chopped to it by maybeChopSubStep() below.
+            const double to_slave_report = reservoirCouplingMaster_().maybeChopSubStep(remaining, current_time);
+            if (current_step_length < to_slave_report && 1.5 * current_step_length > to_slave_report) {
+                current_step_length = 0.5 * to_slave_report;
+            }
+        }
         // NOTE: The substep timer is later constructed (in the caller) with
         //  current_step_length as its span, and after construction,
         //  substep_timer.currentStepLength() should return the same as
@@ -665,18 +684,25 @@ getRcMasterSyncStepLength_(double prev_step,
         //  provideTimeStepEstimate() with suggestedNextTimestep_() as the dt_
         //  estimate and current_step_length as the span.  Since we took
         //    current_step_length = min(suggestedNextTimestep_(), maxTimeStep_(), remaining)
-        //  here (and only shrink it further via maybeChopSubStep below), the
+        //  here (and only shrink it further, via the GRUPMAST item 4 flow limit above
+        //  and maybeChopSubStep below), the
         //  estimate is always >= the span, so the timer's snap branch (see
         //  AdaptiveSimulatorTimer::provideTimeStepEstimate) fires and clamps
         //  dt_ to current_step_length.
     }
-    current_step_length = reservoirCouplingMaster_().maybeChopSubStep(current_step_length, current_time);
+    const double chopped_step_length =
+        reservoirCouplingMaster_().maybeChopSubStep(current_step_length, current_time);
+    if (chopped_step_length < current_step_length) {
+        flow_limited_by.clear(); // a slave report date, not the flow limit, decides the step
+    }
+    current_step_length = chopped_step_length;
     auto num_active = reservoirCouplingMaster_().numCoupledSlaves();
     OpmLog::info(fmt::format(
-        "\nChoosing next sync time{} between master and {} active slave {}: {:.2f} days",
+        "\nChoosing next sync time{} between master and {} active slave {}: {:.2f} days{}",
         sync_at_report_steps ? " (RSYNC)" : "",
         num_active, (num_active == 1 ? "process" : "processes"),
-        current_step_length / unit::day
+        current_step_length / unit::day,
+        flow_limited_by.empty() ? "" : fmt::format(" (limited by GRUPMAST item 4 for group {})", flow_limited_by)
     ));
     return current_step_length;
 }
@@ -723,8 +749,9 @@ reservoirCouplingSlave_()
 //       Provided as a developer escape hatch.
 //
 // In both modes the sync step is also limited so as not to overshoot the next slave report date
-// (`maybeChopSubStep`).  A second, drift-based limit (GRUPMAST item 4 / RCMASTS) is parsed but not
-// yet honored — tracked as a follow-up PR.
+// (`maybeChopSubStep`).  A second, drift-based limit (GRUPMAST item 4 / RCMASTS) restricts the next
+// sync step from the previous sync step's group flow changes (TSYNC only).  It is retrospective: a step
+// that exceeds the limit is not chopped.
 //
 // Per sync step:
 //   - Master receives each activated slave's next report date (`receiveNextReportDateFromSlaves`).

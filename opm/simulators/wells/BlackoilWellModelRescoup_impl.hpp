@@ -348,7 +348,14 @@ rescoupSyncSummaryData()
     // current one.)
     if (this->isReservoirCouplingMaster()) {
         if (this->reservoirCouplingMaster().needsSlaveDataReceive()) {
+            // The rates held before the receive are the slaves' start-of-step rates, which
+            // GRUPMAST item 4 compares with the end-of-step rates. They come from the last
+            // receive of the sync step, so they are the converged start state: after the
+            // slaves' initial well solve and any network iterations. The first receive is
+            // too early, wells that open at the start of the step still have zero rate then.
+            this->reservoirCouplingMaster().saveGroupFlowsAtStartOfSyncStep();
             this->receiveSlaveGroupData();
+            this->reservoirCouplingMaster().updateFlowChangeTimeStepLimit();
             this->reservoirCouplingMaster().setNeedsSlaveDataReceive(false);
         }
     }

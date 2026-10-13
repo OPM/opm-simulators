@@ -25,12 +25,17 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
 #include <vector>
 #include <fmt/format.h>
 
@@ -443,6 +448,74 @@ setReportStepIdx(int report_step_idx)
 }
 
 template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+saveGroupFlowsAtStartOfSyncStep()
+{
+    this->group_flows_at_start_of_sync_step_.clear();
+    for (const auto& [group_name, slave_name] : this->getMasterGroupToSlaveNameMap()) {
+        if (this->slave_group_production_data_.count(slave_name) > 0
+            && this->slave_group_injection_data_.count(slave_name) > 0) {
+            this->group_flows_at_start_of_sync_step_[group_name] = this->getMasterGroupFlows_(group_name);
+        }
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+updateFlowChangeTimeStepLimit()
+{
+    this->flow_change_time_step_limit_ = std::numeric_limits<Scalar>::infinity();
+    if (this->sync_step_length_ <= 0) {
+        return;
+    }
+    const auto& report_step = this->schedule()[this->report_step_idx_];
+    const auto& rescoup = report_step.rescoup();
+    constexpr Scalar default_flow_limit_fraction =
+        ParserKeywords::GRUPMAST::LIMITING_FRACTION::defaultValue;
+    // RCMASTS is 0 if not given, then the master's minimum time step applies
+    const Scalar rcmasts = rescoup.masterMinTimeStep();
+    const Scalar min_step = rcmasts > 0 ? rcmasts : report_step.tuning().TSMINZ;
+    for (const auto& [group_name, start] : this->group_flows_at_start_of_sync_step_) {
+        const Scalar fraction = rescoup.masterGroup(group_name).flowLimitFraction();
+        if (fraction >= default_flow_limit_fraction) {
+            continue; // Item 4 defaulted: no limit
+        }
+        const auto end = this->getMasterGroupFlows_(group_name);
+        Scalar max_change{0};
+        auto add_change = [&max_change](Scalar before, Scalar after) {
+            if (before == after) {
+                return;
+            }
+            // A flow starting from zero is an infinite fractional change
+            const Scalar change = (before == 0)
+                ? std::numeric_limits<Scalar>::infinity()
+                : std::abs(after - before) / std::abs(before);
+            max_change = std::max(max_change, change);
+        };
+        add_change(start.production_reservoir, end.production_reservoir);
+        for (std::size_t phase = 0; phase < start.injection_surface.size(); ++phase) {
+            add_change(start.injection_surface[phase], end.injection_surface[phase]);
+        }
+        if (max_change > 0) {
+            // The master and the slaves add up the sync step lengths independently and compare the
+            // sums with a tolerance of a few ulps (see ReservoirCoupling::Seconds). Whole seconds
+            // add up exactly, so the limit is rounded to those, as the report step dates are.
+            const Scalar limit = std::max(
+                std::round(this->sync_step_length_ * fraction / max_change),
+                std::max<Scalar>(1, std::ceil(min_step)));
+            if (limit < this->flow_change_time_step_limit_) {
+                this->flow_change_time_step_limit_ = limit;
+                this->flow_change_limiting_group_ = group_name;
+                this->flow_change_limiting_change_ = max_change;
+                this->flow_change_limiting_fraction_ = fraction;
+            }
+        }
+    }
+}
+
+template <class Scalar>
 data::ReservoirCouplingGroupRates
 ReservoirCouplingMasterReportStep<Scalar>::
 collectGroupRatesForSummary() const
@@ -507,6 +580,23 @@ collectGroupRatesForSummary() const
 // ------------------
 // Private methods
 // ------------------
+
+template <class Scalar>
+typename ReservoirCouplingMasterReportStep<Scalar>::GroupFlows
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupFlows_(const std::string& group_name) const
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    using RateKind = ReservoirCoupling::RateKind;
+    GroupFlows flows;
+    for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
+        flows.production_reservoir +=
+            this->getMasterGroupRate_(group_name, phase, RateKind::ProductionReservoir);
+        flows.injection_surface[static_cast<std::size_t>(phase)] =
+            this->getMasterGroupRate_(group_name, phase, RateKind::InjectionSurface);
+    }
+    return flows;
+}
 
 template <class Scalar>
 Scalar
