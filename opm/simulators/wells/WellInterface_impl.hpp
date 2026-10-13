@@ -2511,6 +2511,72 @@ namespace Opm
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state_copy, this->well_ecl_, rates, this->getRefDensity(), summary_state, alq_value);
     }
 
+    template<typename TypeTag>
+    std::vector<typename WellInterface<TypeTag>::Scalar>
+    WellInterface<TypeTag>::
+    computeWellRatesAtThpLimitProd(const Simulator& simulator,
+                                   const GroupStateHelperType& groupStateHelper,
+                                   const WellStateType& well_state,
+                                   const Scalar thp_limit)
+    {
+        OPM_TIMEFUNCTION();
+        auto& deferred_logger = groupStateHelper.deferredLogger();
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& controls = this->well_ecl_.productionControls(summary_state);
+        const auto& pu = this->phaseUsage();
+
+        // Inflow at a BHP, cut back to the well's rate limits keeping the phase
+        // fractions. Reservoir volume limits are not applied.
+        const auto frates = [&](const Scalar bhp) {
+            std::vector<Scalar> rates(this->number_of_phases_, 0.0);
+            this->computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            const auto produced = [&pu, &rates](const int phase) {
+                return pu.phaseIsActive(phase) ? -rates[pu.canonicalToActivePhaseIdx(phase)]
+                                               : Scalar{0.0};
+            };
+            const Scalar oil = produced(IndexTraits::oilPhaseIdx);
+            const Scalar water = produced(IndexTraits::waterPhaseIdx);
+            Scalar scale{1.0};
+            const auto limit = [&controls, &scale](const Well::ProducerCMode mode,
+                                                   const Scalar limit_rate,
+                                                   const Scalar rate) {
+                if (controls.hasControl(mode) && rate > limit_rate) {
+                    scale = std::min(scale, limit_rate / rate);
+                }
+            };
+            limit(Well::ProducerCMode::ORAT, controls.oil_rate, oil);
+            limit(Well::ProducerCMode::WRAT, controls.water_rate, water);
+            limit(Well::ProducerCMode::GRAT, controls.gas_rate, produced(IndexTraits::gasPhaseIdx));
+            limit(Well::ProducerCMode::LRAT, controls.liquid_rate, oil + water);
+            std::ranges::transform(rates, rates.begin(), [scale](const Scalar rate) { return scale * rate; });
+            return rates;
+        };
+        const auto vfp_rates = [&frates, this](const Scalar bhp) {
+            auto rates = frates(bhp);
+            this->adaptRatesForVFP(rates);
+            return rates;
+        };
+
+        // The THP limit does not bind if the tubing lifts the flow at the BHP
+        // limit against it.
+        const auto previous_thp_limit = this->getDynamicThpLimit();
+        this->setDynamicThpLimit(thp_limit);
+        const Scalar bhp_for_thp = WellBhpThpCalculator(*this).
+            calculateBhpFromThp(well_state, vfp_rates(controls.bhp_limit), this->well_ecl_,
+                                summary_state, this->getRefDensity(), deferred_logger);
+        this->setDynamicThpLimit(previous_thp_limit);
+        if (bhp_for_thp <= controls.bhp_limit) {
+            return frates(controls.bhp_limit);
+        }
+
+        const auto bhp = WellBhpThpCalculator(*this).
+            computeBhpAtThpLimitProd(vfp_rates, summary_state, this->maxPerfPress(simulator),
+                                     this->getRefDensity(), this->getALQ(well_state),
+                                     thp_limit, deferred_logger);
+        // No BHP lifts any flow against this THP: the well cannot produce.
+        return bhp.has_value() ? frates(*bhp) : std::vector<Scalar>(this->number_of_phases_, 0.0);
+    }
+
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
