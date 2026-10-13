@@ -203,6 +203,7 @@ initWellConnectionData()
                 pd.connection_transmissibility_factor = connection.CF();
                 pd.satnum_id = connection.satTableId();
                 pd.ecl_index = connection_index;
+                pd.global_index = connection.global_index();
             }
             ++connection_index;
         }

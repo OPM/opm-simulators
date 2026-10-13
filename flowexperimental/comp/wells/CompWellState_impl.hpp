@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <span>
+
 namespace Opm {
 
 template <typename FluidSystem>
@@ -163,6 +165,19 @@ report() const
     }
     using rt = data::Rates::opt;
 
+    const auto setSurfaceRates = [](data::Rates& rates, std::span<const Scalar> surface_rates)
+    {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            rates.set(rt::wat, surface_rates[FluidSystem::waterPhaseIdx]);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            rates.set(rt::oil, surface_rates[FluidSystem::oilPhaseIdx]);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            rates.set(rt::gas, surface_rates[FluidSystem::gasPhaseIdx]);
+        }
+    };
+
     data::Wells res;
     for (std::size_t w = 0; w < this->wells_.size(); ++w) {
         const auto& ws = this->wells_[w];
@@ -172,15 +187,25 @@ report() const
         auto& well = res[ws.name];
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
-        const auto& surface_rates = ws.surface_phase_rates;
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            well.rates.set(rt::wat, surface_rates[FluidSystem::waterPhaseIdx]);
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            well.rates.set(rt::oil, surface_rates[FluidSystem::oilPhaseIdx]);
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            well.rates.set(rt::gas, surface_rates[FluidSystem::gasPhaseIdx]);
+        well.dynamicStatus = ws.status;
+        setSurfaceRates(well.rates, ws.surface_phase_rates);
+
+        auto& curr = well.current_control;
+        curr.isProducer = ws.producer;
+        curr.prod = ws.production_cmode;
+        curr.inj = ws.injection_cmode;
+
+        // The restart file marks a well as open only if a connection flows.
+        constexpr auto np = static_cast<std::size_t>(FluidSystem::numPhases);
+        const auto& conn_data = ws.connection_data;
+        well.connections.resize(conn_data.global_index.size());
+        for (std::size_t con = 0; con < well.connections.size(); ++con) {
+            auto& connection = well.connections[con];
+            connection.index = conn_data.global_index[con];
+            connection.pressure = conn_data.pressure[con];
+            connection.trans_factor = conn_data.transmissibility_factor[con];
+            setSurfaceRates(connection.rates,
+                            std::span{conn_data.surface_phase_rates}.subspan(con * np, np));
         }
     }
     return res;
