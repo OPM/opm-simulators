@@ -651,18 +651,27 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, Phase::OIL);
 
-    // Delegate to applyReductionsAndFractions_ with no addback.  Addback is not
-    // needed because autochoke wells are excluded from reductions via the
-    // !group.as_choke() check in updateGroupTargetReductionRecursive_().
+    // Autochoke wells are excluded from reductions via the !group.as_choke()
+    // check in updateGroupTargetReductionRecursive_(). An autochoke group
+    // below its share has no group controlled wells, though, and its rate is
+    // then reduced above it like that of a group under individual control:
+    // add it back, or the group would be chasing its own rate.
+    const bool addback = this->groupControlledWells(bottom_group.name(),
+                                                    /*always_included_child=*/"",
+                                                    /*is_production_group=*/true,
+                                                    /*injection_phase=*/Phase::OIL) == 0;
+    const Scalar current_rate_available = addback
+        ? tcalc.calcModeRateFromRates(this->groupState().production_rates(bottom_group.name()))
+        : Scalar(0.0);
     const Scalar target = this->applyReductionsAndFractions_(chain,
                                                               orig_target,
-                                                              /*current_rate_available=*/Scalar(0.0),
+                                                              current_rate_available,
                                                               local_reduction_level,
                                                               /*is_production_group=*/true,
                                                               /*injection_phase=*/Phase::OIL,
                                                               localReduction,
                                                               localFraction,
-                                                              /*do_addback=*/false);
+                                                              addback);
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
 
