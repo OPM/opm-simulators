@@ -26,7 +26,7 @@
 #include <dune/istl/matrix.hh>
 
 #include <algorithm>
-#include <cmath>
+#include <cassert>
 #include <cstddef>
 
 namespace Dune {
@@ -110,8 +110,10 @@ namespace mswellhelpers
         using Scalar = typename DiagMatWell::field_type;
         using Block = typename DiagMatWell::block_type;
 
-        // The last row is the segment pressure equation. Extra reservoir
+        // Conservation rows come first and the segment pressure is last; a
+        // reordering of the well variables must update this. Extra reservoir
         // weights (e.g. EXTBO) have no well row, as in StandardWellEquations.
+        assert(pressureColumn == Block::cols - 1);
         const std::size_t numConservationRows =
             std::min(lambda.size(), static_cast<std::size_t>(Block::rows - 1));
 
@@ -123,7 +125,7 @@ namespace mswellhelpers
                 }
             }
         }
-        return (std::abs(diag) > 0.0) ? diag : Scalar{1.0};
+        return (diag == 0.0) ? Scalar{1.0} : diag;
     }
 
 
