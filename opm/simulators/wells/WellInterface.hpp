@@ -214,6 +214,16 @@ public:
                                             Scalar bhp,
                                             const SummaryState& summary_state,
                                             const Scalar alq_value);
+
+    /// Surface rates of a producer against the given THP limit, from its
+    /// inflow at the current reservoir state, honouring its BHP and rate
+    /// limits. Zero if the well cannot flow against that THP.
+    std::vector<Scalar>
+    computeWellRatesAtThpLimitProd(const Simulator& simulator,
+                                   const GroupStateHelperType& groupStateHelper,
+                                   const WellStateType& well_state,
+                                   const Scalar thp_limit);
+
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,

@@ -37,7 +37,6 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <fmt/format.h>
 
@@ -112,6 +111,11 @@ update(const bool mandatory_network_balance,
         const double dt = well_model_.simulator().timeStepSize();
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
         const bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
+        if (well_group_thp_updated) {
+            // The network pressures must follow from the rates of the wells
+            // just solved against the new common THP.
+            well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
+        }
         const int max_number_of_sub_iterations =
             well_model_.param().network_max_sub_iterations_;
         const Scalar network_pressure_update_damping_factor =
@@ -207,6 +211,10 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
         return false;
     }
 
+    const auto& simulator = well_model_.simulator();
+    const auto& summary_state = simulator.vanguard().summaryState();
+    const auto& comm = simulator.vanguard().grid().comm();
+    const auto& group_state_helper = well_model_.groupStateHelper();
     auto& well_state = well_model_.wellState();
     auto& group_state = well_model_.groupState();
 
@@ -214,7 +222,6 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     for (const std::string& nodeName : network.node_names()) {
         const bool has_choke = network.node(nodeName).as_choke();
         if (has_choke) {
-            const auto& summary_state = well_model_.simulator().vanguard().summaryState();
             const Group& group = well_model_.schedule().getGroup(nodeName, reportStepIdx);
 
             //TODO: Auto choke combined with RESV control is not supported
@@ -226,13 +233,13 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
                 cmode = group.productionControls(summary_state).cmode;
             }
-            Scalar target_tmp{0.0};
+            Scalar target{0.0};
             if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
                 // Target is set for an ancestor group. Target for autochoke group to be
                 // derived via group guide rates
                 const Scalar efficiencyFactor = 1.0;
                 const Group& parentGroup = well_model_.schedule().getGroup(group.parent(), reportStepIdx);
-                std::tie(target_tmp, cmode) = well_model_.groupStateHelper().
+                std::tie(target, cmode) = group_state_helper.
                     getAutoChokeGroupProductionTargetRate(group,
                                                           parentGroup,
                                                           resv_coeff,
@@ -240,172 +247,133 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             }
             else {
                 // Target is set for the autochoke group itself
-                target_tmp = well_model_.groupStateHelper().getProductionGroupTargetForMode(group, cmode);
+                target = group_state_helper.getProductionGroupTargetForMode(group, cmode);
             }
             constexpr auto rate_modes = std::array{Group::ProductionCMode::ORAT,
                                                    Group::ProductionCMode::WRAT,
                                                    Group::ProductionCMode::GRAT,
                                                    Group::ProductionCMode::LRAT,
                                                    Group::ProductionCMode::RESV};
-            if (target_tmp <= 0.0 || std::ranges::find(rate_modes, cmode) == rate_modes.end()) {
-                // No rate target to choke the group back to.
-                continue;
+            const bool has_target = target > 0.0
+                && std::ranges::find(rate_modes, cmode) != rate_modes.end();
+
+            // The wells cannot produce against less than the node's own network
+            // pressure, which does not include the manifold's choke.
+            Scalar nodal_pressure{0.0};
+            if (const auto it = this->node_pressures_.find(nodeName);
+                it != this->node_pressures_.end())
+            {
+                nodal_pressure = it->second;
             }
-            using TargetCalculatorType =  GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
-            TargetCalculatorType tcalc{well_model_.groupStateHelper(), resv_coeff, cmode};
+            else {
+                // No network solution yet; start from the fixed pressure node above.
+                std::string node_name = nodeName;
+                while (!network.node(node_name).terminal_pressure().has_value()) {
+                    node_name = network.uptree_branch(node_name).value().uptree_node();
+                }
+                nodal_pressure = network.node(node_name).terminal_pressure().value();
+            }
 
-            const Scalar orig_target = target_tmp;
-
-            auto mismatch = [&] (auto group_thp) {
-                Scalar group_rate(0.0);
-                Scalar rate(0.0);
-                for (auto& well : well_model_) {
-                    std::string well_name = well->name();
-                    auto& ws = well_state.well(well_name);
-                    if (group.hasWell(well_name)) {
-                        // A well without a VFP table cannot be put under THP
-                        // control, so the common THP is not imposed on it.
-                        if (well->wellEcl().vfp_table_number() > 0) {
-                            well->setDynamicThpLimit(group_thp);
-                        }
-                        const auto inj_controls = Well::InjectionControls(0);
-                        // The well equations are solved here to find the group
-                        // THP, so the controls must carry the drawdown limit;
-                        // callers that pass controls explicitly are required to
-                        // have applied it.
-                        const auto prod_controls =
-                            well->productionControlsWithWeldraw(summary_state, ws);
-                        well->iterateWellEqWithSwitching(well_model_.simulator(),
-                                                         dt,
-                                                         inj_controls,
-                                                         prod_controls,
-                                                         well_model_.groupStateHelper(),
-                                                         well_state,
-                                                         /*fixed_control=*/false,
-                                                         /*fixed_status=*/false,
-                                                         /*solving_with_zero_rate=*/false);
-                        rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
-                        group_rate += rate;
+            using TargetCalculatorType = GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
+            const TargetCalculatorType tcalc{group_state_helper, resv_coeff, cmode};
+            // Group rate with the producers at a common THP, from their inflow at
+            // the current reservoir state. The well state is left untouched.
+            const auto group_rate = [&](const Scalar thp) {
+                Scalar rate{0.0};
+                for (const auto& well : well_model_) {
+                    if (!well->isProducer() || !group.hasWell(well->name())) {
+                        continue;
+                    }
+                    const auto& ws = well_state.well(well->indexOfWell());
+                    if (ws.status != Well::Status::OPEN) {
+                        continue;
+                    }
+                    // A well without a VFP table cannot be put under THP
+                    // control, so the common THP is not imposed on it.
+                    const auto rates = well->wellEcl().vfp_table_number() > 0
+                                       && well->wellEcl().predictionMode()
+                        ? well->computeWellRatesAtThpLimitProd(simulator, group_state_helper,
+                                                               well_state, thp)
+                        : ws.surface_rates;
+                    if (well_state.wellIsOwned(well->indexOfWell(), well->name())) {
+                        rate -= well->wellEcl().getEfficiencyFactor() * ws.efficiency_scaling_factor
+                            * tcalc.calcModeRateFromRates(rates);
                     }
                 }
-                return (group_rate - orig_target)/orig_target;
+                return comm.sum(rate);
             };
 
-            const auto upbranch = network.uptree_branch(nodeName);
-            const auto it = this->node_pressures_.find((*upbranch).uptree_node());
-            const Scalar nodal_pressure = it->second;
+            std::optional<Scalar> manifold_thp;
+            if (has_target) {
+                const auto mismatch = [&](const Scalar thp) {
+                    return (group_rate(thp) - target) / target;
+                };
+                // The group rate falls as the common THP rises. With the choke
+                // open the wells produce against the nodal pressure.
+                Scalar low = nodal_pressure;
+                if (mismatch(low) <= thp_tolerance) {
+                    manifold_thp = low;
+                }
+                else {
+                    // Bracket the THP meeting the target, from the last solution if any.
+                    // Steps doubling from 1 bar reach a thousand bar within ten attempts.
+                    constexpr Scalar initial_step = 1.0 * unit::barsa;
+                    constexpr int max_bracket_attempts = 10;
+                    const auto cached = this->well_group_thp_calc_.find(nodeName);
+                    Scalar high = (cached != this->well_group_thp_calc_.end() && cached->second > low)
+                        ? cached->second
+                        : low + initial_step;
+                    Scalar step = std::max(high - low, initial_step);
+                    Scalar mismatch_high = mismatch(high);
+                    for (int attempt = 0; mismatch_high > 0.0 && attempt < max_bracket_attempts; ++attempt) {
+                        low = high;
+                        step *= 2;
+                        high = low + step;
+                        mismatch_high = mismatch(high);
+                    }
+                    if (mismatch_high > 0.0) {
+                        local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: no common THP "
+                                                               "brings the group down to its target",
+                                                               nodeName));
+                    }
+                    else {
+                        int iterations = 0;
+                        manifold_thp = RegulaFalsiBisection<ContinueOnError>::
+                            solve(mismatch, low, high, balance.thp_max_iter(),
+                                  thp_tolerance, iterations);
+                    }
+                }
+            }
+
             Scalar well_group_thp = nodal_pressure;
-
-            std::optional<Scalar> autochoke_thp;
-            if (auto iter = this->well_group_thp_calc_.find(nodeName);
-                iter != this->well_group_thp_calc_.end())
-            {
-                autochoke_thp = this->well_group_thp_calc_.at(nodeName);
+            if (manifold_thp.has_value()) {
+                this->well_group_thp_calc_[nodeName] = *manifold_thp;
+                well_group_thp = std::max(*manifold_thp, nodal_pressure);
             }
-
-            using WellBhpThpCalculatorType = WellBhpThpCalculator<Scalar, IndexTraits>;
-            //Find an initial bracket
-            std::array<Scalar, 2> range_initial;
-            if (!autochoke_thp.has_value()){
-                Scalar min_thp, max_thp;
-                // Retrieve the terminal pressure of the associated root of the manifold group
-                std::string node_name =  nodeName;
-                while (!network.node(node_name).terminal_pressure().has_value()) {
-                    auto branch = network.uptree_branch(node_name).value();
-                    node_name = branch.uptree_node();
-                }
-                min_thp = network.node(node_name).terminal_pressure().value();
-                WellBhpThpCalculatorType::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
-                // Narrow down the bracket
-                Scalar low1, high1;
-                std::array<Scalar, 2> range = {Scalar{0.9}*min_thp, Scalar{1.1}*max_thp};
-                std::optional<Scalar> appr_sol;
-                WellBhpThpCalculatorType::bruteForceBracketCommonTHP(mismatch,
-                                                                     range,
-                                                                     low1,
-                                                                     high1,
-                                                                     appr_sol,
-                                                                     0.0,
-                                                                     local_deferredLogger);
-                min_thp = low1;
-                max_thp = high1;
-                range_initial = {min_thp, max_thp};
-            }
-
-            if (!autochoke_thp.has_value() || autochoke_thp.value() > nodal_pressure) {
-                // The bracket is based on the initial bracket or
-                // on a range based on a previous calculated group thp
-                std::array<Scalar, 2> range = autochoke_thp.has_value() ?
-                    std::array<Scalar, 2>{Scalar{0.9} * autochoke_thp.value(),
-                                          Scalar{1.1} * autochoke_thp.value()} : range_initial;
-                Scalar low, high;
-                std::optional<Scalar> approximate_solution;
-                const Scalar tolerance1 = thp_tolerance;
-                local_deferredLogger.debug("Using brute force search to bracket the group THP");
-                const bool finding_bracket = WellBhpThpCalculatorType::
-                    bruteForceBracketCommonTHP(mismatch,
-                                               range,
-                                               low,
-                                               high,
-                                               approximate_solution,
-                                               tolerance1,
-                                               local_deferredLogger);
-
-                if (approximate_solution.has_value()) {
-                    autochoke_thp = *approximate_solution;
-                    local_deferredLogger.debug("Approximate group THP value found: "  +
-                                               std::to_string(autochoke_thp.value()));
-                } else if (finding_bracket) {
-                    const Scalar tolerance2 = thp_tolerance;
-                    const int max_iteration_solve = 100;
-                    int iteration = 0;
-                    autochoke_thp = RegulaFalsiBisection<ThrowOnError>::
-                                     solve(mismatch,
-                                           low,
-                                           high,
-                                           max_iteration_solve,
-                                           tolerance2,
-                                           iteration);
-                    local_deferredLogger.debug(" bracket = [" + std::to_string(low) + ", " +
-                                               std::to_string(high) + "], " +
-                                               "iteration = " + std::to_string(iteration));
-                    local_deferredLogger.debug("Group THP value = " + std::to_string(autochoke_thp.value()));
-                } else {
-                    autochoke_thp.reset();
-                    local_deferredLogger.debug("Group THP solve failed due to bracketing failure");
-                }
-            }
-             if (autochoke_thp.has_value()) {
-                this->well_group_thp_calc_[nodeName] = autochoke_thp.value();
-                // Note: The node pressure of the auto-choke node is set
-                // to well_group_thp in computeNetworkPressures()
-                // and must be larger or equal to the pressure of the uptree node of its branch.
-                well_group_thp = std::max(autochoke_thp.value(), nodal_pressure);
-            }
+            local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: common THP {:.3f} bar, "
+                                                   "nodal pressure {:.3f} bar, {} target {:.3f} per day",
+                                                   nodeName,
+                                                   well_group_thp / unit::barsa,
+                                                   nodal_pressure / unit::barsa,
+                                                   Group::ProductionCMode2String(cmode),
+                                                   target * unit::day));
 
             for (auto& well : well_model_) {
-                std::string well_name = well->name();
-
-                if (well->isInjector() || !well->wellEcl().predictionMode())
+                if (!well->isProducer() || !well->wellEcl().predictionMode()
+                    || !group.hasWell(well->name())) {
                     continue;
-
+                }
                 // As above: a well without a VFP table cannot be put under THP
                 // control, so the auto-choke group THP is not imposed on it.
-                if (group.hasWell(well_name)
-                    && well->wellEcl().vfp_table_number() > 0) {
+                if (well->wellEcl().vfp_table_number() > 0) {
                     well->setDynamicThpLimit(well_group_thp);
                 }
-                const auto& ws = well_model_.wellState().well(well->indexOfWell());
-                const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                if (thp_is_limit) {
-                    well->prepareWellBeforeAssembling(well_model_.simulator(),
-                                                      dt,
-                                                      well_model_.groupStateHelper(),
-                                                      well_model_.wellState());
-                }
+                // Wells on rate control may have to switch to the new THP limit
+                // before the network sees their rates.
+                well->prepareWellBeforeAssembling(simulator, dt, group_state_helper, well_state);
             }
 
-            // Use the group THP in computeNetworkPressures().
+            // The wells of the group produce against this THP, see producerThpLimit().
             const auto& current_well_group_thp = group_state.is_autochoke_group(nodeName)
                 ? group_state.well_group_thp(nodeName)
                 : 1e30;
