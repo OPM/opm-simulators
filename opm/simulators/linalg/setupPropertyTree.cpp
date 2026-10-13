@@ -387,8 +387,9 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
     // Coarse well diagonal for multisegment wells: "row_sum" is the historical
-    // minus-the-row-sum, "contract_d" contracts D and so keeps the
-    // segment-to-segment coupling. Standard wells contract D either way.
+    // minus-the-row-sum, "contract_d" contracts all D blocks directly.
+    // Only non-pressure-controlled multisegment wells use this choice;
+    // standard wells ignore it and pressure-controlled MSWs keep a unit diagonal.
     prm.put("preconditioner.well_coarse_diagonal", "row_sum"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.pre_smooth", 0);

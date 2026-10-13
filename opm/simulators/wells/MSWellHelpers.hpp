@@ -83,18 +83,20 @@ namespace mswellhelpers
     /// Coarse CPRW diagonal for a multisegment well: lambda' D(:,p), summed
     /// over every segment row and every column of D.
     ///
-    /// This is the Galerkin diagonal for a prolongation that spreads the well's
-    /// single coarse unknown over all of its segment pressures, which is the
-    /// prolongation the coarse column already assumes. Unlike the row-sum
-    /// convention it keeps the segment-to-segment coupling D carries, which is
-    /// most of a well once there is one segment per connection.
+    /// In an augmented reservoir-well system this is R_w D P_w, where R_w
+    /// applies lambda to each segment's conservation rows and P_w injects one
+    /// coarse value into every segment pressure. This matches the pressure
+    /// column used to assemble the coarse matrix. Classic CPRW eliminates
+    /// wells from its fine vectors and does not prolong a coarse correction
+    /// into segment pressures. Unlike the historical row-sum diagonal, this
+    /// contraction reads D directly, including its off-diagonal blocks;
+    /// internal coupling terms can cancel under a uniform pressure shift.
     ///
     /// \param D                  the well's diagonal block, segment rows by segment columns
     /// \param lambda             well weights, one per conservation equation
     /// \param pressureColumn     the segment-pressure column of a D block
     ///
-    /// Returns 1 if the contraction cancels exactly, since a zero would make
-    /// the coarse pressure system singular.
+    /// Returns 1 on exact cancellation to avoid a zero coarse diagonal.
     ///
     /// SystemCprwPressureStage::assembleCoarseMatrix runs the same inner
     /// kernel over its merged matrix, but distributes into a whole coarse row

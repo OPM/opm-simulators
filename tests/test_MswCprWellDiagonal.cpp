@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(OffDiagonalSegmentCouplingIsKept)
 
 BOOST_AUTO_TEST_CASE(ExactCancellationIsRegularised)
 {
-    // A zero here would make the coarse pressure system singular.
+    // Exact cancellation is regularised to avoid a zero coarse diagonal.
     const auto D = makeD(2.0, -1.0, -1.0, 0.0);
     const WellWeight lambda {1.0, 1.0, 1.0};
 

@@ -205,7 +205,9 @@ namespace Opm
             // (the default) keeps the historical minus-the-row-sum diagonal,
             // "contract_d" takes it from lambda' D(:,bhp) as standard wells
             // have always done. Standard wells contract D either way, so this
-            // only ever changes multisegment wells. Named after the operation
+            // only changes non-pressure-controlled multisegment wells;
+            // pressure-controlled multisegment wells retain a unit diagonal.
+            // Named after the operation
             // rather than "auto" so a configuration says which it wants, and
             // to match the vocabulary of the system solver's own key.
             const auto diagonal = prm_.get<std::string>("well_coarse_diagonal", "row_sum");
