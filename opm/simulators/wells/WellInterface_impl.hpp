@@ -1278,8 +1278,10 @@ namespace Opm
             checkWellOperability(simulator, well_state, groupStateHelper);
 
         // only use inner well iterations for the first newton iterations.
+        // A well kept stopped is not solved for, see keepStopped().
         const auto& iterCtx = simulator.problem().iterationContext();
-        if (iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
+        if (!this->operability_status_.isKeptStopped()
+            && iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
@@ -1441,7 +1443,8 @@ namespace Opm
             return;
         }
 
-        if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
+        if (this->operability_status_.isKeptStopped()
+            || (this->wellIsStopped() && !changed_to_stopped_this_step_)) {
             return;
         }
 

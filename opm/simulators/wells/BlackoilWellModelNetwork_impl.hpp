@@ -43,6 +43,8 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <set>
+#include <string>
 #include <tuple>
 
 namespace Opm {
@@ -276,22 +278,37 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
 
             using TargetCalculatorType = GroupStateHelpers::TargetCalculator<Scalar, IndexTraits>;
             const TargetCalculatorType tcalc{group_state_helper, resv_coeff, cmode};
+            // A well without a VFP table cannot be put under THP control, so
+            // the common THP is not imposed on it.
+            const auto takes_common_thp = [&group](const auto& well) {
+                return well->isProducer() && group.hasWell(well->name())
+                    && well->wellEcl().vfp_table_number() > 0
+                    && well->wellEcl().predictionMode();
+            };
+            // Wells found unable to flow at the common THP, starting from those
+            // kept stopped for the rest of the time step.
+            using KeptStopped = typename WellInterface<TypeTag>::KeptStopped;
+            std::set<std::string> stopped;
+            for (const auto& well : well_model_) {
+                if (takes_common_thp(well) && well->keptStopped() == KeptStopped::Finally) {
+                    stopped.insert(well->name());
+                }
+            }
             // Group rate with the producers at a common THP, from their inflow at
             // the current reservoir state. The well state is left untouched.
             const auto group_rate = [&](const Scalar thp) {
                 Scalar rate{0.0};
                 for (const auto& well : well_model_) {
-                    if (!well->isProducer() || !group.hasWell(well->name())) {
+                    if (!well->isProducer() || !group.hasWell(well->name())
+                        || stopped.contains(well->name()))
+                    {
                         continue;
                     }
                     const auto& ws = well_state.well(well->indexOfWell());
                     if (ws.status != Well::Status::OPEN) {
                         continue;
                     }
-                    // A well without a VFP table cannot be put under THP
-                    // control, so the common THP is not imposed on it.
-                    const auto rates = well->wellEcl().vfp_table_number() > 0
-                                       && well->wellEcl().predictionMode()
+                    const auto rates = takes_common_thp(well)
                         ? well->computeWellRatesAtThpLimitProd(simulator, group_state_helper,
                                                                well_state, thp)
                         : ws.surface_rates;
@@ -303,53 +320,114 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 return comm.sum(rate);
             };
 
-            std::optional<Scalar> manifold_thp;
-            if (has_target) {
+            // Common THP bringing the group down to its target, if any. The group
+            // rate falls as the THP rises, and drops where a well stops flowing; a
+            // target within such a drop is not met.
+            const auto solve_thp = [&](bool& target_met) -> std::optional<Scalar> {
+                // The lowest THP seen to bring the group below its target.
+                std::optional<Scalar> thp_below_target;
                 const auto mismatch = [&](const Scalar thp) {
-                    return (group_rate(thp) - target) / target;
+                    const Scalar rel_diff = (group_rate(thp) - target) / target;
+                    if (rel_diff < -thp_tolerance && !(thp_below_target && *thp_below_target < thp)) {
+                        thp_below_target = thp;
+                    }
+                    return rel_diff;
                 };
-                // The group rate falls as the common THP rises. With the choke
-                // open the wells produce against the nodal pressure.
+                // With the choke open the wells produce against the nodal pressure.
                 Scalar low = nodal_pressure;
+                target_met = true;
                 if (mismatch(low) <= thp_tolerance) {
-                    manifold_thp = low;
+                    return low;
                 }
-                else {
-                    // Bracket the THP meeting the target, from the last solution if any.
-                    // Steps doubling from 1 bar reach a thousand bar within ten attempts.
-                    constexpr Scalar initial_step = 1.0 * unit::barsa;
-                    constexpr int max_bracket_attempts = 10;
-                    const auto cached = this->well_group_thp_calc_.find(nodeName);
-                    Scalar high = (cached != this->well_group_thp_calc_.end() && cached->second > low)
-                        ? cached->second
-                        : low + initial_step;
-                    Scalar step = std::max(high - low, initial_step);
-                    Scalar mismatch_high = mismatch(high);
-                    for (int attempt = 0; mismatch_high > 0.0 && attempt < max_bracket_attempts; ++attempt) {
-                        low = high;
-                        step *= 2;
-                        high = low + step;
-                        mismatch_high = mismatch(high);
+                // Bracket the THP meeting the target, from the last solution if any.
+                // Steps doubling from 1 bar reach a thousand bar within ten attempts.
+                constexpr Scalar initial_step = 1.0 * unit::barsa;
+                constexpr int max_bracket_attempts = 10;
+                const auto cached = this->well_group_thp_calc_.find(nodeName);
+                Scalar high = (cached != this->well_group_thp_calc_.end() && cached->second > low)
+                    ? cached->second
+                    : low + initial_step;
+                Scalar step = std::max(high - low, initial_step);
+                Scalar mismatch_high = mismatch(high);
+                for (int attempt = 0; mismatch_high > 0.0 && attempt < max_bracket_attempts; ++attempt) {
+                    low = high;
+                    step *= 2;
+                    high = low + step;
+                    mismatch_high = mismatch(high);
+                }
+                if (mismatch_high > 0.0) {
+                    local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: no common THP "
+                                                           "brings the group down to its target",
+                                                           nodeName));
+                    return std::nullopt;
+                }
+                int iterations = 0;
+                const Scalar thp = RegulaFalsiBisection<ContinueOnError>::
+                    solve(mismatch, low, high, balance.thp_max_iter(),
+                          thp_tolerance, iterations);
+                // Within a drop the solver ends next to it, maybe on its
+                // high-rate side; then take the THP seen below the target.
+                target_met = std::abs(mismatch(thp)) < thp_tolerance;
+                return (target_met || !thp_below_target) ? thp : *thp_below_target;
+            };
+
+            // A target within a drop cannot be met with the well that stops there
+            // flowing, so that well is stopped and the THP solved for the others.
+            Scalar well_group_thp = nodal_pressure;
+            bool solve = has_target;
+            while (solve) {
+                bool target_met = true;
+                const auto manifold_thp = solve_thp(target_met);
+                if (!manifold_thp.has_value()) {
+                    break;
+                }
+                this->well_group_thp_calc_[nodeName] = *manifold_thp;
+                well_group_thp = std::max(*manifold_thp, nodal_pressure);
+
+                solve = false;
+                for (const auto& well : well_model_) {
+                    if (!takes_common_thp(well) || stopped.contains(well->name())
+                        || well_state.well(well->indexOfWell()).status != Well::Status::OPEN)
+                    {
+                        continue;
                     }
-                    if (mismatch_high > 0.0) {
-                        local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: no common THP "
-                                                               "brings the group down to its target",
-                                                               nodeName));
+                    if (!well->computeWellRatesAtThpLimitProd(simulator, group_state_helper,
+                                                              well_state, *manifold_thp))
+                    {
+                        stopped.insert(well->name());
+                        solve = !target_met;
                     }
-                    else {
-                        int iterations = 0;
-                        manifold_thp = RegulaFalsiBisection<ContinueOnError>::
-                            solve(mismatch, low, high, balance.thp_max_iter(),
-                                  thp_tolerance, iterations);
-                    }
+                }
+                solve = comm.max(static_cast<int>(solve)) > 0;
+            }
+
+            // A well that cannot flow at the common THP is kept stopped: reopened
+            // as the pressure around it recovers, it would stop again once that
+            // pressure falls. Only a stop decided on a state not yet converged,
+            // after the first Newton iteration, may be undone, and only once.
+            const bool provisionally = !well_model_.iterationContext().isFirstGlobalIteration();
+            for (const auto& well : well_model_) {
+                if (!takes_common_thp(well)) {
+                    continue;
+                }
+                const auto kept = well->keptStopped();
+                if (stopped.contains(well->name())) {
+                    well->keepStopped(provisionally);
+                }
+                else if (kept == KeptStopped::Provisionally) {
+                    well->reopenKeptStopped();
+                }
+                if (well->keptStopped() != kept) {
+                    const bool reopened = well->keptStopped() == KeptStopped::Reopened;
+                    local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: well {} {} at "
+                                                           "the common THP {:.3f} bar",
+                                                           nodeName, well->name(),
+                                                           reopened ? "can flow again"
+                                                                    : "cannot flow, kept stopped",
+                                                           well_group_thp / unit::barsa));
                 }
             }
 
-            Scalar well_group_thp = nodal_pressure;
-            if (manifold_thp.has_value()) {
-                this->well_group_thp_calc_[nodeName] = *manifold_thp;
-                well_group_thp = std::max(*manifold_thp, nodal_pressure);
-            }
             local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: common THP {:.3f} bar, "
                                                    "nodal pressure {:.3f} bar, {} target {:.3f} per day",
                                                    nodeName,
