@@ -190,6 +190,12 @@ protected:
     void imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well,
                             const Scalar limit);
 
+    //! \brief THP limit for the producers of a network group: the node
+    //! pressure, or the common THP of a sub-sea manifold group if higher.
+    Scalar producerThpLimit(const Network::ExtNetwork& network,
+                            const std::string& group,
+                            const Scalar node_pressure) const;
+
     /// Result of one network pressure evaluation for one network (domain).
     struct NetworkPressures
     {

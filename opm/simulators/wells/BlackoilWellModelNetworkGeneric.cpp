@@ -375,7 +375,8 @@ updatePressures(const int reportStepIdx,
                 if (well->isProducer()) {
                     // For producers the leaf-node pressure is the group wellhead THP;
                     // apply it directly as a dynamic THP constraint.
-                    this->imposeWellThpLimit(*well, it->second);
+                    const auto& network = well_model_.schedule()[reportStepIdx].network();
+                    this->imposeWellThpLimit(*well, this->producerThpLimit(network, it->first, it->second));
                     SingleWellState<Scalar, IndexTraits>& ws = well_model_.wellState()[well->indexOfWell()];
                     const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                     // TODO: not sure why the thp is NOT updated properly elsewhere
@@ -532,7 +533,9 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
             && this->invalidNodes(*domain).count(it->first) == 0) {
             // Carry the converged production-network pressure into the next
             // report step as the producer's starting THP constraint.
-            this->imposeWellThpLimit(well, it->second);
+            const auto report_step = well_model_.groupStateHelper().reportStepIdx();
+            const auto& network = well_model_.schedule()[report_step].network();
+            this->imposeWellThpLimit(well, this->producerThpLimit(network, it->first, it->second));
         } else if (it == this->nodePressures(*domain).end()
                    || (well.isProducer() && this->invalidNodes(*domain).count(it->first) > 0)) {
             // Reapply a retained limit after network detachment or well reconstruction,
@@ -551,6 +554,21 @@ imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well, const Scalar 
 {
     well.setDynamicThpLimit(limit);
     well_model_.wellState().well(well.indexOfWell()).network_thp_limit = limit;
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+producerThpLimit(const Network::ExtNetwork& network,
+                 const std::string& group,
+                 const Scalar node_pressure) const
+{
+    const auto& group_state = well_model_.groupState();
+    if (network.has_node(group) && network.node(group).as_choke()
+        && group_state.is_autochoke_group(group))
+    {
+        return std::max(node_pressure, group_state.well_group_thp(group));
+    }
+    return node_pressure;
 }
 
 template <typename Scalar, typename IndexTraits>
