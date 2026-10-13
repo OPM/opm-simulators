@@ -25,7 +25,6 @@
 #include <opm/simulators/flow/rescoup/ReservoirCouplingMasterReportStep.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
-#include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -467,50 +466,28 @@ ReservoirCouplingMasterReportStep<Scalar>::
 updateFlowChangeTimeStepLimit()
 {
     this->flow_change_time_step_limit_ = std::numeric_limits<Scalar>::infinity();
-    if (this->sync_step_length_ <= 0) {
-        return;
-    }
     const auto& report_step = this->schedule()[this->report_step_idx_];
     const auto& rescoup = report_step.rescoup();
-    constexpr Scalar default_flow_limit_fraction =
-        ParserKeywords::GRUPMAST::LIMITING_FRACTION::defaultValue;
     // RCMASTS is 0 if not given, then the master's minimum time step applies
     const Scalar rcmasts = rescoup.masterMinTimeStep();
     const Scalar min_step = rcmasts > 0 ? rcmasts : report_step.tuning().TSMINZ;
+    auto as_vector = [](const GroupFlows& flows) {
+        std::vector<Scalar> result{flows.production_reservoir};
+        result.insert(result.end(), flows.injection_surface.begin(), flows.injection_surface.end());
+        return result;
+    };
     for (const auto& [group_name, start] : this->group_flows_at_start_of_sync_step_) {
-        const Scalar fraction = rescoup.masterGroup(group_name).flowLimitFraction();
-        if (fraction >= default_flow_limit_fraction) {
-            continue; // Item 4 defaulted: no limit
-        }
-        const auto end = this->getMasterGroupFlows_(group_name);
-        Scalar max_change{0};
-        auto add_change = [&max_change](Scalar before, Scalar after) {
-            if (before == after) {
-                return;
-            }
-            // A flow starting from zero is an infinite fractional change
-            const Scalar change = (before == 0)
-                ? std::numeric_limits<Scalar>::infinity()
-                : std::abs(after - before) / std::abs(before);
-            max_change = std::max(max_change, change);
-        };
-        add_change(start.production_reservoir, end.production_reservoir);
-        for (std::size_t phase = 0; phase < start.injection_surface.size(); ++phase) {
-            add_change(start.injection_surface[phase], end.injection_surface[phase]);
-        }
-        if (max_change > 0) {
-            // The master and the slaves add up the sync step lengths independently and compare the
-            // sums with a tolerance of a few ulps (see ReservoirCoupling::Seconds). Whole seconds
-            // add up exactly, so the limit is rounded to those, as the report step dates are.
-            const Scalar limit = std::max(
-                std::round(this->sync_step_length_ * fraction / max_change),
-                std::max<Scalar>(1, std::ceil(min_step)));
-            if (limit < this->flow_change_time_step_limit_) {
-                this->flow_change_time_step_limit_ = limit;
-                this->flow_change_limiting_group_ = group_name;
-                this->flow_change_limiting_change_ = max_change;
-                this->flow_change_limiting_fraction_ = fraction;
-            }
+        const auto [limit, max_change] = ReservoirCoupling::flowChangeTimeStepLimit(
+            static_cast<Scalar>(rescoup.masterGroup(group_name).flowLimitFraction()),
+            this->sync_step_length_,
+            min_step,
+            as_vector(start),
+            as_vector(this->getMasterGroupFlows_(group_name)));
+        if (limit < this->flow_change_time_step_limit_) {
+            this->flow_change_time_step_limit_ = limit;
+            this->flow_change_limiting_group_ = group_name;
+            this->flow_change_limiting_change_ = max_change;
+            this->flow_change_limiting_fraction_ = rescoup.masterGroup(group_name).flowLimitFraction();
         }
     }
 }

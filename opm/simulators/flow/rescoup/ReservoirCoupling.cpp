@@ -22,8 +22,15 @@
 #include <opm/simulators/flow/rescoup/ReservoirCoupling.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
 
 #include <fmt/format.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <limits>
+#include <vector>
 
 namespace Opm {
 namespace ReservoirCoupling {
@@ -210,12 +217,50 @@ bool Seconds::compare_lt_or_eq(double a, double b)
     return a < b;
 }
 
+template <class Scalar>
+FlowChangeLimit<Scalar>
+flowChangeTimeStepLimit(const Scalar limiting_fraction,
+                        const Scalar step_length,
+                        const Scalar min_step,
+                        const std::vector<Scalar>& start_flows,
+                        const std::vector<Scalar>& end_flows)
+{
+    constexpr Scalar infinity = std::numeric_limits<Scalar>::infinity();
+    FlowChangeLimit<Scalar> result{infinity, 0};
+    constexpr Scalar default_fraction = ParserKeywords::GRUPMAST::LIMITING_FRACTION::defaultValue;
+    if (limiting_fraction >= default_fraction || !(step_length > 0)) {
+        return result;
+    }
+    for (std::size_t i = 0; i < start_flows.size(); ++i) {
+        const Scalar before = start_flows[i];
+        const Scalar after = end_flows[i];
+        if (before == after) {
+            continue;
+        }
+        // A flow starting from zero is an infinite fractional change
+        const Scalar change = (before == 0) ? infinity : std::abs(after - before) / std::abs(before);
+        result.max_change = std::max(result.max_change, change);
+    }
+    if (result.max_change > 0) {
+        // The master and the slaves add up the sync step lengths independently and compare the
+        // sums with a tolerance of a few ulps (see Seconds). Whole seconds add up exactly, so
+        // the limit is rounded to those, as the report step dates are.
+        result.time_step_limit = std::max(std::round(step_length * limiting_fraction / result.max_change),
+                                          std::max<Scalar>(1, std::ceil(min_step)));
+    }
+    return result;
+}
+
 template struct InjectionGroupTarget<double>;
 template struct ProductionGroupConstraints<double>;
+template FlowChangeLimit<double> flowChangeTimeStepLimit(
+    double, double, double, const std::vector<double>&, const std::vector<double>&);
 
 #if FLOW_INSTANTIATE_FLOAT
 template struct InjectionGroupTarget<float>;
 template struct ProductionGroupConstraints<float>;
+template FlowChangeLimit<float> flowChangeTimeStepLimit(
+    float, float, float, const std::vector<float>&, const std::vector<float>&);
 #endif
 
 } // namespace ReservoirCoupling

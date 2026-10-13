@@ -350,6 +350,34 @@ inline std::string formatDays(double seconds) {
     return fmt::format(fmt::runtime("{:.0f}s ({:.2f} days)"), seconds, days);
 }
 
+/// \brief Result of flowChangeTimeStepLimit()
+template <class Scalar>
+struct FlowChangeLimit {
+    /// Upper limit for the next sync step length (infinity if the flow change does not limit it)
+    Scalar time_step_limit;
+    /// The largest fractional flow change (infinity for a flow that starts from zero)
+    Scalar max_change;
+};
+
+/// \brief Limit the next sync step from the flow change of a master group (GRUPMAST item 4)
+///
+/// The limit is the step length times the limiting fraction divided by the largest fractional
+/// change of the flows between the start and the end of the step. It is rounded to whole seconds,
+/// see Seconds, and never below the minimum step.
+///
+/// \param limiting_fraction GRUPMAST item 4. The default value means no limit.
+/// \param step_length Length of the sync step taken
+/// \param min_step Smallest limit that is returned
+/// \param start_flows Flow rates at the start of the step
+/// \param end_flows Flow rates at the end of the step, in the same order as \a start_flows
+template <class Scalar>
+FlowChangeLimit<Scalar>
+flowChangeTimeStepLimit(Scalar limiting_fraction,
+                        Scalar step_length,
+                        Scalar min_step,
+                        const std::vector<Scalar>& start_flows,
+                        const std::vector<Scalar>& end_flows);
+
 /// \brief Utility class for comparing double values representing epoch dates or elapsed time.
 ///
 /// This class is used to compare double values that represent:
