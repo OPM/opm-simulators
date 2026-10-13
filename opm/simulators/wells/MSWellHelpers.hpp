@@ -25,8 +25,8 @@
 
 #include <dune/istl/matrix.hh>
 
+#include <algorithm>
 #include <cmath>
-#include <cassert>
 #include <cstddef>
 
 namespace Dune {
@@ -89,11 +89,10 @@ namespace mswellhelpers
     /// column used to assemble the coarse matrix. Classic CPRW eliminates
     /// wells from its fine vectors and does not prolong a coarse correction
     /// into segment pressures. Unlike the historical row-sum diagonal, this
-    /// contraction reads D directly, including its off-diagonal blocks;
-    /// internal coupling terms can cancel under a uniform pressure shift.
+    /// picks up the accumulation and perforation pressure derivatives in D.
     ///
     /// \param D                  the well's diagonal block, segment rows by segment columns
-    /// \param lambda             well weights, one per conservation equation
+    /// \param lambda             reservoir weights; any beyond the well's conservation rows are ignored
     /// \param pressureColumn     the segment-pressure column of a D block
     ///
     /// Returns 1 on exact cancellation to avoid a zero coarse diagonal.
@@ -111,15 +110,15 @@ namespace mswellhelpers
         using Scalar = typename DiagMatWell::field_type;
         using Block = typename DiagMatWell::block_type;
 
-        // lambda indexes the conservation-equation rows of a D block, so the
-        // weights must not outrun them.  Catches a future reordering of the
-        // well primary variables that puts something else in the first rows.
-        assert(lambda.size() <= static_cast<std::size_t>(Block::rows));
+        // The last row is the segment pressure equation. Extra reservoir
+        // weights (e.g. EXTBO) have no well row, as in StandardWellEquations.
+        const std::size_t numConservationRows =
+            std::min(lambda.size(), static_cast<std::size_t>(Block::rows - 1));
 
         Scalar diag = 0.0;
         for (std::size_t row = 0; row < D.N(); ++row) {
             for (auto col = D[row].begin(), end = D[row].end(); col != end; ++col) {
-                for (std::size_t i = 0; i < lambda.size(); ++i) {
+                for (std::size_t i = 0; i < numConservationRows; ++i) {
                     diag += lambda[i] * (*col)[i][pressureColumn];
                 }
             }

@@ -100,11 +100,9 @@ BOOST_AUTO_TEST_CASE(ContractionUsesEachRowsWeightAndOnlyThePressureColumn)
     BOOST_CHECK_CLOSE(diag, 22.0, 1e-12);
 }
 
-BOOST_AUTO_TEST_CASE(OffDiagonalSegmentCouplingIsKept)
+BOOST_AUTO_TEST_CASE(OffDiagonalBlocksAreSummed)
 {
-    // Same diagonal, different segment-to-segment coupling. The row-sum
-    // convention never reads D at all and cannot tell these two apart; the
-    // contraction must.
+    // Helper arithmetic only: entries in the off-diagonal blocks enter the sum.
     const WellWeight lambda {1.0, 1.0, 1.0};
     const auto weak = Opm::mswellhelpers::contractCprWellDiagonal(makeD(2.0, 0.0, 0.0, 3.0),
                                                                   lambda, pressureColumn);
@@ -114,6 +112,23 @@ BOOST_AUTO_TEST_CASE(OffDiagonalSegmentCouplingIsKept)
     BOOST_CHECK_CLOSE(weak, 5.0 * 3.0, 1e-12);
     BOOST_CHECK_CLOSE(strong, 4.25 * 3.0, 1e-12);
     BOOST_CHECK_LT(strong, weak);
+}
+
+BOOST_AUTO_TEST_CASE(WeightsBeyondTheConservationRowsAreIgnored)
+{
+    // EXTBO has four reservoir weights but three MSW conservation rows; the
+    // fourth must not weight the segment pressure equation.
+    auto D = makeD(2.0, -0.5, -0.25, 3.0);
+    for (auto row = D.begin(); row != D.end(); ++row) {
+        for (auto col = row->begin(); col != row->end(); ++col) {
+            (*col)[pressureColumn][pressureColumn] = 1024.0;
+        }
+    }
+    const Dune::FieldVector<Scalar, 4> lambda {0.5, 0.25, 0.125, 100.0};
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    BOOST_CHECK_CLOSE(diag, 4.25 * (0.5 + 0.25 + 0.125), 1e-12);
 }
 
 BOOST_AUTO_TEST_CASE(ExactCancellationIsRegularised)
