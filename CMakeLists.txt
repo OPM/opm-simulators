@@ -373,6 +373,7 @@ macro(opm-simulators_sources_hook)
       tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
+      tests/gpuistl/test_gpuConstantCompressibilityWaterPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
       tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_GpuSparseTable.cu
@@ -515,6 +516,7 @@ macro(opm-simulators_tests_hook)
                  gpu_smart_pointers
                  gpuBlackOilFluidSystem
                  GpuBuffer
+                 gpuConstantCompressibilityWaterPvt
                  GpuDILU
                  GpuJac
                  GpuOwnerOverlapCopy
