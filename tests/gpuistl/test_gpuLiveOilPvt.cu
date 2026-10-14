@@ -79,8 +79,9 @@ using Scalars = boost::mpl::list<double, float>;
 
 template <class Scalar>
 struct CheckCopySemantics {
-    // The views in an owning object point into its own device buffers, so a copy would
-    // have views into the buffers of the original. The owning object must be move-only.
+    // The views in the owning GPU object point into the tables of its device table owner,
+    // so a copy would have views into the tables of the original. The owning GPU object
+    // must be move-only.
     static_assert(!std::is_copy_constructible_v<GpuBufPvt<Scalar>>);
     static_assert(!std::is_copy_assignable_v<GpuBufPvt<Scalar>>);
     static_assert(std::is_move_constructible_v<GpuBufPvt<Scalar>>);
@@ -572,8 +573,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ViewsStayValidAfterMovingOwner, Scalar, Scalars)
 {
     Fixture<Scalar> fx;
 
-    // Moving the owning object moves the GpuBuffers, which keeps their device memory.
-    // Both a view created before the move and one created after it must stay valid.
+    // Moving the owning GPU object moves the pointer to its device table owner and the
+    // outer GpuBuffers of views; the tables and their device memory stay in place. Both a
+    // view created before the move and one created after it must stay valid.
     const auto viewBeforeMove = fx.gpuViewPvt;
     GpuBufPvt<Scalar> movedPvt = std::move(fx.gpuBufPvt);
     const auto viewAfterMove = Opm::gpuistl::make_view(movedPvt);
