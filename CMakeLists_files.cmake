@@ -1539,6 +1539,7 @@ if(MPI_FOUND)
     )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp
+    tests/rescoup/test_flow_change_limit.cpp
   )
 endif()
 if(HYPRE_FOUND)
