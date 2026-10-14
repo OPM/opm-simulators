@@ -167,8 +167,9 @@ struct TestProblem
     double temperature_ = 300.0;
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return temperature_; }
-    Opm::CompositionalConfig::EOSType getEosType() const
+    Opm::CompositionalConfig::EOSType getEosType(unsigned) const
     { return Opm::CompositionalConfig::EOSType::PR; }
+    std::size_t eosRegionIndex(unsigned) const { return 0; }
     template<class Context>
     TestMaterialLaw::Params materialLawParams(const Context&, unsigned, unsigned) const { return {}; }
     template<class Context>
