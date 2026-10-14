@@ -201,6 +201,14 @@ public:
                                          std::vector<Scalar>& well_flux,
                                          DeferredLogger& deferred_logger) const = 0;
 
+    //! \brief As above, with the segment pressures of a multisegment well taken from the
+    //! given well state instead of the model's well state.
+    virtual void computeWellRatesWithBhp(const Simulator& simulator,
+                                         const WellStateType& well_state,
+                                         const Scalar& bhp,
+                                         std::vector<Scalar>& well_flux,
+                                         DeferredLogger& deferred_logger) const;
+
     virtual std::optional<Scalar>
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const GroupStateHelperType& groupStateHelper,
