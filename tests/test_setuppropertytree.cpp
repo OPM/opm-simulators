@@ -180,7 +180,8 @@ BOOST_AUTO_TEST_CASE(KrylovSweepRequiresFlexibleOuterSolver)
 {
     const Opm::FlowLinearSolverParameters p;
     for (const auto* block : {"well", "reservoir"}) {
-        for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres"}) {
+        for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres",
+                                  "mixed-bicgstab", "mixed-legacy", "gpubicgstab"}) {
             auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
             Opm::PropertyTree step;
             step.put("block", std::string{block});
@@ -194,12 +195,11 @@ BOOST_AUTO_TEST_CASE(KrylovSweepRequiresFlexibleOuterSolver)
     }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
 BOOST_AUTO_TEST_CASE(KrylovCoarseSolverRequiresFlexibleOuterSolver)
 {
     const Opm::FlowLinearSolverParameters p;
-    for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres"}) {
+    for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres",
+                                  "mixed-bicgstab", "mixed-legacy", "gpubicgstab"}) {
         for (const auto* outer : {"bicgstab", "gmres", "cg"}) {
             auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
             prm.put("solver", std::string{outer});
@@ -280,3 +280,23 @@ BOOST_AUTO_TEST_CASE(SmoothingCountsMustBeNonNegative)
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE(NestedPressureSolversRequireFlexibleOuterSolver)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* solver : {"loopsolver", "bicgstab", "mixed-bicgstab", "gpubicgstab"}) {
+        auto prm = Opm::setupGeneralSystemCPR("general_system_cpr", p);
+        auto steps = *prm.get_child_list("preconditioner.finesmoother.steps");
+        // The first default reservoir step applies CPR once. Its pressure
+        // solver must still satisfy the outer solver's stationarity contract.
+        steps.front().put("preconditioner.coarsesolver.solver", std::string{solver});
+        steps.front().put("preconditioner.coarsesolver.maxiter", 2);
+        prm.put_child_list("preconditioner.finesmoother.steps", steps);
+        prm.put("solver", std::string{"bicgstab"});
+        BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+        prm.put("solver", std::string{"flexgmres"});
+        BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END() // GeneralSystemCPR

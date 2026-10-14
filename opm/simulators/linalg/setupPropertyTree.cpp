@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <tuple>
+#include <utility>
 #include <vector>
 #include <fmt/format.h>
 
@@ -841,20 +842,24 @@ setupGeneralSystemCPR(const std::string& conf, const FlowLinearSolverParameters&
 
 void validateGeneralSystemCPRTree(const PropertyTree& prm)
 {
-    // Only the composition is checked here: which parts exist is the point of
-    // this layout, so nearly everything is optional. The parts themselves are
-    // validated by whatever builds them.
-    for (const auto* key : {"preconditioner.pre_smooth", "preconditioner.post_smooth"}) {
-        if (prm.get(key, 0) < 0) {
+    // Validate the optional composition and solver stationarity before building
+    // the preconditioner. Individual factories validate their remaining options.
+    for (const auto& [key, fallback] : {
+             std::pair{"preconditioner.pre_smooth", 0},
+             std::pair{"preconditioner.post_smooth", 1}}) {
+        if (prm.get(key, fallback) < 0) {
             OPM_THROW(std::invalid_argument,
                       fmt::format("general_system_cpr requires '{}' to be non-negative.", key));
         }
     }
-    const auto validateInnerSolver = [&prm](const PropertyTree& innerPrm,
-                                           const std::string& path) {
+    const auto validateInnerSolver = [&prm](const auto& self,
+                                          const PropertyTree& innerPrm,
+                                          const std::string& path) -> void {
         const auto inner = innerPrm.get("solver", std::string{"bicgstab"});
         const bool krylov = inner == "bicgstab" || inner == "gmres"
-            || inner == "cg" || inner == "flexgmres";
+            || inner == "cg" || inner == "flexgmres"
+            || inner == "mixed-bicgstab" || inner == "mixed-legacy"
+            || inner == "gpubicgstab";
         // More than one loopsolver iteration can stop at a different iteration
         // for each RHS. Match FlexibleSolver's default iteration limit here.
         const bool variableLoop = inner == "loopsolver" && innerPrm.get("maxiter", 200) > 1;
@@ -863,6 +868,11 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
             OPM_THROW(std::invalid_argument,
                       fmt::format("general_system_cpr with variable inner solver '{}' at '{}' "
                                   "requires the outer 'solver' to be 'flexgmres'.", inner, path));
+        }
+        // A single application of a CPR preconditioner can itself contain a
+        // variable pressure solve. Follow that solver's preconditioner too.
+        if (const auto nested = innerPrm.get_child_optional("preconditioner.coarsesolver")) {
+            self(self, *nested, path + ".preconditioner.coarsesolver");
         }
     };
     const auto coarse = prm.get_child_optional("preconditioner.coarsesolver");
@@ -878,7 +888,7 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                   "CPRW pressure system and needs its own 'preconditioner' sub-tree.");
     }
     if (coarse) {
-        validateInnerSolver(*coarse, "preconditioner.coarsesolver");
+        validateInnerSolver(validateInnerSolver, *coarse, "preconditioner.coarsesolver");
         for (const auto& [key, fallback, allowed] : {
                  std::tuple{"type", "cprw_pressure", std::vector<std::string>{"cprw_pressure"}},
                  std::tuple{"well_weight_type", "cellavg",
@@ -908,7 +918,7 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                           "Every 'preconditioner.finesmoother.steps' entry needs \"block\" set "
                           "to 'reservoir' or 'well'; got '" + block + "'.");
             }
-            validateInnerSolver(step, "preconditioner.finesmoother.steps");
+            validateInnerSolver(validateInnerSolver, step, "preconditioner.finesmoother.steps");
         }
     }
 }
