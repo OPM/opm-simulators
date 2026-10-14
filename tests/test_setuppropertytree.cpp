@@ -195,3 +195,32 @@ BOOST_AUTO_TEST_CASE(KrylovSweepRequiresFlexibleOuterSolver)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_CASE(KrylovCoarseSolverRequiresFlexibleOuterSolver)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres"}) {
+        for (const auto* outer : {"bicgstab", "gmres", "cg"}) {
+            auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
+            prm.put("solver", std::string{outer});
+            prm.put("preconditioner.coarsesolver.solver", std::string{inner});
+            // Even one Krylov iteration has RHS-dependent coefficients.
+            prm.put("preconditioner.coarsesolver.maxiter", 1);
+            BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+            prm.put("solver", std::string{"flexgmres"});
+            BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+        }
+    }
+
+    // FlexibleSolver defaults to bicgstab when the inner solver is omitted.
+    auto missing = Opm::PropertyTree::fromJsonString(R"({
+        "solver": "bicgstab",
+        "preconditioner": {
+            "type": "general_system_cpr",
+            "coarsesolver": {"preconditioner": {"type": "jac"}}
+        }
+    })");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(missing), std::invalid_argument);
+    missing.put("solver", std::string{"flexgmres"});
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(missing));
+}

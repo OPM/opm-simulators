@@ -844,6 +844,17 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
     // Only the composition is checked here: which parts exist is the point of
     // this layout, so nearly everything is optional. The parts themselves are
     // validated by whatever builds them.
+    const auto validateInnerSolver = [&prm](const PropertyTree& innerPrm,
+                                           const std::string& path) {
+        const auto inner = innerPrm.get("solver", std::string{"bicgstab"});
+        const bool krylov = inner == "bicgstab" || inner == "gmres"
+            || inner == "cg" || inner == "flexgmres";
+        if (krylov && prm.get("solver", std::string{"bicgstab"}) != "flexgmres") {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("general_system_cpr with a Krylov solver at '{}' requires "
+                                  "the outer 'solver' to be 'flexgmres'.", path));
+        }
+    };
     const auto coarse = prm.get_child_optional("preconditioner.coarsesolver");
     const auto smoother = prm.get_child_optional("preconditioner.finesmoother");
     if (!coarse.has_value() && !smoother.has_value()) {
@@ -857,6 +868,7 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                   "CPRW pressure system and needs its own 'preconditioner' sub-tree.");
     }
     if (coarse) {
+        validateInnerSolver(*coarse, "preconditioner.coarsesolver");
         for (const auto& [key, fallback, allowed] : {
                  std::tuple{"type", "cprw_pressure", std::vector<std::string>{"cprw_pressure"}},
                  std::tuple{"well_weight_type", "cellavg",
@@ -886,16 +898,7 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                           "Every 'preconditioner.finesmoother.steps' entry needs \"block\" set "
                           "to 'reservoir' or 'well'; got '" + block + "'.");
             }
-            // A tolerance-based block solve makes the composed preconditioner
-            // variable, regardless of which block it acts on.
-            const auto inner = step.get("solver", std::string{"bicgstab"});
-            const bool krylov = inner == "bicgstab" || inner == "gmres"
-                || inner == "cg" || inner == "flexgmres";
-            if (krylov && prm.get("solver", std::string{"bicgstab"}) != "flexgmres") {
-                OPM_THROW(std::invalid_argument,
-                          "general_system_cpr with a Krylov finesmoother step requires "
-                          "the outer 'solver' to be 'flexgmres'.");
-            }
+            validateInnerSolver(step, "preconditioner.finesmoother.steps");
         }
     }
 }
