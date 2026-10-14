@@ -1605,13 +1605,15 @@ GroupStateHelper<Scalar, IndexTraits>::wellRateContributionToGroup(const std::st
                                                                   const int phase_pos,
                                                                   const bool res_rates,
                                                                   const bool is_injector,
-                                                                  const bool network) const
+                                                                  const bool network,
+                                                                  const WellState<Scalar, IndexTraits>* well_state) const
 {
-    const auto well_index = this->wellState().index(well_name);
+    const auto& wstate = well_state ? *well_state : this->wellState();
+    const auto well_index = wstate.index(well_name);
     if (!well_index.has_value())
         return 0.0;
 
-    if (!this->wellState().wellIsOwned(well_index.value(), well_name)) // Only sum once
+    if (!wstate.wellIsOwned(well_index.value(), well_name)) // Only sum once
     {
         return 0.0;
     }
@@ -1621,7 +1623,7 @@ GroupStateHelper<Scalar, IndexTraits>::wellRateContributionToGroup(const std::st
     if ((well_ecl.isProducer() && is_injector) || (well_ecl.isInjector() && !is_injector))
         return 0.0;
 
-    const auto& ws = this->wellState().well(well_index.value());
+    const auto& ws = wstate.well(well_index.value());
     if (ws.status == Opm::Well::Status::SHUT)
         return 0.0;
 
@@ -2458,8 +2460,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
     const auto& group = this->schedule_.getGroup(group_name, this->report_step_);
     int num_wells = 0;
     // NOTE: If "group" is a reservoir coupling master group, it should have no child groups or wells.
-    //   During master group constraint calculation, we will set individual control on master groups
-    //   to exclude them from guide rate distribution, see
+    //   During master group constraint calculation, a master group that is available for
+    //   higher-level control is excluded from guide rate distribution through its effective GCW,
+    //   and one that is not is put on individual control, see
     //   RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
     if (is_production_group) {
         if (group.productionGroupControlAvailable()) {
@@ -2467,8 +2470,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // = YES], OR a plain FLD/NONE group: the group participates in the
             // parent's guide-rate distribution.  Its GCW is decoupled from the
             // production control mode and read from the rescoup master, which
-            // sets it to 1 when participating-and-uncapped and 0 when capped at
-            // the slave potential or belonging to an inactive slave.  See
+            // sets it to 1 when participating and 0 when none of its slave
+            // producers are under group control or it belongs to an inactive
+            // slave.  See
             // RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves().
             num_wells = this->reservoirCouplingMaster().effectiveGCW(group_name);
         } else {
@@ -2488,9 +2492,9 @@ GroupStateHelper<Scalar, IndexTraits>::getMasterGroupEffectiveGCW_(const std::st
             // As for production: the group participates in the parent's injection
             // guide-rate distribution for this phase whatever its injection control
             // mode, and its weight is read from the rescoup master -- 1 when
-            // participating-and-uncapped, 0 when capped at the slave's injection
-            // potential or belonging to an inactive slave.  See
-            // RescoupConstraintsCalculator::capAndRedistributeInjectionTargets_().
+            // participating, 0 when none of its slave injectors are under group
+            // control for the phase or it belongs to an inactive slave.  See
+            // RescoupConstraintsCalculator::excludeAndRedistributeInjectionTargets_().
             num_wells = this->reservoirCouplingMaster().effectiveInjectionGCW(
                 group_name, injection_phase);
         } else {
@@ -2926,11 +2930,11 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
             // A participating reservoir-coupling master group (GCONPROD item 8
             // RESPOND_TO_PARENT = YES) has its target guide-rate distributed by the
             // parent, so its rate must NOT also be subtracted from the parent's
-            // available target.  Its control mode is set to individual control for
-            // slave communication, see RescoupConstraintsCalculator::capAndRedistributeProductionTargets_(),
-            // which would otherwise flag it as individual and
-            // double-count it here. Treat it as group-controlled; a capped or inactive participating
-            // group keeps effective GCW = 0 and is still reduced via the num==0 branch below.
+            // available target.  Its control mode can be an individual one, from the deck
+            // or switched to by group control for a limit of its own, which would otherwise
+            // flag it as individual and double-count it here.  Treat it as group-controlled;
+            // an excluded or inactive-slave group keeps effective GCW = 0 and is still
+            // reduced via the num==0 branch below.
             if (this->isMasterGroupEligibleForGuideRate(sub_group.name())) {
                 individual_control = false;
             }

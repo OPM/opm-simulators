@@ -545,11 +545,14 @@ public:
     /// \param res_rates Use reservoir rates instead of surface rates
     /// \param is_injector Sum injectors rather than producers
     /// \param network Use the network efficiency factors (GEFAC/WEFAC item 3)
+    /// \param well_state The well state to take the well's rates from, or nullptr
+    ///        for the helper's current well state
     Scalar wellRateContributionToGroup(const std::string& well_name,
                                        const int phase_pos,
                                        const bool res_rates,
                                        const bool is_injector,
-                                       const bool network = false) const;
+                                       const bool network = false,
+                                       const WellState<Scalar, IndexTraits>* well_state = nullptr) const;
 
     /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase)
     std::pair<std::optional<std::string>, Scalar>
@@ -730,9 +733,10 @@ private:
     /// @brief Effective group-controlled-wells (GCW) count for a reservoir-coupling
     ///   master group, decoupled from its production control mode.
     /// @details Only called for master groups (see updateGroupControlledWellsRecursive_).
-    ///   A master group carries the ORAT marker control mode purely for slave
-    ///   communication, so its real participation in the parent's guide-rate
-    ///   distribution cannot be read off the cmode.  Instead:
+    ///   The participation of a master group in the parent's guide-rate
+    ///   distribution is not read off its cmode, which can be an individual one
+    ///   (from the deck, or switched to by group control for a limit of its own)
+    ///   while the group still takes part.  Instead:
     ///   - If the group is available for higher-level control (GCONPROD item 8
     ///     RESPOND_TO_PARENT = YES, or a plain FLD group): return the effective GCW
     ///     maintained by the rescoup master — 1 when participating-and-uncapped, 0
