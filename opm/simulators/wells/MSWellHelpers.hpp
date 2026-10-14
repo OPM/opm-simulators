@@ -25,6 +25,10 @@
 
 #include <dune/istl/matrix.hh>
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+
 namespace Dune {
 template<class Matrix> class UMFPack;
 }
@@ -75,6 +79,54 @@ namespace mswellhelpers
     VectorType
     applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
                  VectorType x);
+
+    /// Coarse CPRW diagonal for a multisegment well: lambda' D(:,p), summed
+    /// over every segment row and every column of D.
+    ///
+    /// In an augmented reservoir-well system this is R_w D P_w, where R_w
+    /// applies lambda to each segment's conservation rows and P_w injects one
+    /// coarse value into every segment pressure. This matches the pressure
+    /// column used to assemble the coarse matrix. Classic CPRW eliminates
+    /// wells from its fine vectors and does not prolong a coarse correction
+    /// into segment pressures. Unlike the historical row-sum diagonal, this
+    /// picks up the accumulation and perforation pressure derivatives in D.
+    ///
+    /// \param D                  the well's diagonal block, segment rows by segment columns
+    /// \param lambda             reservoir weights; any beyond the well's conservation rows are ignored
+    /// \param pressureColumn     the segment-pressure column of a D block
+    ///
+    /// Returns 1 on exact cancellation to avoid a zero coarse diagonal.
+    ///
+    /// SystemCprwPressureStage::assembleCoarseMatrix runs the same inner
+    /// kernel over its merged matrix, but distributes into a whole coarse row
+    /// with per-block weights instead of accumulating one well's D into a
+    /// single scalar, so the two are not one function.
+    template <class DiagMatWell, class WellWeight>
+    typename DiagMatWell::field_type
+    contractCprWellDiagonal(const DiagMatWell& D,
+                            const WellWeight& lambda,
+                            const int pressureColumn)
+    {
+        using Scalar = typename DiagMatWell::field_type;
+        using Block = typename DiagMatWell::block_type;
+
+        // Conservation rows come first and the segment pressure is last; a
+        // reordering of the well variables must update this. Extra reservoir
+        // weights (e.g. EXTBO) have no well row, as in StandardWellEquations.
+        assert(pressureColumn == Block::cols - 1);
+        const std::size_t numConservationRows =
+            std::min(lambda.size(), static_cast<std::size_t>(Block::rows - 1));
+
+        Scalar diag = 0.0;
+        for (std::size_t row = 0; row < D.N(); ++row) {
+            for (auto col = D[row].begin(), end = D[row].end(); col != end; ++col) {
+                for (std::size_t i = 0; i < numConservationRows; ++i) {
+                    diag += lambda[i] * (*col)[i][pressureColumn];
+                }
+            }
+        }
+        return (diag == 0.0) ? Scalar{1.0} : diag;
+    }
 
 
 

@@ -1,0 +1,143 @@
+/*
+  Copyright Equinor ASA 2026
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <config.h>
+#define BOOST_TEST_MODULE OPM_test_MswCprWellDiagonal
+#include <boost/test/unit_test.hpp>
+
+#include <opm/simulators/wells/MSWellHelpers.hpp>
+
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/istl/bcrsmatrix.hh>
+
+#include <cstddef>
+
+namespace {
+
+using Scalar = double;
+constexpr int numWellEq = 4; // three conservation equations plus segment pressure
+constexpr int pressureColumn = numWellEq - 1;
+
+using Block = Dune::FieldMatrix<Scalar, numWellEq, numWellEq>;
+using DiagMatWell = Dune::BCRSMatrix<Block>;
+using WellWeight = Dune::FieldVector<Scalar, 3>;
+
+// Two segments, each with an entry on the other: the tridiagonal pattern an
+// inlet/outlet pair produces. Only the pressure column is filled, since that is
+// all the contraction reads.
+DiagMatWell makeD(const Scalar d00, const Scalar d01,
+                  const Scalar d10, const Scalar d11)
+{
+    DiagMatWell D(2, 2, 4, DiagMatWell::row_wise);
+    for (auto row = D.createbegin(); row != D.createend(); ++row) {
+        row.insert(0);
+        row.insert(1);
+    }
+    D = 0.0;
+    // Put the same value on every conservation row, so the contraction against
+    // a weight vector is just (sum of weights) times that value.
+    for (int i = 0; i < 3; ++i) {
+        D[0][0][i][pressureColumn] = d00;
+        D[0][1][i][pressureColumn] = d01;
+        D[1][0][i][pressureColumn] = d10;
+        D[1][1][i][pressureColumn] = d11;
+    }
+    return D;
+}
+
+} // anonymous namespace
+
+BOOST_AUTO_TEST_CASE(ContractionSumsEveryBlockOfD)
+{
+    const auto D = makeD(2.0, -0.5, -0.25, 3.0);
+    const WellWeight lambda {0.5, 0.25, 0.125};
+    const Scalar weightSum = 0.5 + 0.25 + 0.125;
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    // (2.0 - 0.5 - 0.25 + 3.0) * sum(lambda)
+    BOOST_CHECK_CLOSE(diag, 4.25 * weightSum, 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(ContractionUsesEachRowsWeightAndOnlyThePressureColumn)
+{
+    auto D = makeD(0.0, 0.0, 0.0, 0.0);
+    // Non-pressure columns and the pressure/control equation must not enter
+    // the contraction. Give them nonzero values to expose accidental reads.
+    D = 1024.0;
+    const WellWeight d00 {2.0, 3.0, 5.0};
+    const WellWeight d01 {-7.0, 11.0, 13.0};
+    const WellWeight d10 {17.0, -19.0, 23.0};
+    const WellWeight d11 {29.0, 31.0, -37.0};
+    for (std::size_t i = 0; i < d00.size(); ++i) {
+        D[0][0][i][pressureColumn] = d00[i];
+        D[0][1][i][pressureColumn] = d01[i];
+        D[1][0][i][pressureColumn] = d10[i];
+        D[1][1][i][pressureColumn] = d11[i];
+    }
+    const WellWeight lambda {0.5, -0.25, 2.0};
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    // Conservation-row sums are 41, 26 and 4, respectively:
+    // 0.5 * 41 - 0.25 * 26 + 2 * 4 = 22.
+    BOOST_CHECK_CLOSE(diag, 22.0, 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(OffDiagonalBlocksAreSummed)
+{
+    // Helper arithmetic only: entries in the off-diagonal blocks enter the sum.
+    const WellWeight lambda {1.0, 1.0, 1.0};
+    const auto weak = Opm::mswellhelpers::contractCprWellDiagonal(makeD(2.0, 0.0, 0.0, 3.0),
+                                                                  lambda, pressureColumn);
+    const auto strong = Opm::mswellhelpers::contractCprWellDiagonal(makeD(2.0, -0.5, -0.25, 3.0),
+                                                                    lambda, pressureColumn);
+
+    BOOST_CHECK_CLOSE(weak, 5.0 * 3.0, 1e-12);
+    BOOST_CHECK_CLOSE(strong, 4.25 * 3.0, 1e-12);
+    BOOST_CHECK_LT(strong, weak);
+}
+
+BOOST_AUTO_TEST_CASE(WeightsBeyondTheConservationRowsAreIgnored)
+{
+    // EXTBO has four reservoir weights but three MSW conservation rows; the
+    // fourth must not weight the segment pressure equation.
+    auto D = makeD(2.0, -0.5, -0.25, 3.0);
+    for (auto row = D.begin(); row != D.end(); ++row) {
+        for (auto col = row->begin(); col != row->end(); ++col) {
+            (*col)[pressureColumn][pressureColumn] = 1024.0;
+        }
+    }
+    const Dune::FieldVector<Scalar, 4> lambda {0.5, 0.25, 0.125, 100.0};
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    BOOST_CHECK_CLOSE(diag, 4.25 * (0.5 + 0.25 + 0.125), 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(ExactCancellationIsRegularised)
+{
+    // Exact cancellation is regularised to avoid a zero coarse diagonal.
+    const auto D = makeD(2.0, -1.0, -1.0, 0.0);
+    const WellWeight lambda {1.0, 1.0, 1.0};
+
+    const auto diag = Opm::mswellhelpers::contractCprWellDiagonal(D, lambda, pressureColumn);
+
+    BOOST_CHECK_EQUAL(diag, 1.0);
+}
