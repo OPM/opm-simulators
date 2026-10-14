@@ -137,6 +137,70 @@ void PackUnpackXConn::unpack([[maybe_unused]] const int link,
 
 } // Anonymous namespace
 
+namespace {
+
+template<class Scalar>
+struct DissolvedVaporisedRates
+{
+    Scalar dissolved_gas{0};
+    Scalar vaporized_oil{0};
+    Scalar vaporized_water{0};
+};
+
+// Splits the total surface rates into free and dissolved/vaporised parts
+// using the representative ratios of the well, so that free + dissolved
+// equals the total exactly. A free part that would end up on the wrong side
+// of its total is clamped to zero, and the dissolved/vaporised part takes the
+// remainder.
+template<class Scalar, class SingleWellState>
+DissolvedVaporisedRates<Scalar>
+splitSurfaceRates(const SingleWellState& ws, const int iw, const int io, const int ig)
+{
+    DissolvedVaporisedRates<Scalar> res;
+    if (!ws.producer || ig < 0) {
+        return res;
+    }
+
+    const auto& q = ws.surface_rates;
+    const auto sameSide = [](const Scalar x, const Scalar total) {
+        return (x * total < 0.0) ? Scalar{0.0} : x;
+    };
+
+    if (io >= 0) {
+        const Scalar d = 1.0 - ws.rs_rep * ws.rv_rep;
+        if (d > 0.0) {
+            const Scalar free_oil = sameSide((q[io] - ws.rv_rep * q[ig]) / d, q[io]);
+            const Scalar free_gas = sameSide((q[ig] - ws.rs_rep * q[io]) / d, q[ig]);
+            res.dissolved_gas = q[ig] - free_gas;
+            res.vaporized_oil = q[io] - free_oil;
+            if (iw >= 0) {
+                // Vaporised water is carried by the free gas.
+                Scalar vap = ws.rvw_rep * free_gas;
+                if (vap * q[iw] < 0.0) {
+                    vap = 0.0;
+                }
+                else if (std::abs(vap) > std::abs(q[iw])) {
+                    vap = q[iw];
+                }
+                res.vaporized_water = vap;
+            }
+        }
+    }
+    else if (iw >= 0) {
+        const Scalar d = 1.0 - ws.rsw_rep * ws.rvw_rep;
+        if (d > 0.0) {
+            const Scalar free_water = sameSide((q[iw] - ws.rvw_rep * q[ig]) / d, q[iw]);
+            const Scalar free_gas = sameSide((q[ig] - ws.rsw_rep * q[iw]) / d, q[ig]);
+            res.dissolved_gas = q[ig] - free_gas; // dissolved in water
+            res.vaporized_water = q[iw] - free_water;
+        }
+    }
+
+    return res;
+}
+
+} // Anonymous namespace
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -649,14 +713,19 @@ report(const int*                            globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        if (!rsConst.enabled) {
-            well.rates.set(rt::dissolved_gas,
-                           ws.phase_mixing_rates[ws.dissolved_gas] +
-                           ws.phase_mixing_rates[ws.dissolved_gas_in_water]);
-        }
+        {
+            const auto dv = splitSurfaceRates<Scalar>(
+                ws,
+                pu.phaseIsActive(waterPhaseIdx) ? pu.canonicalToActivePhaseIdx(waterPhaseIdx) : -1,
+                pu.phaseIsActive(oilPhaseIdx) ? pu.canonicalToActivePhaseIdx(oilPhaseIdx) : -1,
+                pu.phaseIsActive(gasPhaseIdx) ? pu.canonicalToActivePhaseIdx(gasPhaseIdx) : -1);
 
-        well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
-        well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
+            if (!rsConst.enabled) {
+                well.rates.set(rt::dissolved_gas, dv.dissolved_gas);
+            }
+            well.rates.set(rt::vaporized_oil, dv.vaporized_oil);
+            well.rates.set(rt::vaporized_water, dv.vaporized_water);
+        }
 
         {
             auto& curr = well.current_control;

@@ -354,6 +354,17 @@ public:
     bool updateWellOperabilityFromWellEq(const Simulator& simulator,
                                          const GroupStateHelperType& groupStateHelper);
 
+    // Sets the representative dissolved/vaporised ratios of the well (Rs, Rv,
+    // Rsw, Rvw in the well state) used to split the total surface rates into
+    // free and dissolved/vaporised parts for output. The ratios are the
+    // rate-weighted averages of the perforation ratios, i.e. what the
+    // perforations actually produce. When they are not well defined (e.g.
+    // crossflow) the ratios inferred from the total rates, bounded by the
+    // saturated values at the well pressure, are used instead.
+    //
+    // Called once per timestep from BlackoilWellModel::timeStepSucceeded().
+    void consolidatePhaseMixingRates(WellStateType& well_state) const;
+
     // update perforation water throughput based on solved water rate
     virtual void updateWaterThroughput(const double dt,
                                        WellStateType& well_state) const = 0;

@@ -381,7 +381,6 @@ namespace Opm
         const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.phase_mixing_rates.fill(0.0);
         if constexpr (has_energy) {
             ws.energy_rate = 0.0;
         }
@@ -441,13 +440,6 @@ namespace Opm
         }
         // Update the connection
         this->connectionRates_ = connectionRates;
-
-        // Accumulate dissolved gas and vaporized oil flow rates across all
-        // ranks sharing this well (this->index_of_well_).
-        {
-            const auto& comm = this->parallel_well_info_.communication();
-            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
-        }
 
         // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
         this->linSys_.sumDistributed(this->parallel_well_info_.communication());
@@ -549,10 +541,6 @@ namespace Opm
 
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
-            ws.phase_mixing_rates[ws.dissolved_gas] += perf_rates.dis_gas;
-            ws.phase_mixing_rates[ws.dissolved_gas_in_water] += perf_rates.dis_gas_in_water;
-            ws.phase_mixing_rates[ws.vaporized_oil] += perf_rates.vap_oil;
-            ws.phase_mixing_rates[ws.vaporized_water] += perf_rates.vap_wat;
             perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perf_rates.dis_gas;
             perf_data.phase_mixing_rates[perf][ws.dissolved_gas_in_water] = perf_rates.dis_gas_in_water;
             perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perf_rates.vap_oil;
