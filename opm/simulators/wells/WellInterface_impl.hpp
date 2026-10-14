@@ -1485,6 +1485,19 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
+    computeWellRatesWithBhp(const Simulator& simulator,
+                            [[maybe_unused]] const WellStateType& well_state,
+                            const Scalar& bhp,
+                            std::vector<Scalar>& well_flux,
+                            DeferredLogger& deferred_logger) const
+    {
+        // only MSW takes values from the well state
+        this->computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
                               const GroupStateHelperType& groupStateHelper,
                               WellStateType& well_state) const
@@ -2390,11 +2403,19 @@ namespace Opm
                    std::ranges::any_of(q, [](const Scalar r) { return r < 0.0; });
         };
 
+        // Rates without iterating the well equations, for the state being solved, which in a
+        // well test is a copy of the model's well state.
+        const auto frates_explicit =
+            [this, &simulator, &well_state, &deferred_logger](const Scalar bhp_value) {
+                std::vector<Scalar> q(this->number_of_phases_, 0.0);
+                this->computeWellRatesWithBhp(simulator, well_state, bhp_value, q, deferred_logger);
+                this->adaptRatesForVFP(q);
+                return q;
+            };
+
         // The search for the bhp at the thp limit only covers bhp values above the bhp limit.
         // At the bhp limit itself, the thp limit holds if the bhp-curve is not above it.
-        std::vector<Scalar> rates(this->number_of_phases_, 0.0);
-        this->computeWellRatesWithBhp(simulator, bhp_limit, rates, deferred_logger);
-        this->adaptRatesForVFP(rates);
+        auto rates = frates_explicit(bhp_limit);
         std::optional<Scalar> bhp;
         if (flows(rates) &&
             WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state,
@@ -2402,9 +2423,12 @@ namespace Opm
             bhp = bhp_limit;
         } else {
             // Without iterations: they make each refusal costly.
-            bhp = this->computeBhpAtThpLimitProdWithAlq(simulator, groupStateHelper, summary_state,
-                                                        this->getALQ(well_state),
-                                                        /*iterate_if_no_solution */ false);
+            bhp = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates_explicit, summary_state,
+                                                                       this->maxPerfPress(simulator),
+                                                                       this->getRefDensity(),
+                                                                       this->getALQ(well_state),
+                                                                       this->getTHPConstraint(summary_state),
+                                                                       deferred_logger);
         }
         if (!bhp) {
             return false;
@@ -2445,7 +2469,7 @@ namespace Opm
                 }
             }
         } else {
-            this->computeWellRatesWithBhp(simulator, *bhp, rates, deferred_logger);
+            this->computeWellRatesWithBhp(simulator, well_state, *bhp, rates, deferred_logger);
         }
         // The search accepts zero rates.
         if (!bhp || !flows(rates)) {
