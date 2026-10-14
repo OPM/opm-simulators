@@ -261,3 +261,15 @@ opm_add_test(test_rstconv_parallel
   PROCESSORS
     4
 )
+
+opm_add_test(test_GeneralSystemPreconditioner_np2
+  SOURCES
+    tests/test_GeneralSystemPreconditioner_mpi.cpp
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
+  DRIVER_ARGS
+    -n 2
+  PROCESSORS
+    2
+)

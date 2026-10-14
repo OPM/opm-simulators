@@ -30,6 +30,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <type_traits>
 
 namespace Opm
 {
@@ -69,6 +70,7 @@ public:
                                     const int verbosity,
                                     const Comm* comm = nullptr)
         : weights_(&weights)
+        , comm_(comm)
         , stage_(std::make_shared<Stage>(S, coarseSolverPrm, pressureIndex,
                                          wellTransfer, comm, diagonal, verbosity))
     {
@@ -92,7 +94,15 @@ public:
 
     void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
-        stage_->moveToCoarseLevel(fine[_0], fine[_1], *weights_, this->rhs_);
+        if constexpr (!std::is_same_v<Comm, Dune::Amg::SequentialInformation>) {
+            // Fine-level defect updates leave copy entries stale. Match the
+            // fixed system preconditioner before restricting to pressure.
+            consistentResidual_ = fine[_0];
+            comm_->copyOwnerToAll(consistentResidual_, consistentResidual_);
+            stage_->moveToCoarseLevel(consistentResidual_, fine[_1], *weights_, this->rhs_);
+        } else {
+            stage_->moveToCoarseLevel(fine[_0], fine[_1], *weights_, this->rhs_);
+        }
         this->lhs_ = 0;
     }
 
@@ -124,6 +134,8 @@ private:
     // Points at the weights the owning preconditioner refreshes, so an update
     // is seen here without copying.
     const SystemVector<Scalar>* weights_;
+    const Comm* comm_;
+    ResVector<Scalar> consistentResidual_;
     // Shared so that clone() is a shallow copy, as it is for
     // PressureBhpTransferPolicy.
     std::shared_ptr<Stage> stage_;
