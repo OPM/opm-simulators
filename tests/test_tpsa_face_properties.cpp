@@ -83,8 +83,11 @@ static Opm::Deck createDeck()
             8*50.0 /
         DZ
             4*30.0 4*50.0 /
+        BOX
+            1 2 1 2 1 1 /
         TOPS
             3*1000.0 1*1020 /
+        ENDBOX
 
         PORO
             8*0.3 /

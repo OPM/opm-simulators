@@ -42,8 +42,13 @@ DYV
 DZV
 10*1 /
 
+BOX
+1 1 1 1 1 1 /
+
 TOPS
 1*0.0 /
+
+ENDBOX
 
 PORO
    	10*0.3 /
