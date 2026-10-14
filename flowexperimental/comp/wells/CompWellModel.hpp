@@ -157,13 +157,17 @@ public:
     int numLocalWellsEnd() const { return 0; }
 
     template <class PressureMatrix, class Vector>
-    void addWellPressureEquations(PressureMatrix&, const Vector&, const bool) const {}
+    void addWellPressureEquations(PressureMatrix&, const Vector&, const bool, const bool) const {}
 
     template <class PressureMatrix>
     void addWellPressureEquationsStruct(PressureMatrix&) const {}
 
     template <class PressureMatrix, class Vector>
-    void addWellPressureEquationsDomain(PressureMatrix&, const Vector&, const bool, const int) const
+    void addWellPressureEquationsDomain(PressureMatrix&,
+                                        const Vector&,
+                                        const bool,
+                                        const bool,
+                                        const int) const
     { OPM_THROW(std::logic_error, "NLDD is not supported for compositional wells"); }
 
     const std::vector<std::vector<int>>& well_local_cells() const
