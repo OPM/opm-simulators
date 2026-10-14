@@ -89,6 +89,12 @@ public:
 
     void apply(BVector& r) const;
 
+    void apply(const BVector& x, BVector& Ax) const;
+
+    // A -= C^T D^-1 B, adding the well coupling to the reservoir matrix
+    template <class SparseMatrixAdapter>
+    void extract(SparseMatrixAdapter& jacobian) const;
+
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
 private:

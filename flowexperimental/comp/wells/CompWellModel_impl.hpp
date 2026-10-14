@@ -33,6 +33,10 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -43,6 +47,8 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , summary_state_(simulator.vanguard().summaryState())
     , ecl_state_(simulator.vanguard().eclState())
     , comm_(simulator.gridView().comm())
+    // flowexp_comp does not register the model parameters
+    , add_matrix_contributions_(Parameters::Get<Parameters::MatrixAddWellContributions>(false))
     , comp_config_(ecl_state_.compositionalConfig())
     , comp_well_states_(comp_config_)
     , last_valid_comp_well_states_(comp_config_)

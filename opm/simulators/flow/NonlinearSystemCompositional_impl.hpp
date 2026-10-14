@@ -30,9 +30,15 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/setupPropertyTree.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <stdexcept>
 
 namespace Opm {
 
@@ -44,6 +50,13 @@ NonlinearSystemCompositional(Simulator& simulator,
                              const bool terminalOutput)
     : ParentType(simulator, param, wellModel, terminalOutput)
 {
+    if (Parameters::linearSolverAcceleratorTypeFromCLI() != Parameters::LinearSolverAcceleratorType::CPU
+        || Parameters::Get<Parameters::AcceleratorMode>() != "none") {
+        OPM_THROW(std::invalid_argument,
+                  "Compositional runs solve the linear systems on the CPU only."
+                  " Please use --linear-solver-accelerator=cpu and --accelerator-mode=none.");
+    }
+
     this->convergence_reports_.reserve(64);
 }
 
@@ -282,6 +295,11 @@ solveJacobianSystem(BVector& x)
     auto& jacobian = this->simulator_.model().linearizer().jacobian();
     auto& residual = this->simulator_.model().linearizer().residual();
     auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+
+    // Checked per solve, since wells can open during the run.
+    checkUmfpackMatrixAddWell(linSolver.activeSolverPrm(),
+                              this->param_.matrix_add_well_contributions_,
+                              !this->wellModel().empty());
 
     x = 0.0;
 

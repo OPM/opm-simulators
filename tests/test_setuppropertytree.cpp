@@ -89,6 +89,20 @@ BOOST_AUTO_TEST_CASE(MatrixAddWellContributionsIncompatible)
     BOOST_CHECK_NO_THROW(Opm::checkSystemCPRMatrixAddWell(false));
 }
 
+// UMFPACK factorizes the matrix alone, so it may only be used when the wells
+// add their coupling to the matrix, or when there are no wells.
+BOOST_AUTO_TEST_CASE(UmfpackNeedsWellContributionsInMatrix)
+{
+    const Opm::FlowLinearSolverParameters p;
+    const auto umfpack = Opm::setupUMFPack("umfpack", p);
+    const auto ilu0 = Opm::setupILU("ilu0", p);
+
+    BOOST_CHECK_THROW(Opm::checkUmfpackMatrixAddWell(umfpack, false, true), std::invalid_argument);
+    BOOST_CHECK_NO_THROW(Opm::checkUmfpackMatrixAddWell(umfpack, true, true));
+    BOOST_CHECK_NO_THROW(Opm::checkUmfpackMatrixAddWell(umfpack, false, false));
+    BOOST_CHECK_NO_THROW(Opm::checkUmfpackMatrixAddWell(ilu0, false, true));
+}
+
 // An approximate (Krylov) well solver stops on a tolerance and therefore does
 // a different number of inner iterations per right-hand side, so the system
 // preconditioner is no longer a fixed operator. Only a flexible outer solver

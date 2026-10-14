@@ -185,7 +185,11 @@ using CommunicationType = Dune::Communication<int>;
     INSTANTIATE_FLEX(T,4)   \
     INSTANTIATE_FLEX(T,5)   \
     INSTANTIATE_FLEX(T,6)   \
-    INSTANTIATE_FLEX(T,7)
+    INSTANTIATE_FLEX(T,7)   \
+    INSTANTIATE_FLEX(T,8)   \
+    INSTANTIATE_FLEX(T,9)   \
+    INSTANTIATE_FLEX(T,10)  \
+    INSTANTIATE_FLEX(T,11)
 
 INSTANTIATE_TYPE(double)
 

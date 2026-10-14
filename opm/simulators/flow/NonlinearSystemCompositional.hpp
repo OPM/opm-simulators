@@ -109,11 +109,6 @@ public:
 
     void writePartitions(const std::filesystem::path&) const {}
 
-protected:
-    // The linear solver leaves the updates of overlap and ghost cells at zero.
-    void postSolutionUpdate() override
-    { this->simulator_.model().syncOverlap(); }
-
 private:
     std::vector<Scalar> reservoirResidualMetrics() const;
 
