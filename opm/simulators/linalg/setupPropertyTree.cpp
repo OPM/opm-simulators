@@ -26,7 +26,10 @@
 
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
+#include <algorithm>
 #include <filesystem>
+#include <tuple>
+#include <vector>
 #include <fmt/format.h>
 
 namespace Opm
@@ -853,6 +856,22 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                   "general_system_cpr's 'preconditioner.coarsesolver' is the solver for the "
                   "CPRW pressure system and needs its own 'preconditioner' sub-tree.");
     }
+    if (coarse) {
+        for (const auto& [key, fallback, allowed] : {
+                 std::tuple{"type", "cprw_pressure", std::vector<std::string>{"cprw_pressure"}},
+                 std::tuple{"well_weight_type", "cellavg",
+                            std::vector<std::string>{"unit", "cellavg", "cellblockavg", "quasiimpes"}},
+                 std::tuple{"well_transfer", "classic",
+                            std::vector<std::string>{"full", "no_prolongation", "classic"}},
+                 std::tuple{"well_coarse_diagonal", "contract_d",
+                            std::vector<std::string>{"auto", "contract_d", "row_sum"}}}) {
+            const auto value = coarse->get(key, std::string{fallback});
+            if (std::find(allowed.begin(), allowed.end(), value) == allowed.end()) {
+                OPM_THROW(std::invalid_argument,
+                          fmt::format("Unknown preconditioner.coarsesolver.{} '{}'.", key, value));
+            }
+        }
+    }
     if (smoother) {
         const auto steps = smoother->get_child_list("steps");
         if (!steps.has_value() || steps->empty()) {
@@ -866,6 +885,16 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
                 OPM_THROW(std::invalid_argument,
                           "Every 'preconditioner.finesmoother.steps' entry needs \"block\" set "
                           "to 'reservoir' or 'well'; got '" + block + "'.");
+            }
+            // A tolerance-based block solve makes the composed preconditioner
+            // variable, regardless of which block it acts on.
+            const auto inner = step.get("solver", std::string{"bicgstab"});
+            const bool krylov = inner == "bicgstab" || inner == "gmres"
+                || inner == "cg" || inner == "flexgmres";
+            if (krylov && prm.get("solver", std::string{"bicgstab"}) != "flexgmres") {
+                OPM_THROW(std::invalid_argument,
+                          "general_system_cpr with a Krylov finesmoother step requires "
+                          "the outer 'solver' to be 'flexgmres'.");
             }
         }
     }

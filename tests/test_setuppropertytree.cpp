@@ -154,3 +154,44 @@ BOOST_AUTO_TEST_CASE(SystemCPRWEnablesAddWells)
 }
 
 BOOST_AUTO_TEST_SUITE_END() // SystemCPR
+
+BOOST_AUTO_TEST_SUITE(GeneralSystemCPR)
+
+BOOST_AUTO_TEST_CASE(DefaultLayoutsAreValid)
+{
+    const Opm::FlowLinearSolverParameters p;
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(
+        Opm::setupGeneralSystemCPR("general_system_cpr", p)));
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(
+        Opm::setupGeneralSystemCPR("general_system_cprw", p)));
+}
+
+BOOST_AUTO_TEST_CASE(RejectsInvalidCoarseOptionsAtSetup)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* key : {"type", "well_weight_type", "well_transfer", "well_coarse_diagonal"}) {
+        auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
+        prm.put(std::string{"preconditioner.coarsesolver."} + key, std::string{"typo"});
+        BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(KrylovSweepRequiresFlexibleOuterSolver)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* block : {"well", "reservoir"}) {
+        for (const auto* inner : {"bicgstab", "gmres", "cg", "flexgmres"}) {
+            auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
+            Opm::PropertyTree step;
+            step.put("block", std::string{block});
+            step.put("solver", std::string{inner});
+            prm.put_child_list("preconditioner.finesmoother.steps", {step});
+            prm.put("solver", std::string{"bicgstab"});
+            BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+            prm.put("solver", std::string{"flexgmres"});
+            BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
