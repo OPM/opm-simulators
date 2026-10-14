@@ -38,8 +38,11 @@ The optional `preconditioner.coarsesolver` is a scalar solver specification with
 Reservoir `weight_type` lives directly under `preconditioner`. The optional
 `preconditioner.finesmoother.steps` array contains solver specifications with
 `block: "reservoir"` or `block: "well"`, applied in array order. At least one
-of the coarse solver and the sweep must be present. A Krylov solver in any
-sweep step requires the outer `solver` to be `flexgmres`.
+of the coarse solver and the sweep must be present. A Krylov solver in the
+coarse solve or any sweep step requires the outer `solver` to be `flexgmres`.
+The same requirement applies to `loopsolver` with `maxiter > 1` (including its
+default of 200), since its stopping iteration depends on the residual. The
+shipped one-step `loopsolver` coarse solve remains valid with BiCGSTAB.
 
 `pre_smooth` and `post_smooth` control sweeps around the coarse correction
 (defaults: 0 and 1). When the well structure changes, `well_structure_update`

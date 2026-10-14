@@ -224,3 +224,45 @@ BOOST_AUTO_TEST_CASE(KrylovCoarseSolverRequiresFlexibleOuterSolver)
     missing.put("solver", std::string{"flexgmres"});
     BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(missing));
 }
+
+BOOST_AUTO_TEST_CASE(MultiIterationLoopsRequireFlexibleOuterSolver)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* location : {"coarse", "well", "reservoir"}) {
+        for (const int iterations : {1, 2, 200}) {
+            auto prm = Opm::setupGeneralSystemCPR("general_system_cprw", p);
+            prm.put("solver", std::string{"bicgstab"});
+            if (std::string{location} == "coarse") {
+                prm.put("preconditioner.coarsesolver.solver", std::string{"loopsolver"});
+                prm.put("preconditioner.coarsesolver.maxiter", iterations);
+            } else {
+                Opm::PropertyTree step;
+                step.put("block", std::string{location});
+                step.put("solver", std::string{"loopsolver"});
+                step.put("maxiter", iterations);
+                step.put("tol", 0.15);
+                prm.put_child_list("preconditioner.finesmoother.steps", {step});
+            }
+            if (iterations == 1) {
+                BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+            } else {
+                BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+            }
+            prm.put("solver", std::string{"flexgmres"});
+            BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+        }
+    }
+
+    // The default maxiter=200 is variable too; no outer solver means bicgstab.
+    auto defaults = Opm::PropertyTree::fromJsonString(R"({
+        "preconditioner": {
+            "type": "general_system_cpr",
+            "coarsesolver": {
+                "solver": "loopsolver", "preconditioner": {"type": "jac"}
+            }
+        }
+    })");
+    BOOST_CHECK_THROW(Opm::validateSystemCPRTree(defaults), std::invalid_argument);
+    defaults.put("solver", std::string{"flexgmres"});
+    BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(defaults));
+}

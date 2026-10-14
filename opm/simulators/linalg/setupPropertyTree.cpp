@@ -849,10 +849,14 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
         const auto inner = innerPrm.get("solver", std::string{"bicgstab"});
         const bool krylov = inner == "bicgstab" || inner == "gmres"
             || inner == "cg" || inner == "flexgmres";
-        if (krylov && prm.get("solver", std::string{"bicgstab"}) != "flexgmres") {
+        // More than one loopsolver iteration can stop at a different iteration
+        // for each RHS. Match FlexibleSolver's default iteration limit here.
+        const bool variableLoop = inner == "loopsolver" && innerPrm.get("maxiter", 200) > 1;
+        if ((krylov || variableLoop)
+            && prm.get("solver", std::string{"bicgstab"}) != "flexgmres") {
             OPM_THROW(std::invalid_argument,
-                      fmt::format("general_system_cpr with a Krylov solver at '{}' requires "
-                                  "the outer 'solver' to be 'flexgmres'.", path));
+                      fmt::format("general_system_cpr with variable inner solver '{}' at '{}' "
+                                  "requires the outer 'solver' to be 'flexgmres'.", inner, path));
         }
     };
     const auto coarse = prm.get_child_optional("preconditioner.coarsesolver");
