@@ -699,7 +699,8 @@ updateConnectionQuantities(const Simulator& simulator,
 {
     // A connection stream can differ in composition from the wellbore fluid,
     // e.g. while the wellbore fluid changes, so it is flashed on its own.
-    const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
+    const auto& tables = simulator.vanguard().eclState().getTableManager();
+    const auto& surface_cond = tables.stCond();
     constexpr int np = FluidSystem::numPhases;
     auto& conn_data = well_state.connection_data;
     for (int con = 0; con < this->number_of_connection_; ++con) {
@@ -707,8 +708,13 @@ updateConnectionQuantities(const Simulator& simulator,
         for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
             mass_rates[comp_idx] = getValue(this->connectionRates_[con][comp_idx]);
         }
-        const auto rates = surfacePhaseRates<FluidSystem>(mass_rates, surface_cond.pressure,
-                                                          surface_cond.temperature);
+        auto rates = surfacePhaseRates<FluidSystem>(mass_rates, surface_cond.pressure,
+                                                    surface_cond.temperature);
+        if constexpr (FluidSystem::waterEnabled) {
+            // water takes no part in the flash; DENSITY gives its surface volume
+            rates[FluidSystem::waterPhaseIdx] = getValue(this->connectionRates_[con][num_comp])
+                / tables.getDensityTable()[0].water;
+        }
         std::ranges::copy(rates, conn_data.surface_phase_rates.begin() + con * np);
         // no pressure drop between the bottom hole and the connections
         conn_data.pressure[con] = well_state.bhp;
