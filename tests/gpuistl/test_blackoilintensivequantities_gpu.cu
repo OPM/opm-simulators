@@ -488,6 +488,8 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     using PrimaryVariablesGpu = Opm::BlackOilPrimaryVariables<TypeNacht, Opm::gpuistl::MiniVector>;
     using IntensiveQuantitiesCpu = Opm::BlackOilIntensiveQuantities<TypeTag>;
     using IntensiveQuantitiesGpu = Opm::BlackOilIntensiveQuantities<TypeNacht>;
+    static_assert(std::is_trivially_copyable_v<typename IntensiveQuantitiesGpu::FluidState>,
+                  "the fluid state is copied byte-wise to and from the device");
 
     const auto& cpuSolution = cpuProblem.model().solution(/*timeIdx=*/0);
     BOOST_REQUIRE_EQUAL(cpuSolution.size(), numCells);
@@ -833,6 +835,8 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
     using PrimaryVariablesGpu = Opm::BlackOilPrimaryVariables<LocalGpuTypeTag, Opm::gpuistl::MiniVector>;
     using IntensiveQuantitiesCpu = Opm::BlackOilIntensiveQuantities<LocalTypeTag>;
     using IntensiveQuantitiesGpu = Opm::BlackOilIntensiveQuantities<LocalGpuTypeTag>;
+    static_assert(std::is_trivially_copyable_v<typename IntensiveQuantitiesGpu::FluidState>,
+                  "the fluid state is copied byte-wise to and from the device");
 
     // Pull the EQUIL-initialized per-cell primary variables straight from
     // the simulator's solution vector and convert them to the GPU
