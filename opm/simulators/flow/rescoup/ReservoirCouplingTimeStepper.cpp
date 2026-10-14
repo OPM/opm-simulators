@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
@@ -58,10 +59,10 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 {
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
     // next report step, or if the slave process has not started yet: the start of a slave process.
-    // NOTE: getStartTime() returns a std::time_t value, which is typically a long integer. It should
-    //     be possible to represent reasonable epoch values within a double. See comment for
+    // NOTE: TimeService::to_time_t() returns the start time as an integer number of seconds. It
+    //     should be possible to represent reasonable epoch values within a double. See comment for
     //     getMasterActivationDate_() for more information.
-    double start_date = this->schedule().getStartTime();
+    double start_date = TimeService::to_time_t(this->schedule().getStartTime());
     double step_start_date{start_date + elapsed_time};
     double step_end_date{step_start_date + suggested_timestep_original};
     double suggested_timestep{suggested_timestep_original};
