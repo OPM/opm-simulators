@@ -432,3 +432,18 @@ BOOST_AUTO_TEST_CASE(RejectsAnEmptyComposition)
     BOOST_CHECK_THROW(General(f.S, f.weightsCalculator(), pressureIndex, prm),
                       std::invalid_argument);
 }
+
+BOOST_AUTO_TEST_CASE(RejectsNegativeSmoothingCountsForDirectConstruction)
+{
+    const Fixture f;
+    for (const bool coarse : {false, true}) {
+        for (const auto* key : {"pre_smooth", "post_smooth"}) {
+            auto prm = generalTree(coarse, "classic");
+            prm.put(key, -1);
+            BOOST_CHECK_THROW(General(f.S, f.weightsCalculator(), pressureIndex, prm),
+                              std::invalid_argument);
+            prm.put(key, 0);
+            BOOST_CHECK_NO_THROW(General(f.S, f.weightsCalculator(), pressureIndex, prm));
+        }
+    }
+}

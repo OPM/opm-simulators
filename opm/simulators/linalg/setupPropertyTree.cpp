@@ -844,6 +844,12 @@ void validateGeneralSystemCPRTree(const PropertyTree& prm)
     // Only the composition is checked here: which parts exist is the point of
     // this layout, so nearly everything is optional. The parts themselves are
     // validated by whatever builds them.
+    for (const auto* key : {"preconditioner.pre_smooth", "preconditioner.post_smooth"}) {
+        if (prm.get(key, 0) < 0) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("general_system_cpr requires '{}' to be non-negative.", key));
+        }
+    }
     const auto validateInnerSolver = [&prm](const PropertyTree& innerPrm,
                                            const std::string& path) {
         const auto inner = innerPrm.get("solver", std::string{"bicgstab"});

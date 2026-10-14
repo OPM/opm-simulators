@@ -266,3 +266,17 @@ BOOST_AUTO_TEST_CASE(MultiIterationLoopsRequireFlexibleOuterSolver)
     defaults.put("solver", std::string{"flexgmres"});
     BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(defaults));
 }
+
+BOOST_AUTO_TEST_CASE(SmoothingCountsMustBeNonNegative)
+{
+    const Opm::FlowLinearSolverParameters p;
+    for (const auto* config : {"general_system_cpr", "general_system_cprw"}) {
+        for (const auto* key : {"preconditioner.pre_smooth", "preconditioner.post_smooth"}) {
+            auto prm = Opm::setupGeneralSystemCPR(config, p);
+            prm.put(key, -1);
+            BOOST_CHECK_THROW(Opm::validateSystemCPRTree(prm), std::invalid_argument);
+            prm.put(key, 0);
+            BOOST_CHECK_NO_THROW(Opm::validateSystemCPRTree(prm));
+        }
+    }
+}

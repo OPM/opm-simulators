@@ -45,7 +45,7 @@ default of 200), since its stopping iteration depends on the residual. The
 shipped one-step `loopsolver` coarse solve remains valid with BiCGSTAB.
 
 `pre_smooth` and `post_smooth` control sweeps around the coarse correction
-(defaults: 0 and 1). When the well structure changes, `well_structure_update`
-defaults to `rebuild`; `refresh` retains the reservoir solver hierarchy while
+(defaults: 0 and 1); both counts must be non-negative. When the well structure
+changes, `well_structure_update` defaults to `rebuild`; `refresh` retains the reservoir solver hierarchy while
 rebuilding the well and coarse systems. These choices can produce different
 iteration counts.

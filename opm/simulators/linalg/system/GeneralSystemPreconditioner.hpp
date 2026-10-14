@@ -237,6 +237,17 @@ private:
 
     void build()
     {
+        // Validate while still signed, before assigning the loop counts or
+        // building sub-solvers. Direct callers can bypass JSON validation.
+        const auto preSteps = prm_.get("pre_smooth", 0);
+        const auto postSteps = prm_.get("post_smooth", 1);
+        if (preSteps < 0 || postSteps < 0) {
+            OPM_THROW(std::invalid_argument,
+                      "general_system_cpr requires pre_smooth and post_smooth to be non-negative.");
+        }
+        preSteps_ = static_cast<std::size_t>(preSteps);
+        postSteps_ = static_cast<std::size_t>(postSteps);
+
         twoLevel_.reset();
         coarsePolicy_.reset();
         transfer_.reset();
@@ -311,9 +322,6 @@ private:
         // default 0/1 is the composition the fixed three-stage preconditioner
         // uses: coarse first, then one sweep. A pre-sweep sees the original
         // defect and feeds a coarse correction built from what it leaves.
-        preSteps_ = prm_.get("pre_smooth", 0);
-        postSteps_ = prm_.get("post_smooth", 1);
-
         if (coarseResPrm_) {
             makeTwoLevel();
         }
