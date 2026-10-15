@@ -30,7 +30,7 @@ CompConnectionData(std::size_t num_connection,
   , total_molar_fractions(num_connection * num_components)
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
-  , ecl_index(num_connection)
+  , cell_index(num_connection)
   , global_index(num_connection)
 {
 }
@@ -46,7 +46,7 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
         this->satnum_id[con] = connections[con].satnum_id;
-        this->ecl_index[con] = connections[con].cell_index;
+        this->cell_index[con] = connections[con].cell_index;
         this->global_index[con] = connections[con].global_index;
     }
 }
@@ -136,8 +136,8 @@ update_producer_targets(const Well& well,
 
     // Read the reservoir composition only when an open perforation is
     // available. Initialize schedule targets below even without perforations.
-    if (!this->connection_data.ecl_index.empty()) {
-        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+    if (!this->connection_data.cell_index.empty()) {
+        this->total_molar_fractions = cell_mole_fractions[this->connection_data.cell_index[0]];
     }
 
     this->bhp = prod_controls.bhp_limit;
