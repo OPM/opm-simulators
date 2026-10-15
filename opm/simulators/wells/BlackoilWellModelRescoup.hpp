@@ -349,8 +349,9 @@ private:
     bool slaveGroupIsFixedPressureNodeInOwnNetwork_(const std::string& group_name) const;
 
     /// \brief Slave-side: true iff the node of the group, or a node above it in the slave's
-    ///   network, is one of the overridden nodes, i.e. the pressure of the group's node
-    ///   follows from the master's pressure.  A well in such a group has the master's
+    ///   network that no node with a fixed pressure of its own lies between, is one of the
+    ///   overridden nodes, i.e. the pressure of the group's node follows from the master's
+    ///   pressure.  A well in such a group has the master's
     ///   pressure, plus the pressure drops in the branches below the overridden node, as
     ///   its THP limit.
     bool wellIsBelowOverriddenNode_(const std::string& group_name,

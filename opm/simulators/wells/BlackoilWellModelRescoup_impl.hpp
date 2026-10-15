@@ -42,6 +42,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
@@ -840,14 +841,7 @@ wellIsBelowOverriddenNode_(const std::string& group_name,
     const int episodeIdx = this->simulator_.episodeIndex();
     const auto& network = this->schedule()[episodeIdx].network();
     if (!network.active() || !network.has_node(group_name)) return false;
-    // Walk up the branches from the node of the well's group; the branches have no loops.
-    std::string node = group_name;
-    while (true) {
-        if (overrides.count(node) > 0) return true;
-        const auto branch = network.uptree_branch(node);
-        if (!branch.has_value()) return false;
-        node = branch->uptree_node();
-    }
+    return nodeFollowsOverriddenNode(network, group_name, overrides);
 }
 
 

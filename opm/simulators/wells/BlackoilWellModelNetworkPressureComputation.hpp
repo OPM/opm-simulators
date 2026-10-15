@@ -220,6 +220,32 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     }
 };
 
+/// @brief Whether the pressure of a node follows from one of the overridden nodes (see the
+///        terminal pressure overrides of NetworkPressureComputation): the node itself is
+///        overridden, or the nodes above it lead to one without crossing a node that has a
+///        fixed pressure of its own.  Such a node has a fixed pressure that no override
+///        reaches through it, so the nodes below it do not follow the overridden node above.
+template<typename Scalar>
+bool nodeFollowsOverriddenNode(const Network::ExtNetwork& network,
+                               std::string node,
+                               const std::map<std::string, Scalar>& overrides)
+{
+    // The branches have no loops.
+    while (true) {
+        if (overrides.count(node) > 0) {
+            return true;
+        }
+        if (network.node(node).terminal_pressure().has_value()) {
+            return false;
+        }
+        const auto branch = network.uptree_branch(node);
+        if (!branch.has_value()) {
+            return false;
+        }
+        node = branch->uptree_node();
+    }
+}
+
 /// @brief  Class to compute network pressures using VFP tables, given flow rates
 ///         for each group and fixed pressures at network roots.
 ///         Optionally, the ALQ values from wells can be included in the rates.
