@@ -137,13 +137,22 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
     ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
     edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
-    refineBeforeRedistribute_ = Parameters::Get<Parameters::RefineBeforeRedistribute>();
     lgrBackend_ = Parameters::Get<Parameters::LgrBackend>();
     if (lgrBackend_ != "trilinear" && lgrBackend_ != "conforming") {
         throw std::invalid_argument(fmt::format("Unknown value for --lgr-backend: '{}'. "
                                                 "Accepted values are 'trilinear' and 'conforming'.",
                                                 lgrBackend_));
     }
+    // Conforming refines before load balancing unless told otherwise: refining
+    // each box on its owning rank needs every box to fit on one rank.
+    const std::string refineBefore = Parameters::Get<Parameters::RefineBeforeRedistribute>();
+    if (refineBefore != "auto" && refineBefore != "true" && refineBefore != "false") {
+        throw std::invalid_argument(fmt::format("Unknown value for --refine-before-redistribute: '{}'. "
+                                                "Accepted values are 'auto', 'true' and 'false'.",
+                                                refineBefore));
+    }
+    refineBeforeRedistribute_ = (refineBefore == "auto") ? (lgrBackend_ == "conforming")
+                                                         : (refineBefore == "true");
 
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
@@ -494,7 +503,9 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::RefineBeforeRedistribute>
         ("With --lgr-backend=conforming: refine the grid before load "
          "balancing and distribute the refined cells, balanced by refined "
-         "cell count, instead of refining each box on its owning rank.");
+         "cell count, instead of refining each box on its owning rank: "
+         "'auto' does so with --lgr-backend=conforming and not otherwise, "
+         "'true' or 'false' chooses.");
 
 #if HAVE_MPI
     Parameters::Register<Parameters::AddCorners>
