@@ -135,8 +135,10 @@ public:
     //! message is received.  The node itself is not damped by updatePressures().
     //! Only production network nodes with a fixed pressure in the deck are
     //! overridden.
-    void setNodePressureOverrides(std::map<std::string, Scalar> overrides)
-    { node_pressure_overrides_ = std::move(overrides); }
+    //! The cached pressures of the overridden nodes are set to the imposed values at once, so
+    //! that what is computed from them before the next pressure update, such as the common THP
+    //! of an auto-choke group below such a node, uses the current imposed pressure.
+    void setNodePressureOverrides(std::map<std::string, Scalar> overrides);
 
     //! \brief Initialize wells according to network configuration.
     void initialize(const int report_step);

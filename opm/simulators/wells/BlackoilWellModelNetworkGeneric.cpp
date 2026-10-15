@@ -321,7 +321,9 @@ updatePressures(const int reportStepIdx,
                 if (network.domain == details::NetworkDomain::Production
                     && this->node_pressure_overrides_.count(name) > 0) {
                     // Imposed by a reservoir coupling master: neither damped nor part of
-                    // the imbalance, which only measures this network's own iteration.
+                    // the imbalance, which only measures this network's own iteration.  It
+                    // is already at the imposed value, see setNodePressureOverrides(), so
+                    // what is computed from it before this update is not stale.
                     continue;
                 }
                 if (previous_domain_pressures.count(name) <= 0) {
@@ -549,6 +551,20 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
             }
         }
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+setNodePressureOverrides(std::map<std::string, Scalar> overrides)
+{
+    this->node_pressure_overrides_ = std::move(overrides);
+    auto& pressures = this->nodePressures(details::NetworkDomain::Production);
+    for (const auto& [name, pressure] : this->node_pressure_overrides_) {
+        if (const auto it = pressures.find(name); it != pressures.end()) {
+            it->second = pressure;
+        }
+    }
+    this->syncLegacyProductionState_();
 }
 
 template<typename Scalar, typename IndexTraits>
