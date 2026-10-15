@@ -75,6 +75,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -1226,9 +1227,18 @@ doWriteOutput(const int                          reportStepNum,
         const bool noRefinementAtAll = (this->grid_.maxLevel() == 0)
             && ((this->collectGrid_ == nullptr) || (this->collectGrid_->maxLevel() == 0));
 
-        for (std::size_t lgr = 0; noRefinementAtAll && lgr < deckLgrs.size(); ++lgr) {
+        // The fathers and the active cells are those of the grid the restart
+        // file is written for, the output grid: MINPV can remove active cells of
+        // the input grid, every host of a box included.
+        const bool replicate = noRefinementAtAll && (deckLgrs.size() > 0)
+            && (this->equilGrid_ != nullptr);
+        const auto outputGrid = replicate
+            ? std::optional<EclipseGrid> {
+                UgGridHelpers::createEclipseGrid(*this->equilGrid_, this->eclState_.getInputGrid()) }
+            : std::nullopt;
+        for (std::size_t lgr = 0; replicate && lgr < deckLgrs.size(); ++lgr) {
             const auto& name = deckLgrs.getLgr(lgr).NAME();
-            restartValues.emplace_back(fatherReplicatedSolution(this->eclState_.getInputGrid(),
+            restartValues.emplace_back(fatherReplicatedSolution(*outputGrid,
                                                                 name,
                                                                 restartValues.front().solution),
                                        restartValues.front().wells,

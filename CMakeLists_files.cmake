@@ -695,6 +695,7 @@ list (APPEND TEST_DATA_FILES
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data
+  tests/LGR_RESTART_UNREFINED.DATA
   tests/TESTTIMER.DATA
   tests/TESTWELLMODEL.DATA
   tests/liveoil.DATA
