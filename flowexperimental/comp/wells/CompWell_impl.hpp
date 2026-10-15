@@ -118,7 +118,7 @@ void
 CompWell<TypeTag>::
 updateSecondaryQuantities(const Simulator& simulator)
 {
-    updateTotalMass();
+    updateWellboreContents();
     updateSurfaceQuantities(simulator);
 }
 
@@ -126,7 +126,7 @@ updateSecondaryQuantities(const Simulator& simulator)
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateTotalMass()
+updateWellboreContents()
 {
     const EvalWell water_fraction = this->primary_variables_.getWaterVolumeFraction();
     const auto update = [this, &water_fraction](const auto& hydrocarbons) {

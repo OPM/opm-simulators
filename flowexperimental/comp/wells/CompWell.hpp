@@ -184,7 +184,7 @@ private:
     void calculateSingleConnectionRate(const Simulator& simulator,
                                        std::vector<EvalWell>& con_rates) const;
 
-    void updateTotalMass();
+    void updateWellboreContents();
 
     // TODO: a better name
     void updateSurfaceQuantities(const Simulator& simulator);
