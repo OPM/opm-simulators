@@ -20,6 +20,8 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <opm/simulators/wells/WellHelpers.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -429,6 +431,15 @@ assembleControlEqProd(const SingleWellState& well_state,
 {
     // TODO: we only need to pass in the current control?
     const auto current = well_state.production_cmode;
+
+    // For a zero producer rate target, constrain the total surface rate to zero.
+    // This gives the control row a derivative with respect to total rate even
+    // when the controlled phase has no surface share. Wellbore storage may still
+    // allow connection flow during the time step.
+    if (wellhelpers::rateControlWithZeroProdTarget(prod_controls, current)) {
+        control_eq = this->primary_variables_.getTotalRate();
+        return;
+    }
 
     const auto& surface_cond = this->surface_conditions_;
 
