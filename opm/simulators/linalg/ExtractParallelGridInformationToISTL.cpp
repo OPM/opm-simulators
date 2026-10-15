@@ -23,6 +23,7 @@
 #include <dune/common/version.hh>
 #include <dune/common/shared_ptr.hh>
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
 
  namespace Opm
 {
@@ -41,9 +42,24 @@ void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& an
                                                         grid.comm()));
     }
 }
+void extractParallelGridInformationToISTL(const Dune::PolyhedralGrid<3, 3, double>& grid, std::any& anyComm)
+{
+    if(grid.comm().size()>1)
+    {
+        // this is a parallel run with distributed data.
+        auto& mgrid=const_cast<Dune::PolyhedralGrid<3, 3, double>&>(grid);
+        auto& idx=mgrid.getCellIndexSet();
+        auto& ridx=mgrid.getCellRemoteIndices();
+        anyComm=std::any(Opm::ParallelISTLInformation(Dune::stackobject_to_shared_ptr(idx),
+                                                        Dune::stackobject_to_shared_ptr(ridx),
+                                                        grid.comm()));
+    }
+}
 #else
 // Missing support for MPI or dune-istl -> do nothing.
 void extractParallelGridInformationToISTL(const Dune::CpGrid&, std::any&)
+{}
+void extractParallelGridInformationToISTL(const Dune::PolyhedralGrid<3, 3, double>&, std::any&)
 {}
 #endif // defined(HAVE_MPI)
 } // end namespace Opm
