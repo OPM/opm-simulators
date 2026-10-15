@@ -84,6 +84,8 @@ compareResultFileContents () {
 #   ${testProperty["file_name"]} is the base name of the simulation input file.
 #   ${testProperty["test_name"]} is the test suite's name of the particular test.
 #   ${testProperty["ref_sim"]}   is the simulator whose reference solutions the test uses.
+#   ${testProperty["file_names"]} is the ';'-separated base names of all result files
+#                                of a reservoir coupling test (empty for other tests).
 extractTestProperties () {
     local failed_test
 
@@ -109,6 +111,10 @@ extractTestProperties () {
                                   -v prop="REFERENCE_SIMULATOR" -f "${dir}/getprop.awk" \
                                   "${BUILD_DIR}/CTestTestfile.cmake")
     testProperty["ref_sim"]=${testProperty["ref_sim"]:-${testProperty["binary"]}}
+
+    testProperty["file_names"]=$(awk -v test="${failed_test}" \
+                                     -v prop="FILENAMES" -f "${dir}/getprop.awk" \
+                                     "${BUILD_DIR}/CTestTestfile.cmake")
 }
 
 # Copy results from a test run to reference dir
@@ -248,6 +254,41 @@ updateFullSimulationResults () {
     fi
 }
 
+# Generate reference solution updates for reservoir coupling runs.
+#
+# A coupled run writes the results of the master and of every slave into
+# one result directory, and all of them are kept in the one reference
+# directory of the case.  The test's FILENAMES property lists their base
+# names.
+#
+# Uses properties of failing test being processed (${testProperty}).
+updateRescoupSimulationResults () {
+    local binary=${testProperty["binary"]}
+    local dir_name=${testProperty["dir_name"]}
+    local test_name=${testProperty["test_name"]}
+    local ref_sim=${testProperty["ref_sim"]}
+    local file_names=${testProperty["file_names"]}
+    local file_name
+    local changed=1
+
+    for file_name in ${file_names//;/ }
+    do
+        if copyToReferenceDir \
+               "${BUILD_DIR}/tests/results/${binary}+${test_name}" \
+               "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${ref_sim}" \
+               "${file_name}" \
+               EGRID INIT RFT SMSPEC UNRST UNSMRY
+        then
+            changed=0
+        fi
+    done
+
+    if [ ${changed} -eq 0 ]
+    then
+        changed_tests+=" ${test_name}"
+    fi
+}
+
 # Generate reference solution updates for Damaris result files.
 #
 # Uses properties of failing test being processed (${testProperty}).
@@ -302,6 +343,9 @@ case "$@" in
 
   *compareDamarisFiles* )
     updateDamarisResults ;;
+
+  *compareRescoupFiles* )
+    updateRescoupSimulationResults ;;
 esac
 
 {

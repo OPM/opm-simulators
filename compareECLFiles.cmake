@@ -360,6 +360,113 @@ function(add_test_compare_parallel_simulation)
   endif()
 endfunction()
 
+###########################################################################
+# TEST: add_test_compare_rescoup_simulation
+###########################################################################
+
+# Input:
+#   - casename: name of the coupled case
+#   - dir: case directory in opm-tests, holding the master's and the
+#          slaves' deck directories
+#   - master_dir: the master deck's sub-directory of dir
+#   - filename: the master deck (no extension)
+#   - slave_filenames: the slave decks (no extension), as named by SLAVES
+#   - slave_procs: number of ranks of each slave (SLAVES item 5), in the
+#                  order of slave_filenames
+#   - master_procs: number of processes of the master (optional, default 1)
+#   - mpiexec: MPI launcher (optional, default MPIEXEC_EXECUTABLE)
+#
+# Details:
+#   - This test class runs a reservoir coupling simulation, where the
+#     master spawns its slaves, and compares the master's and every slave's
+#     output to reference files. The reference files of all decks live in
+#     one directory, ${dir}/opm-simulation-reference/<simulator>, since a
+#     slave's results from a coupled run differ from those of its deck run
+#     on its own.
+function(add_test_compare_rescoup_simulation)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    REFERENCE_SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+    MASTER_DIR
+    MASTER_PROCS
+    MPIEXEC
+  )
+  set(multiValueArgs SLAVE_FILENAMES SLAVE_PROCS TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(NOT PARAM_MASTER_PROCS)
+    set(PARAM_MASTER_PROCS 1)
+  endif()
+  list(LENGTH PARAM_SLAVE_FILENAMES num_slaves)
+  list(LENGTH PARAM_SLAVE_PROCS num_slave_procs)
+  if(NOT num_slaves EQUAL num_slave_procs)
+    message(FATAL_ERROR "add_test_compare_rescoup_simulation(${PARAM_CASENAME}): "
+                        "SLAVE_PROCS needs one value per SLAVE_FILENAMES entry "
+                        "(got ${num_slave_procs}, expected ${num_slaves})")
+  endif()
+  # Total number of processes: the master's plus the ranks of all slaves
+  set(mpi_procs ${PARAM_MASTER_PROCS})
+  foreach(procs IN LISTS PARAM_SLAVE_PROCS)
+    math(EXPR mpi_procs "${mpi_procs} + ${procs}")
+  endforeach()
+  if(NOT PARAM_MPIEXEC)
+    set(PARAM_MPIEXEC ${MPIEXEC_EXECUTABLE})
+  endif()
+  set(reference_simulator ${PARAM_SIMULATOR})
+  if(PARAM_REFERENCE_SIMULATOR)
+    set(reference_simulator ${PARAM_REFERENCE_SIMULATOR})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+  endif()
+
+  if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL mpi_procs)
+    # Local computer system can run the master and all slave ranks at once.
+    set(TEST_NAME compareRescoupFiles_${PARAM_SIMULATOR}+${PARAM_FILENAME})
+    set(RESULT_PATH ${BASE_RESULT_PATH}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+    set(filenames ${PARAM_FILENAME} ${PARAM_SLAVE_FILENAMES})
+    string(REPLACE ";" "," filenames_arg "${filenames}")
+    opm_add_test(${TEST_NAME}
+      EXE_TARGET
+        ${PARAM_SIMULATOR}
+      DRIVER
+        ${PROJECT_SOURCE_DIR}/tests/run-rescoup-regressionTest.sh
+      DRIVER_ARGS
+        -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+        -m ${PARAM_MASTER_DIR}
+        -r ${RESULT_PATH}
+        -f ${PARAM_FILENAME}
+        -s ${filenames_arg}
+        -a ${PARAM_ABS_TOL}
+        -t ${PARAM_REL_TOL}
+        -c $<TARGET_FILE:compareECL>
+        -x ${PARAM_MPIEXEC}
+        -n ${PARAM_MASTER_PROCS}
+        -u ${reference_simulator}
+      TEST_ARGS
+        ${PARAM_TEST_ARGS}
+    )
+    # FILENAMES lists the master's and the slaves' result files, which
+    # tests/update_test_reference.sh copies into the reference directory.
+    set_tests_properties(${TEST_NAME} PROPERTIES
+                         DIRNAME ${PARAM_DIR}
+                         FILENAME ${PARAM_FILENAME}
+                         FILENAMES "${filenames}"
+                         SIMULATOR ${PARAM_SIMULATOR}
+                         REFERENCE_SIMULATOR ${reference_simulator}
+                         TESTNAME ${PARAM_CASENAME}
+                         PROCESSORS ${mpi_procs})
+  endif()
+endfunction()
+
 
 ###########################################################################
 # TEST: add_test_compare_parallel_restarted_simulation
