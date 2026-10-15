@@ -54,6 +54,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -84,23 +85,27 @@ struct SimulatorFixture
  * \param filename Path to the Eclipse deck file
  * \param test_name Name of the test (used in argv[0])
  * \param threads_per_process Number of threads per process (default: 1)
+ * \param parsing_strictness Parsing strictness of the deck (default: "normal")
+ * \param options More command line options, such as "--lgr-backend=conforming"
  * \return Unique pointer to the initialized simulator
  */
 template <class TypeTag>
 std::unique_ptr<GetPropType<TypeTag, Properties::Simulator>>
 initSimulator(const char* filename,
               const char* test_name = "test_simulator",
-              int threads_per_process = 1)
+              int threads_per_process = 1,
+              const std::string& parsing_strictness = "normal",
+              const std::vector<std::string>& options = {})
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     std::string filename_arg = "--ecl-deck-file-name=";
     filename_arg += filename;
 
-    const char* argv[] = {
-        test_name,
-        filename_arg.c_str()
-    };
+    std::vector<const char*> argv { test_name, filename_arg.c_str() };
+    for (const auto& option : options) {
+        argv.push_back(option.c_str());
+    }
 
     Parameters::reset();
     registerAllParameters_<TypeTag>(false);
@@ -109,14 +114,14 @@ initSimulator(const char* filename,
     Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
     Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
     Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
+    setupParameters_<TypeTag>(/*argc=*/static_cast<int>(argv.size()),
+                              argv.data(),
                               /*registerParams=*/false,
                               /*allowUnused=*/false,
                               /*handleHelp=*/true,
                               /*myRank=*/0);
 
-    FlowGenericVanguard::readDeck(filename);
+    FlowGenericVanguard::readDeck(filename, parsing_strictness);
     return std::make_unique<Simulator>();
 }
 
