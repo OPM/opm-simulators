@@ -29,6 +29,7 @@
 
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/common/UnstructuredGridPartitioning.hpp>
 #include <opm/grid/polyhedralgrid/levelcartesianindexmapper.hh>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -482,10 +483,31 @@ protected:
                 throw std::invalid_argument { "The partition file has more parts than there are processes." };
             }
         }
-        else {
+        else if (this->partitionMethod() == Dune::PartitionMethod::simple || !Dune::unstructured::metisAvailable()) {
+            if (this->partitionMethod() != Dune::PartitionMethod::simple) {
+                OpmLog::warning("The grid library was built without METIS, so the grid is partitioned in "
+                                "blocks of consecutive cells.");
+            }
             parts = partitionCellsSimple(numCells, numParts).first;
         }
+        else {
+            // Zoltan is only available for the CpGrid, so the other methods use METIS.
+            if (this->partitionMethod() != Dune::PartitionMethod::metis) {
+                OpmLog::info("The partition method is not available for PolyhedralGrid, using METIS.");
+            }
+            parts = Dune::unstructured::partitionWithMetis(static_cast<const UnstructuredGrid&>(*this->grid_),
+                                                           numParts, this->imbalanceTol());
+        }
         this->keepWellsTogether_(parts);
+
+        std::vector<int> size(numParts, 0);
+        for (const int part : parts) {
+            ++size[part];
+        }
+        if (std::ranges::any_of(size, [](const int n) { return n == 0; })) {
+            throw std::runtime_error { "At least one process has no cells. Use fewer processes, or "
+                                       "a different partition method." };
+        }
         return parts;
     }
 
