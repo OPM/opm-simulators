@@ -168,14 +168,14 @@ private:
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
-    // the original mass for each component in wellbore
-    std::array<Scalar, num_comp> component_masses_{0.};
-    // the new mass for each component in wellbore, derived from the primary variables
-    std::array<EvalWell, num_comp> new_component_masses_{0.};
-    // water in the wellbore, kept outside the flash: previous mass, current
-    // mass and current mass fraction of the wellbore mixture
-    Scalar water_mass_{0.};
-    EvalWell new_water_mass_{0.};
+    // the mass for each component in wellbore at the start of the time step
+    std::array<Scalar, num_comp> prev_component_masses_{0.};
+    // the current mass for each component in wellbore, derived from the primary variables
+    std::array<EvalWell, num_comp> component_masses_{0.};
+    // water in the wellbore, kept outside the flash: mass at the start of the
+    // time step, current mass and current mass fraction of the wellbore mixture
+    Scalar prev_water_mass_{0.};
+    EvalWell water_mass_{0.};
     EvalWell water_mass_fraction_{0.};
     // quantities used to calculate the quantities under the surface conditions
     SurfaceConditons surface_conditions_;

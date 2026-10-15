@@ -99,8 +99,8 @@ calculateExplicitQuantities(const Simulator& simulator,
                                getValue(this->primary_variables_.getWaterVolumeFraction()),
                                water_density,
                                this->wellbore_volume_);
-        this->component_masses_ = contents.component_masses;
-        this->water_mass_ = contents.water_mass;
+        this->prev_component_masses_ = contents.component_masses;
+        this->prev_water_mass_ = contents.water_mass;
     }
 }
 
@@ -144,8 +144,8 @@ updateTotalMass()
                                                water_fraction,
                                                water_density,
                                                this->wellbore_volume_);
-        this->new_component_masses_ = contents.component_masses;
-        this->new_water_mass_ = contents.water_mass;
+        this->component_masses_ = contents.component_masses;
+        this->water_mass_ = contents.water_mass;
         this->mass_fractions_ = contents.mass_fractions;
         this->water_mass_fraction_ = contents.water_mass_fraction;
         this->fluid_density_ = contents.density;
@@ -524,7 +524,7 @@ assembleSourceTerm(const Scalar dt)
     }
 
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        const EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt - component_mass_rates[comp_idx];
+        const EvalWell residual = (this->component_masses_[comp_idx] - this->prev_component_masses_[comp_idx]) / dt - component_mass_rates[comp_idx];
         // let us put it in the well equation
         for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
@@ -537,7 +537,7 @@ assembleSourceTerm(const Scalar dt)
         const EvalWell water_mass_rate
             = total_mass_rate * this->surface_conditions_.waterMassFraction();
         const EvalWell residual
-            = (this->new_water_mass_ - this->water_mass_) / dt - water_mass_rate;
+            = (this->water_mass_ - this->prev_water_mass_) / dt - water_mass_rate;
         constexpr int water_row = FluidSystem::numComponents;
         for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             this->well_equations_.D()[0][0][water_row][pvIdx]
