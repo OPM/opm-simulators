@@ -39,12 +39,12 @@ add_test_compare_rescoup_simulation(
   SLAVE_FILENAMES
     RC-01_MOD1_PRED
     RC-01_MOD2_PRED
+  # SLAVES item 5 of each slave above
+  SLAVE_PROCS
+    4
+    1
   MASTER_PROCS
     1
-  # The master's process, plus 4 ranks for RC-01_MOD1_PRED and 1 for
-  # RC-01_MOD2_PRED (SLAVES item 5)
-  MPI_PROCS
-    6
   MPIEXEC
     ${_rescoup_mpiexec}
   SIMULATOR

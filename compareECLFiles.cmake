@@ -371,9 +371,9 @@ endfunction()
 #   - master_dir: the master deck's sub-directory of dir
 #   - filename: the master deck (no extension)
 #   - slave_filenames: the slave decks (no extension), as named by SLAVES
+#   - slave_procs: number of ranks of each slave (SLAVES item 5), in the
+#                  order of slave_filenames
 #   - master_procs: number of processes of the master (optional, default 1)
-#   - mpi_procs: total number of processes, i.e., the master's plus the
-#                ranks of all slaves
 #   - mpiexec: MPI launcher (optional, default MPIEXEC_EXECUTABLE)
 #
 # Details:
@@ -395,10 +395,9 @@ function(add_test_compare_rescoup_simulation)
     DIR
     MASTER_DIR
     MASTER_PROCS
-    MPI_PROCS
     MPIEXEC
   )
-  set(multiValueArgs SLAVE_FILENAMES TEST_ARGS)
+  set(multiValueArgs SLAVE_FILENAMES SLAVE_PROCS TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
@@ -406,6 +405,18 @@ function(add_test_compare_rescoup_simulation)
   if(NOT PARAM_MASTER_PROCS)
     set(PARAM_MASTER_PROCS 1)
   endif()
+  list(LENGTH PARAM_SLAVE_FILENAMES num_slaves)
+  list(LENGTH PARAM_SLAVE_PROCS num_slave_procs)
+  if(NOT num_slaves EQUAL num_slave_procs)
+    message(FATAL_ERROR "add_test_compare_rescoup_simulation(${PARAM_CASENAME}): "
+                        "SLAVE_PROCS needs one value per SLAVE_FILENAMES entry "
+                        "(${num_slave_procs} values for ${num_slaves} slaves)")
+  endif()
+  # Total number of processes: the master's plus the ranks of all slaves
+  set(mpi_procs ${PARAM_MASTER_PROCS})
+  foreach(procs IN LISTS PARAM_SLAVE_PROCS)
+    math(EXPR mpi_procs "${mpi_procs} + ${procs}")
+  endforeach()
   if(NOT PARAM_MPIEXEC)
     set(PARAM_MPIEXEC ${MPIEXEC_EXECUTABLE})
   endif()
@@ -417,7 +428,7 @@ function(add_test_compare_rescoup_simulation)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
-  if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL PARAM_MPI_PROCS)
+  if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL mpi_procs)
     # Local computer system can run the master and all slave ranks at once.
     set(TEST_NAME compareRescoupFiles_${PARAM_SIMULATOR}+${PARAM_FILENAME})
     set(RESULT_PATH ${BASE_RESULT_PATH}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
@@ -452,7 +463,7 @@ function(add_test_compare_rescoup_simulation)
                          SIMULATOR ${PARAM_SIMULATOR}
                          REFERENCE_SIMULATOR ${reference_simulator}
                          TESTNAME ${PARAM_CASENAME}
-                         PROCESSORS ${PARAM_MPI_PROCS})
+                         PROCESSORS ${mpi_procs})
   endif()
 endfunction()
 
