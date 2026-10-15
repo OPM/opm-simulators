@@ -282,6 +282,21 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             std::unordered_set<unsigned> cellOnRank;
             const auto& global_cells = this->grid_->globalCell();
             for (const auto cell : global_cells) cellOnRank.insert(cell);
+            // A COMPDATL connection names its cell inside its LGR, and the
+            // rank holds that cell where it holds the level-zero cell the LGR
+            // refines there.
+            const auto& lgrs = eclState1.getLgrs();
+            const auto cartDims = this->grid_->logicalCartesianSize();
+            const auto levelZeroCell = [&lgrs, &cartDims](const Connection& conn)
+            {
+                const int n = conn.get_lgr_level();
+                if (n <= 0 || static_cast<std::size_t>(n) > lgrs.size()) {
+                    return conn.global_index();
+                }
+                const auto ijk = lgrs.levelZeroIJK(static_cast<std::size_t>(n),
+                                                   { conn.getI(), conn.getJ(), conn.getK() });
+                return static_cast<std::size_t>(ijk[0] + cartDims[0] * (ijk[1] + cartDims[1] * ijk[2]));
+            };
             const auto inactive_well_names = schedule.getInactiveWellNamesAtEnd();
             std::size_t num_wells = inactive_well_names.size();
             std::vector<int> well_on_rank(num_wells, 0);
@@ -289,7 +304,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             for (const auto& well_name : inactive_well_names) {
                 const auto& well = schedule.getWell(well_name, schedule.size()-1);
                 for (const auto& conn: well.getConnections()) {
-                    if (cellOnRank.count(conn.global_index()) > 0) {
+                    if (cellOnRank.count(levelZeroCell(conn)) > 0) {
                         well_on_rank[well_idx] = 1;
                         parallelWells.emplace_back(well_name, true);
                         break;
