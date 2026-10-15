@@ -1436,15 +1436,20 @@ protected:
             // grid's transmissibilities on the I/O rank -- except with LGRs, below.
             if (simulator.vanguard().grid().comm().size() > 1) {
                 bool wholeGridTransNeeded = simulator.vanguard().grid().comm().rank() == 0;
-                // A parallel LGR run writes from the I/O rank's refined
-                // reference grid; the transmissibility must live there too.
+                // A parallel Conforming LGR run writes from the I/O rank's refined
+                // output grid; the transmissibility must live there too.  The
+                // backend decides, not that grid: it exists on the I/O rank only,
+                // and the gathered path below is collective.
+                bool refinedOutputGrid = false;
                 if constexpr (requires { simulator.vanguard().eclOutputTransmissibility(); }) {
-                    if (wholeGridTransNeeded) {
-                        eclWriter.setTransmissibilities(&simulator.vanguard().eclOutputTransmissibility());
+                    refinedOutputGrid = simulator.vanguard().lgrBackend() == "conforming";
+                    if (refinedOutputGrid) {
+                        if (wholeGridTransNeeded) {
+                            eclWriter.setTransmissibilities(&simulator.vanguard().eclOutputTransmissibility());
+                        }
+                        wholeGridTransNeeded = false;
                     }
-                    wholeGridTransNeeded = false;
                 }
-                else
                 // Parallel LGR: reuse the simulator's own (distributed) transmissibilities for the
                 // INIT output -- each rank contributes its interior connections, gathered on the
                 // I/O rank and keyed by level-Cartesian indices so the output walk over the global
@@ -1458,7 +1463,7 @@ protected:
                     // alone (grid().maxLevel() > 0, e.g. after adapt()) must not enable the
                     // gathered mode: the writer would look up different keys than the ones
                     // the leaf-grid walk records.
-                    if (simulator.vanguard().eclState().getLgrs().size() > 0) {
+                    if (!refinedOutputGrid && simulator.vanguard().eclState().getLgrs().size() > 0) {
                         this->finishTransmissibilities_();
                         localTransmissibilitiesFinished = true;
                         const auto& localTrans = simulator.problem().eclTransmissibilities();
