@@ -514,6 +514,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_keyword_validator.cpp
   tests/test_LgrBlockData.cpp
   tests/test_LgrTransIndex.cpp
+  tests/test_lgr_well_ranks.cpp
   tests/test_linearleastsquares.cpp
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
