@@ -606,6 +606,18 @@ macro(opm-simulators_tests_hook)
           -f drsdt_initial_rs
           -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
     )
+
+    # MINPV removes every host cell of the only LGR, so the grid refines
+    # nothing: the run must still write its restart file.
+    add_test(
+      NAME
+        lgr_restart_unrefined
+      COMMAND
+        $<TARGET_FILE:${drsdt_simulator}>
+          ${PROJECT_SOURCE_DIR}/tests/LGR_RESTART_UNREFINED.DATA
+          --output-dir=${PROJECT_BINARY_DIR}/tests/results/lgr_restart_unrefined
+          --parsing-strictness=low
+    )
   endif()
 
   if("3" IN_LIST OPM_COMPILE_COMPONENTS)
