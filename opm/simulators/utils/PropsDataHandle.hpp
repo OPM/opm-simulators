@@ -41,6 +41,7 @@
 #include <dune/grid/common/partitionset.hh>
 #include <dune/common/parallel/mpihelper.hh>
 #include <algorithm>
+#include <exception>
 #include <numeric>
 #include <stdexcept>
 #include <unordered_map>
@@ -197,6 +198,13 @@ public:
 
     ~PropsDataHandle()
     {
+        // A load balancing that throws, for instance because a process got
+        // no cells, leaves no distributed grid to receive the properties:
+        // let its exception pass instead of reading that grid's cells.
+        if (std::uncaught_exceptions() > m_uncaughtExceptions) {
+            return;
+        }
+
         // distributed grid is now correctly set up.
         const auto& gridView = m_grid.levelGridView(0);
         const std::size_t numCells = gridView.size(0);
@@ -318,6 +326,8 @@ private:
     std::unordered_map<typename LocalIdSet::IdType, std::vector<std::pair<double,unsigned char> > > elementData_;
     /// \brief The amount of data to send for each element
     std::size_t m_no_data;
+    /// \brief The number of exceptions in flight when the handle was made.
+    int m_uncaughtExceptions = std::uncaught_exceptions();
 };
 
 } // end namespace Opm

@@ -533,6 +533,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_LgrTransIndex.cpp
   tests/test_lgr_block_data.cpp
   tests/test_lgr_well_ranks.cpp
+  tests/test_lgr_zero_cells.cpp
   tests/test_linearleastsquares.cpp
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
