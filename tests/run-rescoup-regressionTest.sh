@@ -25,12 +25,15 @@ then
   echo -e "\t\t -x <path>     MPI launcher"
   echo -e "\t\t -e <filename> Simulator binary to use"
   echo -e "\tOptional options:"
+  echo -e "\t\t -n <procs>    Number of MPI processes of the master (default 1); the"
+  echo -e "\t\t               master spawns the slaves with the ranks given in SLAVES"
   echo -e "\t\t -u <filename> Simulator binary for reference data"
   exit 1
 fi
 
+MASTER_PROCS=1
 OPTIND=1
-while getopts "i:m:r:f:s:a:t:c:x:e:u:" OPT
+while getopts "i:m:r:f:s:a:t:c:x:e:n:u:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -43,6 +46,7 @@ do
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     x) MPIEXEC=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    n) MASTER_PROCS=${OPTARG} ;;
     u) REF_EXE_NAME=${OPTARG} ;;
   esac
 done
@@ -69,7 +73,7 @@ tar -C ${INPUT_DATA_PATH} --exclude=opm-simulation-reference -cf - . | \
 test $? -eq 0 || exit 1
 
 cd ${RESULT_PATH}/case/${MASTER_DIR} || exit 1
-"${MPIEXEC}" -np 1 "${EXE_NAME}" ${FILENAME}.DATA ${TEST_ARGS} --output-dir=${RESULT_PATH}
+"${MPIEXEC}" -np ${MASTER_PROCS} "${EXE_NAME}" ${FILENAME}.DATA ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ${RESULT_PATH}
 

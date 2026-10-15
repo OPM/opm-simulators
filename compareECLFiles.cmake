@@ -371,8 +371,9 @@ endfunction()
 #   - master_dir: the master deck's sub-directory of dir
 #   - filename: the master deck (no extension)
 #   - slave_filenames: the slave decks (no extension), as named by SLAVES
-#   - mpi_procs: total number of processes, i.e., the master's one plus
-#                the ranks of all slaves
+#   - master_procs: number of processes of the master (optional, default 1)
+#   - mpi_procs: total number of processes, i.e., the master's plus the
+#                ranks of all slaves
 #   - mpiexec: MPI launcher (optional, default MPIEXEC_EXECUTABLE)
 #
 # Details:
@@ -393,6 +394,7 @@ function(add_test_compare_rescoup_simulation)
     REL_TOL
     DIR
     MASTER_DIR
+    MASTER_PROCS
     MPI_PROCS
     MPIEXEC
   )
@@ -400,6 +402,9 @@ function(add_test_compare_rescoup_simulation)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(NOT PARAM_MASTER_PROCS)
+    set(PARAM_MASTER_PROCS 1)
   endif()
   if(NOT PARAM_MPIEXEC)
     set(PARAM_MPIEXEC ${MPIEXEC_EXECUTABLE})
@@ -433,6 +438,7 @@ function(add_test_compare_rescoup_simulation)
         -t ${PARAM_REL_TOL}
         -c $<TARGET_FILE:compareECL>
         -x ${PARAM_MPIEXEC}
+        -n ${PARAM_MASTER_PROCS}
         -u ${reference_simulator}
       TEST_ARGS
         ${PARAM_TEST_ARGS}
