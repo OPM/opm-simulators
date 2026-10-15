@@ -127,8 +127,10 @@ RescoupConstraintsCalculator(
 //         as a reduction.  The remaining groups absorb the shortfall through the
 //         standard localReduction / FractionCalculator machinery.
 //      3. Recompute the targets of all groups.  The excluded group's rate is in
-//         the parent's reduction and is added back for its own target, so it is
-//         sent the target it would get on returning to group control.  That
+//         the parent's reduction and is added back for its own target, and its
+//         own guide rate is counted in its fraction (see
+//         FractionCalculator::groupControlledWells()), so it is sent the target
+//         it would get on returning to group control.  That
 //         leaves its wells at their own limits; if they can meet that target,
 //         they return to group control and the group takes part in the
 //         distribution again from the next recalculation (see
