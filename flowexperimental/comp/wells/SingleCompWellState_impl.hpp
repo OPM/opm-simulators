@@ -30,7 +30,7 @@ CompConnectionData(std::size_t num_connection,
   , total_molar_fractions(num_connection * num_components)
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
-  , ecl_index(num_connection)
+  , cell_index(num_connection)
   , global_index(num_connection)
 {
 }
@@ -46,7 +46,7 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
         this->satnum_id[con] = connections[con].satnum_id;
-        this->ecl_index[con] = connections[con].cell_index;
+        this->cell_index[con] = connections[con].cell_index;
         this->global_index[con] = connections[con].global_index;
     }
 }
@@ -99,9 +99,9 @@ update_injector_targets(const Well& well,
                 // composition the flash accepts, and a water injector has no stream
                 // to take one from. A well without open local connections has no
                 // well equations, so it can wait for a connection to open.
-                if (!this->connection_data.ecl_index.empty()) {
+                if (!this->connection_data.cell_index.empty()) {
                     this->total_molar_fractions
-                        = cell_mole_fractions[this->connection_data.ecl_index.front()];
+                        = cell_mole_fractions[this->connection_data.cell_index.front()];
                 }
                 this->wellbore_water_volume_fraction = 1.;
                 this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
@@ -145,8 +145,8 @@ update_producer_targets(const Well& well,
 
     // Read the reservoir composition only when an open perforation is
     // available. Initialize schedule targets below even without perforations.
-    if (!this->connection_data.ecl_index.empty()) {
-        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+    if (!this->connection_data.cell_index.empty()) {
+        this->total_molar_fractions = cell_mole_fractions[this->connection_data.cell_index[0]];
     }
 
     this->bhp = prod_controls.bhp_limit;
@@ -199,7 +199,7 @@ copyRuntimeStateFrom(const SingleCompWellState& other,
     // So does a well without open connections: it had no well equations and
     // its composition was never set.
     if (status == WellStatus::SHUT || other.status == WellStatus::SHUT
-        || producer != other.producer || other.connection_data.ecl_index.empty()) {
+        || producer != other.producer || other.connection_data.cell_index.empty()) {
         return;
     }
     bhp = other.bhp;
