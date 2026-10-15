@@ -215,7 +215,8 @@ void FlowGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
     summaryState_ = std::move(params.summaryState_);
 }
 
-void FlowGenericVanguard::readDeck(const std::string& filename, const std::string& ignoredKeywords)
+void FlowGenericVanguard::readDeck(const std::string& filename, const std::string& ignoredKeywords,
+                                   const std::string& parsingStrictness)
 {
     Dune::Timer setupTimer;
     setupTimer.start();
@@ -228,7 +229,7 @@ void FlowGenericVanguard::readDeck(const std::string& filename, const std::strin
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "normal", "100", ignoredKeywords, false, false, false, {},
+                  nullptr, parsingStrictness, "normal", "100", ignoredKeywords, false, false, false, {},
                   /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
 }

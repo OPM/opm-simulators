@@ -160,8 +160,10 @@ public:
      * \brief Read a deck.
      * \param filename file to read
      * \param ignoredKeywords ':'-separated unknown keywords to ignore
+     * \param parsingStrictness "low", "normal" or "high", as --parsing-strictness
      */
-    static void readDeck(const std::string& filename, const std::string& ignoredKeywords);
+    static void readDeck(const std::string& filename, const std::string& ignoredKeywords,
+                         const std::string& parsingStrictness = "normal");
 
     /*!
      * \brief Set the simulation configuration objects.
