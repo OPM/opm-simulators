@@ -82,7 +82,8 @@ struct EdgeConformal { static constexpr bool value = false; };
 /// Refine a CpGrid's LGRs with upstream's trilinear code or the corner-point conforming builder.
 struct LgrBackend { static constexpr auto value = "trilinear"; };
 /// Conforming backend only: refine before load balancing and distribute the refined leaf.
-struct RefineBeforeRedistribute { static constexpr bool value = false; };
+/// "auto" follows the backend: on with Conforming, off with Trilinear; "true" or "false" chooses.
+struct RefineBeforeRedistribute { static constexpr auto value = "auto"; };
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
