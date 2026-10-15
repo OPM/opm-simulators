@@ -133,6 +133,7 @@ public:
     std::vector<Scalar> compactConvergenceFactors();
     std::vector<Scalar> compactRelativeChange();
     std::vector<Scalar> compactRockCompactionState();
+    std::vector<typename Bridge::FipCellRecord> compactFipCells();
     void reportTransferCounters() const;
 
     /// Explicit CPU-boundary materialization for legacy CPU consumers.
@@ -143,6 +144,17 @@ public:
     /// Materialize one source cell without downloading the complete IQ slot.
     void materializeHostIntensiveQuantity(unsigned timeIdx, unsigned globalIdx,
                                          IntensiveQuantities& destination);
+
+    void materializeHostSourceIntensiveQuantities(unsigned timeIdx,
+                                                  const unsigned* indices,
+                                                  IntensiveQuantities* const* destination,
+                                                  std::size_t count);
+
+    /// Gather all requested block cells' PVs and IQs with one stream wait.
+    void materializeHostBlockState(unsigned timeIdx, const unsigned* indices,
+                                   PrimaryVariables* const* primaryDestination,
+                                   IntensiveQuantities* const* intensiveDestination,
+                                   std::size_t count);
 
     /// Form true-IMPES CPR weights directly from resident storage derivatives.
     /// Return false for a singular block so the CPU path retains its diagnostics.

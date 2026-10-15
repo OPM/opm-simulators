@@ -26,6 +26,7 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFipCellRecord.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/scoped_gpu_memory_accounting.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -46,6 +47,41 @@
 #endif
 
 namespace Opm::gpuistl {
+
+template <class Primary, class Intensive>
+struct GpuBlockState {
+    Primary primary;
+    Intensive intensive;
+};
+
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+template <class T>
+__global__ void gatherSourceIntensiveQuantitiesKernel(const T* source,
+                                                       const unsigned* indices,
+                                                       T* gathered,
+                                                       std::size_t count)
+{
+    const auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < count) {
+        gathered[i] = source[indices[i]];
+    }
+}
+
+template <class Primary, class Intensive, class BlockState>
+__global__ void gatherBlockStateKernel(const Primary* primary,
+                                       const Intensive* intensive,
+                                       const unsigned* indices,
+                                       BlockState* gathered,
+                                       std::size_t count)
+{
+    const auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < count) {
+        const auto cell = indices[i];
+        gathered[i].primary = primary[cell];
+        gathered[i].intensive = intensive[cell];
+    }
+}
+#endif
 
 /*!
  * \brief Owns the persistent, typed device state shared by GPU IQ evaluation
@@ -77,6 +113,8 @@ private:
     using DeviceProblem = GetPropType<DeviceTypeTag, Properties::Problem>;
     using DeviceModelView = SimpleFIBlackOilModel<DeviceTypeTag, gpuistl::GpuView>;
 
+    using BlockState = GpuBlockState<DevicePrimaryVariables, DeviceIntensiveQuantities>;
+
     using DynamicCpuFluidSystem =
         std::remove_reference_t<decltype(CpuFluidSystem::getNonStaticInstance())>;
     using FluidSystemBuffer =
@@ -101,6 +139,7 @@ private:
 
 public:
     using DeviceTypeTagPublic = DeviceTypeTag;
+    using FipCellRecord = GpuFipCellRecord<Scalar>;
     using DevicePrimaryVariablesPublic = DevicePrimaryVariables;
     using DeviceIntensiveQuantitiesView = gpuistl::GpuView<DeviceIntensiveQuantities>;
     using DevicePrimaryVariablesView = gpuistl::GpuView<const DevicePrimaryVariables>;
@@ -149,6 +188,8 @@ public:
         std::uint64_t sourceIntensiveQuantityDownloads{0}, sourceIntensiveQuantityDownloadBytes{0};
         std::uint64_t compactConvergenceDownloads{0}, compactConvergenceDownloadBytes{0};
         std::uint64_t relativeChangeDownloads{0}, relativeChangeDownloadBytes{0};
+        std::uint64_t compactFipDownloads{0}, compactFipDownloadBytes{0};
+        std::uint64_t blockStateDownloads{0}, blockStateDownloadBytes{0};
         std::uint64_t ownedBufferAllocations{0};
         std::uint64_t ownedBufferAllocationBytes{0};
         std::uint64_t staticUploadBatches{0};
@@ -226,6 +267,23 @@ public:
         ++counters_.primaryVariableDownloads;
         counters_.primaryVariableDownloadBytes += numDof_ * sizeof(DevicePrimaryVariables);
         counters_.lastPrimaryVariableDownloadCause = "CPU consumer";
+    }
+
+    void materializeHostPrimaryVariable(unsigned timeIdx, unsigned globalIdx,
+                                        HostPrimaryVariables& destination)
+    {
+        validatePrimarySlot_(timeIdx);
+        if (globalIdx >= numDof_) {
+            OPM_THROW(std::out_of_range, "GPU block-output cell index is outside the primary-variable cache");
+        }
+        DevicePrimaryVariables value;
+        copyDeviceToHost_(&value, primaryVariablesBuffer_[timeIdx]->data() + globalIdx,
+                          sizeof(value));
+        synchronizeStream_();
+        destination = HostPrimaryVariables(value);
+        ++counters_.primaryVariableDownloads;
+        counters_.primaryVariableDownloadBytes += sizeof(value);
+        counters_.lastPrimaryVariableDownloadCause = "block output";
     }
 
     gpuistl::GpuVector<Scalar>& correction() { return *correction_; }
@@ -437,6 +495,26 @@ public:
         return result;
     }
 
+    gpuistl::GpuView<FipCellRecord> compactFipView()
+    {
+        validateValidSlot_(0);
+        if (!compactFipBuffer_ || compactFipBuffer_->size() != numDof_) {
+            compactFipBuffer_ = std::make_unique<gpuistl::GpuBuffer<FipCellRecord>>(numDof_);
+        }
+        return {compactFipBuffer_->data(), numDof_};
+    }
+
+    std::vector<FipCellRecord> downloadCompactFip()
+    {
+        std::vector<FipCellRecord> result(numDof_);
+        copyDeviceToHost_(result.data(), compactFipBuffer_->data(),
+                          result.size() * sizeof(FipCellRecord));
+        synchronizeStream_();
+        ++counters_.compactFipDownloads;
+        counters_.compactFipDownloadBytes += result.size() * sizeof(FipCellRecord);
+        return result;
+    }
+
     void recordPropertyReady(unsigned timeIdx)
     {
         validateReadySlot_(timeIdx);
@@ -531,6 +609,100 @@ public:
         counters_.sourceIntensiveQuantityDownloadBytes += sizeof(value);
         destination.overlayBlackOilFieldsFrom(value);
     }
+
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+    void materializeHostSourceIntensiveQuantities(
+        unsigned timeIdx, const unsigned* indices,
+        HostIntensiveQuantities* const* destination, std::size_t count)
+    {
+        validateValidSlot_(timeIdx);
+        if (count == 0) { return; }
+        if (!indices || !destination) {
+            OPM_THROW(std::invalid_argument, "Invalid GPU source IQ gather arguments");
+        }
+        for (std::size_t i = 0; i < count; ++i) {
+            if (indices[i] >= numDof_ || destination[i] == nullptr) {
+                OPM_THROW(std::out_of_range, "Invalid GPU source IQ gather cell");
+            }
+        }
+        if (sourceIqCapacity_ < count) {
+            sourceIqIndices_ = std::make_unique<gpuistl::GpuBuffer<unsigned>>(count);
+            sourceIqGathered_ = std::make_unique<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>(count);
+            sourceIqCapacity_ = count;
+        }
+        hostSourceIntensiveQuantities_.resize(count, *prototype_);
+        copyHostToDevice_(sourceIqIndices_->data(), indices, count * sizeof(unsigned));
+        constexpr unsigned blockSize = 128;
+        gatherSourceIntensiveQuantitiesKernel<<<(count + blockSize - 1) / blockSize,
+                                                blockSize, 0, stream_>>>(
+            intensiveQuantitiesBuffer_[timeIdx]->data(), sourceIqIndices_->data(),
+            sourceIqGathered_->data(), count);
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipGetLastError());
+#else
+        OPM_GPU_SAFE_CALL(cudaGetLastError());
+#endif
+        copyDeviceToHost_(hostSourceIntensiveQuantities_.data(), sourceIqGathered_->data(),
+                          count * sizeof(DeviceIntensiveQuantities));
+        synchronizeStream_();
+        ++counters_.intensiveQuantityDownloads;
+        counters_.intensiveQuantityDownloadBytes += count * sizeof(DeviceIntensiveQuantities);
+        ++counters_.sourceIntensiveQuantityDownloads;
+        counters_.sourceIntensiveQuantityDownloadBytes += count * sizeof(DeviceIntensiveQuantities);
+        for (std::size_t i = 0; i < count; ++i) {
+            destination[i]->overlayBlackOilFieldsFrom(hostSourceIntensiveQuantities_[i]);
+        }
+    }
+
+    // Gather sparse block-output cells as one transfer. The host PV mirror is
+    // deliberately left partially valid; do not publish hostPrimaryGeneration_.
+    void materializeHostBlockState(unsigned timeIdx, const unsigned* indices,
+                                   HostPrimaryVariables* const* primaryDestination,
+                                   HostIntensiveQuantities* const* intensiveDestination,
+                                   std::size_t count)
+    {
+        validatePrimarySlot_(timeIdx);
+        validateValidSlot_(timeIdx);
+        if (count == 0) { return; }
+        if (!indices || !primaryDestination || !intensiveDestination) {
+            OPM_THROW(std::invalid_argument, "Invalid GPU block-state gather arguments");
+        }
+        for (std::size_t i = 0; i < count; ++i) {
+            if (indices[i] >= numDof_ || primaryDestination[i] == nullptr
+                || intensiveDestination[i] == nullptr) {
+                OPM_THROW(std::out_of_range, "Invalid GPU block-state gather cell");
+            }
+        }
+        if (blockStateCapacity_ < count) {
+            blockStateIndices_ = std::make_unique<gpuistl::GpuBuffer<unsigned>>(count);
+            blockStateGathered_ = std::make_unique<gpuistl::GpuBuffer<BlockState>>(count);
+            blockStateCapacity_ = count;
+        }
+        hostBlockState_.resize(count, BlockState{DevicePrimaryVariables{}, *prototype_});
+        copyHostToDevice_(blockStateIndices_->data(), indices, count * sizeof(unsigned));
+        constexpr unsigned blockSize = 128;
+        gatherBlockStateKernel<<<(count + blockSize - 1) / blockSize,
+                                 blockSize, 0, stream_>>>(
+            primaryVariablesBuffer_[timeIdx]->data(),
+            intensiveQuantitiesBuffer_[timeIdx]->data(),
+            blockStateIndices_->data(), blockStateGathered_->data(), count);
+#if USE_HIP
+        OPM_GPU_SAFE_CALL(hipGetLastError());
+#else
+        OPM_GPU_SAFE_CALL(cudaGetLastError());
+#endif
+        copyDeviceToHost_(hostBlockState_.data(), blockStateGathered_->data(),
+                          count * sizeof(BlockState));
+        synchronizeStream_();
+        ++counters_.blockStateDownloads;
+        counters_.blockStateDownloadBytes += count * sizeof(BlockState);
+        counters_.lastPrimaryVariableDownloadCause = "block output";
+        for (std::size_t i = 0; i < count; ++i) {
+            *primaryDestination[i] = HostPrimaryVariables(hostBlockState_[i].primary);
+            intensiveDestination[i]->overlayBlackOilFieldsFrom(hostBlockState_[i].intensive);
+        }
+    }
+#endif
 
     void materializeHostIntensiveQuantities(unsigned timeIdx,
                                             HostIntensiveQuantities* const* destination,
@@ -855,11 +1027,16 @@ private:
         updateStatus_.reset();
         compactConvergenceBuffer_.reset();
         relativeChangeBuffer_.reset();
+        compactFipBuffer_.reset();
         volumesBuffer_.reset();
         problemBuffer_.reset();
         deviceFluidSystem_.reset();
         fluidSystemBuffer_.reset();
         hostIntensiveQuantities_.clear();
+        blockStateIndices_.reset();
+        blockStateGathered_.reset();
+        hostBlockState_.clear();
+        blockStateCapacity_ = 0;
         prototype_.reset();
         lastWriterTimeIdx_ = invalidTimeIdx;
         numDof_ = 0;
@@ -888,12 +1065,21 @@ private:
     std::unique_ptr<gpuistl::GpuBuffer<std::uint32_t>> updateStatus_;
     std::unique_ptr<gpuistl::GpuBuffer<Scalar>> compactConvergenceBuffer_;
     std::unique_ptr<gpuistl::GpuBuffer<Scalar>> relativeChangeBuffer_;
+    std::unique_ptr<gpuistl::GpuBuffer<FipCellRecord>> compactFipBuffer_;
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>>, numTimeSlots>
         primaryVariablesBuffer_{};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>, numTimeSlots>
         intensiveQuantitiesBuffer_{};
     std::array<std::vector<DevicePrimaryVariables>, numTimeSlots> hostPrimaryVariables_{};
     std::vector<DeviceIntensiveQuantities> hostIntensiveQuantities_{};
+    std::unique_ptr<gpuistl::GpuBuffer<unsigned>> sourceIqIndices_;
+    std::unique_ptr<gpuistl::GpuBuffer<DeviceIntensiveQuantities>> sourceIqGathered_;
+    std::vector<DeviceIntensiveQuantities> hostSourceIntensiveQuantities_{};
+    std::size_t sourceIqCapacity_{0};
+    std::unique_ptr<gpuistl::GpuBuffer<unsigned>> blockStateIndices_;
+    std::unique_ptr<gpuistl::GpuBuffer<BlockState>> blockStateGathered_;
+    std::vector<BlockState> hostBlockState_{};
+    std::size_t blockStateCapacity_{0};
     std::optional<DeviceIntensiveQuantities> prototype_;
     std::unique_ptr<gpuistl::GpuBuffer<Scalar>> volumesBuffer_;
     std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer_;

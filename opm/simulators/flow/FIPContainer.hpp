@@ -47,7 +47,7 @@ class FIPContainer {
 public:
     using Scalar = typename FluidSystem::Scalar;
     using FIPArray = std::array<std::vector<Scalar>,
-                                static_cast<std::size_t>(Inplace::Phase::NumberOfEnumerators)>;
+                                static_cast<std::size_t>(Inplace::Phase::WaterMass) + 1>;
 
     static constexpr auto numPhases = FluidSystem::numPhases;
     static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;

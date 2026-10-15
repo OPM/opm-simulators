@@ -882,34 +882,98 @@ private:
 
             this->outputModule_->prepareDensityAccumulation();
             this->outputModule_->setupExtractors(isSubStep, reportStepNum);
-            // Each element writes only its own cell's output entries.
-            simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+            bool usedCompactFip = false;
+            if constexpr (requires { simulator_.model().hasGpuPropertyAssemblyBridge();
+                                     this->outputModule_->hasBlockExtractors();
+                                     this->outputModule_->hasLgrBlockExtractors();
+                                     this->outputModule_->canUseCompactFipOutput(); }) {
+                if (isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>()
+                    && !this->outputModule_->needInterfaceFluxes(isSubStep)
+                    && this->outputModule_->canUseCompactFipOutput()
+                    && !this->outputModule_->hasLgrBlockExtractors()) {
+                    usedCompactFip = simulator_.model().withCompactFipForOutput(
+                        [&](const auto& records) {
+                            // The bridge record uses global-space indexing; the
+                            // number of interior cells need not be a prefix of it.
+                            simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-                for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
-                    auto chunkIterator = chunks.begin();
-                    chunkIterator += chunkIdx;
-                    const auto chunk = *chunkIterator;
-                    ElementContext elemCtx(simulator_);
-                    for (const auto& elem : chunk) {
-                        elemCtx.updatePrimaryStencil(elem);
-                        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                        this->outputModule_->processElement(elemCtx);
-                        this->outputModule_->processElementBlockData(elemCtx);
-
-                        // Reuse the IQs already loaded into the element context. A
-                        // separate parallel FIP traversal reloads the whole cache and,
-                        // on GPU models, serializes cell lookups on the host-cache mutex.
-                        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                            const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                            this->outputModule_->updateFluidInPlace(
-                                globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
-                                simulator_.model().dofTotalVolume(globalIdx));
-                        }
+                                for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
+                                    auto chunkIterator = chunks.begin();
+                                    chunkIterator += chunkIdx;
+                                    const auto chunk = *chunkIterator;
+                                    for (const auto& elem : chunk) {
+                                        const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                        this->outputModule_->updateFluidInPlace(
+                                            cell, records[cell],
+                                            simulator_.model().dofTotalVolume(cell));
+                                    }
+                                }
+                            });
+                        });
+                    if (usedCompactFip && this->outputModule_->hasBlockExtractors()) {
+                        std::vector<unsigned> blockCells;
+                        simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+                            for (const auto& chunk : chunks) {
+                                for (const auto& elem : chunk) {
+                                    const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                    if (this->outputModule_->needsGlobalBlockCell(cell)) {
+                                        blockCells.push_back(cell);
+                                    }
+                                }
+                            }
+                        });
+                        usedCompactFip = simulator_.model().withSparseHostStateForBlockOutput(
+                            /*timeIdx=*/0, blockCells, [&] {
+                                simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+                                    for (const auto& chunk : chunks) {
+                                        ElementContext elemCtx(simulator_);
+                                        for (const auto& elem : chunk) {
+                                            const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                            if (!this->outputModule_->needsGlobalBlockCell(cell)) {
+                                                continue;
+                                            }
+                                            elemCtx.updatePrimaryStencil(elem);
+                                            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                                            this->outputModule_->processElementBlockData(elemCtx);
+                                        }
+                                    }
+                                });
+                            });
                     }
                 }
+            }
+            if (!usedCompactFip) simulator_.model().withHostStateForOutput(/*timeIdx=*/0, [&] {
+                // Each element writes only its own cell's output entries.
+                simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+                    for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
+                        auto chunkIterator = chunks.begin();
+                        chunkIterator += chunkIdx;
+                        const auto chunk = *chunkIterator;
+                        ElementContext elemCtx(simulator_);
+                        for (const auto& elem : chunk) {
+                            elemCtx.updatePrimaryStencil(elem);
+                            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                            this->outputModule_->processElement(elemCtx);
+                            this->outputModule_->processElementBlockData(elemCtx);
+
+                            // Reuse the IQs already loaded into the element context. A
+                            // separate parallel FIP traversal reloads the whole cache and,
+                            // on GPU models, serializes cell lookups on the host-cache mutex.
+                            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                                const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                                this->outputModule_->updateFluidInPlace(
+                                    globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
+                                    simulator_.model().dofTotalVolume(globalIdx));
+                            }
+                        }
+                    }
+                });
             });
             this->outputModule_->clearExtractors();
         }

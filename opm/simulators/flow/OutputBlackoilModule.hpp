@@ -62,6 +62,7 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputModule.hpp>
 #include <opm/simulators/flow/OutputExtractor.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFipCellRecord.hpp>
 
 #include <algorithm>
 #include <array>
@@ -295,6 +296,39 @@ public:
         this->setupBlockExtractors_(isSubStep, reportStepNum);
     }
 
+    bool canUseCompactFipOutput() const
+    {
+        // RFT and tracer entries are unconditional in setupElementExtractors_;
+        // both are fed below. The density aggregator is fed from the record.
+        // Every other active extractor still needs the full element context.
+        return this->extractors_.size() == 2u + (this->regionAvgDensity_ ? 1u : 0u);
+    }
+
+    bool hasBlockExtractors() const
+    {
+        return !this->blockExtractors_.empty()
+            || !this->extraBlockExtractors_.empty()
+            || !this->lgrBlockExtractors_.empty();
+    }
+
+    bool hasLgrBlockExtractors() const
+    {
+        return !this->lgrBlockExtractors_.empty();
+    }
+
+    // A compact FIP traversal can materialize only cells named by block
+    // summaries before running the existing block extractors. LGR requests
+    // require the element-level mapping in processElementBlockData().
+    bool needsGlobalBlockCell(const unsigned globalDofIdx) const
+    {
+        if (this->blockExtractors_.empty() && this->extraBlockExtractors_.empty()) {
+            return false;
+        }
+        const auto cartesianIdx = this->simulator_.vanguard().cartesianIndex(globalDofIdx);
+        return this->blockExtractors_.contains(cartesianIdx)
+            || this->extraBlockExtractors_.contains(cartesianIdx);
+    }
+
     //! \brief Clear list of active element-level data extractors
     void clearExtractors()
     {
@@ -392,6 +426,21 @@ public:
                 intQuants,
                 hysterParams
             };
+
+            if (matLawManager.enableHysteresis()) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    matLawManager.oilWaterHysteresisParams(hysterParams.somax,
+                                                            hysterParams.swmax,
+                                                            hysterParams.swmin,
+                                                            ectx.globalDofIdx);
+                }
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    matLawManager.gasOilHysteresisParams(hysterParams.sgmax,
+                                                          hysterParams.shmax,
+                                                          hysterParams.somin,
+                                                          ectx.globalDofIdx);
+                }
+            }
 
             Extractor::process(ectx, extractors_);
         }
@@ -793,6 +842,32 @@ public:
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
+    void updateFluidInPlace(const unsigned globalDofIdx,
+                            const gpuistl::GpuFipCellRecord<Scalar>& record,
+                            const double totVolume)
+    {
+        this->updateFluidInPlace_(globalDofIdx, record, totVolume);
+        if (this->regionAvgDensity_) {
+            this->aggregateAverageDensityContributions_(
+                record.fluidState(), globalDofIdx,
+                static_cast<double>(record.referencePorosity() * totVolume));
+        }
+        const auto cartesianIdx = this->simulator_.vanguard().cartesianIndex(globalDofIdx);
+        this->rftC_.assign(cartesianIdx,
+                           [&record]() { return record.fluidState().pressure(oilPhaseIdx); },
+                           [&record]() { return record.fluidState().saturation(waterPhaseIdx); },
+                           [&record]() { return record.fluidState().saturation(gasPhaseIdx); });
+        auto& tracerModel = this->simulator_.problem().tracerModel();
+        this->tracerC_.assignFreeConcentrations(
+            globalDofIdx,
+            [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                { return tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx); });
+        this->tracerC_.assignSolConcentrations(
+            globalDofIdx,
+            [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                { return tracerModel.solTracerConcentration(tracerIdx, globalDofIdx); });
+    }
+
     //! \brief Restore the buffers this module owns from a restart file.
     void setRestart(const data::Solution& sol,
                     const unsigned elemIdx,
@@ -904,16 +979,16 @@ private:
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
+    template <class CellQuantities>
     void updateFluidInPlace_(const unsigned             globalDofIdx,
-                             const IntensiveQuantities& intQuants,
+                             const CellQuantities&      intQuants,
                              const double               totVolume)
     {
         OPM_TIMEBLOCK_LOCAL(updateFluidInPlace, Subsystem::Output);
 
         this->updateTotalVolumesAndPressures_(globalDofIdx,
                                               intQuants,
-                                              totVolume,
-                                              intQuants.referencePorosity());
+                                              totVolume);
 
         if (this->computeFip_) {
             this->updatePhaseInplaceVolumes_(globalDofIdx, intQuants, totVolume);
@@ -1068,8 +1143,75 @@ private:
         return rates;
     }
 
+    template <typename FluidState>
+    Scalar hydroCarbonFraction(const FluidState& fs) const
+    {
+        if (this->eclState_.runspec().co2Storage()) {
+            // CO2 storage: Hydrocarbon volume is full pore-volume.
+            return 1.0;
+        }
+
+        // Common case.  Hydrocarbon volume is fraction occupied by actual
+        // hydrocarbons.
+        auto hydrocarbon = Scalar {0};
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
+        }
+
+        return hydrocarbon;
+    }
+
+    template <class CellQuantities>
+    void updateTotalVolumesAndPressures_(const unsigned             globalDofIdx,
+                                         const CellQuantities&      intQuants,
+                                         const double               totVolume)
+    {
+        const auto& fs = intQuants.fluidState();
+
+        const double pv = totVolume * intQuants.porosity().value();
+        const auto hydrocarbon = this->hydroCarbonFraction(fs);
+
+        this->fipC_.assignPoreVolume(globalDofIdx,
+                                totVolume * intQuants.referencePorosity(),
+                                pv);
+        if (! this->hydrocarbonPoreVolume_.empty()) {
+            this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
+        }
+
+        if (!this->pressureTimesHydrocarbonVolume_.empty() &&
+            !this->pressureTimesPoreVolume_.empty())
+        {
+            assert(this->hydrocarbonPoreVolume_.size() == this->pressureTimesHydrocarbonVolume_.size());
+            assert(this->fipC_.get(Inplace::Phase::PoreVolume).size() == this->pressureTimesPoreVolume_.size());
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(oilPhaseIdx)) * pv;
+
+                this->pressureTimesHydrocarbonVolume_[globalDofIdx] =
+                    this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            }
+            else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(gasPhaseIdx)) * pv;
+
+                this->pressureTimesHydrocarbonVolume_[globalDofIdx] =
+                    this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            }
+            else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(waterPhaseIdx)) * pv;
+            }
+        }
+    }
+
+    template <class CellQuantities>
     void updatePhaseInplaceVolumes_(const unsigned             globalDofIdx,
-                                    const IntensiveQuantities& intQuants,
+                                    const CellQuantities&      intQuants,
                                     const double               totVolume)
     {
         std::array<Scalar, FluidSystem::numPhases> fip {};

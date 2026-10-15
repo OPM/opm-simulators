@@ -56,9 +56,11 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
 
 #include <cassert>
+#include <array>
 #include <cstddef>
 #include <exception>   // current_exception, rethrow_exception
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -959,6 +961,10 @@ private:
                     gpuParams_->refreshForLinearization(numCells);
                 }
 
+                if (useAssemblyLinearsolveBridge) {
+                    prepare_source_intensive_quantities_gpu(numCells, domain);
+                }
+
                 linearize_parallelization_wrapper<run_assembly_on_gpu,
                                                   typename GpuParams::LocalResidualGPU>(
                     numCells,
@@ -1079,6 +1085,45 @@ private:
                                                      problem);
             }
         }
+    }
+
+    template <class SubDomainType>
+    void prepare_source_intensive_quantities_gpu(unsigned int numCells, const SubDomainType& domain)
+    {
+        // Gather source IQs before launching assembly.  Otherwise the host
+        // download waits for the queued assembly kernel as well as the gather.
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (enableFullyImplicitThermal &&
+                      requires { model_().prepareHostIntensiveQuantitiesForSources(0, sourceIqCells_); }) {
+            const auto episode = simulatorPtr_->episodeIndex();
+            if (sourceCellsEpisode_ != episode || sourceCellsDomainSize_ != numCells) {
+                sourceIqCells_.clear();
+                const auto& vanguard = simulatorPtr_->vanguard();
+                const auto& source = vanguard.schedule()[episode].source();
+                if (source.size() > 0) {
+                    for (unsigned ii = 0; ii < numCells; ++ii) {
+                        const unsigned cell = domain.cells[ii];
+                        std::array<int, 3> ijk;
+                        vanguard.cartesianCoordinate(cell, ijk);
+                        if (!source.hasSource(ijk)) { continue; }
+                        // The shared CPU source calculation reads IQs whenever
+                        // an active phase lacks an explicit enthalpy rate.
+                        if ((FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+                             && !source.hrate(ijk, SourceComponent::WATER))
+                            || (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                                && !source.hrate(ijk, SourceComponent::OIL))
+                            || (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                                && !source.hrate(ijk, SourceComponent::GAS))) {
+                            sourceIqCells_.push_back(cell);
+                        }
+                    }
+                }
+                sourceCellsEpisode_ = episode;
+                sourceCellsDomainSize_ = numCells;
+            }
+            model_().prepareHostIntensiveQuantitiesForSources(0, sourceIqCells_);
+        }
+#endif
     }
 
     template <class SubDomainType>
@@ -1480,6 +1525,12 @@ private:
     std::vector<BoundaryInfoCPU> boundaryInfo_;
 
     bool separateSparseSourceTerms_ = false;
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    std::vector<unsigned> sourceIqCells_;
+    std::size_t sourceCellsDomainSize_{0};
+    int sourceCellsEpisode_{std::numeric_limits<int>::min()};
+#endif
 
     FullDomain<> fullDomain_;
 
