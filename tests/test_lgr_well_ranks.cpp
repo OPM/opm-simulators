@@ -29,6 +29,9 @@
  * their (i,j,k) inside the LGR.  Every connection cell must be on exactly one
  * rank, that rank must have the well, and the well model must set up on all
  * ranks.
+ *
+ * A COMPDAT connection in a cell that a box refines moves into the LGR, on
+ * every process count, so its cells are found the same way.
  */
 
 #define BOOST_TEST_MODULE LgrWellRanks
@@ -46,9 +49,11 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <tuple>
 
 using SimulatorFixture = Opm::SimulatorFixture;
 BOOST_GLOBAL_FIXTURE(SimulatorFixture);
@@ -151,6 +156,84 @@ TSTEP
 END
 )";
 
+// The grid and LGR1 of the deck above, and LGR2 refining cells (9,6,1..2) into
+// 3x3x4 cells.  Wells PBOX and PCOL are completed by COMPDAT in cells that the
+// boxes refine, and both flow.
+const char* boxDeck = R"(RUNSPEC
+DIMENS
+ 12 8 2 /
+OIL
+WATER
+METRIC
+START
+ 1 'JAN' 2020 /
+WELLDIMS
+ 2 4 1 2 /
+TABDIMS
+/
+EQLDIMS
+/
+GRID
+CARFIN
+'LGR1' 5 6 4 4 1 1 6 3 3 /
+ENDFIN
+CARFIN
+'LGR2' 9 9 6 6 1 2 3 3 4 /
+ENDFIN
+DXV
+ 12*100.0 /
+DYV
+ 8*100.0 /
+DZV
+ 2*30.0 /
+TOPS
+ 96*2000 /
+PORO
+ 192*0.25 /
+PERMX
+ 192*500 /
+COPY
+ PERMX PERMY /
+ PERMX PERMZ /
+/
+PROPS
+PVTW
+ 250.0 1.02 4.0E-05 0.5 0.0 /
+ROCK
+ 250.0 1.0E-03 /
+DENSITY
+ 850 1014 1.0 /
+PVDO
+ 100.0 1.05 2.0
+ 250.0 1.02 2.5
+ 400.0 1.00 3.0 /
+SWOF
+ 0.2 0.0  1.0 0.0
+ 0.3 0.05 0.6 0.0
+ 0.5 0.15 0.3 0.0
+ 0.7 0.35 0.1 0.0
+ 0.8 0.5  0.0 0.0 /
+SOLUTION
+EQUIL
+ 2000 250.0 2100 0.0 /
+SCHEDULE
+WELSPECS
+ 'PBOX' 'G' 6 4 2020 'OIL' /
+ 'PCOL' 'G' 9 6 2020 'OIL' /
+/
+COMPDAT
+ 'PBOX' 6 4 1 1 'OPEN' 2* 0.2 /
+ 'PCOL' 9 6 1 2 'OPEN' 2* 0.2 /
+/
+WCONPROD
+ 'PBOX' 'OPEN' 'BHP' 5* 150 /
+ 'PCOL' 'OPEN' 'BHP' 5* 150 /
+/
+TSTEP
+ 1 /
+END
+)";
+
 } // Anonymous namespace
 
 BOOST_AUTO_TEST_CASE(ShutWellsInLgrsAreOnTheRanksOfTheirCells)
@@ -182,6 +265,66 @@ BOOST_AUTO_TEST_CASE(ShutWellsInLgrsAreOnTheRanksOfTheirCells)
             const bool onRank = (comm.size() == 1) || ((well != wells.end()) && well->second);
 
             for (const auto& conn : vanguard.schedule().getWell(name, 0).getConnections()) {
+                const int cell = vanguard.compressedIndexForConnection(conn);
+                BOOST_CHECK_EQUAL(comm.sum(cell >= 0 ? 1 : 0), 1);
+                if (cell >= 0) {
+                    BOOST_CHECK(onRank);
+                }
+            }
+        }
+    }
+
+    simulator->model().applyInitialSolution();
+    simulator->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(Opm::unit::day);
+    simulator->problem().resetIterationForNewTimestep();
+
+    BOOST_CHECK_NO_THROW(simulator->problem().wellModel().beginReportStep(0));
+
+    comm.barrier();
+    if (comm.rank() == 0) {
+        std::filesystem::remove_all(dir);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompdatInsideBoxesMovesIntoTheLgrs)
+{
+    using TypeTag = Opm::Properties::TTag::TestTypeTag;
+
+    const auto& comm = Opm::FlowGenericVanguard::comm();
+    const auto dir = std::filesystem::temp_directory_path() / ("test_lgr_well_ranks_box_np" + std::to_string(comm.size()));
+    const auto deck_file = (dir / "LGR_WELL_RANKS_BOX.DATA").string();
+    if (comm.rank() == 0) {
+        std::filesystem::create_directories(dir);
+        std::ofstream os(deck_file);
+        os << boxDeck;
+    }
+    comm.barrier();
+
+    // In parallel the conforming refinement refines before distributing; the
+    // connections must move into the LGRs there as in a serial run.
+    auto simulator = Opm::initSimulator<TypeTag>(deck_file.c_str(), "test_lgr_well_ranks",
+                                                 /*threads_per_process=*/1, "low",
+                                                 { "--lgr-backend=conforming" });
+    const auto& vanguard = simulator->vanguard();
+    const auto& wells = vanguard.parallelWells();
+
+    // Well, its LGR's grid number, and its connections: one per refined layer of its host cells.
+    for (const auto& [name, grid, numConn] : { std::tuple{ "PBOX", 1, std::size_t{3} },
+                                               std::tuple{ "PCOL", 2, std::size_t{4} } }) {
+        BOOST_TEST_CONTEXT("Well " << name) {
+            const auto& well = vanguard.schedule().getWell(name, 0);
+            BOOST_CHECK(well.is_lgr_well());
+            BOOST_CHECK_EQUAL(well.getConnections().size(), numConn);
+
+            const auto onWell = std::ranges::find(wells, std::string{name}, &std::pair<std::string, bool>::first);
+            const bool onRank = (comm.size() == 1) || ((onWell != wells.end()) && onWell->second);
+
+            for (const auto& conn : well.getConnections()) {
+                BOOST_CHECK_EQUAL(conn.get_lgr_level(), grid);
                 const int cell = vanguard.compressedIndexForConnection(conn);
                 BOOST_CHECK_EQUAL(comm.sum(cell >= 0 ? 1 : 0), 1);
                 if (cell >= 0) {
