@@ -83,7 +83,7 @@ void
 CompWell<TypeTag>::
 updateSecondaryQuantities(const Simulator& simulator)
 {
-    updateTotalMass();
+    updateWellboreContents();
     updateSurfaceQuantities(simulator);
 }
 
@@ -91,7 +91,7 @@ updateSecondaryQuantities(const Simulator& simulator)
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateTotalMass()
+updateWellboreContents()
 {
     // flash calculation in the wellbore
     auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
