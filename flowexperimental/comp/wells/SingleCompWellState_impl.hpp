@@ -86,7 +86,8 @@ update_injector_targets(const Well& well,
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
 
-    // we initialize all open wells with a rate to avoid singularities
+    // Seed BHP-controlled injectors with a surface rate; rate-controlled
+    // injectors use their schedule target, which may be zero.
     Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     if (inj_controls.cmode == Well::InjectorCMode::RATE) {
         inj_surf_rate = inj_controls.surface_rate;
@@ -152,10 +153,9 @@ update_producer_targets(const Well& well,
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // Start BHP-controlled wells with a set of rates and rate-controlled wells
-    // at their target. At a zero total rate, a rate control equation depends on
-    // the total rate only, through the surface share of its phase, so the well
-    // matrix is singular when that phase is missing.
+    // Seed BHP-controlled producers with nonzero surface rates and rate-controlled
+    // producers with their schedule targets. Zero targets use a total-surface-rate
+    // control equation, even when the controlled phase has no surface share.
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::BHP:
