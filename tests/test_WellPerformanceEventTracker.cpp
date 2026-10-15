@@ -71,8 +71,11 @@ DYV
  100.0 /
 DZV
  4*10.0 /
+BOX
+ 1 4 1 1 1 1 /
 TOPS
  4*1000.0 /
+ENDBOX
 PORO
  16*0.3 /
 PERMX

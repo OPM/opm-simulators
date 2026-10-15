@@ -53,9 +53,14 @@ DZ
 /
 
 
+BOX
+1 1 1 1 1 1 /
+
 TOPS
 0.0
 /
+
+ENDBOX
 
 PORO
 20*0.2 /
