@@ -706,22 +706,25 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
     }
 
     // A refined cell's host keeps its unrefined connections in the global section.
-    const auto& dims0 = computeLevelCartDims(0);
-    for (const auto& [cells, t] : globalTrans().hostLevelTransmissibilities()) {
-        const auto [cell1, cell2] = cells;
-        const char* name = nullptr;
-        if ((cell2 - cell1 == 1) && (dims0[0] > 1)) {
-            name = "TRANX";
-        }
-        else if ((cell2 - cell1 == dims0[0]) && (dims0[1] > 1)) {
-            name = "TRANY";
-        }
-        else if ((cell2 - cell1 == dims0[0]*dims0[1]) ||
-                 directVerticalNeighbors(dims0, levelCartToLevelCompressed[0], cell1, cell2)) {
-            name = "TRANZ";
-        }
-        if (name != nullptr) {
-            outputTrans_->at(0).at(name).template data<double>()[cell1] = t;
+    // Only Conforming has them; the gathered records come with no global object.
+    if (!this->gatheredLgrTrans_.has_value()) {
+        const auto& dims0 = computeLevelCartDims(0);
+        for (const auto& [cells, t] : globalTrans().hostLevelTransmissibilities()) {
+            const auto [cell1, cell2] = cells;
+            const char* name = nullptr;
+            if ((cell2 - cell1 == 1) && (dims0[0] > 1)) {
+                name = "TRANX";
+            }
+            else if ((cell2 - cell1 == dims0[0]) && (dims0[1] > 1)) {
+                name = "TRANY";
+            }
+            else if ((cell2 - cell1 == dims0[0]*dims0[1]) ||
+                     directVerticalNeighbors(dims0, levelCartToLevelCompressed[0], cell1, cell2)) {
+                name = "TRANZ";
+            }
+            if (name != nullptr) {
+                outputTrans_->at(0).at(name).template data<double>()[cell1] = t;
+            }
         }
     }
 }
@@ -973,15 +976,18 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
     }
 
     // Do not include the generated NNCs transsmisibilities in the input NNCs
-    // The hosts' unrefined connections that are not Cartesian neighbours.
-    for (const auto& [cells, t] : this->globalTrans().hostLevelTransmissibilities()) {
-        const auto [cell1, cell2] = cells;
-        if (isDirectNeighbours_(levelCartToLevelCompressed[0], level0CartDims, cell1, cell2)) {
-            continue;
-        }
-        const auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, t);
-        if (std::isnormal(tt) && (tt > 1.0e-12)) {
-            this->outputNnc_[0].emplace_back(cell1, cell2, t);
+    // The hosts' unrefined connections that are not Cartesian neighbours
+    // (Conforming only, as above).
+    if (!this->gatheredLgrTrans_.has_value()) {
+        for (const auto& [cells, t] : this->globalTrans().hostLevelTransmissibilities()) {
+            const auto [cell1, cell2] = cells;
+            if (isDirectNeighbours_(levelCartToLevelCompressed[0], level0CartDims, cell1, cell2)) {
+                continue;
+            }
+            const auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, t);
+            if (std::isnormal(tt) && (tt > 1.0e-12)) {
+                this->outputNnc_[0].emplace_back(cell1, cell2, t);
+            }
         }
     }
 
