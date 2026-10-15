@@ -497,6 +497,9 @@ initializeWellPerfData()
 
     int well_index = 0;
 
+    // Connection cells this rank's wells miss on all of their ranks.
+    std::string missingCells;
+
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
 
@@ -575,14 +578,26 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        // The verdict is reduced over the ranks, so every rank stops together.
+        // The verdict is reduced over the ranks of this well only.  Go on
+        // with the other wells, whose ranks meet in the calls below, and
+        // stop after the loop.
         if (const auto [found, msg] = checker.checkAllConnectionsFound(); !found) {
-            OPM_THROW(std::runtime_error, msg);
+            missingCells += (missingCells.empty() ? "" : "\n") + msg;
         }
 
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
         ++well_index;
+    }
+
+    // A rank that stops alone leaves the others waiting for it, so every
+    // rank stops when any rank misses a connection cell.
+    if (this->comm_.max(missingCells.empty() ? 0 : 1) > 0) {
+        if (missingCells.empty()) {
+            missingCells = "Connection cells of a well were not found "
+                           "in grid on another rank";
+        }
+        OPM_THROW(std::runtime_error, missingCells);
     }
 }
 
