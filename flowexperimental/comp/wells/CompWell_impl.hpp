@@ -65,7 +65,7 @@ calculateExplicitQuantities(const Simulator& simulator,
 
         flashFluidState_(fluid_state_scalar);
 
-        this->component_masses_ = wellboreComponentMasses(fluid_state_scalar, this->wellbore_volume_);
+        this->prev_component_masses_ = wellboreComponentMasses(fluid_state_scalar, this->wellbore_volume_);
     }
 }
 
@@ -98,11 +98,11 @@ updateTotalMass()
 
     flashFluidState_(fluid_state);
 
-    this->new_component_masses_ = wellboreComponentMasses(fluid_state, this->wellbore_volume_);
+    this->component_masses_ = wellboreComponentMasses(fluid_state, this->wellbore_volume_);
 
     EvalWell total_mass = 0.;
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        total_mass += this->new_component_masses_[compidx];
+        total_mass += this->component_masses_[compidx];
     }
 
     const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
@@ -117,7 +117,7 @@ updateTotalMass()
     // dependence that flows through the flash, are checked against finite
     // differences in tests/test_compwell_jacobian.cpp.
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
+        mass_fractions_[compidx] = this->component_masses_[compidx] / total_mass;
     }
 }
 
@@ -368,7 +368,7 @@ assembleSourceTerm(const Scalar dt)
     }
 
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        const EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt - component_mass_rates[comp_idx];
+        const EvalWell residual = (this->component_masses_[comp_idx] - this->prev_component_masses_[comp_idx]) / dt - component_mass_rates[comp_idx];
         // let us put it in the well equation
         for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
