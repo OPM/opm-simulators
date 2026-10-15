@@ -410,7 +410,7 @@ function(add_test_compare_rescoup_simulation)
   if(NOT num_slaves EQUAL num_slave_procs)
     message(FATAL_ERROR "add_test_compare_rescoup_simulation(${PARAM_CASENAME}): "
                         "SLAVE_PROCS needs one value per SLAVE_FILENAMES entry "
-                        "(${num_slave_procs} values for ${num_slaves} slaves)")
+                        "(got ${num_slave_procs}, expected ${num_slaves})")
   endif()
   # Total number of processes: the master's plus the ranks of all slaves
   set(mpi_procs ${PARAM_MASTER_PROCS})
