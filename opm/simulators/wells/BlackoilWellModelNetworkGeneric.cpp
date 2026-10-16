@@ -558,12 +558,32 @@ void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 setNodePressureOverrides(std::map<std::string, Scalar> overrides)
 {
     this->node_pressure_overrides_ = std::move(overrides);
+    this->applyNodePressureOverrides_();
+    this->syncLegacyProductionState_();
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+applyNodePressureOverrides_()
+{
     auto& pressures = this->nodePressures(details::NetworkDomain::Production);
     for (const auto& [name, pressure] : this->node_pressure_overrides_) {
         if (const auto it = pressures.find(name); it != pressures.end()) {
             it->second = pressure;
         }
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+resetState()
+{
+    this->node_pressures_ = this->last_valid_node_pressures_;
+    this->branch_data_ = this->last_valid_branch_data_;
+    this->domain_node_pressures_ = this->last_valid_domain_node_pressures_;
+    this->domain_branch_data_ = this->last_valid_domain_branch_data_;
+    // The restored pressures predate the overrides in force now.
+    this->applyNodePressureOverrides_();
     this->syncLegacyProductionState_();
 }
 

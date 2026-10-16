@@ -177,13 +177,10 @@ public:
         this->last_valid_domain_branch_data_ = this->domain_branch_data_;
     }
 
-    void resetState()
-    {
-        this->node_pressures_ = this->last_valid_node_pressures_;
-        this->branch_data_ = this->last_valid_branch_data_;
-        this->domain_node_pressures_ = this->last_valid_domain_node_pressures_;
-        this->domain_branch_data_ = this->last_valid_domain_branch_data_;
-    }
+    /// Restores the state saved by commitState().  The node pressure
+    /// overrides are kept, as they are the current boundary condition, so
+    /// they are applied to the restored pressures again.
+    void resetState();
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -270,6 +267,10 @@ protected:
     {
         return domain_invalid_nodes_[details::domainIndex(domain)];
     }
+
+    /// Sets the cached production node pressures of the overridden nodes to
+    /// the override values.  Does not sync the legacy state.
+    void applyNodePressureOverrides_();
 
     void syncLegacyProductionState_()
     {
