@@ -142,6 +142,10 @@ macro(opm-simulators_prereqs_hook)
     if(NOT pybind11_FOUND)
       include(DownloadPyBind11)
     endif()
+    # Set the build directory for the python modules.
+    get_property(_opm_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    # The build directory for the python modules is set to a configuration specific.
+    set(OPM_SIMULATORS_PYTHON_BUILD_DIR ${PROJECT_BINARY_DIR}/python/$<$<BOOL:${_opm_multi_config}>:$<CONFIG>>)
   endif()
 
   if(CONVERT_CUDA_TO_HIP)
@@ -585,9 +589,14 @@ macro(opm-simulators_tests_hook)
       else()
         set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
       endif()
+      set(_failure_report_env)
+      if(opm-common_PYTHON_COMMON_DIR)
+        set(_failure_report_env
+          ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_PYTHON_COMMON_DIR}")
+      endif()
       add_custom_target(failure_report
                         USES_TERMINAL
-                        COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
+                        COMMAND ${_failure_report_env}
                         ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
                         ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
     endif()
