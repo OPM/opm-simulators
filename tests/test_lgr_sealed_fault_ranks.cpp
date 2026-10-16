@@ -134,12 +134,13 @@ BOOST_AUTO_TEST_CASE(InitOutputAlongASealedFault)
     }
     comm.barrier();
 
-    // The trilinear refinement is flow's default.  The INIT output is
-    // extracted while the simulator is set up.
+    // The trilinear refinement.  The INIT output is extracted while the
+    // simulator is set up.
     BOOST_CHECK_NO_THROW(Opm::initSimulator<TypeTag>(deck_file.c_str(),
                                                      "test_lgr_sealed_fault_ranks",
                                                      /*threads_per_process=*/1, "low",
-                                                     { "--output-dir=" + dir.string() }));
+                                                     { "--output-dir=" + dir.string(),
+                                                       "--lgr-backend=trilinear" }));
     comm.barrier();
     if (comm.rank() == 0) {
         // Setting up the simulator extracted the INIT output without a throw.

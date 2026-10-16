@@ -497,9 +497,9 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::EdgeConformal>
         ("Edge conformal cornerpoint processing.");
     Parameters::Register<Parameters::LgrBackend>
-        ("How LGRs are refined: 'trilinear' (default) or 'conforming', the "
-         "corner-point builder that also handles graded boxes, block MINPV, "
-         "faults and LGRPILLR.");
+        ("How LGRs are refined: 'conforming' (default), the corner-point "
+         "builder that also handles graded boxes, block MINPV, faults and "
+         "LGRPILLR, or 'trilinear'.");
     Parameters::Register<Parameters::RefineBeforeRedistribute>
         ("With --lgr-backend=conforming: refine the grid before load "
          "balancing and distribute the refined cells, balanced by refined "
