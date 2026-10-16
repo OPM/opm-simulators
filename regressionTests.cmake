@@ -605,6 +605,27 @@ add_test_compareECLFiles(
     --enable-tuning=true
 )
 
+set(_network_manifold_tests
+  NETWORK_MODEL5_STDW_AUTOCHK
+  NETWORK_MODEL5_STDW_AUTOCHK_GROUPGUIDERATES
+  NETWORK_MODEL5_STDW_AUTOCHK_WITHVFP
+)
+
+add_multiple_tests(
+  _network_manifold_tests
+  ""
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    network
+)
+
 add_test_compareECLFiles(
   CASENAME
     spe1_metric_vfp1

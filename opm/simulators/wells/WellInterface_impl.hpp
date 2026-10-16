@@ -29,6 +29,7 @@
 #endif
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
@@ -48,6 +49,8 @@
 #include <cassert>
 #include <cstddef>
 #include <numbers>
+#include <numeric>
+#include <optional>
 #include <utility>
 
 #include <fmt/format.h>
@@ -1155,8 +1158,10 @@ namespace Opm
             checkWellOperability(simulator, well_state, groupStateHelper);
 
         // only use inner well iterations for the first newton iterations.
+        // A well kept stopped is not solved for, see keepStopped().
         const auto& iterCtx = simulator.problem().iterationContext();
-        if (iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
+        if (!this->operability_status_.isKeptStopped()
+            && iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
@@ -1318,7 +1323,8 @@ namespace Opm
             return;
         }
 
-        if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
+        if (this->operability_status_.isKeptStopped()
+            || (this->wellIsStopped() && !changed_to_stopped_this_step_)) {
             return;
         }
 
@@ -2389,6 +2395,126 @@ namespace Opm
         this->updateIPRImplicit(simulator, groupStateHelper_copy, well_state_copy);
         this->adaptRatesForVFP(rates);
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state_copy, this->well_ecl_, rates, this->getRefDensity(), summary_state, alq_value);
+    }
+
+    template<typename TypeTag>
+    std::optional<std::vector<typename WellInterface<TypeTag>::Scalar>>
+    WellInterface<TypeTag>::
+    computeWellRatesAtThpLimitProd(const Simulator& simulator,
+                                   const GroupStateHelperType& groupStateHelper,
+                                   const WellStateType& well_state,
+                                   const Scalar thp_limit)
+    {
+        OPM_TIMEFUNCTION();
+        auto& deferred_logger = groupStateHelper.deferredLogger();
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto& controls = this->well_ecl_.productionControls(summary_state);
+        const auto& pu = this->phaseUsage();
+
+        // Inflow at a BHP, and the factor cutting it back to the well's rate
+        // limits keeping the phase fractions. Reservoir volume limits are not
+        // applied.
+        const auto inflow = [&](const Scalar bhp) {
+            std::vector<Scalar> rates(this->number_of_phases_, 0.0);
+            this->computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            const auto produced = [&pu, &rates](const int phase) {
+                return pu.phaseIsActive(phase) ? -rates[pu.canonicalToActivePhaseIdx(phase)]
+                                               : Scalar{0.0};
+            };
+            const Scalar oil = produced(IndexTraits::oilPhaseIdx);
+            const Scalar water = produced(IndexTraits::waterPhaseIdx);
+            Scalar scale{1.0};
+            const auto limit = [&controls, &scale](const Well::ProducerCMode mode,
+                                                   const Scalar limit_rate,
+                                                   const Scalar rate) {
+                if (controls.hasControl(mode) && rate > limit_rate) {
+                    scale = std::min(scale, limit_rate / rate);
+                }
+            };
+            limit(Well::ProducerCMode::ORAT, controls.oil_rate, oil);
+            limit(Well::ProducerCMode::WRAT, controls.water_rate, water);
+            limit(Well::ProducerCMode::GRAT, controls.gas_rate, produced(IndexTraits::gasPhaseIdx));
+            limit(Well::ProducerCMode::LRAT, controls.liquid_rate, oil + water);
+            return std::pair{rates, scale};
+        };
+        const auto frates = [&inflow](const Scalar bhp) {
+            auto [rates, scale] = inflow(bhp);
+            std::ranges::transform(rates, rates.begin(), [scale](const Scalar rate) { return scale * rate; });
+            return rates;
+        };
+        const auto producing = [&inflow](const Scalar bhp) {
+            const auto rates = inflow(bhp).first;
+            return std::accumulate(rates.begin(), rates.end(), Scalar{0.0}) < 0.0;
+        };
+        const auto cut_back = [&inflow](const Scalar bhp) { return inflow(bhp).second < 1.0; };
+
+        // How far the BHP the tubing needs to lift the inflow at a BHP against
+        // the THP limit exceeds that BHP.
+        const auto previous_thp_limit = this->getDynamicThpLimit();
+        this->setDynamicThpLimit(thp_limit);
+        const auto excess = [&](const Scalar bhp) {
+            auto rates = frates(bhp);
+            this->adaptRatesForVFP(rates);
+            return WellBhpThpCalculator(*this).
+                calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state,
+                                    this->getRefDensity(), deferred_logger) - bhp;
+        };
+        const auto bhp = [&]() -> std::optional<Scalar> {
+            const Scalar bhp_limit = controls.bhp_limit;
+            // The THP limit does not bind if the tubing lifts the flow at the BHP limit.
+            if (excess(bhp_limit) <= 0.0) {
+                return bhp_limit;
+            }
+            if (!producing(bhp_limit)) {
+                return std::nullopt;
+            }
+            // The stable operating point is the lowest BHP where the excess
+            // vanishes. The flow falls from its cut back value to zero over a
+            // BHP range that is narrow for a highly productive well, and a
+            // search evenly in BHP may step over the operating window.
+            // Search evenly in rate instead.
+            constexpr Scalar tolerance = 0.01 * unit::barsa;
+            const auto last_holding = [tolerance](const auto& holds, Scalar low, Scalar high) {
+                while (high - low > tolerance) {
+                    const Scalar mid = 0.5 * (low + high);
+                    if (holds(mid)) {
+                        low = mid;
+                    }
+                    else {
+                        high = mid;
+                    }
+                }
+                return low;
+            };
+            const Scalar bhp_no_flow = last_holding(producing, bhp_limit,
+                                                    this->maxPerfPress(simulator) + 1.0 * unit::barsa);
+            const Scalar bhp_full_flow = cut_back(bhp_limit)
+                ? last_holding(cut_back, bhp_limit, bhp_no_flow)
+                : bhp_limit;
+            // While cut back the flow is fixed, and so is the BHP the tubing
+            // needs, so the ends of that range tell whether it holds the root.
+            constexpr int samples = 50;
+            int sample = 0;
+            Scalar low = bhp_limit;
+            Scalar high = bhp_full_flow;
+            while (excess(high) > 0.0) {
+                if (++sample > samples) {
+                    return std::nullopt;
+                }
+                low = high;
+                high = bhp_full_flow + (bhp_no_flow - bhp_full_flow) * sample / samples;
+            }
+            constexpr int max_iterations = 100;
+            int iterations = 0;
+            return RegulaFalsiBisection<ContinueOnError>::
+                solve(excess, low, high, max_iterations, tolerance, iterations);
+        }();
+        this->setDynamicThpLimit(previous_thp_limit);
+        // No BHP lifts any flow against this THP: the well cannot produce.
+        if (!bhp.has_value()) {
+            return std::nullopt;
+        }
+        return frates(*bhp);
     }
 
     template <typename TypeTag>
