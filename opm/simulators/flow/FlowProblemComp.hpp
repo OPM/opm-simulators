@@ -655,7 +655,19 @@ protected:
         const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
         const auto flash_method
             = ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
+
+        // Count owned cells only; overlap copies are normalized below but not counted.
         int zmf_oil_and_gas_cells = 0;
+        if (zmf_initialization_) {
+            for (const auto& elem : elements(this->gridView(), Dune::Partitions::interior)) {
+                const auto& fs = initialFluidStates_[this->elementMapper().index(elem)];
+                const Scalar sw = fs.saturation(FluidSystem::waterPhaseIdx);
+                if (sw > 0.0 && sw < 1.0 && fs.saturation(FluidSystem::oilPhaseIdx) > 0.0
+                    && fs.saturation(FluidSystem::gasPhaseIdx) > 0.0) {
+                    ++zmf_oil_and_gas_cells;
+                }
+            }
+        }
 
         // A failing flash on one rank must not leave the others in the reduction below.
         const auto& comm = this->simulator().vanguard().grid().comm();
@@ -664,10 +676,6 @@ protected:
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
-            }
-            if (zmf_initialization_ && fs.saturation(FluidSystem::oilPhaseIdx) > 0.0
-                && fs.saturation(FluidSystem::gasPhaseIdx) > 0.0) {
-                ++zmf_oil_and_gas_cells;
             }
 
             typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
