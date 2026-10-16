@@ -383,7 +383,7 @@ assembleICDPressureEq(const int seg,
        (segment.segmentType() == Segment::SegmentType::VALVE) &&
        (segment.valve().status() == Opm::ICDStatus::SHUT) ) { // we use a zero rate equation to handle SHUT valve
         MultisegmentWellAssemble(baseif_).
-            assembleTrivialEq(seg, this->primary_variables_.eval(seg)[WQTotal].value(), linSys_);
+            assembleTrivialEq(seg, this->primary_variables_.eval(seg)[WQTotal], linSys_);
 
         auto& ws = well_state.well(baseif_.indexOfWell());
         ws.segments.pressure_drop_friction[seg] = 0.;
