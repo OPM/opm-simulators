@@ -502,9 +502,9 @@ void FlowGenericVanguard::registerParameters_()
         ("Merge the cells that MINPV removes into the cell below, instead of collapsing them and connecting the cells "
          "above and below (only for PolyhedralGrid).");
     Parameters::Register<Parameters::LgrBackend>
-        ("How LGRs are refined: 'trilinear' (default) or 'conforming', the "
-         "corner-point builder that also handles graded boxes, block MINPV "
-         "and faults.");
+        ("How LGRs are refined: 'conforming' (default), the corner-point "
+         "builder that also handles graded boxes, block MINPV and faults, "
+         "or 'trilinear'.");
     Parameters::Register<Parameters::RefineBeforeRedistribute>
         ("With --lgr-backend=conforming: refine the grid before load "
          "balancing and distribute the refined cells, balanced by refined "
