@@ -1008,6 +1008,10 @@ shareGasLiftLimit_(const Group& limit_group,
     Scalar sum_weight = 0.0;
     std::size_t num_groups = 0;
     for (const auto& [name, slave_name] : rescoup_master.getMasterGroupToSlaveNameMap()) {
+        if (!rescoup_master.hasSlaveGroupProductionData(name)) {
+            // The slave has no slave groups (history mode), so there is nothing to share with it
+            continue;
+        }
         const auto factor = this->efficiencyFactorToAncestor_(name, limit_group.name());
         if (!factor.has_value()) {
             continue;

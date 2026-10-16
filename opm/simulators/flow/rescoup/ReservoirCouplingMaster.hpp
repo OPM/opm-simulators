@@ -143,6 +143,10 @@ public:
 
     Scalar getMasterGroupRate(
         const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind) const;
+    /// @brief Whether the slave of a master group has sent production data
+    bool hasSlaveGroupProductionData(const std::string &group_name) const {
+        return this->report_step_data_->hasSlaveGroupProductionData(group_name);
+    }
     /// @brief Lift gas rate of the slave group of a master group, as last received from the slave
     Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const {
         return this->report_step_data_->getMasterGroupGasLiftRate(group_name, network);

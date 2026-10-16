@@ -151,13 +151,19 @@ public:
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
+    /// @brief Whether the slave of a master group has sent production data, which a slave
+    ///   with no slave groups (history mode) has not.
+    bool hasSlaveGroupProductionData(const std::string &group_name) const;
+
     /// @brief Get the lift gas rate of the slave group of a master group
     /// @param group_name Name of the master group
     /// @param network If true, the rate with network efficiency factors (GEFAC/WEFAC item 3)
-    /// @return Lift gas rate (ALQ) of the slave group's producers
+    /// @return Lift gas rate (ALQ) of the slave group's producers, 0 if the slave has sent no
+    ///   production data
     Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const;
 
-    /// @brief How much more lift gas the slave group of a master group can take
+    /// @brief How much more lift gas the slave group of a master group can take, 0 if the
+    ///   slave has sent no production data
     Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const;
 
     /// @brief Get the number of a slave group's injectors under group control for a phase
@@ -364,6 +370,11 @@ public:
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
 private:
+    /// @brief The production data of the slave group of a master group; nullptr if the slave has
+    ///   sent none.  Throws for a name that is not a master group.
+    const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+    slaveGroupProductionDataOrNull_(const std::string &group_name) const;
+
     /// Flow rates of a master group used for the flow-change time step limit
     struct GroupFlows {
         Scalar production_reservoir{};

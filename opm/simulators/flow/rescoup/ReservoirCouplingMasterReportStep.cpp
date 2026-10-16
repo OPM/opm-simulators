@@ -104,11 +104,21 @@ getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCo
 }
 
 template <class Scalar>
-Scalar
+bool
 ReservoirCouplingMasterReportStep<Scalar>::
-getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
+hasSlaveGroupProductionData(const std::string &group_name) const
 {
-    auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    return it != this->getMasterGroupToSlaveNameMap().end()
+        && this->slave_group_production_data_.count(it->second) > 0;
+}
+
+template <class Scalar>
+const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+ReservoirCouplingMasterReportStep<Scalar>::
+slaveGroupProductionDataOrNull_(const std::string &group_name) const
+{
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
     if (it == this->getMasterGroupToSlaveNameMap().end()) {
         RCOUP_LOG_THROW(
             std::runtime_error,
@@ -119,9 +129,24 @@ getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
         );
     }
     const auto& slave_name = it->second;
-    const auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, group_name);
-    const auto& data = this->slave_group_production_data_.at(slave_name)[group_idx];
-    return network ? data.network_gas_lift_rate : data.gas_lift_rate;
+    const auto data_it = this->slave_group_production_data_.find(slave_name);
+    if (data_it == this->slave_group_production_data_.end()) {
+        // The slave has sent no production data, e.g. it has no slave groups yet
+        return nullptr;
+    }
+    return &data_it->second[this->getMasterGroupCanonicalIdx(slave_name, group_name)];
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
+{
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    if (data == nullptr) {
+        return 0.0;
+    }
+    return network ? data->network_gas_lift_rate : data->gas_lift_rate;
 }
 
 template <class Scalar>
@@ -176,9 +201,8 @@ Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupGasLiftHeadroom(const std::string &group_name) const
 {
-    const auto& slave_name = this->getMasterGroupToSlaveNameMap().at(group_name);
-    const auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, group_name);
-    return this->slave_group_production_data_.at(slave_name)[group_idx].gas_lift_headroom;
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    return (data == nullptr) ? Scalar{0} : data->gas_lift_headroom;
 }
 
 template <class Scalar>
