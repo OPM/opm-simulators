@@ -897,6 +897,31 @@ if(MPI_FOUND)
     POST_COMMAND
       "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
   )
+
+  # With successive substitution forced, the flash fails only on the rank that
+  # owns cell 1. Both ranks must then stop with the normalization error instead
+  # of hanging.
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_flash_failure_parallel
+    FILENAME
+      EXPLICIT_SWAT_NEAR_DEW_POINT
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    PROCS
+      2
+    TEST_ARGS
+      --normalize-explicit-swat=true
+      --flash-two-phase-method=ssi
+  )
+  set_tests_properties(
+    runSimulator/comp_explicit_swat_flash_failure_parallel
+    PROPERTIES
+      PASS_REGULAR_EXPRESSION "FlowProblemComp::normalizeExplicitSwat_\\(\\) failed"
+      TIMEOUT 60
+  )
 endif()
 
 add_test_runSimulator(

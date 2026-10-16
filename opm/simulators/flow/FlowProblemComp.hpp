@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/grid/LookUpData.hh>
 
@@ -655,6 +656,9 @@ protected:
             = ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
         int zmf_oil_and_gas_cells = 0;
 
+        // A failing flash on one rank must not leave the others in the reduction below.
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto& fs : initialFluidStates_) {
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
@@ -723,8 +727,8 @@ protected:
                                  fs.saturation(FluidSystem::oilPhaseIdx) * hc_scale);
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("FlowProblemComp::normalizeExplicitSwat_() failed: ", comm);
 
-        const auto& comm = this->simulator().vanguard().grid().comm();
         zmf_oil_and_gas_cells = comm.sum(zmf_oil_and_gas_cells);
         if (zmf_oil_and_gas_cells > 0 && comm.rank() == 0) {
             OpmLog::warning(fmt::format("ZMF is given with both SGAS and SOIL in {} cells; both "
