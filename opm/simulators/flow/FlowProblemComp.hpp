@@ -106,11 +106,15 @@ public:
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
 
-    Opm::CompositionalConfig::EOSType getEosType() const
+    //! The zero-based reservoir EOS region of a cell.
+    std::size_t eosRegionIndex(const unsigned globalDofIdx) const
+    { return eosnum_.empty() ? 0 : eosnum_[globalDofIdx]; }
+
+    //! The equation of state of a cell's reservoir EOS region.
+    Opm::CompositionalConfig::EOSType getEosType(const unsigned globalDofIdx) const
     {
-        auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-        return eclState.compositionalConfig().eosType(0);
+        const auto& eclState = this->simulator().vanguard().eclState();
+        return eclState.compositionalConfig().eosType(eosRegionIndex(globalDofIdx));
     }
 
     /*!
@@ -146,6 +150,7 @@ public:
             throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
                                      "by compositional modeling yet");
         }
+        this->updateNum("EOSNUM", eosnum_, eclState.getTableManager().getTabdims().getNumEosRes());
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -286,6 +291,7 @@ public:
     void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const typename FluidSystem::ScopedEosRegion eosRegion{eosRegionIndex(globalDofIdx)};
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
@@ -308,7 +314,7 @@ public:
             }
 
             {
-                const auto& eos_type = getEosType();
+                const auto& eos_type = getEosType(globalDofIdx);
                 typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
@@ -434,7 +440,7 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
-            getEosType(),
+            eosnum_,
             vanguard.cellCenterDepths(),
             eqlnum,
             vanguard.gridView().comm(),
@@ -639,6 +645,8 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+    // Zero-based reservoir EOS region of each cell, empty for a single region.
+    std::vector<int> eosnum_;
 
     bool zmf_initialization_ {false};
 

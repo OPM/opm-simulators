@@ -52,6 +52,8 @@ struct TestFluidSystem
     static double criticalTemperature(unsigned) { return 300.0; }
     static double criticalPressure(unsigned) { return 1.0e6; }
 
+    struct ScopedEosRegion { explicit ScopedEosRegion(std::size_t) {} };
+
     template<class Eval>
     struct ParameterCache {
         explicit ParameterCache(int) {}
@@ -170,7 +172,8 @@ struct TestProblem
 {
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return 300.0; }
-    int getEosType() const { return 0; }
+    int getEosType(unsigned) const { return 0; }
+    std::size_t eosRegionIndex(unsigned) const { return 0; }
     template<class Context>
     TestMaterialLaw::Params materialLawParams(const Context&, unsigned, unsigned) const { return {}; }
     template<class Context>
