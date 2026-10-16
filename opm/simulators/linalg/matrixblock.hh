@@ -316,6 +316,23 @@ public:
         : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
     {}
 };
+
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+template <typename T, typename I, typename A, int n, int m>
+class UMFPack<Experimental::BCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A> >
+    : public UMFPack<Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A> >
+{
+    using Base = UMFPack<Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A> >;
+    using Matrix = Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A>;
+
+public:
+    using RealMatrix = Experimental::BCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A>;
+
+    UMFPack(const RealMatrix& matrix, int verbose, bool)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
+    {}
+};
+#endif
 #endif
 
 #if HAVE_SUPERLU
@@ -336,6 +353,23 @@ public:
         : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)
     {}
 };
+
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+template <typename T, typename I, typename A, int n, int m>
+class SuperLU<Experimental::BCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A> >
+    : public SuperLU<Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A> >
+{
+    using Base = SuperLU<Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A> >;
+    using Matrix = Experimental::BCRSMatrix<FieldMatrix<T, n, m>, I, A>;
+
+public:
+    using RealMatrix = Experimental::BCRSMatrix<Opm::MatrixBlock<T, n, m>, I, A>;
+
+    SuperLU(const RealMatrix& matrix, int verb, bool reuse=true)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)
+    {}
+};
+#endif
 #endif
 
 template<typename T, int n, int m>

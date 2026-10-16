@@ -30,9 +30,9 @@
 
 #include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
 using namespace Opm::gpuistl;
@@ -45,7 +45,7 @@ BOOST_FIXTURE_TEST_CASE(TestTypeTraits, HypreTestFixture)
 {
     BOOST_CHECK(!is_gpu_type<std::vector<double>>::value);
 
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
     BOOST_CHECK(!is_gpu_type<Matrix>::value);
     BOOST_CHECK(!is_gpu_type<Vector>::value);
@@ -65,7 +65,7 @@ BOOST_FIXTURE_TEST_CASE(TestVectorTransfer_CpuInputCpuBackend, HypreTestFixture)
 
 BOOST_FIXTURE_TEST_CASE(TestMatrixTransfer_CpuInputCpuBackend, HypreTestFixture)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<double, 1, 1>>;
     testMatrixTransfer<Matrix>(false);
 }
 

@@ -23,8 +23,9 @@
 #ifndef OPM_WELLHELPERS_HEADER_INCLUDED
 #define OPM_WELLHELPERS_HEADER_INCLUDED
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/dynmatrix.hh>
+
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <cstdint>
 
@@ -53,7 +54,7 @@ class ParallelStandardWellB
 {
 public:
     using Block = Dune::DynamicMatrix<Scalar>;
-    using Matrix = Dune::BCRSMatrix<Block>;
+    using Matrix = BlockSparseMatrix<Block>;
 
     ParallelStandardWellB(const Matrix& B,
                           const ParallelWellInfo<Scalar>& parallel_well_info);

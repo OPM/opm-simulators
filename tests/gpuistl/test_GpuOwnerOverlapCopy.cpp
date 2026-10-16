@@ -23,7 +23,6 @@
 
 #include <boost/test/unit_test.hpp>
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <memory>
 #include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>

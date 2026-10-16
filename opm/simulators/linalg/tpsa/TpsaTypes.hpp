@@ -22,10 +22,10 @@
 #define OPM_TPSA_TYPES_HPP
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/indices.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/multitypeblockvector.hh>
 
@@ -49,25 +49,25 @@ inline constexpr int numTpsaEq = 3 * numDispDofs + numRotDofs + numSolidPresDofs
 //
 // Diagonal blocks
 template <typename Scalar>
-using DispDispMatrix00T = Dune::BCRSMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
+using DispDispMatrix00T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
 template <typename Scalar>
-using DispDispMatrix11T = Dune::BCRSMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
+using DispDispMatrix11T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
 template <typename Scalar>
-using DispDispMatrix22T = Dune::BCRSMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
+using DispDispMatrix22T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numDispDofs, numDispDofs>>;
 template <typename Scalar>
-using RotRotMatrixT = Dune::BCRSMatrix<MatrixBlock<Scalar, numRotDofs, numRotDofs>>;
+using RotRotMatrixT = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numRotDofs, numRotDofs>>;
 template <typename Scalar>
-using SPresSPresMatrixT = Dune::BCRSMatrix<MatrixBlock<Scalar, numSolidPresDofs, numSolidPresDofs>>;
+using SPresSPresMatrixT = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numSolidPresDofs, numSolidPresDofs>>;
 
 // Displacement-rotation and displacement-solid pressure
 template <typename Scalar>
-using DispRotMatrix0T = Dune::BCRSMatrix<MatrixBlock<Scalar, numDispDofs, numRotDofs>>;
+using DispRotMatrix0T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numDispDofs, numRotDofs>>;
 template <typename Scalar>
 using DispRotMatrix1T = DispRotMatrix0T<Scalar>;
 template <typename Scalar>
 using DispRotMatrix2T = DispRotMatrix0T<Scalar>;
 template <typename Scalar>
-using DispSPresMatrix0T = Dune::BCRSMatrix<MatrixBlock<Scalar, numDispDofs, numSolidPresDofs>>;
+using DispSPresMatrix0T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numDispDofs, numSolidPresDofs>>;
 template <typename Scalar>
 using DispSPresMatrix1T = DispSPresMatrix0T<Scalar>;
 template <typename Scalar>
@@ -75,23 +75,23 @@ using DispSPresMatrix2T = DispSPresMatrix0T<Scalar>;
 
 // Rotation-displacement and rotation-solid pressure
 template <typename Scalar>
-using RotDispMatrix0T = Dune::BCRSMatrix<MatrixBlock<Scalar, numRotDofs, numDispDofs>>;
+using RotDispMatrix0T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numRotDofs, numDispDofs>>;
 template <typename Scalar>
 using RotDispMatrix1T = RotDispMatrix0T<Scalar>;
 template <typename Scalar>
 using RotDispMatrix2T = RotDispMatrix0T<Scalar>;
 template <typename Scalar>
-using RotSPresMatrixT = Dune::BCRSMatrix<MatrixBlock<Scalar, numRotDofs, numSolidPresDofs>>;
+using RotSPresMatrixT = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numRotDofs, numSolidPresDofs>>;
 
 // Solid pressure-displacement and solid pressure-rotation
 template <typename Scalar>
-using SPresDispMatrix0T = Dune::BCRSMatrix<MatrixBlock<Scalar, numSolidPresDofs, numDispDofs>>;
+using SPresDispMatrix0T = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numSolidPresDofs, numDispDofs>>;
 template <typename Scalar>
 using SPresDispMatrix1T = SPresDispMatrix0T<Scalar>;
 template <typename Scalar>
 using SPresDispMatrix2T = SPresDispMatrix0T<Scalar>;
 template <typename Scalar>
-using SPresRotMatrixT = Dune::BCRSMatrix<MatrixBlock<Scalar, numSolidPresDofs, numRotDofs>>;
+using SPresRotMatrixT = Opm::BlockSparseMatrix<MatrixBlock<Scalar, numSolidPresDofs, numRotDofs>>;
 
 //
 // Sub-vector types

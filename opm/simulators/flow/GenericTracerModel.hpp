@@ -28,14 +28,13 @@
 #ifndef OPM_GENERIC_TRACER_MODEL_HPP
 #define OPM_GENERIC_TRACER_MODEL_HPP
 
-#include <dune/istl/bcrsmatrix.hh>
-
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 
 #include <opm/models/blackoil/blackoilmodel.hh>
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 
@@ -56,7 +55,7 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 class GenericTracerModel {
 public:
     using TracerVectorSingle = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
-    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 2, 2>>;
+    using TracerMatrix = BlockSparseMatrix<Opm::MatrixBlock<Scalar, 2, 2>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar, 2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;

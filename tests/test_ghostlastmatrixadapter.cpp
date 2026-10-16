@@ -23,6 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 
@@ -32,7 +33,6 @@
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/common/parallel/communication.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
 
@@ -265,7 +265,7 @@ int main(int argc, char** argv)
 
     constexpr int BS=2, N=100;
     using MatrixBlock = Dune::FieldMatrix<double,BS,BS>;
-    using BCRSMat = Dune::BCRSMatrix<MatrixBlock>;
+    using BCRSMat = Opm::BlockSparseMatrix<MatrixBlock>;
     using VectorBlock = Dune::FieldVector<double,BS>;
     using Vector = Dune::BlockVector<VectorBlock>;
     using Communication = Dune::OwnerOverlapCopyCommunication<int>;

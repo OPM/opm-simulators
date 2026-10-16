@@ -22,6 +22,7 @@
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/wells/StandardWellConnections.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
@@ -78,9 +79,9 @@ public:
 
     static constexpr int numResDofs = Indices::numEq;
     static constexpr int numWellDofs = numResDofs + 1;// NB will fail for for thermal for now
-    using BMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
-    using CMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
-    using DMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+    using BMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+    using CMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+    using DMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
     using WVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 
     void addBCDMatrix(std::vector<BMatrix>& b_matrices,
