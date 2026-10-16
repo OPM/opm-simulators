@@ -321,7 +321,7 @@ protected:
             // Testing the grid *type* is not enough: not every CpGrid backend
             // has this query, so test for the member itself.
             bool refinedFlatLeaf = false;
-            if constexpr (requires { this->gridView().grid().leafHasParentCellIndices(); }) {
+            if constexpr (requires (const Grid& g) { g.leafHasParentCellIndices(); }) {
                 refinedFlatLeaf = this->gridView().grid().leafHasParentCellIndices();
             }
             bool useEclipse = !isCpGrid ||
