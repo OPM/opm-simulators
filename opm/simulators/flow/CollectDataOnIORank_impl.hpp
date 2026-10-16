@@ -924,6 +924,22 @@ public:
     }
 };
 
+// Key of a cell in the index maps: its Cartesian index, or its global id in a
+// CpGrid with LGRs, where a refined cell shares its origin's Cartesian index.
+template <class G, class Element>
+int indexMapKey(const G& grid, const Element& elem, const int cartIdx, const bool useGlobalId)
+{
+    if constexpr (std::is_same_v<G, Dune::CpGrid>) {
+        if (useGlobalId) {
+            // A global id is the cell's level index plus the entity counts of
+            // the levels before it, so it fits in int as those counts do.
+            return static_cast<int>(grid.globalIdSet().id(elem));
+        }
+    }
+
+    return cartIdx;
+}
+
 template <class Grid, class EquilGrid, class GridView>
 CollectDataOnIORank<Grid,EquilGrid,GridView>::
 CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
@@ -937,11 +953,16 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             fipRegionsInterregFlow.end()
         }))
 {
-    // Build index maps only when reordering is needed; skip in parallel runs for CpGrid with LGRs
-    if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
+    // index maps only have to be built when reordering is needed
+    if (!needsReordering && !isParallel())
         return;
 
     const CollectiveCommunication& comm = grid.comm();
+
+    // Runs with LGRs key cells by global id.  They do not restart, so they
+    // skip the level-0 restart map localIdxToGlobalIdx_.
+    const bool useGlobalId = std::is_same_v<Grid, Dune::CpGrid> && (grid.maxLevel() > 0);
+    const bool buildRestartMap = !useGlobalId;
 
     {
         std::set<int> send, recv;
@@ -959,7 +980,9 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
         }
 
         std::ranges::sort(sortedCartesianIdx_);
-        localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
+        if (buildRestartMap) {
+            localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
+        }
 
         // the I/O rank receives from all other ranks
         if (isIORank()) {
@@ -975,15 +998,17 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
 
            // Scatter the global index to local index for lookup during restart
            if constexpr (isSameGrid) {
-             ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
-             grid.scatterData(handle);
+             if (buildRestartMap) {
+               ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
+               grid.scatterData(handle);
+             }
            }
 
-            // loop over all elements (global grid) and store Cartesian index
+            // loop over all elements (global grid) and store the index map key
             for (const auto& elem : elements(equilGrid->leafGridView())) {
                 int elemIdx = equilElemMapper.index(elem);
                 int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx);
-                globalCartesianIndex_[elemIdx] = cartElemIdx;
+                globalCartesianIndex_[elemIdx] = indexMapKey(*equilGrid, elem, cartElemIdx, useGlobalId);
             }
 
             for (int i = 0; i < comm.size(); ++i) {
@@ -1000,16 +1025,20 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             // This is a bit hacky since the type differs from the iorank.
             // But should work since we only receive, i.e. use the second parameter.
             if constexpr (isSameGrid) {
-              ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
-              grid.scatterData(handle);
+              if (buildRestartMap) {
+                ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
+                grid.scatterData(handle);
+              }
             }
         }
 
         // Sync the global element indices
         if constexpr (isSameGrid) {
-          ElementIndexHandle<ElementMapper> handle(elemMapper, localIdxToGlobalIdx_);
-          grid.communicate(handle, Dune::InteriorBorder_All_Interface,
-                           Dune::ForwardCommunication);
+          if (buildRestartMap) {
+            ElementIndexHandle<ElementMapper> handle(elemMapper, localIdxToGlobalIdx_);
+            grid.communicate(handle, Dune::InteriorBorder_All_Interface,
+                             Dune::ForwardCommunication);
+          }
         }
 
         localIndexMap_.clear();
@@ -1023,7 +1052,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
         // A mapping for the whole grid (including the ghosts) is needed for restarts
         for (const auto& elem : elements(localGridView, Dune::Partitions::interior)) {
             int elemIdx = elemMapper.index(elem);
-            distributedCartesianIndex[elemIdx] = cartMapper.cartesianIndex(elemIdx);
+            distributedCartesianIndex[elemIdx] = indexMapKey(grid, elem, cartMapper.cartesianIndex(elemIdx), useGlobalId);
 
             // only store interior element for collection
             assert(elem.partitionType() == Dune::InteriorEntity);
