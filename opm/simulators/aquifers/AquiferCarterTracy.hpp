@@ -142,8 +142,7 @@ protected:
     AquiferCT::AQUCT_data aquct_data_;
 
     Scalar beta_; // Influx constant
-    // TODO: it is possible it should be a AD variable
-    Scalar fluxValue_{0}; // value of flux
+    Scalar fluxValue_{0}; // cumulative influx W (previous step)
 
     Scalar dimensionless_time_{0};
     Scalar dimensionless_pressure_{0};
@@ -157,19 +156,20 @@ protected:
     std::pair<Scalar, Scalar>
     getInfluenceTableValues(const Scalar td_plus_dt)
     {
-        // We use the opm-common numeric linear interpolator
         this->dimensionless_pressure_ =
-            linearInterpolation(this->aquct_data_.dimensionless_time,
+            linearInterpolationNoExtrapolation(this->aquct_data_.dimensionless_time,
                                 this->aquct_data_.dimensionless_pressure,
                                 this->dimensionless_time_);
 
         const auto PItd =
-            linearInterpolation(this->aquct_data_.dimensionless_time,
+            linearInterpolationNoExtrapolation(this->aquct_data_.dimensionless_time,
                                 this->aquct_data_.dimensionless_pressure,
                                 td_plus_dt);
-
-        const auto PItdprime =
-            linearInterpolationDerivative(this->aquct_data_.dimensionless_time,
+        // Fix PItd at td_max; set PItd' to zero for td_plus_dt >= td_max.
+        const Scalar td_max = this->aquct_data_.dimensionless_time.back();
+        const auto PItdprime = td_plus_dt >= td_max
+            ? Scalar{0}
+            : linearInterpolationDerivative(this->aquct_data_.dimensionless_time,
                                           this->aquct_data_.dimensionless_pressure,
                                           td_plus_dt);
 
