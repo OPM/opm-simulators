@@ -10,9 +10,12 @@ add_test(NAME
 )
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set(modifications
-      "PYTHONPATH=path_list_append:${opm-common_DIR}/python"
-      "PYTHONPATH=path_list_append:${CMAKE_CURRENT_BINARY_DIR}/python"
+  set(modifications)
+  if(opm-common_PYTHON_BUILD_DIR)
+    list(APPEND modifications "PYTHONPATH=path_list_append:${opm-common_PYTHON_BUILD_DIR}")
+  endif()
+  list(APPEND modifications
+      "PYTHONPATH=path_list_append:${OPM_SIMULATORS_PYTHON_BUILD_DIR}"
       "FLOW_BINARY=set:$<TARGET_FILE:flow>"
   )
   set_tests_properties(HybridNewton PROPERTIES
