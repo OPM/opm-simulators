@@ -395,7 +395,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // column enters here; the pressure stage is then the same matrix as for an
     // unscaled run. The row-sum diagonal below comes from B and is physical
     // already; the one contracted from D is not.
-    static const Scalar bhp_scale =
+    const Scalar bhp_scale =
         Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
 
     if (!well.isPressureControlled(well_state)) {

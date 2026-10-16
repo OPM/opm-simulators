@@ -90,9 +90,7 @@ public:
     using BVectorWell = typename StandardWellEquations<Scalar, IndexTraits, Indices::numEq>::BVectorWell;
 
     //! \brief Constructor initializes reference to well interface.
-    explicit StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
-        : well_(well)
-    {}
+    explicit StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well);
 
     //! \brief Resize values and evaluations.
     void resize(const int numWellEq);
@@ -155,7 +153,7 @@ public:
 
 private:
     //! \brief Scaling of well primary variable \p eqIdx, 1.0 unless configured.
-    static Scalar varScale(const int eqIdx);
+    Scalar varScale(const int eqIdx) const;
 
     //! \brief The physical increment for \p eqIdx from a solver-space update.
     //! \details The only place solver-space quantities enter this class, see the
@@ -197,6 +195,9 @@ private:
     std::vector<EvalWell> evaluation_;
 
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
+
+    Scalar rate_scale_; //!< Read per well so Parameters::reset() takes effect
+    Scalar bhp_scale_;
 
     //! \brief Total number of the well equations and primary variables.
     //! \details There might be extra equations be used, numWellEq will be updated during the initialization

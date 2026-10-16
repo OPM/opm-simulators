@@ -56,16 +56,22 @@ resize(const int numSegments)
 }
 
 template<class FluidSystem, class Indices>
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    : well_(well)
+    , rate_scale_(Parameters::Get<Parameters::WellRateScaling<Scalar>>())
+    , pressure_scale_(Parameters::Get<Parameters::WellBhpScaling<Scalar>>())
+{}
+
+template<class FluidSystem, class Indices>
 typename FluidSystem::Scalar
-MultisegmentWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx)
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx) const
 {
     if (eqIdx == WQTotal) {
-        static const Scalar s = Parameters::Get<Parameters::WellRateScaling<Scalar>>();
-        return s;
+        return rate_scale_;
     }
     if (eqIdx == SPres) {
-        static const Scalar s = Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
-        return s;
+        return pressure_scale_;
     }
     return Scalar{1}; // fractions and temperature stay unscaled
 }

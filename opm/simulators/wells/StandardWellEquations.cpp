@@ -309,7 +309,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // The coarse well unknown stays the physical bhp. C and D differentiate
     // w.r.t. the scaled one, so divide the factor out as those columns enter
     // here; the pressure stage is then the same matrix as for an unscaled run.
-    static const Scalar bhp_scale =
+    const Scalar bhp_scale =
         Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
 
     // Add the well contributions in cpr

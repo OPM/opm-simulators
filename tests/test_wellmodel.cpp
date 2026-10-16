@@ -298,8 +298,8 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariableScaling) {
     // The scaling must appear in the derivative only: the stored value and the
-    // Evaluation's value stay physical. Set the parameters before the first
-    // varScale() call - the scales are cached statically.
+    // Evaluation's value stay physical. Each well reads the scales when it is
+    // constructed.
     Opm::Parameters::SetDefault<Opm::Parameters::WellBhpScaling<double>>(8388608.0); // 2^23
     Opm::Parameters::SetDefault<Opm::Parameters::WellRateScaling<double>>(0.25);   // 2^-2
 

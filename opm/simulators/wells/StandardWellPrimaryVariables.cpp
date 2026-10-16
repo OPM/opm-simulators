@@ -101,20 +101,26 @@ Scalar relaxationFactorFraction(const Scalar old_value,
 namespace Opm {
 
 template<class FluidSystem, class Indices>
+StandardWellPrimaryVariables<FluidSystem,Indices>::
+StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    : well_(well)
+    , rate_scale_(Parameters::Get<Parameters::WellRateScaling<Scalar>>())
+    , bhp_scale_(Parameters::Get<Parameters::WellBhpScaling<Scalar>>())
+{}
+
+template<class FluidSystem, class Indices>
 typename FluidSystem::Scalar
-StandardWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx)
+StandardWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx) const
 {
     // A per-well scale derived from the current bhp was tried and rejected: it
     // improves the median conditioning of D but is ~8x worse in the tail
     // (stopped and zero-rate wells are not scaled by their bhp magnitude), and
     // the tail is what the scaling exists for.
     if (eqIdx == WQTotal) {
-        static const Scalar s = Parameters::Get<Parameters::WellRateScaling<Scalar>>();
-        return s;
+        return rate_scale_;
     }
     if (eqIdx == Bhp) {
-        static const Scalar s = Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
-        return s;
+        return bhp_scale_;
     }
     return Scalar{1}; // the fractions are dimensionless
 }
