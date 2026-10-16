@@ -201,6 +201,14 @@ public:
                                          std::vector<Scalar>& well_flux,
                                          DeferredLogger& deferred_logger) const = 0;
 
+    //! \brief As above, with the segment pressures of a multisegment well taken from the
+    //! given well state instead of the model's well state.
+    virtual void computeWellRatesWithBhp(const Simulator& simulator,
+                                         const WellStateType& well_state,
+                                         const Scalar& bhp,
+                                         std::vector<Scalar>& well_flux,
+                                         DeferredLogger& deferred_logger) const;
+
     virtual std::optional<Scalar>
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const GroupStateHelperType& groupStateHelper,
@@ -556,6 +564,14 @@ protected:
     //! \brief Temperature and salt concentration of the first perforated cell,
     //! broadcast so that all processes of a distributed well get the values.
     FSInfo getFirstPerfCellConditions(const Simulator& simulator) const;
+
+    //! \brief Opens a stopped producer with a thp limit if it can flow within its bhp and
+    //! thp limits, with the well state set to the flowing solution. Returns false, leaving
+    //! the well stopped, otherwise.
+    bool tryOpenProducerWithThpLimit(const Simulator& simulator,
+                                     const GroupStateHelperType& groupStateHelper,
+                                     const Scalar bhp_limit,
+                                     WellStateType& well_state);
 };
 
 } // namespace Opm
