@@ -45,7 +45,9 @@
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <unordered_map>
@@ -363,11 +365,14 @@ protected:
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
 
         const auto num_aqu_cells = this->allAquiferCells();
-        const auto* depthEdits = this->editedCellDepths_(numCells);
+        const auto editedCells = this->cellsWithEditedDepth_();
+        const auto* depthEdits = editedCells.empty()
+            ? nullptr : &this->editedCellDepths_(numCells);
 
         for (const auto& element : elements(this->gridView())) {
             const unsigned int elemIdx = elemMapper.index(element);
-            cellCenterDepth_[elemIdx] = depthEdits != nullptr
+            cellCenterDepth_[elemIdx] =
+                std::ranges::binary_search(editedCells, cartesianIndex(elemIdx))
                 ? (*depthEdits)[elemIdx]
                 : cellCenterDepth(element);
 
@@ -383,25 +388,13 @@ protected:
     }
 
     /*!
-     * \brief Cell depths from a DEPTH assignment in the EDIT section, or nullptr.
+     * \brief Cell depths from a DEPTH assignment in the EDIT section.
      *
      * The DEPTH field property is used rather than EclipseGrid::getCellDepth() because
-     * the input grid is only available on the root process. Whether DEPTH was edited is
-     * likewise only known on the root process, so the flag has to be communicated to
-     * keep all ranks on the same branch.
+     * the input grid is only available on the root process.
      */
-    const std::vector<double>* editedCellDepths_(const int numCells) const
+    const std::vector<double>& editedCellDepths_(const int numCells) const
     {
-        const auto& comm = this->gridView().comm();
-
-        int depthEdited = (comm.rank() == 0)
-            && this->eclState().globalFieldProps().depth_edited();
-        depthEdited = comm.max(depthEdited);
-
-        if (!depthEdited) {
-            return nullptr;
-        }
-
         const auto& depth = this->eclState().fieldProps().get_double("DEPTH");
 
         // The field properties are given on the level zero grid, so they cannot be
@@ -411,7 +404,47 @@ protected:
                                       "supported in combination with LGR");
         }
 
-        return &depth;
+        return depth;
+    }
+
+    /*!
+     * \brief Sorted Cartesian indices of the cells whose DEPTH the EDIT section changed.
+     *
+     * Only these cells take their DEPTH value.  DEPTH starts out as the input grid's
+     * cell depths, which are not the simulation grid's where grid processing moves
+     * corners, e.g. MINPV cells merged into the cell below on an edge-conformal grid.
+     * The root process has the input grid, so it finds the cells and broadcasts them.
+     * Numerical aquifer cells, whose DEPTH is the aquifer depth, are included too.
+     */
+    std::vector<unsigned> cellsWithEditedDepth_() const
+    {
+        const auto& comm = this->gridView().comm();
+
+        std::vector<unsigned> cells;
+        if (comm.rank() == 0) {
+            const auto& fieldProps = this->eclState().globalFieldProps();
+            if (fieldProps.depth_edited()) {
+                const auto& inputGrid = this->eclState().getInputGrid();
+                const auto actnum = fieldProps.actnum();
+                const auto depth = fieldProps.get_global_double("DEPTH");
+                for (std::size_t cartIdx = 0; cartIdx < actnum.size(); ++cartIdx) {
+                    // An unedited DEPTH and the cell centre both average the cell's
+                    // corner depths, so they agree to round-off, far below 1e-6 m.
+                    if ((actnum[cartIdx] != 0) &&
+                        (std::abs(depth[cartIdx] - inputGrid.getCellCenter(cartIdx)[2]) > 1.0e-6))
+                    {
+                        cells.push_back(static_cast<unsigned>(cartIdx));
+                    }
+                }
+            }
+        }
+
+        auto size = cells.size();
+        comm.broadcast(&size, 1, 0);
+        cells.resize(size);
+        comm.broadcast(cells.data(), static_cast<int>(size), 0);
+
+        return cells;
     }
     void updateCellThickness_()
     {
