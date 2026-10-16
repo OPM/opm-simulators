@@ -762,6 +762,37 @@ add_test_runSimulator(
     --enable-vtk-output=true
 )
 
+# Analytic true-IMPES weights in two-phase models (oil-water and gas-water).
+add_test_runSimulator(
+  CASENAME
+    spe1case2_2p_cpr_trueimpesanalytic
+  FILENAME
+    SPE1CASE2_2P
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver=cpr_trueimpesanalytic
+)
+
+add_test_runSimulator(
+  CASENAME
+    spe1case2_gaswater_cpr_trueimpesanalytic
+  FILENAME
+    SPE1CASE2_GASWATER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  DIR
+    spe1
+  TEST_ARGS
+    --linear-solver=cpr_trueimpesanalytic
+)
+
 add_test_runSimulator(
   CASENAME
     spe1case1_carfin_gr
