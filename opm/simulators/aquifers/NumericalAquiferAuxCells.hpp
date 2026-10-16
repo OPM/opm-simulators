@@ -31,6 +31,8 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <opm/simulators/flow/FlowAuxCellModule.hpp>
 
 #include <fmt/format.h>
