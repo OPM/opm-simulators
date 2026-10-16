@@ -19,7 +19,7 @@
 #include <config.h>
 #include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
-#include <opm/simulators/linalg/system/SystemPreconditioner.hpp>
+#include <opm/simulators/linalg/system/SystemPreconditioner_impl.hpp>
 #include <opm/simulators/linalg/system/SystemPreconditionerFactory.hpp>
 
 #define INSTANTIATE_SYSTEM_PF_SEQ(T)                                                                  \

@@ -64,6 +64,16 @@ using WellVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 template<typename Scalar>
 using SystemVector = Dune::MultiTypeBlockVector<ResVector<Scalar>, WellVector<Scalar>>;
 
+// Reservoir operator/comm types used as template arguments.
+template<typename Scalar>
+using SeqResOperator = Dune::MatrixAdapter<RRMatrix<Scalar>, ResVector<Scalar>, ResVector<Scalar>>;
+
+#if HAVE_MPI
+using ParResComm = Dune::OwnerOverlapCopyCommunication<int, int>;
+template<typename Scalar>
+using ParResOperator = Dune::OverlappingSchwarzOperator<RRMatrix<Scalar>, ResVector<Scalar>, ResVector<Scalar>, ParResComm>;
+#endif
+
 // --------------------------------------------------------------------------
 // WellDofLayout: which block rows of the merged well matrices belong to which
 // well, plus the position of the pressure-like unknown inside a well block.
