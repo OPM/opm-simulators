@@ -155,13 +155,15 @@ private:
     void createSolver(const Simulator& simulator, Args&&... args)
     {
         auto linSolverConf = Parameters::Get<Parameters::LinearSolver>();
-        bool useSystemCpr = (linSolverConf == "system_cpr") || (linSolverConf == "system_cprw");
+        bool useSystemCpr = (linSolverConf == "system_cpr") || (linSolverConf == "system_cprw")
+            || (linSolverConf == "general_system_cpr") || (linSolverConf == "general_system_cprw");
         if (!useSystemCpr && linSolverConf.size() > 5
             && linSolverConf.ends_with(".json")
             && std::filesystem::exists(linSolverConf)) {
             try {
                 PropertyTree prm(linSolverConf);
-                useSystemCpr = (prm.get<std::string>("preconditioner.type", "") == "system_cpr");
+                const auto type = prm.get<std::string>("preconditioner.type", "");
+                useSystemCpr = (type == "system_cpr") || (type == "general_system_cpr");
             } catch (...) {}
         }
         if (useSystemCpr) {
