@@ -283,7 +283,7 @@ public:
                              substep,
                              log,
                              forceRestartFieldAllocation,
-                             &problem.materialLawManager()->hysteresisConfig(),
+                             &problem.materialLawManager().hysteresisConfig(),
                              problem.eclWriter().getOutputNnc().front().size());
     }
 
@@ -369,15 +369,15 @@ public:
             const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             typename Extractor::HysteresisParams hysterParams;
-            if (matLawManager->enableHysteresis()) {
+            if (matLawManager.enableHysteresis()) {
                 if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                    matLawManager->oilWaterHysteresisParams(hysterParams.somax,
+                    matLawManager.oilWaterHysteresisParams(hysterParams.somax,
                                                             hysterParams.swmax,
                                                             hysterParams.swmin,
                                                             globalDofIdx);
                 }
                 if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    matLawManager->gasOilHysteresisParams(hysterParams.sgmax,
+                    matLawManager.gasOilHysteresisParams(hysterParams.sgmax,
                                                           hysterParams.shmax,
                                                           hysterParams.somin,
                                                           globalDofIdx);
@@ -720,8 +720,8 @@ public:
         if (!this->soMax_.empty())
             simulator.problem().setMaxOilSaturation(elemIdx, this->soMax_[elemIdx]);
 
-        if (simulator.problem().materialLawManager()->enableHysteresis()) {
-            auto matLawManager = simulator.problem().materialLawManager();
+        if (simulator.problem().materialLawManager().enableHysteresis()) {
+            auto& matLawManager = simulator.problem().materialLawManager();
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)
                 && FluidSystem::phaseIsActive(waterPhaseIdx)) {
@@ -729,22 +729,22 @@ public:
                     Scalar swmax = -2.0;
                     Scalar swmin = 2.0;
 
-                if (matLawManager->enableNonWettingHysteresis()) {
+                if (matLawManager.enableNonWettingHysteresis()) {
                     if (!this->soMax_.empty()) {
                         somax = this->soMax_[elemIdx];
                     }
                 }
-                if (matLawManager->enableWettingHysteresis()) {
+                if (matLawManager.enableWettingHysteresis()) {
                     if (!this->swMax_.empty()) {
                         swmax = this->swMax_[elemIdx];
                     }
                 }
-                if (matLawManager->enablePCHysteresis()) {
+                if (matLawManager.enablePCHysteresis()) {
                     if (!this->swmin_.empty()) {
                         swmin = this->swmin_[elemIdx];
                     }
                 }
-                matLawManager->setOilWaterHysteresisParams(
+                matLawManager.setOilWaterHysteresisParams(
                         somax, swmax, swmin, elemIdx);
             }
             if (FluidSystem::phaseIsActive(oilPhaseIdx)
@@ -753,30 +753,29 @@ public:
                     Scalar shmax = -2.0;
                     Scalar somin = 2.0;
 
-                if (matLawManager->enableNonWettingHysteresis()) {
+                if (matLawManager.enableNonWettingHysteresis()) {
                     if (!this->sgmax_.empty()) {
                         sgmax = this->sgmax_[elemIdx];
                     }
                 }
-                if (matLawManager->enableWettingHysteresis()) {
+                if (matLawManager.enableWettingHysteresis()) {
                     if (!this->shmax_.empty()) {
                         shmax = this->shmax_[elemIdx];
                     }
                 }
-                if (matLawManager->enablePCHysteresis()) {
+                if (matLawManager.enablePCHysteresis()) {
                     if (!this->somin_.empty()) {
                         somin = this->somin_[elemIdx];
                     }
                 }
-                matLawManager->setGasOilHysteresisParams(
+                matLawManager.setGasOilHysteresisParams(
                         sgmax, shmax, somin, elemIdx);
             }
 
         }
 
         if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
-            simulator.problem().materialLawManager()
-                ->applyRestartSwatInit(elemIdx, this->ppcw_[elemIdx]);
+            simulator.problem().materialLawManager().applyRestartSwatInit(elemIdx, this->ppcw_[elemIdx]);
         }
     }
 
@@ -1178,7 +1177,7 @@ private:
                         const double      pv,
                         const IntensiveQuantities& intQuants)
     {
-        const auto& materialLawManager = this->simulator_.problem().materialLawManagerRef();
+        const auto& materialLawManager = this->simulator_.problem().materialLawManager();
         const auto& scaledDrainageInfo = materialLawManager.oilWaterScaledEpsInfoDrainage(globalDofIdx);
 
         const auto& fs = intQuants.fluidState();
@@ -1335,7 +1334,7 @@ private:
         using PhaseEntry = typename Extractor::PhaseEntry;
 
         const bool hasResidual = simulator_.model().linearizer().residual().size() > 0;
-        const auto& hysteresisConfig = simulator_.problem().materialLawManager()->hysteresisConfig();
+        const auto& hysteresisConfig = simulator_.problem().materialLawManager().hysteresisConfig();
 
         auto extractors = std::array{
             Entry{PhaseEntry{&this->saturation_,
@@ -1546,7 +1545,7 @@ private:
                   }
             },
             Entry{ScalarEntry{&this->ppcw_,
-                              [&matLawManager = *this->simulator_.problem().materialLawManager()]
+                              [&matLawManager = this->simulator_.problem().materialLawManager()]
                               (const Context& ectx)
                               {
                                   return matLawManager.
@@ -2839,7 +2838,7 @@ private:
                                 // RegionPhasePoreVolAverage.
 
                                 // Subtract one to convert FIPNUM to region index.
-                                const auto datum = simConfig.datumDepths()(regions["FIPNUM"][ectx.dofIdx] - 1);
+                                const auto datum = simConfig.datumDepths()(std::as_const(regions).at("FIPNUM")[ectx.dofIdx] - 1);
 
                                 // Add one to convert region index to region ID.
                                 const auto region = RegionPhasePoreVolAverage::Region {
@@ -3001,11 +3000,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar strandedGas = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       const Scalar krg = getValue(ectx.intQuants.relativePermeability(gasPhaseIdx));
                                       strandedGas = MaterialLaw::strandedGasSaturation(matParams, sg, krg);
@@ -3025,11 +3023,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar strandedGas = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       const Scalar krg = getValue(ectx.intQuants.relativePermeability(gasPhaseIdx));
                                       strandedGas = MaterialLaw::strandedGasSaturation(matParams, sg, krg);
@@ -3049,10 +3046,9 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   Scalar trappedGas = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       trappedGas = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/true);
                                   }
@@ -3071,10 +3067,9 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   Scalar trappedGas = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       trappedGas = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/true);
                                   }
@@ -3093,11 +3088,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }
@@ -3121,11 +3115,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }
@@ -3149,10 +3142,9 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }
@@ -3172,10 +3164,9 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }
@@ -3195,11 +3186,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }
@@ -3224,11 +3214,10 @@ private:
                               [&model = this->simulator_.model(),
                                &problem = this->simulator_.problem()](const Context& ectx)
                               {
-                                  const auto& scaledDrainageInfo = problem.materialLawManager()
-                                                                   ->oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
+                                  const auto& scaledDrainageInfo = problem.materialLawManager().oilWaterScaledEpsInfoDrainage(ectx.dofIdx);
                                   const Scalar sg = getValue(ectx.fs.saturation(gasPhaseIdx));
                                   Scalar sgcr = scaledDrainageInfo.Sgcr;
-                                  if (problem.materialLawManager()->enableHysteresis()) {
+                                  if (problem.materialLawManager().enableHysteresis()) {
                                       const auto& matParams = problem.materialLawParams(ectx.dofIdx);
                                       sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maxTrapping*/false);
                                   }

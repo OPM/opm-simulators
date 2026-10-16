@@ -911,11 +911,7 @@ public:
      * Note that this method is *not* part of the generic eWoms problem API because it
      * would force all problens use the ECL material laws.
      */
-    std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
-    { return materialLawManager_; }
-
-    // Avoid shared_ptr reference-count traffic in per-cell calculations.
-    const EclMaterialLawManager& materialLawManagerRef() const
+    const EclMaterialLawManager& materialLawManager() const
     { return *materialLawManager_; }
 
     std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
@@ -955,8 +951,8 @@ public:
     /*!
      * \copydoc materialLawManager()
      */
-    std::shared_ptr<EclMaterialLawManager> materialLawManager()
-    { return materialLawManager_; }
+    EclMaterialLawManager& materialLawManager()
+    { return *materialLawManager_; }
 
     using BaseType::pvtRegionIndex;
     /*!

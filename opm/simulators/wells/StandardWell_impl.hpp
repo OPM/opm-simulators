@@ -1962,7 +1962,7 @@ namespace Opm
             const Scalar area = 2 * std::numbers::pi_v<Scalar> * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = simulator.problem().materialLawManager();
             const auto& scaled_drainage_info =
-                        material_law_manager->oilWaterScaledEpsInfoDrainage(cell_idx);
+                        material_law_manager.oilWaterScaledEpsInfoDrainage(cell_idx);
             const Scalar swcr = scaled_drainage_info.Swcr;
             const EvalWell poro = this->extendEval(int_quant.porosity());
             const EvalWell sw = this->extendEval(int_quant.fluidState().saturation(FluidSystem::waterPhaseIdx));
