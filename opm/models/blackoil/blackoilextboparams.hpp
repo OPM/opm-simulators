@@ -34,6 +34,7 @@
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/common/UniformXTabulated2DFunctionBuilder.hpp>
 
 #include <vector>
 
@@ -47,6 +48,7 @@ struct BlackOilExtboParams
 {
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
     using Tabulated2DFunction = UniformXTabulated2DFunction<Scalar>;
+    using Tabulated2DFunctionBuilder = UniformXTabulated2DFunctionBuilder<Scalar>;
 
     template<bool enableExtbo>
     void initFromState(const EclipseState& eclState);
