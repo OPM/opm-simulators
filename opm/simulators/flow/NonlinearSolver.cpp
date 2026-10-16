@@ -146,6 +146,7 @@ NonlinearSolverParameters()
 
     // overload with given parameters
     relaxMax_ = Parameters::Get<Parameters::NewtonMaxRelax<Scalar>>();
+    relaxRecovery_ = Parameters::Get<Parameters::NewtonRelaxRecovery>();
 
     const auto& relaxationTypeString = Parameters::Get<Parameters::NewtonRelaxationType>();
     if (relaxationTypeString == "dampen") {
@@ -167,6 +168,7 @@ reset()
     relaxMax_ = 0.5;
     relaxIncrement_ = 0.1;
     relaxRelTol_ = 0.2;
+    relaxRecovery_ = 0;
 }
 
 template<class Scalar>
@@ -175,6 +177,11 @@ registerParameters()
 {
     Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
         ("The maximum relaxation factor of a Newton iteration");
+    Parameters::Register<Parameters::NewtonRelaxRecovery>
+        ("Number of consecutive Newton iterations with contracting residuals after which "
+         "the relaxation factor is walked back up towards 1. The factor otherwise only "
+         "ever decreases within a substep, so one oscillation early on damps every later "
+         "iteration. 0 (default) keeps the factor latched once reduced");
     Parameters::Register<Parameters::NewtonRelaxationType>
         ("The type of relaxation used by Newton method. Valid options are: dampen or sor");
 }
