@@ -800,7 +800,9 @@ shareUnusedTargetAmongExcludedGroups_(
                     continue;
                 }
                 const auto ancestor = controlling_ancestor(name, mode, /*is_target=*/pc.cmode == mode);
-                if (!ancestor.has_value()) {
+                // A group with an efficiency factor of 0 takes nothing of what the ancestor
+                // has left, and the shares below are divided by the factor.
+                if (!ancestor.has_value() || !(ancestor->second > 0)) {
                     continue;
                 }
                 excluded_by_ancestor[ancestor->first].push_back(
