@@ -27,6 +27,7 @@
 #ifndef OPM_CPGRID_VANGUARD_HPP
 #define OPM_CPGRID_VANGUARD_HPP
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -42,6 +43,8 @@
 #include <stdexcept>
 #include <tuple>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 template <class TypeTag>
@@ -118,14 +121,57 @@ public:
 
     int compressedIndexForInteriorLGR(const std::string& lgr_tag, const Connection& conn) const override
     {
-        const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
-        const auto& lgr_level = this->grid().getLgrNameToLevel().at(lgr_tag);
+        // Every rank registers every requested LGR name, with an empty level
+        // grid on ranks that hold no cell of the box (interior or overlap) --
+        // the level structure is identical on all ranks.  A name that fails to
+        // resolve is therefore a programming error, not a distribution effect,
+        // and must be fatal rather than silently skipped.
+        const auto& nameToLevel = this->grid().getLgrNameToLevel();
+        const auto levelIt = nameToLevel.find(lgr_tag);
+        if (levelIt == nameToLevel.end()) {
+            OPM_THROW(std::logic_error,
+                      fmt::format("Internal error: LGR '{}' is not known to the grid. "
+                                  "The level structure must be identical on all ranks.",
+                                  lgr_tag));
+        }
+        const int lgr_level = levelIt->second;
+
         if (ParentType::lgrMappers_.has_value() == false) {
             ParentType::lgrMappers_.emplace(this->grid().mapLocalCartesianIndexSetsToLeafIndexSet());
         }
+
+        // An out-of-range Cartesian position within the level is likewise a
+        // bug (a COMPDATL record addressing outside its LGR box has already
+        // been validated at parse time), so it is fatal too.
         const auto& lgr_dim = this->grid().currentData()[lgr_level]->logicalCartesianSize();
+        const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
+        if (lgr_ijk[0] < 0 || lgr_ijk[0] >= lgr_dim[0] ||
+            lgr_ijk[1] < 0 || lgr_ijk[1] >= lgr_dim[1] ||
+            lgr_ijk[2] < 0 || lgr_ijk[2] >= lgr_dim[2])
+        {
+            OPM_THROW(std::logic_error,
+                      fmt::format("Internal error: connection ({},{},{}) is outside "
+                                  "LGR '{}' with dimensions {}x{}x{}.",
+                                  lgr_ijk[0], lgr_ijk[1], lgr_ijk[2], lgr_tag,
+                                  lgr_dim[0], lgr_dim[1], lgr_dim[2]));
+        }
         const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
-        return ParentType::lgrMappers_.value()[lgr_level].at(lgr_cartesian_index);
+
+        // A cell that is absent from this rank's level mapper is the one
+        // legitimate miss: the box lives elsewhere and this rank's level grid
+        // is empty (or holds another part of it).  Mirror
+        // compressedIndexForInterior and return -1; the global existence of
+        // every connection cell is checked collectively afterwards
+        // (checkAllConnectionsFound).  Using .at() here threw
+        // std::out_of_range on such ranks -- asymmetrically, which deadlocked
+        // runs at higher rank counts where more ranks hold no part of the box.
+        const auto& mapper = ParentType::lgrMappers_.value()[lgr_level];
+        const auto it = mapper.find(lgr_cartesian_index);
+        if (it == mapper.end()) {
+            return -1;
+        }
+
+        return static_cast<int>(it->second);
     }
     /*!
      * Checking consistency of simulator
