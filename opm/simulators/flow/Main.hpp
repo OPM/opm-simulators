@@ -199,8 +199,6 @@ protected:
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
 
-        handleVersionCmdLine_(argc_, argv_, Opm::moduleVersionName());
-
         // we always want to use the default locale, and thus spare us the trouble
         // with incorrect locale settings.
         resetLocale();
@@ -387,6 +385,15 @@ private:
     // on stdout and exit(0).
     void handleVersionCmdLine_(int argc, char** argv,
                                std::string_view moduleVersionName);
+
+    // Similar to the version command, if the program has been invoked *exactly* as:
+    //
+    //    flow   --build-info
+    //
+    // the call is intercepted by this function which will print what identifies this
+    // build, one "key=value" line each (version, hash, build_time, build_type, mpi;
+    // values may be empty), on stdout and exit(0).
+    void handleBuildInfoCmdLine_(int argc, char** argv);
 
     // This function is a special case, if the program has been invoked
     // with the argument "--test-split-communicator=true" as the FIRST
