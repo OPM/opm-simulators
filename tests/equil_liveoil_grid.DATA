@@ -25,9 +25,15 @@ DZV
 20*5.0
 /
 
-TOPS
-4*0.0
+BOX
+1 1 1 1 1 1
 /
+
+TOPS
+1*0.0
+/
+
+ENDBOX
 
 
 PVTO
