@@ -33,6 +33,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+
 #include <opm/common/utility/TimeService.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
@@ -223,6 +225,29 @@ void FlowGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.eclSummaryConfig_,
                   nullptr, "normal", "normal", "100", false, false, false, {}, /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
+}
+
+void FlowGenericVanguard::validateGridFile(const EclipseGrid& inputGrid,
+                                           const int numCellsFile,
+                                           const std::string& gridFileName)
+{
+    if (!inputGrid.allActive()) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Cannot use unstructured grid file '{}': the Eclipse input grid "
+                              "contains inactive cells ({} active out of {} total). "
+                              "Unstructured grid files require all cells to be active.",
+                              gridFileName,
+                              inputGrid.getNumActive(),
+                              inputGrid.getCartesianSize()));
+    }
+
+    const auto numCellsEcl = static_cast<int>(inputGrid.getNumActive());
+    if (numCellsFile != numCellsEcl) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Cell count mismatch: unstructured grid file '{}' has {} cells, "
+                              "but the Eclipse input grid has {} active cells.",
+                              gridFileName, numCellsFile, numCellsEcl));
+    }
 }
 
 std::string FlowGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -535,8 +560,9 @@ void FlowGenericVanguard::registerParameters_()
         ("Convert plain single-segment wells into multisegment wells so the "
          "wellbore hydrostatic head is handled implicitly. 'none' (default) "
          "or 'per-connection' (one linear tubing, a segment per connection)");
+    Parameters::Register<Parameters::UnstructuredGridFileName>
+        ("Filename for unstructured grid input. If empty, the grid will be constructed from the ECL deck.");
 }
-
 template void FlowGenericVanguard::registerParameters_<double>();
 
 #if FLOW_INSTANTIATE_FLOAT

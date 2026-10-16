@@ -88,13 +88,14 @@ struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
 struct ZoltanPhgEdgeSizeThreshold { static constexpr auto value = 0.35; };
 
 struct ZoltanParams { static constexpr auto value = "graph"; };
-
+struct UnstructuredGridFileName { static constexpr auto* value = ""; };
 } // namespace Opm::Parameters
 
 namespace Opm {
 
 namespace Action { class State; }
 class Deck;
+class EclipseGrid;
 class EclipseState;
 struct NumericalAquiferCell;
 class ParseContext;
@@ -144,6 +145,18 @@ public:
      * (i.e., without the .DATA extension)
      */
     static std::string canonicalDeckPath(const std::string& caseName);
+
+    bool gridFromFile() const
+    {
+        return false;
+    }
+
+    /// Check that a grid loaded from UnstructuredGridFileName is compatible
+    /// with the grid of the input deck (all cells active, same cell count).
+    /// Throws std::runtime_error otherwise.
+    static void validateGridFile(const EclipseGrid& inputGrid,
+                                 int numCellsFile,
+                                 const std::string& gridFileName);
 
     /*!
      * \brief Returns the wall time required to set up the simulator before it was born.

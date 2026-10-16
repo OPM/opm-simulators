@@ -41,6 +41,8 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PropsDataHandle.hpp>
@@ -482,46 +484,89 @@ doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
         OpmLog::info("\nProcessing grid");
     }
 
+    const auto gridFileName = Parameters::Get<Parameters::UnstructuredGridFileName>();
+
     // --- Create grid ---
     OPM_TIMEBLOCK(createGrids);
 
+    std::vector<std::size_t> removed_cells;
+    if (gridFileName.empty()) {
 #if HAVE_MPI
-    this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
+        this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
 #else
-    this->grid_ = std::make_unique<Dune::CpGrid>();
+        this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
 
-    // Note: removed_cells is guaranteed to be empty on ranks other than 0.
-    auto removed_cells = this->grid_
-        ->processEclipseFormat(input_grid,
-                               &eclState,
-                               /* isPeriodic = */ false,
-                               /* flipNormals = */ false,
-                               /* clipZ = */ false,
-                               edge_conformal);
+        // Note: removed_cells is guaranteed to be empty on ranks other than 0.
+        removed_cells = this->grid_
+            ->processEclipseFormat(input_grid,
+                                   &eclState,
+                                   /* isPeriodic = */ false,
+                                   /* flipNormals = */ false,
+                                   /* clipZ = */ false,
+                                   edge_conformal);
 
-    if (isRoot) {
-        const auto& active_porv = eclState.fieldProps().porv(false);
-        const auto& unit_system = eclState.getUnits();
-        const auto& volume_unit = unit_system.name(UnitSystem::measure::volume);
-        double total_pore_volume = unit_system.from_si(UnitSystem::measure::volume,
-                                                       std::accumulate(active_porv.begin(), active_porv.end(), 0.0));
-        OpmLog::info(fmt::format("Total number of active cells: {} / total pore volume: {:0.0f} {}",
-                                 grid_->numCells(), total_pore_volume , volume_unit));
+        if (isRoot) {
+            const auto& active_porv = eclState.fieldProps().porv(false);
+            const auto& unit_system = eclState.getUnits();
+            const auto& volume_unit = unit_system.name(UnitSystem::measure::volume);
+            double total_pore_volume = unit_system.from_si(UnitSystem::measure::volume,
+                                                           std::accumulate(active_porv.begin(), active_porv.end(), 0.0));
+            OpmLog::info(fmt::format("Total number of active cells: {} / total pore volume: {:0.0f} {}",
+                                     grid_->numCells(), total_pore_volume , volume_unit));
 
-        double removed_pore_volume =
-            std::accumulate(removed_cells.begin(), removed_cells.end(), 0.0,
-                            [&active_porv, &eclState](const auto acc, const auto global_index)
-                            { return acc + active_porv[eclState.getInputGrid().activeIndex(global_index)]; });
+            double removed_pore_volume =
+                std::accumulate(removed_cells.begin(), removed_cells.end(), 0.0,
+                                [&active_porv, &eclState](const auto acc, const auto global_index)
+                                { return acc + active_porv[eclState.getInputGrid().activeIndex(global_index)]; });
 
-        if (removed_pore_volume > 0) {
-            removed_pore_volume = unit_system.from_si(UnitSystem::measure::volume, removed_pore_volume);
-            OpmLog::info(fmt::format("Removed {} cells with a pore volume of {:0.0f} "
-                                     "{} ({:5.3f} %) due to MINPV/MINPVV",
-                                     removed_cells.size(),
-                                     removed_pore_volume,
-                                     volume_unit,
-                                     100 * removed_pore_volume / total_pore_volume));
+            if (removed_pore_volume > 0) {
+                removed_pore_volume = unit_system.from_si(UnitSystem::measure::volume, removed_pore_volume);
+                OpmLog::info(fmt::format("Removed {} cells with a pore volume of {:0.0f} "
+                                         "{} ({:5.3f} %) due to MINPV/MINPVV",
+                                         removed_cells.size(),
+                                         removed_pore_volume,
+                                         volume_unit,
+                                         100 * removed_pore_volume / total_pore_volume));
+            }
+        }
+    }
+    else {
+        const bool parallel = FlowGenericVanguard::comm().size() > 1;
+        OpmLog::info(fmt::format("Using unstructured grid from file{}: {}",
+                                 parallel ? " (MPI)" : "", gridFileName));
+#if HAVE_MPI
+        if (parallel) {
+            // Only rank 0 reads the file; the other ranks keep an empty grid
+            // that is filled by the subsequent load balancing.
+            this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
+            this->grid_->readUnstructuredGridFile(gridFileName);
+        }
+        else
+#endif
+        {
+            this->grid_ = std::make_unique<Dune::CpGrid>(gridFileName);
+        }
+
+        // Validate on rank 0 and tell all ranks about a failure, so that the
+        // other ranks do not block in the next collective operation.
+        int validationFailed = 0;
+        std::string validationError;
+        if (isRoot) {
+            try {
+                FlowGenericVanguard::validateGridFile(*input_grid, this->grid_->numCells(), gridFileName);
+            }
+            catch (const std::exception& e) {
+                validationFailed = 1;
+                validationError = e.what();
+            }
+        }
+        FlowGenericVanguard::comm().broadcast(&validationFailed, 1, 0);
+        if (validationFailed) {
+            const std::string message = isRoot
+                ? validationError
+                : std::string("Unstructured grid file validation failed on rank 0.");
+            OPM_THROW(std::runtime_error, message);
         }
     }
 
