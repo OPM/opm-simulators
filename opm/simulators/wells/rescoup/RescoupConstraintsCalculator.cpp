@@ -801,10 +801,12 @@ shareUnusedTargetAmongExcludedGroups_(
         }
         for (auto& [ancestor, members] : excluded_by_ancestor) {
             const Group& top = this->schedule_.getGroup(ancestor, this->report_step_idx_);
-            Scalar unused = this->group_state_helper_.getProductionGroupTargetForMode(top, mode)
+            // How far the ancestor is below its target; negative when it is above it.
+            const Scalar slack = this->group_state_helper_.getProductionGroupTargetForMode(top, mode)
                 - rate_for_mode(ancestor, mode);
             // The room the participating master groups below the ancestor still
             // have up to their own targets or limits is not unused.
+            Scalar room = 0.0;
             for (std::size_t slave_idx = 0; slave_idx < all_production_constraints.size(); ++slave_idx) {
                 const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
                 for (auto& pc : all_production_constraints[slave_idx]) {
@@ -820,9 +822,14 @@ shareUnusedTargetAmongExcludedGroups_(
                     }
                     const auto chain = controlling_ancestor(name, mode, /*is_target=*/pc.cmode == mode);
                     const Scalar efficiency = chain.has_value() ? chain->second : Scalar{1};
-                    unused -= efficiency * std::max(Scalar{0}, *value - rate_for_mode(name, mode));
+                    room += efficiency * std::max(Scalar{0}, *value - rate_for_mode(name, mode));
                 }
             }
+            // An ancestor below its target hands what the participating groups do not
+            // take to the excluded groups, and never takes anything from them: they are
+            // held at their current rates when the participating groups take it all.  Only
+            // an ancestor above its target takes from the excluded groups.
+            const Scalar unused = (slack >= 0) ? std::max(Scalar{0}, slack - room) : slack;
             Scalar weight_sum = 0.0;
             for (const auto& m : members) {
                 weight_sum += (unused >= 0)
