@@ -63,6 +63,7 @@
 #include <numeric>
 #include <set>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -178,6 +179,9 @@ class TpfaLinearizer
 //! \endcond
 
 public:
+    //! Yes: the cell loop covers every DOF, auxiliary connections included.
+    static constexpr bool assemblesAuxiliaryDofEquations = true;
+
     TpfaLinearizer()
     {
         simulatorPtr_ = nullptr;
@@ -515,6 +519,70 @@ private:
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells); // Expect ~6 neighbors per cell
         std::vector<NeighborInfoCPU> loc_nbinfo;
+
+        // The device path does not assemble auxiliary DOFs.
+        if constexpr (runAssemblyOnGpu) {
+            if (model.numAuxiliaryDof() > 0) {
+                throw std::logic_error("Auxiliary degrees of freedom are not supported by the GPU "
+                                       "assembly path; run the assembly on the CPU instead");
+            }
+        }
+
+        std::vector<std::vector<unsigned>> auxNeighbors(numCells);
+        {
+            std::vector<typename BaseAuxiliaryModule<TypeTag>::AuxiliaryConnection> auxConns;
+            const std::size_t numAuxModules = model.numAuxiliaryModules();
+            for (unsigned auxModIdx = 0; auxModIdx < numAuxModules; ++auxModIdx) {
+                model.auxiliaryModule(auxModIdx)->addConnections(auxConns);
+            }
+            // linearize_cell() writes only its own row, so enter both endpoints or mass
+            // is not conserved.
+            for (const auto& conn : auxConns) {
+                if (conn.dof1 >= numCells || conn.dof2 >= numCells || conn.dof1 == conn.dof2) {
+                    throw std::logic_error("Auxiliary module reported an invalid connection ("
+                                           + std::to_string(conn.dof1) + ", "
+                                           + std::to_string(conn.dof2) + ") for a model with "
+                                           + std::to_string(numCells) + " degrees of freedom");
+                }
+                auxNeighbors[conn.dof1].push_back(conn.dof2);
+                auxNeighbors[conn.dof2].push_back(conn.dof1);
+                sparsityPattern[conn.dof1].insert(conn.dof2);
+                sparsityPattern[conn.dof2].insert(conn.dof1);
+            }
+            // diagonal even for an unconnected auxiliary DOF
+            for (unsigned dofIdx = model.numGridDof(); dofIdx < numCells; ++dofIdx) {
+                sparsityPattern[dofIdx].insert(dofIdx);
+            }
+        }
+
+        // No geometric face: unit area, no direction.
+        const auto makeAuxNeighborInfo = [this, gravity](unsigned myIdx, unsigned neighborIdx) {
+            ResidualNBInfo nbinfo{problem_().transmissibility(myIdx, neighborIdx),
+                                  1.0,
+                                  problem_().thresholdPressure(myIdx, neighborIdx),
+                                  problem_().thresholdPressure(neighborIdx, myIdx),
+                                  (problem_().dofCenterDepth(myIdx) -
+                                   problem_().dofCenterDepth(neighborIdx)) * gravity,
+                                  FaceDir::DirEnum::Unknown,
+                                  problem_().model().dofTotalVolume(myIdx),
+                                  problem_().model().dofTotalVolume(neighborIdx),
+                                  {},
+                                  {},
+                                  {},
+                                  {}};
+            if constexpr (enableFullyImplicitThermal) {
+                nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
+                nbinfo.outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
+            }
+            if constexpr (enableDiffusion) {
+                nbinfo.diffusivity = problem_().diffusivity(myIdx, neighborIdx);
+            }
+            if constexpr (enableDispersion) {
+                nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
+            }
+            return NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
+        };
+
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -565,6 +633,9 @@ private:
                         loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }
+                for (const unsigned auxNeighbor : auxNeighbors[myIdx]) {
+                    loc_nbinfo.push_back(makeAuxNeighborInfo(myIdx, auxNeighbor));
+                }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
                 if (problem_().nonTrivialBoundaryConditions()) {
                     for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
@@ -599,6 +670,23 @@ private:
         const std::size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
+        }
+
+        // Rows are indexed by DOF; the grid loop produced the first numGridDof().
+        for (unsigned auxDofIdx = model.numGridDof(); auxDofIdx < numCells; ++auxDofIdx) {
+            loc_nbinfo.clear();
+            for (const unsigned neighborIdx : auxNeighbors[auxDofIdx]) {
+                loc_nbinfo.push_back(makeAuxNeighborInfo(auxDofIdx, neighborIdx));
+            }
+            neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
+        }
+
+        // SparseTable only asserts; a short table would be an out-of-bounds read.
+        if (static_cast<unsigned>(neighborInfo_.size()) != numCells) {
+            throw std::logic_error("The neighbor info table has " +
+                                   std::to_string(neighborInfo_.size()) +
+                                   " rows but the model has " + std::to_string(numCells) +
+                                   " degrees of freedom");
         }
 
         // allocate raw matrix
@@ -794,7 +882,8 @@ public:
         if (!enableFlows && !enableFlores && blockFlows.empty()) {
             return;
         }
-        const unsigned int numCells = model_().numTotalDof();
+        // flowsInfo_/floresInfo_ are per grid element; aux fluxes are reported elsewhere.
+        const unsigned int numCells = model_().numGridDof();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif

@@ -63,6 +63,13 @@ protected:
     using NeighborSet = std::set<unsigned>;
 
 public:
+    //! \brief A flux connection between two global DOFs, assembled like a grid face.
+    struct AuxiliaryConnection
+    {
+        unsigned dof1{};
+        unsigned dof2{};
+    };
+
     virtual ~BaseAuxiliaryModule() = default;
 
     /*!
@@ -82,8 +89,17 @@ public:
      * \brief Return the offset in the global system of equations for the first degree of
      *        freedom of this auxiliary module.
      */
-    int dofOffset()
+    int dofOffset() const
     { return dofOffset_; }
+
+    //! \brief Whether this module's DOFs carry the model's own equations; if so they
+    //!        join the error norm and variable switching like grid cells.
+    virtual bool carriesModelEquations() const
+    { return false; }
+
+    //! \brief Volume of a DOF; zero unless the DOFs are cells.
+    virtual Scalar dofVolume(unsigned /*localDofIdx*/) const
+    { return 0.0; }
 
     /*!
      * \brief Given a degree of freedom relative to the current auxiliary equation,
@@ -100,6 +116,10 @@ public:
      *        module.
      */
     virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const = 0;
+
+    //! \brief Append flux connections, each exactly once (assembled from both ends).
+    virtual void addConnections(std::vector<AuxiliaryConnection>&) const
+    {}
 
     /*!
      * \brief Set the initial condition of the auxiliary module in the solution vector.

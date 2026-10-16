@@ -69,6 +69,10 @@ struct NumJacobiBlocks { static constexpr int value = 0; };
 #endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
 struct OwnerCellsFirst { static constexpr bool value = true; };
+
+/// How numerical aquifers (AQUNUM/AQUCON) are represented: "grid" lets each aquifer cell
+/// take over the grid cell it names, "aux" keeps them out of the grid entirely.
+struct NumericalAquiferMode { static constexpr auto value = "grid"; };
 struct ParsingStrictness { static constexpr auto value = "normal"; };
 struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 

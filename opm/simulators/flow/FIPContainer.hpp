@@ -54,7 +54,9 @@ public:
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
+    //! \brief bufferSize includes auxiliary DOFs; restart arrays stop at gridSize.
     bool allocate(const std::size_t bufferSize,
+                  const std::size_t gridSize,
                   const SummaryConfig& summaryConfig,
                   const bool forceAlloc,
                   std::map<std::string, int>& rstKeywords);
@@ -161,6 +163,8 @@ private:
             return this->noPrefix || this->surface || this->reservoir;
         }
     } outputRestart_{};
+
+    std::size_t gridSize_{};
 };
 
 } // namespace Opm

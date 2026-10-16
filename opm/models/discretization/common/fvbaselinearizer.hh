@@ -118,6 +118,9 @@ class FvBaseLinearizer
 //! \endcond
 
 public:
+    //! No: the element loop cannot reach auxiliary DOFs.
+    static constexpr bool assemblesAuxiliaryDofEquations = false;
+
     FvBaseLinearizer() = default;
 
     // copying the linearizer is not a good idea

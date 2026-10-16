@@ -127,8 +127,16 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->solver_ = std::move(sol);
         } else {
             using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
+            // Auxiliary DOFs sit behind the ghosts; a prefix count would project them out.
+            auto ownedRowBands = std::vector<std::pair<std::size_t, std::size_t>>
+                {{0, interiorCellNum_}};
+            if (numAuxiliaryDof_ > 0) {
+                ownedRowBands.emplace_back(matrix.N() - numAuxiliaryDof_, matrix.N());
+            }
+
             auto pop = std::make_unique<ParOperatorType>(matrix, *wellOperator_,
-                                                         interiorCellNum_);
+                                                         std::move(ownedRowBands),
+                                                         matrix.N());
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
             auto sol = std::make_unique<FlexibleSolverType>(*pop, *comm, prm,
                                                             weightsCalculator,

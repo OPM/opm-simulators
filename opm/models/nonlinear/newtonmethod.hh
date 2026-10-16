@@ -576,8 +576,11 @@ protected:
         // the solution's residual
         error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
-            // do not consider auxiliary DOFs for the error
-            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0) {
+            // Skip auxiliary DOFs unless they carry the model's equations; dormant
+            // auxiliary cells have no volume.
+            if (!model().dofCarriesModelEquations(dofIdx) ||
+                model().dofTotalVolume(dofIdx) <= 0.0)
+            {
                 continue;
             }
 
@@ -705,8 +708,18 @@ protected:
         // update the DOFs of the auxiliary equations
         std::size_t numDof = model().numTotalDof();
         for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
-            nextSolution[dofIdx] = currentSolution[dofIdx];
-            nextSolution[dofIdx] -= solutionUpdate[dofIdx];
+            if (model().dofCarriesModelEquations(dofIdx)) {
+                // needed for primary-variable switching
+                asImp_().updatePrimaryVariables_(dofIdx,
+                                                 nextSolution[dofIdx],
+                                                 currentSolution[dofIdx],
+                                                 solutionUpdate[dofIdx],
+                                                 currentResidual[dofIdx]);
+            }
+            else {
+                nextSolution[dofIdx] = currentSolution[dofIdx];
+                nextSolution[dofIdx] -= solutionUpdate[dofIdx];
+            }
         }
     }
 

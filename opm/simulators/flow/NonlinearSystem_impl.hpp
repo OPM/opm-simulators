@@ -148,7 +148,8 @@ NonlinearSystem(Simulator& simulator,
     , param_(param)
     , well_model_(wellModel)
     , current_relaxation_(1.0)
-    , dx_old_(simulator_.model().numGridDof())
+      // must match the solution vector in stabilizeNonlinearUpdate()
+    , dx_old_(simulator_.model().numTotalDof())
 {}
 
 template <class TypeTag>
