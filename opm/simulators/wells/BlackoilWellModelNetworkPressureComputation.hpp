@@ -220,6 +220,32 @@ struct NetworkVfpPressureCalculator<Scalar, IndexTraits, VFPInjProperties<Scalar
     }
 };
 
+/// @brief Whether the pressure of a node follows from one of the overridden nodes (see the
+///        terminal pressure overrides of NetworkPressureComputation): the node itself is
+///        overridden, or the nodes above it lead to one without crossing a node that has a
+///        fixed pressure of its own.  Such a node has a fixed pressure that no override
+///        reaches through it, so the nodes below it do not follow the overridden node above.
+template<typename Scalar>
+bool nodeFollowsOverriddenNode(const Network::ExtNetwork& network,
+                               std::string node,
+                               const std::map<std::string, Scalar>& overrides)
+{
+    // The branches have no loops.
+    while (true) {
+        if (overrides.count(node) > 0) {
+            return true;
+        }
+        if (network.node(node).terminal_pressure().has_value()) {
+            return false;
+        }
+        const auto branch = network.uptree_branch(node);
+        if (!branch.has_value()) {
+            return false;
+        }
+        node = branch->uptree_node();
+    }
+}
+
 /// @brief  Class to compute network pressures using VFP tables, given flow rates
 ///         for each group and fixed pressures at network roots.
 ///         Optionally, the ALQ values from wells can be included in the rates.
@@ -232,13 +258,16 @@ public:
                                const VfpProperties& vfp_props,
                                const UnitSystem& unit_system,
                                const int report_step_idx,
-                               const Communication& comm)
+                               const Communication& comm,
+                               const std::map<std::string, typename GenericWellModel::Scalar>*
+                                   terminal_pressure_overrides = nullptr)
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
         , unit_system_(unit_system)
         , report_step_idx_(report_step_idx)
         , comm_(comm)
+        , terminal_pressure_overrides_(terminal_pressure_overrides)
     {
     }
 
@@ -453,7 +482,15 @@ private:
                 continue;
             }
 
-            const auto terminal_pressure = network_.node(node).terminal_pressure();
+            auto terminal_pressure = network_.node(node).terminal_pressure();
+            if (terminal_pressure && terminal_pressure_overrides_) {
+                // The pressure of a fixed-pressure node can be imposed from outside, by a
+                // reservoir coupling master; the nodes below it follow from it.
+                if (const auto it = terminal_pressure_overrides_->find(node);
+                    it != terminal_pressure_overrides_->end()) {
+                    terminal_pressure = it->second;
+                }
+            }
             const auto upbranch = network_.uptree_branch(node);
             assert(upbranch || terminal_pressure); // If not root, must have uptree branch, and if root, must have terminal pressure.
             using Calc = NetworkVfpPressureCalculator<Scalar, IndexTraits, VfpProperties>;
@@ -541,6 +578,7 @@ private:
     const UnitSystem& unit_system_;
     const int report_step_idx_;
     const Communication& comm_;
+    const std::map<std::string, Scalar>* terminal_pressure_overrides_;
     std::map<std::string, Scalar> node_pressures_;
     std::map<std::string, data::BranchData> branch_data_;
     std::set<std::string> invalid_nodes_;

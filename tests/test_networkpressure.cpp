@@ -565,4 +565,130 @@ BOOST_AUTO_TEST_CASE(production_fixed_pressure_node_above_fixed_pressure)
     BOOST_CHECK_CLOSE(branch_data.at("PLAT-A").pressure_drop, convert::from(10.0, bars), 1e-7);
 }
 
+BOOST_AUTO_TEST_CASE(production_terminal_pressure_override_replaces_fixed_pressure)
+{
+    // A reservoir coupling slave takes the pressure of a fixed pressure node from its master.
+    // The override must give the same result as a network whose node has that pressure itself,
+    // and the nodes below the node must follow it.
+    const auto override_pressure = convert::from(30.0, bars);
+
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+
+    auto reference = NetworkSetup{NetworkScenario::Production, override_pressure};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> reference_comp(
+        reference.well_model, reference.network, reference.vfp_prod_props, unit_system, 0, comm);
+    const auto [reference_pressures, reference_branch_data] = reference_comp.run();
+
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const std::map<std::string, double> overrides{{"PLAT-A", override_pressure}};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm, &overrides);
+    const auto [pressures, branch_data] = comp.run();
+
+    BOOST_CHECK_CLOSE(pressures.at("PLAT-A"), override_pressure, 1e-7);
+    BOOST_REQUIRE(pressures.find("G1") != pressures.end());
+    BOOST_CHECK_CLOSE(pressures.at("G1"), reference_pressures.at("G1"), 1e-7);
+    // Without the override, the node below is at 31 bar (see production_pressure_computation).
+    BOOST_CHECK_GT(pressures.at("G1"), convert::from(31.0, bars));
+    BOOST_REQUIRE(branch_data.find("M5S") != branch_data.end());
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").pressure_drop,
+                      reference_branch_data.at("M5S").pressure_drop, 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(production_terminal_pressure_override_ignored_for_other_nodes)
+{
+    // Only a node with a fixed pressure of its own can be overridden.  Entries for a node
+    // that is computed from the node above it, or for a node not in the network, change nothing.
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+
+    auto reference = NetworkSetup{NetworkScenario::Production};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> reference_comp(
+        reference.well_model, reference.network, reference.vfp_prod_props, unit_system, 0, comm);
+    const auto [reference_pressures, reference_branch_data] = reference_comp.run();
+
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const std::map<std::string, double> overrides{{"G1", convert::from(50.0, bars)},
+                                                  {"M5S", convert::from(40.0, bars)},
+                                                  {"UNKNOWN", convert::from(1.0, bars)}};
+    NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+        s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm, &overrides);
+    const auto [pressures, branch_data] = comp.run();
+
+    BOOST_REQUIRE_EQUAL(pressures.size(), reference_pressures.size());
+    for (const auto& [node, pressure] : reference_pressures) {
+        BOOST_REQUIRE(pressures.find(node) != pressures.end());
+        BOOST_CHECK_CLOSE(pressures.at(node), pressure, 1e-7);
+    }
+    BOOST_CHECK_CLOSE(pressures.at("PLAT-A"), convert::from(20.0, bars), 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(node_follows_overridden_node_stops_at_fixed_pressure)
+{
+    // A is the overridden node.  B has a fixed pressure of its own, below A, with the node G below
+    // it.  C has no fixed pressure, below A, with the node H below it.
+    Network::ExtNetwork network;
+    network.add_branch(Network::Branch{"B", "A", 9999, 0.0});
+    network.add_branch(Network::Branch{"G", "B", 9999, 0.0});
+    network.add_branch(Network::Branch{"C", "A", 9999, 0.0});
+    network.add_branch(Network::Branch{"H", "C", 9999, 0.0});
+    for (const auto& [name, bar] : {std::pair<const char*, double>{"A", 20.0}, {"B", 25.0}}) {
+        Network::Node node{name};
+        node.terminal_pressure(convert::from(bar, bars));
+        network.update_node(node);
+    }
+    const std::map<std::string, double> overrides{{"A", convert::from(30.0, bars)}};
+
+    BOOST_CHECK(nodeFollowsOverriddenNode(network, "A", overrides));
+    // B has a fixed pressure of its own, so neither it nor the nodes below it follow A.
+    BOOST_CHECK(!nodeFollowsOverriddenNode(network, "B", overrides));
+    BOOST_CHECK(!nodeFollowsOverriddenNode(network, "G", overrides));
+    // C has none, so C and the nodes below it do.
+    BOOST_CHECK(nodeFollowsOverriddenNode(network, "C", overrides));
+    BOOST_CHECK(nodeFollowsOverriddenNode(network, "H", overrides));
+    // Nothing is overridden.
+    BOOST_CHECK(!nodeFollowsOverriddenNode(network, "H", std::map<std::string, double>{}));
+}
+
+BOOST_AUTO_TEST_CASE(node_follows_overridden_node_agrees_with_the_pressure_computation)
+{
+    // The node below follows the overridden node exactly when its pressure changes with the
+    // override: not when a node with a fixed pressure of its own lies between them.
+    using Comm = Dune::Communication<int>;
+    auto comm = Comm{};
+    auto unit_system = UnitSystem{};
+    const std::map<std::string, double> overrides{{"PLAT-A", convert::from(30.0, bars)}};
+
+    for (const bool middle_node_is_fixed : {true, false}) {
+        auto s = NetworkSetup{NetworkScenario::Production};
+        // G1 -> M5S (VFP table 3) -> MID -> PLAT-A
+        Network::ExtNetwork network;
+        network.add_branch(Network::Branch{"G1", "M5S", 9999, 0.0});
+        network.add_branch(Network::Branch{"M5S", "MID", 3, 0.0});
+        network.add_branch(Network::Branch{"MID", "PLAT-A", 9999, 0.0});
+        Network::Node plat{"PLAT-A"};
+        plat.terminal_pressure(convert::from(20.0, bars));
+        network.update_node(plat);
+        if (middle_node_is_fixed) {
+            Network::Node mid{"MID"};
+            mid.terminal_pressure(convert::from(25.0, bars));
+            network.update_node(mid);
+        }
+
+        NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> without(
+            s.well_model, network, s.vfp_prod_props, unit_system, 0, comm);
+        const auto [pressures, branch_data] = without.run();
+        NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> with(
+            s.well_model, network, s.vfp_prod_props, unit_system, 0, comm, &overrides);
+        const auto [pressures_override, branch_data_override] = with.run();
+
+        const bool changes = std::abs(pressures_override.at("G1") - pressures.at("G1")) > 1.0;
+        BOOST_CHECK_EQUAL(changes, !middle_node_is_fixed);
+        BOOST_CHECK_EQUAL(nodeFollowsOverriddenNode(network, "G1", overrides), changes);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END() // NetworkPressureComputationTests
