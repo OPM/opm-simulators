@@ -1152,12 +1152,29 @@ computeFaceProperties(const Intersection& intersection,
                       DimVector& faceAreaNormal,
                       /*isCpGrid=*/std::false_type) const
 {
-    // default implementation for DUNE grids
-    const auto& geometry = intersection.geometry();
-    outside.faceCenter = inside.faceCenter = geometry.center();
+    if constexpr (requires(const Grid& g) { g.faceAreaNormalEcl(0); }) {
+        // The grid gives the face center and the area normal as the CpGrid defines them: the face center is the
+        // center of the side of each cell, and the area normal is computed from the nodes of the face. For faces
+        // that are not plane or at faults, this is different from the geometry of the face, and gives the
+        // transmissibilities of the CpGrid.
+        inside.faceCenter = grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx);
+        outside.faceCenter = grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx);
 
-    faceAreaNormal = intersection.centerUnitOuterNormal();
-    faceAreaNormal *= geometry.volume();
+        if constexpr (requires { intersection.id(); }) {
+            faceAreaNormal = grid_.faceAreaNormalEcl(intersection.id());
+        }
+        else {
+            faceAreaNormal = grid_.faceAreaNormalEcl(intersection.impl().id());
+        }
+    }
+    else {
+        // default implementation for DUNE grids
+        const auto& geometry = intersection.geometry();
+        outside.faceCenter = inside.faceCenter = geometry.center();
+
+        faceAreaNormal = intersection.centerUnitOuterNormal();
+        faceAreaNormal *= geometry.volume();
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
