@@ -1,7 +1,6 @@
 #include <opm/io/eclipse/ERst.hpp>
 #include <opm/io/eclipse/ESmry.hpp>
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <exception>
@@ -9,13 +8,15 @@
 #include <map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace
 {
 
-// Initial SWAT per cell with --normalize-explicit-swat=true. Cells 6-8 depend
-// on whether SGAS or SOIL is given, and SSHIFT moves every two-phase cell.
-const std::map<std::string_view, std::array<float, 9>> probeCases {
+// Initial SWAT per cell with --normalize-explicit-swat=true. In the probe decks,
+// cells 6-8 depend on whether SGAS or SOIL is given, and SSHIFT moves every
+// two-phase cell.
+const std::map<std::string_view, std::vector<float>> probeCases {
     {"EXPLICIT_SWAT_PROBES_SGAS",
      {0.1626093f,
       0.0392756f,
@@ -56,10 +57,11 @@ const std::map<std::string_view, std::array<float, 9>> probeCases {
       0.0504184f,
       0.3269900f,
       0.2000000f}},
+    {"EXPLICIT_SWAT_NEAR_DEW_POINT", {0.2000029f, 0.1626093f}},
 };
 
 int
-checkProbeCase(std::string_view caseName, const std::array<float, 9>& expected)
+checkProbeCase(std::string_view caseName, const std::vector<float>& expected)
 {
     try {
         Opm::EclIO::ERst restart(std::string {caseName} + ".UNRST");

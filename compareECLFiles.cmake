@@ -863,6 +863,42 @@ foreach(case SGAS SOIL SSHIFT XMF_YMF)
   )
 endforeach()
 
+# Cell 1 lies just inside its dew point, where successive substitution alone
+# converges slowly, so the normalization has to flash as the model does.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_near_dew_point
+  FILENAME
+    EXPLICIT_SWAT_NEAR_DEW_POINT
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional/explicit_swat
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
+)
+
+if(MPI_FOUND)
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_near_dew_point_parallel
+    FILENAME
+      EXPLICIT_SWAT_NEAR_DEW_POINT
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    PROCS
+      2
+    TEST_ARGS
+      --normalize-explicit-swat=true
+    POST_COMMAND
+      "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
+  )
+endif()
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe

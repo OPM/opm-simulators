@@ -31,12 +31,14 @@
 #define OPM_FLOW_PROBLEM_COMP_HPP
 
 
+#include <opm/models/ptflash/flashparameters.hh>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
 #include <opm/grid/LookUpData.hh>
 
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
@@ -646,7 +648,11 @@ protected:
     {
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
         const auto eos_type = getEosType();
-        constexpr Scalar flash_tolerance = 1e-8;
+        // Flash as the model does, so that this converges wherever the model's flash does.
+        const Scalar flash_tolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
+        const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
+        const auto flash_method
+            = ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
         int zmf_oil_and_gas_cells = 0;
 
         for (auto& fs : initialFluidStates_) {
@@ -690,7 +696,7 @@ protected:
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, PTFlashMethod::Ssi, flash_tolerance, eos_type);
+                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity);
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();
