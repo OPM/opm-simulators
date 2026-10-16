@@ -607,8 +607,8 @@ macro(opm-simulators_tests_hook)
           -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
     )
 
-    # MINPV removes every host cell of the only LGR, so the grid refines
-    # nothing: the run must still write its restart file.
+    # MINPV removes every host cell of the only LGR, so the trilinear
+    # refinement refines nothing: the run must still write its restart file.
     add_test(
       NAME
         lgr_restart_unrefined
@@ -617,6 +617,7 @@ macro(opm-simulators_tests_hook)
           ${PROJECT_SOURCE_DIR}/tests/LGR_RESTART_UNREFINED.DATA
           --output-dir=${PROJECT_BINARY_DIR}/tests/results/lgr_restart_unrefined
           --parsing-strictness=low
+          --lgr-backend=trilinear
     )
   endif()
 
