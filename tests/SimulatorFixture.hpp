@@ -84,13 +84,15 @@ struct SimulatorFixture
  * \param filename Path to the Eclipse deck file
  * \param test_name Name of the test (used in argv[0])
  * \param threads_per_process Number of threads per process (default: 1)
+ * \param parsing_strictness Parsing strictness of the deck (default: "normal")
  * \return Unique pointer to the initialized simulator
  */
 template <class TypeTag>
 std::unique_ptr<GetPropType<TypeTag, Properties::Simulator>>
 initSimulator(const char* filename,
               const char* test_name = "test_simulator",
-              int threads_per_process = 1)
+              int threads_per_process = 1,
+              const std::string& parsing_strictness = "normal")
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
@@ -116,7 +118,7 @@ initSimulator(const char* filename,
                               /*handleHelp=*/true,
                               /*myRank=*/0);
 
-    FlowGenericVanguard::readDeck(filename);
+    FlowGenericVanguard::readDeck(filename, parsing_strictness);
     return std::make_unique<Simulator>();
 }
 

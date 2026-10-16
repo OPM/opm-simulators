@@ -84,6 +84,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm {
@@ -1917,12 +1918,14 @@ protected:
         if (bcconfig.size() > 0) {
             nonTrivialBoundaryConditions_ = true;
 
-            std::size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-            std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
 
+            // The refined cells of a local grid all report the Cartesian index
+            // of their host cell, so one index can give several cells.
+            std::unordered_multimap<int, unsigned> cartesianToCompressedElemIdx;
+            cartesianToCompressedElemIdx.reserve(numElems);
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
-                cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
+                cartesianToCompressedElemIdx.emplace(vanguard.cartesianIndex(elemIdx), elemIdx);
 
             bcindex_.resize(numElems, 0);
             auto loopAndApply = [&cartesianToCompressedElemIdx,
@@ -1933,9 +1936,10 @@ protected:
                     for (int j = bcface.j1; j <= bcface.j2; ++j) {
                         for (int k = bcface.k1; k <= bcface.k2; ++k) {
                             std::array<int, 3> tmp = {i,j,k};
-                            auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                            if (elemIdx >= 0)
-                                apply(elemIdx);
+                            const auto [first, last] =
+                                cartesianToCompressedElemIdx.equal_range(vanguard.cartesianIndex(tmp));
+                            for (auto it = first; it != last; ++it)
+                                apply(it->second);
                         }
                     }
                 }
