@@ -655,6 +655,12 @@ protected:
 
     mutable std::unordered_set<std::string> closed_this_step_;
 
+    // Wells read as closed from the restart file.  Their close time is the
+    // restart time, but they were shut before it.  A well leaves the set when
+    // it is tested or shut again, and the set is cleared after the first time
+    // step, so it is not serialized.
+    std::unordered_set<std::string> restart_closed_wells_;
+
     WellPerformanceEventTracker well_performance_event_tracker_;
 
     GuideRate guideRate_;
