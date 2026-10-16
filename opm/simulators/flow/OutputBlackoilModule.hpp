@@ -1178,12 +1178,12 @@ private:
                         const double      pv,
                         const IntensiveQuantities& intQuants)
     {
-        const auto& scaledDrainageInfo = this->simulator_.problem().materialLawManager()
-            ->oilWaterScaledEpsInfoDrainage(globalDofIdx);
+        const auto& materialLawManager = this->simulator_.problem().materialLawManagerRef();
+        const auto& scaledDrainageInfo = materialLawManager.oilWaterScaledEpsInfoDrainage(globalDofIdx);
 
         const auto& fs = intQuants.fluidState();
         Scalar sgcr = scaledDrainageInfo.Sgcr;
-        if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+        if (materialLawManager.enableHysteresis()) {
             const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
             sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maximumTrapping*/false);
         }
@@ -1192,7 +1192,7 @@ private:
         if (this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseMaximumTrapped) ||
             this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped))
         {
-            if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+            if (materialLawManager.enableHysteresis()) {
                 const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
                 // Get the maximum trapped gas saturation
                 trappedGasSaturation = MaterialLaw::trappedGasSaturation(matParams, /*maximumTrapping*/true);
@@ -1204,7 +1204,7 @@ private:
         if (this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped) ||
             this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped))
         {
-            if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+            if (materialLawManager.enableHysteresis()) {
                 const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
                 const double krg = getValue(intQuants.relativePermeability(gasPhaseIdx));
                 strandedGasSaturation = MaterialLaw::strandedGasSaturation(matParams, sg, krg);

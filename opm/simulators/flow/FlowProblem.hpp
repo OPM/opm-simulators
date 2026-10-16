@@ -914,6 +914,10 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
+    // Avoid shared_ptr reference-count traffic in per-cell calculations.
+    const EclMaterialLawManager& materialLawManagerRef() const
+    { return *materialLawManager_; }
+
     std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
     { return thermalLawManager_; }
 
