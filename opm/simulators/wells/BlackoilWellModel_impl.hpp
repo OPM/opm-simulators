@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #endif
 
+#include <opm/grid/LookUpData.hh>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
@@ -321,7 +322,13 @@ namespace Opm {
             if (this->schedule()[reportStepIdx].has_gpmaint()) {
                 this->groupStateHelper().setRegionAveragePressureCalculator(
                     fieldGroup,
-                    this->eclState_.fieldProps(),
+                    [this](const std::string& name)
+                    {
+                        // A refined cell takes the region of its parent cell.
+                        const LookUpData<Grid, GridView> lookUpData(this->simulator_.gridView());
+                        return lookUpData.template assignFieldPropsIntOnLeaf<int>(
+                            this->eclState_.fieldProps(), name, /*needsTranslation=*/false);
+                    },
                     this->regionalAveragePressureCalculator_
                 );
             }

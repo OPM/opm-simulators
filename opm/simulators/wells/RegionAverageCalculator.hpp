@@ -27,9 +27,13 @@
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <numeric>
+#include <stdexcept>
 #include <unordered_map>
 
 /**
@@ -69,6 +73,7 @@ namespace Opm {
              */
             explicit AverageRegionalPressure(const Region&   region)
                 : rmap_ (region)
+                , numCells_ (region.size())
                 , attr_ (rmap_, Attributes())
             {
             }
@@ -124,6 +129,10 @@ namespace Opm {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
+                    if (cellIdx >= numCells_) {
+                        throw std::logic_error(fmt::format("Cell {} is outside the region array ({} cells)",
+                                                           cellIdx, numCells_));
+                    }
                     const int reg = rmap_.region(cellIdx);
                     assert(reg >= 0);
 
@@ -216,6 +225,11 @@ namespace Opm {
              * "Fluid-in-place" region mapping (forward and reverse).
              */
             const RegionMapping<Region> rmap_;
+
+            /**
+             * Number of cells in the region mapping.
+             */
+            const std::size_t numCells_;
 
             /**
              * Derived property attributes for each active region.
