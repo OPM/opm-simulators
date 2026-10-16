@@ -52,12 +52,10 @@ receiveGroupConstraintsFromMaster()
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
     }
-    // The master sends a record for every slave group with each full constraint
-    // update, and none when it only refreshes the injection targets; the limits
-    // received earlier then stay in force.
-    if (num_gas_lift_limits > 0) {
-        rescoup_slave.receiveGasLiftGroupLimitsFromMaster(num_gas_lift_limits);
-    }
+    // The master sends a record for every slave group with each constraint update, and
+    // none when it has no master groups for this slave.  The records replace the limits
+    // received earlier, also when there are none.
+    rescoup_slave.receiveGasLiftGroupLimitsFromMaster(num_gas_lift_limits);
 }
 
 template class RescoupReceiveGroupConstraints<double, BlackOilDefaultFluidSystemIndices>;

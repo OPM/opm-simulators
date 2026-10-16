@@ -308,7 +308,9 @@ receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
 {
     using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
     std::vector<GasLiftGroupLimits> limits(num_limits);
-    if (this->comm().rank() == 0) {
+    // The master sends nothing when it has no records, which then replace the limits
+    // received before: there are none in force.
+    if (num_limits > 0 && this->comm().rank() == 0) {
         auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Recv(
@@ -321,7 +323,9 @@ receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
             MPI_STATUS_IGNORE
         );
     }
-    this->comm().broadcast(limits.data(), num_limits, /*emitter_rank=*/0);
+    if (num_limits > 0) {
+        this->comm().broadcast(limits.data(), num_limits, /*emitter_rank=*/0);
+    }
     this->master_gas_lift_limits_.clear();
     for (const auto& limit : limits) {
         if (limit.max_lift_gas < 0 && limit.max_total_gas < 0) {
