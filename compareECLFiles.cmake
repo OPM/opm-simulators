@@ -447,6 +447,7 @@ function(add_test_compare_rescoup_simulation)
         ${PROJECT_SOURCE_DIR}/tests/run-rescoup-regressionTest.sh
       DRIVER_ARGS
         -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+        -o ${OPM_TESTS_ROOT}
         -m ${PARAM_MASTER_DIR}
         -r ${RESULT_PATH}
         -f ${PARAM_FILENAME}
