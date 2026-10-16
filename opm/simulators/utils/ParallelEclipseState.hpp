@@ -117,6 +117,14 @@ public:
 
     void apply_tran(const std::string& keyword, std::vector<double>& trans) const override;
 
+    //! \brief Apply a TRAN* calculator through an index map (refined grids).
+    void apply_tran(const std::string& keyword,
+                    const std::vector<int>& actionIndex,
+                    std::vector<double>& trans) const override;
+
+    //! \brief The operations a TRAN* calculator performs.
+    std::set<Fieldprops::ScalarOperation> tran_operations(const std::string& keyword) const override;
+
     void copyTran(const FieldPropsManager& from)
     {
         m_tran = from.getTran();

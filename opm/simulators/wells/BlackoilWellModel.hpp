@@ -367,6 +367,15 @@ template<class Scalar> class WellContributions;
                 return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
             }
 
+            int compressedIndexForConnection(const Connection& conn) const override
+            {
+                if constexpr (requires { simulator_.vanguard().compressedIndexForConnection(conn); }) {
+                    return simulator_.vanguard().compressedIndexForConnection(conn);
+                } else {
+                    return BlackoilWellModelGeneric<Scalar, IndexTraits>::compressedIndexForConnection(conn);
+                }
+            }
+
             int compressedIndexForInteriorLGR(const std::string& lgr_tag, const Connection& conn) const override
             {
                 return simulator_.vanguard().compressedIndexForInteriorLGR(lgr_tag, conn);

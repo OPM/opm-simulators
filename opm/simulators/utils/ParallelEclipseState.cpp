@@ -228,6 +228,25 @@ void ParallelFieldPropsManager::apply_tran(const std::string& keyword,
     Opm::apply_tran(m_tran, m_doubleProps, m_activeSize(), keyword, data);
 }
 
+void ParallelFieldPropsManager::apply_tran(const std::string& keyword,
+                                           const std::vector<int>& actionIndex,
+                                           std::vector<double>& data) const
+{
+    Opm::apply_tran(m_tran, m_doubleProps, keyword, actionIndex, data);
+}
+
+std::set<Fieldprops::ScalarOperation>
+ParallelFieldPropsManager::tran_operations(const std::string& keyword) const
+{
+    std::set<Fieldprops::ScalarOperation> ops;
+    if (const auto calculator = m_tran.find(keyword); calculator != m_tran.end()) {
+        for (const auto& action : calculator->second) {
+            ops.insert(action.op);
+        }
+    }
+    return ops;
+}
+
 bool ParallelFieldPropsManager::has_int(const std::string& keyword) const
 {
     auto it = m_intProps.find(keyword);
@@ -333,6 +352,7 @@ void ParallelEclipseState::switchToDistributedProps()
     if (m_comm.size() == 1) { // No need for the parallel frontend
         return;
     }
+    m_fieldProps.set_lgr_block_values(this->getLgrs());
     m_parProps = true;
 }
 
