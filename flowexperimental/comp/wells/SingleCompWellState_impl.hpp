@@ -30,7 +30,7 @@ CompConnectionData(std::size_t num_connection,
   , total_molar_fractions(num_connection * num_components)
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
-  , ecl_index(num_connection)
+  , cell_index(num_connection)
   , global_index(num_connection)
 {
 }
@@ -46,7 +46,7 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
         this->satnum_id[con] = connections[con].satnum_id;
-        this->ecl_index[con] = connections[con].cell_index;
+        this->cell_index[con] = connections[con].cell_index;
         this->global_index[con] = connections[con].global_index;
     }
 }
@@ -72,10 +72,10 @@ SingleCompWellState(const std::string& well_name,
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
 update_injector_targets(const Well& well,
+                        const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
-    const auto& injection_properties = well.getInjectionProperties();
 
     // Report this the way the black-oil model does in WellAssemble.
     if (inj_controls.cmode == Well::InjectorCMode::CMODE_UNDEFINED) {
@@ -83,19 +83,11 @@ update_injector_targets(const Well& well,
                   "Well control must be specified for well " + this->name);
     }
 
-    const auto& inj_composition = injection_properties.gasInjComposition();
-#ifndef NDEBUG
-    assert(this->total_molar_fractions.size() == inj_composition.size());
-    const auto injection_type = injection_properties.injectorType;
-    const bool is_gas_injecting = (injection_type == InjectorType::GAS);
-    assert(is_gas_injecting && "Only gas injection is supported for now");
-#endif
     this->bhp = inj_controls.bhp_limit;
     this->injection_cmode = inj_controls.cmode;
-    // TODO: this might not be correct when crossing flow is involved
-    this->total_molar_fractions = inj_composition;
 
-    // we initialize all open wells with a rate to avoid singularities
+    // Seed BHP-controlled injectors with a surface rate; rate-controlled
+    // injectors use their schedule target, which may be zero.
     Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     if (inj_controls.cmode == Well::InjectorCMode::RATE) {
         inj_surf_rate = inj_controls.surface_rate;
@@ -103,20 +95,38 @@ update_injector_targets(const Well& well,
 
     switch (inj_controls.injector_type) {
         case InjectorType::WATER:
-            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
+            if constexpr (FluidSystem::waterEnabled) {
+                // The wellbore holds water alone. It still needs a hydrocarbon
+                // composition the flash accepts, and a water injector has no stream
+                // to take one from. A well without open local connections has no
+                // well equations, so it can wait for a connection to open.
+                if (!this->connection_data.cell_index.empty()) {
+                    this->total_molar_fractions
+                        = cell_mole_fractions[this->connection_data.cell_index.front()];
+                }
+                this->wellbore_water_volume_fraction = 1.;
+                this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
+            } else {
+                OPM_THROW(std::runtime_error,
+                          "The water injector " + this->name + " needs an active water phase");
+            }
             break;
         case InjectorType::GAS:
-            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
+        case InjectorType::OIL: {
+            const auto& injection = well.getInjectionProperties();
+            const auto& inj_composition = inj_controls.injector_type == InjectorType::OIL
+                ? injection.oilInjComposition() : injection.gasInjComposition();
+            assert(this->total_molar_fractions.size() == inj_composition.size());
+            // TODO: this might not be correct when crossing flow is involved
+            this->total_molar_fractions = inj_composition;
+            const auto injected_phase = inj_controls.injector_type == InjectorType::OIL
+                ? FluidSystem::oilPhaseIdx : FluidSystem::gasPhaseIdx;
+            this->surface_phase_rates[injected_phase] = inj_surf_rate;
             break;
-        case InjectorType::OIL:
-            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = inj_surf_rate;
-            break;
-        case InjectorType::MULTI:
-            // Not currently handled, keep zero init.
-            break;
+        }
+        default:
+            OPM_THROW(std::runtime_error,
+                      "Only gas, oil and water injection is supported for well " + this->name);
     }
 }
 
@@ -136,16 +146,19 @@ update_producer_targets(const Well& well,
 
     // Read the reservoir composition only when an open perforation is
     // available. Initialize schedule targets below even without perforations.
-    if (!this->connection_data.ecl_index.empty()) {
-        this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
+    if (!this->connection_data.cell_index.empty()) {
+        this->total_molar_fractions = cell_mole_fractions[this->connection_data.cell_index[0]];
     }
 
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // we give a set of rates for BHP-controlled wells for initialization
+    // Seed BHP-controlled producers with nonzero surface rates and rate-controlled
+    // producers with their schedule targets. Zero targets use a total-surface-rate
+    // control equation, even when the controlled phase has no surface share.
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-    if (prod_controls.cmode == Well::ProducerCMode::BHP) {
+    switch (prod_controls.cmode) {
+    case Well::ProducerCMode::BHP:
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             this->surface_phase_rates[FluidSystem::oilPhaseIdx] = production_rate;
         }
@@ -155,22 +168,46 @@ update_producer_targets(const Well& well,
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->surface_phase_rates[FluidSystem::gasPhaseIdx] = 100. * production_rate;
         }
+        break;
+    case Well::ProducerCMode::ORAT:
+        this->surface_phase_rates[FluidSystem::oilPhaseIdx] = -prod_controls.oil_rate;
+        break;
+    case Well::ProducerCMode::WRAT:
+        if constexpr (FluidSystem::waterEnabled) {
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = -prod_controls.water_rate;
+        }
+        break;
+    case Well::ProducerCMode::GRAT:
+        this->surface_phase_rates[FluidSystem::gasPhaseIdx] = -prod_controls.gas_rate;
+        break;
+    case Well::ProducerCMode::LRAT:
+        this->surface_phase_rates[FluidSystem::oilPhaseIdx] = -prod_controls.liquid_rate;
+        break;
+    default:
+        break;
     }
 }
 
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
-copyRuntimeStateFrom(const SingleCompWellState& other)
+copyRuntimeStateFrom(const SingleCompWellState& other,
+                     const bool keep_control)
 {
-    // Keep the freshly initialized schedule-derived status, controls, and
-    // injector targets from base_init(); only reuse the dynamic state.
+    // Keep the freshly initialized schedule-derived status and
+    // targets from base_init() and carry over the wellbore inventory, which a
+    // shut well, or one that switched between producer and injector, lacks.
+    // So does a well without open connections: it had no well equations and
+    // its composition was never set.
+    if (status == WellStatus::SHUT || other.status == WellStatus::SHUT
+        || producer != other.producer || other.connection_data.cell_index.empty()) {
+        return;
+    }
     bhp = other.bhp;
-    surface_phase_rates = other.surface_phase_rates;
-    phase_fractions = other.phase_fractions;
-    reservoir_phase_rates = other.reservoir_phase_rates;
-    if (producer) {
-        total_molar_fractions = other.total_molar_fractions;
-        phase_molar_fractions = other.phase_molar_fractions;
+    wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
+    total_molar_fractions = other.total_molar_fractions;
+    if (keep_control) {
+        injection_cmode = other.injection_cmode;
+        production_cmode = other.production_cmode;
     }
 }
 

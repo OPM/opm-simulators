@@ -38,11 +38,12 @@
  *
  * It checks extract(jacobian), A -= C^T D^-1 B, against apply(x, Ax).
  *
- * It also exercises the singular-matrix fallback (inverse replaced by the
- * identity) for both the 4x4 block size (which signals singularity by throwing
- * Opm::NumericalProblem) and the 3x3 block size (which does not throw but
- * silently yields non-finite values, inf/NaN). The 3x3 case is a regression
- * guard for the fallback only working when numWellEq == 4.
+ * It also checks that singular matrices are rejected for both the 4x4 block
+ * size (which signals singularity by throwing) and the 3x3 block size (which
+ * silently yields non-finite values, inf/NaN).
+ *
+ * Finally it checks sumAndPinRows(), which keeps the system of a wellbore
+ * holding water alone solvable.
  */
 #include "config.h"
 
@@ -319,34 +320,20 @@ BOOST_AUTO_TEST_CASE(MatrixContributionsMatchOperator)
     }
 }
 
-// Singular 4x4 well matrix: detail::invertMatrix throws Opm::NumericalProblem,
-// the fallback replaces the inverse with the identity, so solve() returns the
-// residual unchanged.
-BOOST_AUTO_TEST_CASE(SingularFallback4x4)
+// Singular 4x4 well matrix: detail::invertMatrix throws Dune::MatrixBlockError,
+// which invert() reports as NumericalProblem.
+BOOST_AUTO_TEST_CASE(SingularMatrix4x4)
 {
     Eqns eqns;
     eqns.init(num_conn, std::vector<std::size_t>{0, 1});
     eqns.clear(); // D is now all zeros -> singular
 
-    WellVec resWell;
-    for (int i = 0; i < nw; ++i) {
-        resWell[i] = 1.0 + i;
-        eqns.residual()[0][i] = resWell[i];
-    }
-
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
-
-    Eqns::BVectorWell dx(1);
-    eqns.solve(dx);
-    checkClose(dx[0], resWell, "singular-4x4 solve (identity inverse)");
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
 }
 
-// Singular 3x3 well matrix (numWellEq == 3, e.g. a two-component well):
-// detail::invertMatrix does NOT throw here - it silently produces inf/NaN. This
-// is the regression guard for invert() detecting that non-finite result and
-// still falling back to the identity (the fallback previously only worked for
-// the 4x4 block size).
-BOOST_AUTO_TEST_CASE(SingularFallback3x3)
+// Singular 3x3 matrix: detail::invertMatrix silently produces inf/NaN, which
+// invert() reports as NumericalProblem too.
+BOOST_AUTO_TEST_CASE(SingularMatrix3x3)
 {
     constexpr int nw3 = 3;
     using Eqns3 = Opm::CompWellEquations<Scalar, nw3, ne>;
@@ -355,19 +342,109 @@ BOOST_AUTO_TEST_CASE(SingularFallback3x3)
     eqns.init(1, std::vector<std::size_t>{0});
     eqns.clear(); // singular D
 
-    Dune::FieldVector<Scalar, nw3> resWell;
-    for (int i = 0; i < nw3; ++i) {
-        resWell[i] = 2.0 + i;
-        eqns.residual()[0][i] = resWell[i];
+    BOOST_CHECK_THROW(eqns.invert(), Opm::NumericalProblem);
+}
+
+// A wellbore holding water alone: the component rows have lost everything but
+// their dependence on the water fraction, so D is singular. sumAndPinRows()
+// leaves a system that keeps the mole fractions and determines the remaining
+// unknowns from the summed component row, the water row and the control row.
+BOOST_AUTO_TEST_CASE(SumAndPinRowsOfWaterFilledWellbore)
+{
+    // three components and water: total rate, two mole fractions, water
+    // fraction, bhp
+    constexpr int nw5 = 5;
+    constexpr int num_comp = 3;
+    constexpr int first_mole_fraction = 1;
+    constexpr std::array<int, 3> kept{0, 3, 4}; // unknowns that are still solved for
+    using Eqns5 = Opm::CompWellEquations<Scalar, nw5, ne>;
+    using Vec5 = Dune::FieldVector<Scalar, nw5>;
+
+    Dune::FieldMatrix<Scalar, nw5, nw5> D(0.0);
+    Dune::FieldMatrix<Scalar, nw5, ne> B(0.0);
+    Vec5 res(0.0);
+    for (int row = 0; row < num_comp; ++row) {
+        D[row][3] = -2.0 - row; // only the water fraction is left in a component row
+        res[row] = 0.1 * (row + 1);
+    }
+    for (int row = num_comp; row < nw5; ++row) {
+        for (int col = 0; col < nw5; ++col) {
+            D[row][col] = 1.0 / (1.0 + row + col) + (row == col ? 3.0 : 0.0);
+        }
+        res[row] = 1.0 + row;
+    }
+    for (int row = 0; row < nw5; ++row) {
+        for (int col = 0; col < ne; ++col) {
+            B[row][col] = 0.1 * (row + 1) - 0.05 * col;
+        }
     }
 
-    BOOST_REQUIRE_NO_THROW(eqns.invert());
+    Eqns5 eqns;
+    eqns.init(1, std::vector<std::size_t>{0});
+    eqns.clear();
+    eqns.D()[0][0] = D;
+    eqns.B()[0][0] = B;
+    eqns.residual()[0] = res;
 
-    Eqns3::BVectorWell dx(1);
-    eqns.solve(dx);
-    for (int i = 0; i < nw3; ++i) {
-        BOOST_CHECK_MESSAGE(std::abs(dx[0][i] - resWell[i]) < 1e-10,
-                            "singular-3x3 solve (identity inverse)[" << i << "]: got "
-                            << dx[0][i] << " expected " << resWell[i]);
+    eqns.sumAndPinRows(num_comp - 1, first_mole_fraction);
+    eqns.invert();
+
+    // Reference: the summed component row, the water row and the control row
+    // in the unknowns that are kept.
+    const auto reducedRow = [](const auto& full_row, const int row) {
+        auto sum = full_row(row);
+        if (row == num_comp - 1) {
+            for (int comp = 0; comp < num_comp - 1; ++comp) {
+                sum += full_row(comp);
+            }
+        }
+        return sum;
+    };
+    constexpr std::array<int, 3> rows{num_comp - 1, 3, 4};
+    Dune::FieldMatrix<Scalar, 3, 3> Dred(0.0);
+    Dune::FieldVector<Scalar, 3> res_red(0.0), rhs_red(0.0);
+    ResVec x;
+    for (int j = 0; j < ne; ++j) {
+        x[j] = 1.0 - 0.3 * j;
+    }
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            const int col = kept[j];
+            Dred[i][j] = reducedRow([&D, col](const int r) { return D[r][col]; }, rows[i]);
+        }
+        res_red[i] = reducedRow([&res](const int r) { return res[r]; }, rows[i]);
+        rhs_red[i] = res_red[i] - reducedRow([&B, &x](const int r) { return B[r] * x; }, rows[i]);
+    }
+    Dred.invert();
+
+    const auto check = [&kept](const Vec5& got, const Dune::FieldVector<Scalar, 3>& expected,
+                               const std::string& what) {
+        for (int comp = 0; comp < num_comp - 1; ++comp) {
+            BOOST_CHECK_MESSAGE(got[first_mole_fraction + comp] == 0.0,
+                                what << ": mole fraction " << comp << " moved by "
+                                << got[first_mole_fraction + comp]);
+        }
+        for (int i = 0; i < 3; ++i) {
+            BOOST_CHECK_MESSAGE(std::abs(got[kept[i]] - expected[i]) < 1e-10,
+                                what << "[" << kept[i] << "]: got " << got[kept[i]]
+                                << " expected " << expected[i]);
+        }
+    };
+
+    {
+        Eqns5::BVectorWell dx(1);
+        eqns.solve(dx);
+        Dune::FieldVector<Scalar, 3> expected;
+        Dred.mv(res_red, expected);
+        check(dx[0], expected, "solve");
+    }
+    {
+        Eqns5::BVector xres(1);
+        xres[0] = x;
+        Eqns5::BVectorWell xw(1);
+        eqns.recoverSolutionWell(xres, xw);
+        Dune::FieldVector<Scalar, 3> expected;
+        Dred.mv(rhs_red, expected);
+        check(xw[0], expected, "recoverSolutionWell");
     }
 }
