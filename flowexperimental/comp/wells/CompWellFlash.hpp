@@ -62,7 +62,7 @@ void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_stat
 
     bool single_phase = false;
     if constexpr (std::is_same_v<T, Scalar>) {
-        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(
+        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar(
             fluid_state, PTFlashMethod::Ssi, flash_tolerance, EOSType::PR);
     } else { // Evaluation
         single_phase = PTFlash<Scalar, FluidSystem>::solve(
