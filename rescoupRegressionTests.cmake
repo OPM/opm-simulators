@@ -45,6 +45,9 @@ add_test_compare_rescoup_simulation(
     1
   MASTER_PROCS
     1
+  # Data files that rc_m1 shares with other cases
+  SHARED_DIRS
+    rescoup/common
   MPIEXEC
     ${_rescoup_mpiexec}
   SIMULATOR
