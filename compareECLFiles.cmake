@@ -880,6 +880,22 @@ add_test_runSimulator(
     "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
 )
 
+# Components left out of ZMF must not break the normalization's flash.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_zero_component
+  FILENAME
+    EXPLICIT_SWAT_ZERO_COMPONENT
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional/explicit_swat
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_ZERO_COMPONENT"
+)
+
 if(MPI_FOUND)
   add_test_runSimulator(
     CASENAME

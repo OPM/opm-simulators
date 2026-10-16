@@ -97,6 +97,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::PrimaryVariables;
     using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using typename FlowProblemType::Evaluation;
+    using typename FlowProblemType::IntensiveQuantities;
     using typename FlowProblemType::MaterialLaw;
     using typename FlowProblemType::RateVector;
 
@@ -690,12 +691,20 @@ protected:
                 continue;
             }
 
+            // Floor and renormalize the composition as the model does before its flash.
+            Dune::FieldVector<Scalar, numComponents> z(0.0);
+            Scalar sum_z = 0.0;
+            for (unsigned c = 0; c < numComponents; ++c) {
+                z[c] = std::max(moles[c] / total_moles, IntensiveQuantities::compositionFloor);
+                sum_z += z[c];
+            }
+
             InitialFluidState flash_fs;
             flash_fs.setTemperature(fs.temperature(0));
             flash_fs.setPressure(FluidSystem::oilPhaseIdx, fs.pressure(FluidSystem::oilPhaseIdx));
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
-                flash_fs.setMoleFraction(c, moles[c] / total_moles);
+                flash_fs.setMoleFraction(c, z[c] / sum_z);
                 flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
             }
             flash_fs.setLvalue(-1.0);

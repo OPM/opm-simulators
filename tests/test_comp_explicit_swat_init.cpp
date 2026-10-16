@@ -58,6 +58,7 @@ const std::map<std::string_view, std::vector<float>> probeCases {
       0.3269900f,
       0.2000000f}},
     {"EXPLICIT_SWAT_NEAR_DEW_POINT", {0.2000029f, 0.1626093f}},
+    {"EXPLICIT_SWAT_ZERO_COMPONENT", {0.2000000f, 0.1830071f}},
 };
 
 int
