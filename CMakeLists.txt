@@ -690,6 +690,8 @@ macro(opm-simulators_targets_hook)
     SOURCES
       opm/simulators/utils/moduleVersion.cpp
   )
+  # The build configuration (moduleBuildType)
+  target_compile_definitions(moduleVersion PRIVATE OPM_BUILD_TYPE="$<CONFIG>")
 
   # Strictly we only depend on the update-version target,
   # but this is not exposed in a super-build.
