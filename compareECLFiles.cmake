@@ -822,6 +822,24 @@ add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       SIMULATOR flow_comp3_2p
                       DIR compositional)
 
+# The only well is defined in an ACTIONX block, so its connections must be in
+# the matrix pattern although the schedule does not know the well yet.
+add_test_runSimulator(
+  CASENAME
+    actionx_welspecs_matrix_add_well_contributions
+  FILENAME
+    ACTIONX_WELSPECS
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    actionx
+  TEST_ARGS
+    --matrix-add-well-contributions=true
+    --linear-solver=ilu0
+)
+
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(
   CASENAME
