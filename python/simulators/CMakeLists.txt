@@ -171,7 +171,7 @@ endforeach()
 
 include(PyInstallPrefix)
 if(OPM_ENABLE_PYTHON_TESTS)
-  set(cases basic fluidstate_variables primary_variables schedule throw)
+  set(cases basic fluidstate_variables get_schedule primary_variables schedule throw)
   if(MPI_FOUND)
     list(APPEND cases mpi)
   endif()
