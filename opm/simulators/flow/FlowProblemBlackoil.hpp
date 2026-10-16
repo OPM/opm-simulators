@@ -1402,7 +1402,7 @@ protected:
         initialFluidStates_.resize(numDof);
 
         // Input-grid arrays read per leaf cell: a refined cell takes its parent's value.
-        const auto onLeaf = [assign = this->fieldPropDoubleOnLeafAssigner_(), &fp]
+        const auto fieldPropOnLeaf = [assign = this->fieldPropDoubleOnLeafAssigner_(), &fp]
             (const std::string& kw) { return assign(fp, kw); };
 
         std::vector<double> waterSaturationData;
@@ -1417,38 +1417,38 @@ protected:
         std::vector<double> saltpData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-            waterSaturationData = onLeaf("SWAT");
+            waterSaturationData = fieldPropOnLeaf("SWAT");
         else
             waterSaturationData.resize(numDof);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = onLeaf("SGAS");
+            gasSaturationData = fieldPropOnLeaf("SGAS");
         else
             gasSaturationData.resize(numDof);
 
-        pressureData = onLeaf("PRESSURE");
+        pressureData = fieldPropOnLeaf("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = onLeaf("RS");
+            rsData = fieldPropOnLeaf("RS");
 
         if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
-            rswData = onLeaf("RSW");
+            rswData = fieldPropOnLeaf("RSW");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = onLeaf("RV");
+            rvData = fieldPropOnLeaf("RV");
 
         if (FluidSystem::enableVaporizedWater())
-            rvwData = onLeaf("RVW");
+            rvwData = fieldPropOnLeaf("RVW");
 
         // initial reservoir temperature
-        tempiData = onLeaf("TEMPI");
+        tempiData = fieldPropOnLeaf("TEMPI");
 
         // initial salt concentration data
         if constexpr (enableBrine)
-            saltData = onLeaf("SALT");
+            saltData = fieldPropOnLeaf("SALT");
 
         // initial precipitated salt saturation data
         if constexpr (enableSaltPrecipitation)
-            saltpData = onLeaf("SALTP");
+            saltpData = fieldPropOnLeaf("SALTP");
 
         // calculate the initial fluid states
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
