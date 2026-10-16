@@ -1332,10 +1332,10 @@ computeFaceProperties(const Intersection& intersection,
                 : DimVector(grid_.getParentIntersectionFromLgrBoundaryFace(intersection).geometry().center());
             inside.faceCenter =  (intersection.inside().level() == 0)
                 ? (conforming ? coarseFaceCenter(intersection.inside(), inside.faceIdx) : parentCenter)
-                : grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection);
+                : DimVector(grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection));
             outside.faceCenter = (intersection.outside().level() == 0)
                 ? (conforming ? coarseFaceCenter(intersection.outside(), outside.faceIdx) : parentCenter)
-                : grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection);
+                : DimVector(grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection));
 
             faceAreaNormal = intersection.centerUnitOuterNormal();
             faceAreaNormal *= intersection.geometry().volume();
