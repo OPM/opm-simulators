@@ -397,11 +397,17 @@ function(add_test_compare_rescoup_simulation)
     MASTER_PROCS
     MPIEXEC
   )
-  set(multiValueArgs SLAVE_FILENAMES SLAVE_PROCS TEST_ARGS)
+  # SHARED_DIRS: directories, relative to OPM_TESTS_ROOT, with data files that the case shares
+  # with other cases.  They are copied next to the copy of the case directory.
+  set(multiValueArgs SLAVE_FILENAMES SLAVE_PROCS SHARED_DIRS TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
+  set(shared_dir_args)
+  foreach(shared_dir IN LISTS PARAM_SHARED_DIRS)
+    list(APPEND shared_dir_args -d ${OPM_TESTS_ROOT}/${shared_dir})
+  endforeach()
   if(NOT PARAM_MASTER_PROCS)
     set(PARAM_MASTER_PROCS 1)
   endif()
@@ -451,6 +457,7 @@ function(add_test_compare_rescoup_simulation)
         -x ${PARAM_MPIEXEC}
         -n ${PARAM_MASTER_PROCS}
         -u ${reference_simulator}
+        ${shared_dir_args}
       TEST_ARGS
         ${PARAM_TEST_ARGS}
     )

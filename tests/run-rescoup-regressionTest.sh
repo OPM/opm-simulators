@@ -9,6 +9,9 @@
 # relative to the master's working directory (SLAVES item 4), and the
 # slaves' log files are written there, so running from the copy keeps the
 # test from writing into the test data.
+# Directories given with -d (data files that several cases share) are copied
+# next to the copy of the case, so that the decks can include their files as
+# ../../<directory name>/... from the deck directories.
 
 if test $# -eq 0
 then
@@ -28,12 +31,15 @@ then
   echo -e "\t\t -n <procs>    Number of MPI processes of the master (default 1); the"
   echo -e "\t\t               master spawns the slaves with the ranks given in SLAVES"
   echo -e "\t\t -u <filename> Simulator binary for reference data"
+  echo -e "\t\t -d <path>     A directory to copy next to the copy of the case directory, for data files"
+  echo -e "\t\t               that several cases share. Can be given several times. A missing directory is skipped"
   exit 1
 fi
 
 MASTER_PROCS=1
 OPTIND=1
-while getopts "i:m:r:f:s:a:t:c:x:e:n:u:" OPT
+SHARED_DIRS=()
+while getopts "i:m:r:f:s:a:t:c:x:e:n:u:d:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -48,6 +54,7 @@ do
     e) EXE_NAME=${OPTARG} ;;
     n) MASTER_PROCS=${OPTARG} ;;
     u) REF_EXE_NAME=${OPTARG} ;;
+    d) SHARED_DIRS+=("${OPTARG}") ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -71,6 +78,22 @@ mkdir -p ${RESULT_PATH}/case
 tar -C ${INPUT_DATA_PATH} --exclude=opm-simulation-reference -cf - . | \
   tar -C ${RESULT_PATH}/case -xf -
 test $? -eq 0 || exit 1
+
+# Data files that several cases share are in directories next to the case
+# directory, and the decks include them as ../../<directory name>/... from the
+# deck directories.  Copy them next to the copy of the case so that these paths
+# resolve there.
+for SHARED_DIR in "${SHARED_DIRS[@]}"
+do
+  if [ -d "${SHARED_DIR}" ]; then
+    SHARED_NAME=$(basename -- "${SHARED_DIR}")
+    mkdir -p ${RESULT_PATH}/${SHARED_NAME}
+    tar -C ${SHARED_DIR} -cf - . | tar -C ${RESULT_PATH}/${SHARED_NAME} -xf -
+    test $? -eq 0 || exit 1
+  else
+    echo "Skipping the shared directory ${SHARED_DIR}: it does not exist"
+  fi
+done
 
 cd ${RESULT_PATH}/case/${MASTER_DIR} || exit 1
 "${MPIEXEC}" -np ${MASTER_PROCS} "${EXE_NAME}" ${FILENAME}.DATA ${TEST_ARGS} --output-dir=${RESULT_PATH}
