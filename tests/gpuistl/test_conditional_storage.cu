@@ -24,6 +24,11 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+
 namespace
 {
 
@@ -67,12 +72,33 @@ testEnabledStorageArrow(Opm::ConditionalStorage<true, T>* storage, S* output)
     output[0] = (*storage)->someFunc();
 }
 
+template <class T>
+__global__ void
+testDisabledStorage(Opm::ConditionalStorage<false, T> storage, int* output)
+{
+    Opm::ConditionalStorage<false, T> other = storage;
+    other = storage;
+    Opm::ConditionalStorage<false, T> moved = std::move(other);
+    moved = std::move(storage);
+    output[0] = 42;
+}
+
 struct SomeStruct {
     OPM_HOST_DEVICE int someFunc()
     {
         return 123;
     }
 };
+
+// The copy and move operations are defaulted, so trivial copyability and
+// copy-constructibility follow the payload, also when compiled by nvcc.
+static_assert(std::is_trivially_copyable_v<Opm::ConditionalStorage<true, double>>);
+static_assert(std::is_trivially_copyable_v<Opm::ConditionalStorage<true, SomeStruct>>);
+static_assert(std::is_trivially_copyable_v<Opm::ConditionalStorage<false, std::string>>);
+static_assert(std::is_trivially_copyable_v<Opm::ConditionalStorage<false, SomeStruct>>);
+static_assert(!std::is_trivially_copyable_v<Opm::ConditionalStorage<true, std::string>>);
+static_assert(!std::is_copy_constructible_v<Opm::ConditionalStorage<true, std::unique_ptr<int>>>);
+static_assert(std::is_move_constructible_v<Opm::ConditionalStorage<true, std::unique_ptr<int>>>);
 
 } // namespace
 
@@ -131,4 +157,14 @@ BOOST_AUTO_TEST_CASE(TestEnabledStorageCopy)
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     auto numberFromCall = Opm::gpuistl::copyFromGPU(numberFromGPUFromCall);
     BOOST_CHECK_EQUAL(123, numberFromCall);
+}
+
+BOOST_AUTO_TEST_CASE(TestDisabledStorageCopy)
+{
+    using namespace Opm;
+    auto output = Opm::gpuistl::make_gpu_unique_ptr<int>(0);
+    testDisabledStorage<<<1, 1>>>(ConditionalStorage<false, SomeStruct>(), output.get());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    BOOST_CHECK_EQUAL(42, Opm::gpuistl::copyFromGPU(output));
 }
