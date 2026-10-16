@@ -35,9 +35,12 @@
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <dune/common/fvector.hh>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <vector>
 
 namespace Opm
 {
@@ -254,20 +257,39 @@ extract(SparseMatrixAdapter& jacobian) const
     // D is diagonal
     // B and C have 1 row, nc colums and nonzero
     // at (0,j) only if this well has a perforation at cell j.
+    // D^-1 B only depends on the column, so form it once per column. It is
+    // kept as fixed size rows rather than a Dune::DynamicMatrix, avoiding
+    // a heap allocated temporary for every (C, B) block pair.
+    const auto& invD = invDuneD_[0][0];
+    std::vector<Dune::FieldVector<Scalar, numEq>> invDB(invD.N());
     typename SparseMatrixAdapter::MatrixBlock tmpMat;
-    for (auto colC = duneC_[0].begin(),
-              endC = duneC_[0].end(); colC != endC; ++colC)
+    for (auto colB = duneB_[0].begin(),
+              endB = duneB_[0].end(); colB != endB; ++colB)
     {
         // map the well perforated cell index to global cell index
-        const auto row_index = this->cells_[colC.index()];
+        const auto col_index = this->cells_[colB.index()];
+        for (std::size_t k = 0; k < invDB.size(); ++k) {
+            invDB[k] = 0.0;
+            for (std::size_t l = 0; l < invD.M(); ++l) {
+                invDB[k].axpy(invD[k][l], (*colB)[l]);
+            }
+        }
 
-        for (auto colB = duneB_[0].begin(),
-                  endB = duneB_[0].end(); colB != endB; ++colB)
+        for (auto colC = duneC_[0].begin(),
+                  endC = duneC_[0].end(); colC != endC; ++colC)
         {
             // map the well perforated cell index to global cell index
-            const auto col_index = this->cells_[colB.index()];
-            const auto tmp = detail::multMatrix(invDuneD_[0][0], (*colB));
-            detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
+            const auto row_index = this->cells_[colC.index()];
+            // tmpMat = -C^T D^-1 B
+            for (int i = 0; i < numEq; ++i) {
+                for (int j = 0; j < numEq; ++j) {
+                    Scalar sum = 0.0;
+                    for (std::size_t k = 0; k < invDB.size(); ++k) {
+                        sum += (*colC)[k][i] * invDB[k][j];
+                    }
+                    tmpMat[i][j] = -sum;
+                }
+            }
             jacobian.addToBlock(row_index, col_index, tmpMat);
         }
     }
