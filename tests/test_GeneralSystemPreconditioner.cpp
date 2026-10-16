@@ -141,7 +141,7 @@ struct Fixture
                                   /*diagonal=*/true);
 
         layout.wellBlockOffsets = {0, 1, 4};
-        layout.pressureDofIndex = numWell - 1;
+        layout.pressureVariableIndex = numWell - 1;
 
         S.A = &A;
         S.C = &C;
