@@ -1898,7 +1898,6 @@ namespace Opm
         this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.phase_mixing_rates.fill(0.0);
         if constexpr (has_energy) {
             ws.energy_rate = 0.0;
         }
@@ -1944,8 +1943,6 @@ namespace Opm
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
-                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
                     perf_data.phase_mixing_rates[local_perf_index][ws.dissolved_gas] = perfRates.dis_gas;
                     perf_data.phase_mixing_rates[local_perf_index][ws.vaporized_oil] = perfRates.vap_oil;
                 }
@@ -1981,13 +1978,8 @@ namespace Opm
                 }
             }
         }
-        // Accumulate dissolved gas and vaporized oil flow rates across all ranks sharing this well.
-        {
-            const auto& comm = this->parallel_well_info_.communication();
-            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
-            if constexpr (has_energy) {
-                ws.energy_rate = comm.sum(ws.energy_rate);
-            }
+        if constexpr (has_energy) {
+            ws.energy_rate = this->parallel_well_info_.communication().sum(ws.energy_rate);
         }
 
         if (this->parallel_well_info_.communication().size() > 1) {

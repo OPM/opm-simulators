@@ -730,6 +730,96 @@ namespace Opm
     }
 
     template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    consolidatePhaseMixingRates(WellStateType& well_state) const
+    {
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.rs_rep = ws.rv_rep = ws.rsw_rep = ws.rvw_rep = 0.0;
+        if (!this->isProducer()) {
+            return;
+        }
+
+        const auto phaseIdx = [](const unsigned phase) {
+            return FluidSystem::phaseIsActive(phase)
+                ? FluidSystem::canonicalToActivePhaseIdx(phase) : -1;
+        };
+        const int iw = phaseIdx(FluidSystem::waterPhaseIdx);
+        const int io = phaseIdx(FluidSystem::oilPhaseIdx);
+        const int ig = phaseIdx(FluidSystem::gasPhaseIdx);
+        if (ig < 0 || (io < 0 && iw < 0)) {
+            return;
+        }
+
+        // Sum the perforation total rates and dissolved/vaporised rates over
+        // all perforations of the well (on all ranks).
+        const int np = this->numPhases();
+        constexpr std::size_t nmix = 4;
+        std::vector<Scalar> sums(np + nmix, 0.0);
+        const auto& perf_rates = ws.perf_data.phase_rates;
+        const auto& perf_mixing = ws.perf_data.phase_mixing_rates;
+        for (int perf = 0; perf < this->numLocalPerfs(); ++perf) {
+            for (int p = 0; p < np; ++p) {
+                sums[p] += perf_rates[perf * np + p];
+            }
+            for (std::size_t m = 0; m < nmix; ++m) {
+                sums[np + m] += perf_mixing[perf][m];
+            }
+        }
+        this->parallelWellInfo().communication().sum(sums.data(), sums.size());
+
+        const Scalar dis_gas = sums[np + ws.dissolved_gas];
+        const Scalar dis_gas_water = sums[np + ws.dissolved_gas_in_water];
+        const Scalar vap_oil = sums[np + ws.vaporized_oil];
+        const Scalar vap_water = sums[np + ws.vaporized_water];
+
+        // The free part of a phase is its total rate minus what is
+        // dissolved in/vaporised from the other phase.
+        const Scalar free_oil = (io >= 0) ? sums[io] - vap_oil : 0.0;
+        const Scalar free_water = (iw >= 0) ? sums[iw] - vap_water : 0.0;
+        const Scalar free_gas = sums[ig] - dis_gas - dis_gas_water;
+        const auto ratio = [](const Scalar num, const Scalar den) {
+            return (den != 0.0) ? num / den : Scalar{0.0};
+        };
+
+        if (io >= 0) {
+            const Scalar rs = ratio(dis_gas, free_oil);
+            const Scalar rv = ratio(vap_oil, free_gas);
+            const Scalar rvw = (iw >= 0) ? ratio(vap_water, free_gas) : Scalar{0.0};
+            if (rs >= 0.0 && rv >= 0.0 && rvw >= 0.0 && rs * rv < 1.0) {
+                ws.rs_rep = rs;
+                ws.rv_rep = rv;
+                ws.rvw_rep = rvw;
+            }
+            else {
+                // Not well defined (e.g. crossflow): infer the ratios from the
+                // total rates, bounded by the saturated values at the well pressure.
+                const Scalar qo = std::abs(ws.surface_rates[io]);
+                const Scalar qg = std::abs(ws.surface_rates[ig]);
+                const int pvtReg = this->pvtRegionIdx();
+                const Scalar rs_max = FluidSystem::oilPvt()
+                    .saturatedGasDissolutionFactor(pvtReg, ws.temperature, ws.bhp);
+                const Scalar rv_max = FluidSystem::gasPvt()
+                    .saturatedOilVaporizationFactor(pvtReg, ws.temperature, ws.bhp);
+                const Scalar rs_inf = (qo > 0.0) ? std::min(qg / qo, rs_max) : Scalar{0.0};
+                const Scalar rv_inf = (qg > 0.0) ? std::min(qo / qg, rv_max) : Scalar{0.0};
+                if (rs_inf * rv_inf < 1.0) {
+                    ws.rs_rep = rs_inf;
+                    ws.rv_rep = rv_inf;
+                }
+            }
+        }
+        else {
+            const Scalar rsw = ratio(dis_gas_water, free_water);
+            const Scalar rvw = ratio(vap_water, free_gas);
+            if (rsw >= 0.0 && rvw >= 0.0 && rsw * rvw < 1.0) {
+                ws.rsw_rep = rsw;
+                ws.rvw_rep = rvw;
+            }
+        }
+    }
+
+    template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     solveWellWithOperabilityCheck(const Simulator& simulator,
