@@ -153,7 +153,7 @@ public:
     /// written into the slave's group state via the receiver helper.
     /// Called from the slave's beginTimeStep first-substep handshake, and
     /// once per network iteration from maybeSendSlaveGroupFlowToMaster_(),
-    /// where the master sends injection targets only.
+    /// where the master sends the refreshed constraints.
     void receiveGroupConstraintsFromMaster();
 
     /// \brief Receive master-computed network-leaf node pressures and
