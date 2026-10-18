@@ -34,6 +34,36 @@
 
 #include <cstddef>
 
+namespace Opm::detail {
+
+// y = A x and y += alpha A x over rows [0, rowEnd), summing each row in a local block:
+// accumulating straight into y[i] makes the compiler store y[i] after every block.
+// Same per-block operations in the same order as BCRSMatrix::mv/usmv.
+template <class M, class X, class Y>
+void rowAccumulatedMv(const M& A, const X& x, Y& y, std::size_t rowEnd)
+{
+    for (auto row = A.begin(); row != A.end() && row.index() < rowEnd; ++row) {
+        auto acc = y[row.index()];
+        acc = 0;
+        for (auto col = row->begin(); col != row->end(); ++col)
+            col->umv(x[col.index()], acc);
+        y[row.index()] = acc;
+    }
+}
+
+template <class M, class X, class Y, class F>
+void rowAccumulatedUsmv(const F& alpha, const M& A, const X& x, Y& y, std::size_t rowEnd)
+{
+    for (auto row = A.begin(); row != A.end() && row.index() < rowEnd; ++row) {
+        auto acc = y[row.index()];
+        for (auto col = row->begin(); col != row->end(); ++col)
+            col->usmv(alpha, x[col.index()], acc);
+        y[row.index()] = acc;
+    }
+}
+
+} // namespace Opm::detail
+
 namespace Opm {
 
 //=====================================================================
@@ -248,7 +278,7 @@ public:
     void apply( const X& x, Y& y ) const override
     {
       OPM_TIMEBLOCK(apply);
-      A_.mv(x, y);
+      detail::rowAccumulatedMv(A_, x, y, A_.N());
 
       // add well model modification to y
       wellOper_.apply(x, y);
@@ -258,7 +288,7 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
       OPM_TIMEBLOCK(applyscaleadd);
-      A_.usmv(alpha, x, y);
+      detail::rowAccumulatedUsmv(alpha, A_, x, y, A_.N());
 
       // add scaled well model modification to y
       wellOper_.applyscaleadd(alpha, x, y);
@@ -332,13 +362,7 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedMv(A_, x, y, interiorSize_);
 
         // add well model modification to y
         wellOper_.apply(x, y);
@@ -350,12 +374,7 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedUsmv(alpha, A_, x, y, interiorSize_);
         // add scaled well model modification to y
         wellOper_.applyscaleadd(alpha, x, y);
 
@@ -441,13 +460,7 @@ public:
 
     void apply( const X& x, Y& y ) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedMv(*A_, x, y, interiorSize_);
 
         ghostLastProject( y );
     }
@@ -455,12 +468,7 @@ public:
     // y += \alpha * A * x
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedUsmv(alpha, *A_, x, y, interiorSize_);
 
         ghostLastProject( y );
     }
