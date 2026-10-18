@@ -873,6 +873,16 @@ public:
 
     OPM_HOST_DEVICE const Evaluation& mobility(unsigned phaseIdx, FaceDir::DirEnum facedir) const
     {
+        // Called per phase and face in the assembly loop; keep the common case inlinable.
+        if (!dirMob_) {
+            return mobility_[phaseIdx];
+        }
+        return directionalMobility_(phaseIdx, facedir);
+    }
+
+private:
+    OPM_HOST_DEVICE const Evaluation& directionalMobility_(unsigned phaseIdx, FaceDir::DirEnum facedir) const
+    {
         using Dir = FaceDir::DirEnum;
         if (dirMob_) {
             bool constexpr usesStaticFluidSystem = std::is_empty_v<FluidSystem>;
@@ -900,6 +910,8 @@ public:
             return mobility_[phaseIdx];
         }
     }
+
+public:
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity
