@@ -163,6 +163,16 @@ public:
         computeStorage<LhsEval>(storage, intQuants);
     }
 
+
+    // FluidSystem::solventComponentIndex is defined out of line (explicit instantiation in
+    // opm-common), so calling it per face cannot be inlined.
+    OPM_HOST_DEVICE static constexpr unsigned solventComponentIndex_(unsigned phaseIdx)
+    {
+        return phaseIdx == FluidSystem::waterPhaseIdx ? FluidSystem::waterCompIdx
+             : phaseIdx == FluidSystem::oilPhaseIdx   ? FluidSystem::oilCompIdx
+                                                      : FluidSystem::gasCompIdx;
+    }
+
     template <class LhsEval, class StorageType, class IntensiveQuantitiesType = IntensiveQuantities>
     OPM_HOST_DEVICE static void computeStorage(StorageType& storage,
                                                const IntensiveQuantitiesType& intQuants)
@@ -179,7 +189,7 @@ public:
                 continue;
             }
             unsigned activeCompIdx
-                = fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
+                = fsys.canonicalToActiveCompIdx(solventComponentIndex_(phaseIdx));
             LhsEval surfaceVolume = Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
                 * Toolbox::template decay<LhsEval>(fs.invB(phaseIdx))
                 * Toolbox::template decay<LhsEval>(intQuants.porosity());
@@ -444,7 +454,7 @@ public:
             }
 
             unsigned activeCompIdx
-                = fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
+                = fsys.canonicalToActiveCompIdx(solventComponentIndex_(phaseIdx));
             // NB! For the FLORES fluxes without derivatives
             darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea;
 
@@ -879,7 +889,7 @@ public:
         const FluidSystem& fsys = upFs.fluidSystem();
 
         unsigned activeCompIdx
-            = fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
+            = fsys.canonicalToActiveCompIdx(solventComponentIndex_(phaseIdx));
 
         if constexpr (blackoilConserveSurfaceVolume) {
             flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux;
