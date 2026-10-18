@@ -254,19 +254,31 @@ public:
     // standard flow
     const IntensiveQuantities& intensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!this->enableIntensiveQuantityCache_) {
-            OPM_THROW(std::logic_error,
-                      "Intensive quantity cache is disabled; "
-                      "use --enable-intensive-quantity-cache=true");
+        if (!this->enableIntensiveQuantityCache_) [[unlikely]] {
+            throwIntensiveQuantityError_(true);
         }
 
         assert(timeIdx < this->cachedIntensiveQuantityHistorySize());
         const auto* intquant = this->cachedIntensiveQuantities(globalIdx, timeIdx);
-        if (!intquant) {
-            OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
+        if (!intquant) [[unlikely]] {
+            throwIntensiveQuantityError_(false);
         }
         return *intquant;
     }
+
+private:
+    // Out of line so the accessor above stays small enough to inline in the assembly loop.
+    [[noreturn, gnu::cold, gnu::noinline]] static void throwIntensiveQuantityError_(bool cacheDisabled)
+    {
+        if (cacheDisabled) {
+            OPM_THROW(std::logic_error,
+                      "Intensive quantity cache is disabled; "
+                      "use --enable-intensive-quantity-cache=true");
+        }
+        OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
+    }
+
+public:
 
 protected:
 
