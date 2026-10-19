@@ -106,7 +106,7 @@ public:
 
     /// @brief Clear all effective-GCW entries, production and injection.  Call at
     ///   the start of each master-group constraint calculation before any entries
-    ///   are set, so stale caps from a previous sync step do not leak in.
+    ///   are set, so stale exclusions from a previous sync step do not leak in.
     void resetEffectiveGCW() {
         this->effective_gcw_.clear();
         this->effective_injection_gcw_.clear();
