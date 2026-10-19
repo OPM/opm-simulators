@@ -375,11 +375,11 @@ BOOST_AUTO_TEST_CASE(FractionFallback)
     // M1's own target: M1 is the always-included child
     checkClose(fcalc.localFraction("M1", "M1"), 100.0 / 600.0);
     checkClose(fcalc.fraction("M1", "FIELD", /*always_include_this=*/true), 100.0 / 600.0);
-    // M2's target: M1 is not in the guide-rate sum
+    // M2's target, with M2 as the always-included child: M1 is not in the
+    // guide-rate sum.  The fallback only counts the always-included child itself
+    // and its ancestors, and M1 is neither, so M2 does not bring M1 back.
     checkClose(fcalc.localFraction("M2", "M2"), 200.0 / 500.0);
-    // The same without an always-included child: M2 as the always-included child
-    // does not bring M1 back, since the fallback only counts the always-included
-    // child itself and its ancestors, and M1 is neither
+    // Without an always-included child the fraction is the same
     checkClose(fcalc.localFraction("M2", ""), 200.0 / 500.0);
     checkClose(fcalc.fraction("M3", "FIELD", /*always_include_this=*/true), 300.0 / 500.0);
 }
