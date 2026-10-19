@@ -78,6 +78,45 @@ struct SimulatorFixture
 };
 
 /*!
+ * \brief Register the parameters a simulator needs, and set them for a deck file
+ *
+ * The first part of initSimulator(), for tests that read the deck themselves.
+ *
+ * \tparam TypeTag The type tag for the simulator
+ * \param filename Path to the Eclipse deck file
+ * \param test_name Name of the test (used in argv[0])
+ * \param threads_per_process Number of threads per process (default: 1)
+ */
+template <class TypeTag>
+void setupSimulatorParameters(const std::string& filename,
+                              const char* test_name = "test_simulator",
+                              int threads_per_process = 1)
+{
+    const std::string filename_arg = "--ecl-deck-file-name=" + filename;
+
+    const char* argv[] = {
+        test_name,
+        filename_arg.c_str()
+    };
+
+    Parameters::reset();
+    registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+    registerEclTimeSteppingParameters<double>();
+    BlackoilModelParameters<double>::registerParameters();
+    // Normally registered by the simulator class, which the tests do not build.
+    // The well model reads it, so it must be registered here.
+    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
+    Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
+    Parameters::endRegistration();
+    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
+                              argv,
+                              /*registerParams=*/false,
+                              /*allowUnused=*/false,
+                              /*handleHelp=*/true,
+                              /*myRank=*/FlowGenericVanguard::comm().rank());
+}
+
+/*!
  * \brief Initialize a simulator from an Eclipse deck file
  *
  * \tparam TypeTag The type tag for the simulator
@@ -94,28 +133,7 @@ initSimulator(const char* filename,
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    std::string filename_arg = "--ecl-deck-file-name=";
-    filename_arg += filename;
-
-    const char* argv[] = {
-        test_name,
-        filename_arg.c_str()
-    };
-
-    Parameters::reset();
-    registerAllParameters_<TypeTag>(false);
-    registerEclTimeSteppingParameters<double>();
-    BlackoilModelParameters<double>::registerParameters();
-    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
-    Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
-    Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
-                              /*registerParams=*/false,
-                              /*allowUnused=*/false,
-                              /*handleHelp=*/true,
-                              /*myRank=*/0);
-
+    setupSimulatorParameters<TypeTag>(filename, test_name, threads_per_process);
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();
 }
