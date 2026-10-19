@@ -41,7 +41,7 @@ namespace Opm {
 ///   `calculateMasterGroupConstraintsAndSendToSlaves()` is called.  The
 ///   flow is structured as a pre-phase (control restore + inactive-slave
 ///   handling + GCW/reduction recompute) followed by three phases:
-///   target computation (Phase 1), cap-and-redistribute (Phase 2), and
+///   target computation (Phase 1), exclude-and-redistribute (Phase 2), and
 ///   slave send (Phase 3).  See the function-level comment on
 ///   `calculateMasterGroupConstraintsAndSendToSlaves()` in the
 ///   corresponding .cpp file for the per-phase narrative.
@@ -215,7 +215,8 @@ private:
     /// @brief Recompute the Group-Controlled-Wells count and the
     ///   FIELD-level production target reduction.
     /// @details Called from the pre-phase and from Phase 2 (twice: after
-    ///   the cap loop and after the finalize-to-individual loop).  The
+    ///   the exclusion, and after the master groups not available for
+    ///   higher-level control are put on their control modes).  The
     ///   ordering matters: `updateGroupControlledWells()` must run before
     ///   `updateGroupTargetReduction()` because the reduction depends on
     ///   GCW.  The reduction rates are then summed across the master's

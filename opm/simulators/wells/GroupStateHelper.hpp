@@ -313,7 +313,7 @@ public:
     /// @details A necessary but not sufficient condition: a group that is eligible still
     ///   only contributes to the guide-rate sum when its effective GCW > 0 (see
     ///   ReservoirCouplingMaster::effectiveGCW() and the GCW gate in
-    ///   FractionCalculator::guideRateSum).  A capped or inactive-slave group is eligible
+    ///   FractionCalculator::guideRateSum).  An excluded or inactive-slave group is eligible
     ///   here but effGCW=0, so it is excluded and instead contributes its rate as a parent
     ///   target reduction.  Returns false for any non-master group, so non-rescoup runs are
     ///   unaffected.
@@ -739,8 +739,9 @@ private:
     ///   while the group still takes part.  Instead:
     ///   - If the group is available for higher-level control (GCONPROD item 8
     ///     RESPOND_TO_PARENT = YES, or a plain FLD group): return the effective GCW
-    ///     maintained by the rescoup master — 1 when participating-and-uncapped, 0
-    ///     when capped at the slave potential or belonging to an inactive slave
+    ///     maintained by the rescoup master — 1 when participating, 0 when
+    ///     excluded because none of its slave producers are under group control,
+    ///     or when belonging to an inactive slave
     ///     (see ReservoirCouplingMaster::effectiveGCW()).
     ///   - Otherwise (RESPOND_TO_PARENT = NO): the group uses only its own limit and
     ///     is excluded from guide-rate distribution, so GCW = 0.  Being on FLD/NONE

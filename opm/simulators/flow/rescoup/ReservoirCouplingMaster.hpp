@@ -77,7 +77,7 @@ public:
     ///   slave is inactive.  See
     ///   GroupStateHelper::updateGroupControlledWellsRecursive_ for the reader.
     /// @return The stored effective GCW, or 1 if the group has no explicit entry
-    ///   (the participating-and-uncapped default).
+    ///   (the participating default).
     int effectiveGCW(const std::string& group_name) const {
         const auto it = this->effective_gcw_.find(group_name);
         return (it == this->effective_gcw_.end()) ? 1 : it->second;
@@ -95,7 +95,7 @@ public:
     ///   none of its slave injectors are under group control for the phase, or
     ///   when its slave is inactive.
     /// @return The stored effective GCW, or 1 if the group has no explicit entry
-    ///   for the phase (the participating-and-uncapped default).
+    ///   for the phase (the participating default).
     int effectiveInjectionGCW(const std::string& group_name, Phase phase) const {
         const auto it = this->effective_injection_gcw_.find({group_name, phase});
         return (it == this->effective_injection_gcw_.end()) ? 1 : it->second;

@@ -2805,7 +2805,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupControlledWellsRecursive_(
                 // = YES) counts toward its parent's GCW even on individual control,
                 // so the parent is itself treated as group-controlled rather than individual.
                 // Without this the parent gets GCW=0 and its aggregate slave rate is added to the field
-                // reduction.  Its effective GCW (1 uncapped, 0 capped) is added by the recursive call below.
+                // reduction.  Its effective GCW (1 included, 0 excluded) is added by the recursive call below.
                 included |= this->isMasterGroupEligibleForGuideRate(child_group);
             } else {
                 const auto ctrl = this->groupState().injection_control(child_group, injection_phase);
@@ -2895,7 +2895,7 @@ GroupStateHelper<Scalar, IndexTraits>::updateGroupTargetReductionRecursive_(
                     = this->groupState().injection_control(sub_group.name(), phase);
                 // A participating master group (GCONINJE item 8 = YES) has its target
                 // guide-rate distributed by the parent even while on individual control,
-                // so it is not individual here; a capped or inactive-slave group still
+                // so it is not individual here; an excluded or inactive-slave group still
                 // has its rate reduced through the num_group_controlled_wells == 0 branch.
                 const bool individual_control =
                     (current_group_control != Group::InjectionCMode::FLD
