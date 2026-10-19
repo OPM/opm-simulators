@@ -744,6 +744,8 @@ list (APPEND TEST_DATA_FILES
   tests/INJECTION_TOPUP_PHASE_VALIDATION.DATA
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_NESTED.DATA
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
   tests/include/permx_model5.grdecl
@@ -1540,6 +1542,7 @@ if(MPI_FOUND)
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp
     tests/rescoup/test_flow_change_limit.cpp
+    tests/rescoup/test_rescoup_constraints.cpp
   )
 endif()
 if(HYPRE_FOUND)
