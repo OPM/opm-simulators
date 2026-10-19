@@ -1029,7 +1029,8 @@ public:
         // past the end of the input-grid array for every refined cell.
         std::vector<double> tempiOnLeaf{};
         if constexpr (energyModuleType != EnergyModules::NoTemperature) {
-            if (eclState.runspec().co2Storage() || eclState.runspec().h2Storage()) {
+            const auto& rspec = eclState.runspec();
+            if (rspec.co2Storage() || rspec.h2Storage() || rspec.co2Sol() || rspec.h2Sol()) {
                 using LeafGrid = GetPropType<TypeTag, Properties::Grid>;
                 const LookUpData<LeafGrid, GridView> lookUpData(simulator.gridView());
                 tempiOnLeaf = lookUpData
