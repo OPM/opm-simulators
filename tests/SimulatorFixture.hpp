@@ -54,6 +54,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -90,17 +91,22 @@ template <class TypeTag>
 std::unique_ptr<GetPropType<TypeTag, Properties::Simulator>>
 initSimulator(const char* filename,
               const char* test_name = "test_simulator",
-              int threads_per_process = 1)
+              int threads_per_process = 1,
+              const std::vector<std::string>& extra_args = {})
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    std::string filename_arg = "--ecl-deck-file-name=";
-    filename_arg += filename;
+    std::vector<std::string> argv_storage;
+    argv_storage.reserve(extra_args.size() + 2);
+    argv_storage.emplace_back(test_name);
+    argv_storage.emplace_back(std::string{"--ecl-deck-file-name="} + filename);
+    argv_storage.insert(argv_storage.end(), extra_args.begin(), extra_args.end());
 
-    const char* argv[] = {
-        test_name,
-        filename_arg.c_str()
-    };
+    std::vector<const char*> argv;
+    argv.reserve(argv_storage.size());
+    for (const auto& arg : argv_storage) {
+        argv.push_back(arg.c_str());
+    }
 
     Parameters::reset();
     registerAllParameters_<TypeTag>(false);
@@ -109,8 +115,8 @@ initSimulator(const char* filename,
     Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
     Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
     Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
+    setupParameters_<TypeTag>(/*argc=*/static_cast<int>(argv.size()),
+                              argv.data(),
                               /*registerParams=*/false,
                               /*allowUnused=*/false,
                               /*handleHelp=*/true,

@@ -103,7 +103,8 @@ Transmissibility(const EclipseState& eclState,
                  std::function<std::array<double,dimWorld>(int)> centroids,
                  bool enableEnergy,
                  bool enableDiffusivity,
-                 bool enableDispersivity)
+                 bool enableDispersivity,
+                 bool gridFromFile)
       : eclState_(eclState)
       , gridView_(gridView)
       , cartMapper_(cartMapper)
@@ -112,6 +113,7 @@ Transmissibility(const EclipseState& eclState,
       , enableEnergy_(enableEnergy)
       , enableDiffusivity_(enableDiffusivity)
       , enableDispersivity_(enableDispersivity)
+      , gridFromFile_(gridFromFile)
       , lookUpData_(gridView)
       , lookUpCartesianData_(gridView, cartMapper)
 {
@@ -610,7 +612,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
                 // apply the full face transmissibility multipliers
                 // for the inside ...
-                if (!pinchActive) {
+                if (!gridFromFile_ && !pinchActive) {
                     if (inside.faceIdx > 3) { // top or bottom
                          auto find_layer = [&cartDims](std::size_t cell) {
                             cell /= cartDims[0];
