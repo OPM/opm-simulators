@@ -730,6 +730,124 @@ namespace Opm
     }
 
     template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    consolidatePhaseMixingRates(WellStateType& well_state) const
+    {
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.rs_rep = ws.rv_rep = ws.rsw_rep = ws.rvw_rep = 0.0;
+        if (!this->isProducer()) {
+            return;
+        }
+
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        if (!gasActive || (!oilActive && !waterActive)) {
+            return;
+        }
+
+        // Positions of the active phases in the phase vectors.
+        const int waterPos = waterActive ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx) : -1;
+        const int oilPos = oilActive ? FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx) : -1;
+        const int gasPos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
+
+        // Sum the perforation total rates and dissolved/vaporised rates over
+        // all perforations of the well (on all ranks).
+        const int numPhases = this->numPhases();
+        constexpr std::size_t numMixingRates = 4;
+        std::vector<Scalar> sums(numPhases + numMixingRates, 0.0);
+        const auto& perf_rates = ws.perf_data.phase_rates;
+        const auto& perf_mixing = ws.perf_data.phase_mixing_rates;
+        for (int perf = 0; perf < this->numLocalPerfs(); ++perf) {
+            for (int phase = 0; phase < numPhases; ++phase) {
+                sums[phase] += perf_rates[perf * numPhases + phase];
+            }
+            for (std::size_t mix = 0; mix < numMixingRates; ++mix) {
+                sums[numPhases + mix] += perf_mixing[perf][mix];
+            }
+        }
+        this->parallelWellInfo().communication().sum(sums.data(), sums.size());
+
+        const Scalar dis_gas = sums[numPhases + ws.dissolved_gas];
+        const Scalar dis_gas_water = sums[numPhases + ws.dissolved_gas_in_water];
+        const Scalar vap_oil = sums[numPhases + ws.vaporized_oil];
+        const Scalar vap_water = sums[numPhases + ws.vaporized_water];
+
+        // The free part of a phase is its total rate minus what is
+        // dissolved in/vaporised from the other phase.
+        const Scalar free_oil = oilActive ? sums[oilPos] - vap_oil : 0.0;
+        const Scalar free_water = waterActive ? sums[waterPos] - vap_water : 0.0;
+        const Scalar free_gas = sums[gasPos] - dis_gas - dis_gas_water;
+        const auto ratio = [](const Scalar num, const Scalar den) {
+            return (den != 0.0) ? num / den : Scalar{0.0};
+        };
+
+        // Hydrocarbon gas rate for the fallbacks below. With solvent the gas
+        // rate of the well also contains the solvent, which does not take part
+        // in the dissolution/vaporization.
+        const Scalar surface_gas = std::abs(ws.surface_rates[gasPos]);
+        const Scalar solvent = has_solvent ? std::abs(ws.sum_solvent_rates()) : Scalar{0.0};
+        const Scalar hydrocarbon_gas = std::max(surface_gas - solvent, Scalar{0.0});
+
+        // The perforation rates are signed, so with crossflow a summed ratio can
+        // be negative although all local ratios are not. A ratio that is not
+        // well defined must not discard the others.
+        //
+        // The vaporized water ratio then falls back to the one inferred from the
+        // total rates, bounded by the saturated value at the well pressure.
+        Scalar rvw = waterActive ? ratio(vap_water, free_gas) : Scalar{0.0};
+        if (rvw < 0.0) {
+            rvw = 0.0;
+            if (waterActive && FluidSystem::enableVaporizedWater()) {
+                const Scalar qw = std::abs(ws.surface_rates[waterPos]);
+                const Scalar qg = hydrocarbon_gas;
+                const Scalar rvw_max = FluidSystem::gasPvt()
+                    .saturatedWaterVaporizationFactor(this->pvtRegionIdx(), ws.temperature, ws.bhp);
+                rvw = (qg > 0.0) ? std::min(qw / qg, rvw_max) : Scalar{0.0};
+            }
+        }
+
+        if (oilActive) {
+            const Scalar rs = ratio(dis_gas, free_oil);
+            const Scalar rv = ratio(vap_oil, free_gas);
+            if (rs >= 0.0 && rv >= 0.0 && rs * rv < 1.0) {
+                ws.rs_rep = rs;
+                ws.rv_rep = rv;
+            }
+            else {
+                // Not well defined (e.g. crossflow): infer the ratios from the
+                // total rates, bounded by the saturated values at the well pressure.
+                const Scalar qo = std::abs(ws.surface_rates[oilPos]);
+                const Scalar qg = hydrocarbon_gas;
+                const int pvtReg = this->pvtRegionIdx();
+                // The PVT tables can give positive limits also when dissolved
+                // gas or vaporized oil is disabled.
+                const Scalar rs_max = FluidSystem::enableDissolvedGas()
+                    ? FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtReg, ws.temperature, ws.bhp)
+                    : Scalar{0.0};
+                const Scalar rv_max = FluidSystem::enableVaporizedOil()
+                    ? FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtReg, ws.temperature, ws.bhp)
+                    : Scalar{0.0};
+                const Scalar rs_inf = (qo > 0.0) ? std::min(qg / qo, rs_max) : Scalar{0.0};
+                const Scalar rv_inf = (qg > 0.0) ? std::min(qo / qg, rv_max) : Scalar{0.0};
+                if (rs_inf * rv_inf < 1.0) {
+                    ws.rs_rep = rs_inf;
+                    ws.rv_rep = rv_inf;
+                }
+            }
+            ws.rvw_rep = rvw;
+        }
+        else {
+            // A dissolved gas ratio that is not well defined gives no dissolved
+            // gas, but does not discard the vaporized water ratio.
+            const Scalar rsw = std::max(ratio(dis_gas_water, free_water), Scalar{0.0});
+            ws.rsw_rep = rsw;
+            ws.rvw_rep = (rsw * rvw < 1.0) ? rvw : Scalar{0.0};
+        }
+    }
+
+    template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     solveWellWithOperabilityCheck(const Simulator& simulator,

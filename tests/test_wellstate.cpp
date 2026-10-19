@@ -248,6 +248,71 @@ END
     }
 
 
+    // One producer in a two-cell grid with the given phases (RUNSPEC
+    // keywords, one per line) and preferred phase.
+    Opm::Deck makeProducerDeck(const std::string& phases, const std::string& preferredPhase)
+    {
+        return Opm::Parser{}.parseString(std::string{R"(
+RUNSPEC
+)"} + phases + R"(
+METRIC
+DIMENS
+    2 1 1 /
+
+START
+  1 JAN 2000 /
+
+GRID
+DXV
+  2*100 /
+DYV
+  1*100 /
+DZV
+  1*10 /
+DEPTHZ
+  6*1000 /
+PORO
+  2*0.20 /
+PERMX
+  2*100 /
+PERMY
+  2*100 /
+PERMZ
+  2*20 /
+
+SCHEDULE
+WELSPECS
+  'PROD' 'G' 1 1 1000 ')" + preferredPhase + R"(' /
+/
+COMPDAT
+  'PROD' 1 1 1 1 'OPEN' 1* 100 0.1 /
+/
+WCONPROD
+  'PROD' 'OPEN' 'BHP' 5* 100 /
+/
+
+END
+)");
+    }
+
+    // Reports the rates of the producer after letting 'setState' set the
+    // surface rates, representative ratios and solvent rate of the well.
+    template <class SetState>
+    Opm::data::Rates reportProducerRates(const std::string& phases,
+                                         const std::string& preferredPhase,
+                                         SetState&& setState)
+    {
+        const auto setup = Setup { makeProducerDeck(phases, preferredPhase) };
+        auto pinfos = std::vector<Opm::ParallelWellInfo<double>>{};
+        auto wstate = buildWellState(setup, 0, pinfos);
+
+        setState(wstate.well("PROD"), setup.pu);
+
+        return wstate
+            .report(setup.grid.c_grid()->global_cell, [](const int) { return false; })
+            .at("PROD").rates;
+    }
+
     Opm::Deck makeRetainedThpLimitDeck()
     {
         return Opm::Parser{}.parseString(R"(
@@ -580,6 +645,184 @@ BOOST_AUTO_TEST_CASE(RSCONST_InjectionWellDoesNotSynthesizeGas)
     const auto& rates = rpt.at("INJ").rates;
     BOOST_CHECK(!rates.has(Opm::data::Rates::opt::gas));
     BOOST_CHECK(!rates.has(Opm::data::Rates::opt::dissolved_gas));
+}
+
+// ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Free/dissolved split of the total surface rates in the well report. The
+// producer rates are negative. The dissolved gas and vaporized oil rates are
+// reported; the free rates are the total rates minus these.
+
+namespace {
+    struct SplitInput
+    {
+        double qo{0.0};
+        double qg{0.0};
+        double qw{0.0};
+        double rs{0.0};
+        double rv{0.0};
+        double rsw{0.0};
+        double rvw{0.0};
+        double solvent{0.0};
+    };
+
+    Opm::data::Rates reportSplit(const std::string& phases,
+                                 const std::string& preferredPhase,
+                                 const SplitInput& in)
+    {
+        return reportProducerRates(phases, preferredPhase,
+                                   [&in](auto& ws, const auto& pu)
+        {
+            if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+                ws.surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = in.qo;
+            }
+            if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+                ws.surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = in.qg;
+            }
+            if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+                ws.surface_rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = in.qw;
+            }
+            ws.rs_rep = in.rs;
+            ws.rv_rep = in.rv;
+            ws.rsw_rep = in.rsw;
+            ws.rvw_rep = in.rvw;
+            ws.perf_data.solvent_rates.assign(ws.perf_data.solvent_rates.size(), in.solvent);
+        });
+    }
+
+    using Opt = Opm::data::Rates::opt;
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_OilGas)
+{
+    // Free oil 100, free gas 10000, Rs 100, Rv 1e-4:
+    // oil = 100 + 1e-4*10000 = 101, gas = 10000 + 100*100 = 20000.
+    SplitInput in;
+    in.qo = -101.0;
+    in.qg = -20000.0;
+    in.rs = 100.0;
+    in.rv = 1.0e-4;
+
+    const auto rates = reportSplit("OIL\nGAS", "OIL", in);
+    BOOST_CHECK_CLOSE(rates.get(Opt::dissolved_gas), -10000.0, 1.0e-9);
+    BOOST_CHECK_CLOSE(rates.get(Opt::vaporized_oil), -1.0, 1.0e-9);
+    // Free + solution equals the total.
+    BOOST_CHECK_CLOSE(rates.get(Opt::oil) - rates.get(Opt::vaporized_oil), -100.0, 1.0e-9);
+    BOOST_CHECK_CLOSE(rates.get(Opt::gas) - rates.get(Opt::dissolved_gas), -10000.0, 1.0e-9);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_GasWater)
+{
+    // Free water 1000, free gas 500, Rsw 0.2, Rvw 1e-3:
+    // water = 1000 + 1e-3*500 = 1000.5, gas = 500 + 0.2*1000 = 700.
+    SplitInput in;
+    in.qw = -1000.5;
+    in.qg = -700.0;
+    in.rsw = 0.2;
+    in.rvw = 1.0e-3;
+
+    const auto rates = reportSplit("WATER\nGAS", "GAS", in);
+    BOOST_CHECK_CLOSE(rates.get(Opt::dissolved_gas), -200.0, 1.0e-9);
+    BOOST_CHECK_CLOSE(rates.get(Opt::vaporized_water), -0.5, 1.0e-9);
+    BOOST_CHECK_EQUAL(rates.get(Opt::vaporized_oil), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_VaporizedWaterInThreePhase)
+{
+    // The vaporized water is carried by the free gas: Rvw * free gas.
+    // Free gas is 10000 in the oil-gas example above.
+    SplitInput in;
+    in.qo = -101.0;
+    in.qg = -20000.0;
+    in.qw = -50.0;
+    in.rs = 100.0;
+    in.rv = 1.0e-4;
+    in.rvw = 1.0e-3;
+
+    const auto rates = reportSplit("OIL\nWATER\nGAS", "OIL", in);
+    BOOST_CHECK_CLOSE(rates.get(Opt::vaporized_water), -10.0, 1.0e-9);
+    BOOST_CHECK_CLOSE(rates.get(Opt::dissolved_gas), -10000.0, 1.0e-9);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_ZeroOilRateGivesNoVaporizedOil)
+{
+    // A zero total oil rate must give zero vaporized oil: otherwise the free
+    // oil rate (total - vaporized) would have the wrong sign.
+    SplitInput in;
+    in.qo = 0.0;
+    in.qg = -1.0;
+    in.rv = 1.0e-4;
+
+    const auto rates = reportSplit("OIL\nGAS", "OIL", in);
+    BOOST_CHECK_EQUAL(rates.get(Opt::vaporized_oil), 0.0);
+    BOOST_CHECK_EQUAL(rates.get(Opt::dissolved_gas), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_PartsKeepTheSignOfTheTotal)
+{
+    // The free oil implied by the ratios (1.0101) exceeds the total oil rate;
+    // the vaporized oil is then zero, not of the opposite sign.
+    SplitInput in;
+    in.qo = -1.0;
+    in.qg = 0.0;
+    in.rs = 100.0;
+    in.rv = 1.0e-4;
+
+    const auto rates = reportSplit("OIL\nGAS", "OIL", in);
+    BOOST_CHECK_EQUAL(rates.get(Opt::vaporized_oil), 0.0);
+    BOOST_CHECK_EQUAL(rates.get(Opt::dissolved_gas), 0.0);
+    BOOST_CHECK_CLOSE(rates.get(Opt::oil) - rates.get(Opt::vaporized_oil), -1.0, 1.0e-9);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_IllDefinedRatiosGiveNoDissolution)
+{
+    // Rs * Rv >= 1 cannot be a physical mixture: report no dissolution.
+    SplitInput in;
+    in.qo = -101.0;
+    in.qg = -20000.0;
+    in.rs = 2.0e4;
+    in.rv = 1.0e-4;
+
+    const auto rates = reportSplit("OIL\nGAS", "OIL", in);
+    BOOST_CHECK_EQUAL(rates.get(Opt::dissolved_gas), 0.0);
+    BOOST_CHECK_EQUAL(rates.get(Opt::vaporized_oil), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_SolventIsNotHydrocarbonGas)
+{
+    // As above (free oil 100, free hydrocarbon gas 10000, Rs 100, Rv 1e-4) with
+    // 50000 of solvent in the gas rate of the well.
+    SplitInput in;
+    in.qo = -101.0;
+    in.qg = -70000.0;
+    in.rs = 100.0;
+    in.rv = 1.0e-4;
+    in.solvent = -50000.0;
+
+    const auto rates = reportSplit("OIL\nWATER\nGAS\nSOLVENT", "OIL", in);
+    BOOST_CHECK_CLOSE(rates.get(Opt::dissolved_gas), -10000.0, 1.0e-9);
+    BOOST_CHECK_CLOSE(rates.get(Opt::vaporized_oil), -1.0, 1.0e-9);
+    // The solvent stays in the free gas.
+    BOOST_CHECK_CLOSE(rates.get(Opt::gas) - rates.get(Opt::dissolved_gas), -60000.0, 1.0e-9);
+}
+
+BOOST_AUTO_TEST_CASE(DissolvedVaporized_SolventRatesIgnoredWithoutSolventModel)
+{
+    // Without the solvent model the gas rate is all hydrocarbon gas, whatever
+    // is stored in the connection solvent rates (the zfraction model keeps
+    // its solvent rates differently).
+    SplitInput in;
+    in.qo = -101.0;
+    in.qg = -70000.0;
+    in.rs = 100.0;
+    in.rv = 1.0e-4;
+    in.solvent = -50000.0;
+
+    const auto rates = reportSplit("OIL\nWATER\nGAS", "OIL", in);
+    // d = 1 - 100*1e-4 = 0.99, free gas = (70000 - 100*101)/0.99.
+    const auto free_gas = (70000.0 - 100.0*101.0) / 0.99;
+    BOOST_CHECK_CLOSE(rates.get(Opt::dissolved_gas), -(70000.0 - free_gas), 1.0e-9);
 }
 
 // ---------------------------------------------------------------------

@@ -137,6 +137,77 @@ void PackUnpackXConn::unpack([[maybe_unused]] const int link,
 
 } // Anonymous namespace
 
+namespace {
+
+template<class Scalar>
+struct DissolvedVaporisedRates
+{
+    Scalar dissolved_gas{0};
+    Scalar vaporized_oil{0};
+    Scalar vaporized_water{0};
+};
+
+// Splits the total surface rates into free and dissolved/vaporised parts
+// using the representative ratios of the well, so that free + dissolved
+// equals the total exactly. A free part is limited to the interval between
+// zero and its total, so that neither part can change sign (also for a zero
+// total), and the dissolved/vaporised part takes the remainder.
+//
+// The ratios apply to hydrocarbon gas only. With solvent the gas rate of the
+// well also contains the solvent (given as the argument), which is kept in the
+// free gas.
+template<class Scalar, class SingleWellState>
+DissolvedVaporisedRates<Scalar>
+splitSurfaceRates(const SingleWellState& ws, const int waterPos, const int oilPos, const int gasPos,
+                  const Scalar solvent)
+{
+    // A negative position means that the phase is not active.
+    const bool waterActive = waterPos >= 0;
+    const bool oilActive = oilPos >= 0;
+    const bool gasActive = gasPos >= 0;
+
+    DissolvedVaporisedRates<Scalar> res;
+    if (!ws.producer || !gasActive) {
+        return res;
+    }
+
+    const auto& q = ws.surface_rates;
+    const auto bounded = [](const Scalar x, const Scalar total) {
+        return (total >= 0.0) ? std::clamp(x, Scalar{0.0}, total)
+                              : std::clamp(x, total, Scalar{0.0});
+    };
+
+    // Hydrocarbon gas rate: the gas rate without the solvent.
+    const Scalar qg = bounded(q[gasPos] - solvent, q[gasPos]);
+
+    if (oilActive) {
+        const Scalar d = 1.0 - ws.rs_rep * ws.rv_rep;
+        if (d > 0.0) {
+            const Scalar free_oil = bounded((q[oilPos] - ws.rv_rep * qg) / d, q[oilPos]);
+            const Scalar free_gas = bounded((qg - ws.rs_rep * q[oilPos]) / d, qg);
+            res.dissolved_gas = qg - free_gas;
+            res.vaporized_oil = q[oilPos] - free_oil;
+            if (waterActive) {
+                // Vaporised water is carried by the free gas.
+                res.vaporized_water = bounded(ws.rvw_rep * free_gas, q[waterPos]);
+            }
+        }
+    }
+    else if (waterActive) {
+        const Scalar d = 1.0 - ws.rsw_rep * ws.rvw_rep;
+        if (d > 0.0) {
+            const Scalar free_water = bounded((q[waterPos] - ws.rvw_rep * qg) / d, q[waterPos]);
+            const Scalar free_gas = bounded((qg - ws.rsw_rep * q[waterPos]) / d, qg);
+            res.dissolved_gas = qg - free_gas; // dissolved in water
+            res.vaporized_water = q[waterPos] - free_water;
+        }
+    }
+
+    return res;
+}
+
+} // Anonymous namespace
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -649,14 +720,23 @@ report(const int*                            globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        if (!rsConst.enabled) {
-            well.rates.set(rt::dissolved_gas,
-                           ws.phase_mixing_rates[ws.dissolved_gas] +
-                           ws.phase_mixing_rates[ws.dissolved_gas_in_water]);
-        }
+        {
+            // With solvent the gas rate of the well includes the solvent.
+            // The solvent rates of the zfraction model are stored differently.
+            const Scalar solvent = (pu.hasSolvent() && ws.producer) ? ws.sum_solvent_rates() : Scalar{0.0};
+            const auto dv = splitSurfaceRates<Scalar>(
+                ws,
+                pu.phaseIsActive(waterPhaseIdx) ? pu.canonicalToActivePhaseIdx(waterPhaseIdx) : -1,
+                pu.phaseIsActive(oilPhaseIdx) ? pu.canonicalToActivePhaseIdx(oilPhaseIdx) : -1,
+                pu.phaseIsActive(gasPhaseIdx) ? pu.canonicalToActivePhaseIdx(gasPhaseIdx) : -1,
+                solvent);
 
-        well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
-        well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
+            if (!rsConst.enabled) {
+                well.rates.set(rt::dissolved_gas, dv.dissolved_gas);
+            }
+            well.rates.set(rt::vaporized_oil, dv.vaporized_oil);
+            well.rates.set(rt::vaporized_water, dv.vaporized_water);
+        }
 
         {
             auto& curr = well.current_control;
