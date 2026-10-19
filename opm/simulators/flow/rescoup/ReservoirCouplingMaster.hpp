@@ -46,6 +46,7 @@ public:
     using Seconds = ReservoirCoupling::Seconds;
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
+    using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
     using MasterGroupNodePressure = ReservoirCoupling::MasterGroupNodePressure<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
@@ -266,7 +267,24 @@ public:
     ///   passed through DynamicSimulatorState to Summary::eval().
     data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
     // These are currently only used for unit testing
+    void setSlaveActivated(int index)
+    {
+        if (this->slave_activation_status_.size() < this->numSlavesStarted()) {
+            this->slave_activation_status_.resize(this->numSlavesStarted(), 0);
+        }
+        this->slave_activation_status_[index] = 1;
+    }
     void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
+    void setSlaveGroupInjectionData(const std::string& slave_name,
+                                    std::vector<SlaveGroupInjectionData> injection_data)
+    {
+        this->report_step_data_->setSlaveGroupInjectionData(slave_name, std::move(injection_data));
+    }
+    void setSlaveGroupProductionData(const std::string& slave_name,
+                                     std::vector<SlaveGroupProductionData> production_data)
+    {
+        this->report_step_data_->setSlaveGroupProductionData(slave_name, std::move(production_data));
+    }
     void setSlaveNextReportTimeOffset(int index, double offset);
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
     /// @brief Whether the slave has completed its activation handshake with the master.
