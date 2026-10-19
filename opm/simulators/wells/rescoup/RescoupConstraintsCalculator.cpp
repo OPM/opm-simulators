@@ -224,6 +224,31 @@ void
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
 calculateMasterGroupConstraintsAndSendToSlaves()
 {
+    const auto constraints = this->calculateMasterGroupConstraints();
+
+    // Phase 3: send to slaves.  The send functions are rank-0-only internally.
+    const auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
+            this->sendSlaveGroupConstraintsToSlave_(
+                rescoup_master, slave_idx,
+                constraints.injection_targets[slave_idx],
+                constraints.production_constraints[slave_idx]
+            );
+        }
+    }
+}
+
+// The pre-phase and Phases 1, 2 and 2b of
+// calculateMasterGroupConstraintsAndSendToSlaves(), see the overview above.
+// Separate from the send so that unit tests, which have no slaves to send to,
+// can check the constraints (see tests/rescoup/test_rescoup_constraints.cpp).
+template <class Scalar, class IndexTraits>
+typename RescoupConstraintsCalculator<Scalar, IndexTraits>::MasterGroupConstraints
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateMasterGroupConstraints()
+{
     // NOTE: Since this object can only be constructed for a master process,
     //   we can be sure that if we are here, we are running as master.
     //
@@ -271,16 +296,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     // and redistribute the surplus to sibling master groups, per phase.
     this->excludeAndRedistributeInjectionTargets_(calculator, all_injection_targets);
 
-    // Phase 3: send to slaves.  The send functions are rank-0-only internally.
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsCoupled(slave_idx)) {
-            this->sendSlaveGroupConstraintsToSlave_(
-                rescoup_master, slave_idx,
-                all_injection_targets[slave_idx],
-                all_production_constraints[slave_idx]
-            );
-        }
-    }
+    return {std::move(all_injection_targets), std::move(all_production_constraints)};
 }
 
 // ----------------------------------------------------------------------

@@ -54,6 +54,14 @@ public:
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
     using ProductionGroupConstraints = ReservoirCoupling::ProductionGroupConstraints<Scalar>;
 
+    /// @brief The constraints computed for the master groups, indexed by slave.
+    /// @details Entry `slave_idx` of each vector holds the constraints for that
+    ///   slave's master groups; it is empty for a slave that is not coupled.
+    struct MasterGroupConstraints {
+        std::vector<std::vector<InjectionGroupTarget>> injection_targets;
+        std::vector<std::vector<ProductionGroupConstraints>> production_constraints;
+    };
+
     /// @brief Construct a calculator bound to the master's per-sync-step
     ///   state.
     /// @param guide_rate_handler Source of guide rates and the deferred
@@ -79,6 +87,14 @@ public:
     ///   corresponding .cpp file for the per-phase walkthrough and the
     ///   collective-call invariants.
     void calculateMasterGroupConstraintsAndSendToSlaves();
+
+    /// @brief Run the master-side target distribution without sending the
+    ///   result to the slaves.
+    /// @details The pre-phase and Phases 1, 2 and 2b of
+    ///   `calculateMasterGroupConstraintsAndSendToSlaves()`, with the same
+    ///   group-state side effects and collective calls.
+    /// @return The constraints for each slave, as they would be sent.
+    MasterGroupConstraints calculateMasterGroupConstraints();
 
 private:
     /// @brief Phase 1: compute initial guide-rate-distributed targets and
