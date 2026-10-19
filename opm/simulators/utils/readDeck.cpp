@@ -795,6 +795,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const std::string&              parsingStrictness,
                    const std::string&              actionParsingStrictness,
                    const std::string&              inputSkipMode,
+                   const std::string&              ignoredKeywords,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const bool                      keepKeywords,
@@ -824,6 +825,11 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                 parseContext->update(ParseContext::SCHEDULE_GCONSALE_INVALID_INJECTION, InputErrorAction::WARN);
             }
             parseContext->setInputSkipMode(inputSkipMode);
+            for (const auto& keyword : split_string(ignoredKeywords, ':')) {
+                if (!keyword.empty()) {
+                    parseContext->ignoreKeyword(keyword);
+                }
+            }
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,

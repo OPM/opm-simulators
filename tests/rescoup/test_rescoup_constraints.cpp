@@ -96,8 +96,8 @@ initMasterSimulator(const std::string& filename)
                   params.actionState_, params.wtestState_, params.eclSummaryConfig_,
                   /*python=*/nullptr, /*parsingStrictness=*/"low",
                   /*actionParsingStrictness=*/"normal", /*inputSkipMode=*/"100",
-                  /*initFromRestart=*/false, /*checkDeck=*/false, /*keepKeywords=*/false,
-                  /*outputInterval=*/{}, /*slaveMode=*/false);
+                  /*ignoredKeywords=*/"", /*initFromRestart=*/false, /*checkDeck=*/false,
+                  /*keepKeywords=*/false, /*outputInterval=*/{}, /*slaveMode=*/false);
     return std::make_unique<Simulator>();
 }
 

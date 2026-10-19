@@ -394,7 +394,6 @@ protected:
     bool enableEclOutput_;
     bool allow_splitting_inactive_wells_;
 
-    std::string ignoredKeywords_;
     std::optional<int> outputInterval_;
     bool useMultisegmentWell_;
     bool enableExperiments_;
