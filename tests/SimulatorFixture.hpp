@@ -30,6 +30,10 @@
 #include "config.h"
 #include "TestTypeTag.hpp"
 
+#include <opm/common/OpmLog/LogUtil.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/start.hh>
@@ -52,6 +56,8 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
+#include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -74,6 +80,15 @@ struct SimulatorFixture
         Dune::MPIHelper::instance(argc, argv);
 #endif
         FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+        // Without a backend, messages sent to OpmLog, such as warnings and errors
+        // from the deck parser, are lost.  Print them to the test output; the
+        // progress messages (Info and below) are left out.
+        if (!OpmLog::hasBackend("STDERR_LOGGER")) {
+            const std::int64_t message_types = Log::MessageType::Warning
+                + Log::MessageType::Error + Log::MessageType::Problem + Log::MessageType::Bug;
+            OpmLog::addBackend("STDERR_LOGGER",
+                               std::make_shared<StreamLog>(std::cerr, message_types));
+        }
     }
 };
 
