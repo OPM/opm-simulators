@@ -426,7 +426,7 @@ protected:
             maxWater.resize(numDof);
             for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const auto& eps = this->materialLawManager()
-                    ->oilWaterScaledEpsInfoDrainage(static_cast<int>(dofIdx));
+                    .oilWaterScaledEpsInfoDrainage(static_cast<int>(dofIdx));
                 connateWater[dofIdx] = eps.Swl;
                 maxWater[dofIdx] = eps.Swu;
             }

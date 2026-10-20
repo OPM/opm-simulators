@@ -199,7 +199,7 @@ getMobility(const Simulator& simulator,
     // either use mobility of the perforation cell or calculate its own
     // based on passing the saturation table index
     const int satid = this->saturation_table_number_[connectin_idx] - 1;
-    const int satid_elem = material_law_manager->satnumRegionIdx(cell_idx);
+    const int satid_elem = material_law_manager.satnumRegionIdx(cell_idx);
 
     if (satid == satid_elem) {
         for (unsigned phase_idx = 0; phase_idx < FluidSystem::numPhases; ++phase_idx) {

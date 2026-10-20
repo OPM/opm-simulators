@@ -584,7 +584,7 @@ BOOST_AUTO_TEST_CASE(DeckAllDead)
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                     eclipseState,
                                     simulator->vanguard().grid(),
                                     simulator->vanguard().gridView(),
@@ -622,7 +622,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -635,7 +635,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -648,7 +648,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem>(*simulator->problem().materialLawManager(), water, gas, cell, pc[i]);
+            const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem>(simulator->problem().materialLawManager(), water, gas, cell, pc[i]);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -663,7 +663,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillary)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -705,7 +705,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -768,7 +768,7 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     // Initialize the fluid system
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -843,14 +843,14 @@ BOOST_AUTO_TEST_CASE(DeckWithCO2STORE)
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
     auto simulator1 = initSimulator<TypeTag>("equil_co2store_go.DATA");
-    EquilFixture::Initializer comp_go(*simulator1->problem().materialLawManager(),
+    EquilFixture::Initializer comp_go(simulator1->problem().materialLawManager(),
                                     simulator1->vanguard().eclState(),
                                     simulator1->vanguard().grid(),
                                     simulator1->vanguard().gridView(),
                                     simulator1->vanguard().cartesianMapper(), 9.80665);
 
     auto simulator2 = initSimulator<TypeTag>("equil_co2store_gw.DATA");
-    EquilFixture::Initializer comp_gw(*simulator2->problem().materialLawManager(),
+    EquilFixture::Initializer comp_gw(simulator2->problem().materialLawManager(),
                                      simulator2->vanguard().eclState(),
                                      simulator2->vanguard().grid(),
                                      simulator2->vanguard().gridView(),
@@ -889,7 +889,7 @@ BOOST_AUTO_TEST_CASE(DeckWithWetGas)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -972,7 +972,7 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -1032,7 +1032,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -1134,7 +1134,7 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -1229,7 +1229,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
                                    eclipseState,
                                    simulator->vanguard().grid(),
                                    simulator->vanguard().gridView(),
@@ -1381,7 +1381,7 @@ BOOST_AUTO_TEST_CASE(DeckWithSwatinit)
     // apply swatinit
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compScaled(materialLawManagerScaled, eclipseState, simulator->vanguard().gridView(), 9.81, true);
     // don't apply swatinit
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.81, false);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.81, false);
 
     // compute pc
     std::vector<double> pc_scaled(numCells * FluidSystem::numPhases);

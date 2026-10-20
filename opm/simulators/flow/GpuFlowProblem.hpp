@@ -203,7 +203,7 @@ public:
      * Iterates over all grid degrees of freedom and copies the rock /
      * mixing-control fields used by \c BlackOilIntensiveQuantities into local
      * vectors. The inner material-law manager is constructed from
-     * \c *cpu.materialLawManager(), so the GPU manager type held by this
+     * \c cpu.materialLawManager(), so the GPU manager type held by this
      * problem must in turn be constructible from
      * \c Opm::EclMaterialLaw::Manager (i.e. use CPU vector storage and
      * piecewise-linear vector-storage two-phase laws).
@@ -216,7 +216,7 @@ public:
                   std::is_same_v<StS, ::Opm::VectorWithDefaultAllocator<Scalar>>,
                   int> = 0>
     explicit GpuFlowProblem(const CpuProblem& cpu)
-        : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
+        : materialLawManager_(cpu.materialLawManager(), cpu.model().numGridDof())
     {
         if (!cpu.usesDefaultRockCompaction()) {
             OPM_THROW(std::logic_error,
@@ -260,7 +260,7 @@ public:
      * Internally builds the per-cell rock/mixing data on the host as
      * \c std::vector<Scalar>, then uploads each as a single
      * \c GpuBuffer<Scalar>. The inner GPU material law manager is constructed
-     * from \c *cpu.materialLawManager() via its own GpuBuffer-storage
+     * from \c cpu.materialLawManager() via its own GpuBuffer-storage
      * constructor, which uploads the per-cell sample arrays.
      *
      * Only enabled when this problem itself uses \c GpuBuffer storage.
@@ -271,7 +271,7 @@ public:
                   std::is_same_v<StS, ::Opm::gpuistl::GpuBuffer<Scalar>>,
                   int> = 0>
     explicit GpuFlowProblem(const CpuProblem& cpu)
-        : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
+        : materialLawManager_(cpu.materialLawManager(), cpu.model().numGridDof())
         , porosity_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
               return Scalar(p.porosity(u, 0u));
           }))

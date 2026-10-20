@@ -173,28 +173,24 @@ void validateGpuPropertyInputs(const ProblemT& problem)
         }
     }
 
-    const auto materialLawManager = problem.materialLawManager();
-    if (materialLawManager == nullptr) {
-        OPM_THROW(std::invalid_argument,
-                  "GPU property evaluation requires a material-law manager");
-    }
-    if (materialLawManager->twoPhaseApproach() != Opm::EclTwoPhaseApproach::GasWater) {
+    const auto& materialLawManager = problem.materialLawManager();
+    if (materialLawManager.twoPhaseApproach() != Opm::EclTwoPhaseApproach::GasWater) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires the gas-water two-phase approach");
     }
-    if (materialLawManager->hasOil() || !materialLawManager->hasGas()
-        || !materialLawManager->hasWater()) {
+    if (materialLawManager.hasOil() || !materialLawManager.hasGas()
+        || !materialLawManager.hasWater()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires water and gas without an active oil phase");
     }
-    if (!materialLawManager->satCurveIsAllPiecewiseLinear()) {
+    if (!materialLawManager.satCurveIsAllPiecewiseLinear()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires piecewise-linear saturation tables");
     }
-    if (materialLawManager->enableHysteresis()
-        || materialLawManager->enableEndPointScaling()
-        || materialLawManager->hasDirectionalRelperms()
-        || materialLawManager->hasDirectionalImbnum()) {
+    if (materialLawManager.enableHysteresis()
+        || materialLawManager.enableEndPointScaling()
+        || materialLawManager.hasDirectionalRelperms()
+        || materialLawManager.hasDirectionalImbnum()) {
         OPM_THROW(std::logic_error,
                   "GPU property evaluation does not support hysteresis, endpoint scaling, "
                   "or directional saturation functions");
