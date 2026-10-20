@@ -249,6 +249,13 @@ struct BlackOilTwoPhaseIndices
     //! Index of the continuity equation for energy
     static constexpr int contiEnergyEqIdx =
         enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numBioComp + numFoam + numBrine: -1000;
+
+    //! Accessors for the primary variable indices. These are constexpr here;
+    //! indices that are not in use are std::numeric_limits<unsigned>::max().
+    static constexpr unsigned activeWaterSwitchIdx() { return waterSwitchIdx; }
+    static constexpr unsigned activePressureSwitchIdx() { return pressureSwitchIdx; }
+    static constexpr unsigned activeCompositionSwitchIdx() { return compositionSwitchIdx; }
+    static constexpr unsigned activeSolventSaturationIdx() { return solventSaturationIdx; }
 };
 
 } // namespace Opm

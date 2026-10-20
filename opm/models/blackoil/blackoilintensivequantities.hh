@@ -119,10 +119,10 @@ class BlackOilIntensiveQuantities
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
+    static constexpr unsigned compositionSwitchIdx = Indices::activeCompositionSwitchIdx();
 
     static constexpr bool compositionSwitchEnabled =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
 
     using Toolbox = MathToolbox<Evaluation>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
@@ -259,9 +259,9 @@ public:
         Evaluation Sw = 0.0;
         if (Indices::waterIsActive()) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
-                assert(Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max());
-                if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                    Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                assert(Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max());
+                if constexpr (Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                    Sw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 }
             }
             else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw ||
@@ -275,9 +275,9 @@ public:
         Evaluation Sg = 0.0;
         if (Indices::gasIsActive()) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
-                assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
+                assert(Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max());
                 if constexpr (compositionSwitchEnabled) {
-                    Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                    Sg = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
                 }
             }
             else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
@@ -301,10 +301,10 @@ public:
         if constexpr (enableSolvent) {
             if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                 if (getFluidSystem().phaseIsActive(oilPhaseIdx)) {
-                    So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                    So -= priVars.makeEvaluation(Indices::activeSolventSaturationIdx(), timeIdx);
                 }
                 else if (getFluidSystem().phaseIsActive(gasPhaseIdx)) {
-                    Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                    Sg -= priVars.makeEvaluation(Indices::activeSolventSaturationIdx(), timeIdx);
                 }
             }
         }
@@ -381,7 +381,7 @@ public:
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg) {
-            const Evaluation& pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& pg = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, pg + (pC[phaseIdx] - pC[gasPhaseIdx]));
@@ -389,7 +389,7 @@ public:
             }
         }
         else if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pw) {
-            const Evaluation& pw = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& pw = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, pw + (pC[phaseIdx] - pC[waterPhaseIdx]));
@@ -398,7 +398,7 @@ public:
         }
         else {
             assert(getFluidSystem().phaseIsActive(oilPhaseIdx));
-            const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& po = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
@@ -443,7 +443,7 @@ public:
 
         if constexpr (compositionSwitchEnabled) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                const auto& Rs = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
                 fluidState_.setRs(Rs);
             }
             else {
@@ -465,7 +465,7 @@ public:
             }
 
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                const auto& Rv = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
                 fluidState_.setRv(Rv);
             }
             else {
@@ -489,7 +489,7 @@ public:
 
         if constexpr (enableVapwat) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
-                const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                const auto& Rvw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 fluidState_.setRvw(Rvw);
             }
             else {
@@ -504,7 +504,7 @@ public:
 
         if constexpr (enableDisgasInWater) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
-                const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                const auto& Rsw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 fluidState_.setRsw(Rsw);
             }
             else {

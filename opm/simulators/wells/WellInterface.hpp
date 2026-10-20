@@ -136,7 +136,7 @@ public:
                                                       FluidSystem,
                                                       energyModuleType != EnergyModules::NoTemperature,
                                                       energyModuleType == EnergyModules::FullyImplicitThermal,
-                                                      Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max(),
+                                                      Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max(),
                                                       has_watVapor,
                                                       has_brine,
                                                       has_saltPrecip,

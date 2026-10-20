@@ -72,7 +72,7 @@ namespace Opm {
         // gas phases are present so that Rs/Rv are stored in the fluid state. Matches the
         // fluid state's enableDissolution flag (see WellInterface::BlackOilFluidStateType).
         static constexpr bool compositionSwitchEnabled =
-            Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+            Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
 
         // True when the segment fluid state stores a temperature. This includes thermal modes
         // without a fully implicit energy equation.

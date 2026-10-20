@@ -70,11 +70,8 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
-    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
+    static constexpr unsigned compositionSwitchIdx = Indices::activeCompositionSwitchIdx();
 
-    static constexpr bool waterEnabled = Indices::waterEnabled;
-    static constexpr bool gasEnabled = Indices::gasEnabled;
-    static constexpr bool oilEnabled = Indices::oilEnabled;
     static constexpr bool compositionSwitchEnabled =
         compositionSwitchIdx != std::numeric_limits<unsigned>::max();
 
@@ -420,19 +417,19 @@ public:
             // not all phases are necessarily enabled. (we here assume that if a fluid phase
             // is disabled, its respective "main" component is not considered as well.)
 
-            if constexpr (waterEnabled) {
+            if constexpr (Indices::waterIsActive()) {
                 const unsigned activeWaterCompIdx = FluidSystem::canonicalToActiveCompIdx(waterCompIdx);
                 container[conti0EqIdx + activeWaterCompIdx] *=
                     FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
             }
 
-            if constexpr (gasEnabled) {
+            if constexpr (Indices::gasIsActive()) {
                 const unsigned activeGasCompIdx = FluidSystem::canonicalToActiveCompIdx(gasCompIdx);
                 container[conti0EqIdx + activeGasCompIdx] *=
                     FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
             }
 
-            if constexpr (oilEnabled) {
+            if constexpr (Indices::oilIsActive()) {
                 const unsigned activeOilCompIdx = FluidSystem::canonicalToActiveCompIdx(oilCompIdx);
                 container[conti0EqIdx + activeOilCompIdx] *=
                     FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);

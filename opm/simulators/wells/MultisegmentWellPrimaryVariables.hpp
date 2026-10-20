@@ -59,8 +59,8 @@ public:
     // (*) Temperature is only present when energy is enabled;
     //     SPres shifts by one when Temperature is present.
 
-    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
-    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
+    static constexpr bool has_wfrac_variable = Indices::waterIsActive() && Indices::oilIsActive();
+    static constexpr bool has_gfrac_variable = Indices::gasIsActive() && Indices::numPhases > 1;
     static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
 
     static constexpr int WQTotal = 0;

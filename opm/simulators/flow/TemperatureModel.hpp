@@ -82,7 +82,7 @@ class BlackOilEnergyIntensiveQuantitiesTemp
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr bool compositionSwitchEnabled =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
 
     public:
     using EvaluationTemp = DenseAd::Evaluation<Scalar, 1>;
