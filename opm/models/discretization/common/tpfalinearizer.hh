@@ -903,9 +903,12 @@ private:
         constexpr bool run_assembly_on_gpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
         const bool useAssemblyLinearsolveBridge = [&] {
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            // Only use assembly->linsolve bridge if assembly is on GPU, as well as following criteria
             if constexpr (run_assembly_on_gpu) {
-                // The host solver path invalidates overlap rows. Until the
-                // resident interface does so too, retain that path for MPI.
+                // 1. Assembly->linsolv bridge is enabled
+                // 2. We only have 1 rank (because gpuISTL makeOverlapRowsInvalid expects host/cpu matrix)
+                // 3. There are no wells
+                // 4. We use gpuISTL as the linear solver
                 return Parameters::Get<Parameters::EnableGpuAssemblySolverBridge>()
                     && simulator_().gridView().comm().size() == 1
                     && problem_().wellModel().numLocalWellsEnd() == 0
@@ -1092,7 +1095,7 @@ private:
     void linearize_source_terms_gpu(unsigned int numCells, const SubDomainType& domain)
     {
         // Evaluate the same CPU source calculation as the host path, uploading
-        // only nonzero residual and diagonal-block contributions.
+        // only nonzero residual and diagonal-block contributions to gpuParams_
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
         std::vector<unsigned> indices;
         std::vector<VectorBlockCPU> residualContributions;
