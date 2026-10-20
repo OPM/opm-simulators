@@ -608,6 +608,18 @@ macro(opm-simulators_tests_hook)
     )
   endif()
 
+  add_test(
+    NAME
+      comp_numerical_aquifer
+    COMMAND
+      ${PROJECT_SOURCE_DIR}/tests/run-test.sh
+        -e $<TARGET_FILE:flow_comp>
+        -i ${PROJECT_SOURCE_DIR}/tests
+        -f COMP_NUMERICAL_AQUIFER
+        -r ${PROJECT_BINARY_DIR}/tests/results/comp_numerical_aquifer
+        -p $<TARGET_FILE:test_comp_numerical_aquifer>
+  )
+
   if(BUILD_FLOW)
     add_test(
       NAME
@@ -666,6 +678,15 @@ macro(opm-simulators_targets_hook)
       test_comp_explicit_swat_init
     SOURCES
       tests/test_comp_explicit_swat_init.cpp
+    LIBRARIES
+      opmcommon
+  )
+
+  opm_add_executable(
+    TARGET
+      test_comp_numerical_aquifer
+    SOURCES
+      tests/test_comp_numerical_aquifer.cpp
     LIBRARIES
       opmcommon
   )
