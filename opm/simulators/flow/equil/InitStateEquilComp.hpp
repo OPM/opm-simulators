@@ -221,6 +221,11 @@ private:
  * PVT regions with water-zone cells; they must reach the contact at the same
  * pressure. Regions confined above the contact take their water pressure from
  * the hydrocarbon pressure there.
+ *
+ * Above the water-oil contact a cell keeps its connate water, unless SWATINIT
+ * gives the water instead. As in the black-oil equilibration, the water-oil
+ * capillary pressure curve of such a cell is then scaled so that it holds that
+ * water at the pressure difference between the hydrocarbon and the water.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -228,6 +233,13 @@ class InitialStateComputer
 public:
     using Scalar = typename FluidSystem::Scalar;
     using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
+
+    /// Scales the water-oil capillary pressure curve of a cell (first argument)
+    /// to hold a water saturation (third) at a capillary pressure (second).
+    /// Returns the water saturation, and whether the curve cannot hold it
+    /// there, in which case the cell keeps its saturation end point.
+    /// EclMaterialLawManager::applySwatinit() does this.
+    using SwatinitScaling = std::function<std::pair<Scalar, bool>(unsigned, Scalar, Scalar)>;
 
     /// \param[in] inputState      Input state, provides EQUIL, ZMFVD or COMPVD,
     ///                            RTEMP(VD).
@@ -243,6 +255,10 @@ public:
     ///                            empty when the water phase is inactive.
     /// \param[in] maxWater        Scaled maximum water saturation of each cell,
     ///                            empty when the water phase is inactive.
+    /// \param[in] swatinit        SWATINIT water saturation of each cell, empty
+    ///                            when the input does not give it.
+    /// \param[in] scaleSwatinit   Capillary pressure scaling that holds the
+    ///                            SWATINIT water, required with \p swatinit.
     InitialStateComputer(const EclipseState& inputState,
                          const CompositionalConfig::EOSType eosType,
                          const std::vector<Scalar>& cellCenterDepth,
@@ -252,10 +268,14 @@ public:
                          const Scalar gravity,
                          const int numSamplePoints,
                          const std::vector<Scalar>& connateWater = {},
-                         const std::vector<Scalar>& maxWater = {})
+                         const std::vector<Scalar>& maxWater = {},
+                         const std::vector<Scalar>& swatinit = {},
+                         SwatinitScaling scaleSwatinit = {})
         : eosType_(eosType)
         , connateWater_(connateWater)
         , maxWater_(maxWater)
+        , swatinit_(swatinit)
+        , scaleSwatinit_(std::move(scaleSwatinit))
     {
         const auto& records = inputState.getInitConfig().getEquil();
         const auto& tables = inputState.getTableManager();
@@ -299,13 +319,18 @@ public:
         // The endpoint vectors are optional, but a non-empty one is indexed for
         // every cell.
         for (const auto& [name, limits] : {std::pair{"connate water", std::cref(connateWater)},
-                                           std::pair{"maximum water", std::cref(maxWater)}}) {
+                                           std::pair{"maximum water", std::cref(maxWater)},
+                                           std::pair{"SWATINIT water", std::cref(swatinit)}}) {
             if (!limits.get().empty() &&
                 (limits.get().size() != cellCenterDepth.size())) {
                 OPM_THROW(std::runtime_error,
                           fmt::format("The {} saturation has {} entries for {} cell depths.",
                                       name, limits.get().size(), cellCenterDepth.size()));
             }
+        }
+        if (!swatinit.empty() && !scaleSwatinit_) {
+            OPM_THROW(std::runtime_error,
+                      "SWATINIT needs the capillary pressure scaling that holds its water.");
         }
         OPM_END_PARALLEL_TRY_CATCH("Invalid equilibration input: ", comm);
 
@@ -998,6 +1023,23 @@ private:
         return limits.empty() ? fallback : limits[cell];
     }
 
+    /// The SWATINIT water of \p cell, with the capillary pressure curve of the
+    /// cell scaled to hold it at \p pcow, the hydrocarbon pressure less the
+    /// water pressure. The cell keeps \p endPoint without SWATINIT, and where
+    /// the curve cannot hold the water: at or below the free water level, or
+    /// where it has no capillary pressure at that saturation.
+    Scalar swatinitWater(const std::size_t cell,
+                         const Scalar pcow,
+                         const Scalar endPoint) const
+    {
+        if (swatinit_.empty()) {
+            return endPoint;
+        }
+        const auto [sw, keepEndPoint] =
+            scaleSwatinit_(static_cast<unsigned>(cell), pcow, swatinit_[cell]);
+        return keepEndPoint ? endPoint : sw;
+    }
+
     /// EQUIL item 10 type 1: the table gives the total composition and the
     /// pressure is integrated from the datum with the EOS density; the
     /// subsequent flash determines the phase split.
@@ -1256,7 +1298,8 @@ private:
         }
 
         // Below the water-oil contact the pore space holds water alone; above
-        // it the hydrocarbon leaves room for the connate water only.
+        // it the hydrocarbon leaves room for the connate water, or for the
+        // SWATINIT water where it is given.
         Scalar sWat = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             // The saturation function's own endpoints, per cell: below the
@@ -1264,10 +1307,12 @@ private:
             // water remains.
             sWat = (depth > reg.zwoc) ? waterLimit(maxWater_, cell, Scalar{1})
                                       : waterLimit(connateWater_, cell, Scalar{0});
-            fs.setSaturation(FluidSystem::waterPhaseIdx, sWat);
             if (waterPressure != nullptr) {
-                fs.setPressure(FluidSystem::waterPhaseIdx, waterPressure->value(depth));
+                const Scalar waterPhasePressure = waterPressure->value(depth);
+                fs.setPressure(FluidSystem::waterPhaseIdx, waterPhasePressure);
+                sWat = swatinitWater(cell, hydrocarbonPressure - waterPhasePressure, sWat);
             }
+            fs.setSaturation(FluidSystem::waterPhaseIdx, sWat);
         }
 
         // Set a nominal single-phase saturation for the hydrocarbon using the
@@ -1288,6 +1333,8 @@ private:
     /// equilibration region.
     std::vector<Scalar> connateWater_;
     std::vector<Scalar> maxWater_;
+    std::vector<Scalar> swatinit_;
+    SwatinitScaling scaleSwatinit_;
     std::vector<FluidState> fluidStates_;
     std::vector<Scalar> referencePressures_;
 };

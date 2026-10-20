@@ -30,10 +30,13 @@
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -141,10 +144,14 @@ struct BasicEquilFixture
     /// \param connateWater, maxWater  Per-cell water saturation endpoints, as
     ///        the simulator reads them from the scaled saturation functions.
     /// \param pvtnum  Zero-based PVT region of each cell, empty for one region.
+    /// \param swatinit, scaleSwatinit  Per-cell SWATINIT water and the
+    ///        capillary pressure scaling that holds it.
     Computer compute(const std::vector<int>& eqlnum,
                      const std::vector<Scalar>& connateWater = {},
                      const std::vector<Scalar>& maxWater = {},
-                     const std::vector<int>& pvtnum = {}) const
+                     const std::vector<int>& pvtnum = {},
+                     const std::vector<Scalar>& swatinit = {},
+                     typename Computer::SwatinitScaling scaleSwatinit = {}) const
     {
         return Computer(eclState,
                         eclState.compositionalConfig().eosType(0),
@@ -155,7 +162,9 @@ struct BasicEquilFixture
                         gravity,
                         /*numSamplePoints=*/100,
                         connateWater,
-                        maxWater);
+                        maxWater,
+                        swatinit,
+                        std::move(scaleSwatinit));
     }
 
     Opm::Deck deck;
@@ -274,6 +283,78 @@ Scalar waterDensity(const Scalar surfaceDensity, const Scalar bw, const Scalar c
 {
     const Scalar x = cw * (pressure - 75.0);
     return surfaceDensity * (1.0 + x + 0.5 * x * x) / bw;
+}
+
+// The connate water of the saturation functions below.
+constexpr Scalar swatinitConnateSw = 0.1;
+
+// A three-phase deck with the SWATINIT values \p swatinit. Its water-oil
+// capillary pressure falls from 2 bar at the connate water to zero at full
+// water saturation, or is zero throughout without \p capillaryPressure.
+std::string swatinitDeckString(const std::string& equil,
+                               const std::string& swatinit,
+                               const bool capillaryPressure = true)
+{
+    return deckString(equil, "EQLDIMS\n/\n", "",
+                      "ZMFVD\n"
+                      " 2000   0 0.7 0.3\n"
+                      " 2100   0 0.3 0.7  /\n",
+                      "RTEMP\n100\n/\n",
+                      "OIL\nGAS\nWATER\n",
+                      (capillaryPressure ? "SWFN\n 0.1 0.0 2.0\n 0.5 0.2 0.5\n 1.0 1.0 0.0 /\n"
+                                         : "SWFN\n 0.1 0.0 0.0\n 0.5 0.2 0.0\n 1.0 1.0 0.0 /\n")
+                      + std::string{"SGFN\n 0.0 0.0 0.0\n 0.9 1.0 0.0 /\n"
+                                    "SOF3\n 0.0 0.0 0.0\n 0.9 1.0 1.0 /\n"
+                                    "SWATINIT\n"}
+                      + swatinit + " /\n");
+}
+
+using MaterialTraits = Opm::ThreePhaseMaterialTraits<Scalar,
+                                                     WaterFluidSystem::waterPhaseIdx,
+                                                     WaterFluidSystem::oilPhaseIdx,
+                                                     WaterFluidSystem::gasPhaseIdx,
+                                                     /*enableHysteresis=*/true,
+                                                     /*enableEndPointScaling=*/true>;
+using MaterialLawManager = Opm::EclMaterialLaw::Manager<MaterialTraits>;
+
+// Sets up the saturation functions of the cells as the simulator does.
+void initMaterialLaw(MaterialLawManager& manager,
+                     const Opm::EclipseState& eclState,
+                     const std::size_t numCells)
+{
+    manager.initFromState(eclState);
+    manager.initParamsForElements(
+        eclState, numCells,
+        [](const Opm::FieldPropsManager& fieldProps,
+           const std::string& keyword,
+           const bool needsTranslation)
+        {
+            auto values = fieldProps.get_int(keyword);
+            for (auto& value : values) {
+                value -= static_cast<int>(needsTranslation);
+            }
+            return values;
+        },
+        [](const unsigned cell) { return cell; });
+}
+
+// The capillary pressure scaling the simulator hands to the equilibration.
+WaterEquilFixture::Computer::SwatinitScaling swatinitScaling(MaterialLawManager& manager)
+{
+    return [&manager](const unsigned cell, const Scalar pcow, const Scalar sw)
+    { return manager.applySwatinit(cell, pcow, sw); };
+}
+
+// The water-oil capillary pressure of a cell at water saturation \p sw.
+Scalar waterOilPc(const MaterialLawManager& manager, const unsigned cell, const Scalar sw)
+{
+    WaterEquilFixture::Computer::FluidState fs;
+    fs.setSaturation(WaterFluidSystem::waterPhaseIdx, sw);
+    fs.setSaturation(WaterFluidSystem::oilPhaseIdx, 1.0 - sw);
+    fs.setSaturation(WaterFluidSystem::gasPhaseIdx, 0.0);
+    std::array<Scalar, WaterFluidSystem::numPhases> pc{};
+    MaterialLawManager::MaterialLaw::capillaryPressures(pc, manager.materialLawParams(cell), fs);
+    return pc[WaterFluidSystem::oilPhaseIdx] - pc[WaterFluidSystem::waterPhaseIdx];
 }
 
 } // Anonymous namespace
@@ -1572,6 +1653,124 @@ BOOST_AUTO_TEST_CASE(WaterContactAboveCells)
             }
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(SwatinitWaterIsHeldByTheScaledCapillaryPressure)
+{
+    // Above the water-oil contact at 2050 m each cell takes its SWATINIT water,
+    // and its capillary pressure curve is scaled to hold that water at the
+    // pressure difference between the hydrocarbon and the water. Below the
+    // contact the water pressure exceeds the hydrocarbon pressure, so the water
+    // fills the pore space and the curve keeps its input scale.
+    const WaterEquilFixture fix(swatinitDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n",
+                                                   "20*0.3"));
+    MaterialLawManager manager;
+    initMaterialLaw(manager, fix.eclState, fix.depths.size());
+    const Scalar inputMaxPcow = manager.oilWaterScaledEpsInfoDrainage(0).maxPcow;
+    BOOST_REQUIRE_CLOSE(inputMaxPcow, 2.0 * barsa, 1e-10);
+
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, swatinitConnateSw),
+                                    std::vector<Scalar>(20, 1.0),
+                                    /*pvtnum=*/{},
+                                    std::vector<Scalar>(20, 0.3),
+                                    swatinitScaling(manager)).fluidStates();
+
+    for (unsigned c = 0; c < states.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            const auto& fs = states[c];
+            if (fix.depths[c] > 2050.0) {
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::waterPhaseIdx), 1.0, 1e-10);
+                BOOST_CHECK_EQUAL(manager.oilWaterScaledEpsInfoDrainage(c).maxPcow,
+                                  inputMaxPcow);
+            }
+            else {
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::waterPhaseIdx), 0.3, 1e-10);
+                BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::oilPhaseIdx), 0.7, 1e-10);
+                BOOST_CHECK_CLOSE(waterOilPc(manager, c, 0.3),
+                                  fs.pressure(WaterFluidSystem::oilPhaseIdx)
+                                      - fs.pressure(WaterFluidSystem::waterPhaseIdx),
+                                  1e-8);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SwatinitBelowTheConnateWaterKeepsTheConnateWater)
+{
+    // No cell holds less than its connate water, so SWATINIT below it raises
+    // the water to the connate saturation, where the scaled curve then reaches
+    // the pressure difference between the hydrocarbon and the water.
+    const WaterEquilFixture fix(swatinitDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n",
+                                                   "20*0.05"));
+    MaterialLawManager manager;
+    initMaterialLaw(manager, fix.eclState, fix.depths.size());
+
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, swatinitConnateSw),
+                                    std::vector<Scalar>(20, 1.0),
+                                    /*pvtnum=*/{},
+                                    std::vector<Scalar>(20, 0.05),
+                                    swatinitScaling(manager)).fluidStates();
+
+    for (unsigned c = 0; fix.depths[c] < 2050.0; ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            const auto& fs = states[c];
+            BOOST_CHECK_CLOSE(fs.saturation(WaterFluidSystem::waterPhaseIdx),
+                              swatinitConnateSw, 1e-10);
+            BOOST_CHECK_CLOSE(waterOilPc(manager, c, swatinitConnateSw),
+                              fs.pressure(WaterFluidSystem::oilPhaseIdx)
+                                  - fs.pressure(WaterFluidSystem::waterPhaseIdx),
+                              1e-8);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SwatinitNeedsCapillaryPressure)
+{
+    // Without capillary pressure no curve can hold the SWATINIT water, so each
+    // cell keeps the saturation end point on its side of the contact.
+    const WaterEquilFixture fix(swatinitDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n",
+                                                   "20*0.3", /*capillaryPressure=*/false));
+    MaterialLawManager manager;
+    initMaterialLaw(manager, fix.eclState, fix.depths.size());
+
+    const auto states = fix.compute(std::vector<int>(20, 0),
+                                    std::vector<Scalar>(20, swatinitConnateSw),
+                                    std::vector<Scalar>(20, 1.0),
+                                    /*pvtnum=*/{},
+                                    std::vector<Scalar>(20, 0.3),
+                                    swatinitScaling(manager)).fluidStates();
+
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            BOOST_CHECK_CLOSE(states[c].saturation(WaterFluidSystem::waterPhaseIdx),
+                              (fix.depths[c] > 2050.0) ? 1.0 : swatinitConnateSw, 1e-10);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SwatinitMustCoverEveryCellAndComeWithItsScaling)
+{
+    const WaterEquilFixture fix(swatinitDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n",
+                                                   "20*0.3"));
+    MaterialLawManager manager;
+    initMaterialLaw(manager, fix.eclState, fix.depths.size());
+    const std::vector<int> eqlnum(20, 0);
+    const std::vector<Scalar> connate(20, swatinitConnateSw);
+    const std::vector<Scalar> maximum(20, 1.0);
+
+    const auto mentions = [](const std::string& text) {
+        return [text](const std::runtime_error& error) {
+            return std::string{error.what()}.find(text) != std::string::npos;
+        };
+    };
+    BOOST_CHECK_EXCEPTION(fix.compute(eqlnum, connate, maximum, /*pvtnum=*/{},
+                                      std::vector<Scalar>(19, 0.3), swatinitScaling(manager)),
+                          std::runtime_error, mentions("SWATINIT water"));
+    BOOST_CHECK_EXCEPTION(fix.compute(eqlnum, connate, maximum, /*pvtnum=*/{},
+                                      std::vector<Scalar>(20, 0.3)),
+                          std::runtime_error, mentions("capillary pressure scaling"));
 }
 
 namespace {
