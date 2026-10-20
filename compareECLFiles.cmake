@@ -823,6 +823,131 @@ add_test_runSimulator(CASENAME 1dcompositional_flow_comp3_2p
                       DIR compositional)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
+# Check explicit SWAT initialization in both modes without reference files.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_default
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> default"
+)
+
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_normalized
+  FILENAME
+    1D_COMP_NO_WELLS_DUMMY_WATER
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> normalized"
+)
+
+# Check the normalized initial SWAT of the probe decks cell by cell.
+foreach(case SGAS SOIL SSHIFT XMF_YMF)
+  string(TOLOWER ${case} test)
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_probes_${test}
+    FILENAME
+      EXPLICIT_SWAT_PROBES_${case}
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    TEST_ARGS
+      --normalize-explicit-swat=true
+    POST_COMMAND
+      "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_PROBES_${case}"
+  )
+endforeach()
+
+# Cell 1 lies just inside its dew point, where successive substitution alone
+# converges slowly, so the normalization has to flash as the model does.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_near_dew_point
+  FILENAME
+    EXPLICIT_SWAT_NEAR_DEW_POINT
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional/explicit_swat
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
+)
+
+# Components left out of ZMF must not break the normalization's flash.
+add_test_runSimulator(
+  CASENAME
+    comp_explicit_swat_zero_component
+  FILENAME
+    EXPLICIT_SWAT_ZERO_COMPONENT
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional/explicit_swat
+  TEST_ARGS
+    --normalize-explicit-swat=true
+  POST_COMMAND
+    "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_ZERO_COMPONENT"
+)
+
+if(MPI_FOUND)
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_near_dew_point_parallel
+    FILENAME
+      EXPLICIT_SWAT_NEAR_DEW_POINT
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    PROCS
+      2
+    TEST_ARGS
+      --normalize-explicit-swat=true
+    POST_COMMAND
+      "$<TARGET_FILE:test_comp_explicit_swat_init> EXPLICIT_SWAT_NEAR_DEW_POINT"
+  )
+
+  # With successive substitution forced, the flash fails only on the rank that
+  # owns cell 1. Both ranks must then stop with the normalization error instead
+  # of hanging.
+  add_test_runSimulator(
+    CASENAME
+      comp_explicit_swat_flash_failure_parallel
+    FILENAME
+      EXPLICIT_SWAT_NEAR_DEW_POINT
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/explicit_swat
+    PROCS
+      2
+    TEST_ARGS
+      --normalize-explicit-swat=true
+      --flash-two-phase-method=ssi
+  )
+  set_tests_properties(
+    runSimulator/comp_explicit_swat_flash_failure_parallel
+    PROPERTIES
+      PASS_REGULAR_EXPRESSION "FlowProblemComp::normalizeExplicitSwat_\\(\\) failed"
+      TIMEOUT 60
+  )
+endif()
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe
