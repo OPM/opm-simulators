@@ -68,9 +68,12 @@ public:
         serializer(network_thp_limit);
         serializer(pressure_first_connection);
         serializer(temperature);
+        serializer(rs_rep);
+        serializer(rv_rep);
+        serializer(rsw_rep);
+        serializer(rvw_rep);
         serializer(energy_rate);
         serializer(efficiency_scaling_factor);
-        serializer(phase_mixing_rates);
         serializer(well_potentials);
         serializer(productivity_index);
         serializer(implicit_ipr_a);
@@ -119,7 +122,15 @@ public:
     // filtration injection concentration
     Scalar filtrate_conc{0};
 
-    std::array<Scalar,4> phase_mixing_rates{};
+    // Representative dissolved gas-oil, vaporised oil-gas, dissolved gas-water
+    // and vaporised water-gas ratios of the produced fluid. Used to split the
+    // total surface rates into free and dissolved/vaporised parts, see
+    // WellInterface::consolidatePhaseMixingRates.
+    Scalar rs_rep{0};
+    Scalar rv_rep{0};
+    Scalar rsw_rep{0};
+    Scalar rvw_rep{0};
+
     enum RateIndices {
       dissolved_gas = 0,
       dissolved_gas_in_water = 1,
