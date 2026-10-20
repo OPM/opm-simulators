@@ -717,7 +717,7 @@ public:
             const unsigned cellIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
             const auto& materialLawManager = elemCtx.problem().materialLawManager();
             const auto& scaledDrainageInfo =
-                    materialLawManager->oilWaterScaledEpsInfoDrainage(cellIdx);
+                    materialLawManager.oilWaterScaledEpsInfoDrainage(cellIdx);
 
             const Scalar sogcr = scaledDrainageInfo.Sogcr;
             Evaluation sor = sogcr;

@@ -579,9 +579,9 @@ public:
 
     void beginRestart()
     {
-        const auto enablePCHysteresis = simulator_.problem().materialLawManager()->enablePCHysteresis();
-        const auto enableNonWettingHysteresis = simulator_.problem().materialLawManager()->enableNonWettingHysteresis();
-        const auto enableWettingHysteresis = simulator_.problem().materialLawManager()->enableWettingHysteresis();
+        const auto enablePCHysteresis = simulator_.problem().materialLawManager().enablePCHysteresis();
+        const auto enableNonWettingHysteresis = simulator_.problem().materialLawManager().enableNonWettingHysteresis();
+        const auto enableWettingHysteresis = simulator_.problem().materialLawManager().enableWettingHysteresis();
         const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
         const auto gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
         const auto waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);

@@ -767,7 +767,7 @@ public:
         const unsigned cellIdx = elemCtx.globalSpaceIndex(scvfIdx, timeIdx);
         const auto& materialLawManager = elemCtx.problem().materialLawManager();
         const auto& scaledDrainageInfo =
-                materialLawManager->oilWaterScaledEpsInfoDrainage(cellIdx);
+                materialLawManager.oilWaterScaledEpsInfoDrainage(cellIdx);
         const Scalar& Swcr = scaledDrainageInfo.Swcr;
 
         // guard against zero porosity and no mobile water
