@@ -30,6 +30,10 @@
 #include "config.h"
 #include "TestTypeTag.hpp"
 
+#include <opm/common/OpmLog/LogUtil.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/start.hh>
@@ -52,6 +56,8 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
+#include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -74,8 +80,56 @@ struct SimulatorFixture
         Dune::MPIHelper::instance(argc, argv);
 #endif
         FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+        // Without a backend, messages sent to OpmLog, such as warnings and errors
+        // from the deck parser, are lost.  Print them to the test output; the
+        // progress messages (Info and below) are left out.
+        if (!OpmLog::hasBackend("STDERR_LOGGER")) {
+            const std::int64_t message_types = Log::MessageType::Warning
+                + Log::MessageType::Error + Log::MessageType::Problem + Log::MessageType::Bug;
+            OpmLog::addBackend("STDERR_LOGGER",
+                               std::make_shared<StreamLog>(std::cerr, message_types));
+        }
     }
 };
+
+/*!
+ * \brief Register the parameters a simulator needs, and set them for a deck file
+ *
+ * The first part of initSimulator(), for tests that read the deck themselves.
+ *
+ * \tparam TypeTag The type tag for the simulator
+ * \param filename Path to the Eclipse deck file
+ * \param test_name Name of the test (used in argv[0])
+ * \param threads_per_process Number of threads per process (default: 1)
+ */
+template <class TypeTag>
+void setupSimulatorParameters(const std::string& filename,
+                              const char* test_name = "test_simulator",
+                              int threads_per_process = 1)
+{
+    const std::string filename_arg = "--ecl-deck-file-name=" + filename;
+
+    const char* argv[] = {
+        test_name,
+        filename_arg.c_str()
+    };
+
+    Parameters::reset();
+    registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+    registerEclTimeSteppingParameters<double>();
+    BlackoilModelParameters<double>::registerParameters();
+    // Normally registered by the simulator class, which the tests do not build.
+    // The well model reads it, so it must be registered here.
+    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
+    Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
+    Parameters::endRegistration();
+    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
+                              argv,
+                              /*registerParams=*/false,
+                              /*allowUnused=*/false,
+                              /*handleHelp=*/true,
+                              /*myRank=*/FlowGenericVanguard::comm().rank());
+}
 
 /*!
  * \brief Initialize a simulator from an Eclipse deck file
@@ -94,28 +148,7 @@ initSimulator(const char* filename,
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    std::string filename_arg = "--ecl-deck-file-name=";
-    filename_arg += filename;
-
-    const char* argv[] = {
-        test_name,
-        filename_arg.c_str()
-    };
-
-    Parameters::reset();
-    registerAllParameters_<TypeTag>(false);
-    registerEclTimeSteppingParameters<double>();
-    BlackoilModelParameters<double>::registerParameters();
-    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
-    Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
-    Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
-                              /*registerParams=*/false,
-                              /*allowUnused=*/false,
-                              /*handleHelp=*/true,
-                              /*myRank=*/0);
-
+    setupSimulatorParameters<TypeTag>(filename, test_name, threads_per_process);
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();
 }

@@ -137,7 +137,7 @@ guideRateSum(const Group& group,
             // to participate in its parent's guide-rate sum even while on individual
             // control.  Without this, multi-sibling groups on individual control are
             // dropped from each other's denominator, giving each ~the full parent
-            // share.  Eligibility is necessary but not sufficient: the capped-state is
+            // share.  Eligibility is necessary but not sufficient: the excluded state is
             // still enforced by the GCW gate below (effective GCW = 0 -> excluded).
             included |= this->groupStateHelper().isMasterGroupEligibleForGuideRate(child_group);
         } else {
@@ -148,7 +148,7 @@ guideRateSum(const Group& group,
             // The injection counterpart of the master-group rule for producers above: a
             // reservoir-coupling master group available for higher-level injection control
             // (GCONINJE item 8 = YES) stays in its siblings' denominator while on individual
-            // control.  A capped or inactive-slave group is still dropped by the GCW gate below.
+            // control.  An excluded or inactive-slave group is still dropped by the GCW gate below.
             included |= this->groupStateHelper().isMasterGroupEligibleForInjectionGuideRate(
                 child_group, this->injection_phase_);
         }

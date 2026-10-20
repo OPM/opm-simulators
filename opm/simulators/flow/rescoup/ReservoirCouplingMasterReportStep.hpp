@@ -34,6 +34,7 @@
 #include <map>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -279,6 +280,26 @@ public:
     /// This updates the internal state to track which report step is currently
     /// being processed.
     void setReportStepIdx(int report_step_idx);
+
+    /// @brief Set the injection data of a slave's groups, as received from the slave
+    /// @details Used by unit tests, which have no slave process to receive the data from.
+    /// @param slave_name Name of the slave process
+    /// @param injection_data One entry per slave group, in the canonical master group order
+    void setSlaveGroupInjectionData(const std::string& slave_name,
+                                    std::vector<SlaveGroupInjectionData> injection_data)
+    {
+        this->slave_group_injection_data_[slave_name] = std::move(injection_data);
+    }
+
+    /// @brief Set the production data of a slave's groups, as received from the slave
+    /// @details Used by unit tests, which have no slave process to receive the data from.
+    /// @param slave_name Name of the slave process
+    /// @param production_data One entry per slave group, in the canonical master group order
+    void setSlaveGroupProductionData(const std::string& slave_name,
+                                     std::vector<SlaveGroupProductionData> production_data)
+    {
+        this->slave_group_production_data_[slave_name] = std::move(production_data);
+    }
 
     /// @brief Remember the flow rates of the master groups as they stand now
     /// @details Called just before the end-of-sync-step slave data is received. The rates then

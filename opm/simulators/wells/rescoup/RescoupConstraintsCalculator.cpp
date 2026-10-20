@@ -158,7 +158,7 @@ RescoupConstraintsCalculator(
 //    partial sums (a master group's rate is added on rank 0 only).  Each time
 //    this calculator recomputes them (updateGCWAndTargetReductions_(),
 //    updateInjectionGCWAndTargetReductions_()) it sums them across the master's
-//    ranks at once, so every rank computes the same targets and cap decisions,
+//    ranks at once, so every rank computes the same targets and exclusions,
 //    and so makes the same collective calls.  All other group rates were
 //    already summed by the group-data update that precedes this calculation.
 //
@@ -226,6 +226,31 @@ void
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
 calculateMasterGroupConstraintsAndSendToSlaves()
 {
+    const auto constraints = this->calculateMasterGroupConstraints();
+
+    // Phase 3: send to slaves.  The send functions are rank-0-only internally.
+    const auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto num_slaves = rescoup_master.numSlaves();
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
+            this->sendSlaveGroupConstraintsToSlave_(
+                rescoup_master, slave_idx,
+                constraints.injection_targets[slave_idx],
+                constraints.production_constraints[slave_idx]
+            );
+        }
+    }
+}
+
+// The pre-phase and Phases 1, 2 and 2b of
+// calculateMasterGroupConstraintsAndSendToSlaves(), see the overview above.
+// Separate from the send so that unit tests, which have no slaves to send to,
+// can check the constraints (see tests/rescoup/test_rescoup_constraints.cpp).
+template <class Scalar, class IndexTraits>
+typename RescoupConstraintsCalculator<Scalar, IndexTraits>::MasterGroupConstraints
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateMasterGroupConstraints()
+{
     // NOTE: Since this object can only be constructed for a master process,
     //   we can be sure that if we are here, we are running as master.
     //
@@ -241,7 +266,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     };
     // Reset effective-GCW entries from the previous sync step to GCW=1 before
     // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
-    // Phase 2 cap) repopulate the 0-entries for this step.
+    // Phase 2 exclusion) repopulate the 0-entries for this step.
     rescoup_master.resetEffectiveGCW();
     this->excludeInactiveSlaveMasterGroupsFromDistribution_();
     // Recompute GCW and reduction rates after the control changes above.
@@ -273,16 +298,7 @@ calculateMasterGroupConstraintsAndSendToSlaves()
     // and redistribute the surplus to sibling master groups, per phase.
     this->excludeAndRedistributeInjectionTargets_(calculator, all_injection_targets);
 
-    // Phase 3: send to slaves.  The send functions are rank-0-only internally.
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsCoupled(slave_idx)) {
-            this->sendSlaveGroupConstraintsToSlave_(
-                rescoup_master, slave_idx,
-                all_injection_targets[slave_idx],
-                all_production_constraints[slave_idx]
-            );
-        }
-    }
+    return {std::move(all_injection_targets), std::move(all_production_constraints)};
 }
 
 // ----------------------------------------------------------------------
@@ -683,7 +699,7 @@ updateGCWAndTargetReductions_()
     this->group_state_helper_.updateGroupTargetReduction(fieldGroup, /*is_injector=*/false);
     // The reduction rates are per-rank partial sums (a master group's rate is
     // added on rank 0 only); sum them so every rank computes the same targets
-    // and cap decisions, see updateInjectionGCWAndTargetReductions_().
+    // and exclusions, see updateInjectionGCWAndTargetReductions_().
     this->group_state_helper_.groupState().communicate_reduction_rates(
         this->group_state_helper_.comm(), /*is_injector=*/false);
 }
@@ -704,7 +720,7 @@ updateInjectionGCWAndTargetReductions_()
     // updateGroupTargetReduction() leaves per-rank partial sums: a master
     // group's slave-reported rate is added on rank 0 only.  Sum them across the
     // master's ranks before any target is computed from them.  Otherwise the
-    // targets, and with them the cap decisions, can differ between ranks, and
+    // targets, and with them the exclusions, can differ between ranks, and
     // the ranks then make different numbers of the collective calls inside the
     // target computation (GroupStateHelper::getGroupRatesAvailableForHigherLevelControl()).
     this->group_state_helper_.groupState().communicate_reduction_rates(
