@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/hypreinterface/HypreInterface.hpp>
+#include <opm/simulators/linalg/hypreinterface/HypreNumericRap.hpp>
 
 #if HYPRE_USING_CUDA
 #include <opm/simulators/linalg/gpuistl/detail/gpu_type_detection.hpp>
@@ -43,7 +44,9 @@
 #include <_hypre_utilities.h>
 
 #include <algorithm>
+#include <limits>
 #include <numeric>
+#include <string>
 #include <vector>
 
 namespace Opm::linalg
@@ -121,6 +124,19 @@ public:
         // Create solver
         solver_ = HypreInterface::createAMGSolver();
         HypreInterface::setSolverParameters(solver_, prm, use_gpu_backend_);
+        // >1: keep the hierarchy for that many updates; 0: always re-setup cheaply and let the
+        // linear solver decide when to recreate (no perfect update then)
+        const int interval = prm.get<int>("reuse_interval", 1);
+        external_reuse_ = interval == 0;
+        reuse_interval_ = external_reuse_ ? std::numeric_limits<int>::max() : std::max(1, interval);
+        // "frozen": keep the whole hierarchy; "galerkin": keep coarsening and P, recompute P^T A P
+        const auto mode = prm.get<std::string>("reuse_mode", "frozen");
+        if (mode != "frozen" && mode != "galerkin") {
+            OPM_THROW(std::invalid_argument, "HyprePreconditioner: unknown reuse_mode " + mode);
+        }
+        reuse_galerkin_ = mode == "galerkin";
+        numeric_rap_ = prm.get<bool>("numeric_rap", true);
+        relax_type_ = prm.get<int>("relax_type", use_gpu_backend_ ? 16 : 13);
 
         // Setup parallel info and mappings
         par_info_ = HypreInterface::setupHypreParallelInfo(comm_, A_);
@@ -237,7 +253,6 @@ public:
             }
         }
 
-
         // Get the underlying ParCSR matrix for setup
         HYPRE_ParCSRMatrix parcsr_A;
         HYPRE_SAFE_CALL(HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A)));
@@ -247,8 +262,21 @@ public:
         HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(x_hypre_, reinterpret_cast<void**>(&par_x)));
         HYPRE_SAFE_CALL(HYPRE_IJVectorGetObject(b_hypre_, reinterpret_cast<void**>(&par_b)));
 
-        // Setup the solver
+        // The values were updated in place, so the fine level of a kept hierarchy already
+        // sees the new matrix; only its l1 smoother norms are stale.
+        if (is_setup_ && !use_gpu_backend_ && ++updates_since_setup_ < reuse_interval_) {
+            OPM_TIMEBLOCK(prec_update_reuse);
+            if (reuse_galerkin_) {
+                resetupGalerkin_(parcsr_A);
+            } else {
+                refreshFineL1Norms_(parcsr_A);
+            }
+            return;
+        }
         HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetup(solver_, parcsr_A, par_b, par_x));
+        rap_maps_.clear();
+        is_setup_ = true;
+        updates_since_setup_ = 0;
     }
 
     /**
@@ -331,10 +359,8 @@ public:
      */
     bool hasPerfectUpdate() const override
     {
-        // The Hypre preconditioner can depend on the values of the matrix so it does not have perfect update.
-        // However, copying the matrix to Hypre requires to setup the solver again, so this is handled internally.
-        // So for ISTLSolver, we can return true.
-        return true;
+        // Full setups are handled internally, unless the linear solver decides (reuse_interval 0).
+        return !external_reuse_;
     }
 
 private:
@@ -402,6 +428,91 @@ private:
         }
     }
 
+    // Same l1 norms (option 4, no CF ordering) that BoomerAMGSetup builds for l1 smoothers.
+    void refreshL1Norms_(HYPRE_Int level)
+    {
+        if (relax_type_ != 8 && relax_type_ != 13 && relax_type_ != 14) {
+            return;
+        }
+        auto* amg = reinterpret_cast<hypre_ParAMGData*>(solver_);
+        hypre_Vector** l1 = hypre_ParAMGDataL1Norms(amg);
+        if (l1 == nullptr || l1[level] == nullptr) {
+            return;
+        }
+        hypre_ParCSRMatrix* A = hypre_ParAMGDataAArray(amg)[level];
+        HYPRE_Real* d = nullptr;
+        HYPRE_SAFE_CALL(hypre_ParCSRComputeL1Norms(A, 4, nullptr, &d));
+        hypre_SeqVectorDestroy(l1[level]);
+        l1[level] = hypre_SeqVectorCreate(hypre_ParCSRMatrixNumRows(A));
+        hypre_VectorData(l1[level]) = d;
+        hypre_SeqVectorInitialize_v2(l1[level], hypre_ParCSRMatrixMemoryLocation(A));
+    }
+
+    void refreshFineL1Norms_(HYPRE_ParCSRMatrix /*parcsr_A*/)
+    {
+        refreshL1Norms_(0);
+    }
+
+    // Keep the coarsening and interpolation, rebuild the coarse operators from the current
+    // matrix as BoomerAMGSetup does, then the coarsest elimination and the smoother norms.
+    void resetupGalerkin_(HYPRE_ParCSRMatrix parcsr_A)
+    {
+        auto* amg = reinterpret_cast<hypre_ParAMGData*>(solver_);
+        const HYPRE_Int L = hypre_ParAMGDataNumLevels(amg);
+        hypre_ParCSRMatrix** A_array = hypre_ParAMGDataAArray(amg);
+        hypre_ParCSRMatrix** P_array = hypre_ParAMGDataPArray(amg);
+        A_array[0] = reinterpret_cast<hypre_ParCSRMatrix*>(parcsr_A);
+        int num_procs = 1;
+        MPI_Comm_size(hypre_ParCSRMatrixComm(A_array[0]), &num_procs);
+        const HYPRE_Int keepT = hypre_ParAMGDataKeepTranspose(amg);
+        if (numeric_rap_ && rap_maps_.empty()) {
+            rap_maps_.resize(L - 1);
+            for (HYPRE_Int l = 0; l < L - 1; ++l) {
+                rap_maps_[l].build(A_array[l], P_array[l], A_array[l + 1]);
+            }
+        }
+        for (HYPRE_Int l = 0; l < L - 1; ++l) {
+            if (numeric_rap_ && rap_maps_[l].valid()) {
+                rap_maps_[l].apply(A_array[l], P_array[l], A_array[l + 1]);
+                continue;
+            }
+            hypre_ParCSRMatrix* AH = nullptr;
+            if (hypre_ParAMGDataModularizedMatMat(amg)) {
+                AH = hypre_ParCSRMatrixRAPKT(P_array[l], A_array[l], P_array[l], keepT, 1);
+            } else {
+                hypre_BoomerAMGBuildCoarseOperatorKT(P_array[l], A_array[l], P_array[l], keepT, &AH);
+            }
+            if (num_procs > 1 && hypre_ParCSRMatrixCommPkg(AH) == nullptr) {
+                hypre_MatvecCommPkgCreate(AH);
+            }
+            hypre_ParCSRMatrixSetNumNonzeros(AH);
+            hypre_ParCSRMatrixSetDNumNonzeros(AH);
+            hypre_ParCSRMatrixDestroy(A_array[l + 1]);
+            A_array[l + 1] = AH;
+        }
+        HYPRE_Int* grt = hypre_ParAMGDataGridRelaxType(amg);
+        if (L > 1 && (grt[3] == 9 || grt[3] == 19 || grt[3] == 98 || grt[3] == 99
+                      || grt[3] == 198 || grt[3] == 199)) {
+            // free what hypre_GaussElimSetup allocated for the previous coarsest matrix
+            const HYPRE_MemoryLocation gml = hypre_ParAMGDataGEMemoryLocation(amg);
+            hypre_TFree(hypre_ParAMGDataAPiv(amg), gml);
+            hypre_TFree(hypre_ParAMGDataAMat(amg), gml);
+            hypre_TFree(hypre_ParAMGDataAWork(amg), gml);
+            hypre_TFree(hypre_ParAMGDataBVec(amg), gml);
+            hypre_TFree(hypre_ParAMGDataUVec(amg), gml);
+            hypre_TFree(hypre_ParAMGDataCommInfo(amg), HYPRE_MEMORY_HOST);
+            if (hypre_ParAMGDataNewComm(amg) != hypre_MPI_COMM_NULL) {
+                MPI_Comm nc = hypre_ParAMGDataNewComm(amg);
+                hypre_MPI_Comm_free(&nc);
+                hypre_ParAMGDataNewComm(amg) = hypre_MPI_COMM_NULL;
+            }
+            hypre_GaussElimSetup(amg, L - 1, grt[3]);
+        }
+        for (HYPRE_Int l = 0; l < L - 1; ++l) {
+            refreshL1Norms_(l);
+        }
+    }
+
     // Reference to the input matrix
     const M& A_;
     const Comm& comm_; //!< The communication object for parallel operations.
@@ -421,8 +532,16 @@ private:
     // Backend configuration
     bool use_gpu_backend_ = false;
 
+    int reuse_interval_ = 1;
+    bool external_reuse_ = false;
+    bool reuse_galerkin_ = false;
+    bool numeric_rap_ = true;
     std::vector<HYPRE_Int> direct_src_, direct_slots_;
     HYPRE_Int direct_nnz_diag_ = 0;
+    std::vector<HypreInterface::NumericRap> rap_maps_;
+    int relax_type_ = 13;
+    int updates_since_setup_ = 0;
+    bool is_setup_ = false;
 };
 
 } // namespace Hypre
