@@ -467,7 +467,25 @@ protected:
             }
         }
 
-        EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
+        // SWATINIT is given on the unrefined input grid, like EQLNUM. The
+        // material law scales the capillary pressure curve of each cell to hold
+        // its SWATINIT water (PPCW).
+        using StateComputer = EQUIL::Comp::InitialStateComputer<FluidSystem>;
+        std::vector<Scalar> swatinit;
+        typename StateComputer::SwatinitScaling scaleSwatinit;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+            eclState.fieldProps().has_double("SWATINIT")) {
+            const LookUpData<typename GridView::Grid, GridView>
+                lookUpData(vanguard.gridView());
+            const auto input = lookUpData.assignFieldPropsDoubleOnLeaf(eclState.fieldProps(),
+                                                                        "SWATINIT");
+            swatinit.assign(input.begin(), input.end());
+            scaleSwatinit = [&materialLawManager = this->materialLawManager()]
+                (const unsigned cell, const Scalar pcow, const Scalar sw)
+            { return materialLawManager.applySwatinit(cell, pcow, sw); };
+        }
+
+        StateComputer initialState(
             eclState,
             getEosType(),
             vanguard.cellCenterDepths(),
@@ -477,7 +495,9 @@ protected:
             this->gravity()[dimWorld - 1],
             this->numPressurePointsEquil(),
             connateWater,
-            maxWater);
+            maxWater,
+            swatinit,
+            std::move(scaleSwatinit));
 
         initialFluidStates_ = std::move(initialState.fluidStates());
         twoPhaseCheckRegions_ = std::move(initialState.twoPhaseCheckRegions());
