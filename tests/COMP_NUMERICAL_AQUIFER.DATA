@@ -1,0 +1,190 @@
+-- A row of four oil cells with a numerical aquifer of two cells attached to
+-- the first one. The aquifer cells lie above the water-oil contact and start
+-- at 30 bar above the equilibrium pressure, so water flows into the
+-- reservoir until the pressures even out. There are no wells.
+
+RUNSPEC
+
+TITLE
+COMPOSITIONAL NUMERICAL AQUIFER
+
+METRIC
+
+OIL
+GAS
+WATER
+
+DIMENS
+6 1 1 /
+
+COMPS
+3 /
+
+FULLIMP
+
+TABDIMS
+/
+
+EQLDIMS
+/
+
+AQUDIMS
+2 1 /
+
+START
+1 'JAN' 2020 /
+
+UNIFOUT
+
+GRID
+
+INIT
+
+DX
+6*50 /
+DY
+6*50 /
+DZ
+6*10 /
+TOPS
+6*2000 /
+
+PORO
+6*0.25 /
+PERMX
+6*100 /
+PERMY
+6*100 /
+PERMZ
+6*100 /
+
+-- Cells 5 and 6 become the aquifer.
+AQUNUM
+-- ID  I J K  AREA    LENGTH  PORO  PERM  DEPTH  PRESSURE
+   1   5 1 1  2.0E4   500     0.25  5     2005   230 /
+   1   6 1 1  2.0E4   500     0.25  5     2005   230 /
+/
+
+AQUCON
+-- ID  I1 I2 J1 J2 K1 K2  FACE  TRANMULT
+   1   1  1  1  1  1  1   'I-'  0.1 /
+/
+
+PROPS
+
+CNAMES
+CO2
+METHANE
+DECANE
+/
+
+EOS
+PR /
+
+BIC
+0
+0
+0
+/
+
+ACF
+0.22394
+0.01142
+0.4884
+/
+
+PCRIT
+73.773
+45.992
+21.03
+/
+
+TCRIT
+304.128
+190.564
+617.7
+/
+
+MW
+44.00
+16.04
+142.28
+/
+
+VCRIT
+0.09412
+0.09863
+0.60980
+/
+
+STCOND
+15.0 1.0 /
+
+DENSITY
+1* 1000.0 1* /
+
+PVTW
+200 1.0 4.0E-5 0.4 0.0 /
+
+ROCK
+200 5.0E-5 /
+
+SWOF
+0.2  0.0  1.0  0.0
+0.4  0.1  0.5  0.0
+0.6  0.3  0.2  0.0
+0.8  0.6  0.05 0.0
+1.0  1.0  0.0  0.0
+/
+
+SGOF
+0.0  0.0  1.0  0.0
+0.2  0.1  0.5  0.0
+0.4  0.3  0.2  0.0
+0.6  0.6  0.05 0.0
+0.8  1.0  0.0  0.0
+/
+
+RTEMP
+100 /
+
+ZMFVD
+1900  0.05 0.30 0.65
+2100  0.05 0.30 0.65 /
+
+SOLUTION
+
+EQUIL
+-- DATUM  PRESSURE  WOC   PCOW  GOC   PCOG
+   2005   200       2100  0     1900  0 /
+
+RPTRST
+BASIC=2 /
+
+SUMMARY
+
+ANQR
+1 /
+ANQT
+1 /
+ANQP
+1 /
+
+BPR
+1 1 1 /
+4 1 1 /
+/
+
+BSWAT
+1 1 1 /
+/
+
+SCHEDULE
+
+RPTRST
+BASIC=2 /
+
+TSTEP
+10*5 /
+
+END
