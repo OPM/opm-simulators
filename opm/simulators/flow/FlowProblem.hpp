@@ -1575,14 +1575,9 @@ protected:
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
     }
 
-    // Runs the per-dof explicit-quantity updates that a time step needs in a
-    // single sweep over the cached intensive quantities, instead of one sweep
-    // per quantity. Each update is independent (they read the intensive
-    // quantities and write disjoint state), so this is equivalent to calling
-    // them in turn; only the number of passes over the grid changes.
-    // Returns whether any of them ran, i.e. whether the intensive quantities
-    // may need to be invalidated -- same meaning as the individual functions.
-    bool updateExplicitQuantitiesFused_()
+    // The per-dof explicit updates in one sweep. changed[dof] is set when any of them
+    // modified that dof's state; returns false when none of them is active.
+    bool updateExplicitQuantitiesFused_(std::vector<char>& changed)
     {
         OPM_TIMEBLOCK(updateExplicitQuantitiesFused);
         const bool doMaxWaterSat = !this->maxWaterSaturation_.empty();
@@ -1593,21 +1588,24 @@ protected:
         if (!doMaxWaterSat && !doMinPressure && !doHysteresis && !doMaxOilSat) {
             return false;
         }
+        changed.assign(this->simulator().model().solution(/*timeIdx=*/0).size(), 0);
         this->updateProperty_("FlowProblem::updateExplicitQuantitiesFused_() failed:",
                               [&](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
+                                  bool c = false;
                                   if (doMaxWaterSat) {
-                                      this->updateMaxWaterSaturation_(compressedDofIdx, iq);
+                                      c = this->updateMaxWaterSaturation_(compressedDofIdx, iq) || c;
                                   }
                                   if (doMinPressure) {
-                                      this->updateMinPressure_(compressedDofIdx, iq);
+                                      c = this->updateMinPressure_(compressedDofIdx, iq) || c;
                                   }
                                   if (doHysteresis) {
-                                      materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
+                                      c = materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx) || c;
                                   }
                                   if (doMaxOilSat) {
-                                      this->updateMaxOilSaturation_(compressedDofIdx, iq);
+                                      c = this->updateMaxOilSaturation_(compressedDofIdx, iq) || c;
                                   }
+                                  changed[compressedDofIdx] = c;
                               });
         return true;
     }

@@ -169,6 +169,17 @@ public:
         }
     }
 
+    // Recompute only the cached intensive quantities of cells with mask[cell] != 0;
+    // the others stay valid. Falls back to a full update off the context-free path.
+    void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx, const std::vector<char>& mask) const
+    {
+        if constexpr (gridIsUnchanging && avoidElementContext) {
+            updateCachedIntQuants(timeIdx, mask.data());
+        } else {
+            invalidateAndUpdateIntensiveQuantities(timeIdx);
+        }
+    }
+
     void invalidateAndUpdateIntensiveQuantitiesOverlap(unsigned timeIdx) const
     {
         if (!this->enableIntensiveQuantityCache_) {
@@ -273,48 +284,48 @@ protected:
     template <EclMultiplexerApproach ApproachArg>
     using EMD = EclMultiplexerDispatch<ApproachArg>;
 
-    void updateCachedIntQuants(const unsigned timeIdx) const
+    void updateCachedIntQuants(const unsigned timeIdx, const char* mask = nullptr) const
     {
         // Runtime dispatch on three-phase approach to compile-time fixed approach.
         switch (this->simulator_.problem().materialLawManager()->threePhaseApproach()) {
         case EclMultiplexerApproach::Stone1:
-            updateCachedIntQuants1<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx);
+            updateCachedIntQuants1<EclMultiplexerDispatch<EclMultiplexerApproach::Stone1>>(timeIdx, mask);
             break;
 
         case EclMultiplexerApproach::Stone2:
-            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Stone2>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Stone2>>(timeIdx, mask);
             break;
 
         case EclMultiplexerApproach::Default:
-            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Default>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::Default>>(timeIdx, mask);
             break;
 
         case EclMultiplexerApproach::TwoPhase:
-            updateCachedIntQuants1<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::TwoPhase>>(timeIdx, mask);
             break;
 
         case EclMultiplexerApproach::OnePhase:
-            updateCachedIntQuants1<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx);
+            updateCachedIntQuants1<EMD<EclMultiplexerApproach::OnePhase>>(timeIdx, mask);
             break;
         }
     }
 
     template <class EMDArg>
-    void updateCachedIntQuants1(const unsigned timeIdx) const
+    void updateCachedIntQuants1(const unsigned timeIdx, const char* mask) const
     {
         // Runtime dispatch on using piecewise linear saturation curves to compile-time fixed approach.
         if (this->simulator_.problem().materialLawManager()->satCurveIsAllPiecewiseLinear()) {
             using PL = SatCurveMultiplexerDispatch<SatCurveMultiplexerApproach::PiecewiseLinear>;
-            updateCachedIntQuantsLoop<EMDArg, PL>(timeIdx);
+            updateCachedIntQuantsLoop<EMDArg, PL>(timeIdx, mask);
         } else {
             // TODO: Might want to set LET here, but need to check if partial use of LET is possible.
-            updateCachedIntQuantsLoop<EMDArg>(timeIdx);
+            updateCachedIntQuantsLoop<EMDArg>(timeIdx, mask);
         }
     }
 
 
     template <class ...Args>
-    void updateCachedIntQuantsLoop(const unsigned timeIdx) const
+    void updateCachedIntQuantsLoop(const unsigned timeIdx, const char* mask) const
     {
         const auto& elementMapper = this->simulator_.model().elementMapper();
 #ifdef _OPENMP
@@ -322,7 +333,10 @@ protected:
 #endif
         for (const auto& chunk : element_chunks_) {
             for (const auto& elem : chunk) {
-                this->template updateSingleCachedIntQuantUnchecked<Args...>(elementMapper.index(elem), timeIdx);
+                const unsigned idx = elementMapper.index(elem);
+                if (mask == nullptr || mask[idx]) {
+                    this->template updateSingleCachedIntQuantUnchecked<Args...>(idx, timeIdx);
+                }
             }
         }
     }
