@@ -45,6 +45,9 @@ public:
     using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
+    static_assert(Concepts::HasBlackoilComponents<FluidSystem>,
+                  "Constant-flux aquifers need the black-oil components");
+
     static constexpr int numEq = BlackoilIndices::numEq;
     using Eval = GetPropType<TypeTag, Properties::Evaluation>;
     AquiferConstantFlux(const std::vector<Aquancon::AquancCell>& connections,
@@ -157,6 +160,10 @@ public:
 
 private:
     const std::vector<Aquancon::AquancCell>& connections_;
+
+    // Active component index of the aquifer's phase, for offsetting conti0EqIdx.
+    const int activeCompIdx_{FluidSystem::canonicalToActiveCompIdx(
+        FluidSystem::solventComponentIndex(this->phaseIdx_()))};
 
     SingleAquiferFlux aquifer_data_;
     std::vector<Eval> connection_flux_{};

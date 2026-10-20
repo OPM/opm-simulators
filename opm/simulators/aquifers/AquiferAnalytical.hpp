@@ -70,6 +70,9 @@ public:
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
+    static_assert(Concepts::HasBlackoilComponents<FluidSystem>,
+                  "Analytic aquifers need the black-oil components");
+
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
     using Eval = GetPropType<TypeTag, Properties::Evaluation>;
@@ -432,6 +435,10 @@ protected:
     }
 
     const std::vector<Aquancon::AquancCell> connections_;
+
+    // Active component index of the aquifer's phase, for offsetting conti0EqIdx.
+    const int activeCompIdx_{FluidSystem::canonicalToActiveCompIdx(
+        FluidSystem::solventComponentIndex(this->phaseIdx_()))};
 
     // Grid variables
     std::vector<Scalar> faceArea_connected_;
