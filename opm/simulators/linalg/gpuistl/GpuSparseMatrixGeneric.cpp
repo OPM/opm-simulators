@@ -44,18 +44,25 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const T* nonZeroElements,
                                                   const int* columnIndices,
                                                   size_t numberOfNonzeroBlocks,
                                                   size_t blockSize,
-                                                  size_t numberOfRows)
+                                                  size_t numberOfRows,
+                                                  size_t numberOfCols)
     : m_nonZeroElements(nonZeroElements, numberOfNonzeroBlocks * blockSize * blockSize)
     , m_columnIndices(columnIndices, numberOfNonzeroBlocks)
     , m_rowIndices(rowIndices, numberOfRows + 1)
     , m_numberOfNonzeroBlocks(detail::to_int(numberOfNonzeroBlocks))
     , m_numberOfRows(detail::to_int(numberOfRows))
+    , m_numberOfCols(detail::to_int(numberOfCols == 0 ? numberOfRows : numberOfCols))
     , m_blockSize(detail::to_int(blockSize))
     , m_matrixDescriptor(detail::makeSafeMatrixDescriptor())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
 {
     if (detail::to_size_t(rowIndices[numberOfRows]) != numberOfNonzeroBlocks) {
         OPM_THROW(std::invalid_argument, "Wrong sparsity format. Needs to be CSR compliant.");
+    }
+    if (blockSize > 1 && numberOfCols != 0 && numberOfCols != numberOfRows) {
+        OPM_THROW(std::invalid_argument,
+            "Non-square matrices (numberOfCols != numberOfRows) are only supported for "
+            "scalar CSR format (blockSize == 1).");
     }
 
     initializeMatrixDescriptor();
@@ -71,6 +78,7 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuVector<int>& rowIndic
     , m_rowIndices(rowIndices)
     , m_numberOfNonzeroBlocks(detail::to_int(columnIndices.dim()))
     , m_numberOfRows(detail::to_int(rowIndices.dim() - 1))
+    , m_numberOfCols(detail::to_int(rowIndices.dim() - 1))  // square
     , m_blockSize(detail::to_int(blockSize))
     , m_matrixDescriptor(detail::makeSafeMatrixDescriptor())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
@@ -86,6 +94,7 @@ GpuSparseMatrixGeneric<T>::GpuSparseMatrixGeneric(const GpuSparseMatrixGeneric<T
     , m_rowIndices(other.m_rowIndices)
     , m_numberOfNonzeroBlocks(other.m_numberOfNonzeroBlocks)
     , m_numberOfRows(other.m_numberOfRows)
+    , m_numberOfCols(other.m_numberOfCols)
     , m_blockSize(other.m_blockSize)
     , m_matrixDescriptor(detail::makeSafeMatrixDescriptor())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
@@ -120,10 +129,10 @@ GpuSparseMatrixGeneric<T>::initializeMatrixDescriptor()
         OPM_THROW(std::invalid_argument, "BSR format not supported for HIP or CUDA < 12.3 with Generic API");
 #endif
     } else {
-        // Use CSR format for scalar matrices
+        // Use CSR format for scalar matrices (supports non-square)
         OPM_CUSPARSE_SAFE_CALL(cusparseCreateCsr(m_matrixDescriptor.get(),
                                                  m_numberOfRows,
-                                                 m_numberOfRows,
+                                                 m_numberOfCols,
                                                  m_numberOfNonzeroBlocks,
                                                  m_rowIndices.data(),
                                                  m_columnIndices.data(),
@@ -139,19 +148,22 @@ template <class T>
 void
 GpuSparseMatrixGeneric<T>::preprocessSpMV()
 {
-    // Initialize buffer for SpMV operations and preprocess
-    size_t vecSize = m_numberOfRows * m_blockSize;
+    // Initialize buffer for SpMV operations and preprocess.
+    // For non-square matrices: input x has m_numberOfCols * blockSize elements,
+    // output y has m_numberOfRows * blockSize elements.
+    const size_t inputVecSize  = detail::to_size_t(m_numberOfCols) * detail::to_size_t(m_blockSize);
+    const size_t outputVecSize = detail::to_size_t(m_numberOfRows) * detail::to_size_t(m_blockSize);
 
     // Create temporary vectors for preprocessing
-    GpuVector<T> tempX(vecSize);
-    GpuVector<T> tempY(vecSize);
+    GpuVector<T> tempX(inputVecSize);
+    GpuVector<T> tempY(outputVecSize);
 
     // Create vector descriptors with RAII cleanup
     auto tempVecX = detail::makeSafeVectorDescriptor();
     auto tempVecY = detail::makeSafeVectorDescriptor();
 
-    OPM_CUSPARSE_SAFE_CALL(cusparseCreateDnVec(tempVecX.get(), vecSize, tempX.data(), getDataType()));
-    OPM_CUSPARSE_SAFE_CALL(cusparseCreateDnVec(tempVecY.get(), vecSize, tempY.data(), getDataType()));
+    OPM_CUSPARSE_SAFE_CALL(cusparseCreateDnVec(tempVecX.get(), inputVecSize,  tempX.data(), getDataType()));
+    OPM_CUSPARSE_SAFE_CALL(cusparseCreateDnVec(tempVecY.get(), outputVecSize, tempY.data(), getDataType()));
 
     // Determine buffer size for SpMV
     T alpha = 1.0;
@@ -265,8 +277,9 @@ template <typename T>
 void
 GpuSparseMatrixGeneric<T>::spMV(T alpha, const GpuVector<T>& x, T beta, GpuVector<T>& y) const
 {
-    assertSameSize(x);
-    assertSameSize(y);
+    // Input x is sized by columns; output y is sized by rows.
+    detail::validateVectorMatrixSizes(x.dim(), blockSize(), M());
+    detail::validateVectorMatrixSizes(y.dim(), blockSize(), N());
 
     // Create vector descriptors with RAII cleanup
     auto vecX = detail::makeSafeVectorDescriptor();
@@ -322,7 +335,7 @@ template <class VectorType>
 void
 GpuSparseMatrixGeneric<T>::assertSameSize(const VectorType& vector) const
 {
-    // Assume square matrices: numberOfColumns == numberOfRows
+    // Legacy check against row count (used by external callers for square matrices).
     detail::validateVectorMatrixSizes(vector.dim(), blockSize(), N());
 }
 

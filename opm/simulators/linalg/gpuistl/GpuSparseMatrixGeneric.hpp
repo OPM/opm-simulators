@@ -67,13 +67,17 @@ public:
     //! \param[in] numberOfNonzeroBlocks number of nonzero elements
     //! \param[in] blockSize size of each block matrix (typically 3)
     //! \param[in] numberOfRows the number of rows
+    //! \param[in] numberOfCols the number of columns (0 = square, i.e. same as numberOfRows)
     //!
+    //! \note Non-square matrices (numberOfCols != numberOfRows) are only supported for
+    //!       scalar CSR format (blockSize == 1).
     GpuSparseMatrixGeneric(const T* nonZeroElements,
                            const int* rowIndices,
                            const int* columnIndices,
                            std::size_t numberOfNonzeroBlocks,
                            std::size_t blockSize,
-                           std::size_t numberOfRows);
+                           std::size_t numberOfRows,
+                           std::size_t numberOfCols = 0);
 
     //! Create a sparse matrix by copying the sparsity structure of another matrix, not filling in the values
     //!
@@ -111,11 +115,20 @@ public:
     static GpuSparseMatrixGeneric<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
     /**
-     * @brief N returns the number of rows (which is equal to the number of columns)
+     * @brief N returns the number of rows
      */
     std::size_t N() const
     {
         return detail::to_size_t(m_numberOfRows);
+    }
+
+    /**
+     * @brief M returns the number of columns
+     * @note For square matrices this equals N().
+     */
+    std::size_t M() const
+    {
+        return detail::to_size_t(m_numberOfCols);
     }
 
     /**
@@ -300,12 +313,13 @@ private:
     GpuVector<int> m_columnIndices;
     GpuVector<int> m_rowIndices;
 
-    // Notice that we store these three as int to make sure we are cusparse compatible.
+    // Notice that we store these as int to make sure we are cusparse compatible.
     //
     // This gives the added benefit of checking the size constraints at construction of the matrix
     // rather than in some call to cusparse.
     const int m_numberOfNonzeroBlocks;
     const int m_numberOfRows;
+    const int m_numberOfCols;   // == m_numberOfRows for square matrices
     const int m_blockSize;
 
     // Generic API descriptors
