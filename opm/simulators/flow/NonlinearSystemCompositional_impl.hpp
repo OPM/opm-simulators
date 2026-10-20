@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace Opm {
@@ -323,6 +324,8 @@ reservoirResidualMetrics() const
     const auto& constraintsMap = model.linearizer().constraintsMap();
 
     std::vector<Scalar> residualMetrics(numEq, 0.0);
+    // std::max skips a NaN residual, which must still fail the convergence check.
+    std::vector<int> nanResidual(numEq, 0);
 
     // Ghost-cell residuals may omit fluxes from neighbors beyond the overlap.
     // Use the owning rank's residual to assess convergence.
@@ -339,14 +342,23 @@ reservoirResidualMetrics() const
 
         const auto& localResidual = residual[dofIdx];
         for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            residualMetrics[eqIdx] = std::max(
-                residualMetrics[eqIdx],
-                std::abs(localResidual[eqIdx] * model.eqWeight(dofIdx, eqIdx)));
+            const Scalar value = std::abs(localResidual[eqIdx] * model.eqWeight(dofIdx, eqIdx));
+            residualMetrics[eqIdx] = std::max(residualMetrics[eqIdx], value);
+            if (std::isnan(value)) {
+                nanResidual[eqIdx] = 1;
+            }
         }
     }
 
     if (this->grid_.comm().size() > 1 && !residualMetrics.empty()) {
         this->grid_.comm().max(residualMetrics.data(), residualMetrics.size());
+        this->grid_.comm().max(nanResidual.data(), nanResidual.size());
+    }
+
+    for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+        if (nanResidual[eqIdx]) {
+            residualMetrics[eqIdx] = std::numeric_limits<Scalar>::quiet_NaN();
+        }
     }
 
     return residualMetrics;
