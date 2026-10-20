@@ -606,6 +606,19 @@ macro(opm-simulators_tests_hook)
           -f drsdt_initial_rs
           -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
     )
+
+    # MINPV removes every host cell of the only LGR, so the trilinear
+    # refinement refines nothing: the run must still write its restart file.
+    add_test(
+      NAME
+        lgr_restart_unrefined
+      COMMAND
+        $<TARGET_FILE:${drsdt_simulator}>
+          ${PROJECT_SOURCE_DIR}/tests/LGR_RESTART_UNREFINED.DATA
+          --output-dir=${PROJECT_BINARY_DIR}/tests/results/lgr_restart_unrefined
+          --parsing-strictness=low
+          --lgr-backend=trilinear
+    )
   endif()
 
   if(BUILD_FLOW)
@@ -716,6 +729,10 @@ macro(opm-simulators_targets_hook)
   target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_lgr_block_data PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_lgr_sealed_fault_ranks PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_lgr_well_ranks PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+  target_sources(test_lgr_zero_cells PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()

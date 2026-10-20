@@ -1133,6 +1133,7 @@ add_test_compare_parallel_simulation(
     init
   TEST_ARGS
     --parsing-strictness=low
+    --lgr-backend=trilinear
 )
 
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")

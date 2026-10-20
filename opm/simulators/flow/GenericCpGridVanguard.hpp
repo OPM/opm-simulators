@@ -144,6 +144,19 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
 
+    /*!
+     * \brief Reference grid used by ECL output on the I/O rank.
+     *
+     * Equals the (refined) outputGrid_ in a parallel run with LGRs, otherwise
+     * the EQUIL grid.  Only valid on the I/O rank.
+     */
+    const Dune::CpGrid& eclOutputGrid() const;
+
+    /*!
+     * \brief Cartesian index mapper for the ECL output reference grid.
+     */
+    const CartesianIndexMapper& eclOutputCartesianIndexMapper() const;
+
     const std::vector<int>& cellPartition() const
     {
         return this->cell_part_;
@@ -218,7 +231,7 @@ protected:
 
     void allocCartMapper();
 
-    void doCreateGrids_(bool edge_conformal, EclipseState& eclState);
+    void doCreateGrids_(bool edge_conformal, bool conformingLgr, EclipseState& eclState);
     void addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
                                const int lgrsSize,
                                Dune::CpGrid& grid);
@@ -230,8 +243,15 @@ protected:
 
     std::unique_ptr<Dune::CpGrid> grid_;
     std::unique_ptr<Dune::CpGrid> equilGrid_;
+    // I/O-rank reference grid for ECL output.  In a parallel run with LGRs the
+    // simulation grid is refined only after distribution and equilGrid_ stays
+    // coarse, so this holds a self-communicator copy of the global grid refined
+    // exactly as a serial run would have it; ECL output gathers cell data onto
+    // this grid.  Null (and the accessors fall back to equilGrid_) otherwise.
+    std::unique_ptr<Dune::CpGrid> outputGrid_;
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
+    std::unique_ptr<CartesianIndexMapper> outputCartesianIndexMapper_;
     std::unique_ptr<LevelCartesianIndexMapper> levelCartesianIndexMapper_;
 
     int mpiRank;
