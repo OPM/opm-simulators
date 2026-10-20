@@ -31,21 +31,34 @@
 #define OPM_FLOW_PROBLEM_COMP_HPP
 
 
+#include <opm/models/ptflash/flashparameters.hh>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/grid/LookUpData.hh>
 
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 
 #include <algorithm>
 #include <functional>
 #include <vector>
+
+namespace Opm::Parameters {
+
+// Treat explicit compositional saturations as given before the hydrocarbon
+// flash and rescale SWAT accordingly. By default, keep the input SWAT.
+struct NormalizeExplicitSwat { static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -82,6 +95,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::PrimaryVariables;
     using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using typename FlowProblemType::Evaluation;
+    using typename FlowProblemType::IntensiveQuantities;
     using typename FlowProblemType::MaterialLaw;
     using typename FlowProblemType::RateVector;
 
@@ -104,6 +118,14 @@ public:
 
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
+
+        Parameters::Register<Parameters::NormalizeExplicitSwat>(
+            "Treat the explicit initial saturations of compositional runs as "
+            "saturations before the hydrocarbon flash: SGAS and the oil "
+            "saturation 1 - SWAT - SGAS each hold their input composition at "
+            "the vapour or liquid equation-of-state root, and water and the "
+            "flashed phases are then rescaled to fill the pore volume. When "
+            "disabled (the default), the input SWAT is retained.");
     }
 
     Opm::CompositionalConfig::EOSType getEosType() const
@@ -608,6 +630,121 @@ protected:
                     }
                 }
             }
+        }
+
+        if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
+            normalizeExplicitSwat_();
+        }
+    }
+
+    // The explicit saturations describe the cell before the hydrocarbon
+    // flash. SGAS and the oil saturation So = 1 - SWAT - SGAS each hold
+    // their input composition at the vapour or liquid EOS root, whatever the
+    // stable state, and with volume shift applied. After flashing the total,
+    // water and the flashed phases are rescaled to fill the pore volume:
+    //
+    //   Sw = SWAT / (SWAT + n * Vm_flash),  n = So / Vm_liquid + SGAS / Vm_vapour
+    void normalizeExplicitSwat_()
+    {
+        using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
+        const auto eos_type = getEosType();
+        // Flash as the model does, so that this converges wherever the model's flash does.
+        const Scalar flash_tolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
+        const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
+        const auto flash_method
+            = ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
+        bool zmf_oil_and_gas = false;
+
+        // A failing flash on one rank must not leave the others in the reduction below.
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (auto& fs : initialFluidStates_) {
+            const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
+            if (sw_in <= 0.0 || sw_in >= 1.0) {
+                continue;
+            }
+            if (!zmf_oil_and_gas && zmf_initialization_
+                && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                && fs.saturation(FluidSystem::oilPhaseIdx) > 0.0
+                && fs.saturation(FluidSystem::gasPhaseIdx) > 0.0) {
+                zmf_oil_and_gas = true;
+            }
+
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
+
+            // Hydrocarbon moles per unit pore volume as given. Each given phase holds its
+            // input composition, ZMF or XMF/YMF, before the flash, so this is the molar
+            // volume of that composition at the phase's own root.
+            Dune::FieldVector<Scalar, numComponents> moles(0.0);
+            Scalar total_moles = 0.0;
+            for (const unsigned phaseIdx : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
+                const Scalar saturation = fs.saturation(phaseIdx);
+                if (!FluidSystem::phaseIsActive(phaseIdx) || saturation <= 0.0) {
+                    continue;
+                }
+                param_cache.updatePhase(fs, phaseIdx);
+                const Scalar phase_moles = saturation / param_cache.correctedMolarVolume(phaseIdx);
+                for (unsigned c = 0; c < numComponents; ++c) {
+                    moles[c] += phase_moles * fs.moleFraction(phaseIdx, c);
+                }
+                total_moles += phase_moles;
+            }
+            if (total_moles <= 0.0) {
+                continue;
+            }
+
+            // Overall composition of the given phases, which is ZMF itself with ZMF input.
+            // Floor and renormalize it as the model does before its flash.
+            Dune::FieldVector<Scalar, numComponents> z(0.0);
+            Scalar sum_z = 0.0;
+            for (unsigned c = 0; c < numComponents; ++c) {
+                z[c] = std::max(moles[c] / total_moles, IntensiveQuantities::compositionFloor);
+                sum_z += z[c];
+            }
+
+            InitialFluidState flash_fs;
+            flash_fs.setTemperature(fs.temperature(0));
+            flash_fs.setPressure(FluidSystem::oilPhaseIdx, fs.pressure(FluidSystem::oilPhaseIdx));
+            flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
+            for (unsigned c = 0; c < numComponents; ++c) {
+                flash_fs.setMoleFraction(c, z[c] / sum_z);
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
+            }
+            flash_fs.setLvalue(-1.0);
+            FlashSolver::flash_solve_scalar(
+                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity);
+
+            // A single-phase result has L = 0 or 1, so only one phase counts.
+            const Scalar L = flash_fs.L();
+            Scalar vm_flash = 0.0;
+            if (L > 0.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::oilPhaseIdx);
+                vm_flash += L * param_cache.correctedMolarVolume(FluidSystem::oilPhaseIdx);
+            }
+            if (L < 1.0) {
+                param_cache.updatePhase(flash_fs, FluidSystem::gasPhaseIdx);
+                vm_flash += (1.0 - L) * param_cache.correctedMolarVolume(FluidSystem::gasPhaseIdx);
+            }
+
+            const Scalar sw = sw_in / (sw_in + total_moles * vm_flash);
+            const Scalar hc_scale = (1.0 - sw) / (1.0 - sw_in);
+
+            fs.setSaturation(FluidSystem::waterPhaseIdx, sw);
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                fs.setSaturation(FluidSystem::gasPhaseIdx,
+                                 fs.saturation(FluidSystem::gasPhaseIdx) * hc_scale);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                fs.setSaturation(FluidSystem::oilPhaseIdx,
+                                 fs.saturation(FluidSystem::oilPhaseIdx) * hc_scale);
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("FlowProblemComp::normalizeExplicitSwat_() failed: ", comm);
+
+        if (comm.max(zmf_oil_and_gas ? 1 : 0) > 0 && comm.rank() == 0) {
+            OpmLog::warning("ZMF is given with both oil and gas saturations; both phases take "
+                            "the ZMF composition when SWAT is normalized.");
         }
     }
 
