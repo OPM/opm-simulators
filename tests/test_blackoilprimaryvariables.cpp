@@ -3,6 +3,7 @@
 #include "TestTypeTag.hpp"
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
+#include <opm/models/blackoil/blackoilnewtonupdate.hpp>
 
 #define BOOST_TEST_MODULE BlackoilPrimaryVariables
 #include <boost/test/unit_test.hpp>
@@ -111,7 +112,7 @@ struct FluidSystemGuard
     FluidSystemGuard& operator=(const FluidSystemGuard&) = delete;
     FluidSystemGuard(FluidSystemGuard&&) = delete;
     FluidSystemGuard& operator=(FluidSystemGuard&&) = delete;
-    
+
     FluidSystemGuard()
         : dissolvedGas(FluidSystem::enableDissolvedGas())
         , dissolvedGasInWater(FluidSystem::enableDissolvedGasInWater())
@@ -337,4 +338,79 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromRvToGasSaturation)
     BOOST_CHECK(priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Po);
     BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], 0.8, 1e-12);
     BOOST_CHECK_CLOSE(priVars[Indices::pressureSwitchIdx], 1.5e5, 1e-12);
+}
+
+// Exercise the shared update through real primary variables, including the
+// switch-history threshold supplied by the nonlinear method.
+BOOST_AUTO_TEST_CASE(NewtonUpdateLimitsPressureAndCombinedSaturationChange)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    Problem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+
+    const auto current = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                              0.3, 0.3,
+                                              PrimaryVariables::WaterMeaning::Sw,
+                                              PrimaryVariables::PressureMeaning::Po,
+                                              1.e5);
+    auto next = current;
+    Opm::GetPropType<TypeTag, Opm::Properties::EqVector> correction(0.0);
+    correction[Indices::pressureSwitchIdx] = 8.e4;
+    correction[Indices::waterSwitchIdx] = 0.3;
+    correction[Indices::compositionSwitchIdx] = 0.3;
+    const bool switched = Opm::BlackOilNewtonUpdate<TypeTag>::update(
+        problem, FluidSystem{}, 0, next, current, correction, params, false);
+
+    BOOST_CHECK(!switched);
+    BOOST_CHECK_CLOSE(next[Indices::pressureSwitchIdx], 7.e4, 1.e-12);
+    // The oil saturation changes by the sum of the other two changes.
+    BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 0.2, 1.e-12);
+    BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], 0.2, 1.e-12);
+    BOOST_CHECK_CLOSE(current[Indices::waterSwitchIdx], 0.3, 1.e-12);
+}
+
+BOOST_AUTO_TEST_CASE(NewtonUpdateUsesSwitchHistoryToSuppressOscillation)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(true);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(0.25));
+    Problem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+    params.priVarOscilationThreshold_ = 1.e-5;
+    const auto current = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                              0.2, 1.e-6,
+                                              PrimaryVariables::WaterMeaning::Sw,
+                                              PrimaryVariables::PressureMeaning::Po,
+                                              1.e5);
+    Opm::GetPropType<TypeTag, Opm::Properties::EqVector> correction(0.0);
+    correction[Indices::compositionSwitchIdx] = 2.e-6;
+    auto next = current;
+    BOOST_CHECK(Opm::BlackOilNewtonUpdate<TypeTag>::update(
+        problem, FluidSystem{}, 0, next, current, correction, params, false));
+    BOOST_CHECK(next.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+    BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], 0.25, 1.e-12);
+
+    next = current;
+    BOOST_CHECK(!Opm::BlackOilNewtonUpdate<TypeTag>::update(
+        problem, FluidSystem{}, 0, next, current, correction, params, true));
+    BOOST_CHECK(next.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg);
+    BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], -1.e-6, 1.e-12);
 }
