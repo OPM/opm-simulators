@@ -91,9 +91,6 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
 
     static constexpr bool compositionSwitchEnabled =
         Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
-    static constexpr bool waterEnabled = Indices::waterEnabled;
-    static constexpr bool gasEnabled = Indices::gasEnabled;
-    static constexpr bool oilEnabled = Indices::oilEnabled;
 
     // phase indices from the fluid system
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -527,7 +524,7 @@ public:
             sw = 1.0;
         }
 
-        if (primaryVarsMeaningGas() == GasMeaning::Disabled && gasEnabled) {
+        if (primaryVarsMeaningGas() == GasMeaning::Disabled && Indices::gasIsActive()) {
             sg = 1.0 - sw; // water + gas case
         }
 
@@ -588,7 +585,7 @@ public:
         // as sw >= 1.0 -> gas <= 0 (i.e. gas phase disappears)
         if (sw >= thresholdWaterFilledCell && !FluidSystem::enableDissolvedGasInWater()) {
             // make sure water saturations does not exceed sw_maximum. Default to 1.0
-            if constexpr (waterEnabled) {
+            if (Indices::waterIsActive()) {
                 (*this)[Indices::waterSwitchIdx] = std::min(swMaximum, sw);
                 assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
             }

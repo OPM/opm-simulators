@@ -123,9 +123,6 @@ class BlackOilIntensiveQuantities
 
     static constexpr bool compositionSwitchEnabled =
         Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
-    static constexpr bool waterEnabled = Indices::waterEnabled;
-    static constexpr bool gasEnabled = Indices::gasEnabled;
-    static constexpr bool oilEnabled = Indices::oilEnabled;
 
     using Toolbox = MathToolbox<Evaluation>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
@@ -260,7 +257,7 @@ public:
     {
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
-        if constexpr (waterEnabled) {
+        if (Indices::waterIsActive()) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
                 assert(Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max());
                 if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
@@ -276,7 +273,7 @@ public:
             } // else i.e. for MeaningWater() = Rvw, Sw is still 0.0;
         }
         Evaluation Sg = 0.0;
-        if constexpr (gasEnabled) {
+        if (Indices::gasIsActive()) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
                 assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
                 if constexpr (compositionSwitchEnabled) {
@@ -287,7 +284,7 @@ public:
                 Sg = 1.0 - Sw;
             }
             else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Disabled) {
-                if constexpr (waterEnabled) {
+                if (Indices::waterIsActive()) {
                     Sg = 1.0 - Sw; // two phase water + gas
                 } else {
                     // one phase case

@@ -56,6 +56,12 @@ struct BlackOilOnePhaseIndices
     static constexpr bool waterEnabled = canonicalCompIdx == 1;
     static constexpr bool gasEnabled = canonicalCompIdx == 2;
 
+    //! Runtime-style accessors for phase activity. These are constexpr here, so
+    //! code written against them is folded at compile time for static indices.
+    static constexpr bool waterIsActive() { return waterEnabled; }
+    static constexpr bool gasIsActive() { return gasEnabled; }
+    static constexpr bool oilIsActive() { return oilEnabled; }
+
     //! Are solvents involved?
     static constexpr bool enableSolvent = numSolventsV > 0;
 
