@@ -24,6 +24,9 @@
 
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
@@ -44,6 +47,7 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -162,6 +166,22 @@ struct BasicEquilFixture
 
 using EquilFixture = BasicEquilFixture<FluidSystem>;
 using WaterEquilFixture = BasicEquilFixture<WaterFluidSystem>;
+
+struct WarningCapture
+{
+    WarningCapture()
+    {
+        Opm::OpmLog::addBackend("COMPEQUIL_WATER_PVT_TEST",
+            std::make_shared<Opm::StreamLog>(messages, Opm::Log::MessageType::Warning));
+    }
+
+    ~WarningCapture()
+    {
+        Opm::OpmLog::removeBackend("COMPEQUIL_WATER_PVT_TEST");
+    }
+
+    std::ostringstream messages;
+};
 
 // The mixture composition the ZMFVD table prescribes at a depth.
 CompVec tableComposition(const Scalar depth)
@@ -1178,6 +1198,40 @@ BOOST_AUTO_TEST_CASE(OneEquilibrationRegionHoldsTheWaterOfEachPvtRegion)
                        - waterDensity(1000.0, 1.03, 4.0e-5, pCell10 / barsa))
                           * gravity * (fix.depths[10] - 2035.0),
                       0.1);
+}
+
+BOOST_AUTO_TEST_CASE(MixedWaterPvtRegionsWarnAboutPossibleCrossflow)
+{
+    // Give cells of the two PVT regions the same depth, as can occur across a
+    // reservoir/aquifer NNC. Separate columns give the brine higher pressure.
+    WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "10*1 10*2"));
+    fix.depths[10] = fix.depths[9];
+    std::vector<int> pvtnum(20, 0);
+    std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
+    const std::vector<int> eqlnum(20, 0);
+
+    {
+        WarningCapture warnings;
+        const auto states = fix.compute(eqlnum, {}, {}, pvtnum).fluidStates();
+        const auto pressure = [](const auto& fs) {
+            return Opm::getValue(fs.pressure(WaterFluidSystem::waterPhaseIdx));
+        };
+        BOOST_CHECK_EQUAL(fix.depths[9], fix.depths[10]);
+        BOOST_CHECK_GT((pressure(states[10]) - pressure(states[9])) / barsa, 0.1);
+        BOOST_CHECK(warnings.messages.str().find(
+            "Equilibration region 1 has water-zone cells in PVT regions 1, 2")
+            != std::string::npos);
+        BOOST_CHECK(warnings.messages.str().find("numerical-aquifer NNCs")
+                    != std::string::npos);
+    }
+
+    // A second PVT region confined above the water contact contributes no
+    // water-zone cells and needs no crossflow warning.
+    pvtnum.assign(20, 0);
+    pvtnum[0] = 1;
+    WarningCapture warnings;
+    fix.compute(eqlnum, {}, {}, pvtnum);
+    BOOST_CHECK(warnings.messages.str().find("water-zone cells") == std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(DatumInDifferentWatersIsRejected)

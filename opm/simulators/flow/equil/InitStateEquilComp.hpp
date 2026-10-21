@@ -54,6 +54,7 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
 #include <array>
@@ -312,7 +313,7 @@ public:
         regions.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
             regions.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
-                                          cellCenterDepth, eqlnum, comm, gravity,
+                                          cellCenterDepth, eqlnum, pvtnum, comm, gravity,
                                           numSamplePoints, r));
         }
 
@@ -638,6 +639,7 @@ private:
                        const std::vector<unsigned>& pvtRegions,
                        const std::vector<Scalar>& cellCenterDepth,
                        const std::vector<int>& eqlnum,
+                       const std::vector<int>& pvtnum,
                        const Parallel::Communication& comm,
                        const Scalar gravity,
                        const int numSamplePoints,
@@ -799,6 +801,34 @@ private:
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         if (waterActive) {
             reg.zwoc = record.waterOilContactDepth();
+            if (pvtRegions.size() > 1) {
+                // Only PVT regions with cells below the contact can have a water
+                // column connected to another one. Include cells on all ranks.
+                std::vector<int> present(pvtRegions.back() + 1, 0);
+                for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
+                    if (std::cmp_equal(eqlnum[cell], regionIdx) &&
+                        cellCenterDepth[cell] > reg.zwoc) {
+                        present[pvtnum[cell]] = 1;
+                    }
+                }
+                comm.max(present.data(), static_cast<int>(present.size()));
+
+                std::vector<unsigned> waterPvtRegions;
+                for (const auto pvtRegion : pvtRegions) {
+                    if (present[pvtRegion] != 0) {
+                        waterPvtRegions.push_back(pvtRegion + 1);
+                    }
+                }
+                if (waterPvtRegions.size() > 1) {
+                    OpmLog::warning(fmt::format(
+                        "Equilibration region {} has water-zone cells in PVT regions {}. "
+                        "Their water pressures are integrated in separate columns. Where "
+                        "the cells connect (including numerical-aquifer NNCs), differing "
+                        "water densities may cause an initial pressure imbalance and "
+                        "crossflow. Check PVTNUM and initial water pressures across "
+                        "connections.", regionIdx + 1, fmt::join(waterPvtRegions, ", ")));
+                }
+            }
         }
 
         // A datum below the water-oil contact states the pressure of the water
