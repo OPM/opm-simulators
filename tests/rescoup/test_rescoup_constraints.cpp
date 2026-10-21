@@ -66,6 +66,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -137,10 +138,14 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
     //!   reports no producers under group control
     //! \param groups_without_group_controlled_water_injectors Master groups whose slave
     //!   reports no water injectors under group control
+    //! \param uncoupled_slaves Slaves that are not coupled: never activated, and
+    //!   reporting zeros, as the master assumes for a slave that has not
+    //!   activated yet or has ended.  At least one slave must be coupled.
     void commonSetupForAllTests(
         const std::string& data_file = flat_deck,
         const std::vector<std::string>& groups_without_group_controlled_producers = {},
-        const std::vector<std::string>& groups_without_group_controlled_water_injectors = {})
+        const std::vector<std::string>& groups_without_group_controlled_water_injectors = {},
+        const std::set<std::string>& uncoupled_slaves = {})
     {
         for (const auto& group : groups_without_group_controlled_producers) {
             slave_group_reports_.at(group).num_group_controlled_producers = 0;
@@ -148,6 +153,7 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
         for (const auto& group : groups_without_group_controlled_water_injectors) {
             slave_group_reports_.at(group).num_group_controlled_water_injectors = 0;
         }
+        uncoupled_slaves_ = uncoupled_slaves;
         simulator_ = initMasterSimulator<TypeTag>(data_file);
         setupMaster_();
         wellModel().setReservoirCouplingMaster(master_.get());
@@ -160,11 +166,17 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
         simulator_->problem().resetIterationForNewTimestep();
 
         wellModel().beginReportStep(report_step_idx_);
-        // As at the start of a time step: the group rates, with the master groups'
-        // rates taken from the slave reports, then the guide rates.
-        wellModel().updateAndCommunicateGroupData(report_step_idx_,
-                                                  /*update_wellgrouptarget=*/false);
-        wellModel().updateGuideRates(report_step_idx_, /*sim_time=*/0.0);
+        updateGroupData_();
+    }
+
+    //! \brief Send the slave reports to the master again, as the slaves do at the
+    //!   next sync step, and update the group data from them
+    //!
+    //! Change the reports with slaveGroupReport() first.
+    void resendSlaveData()
+    {
+        setSlaveData_();
+        updateGroupData_();
     }
 
     // ------------------------------------------------------------------------
@@ -177,6 +189,11 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
     auto& groupStateHelper() { return wellModel().groupStateHelper(); }
     Opm::GuideRate& guideRate() { return wellModel().guideRate(); }
     Master& master() { return *master_; }
+    //! What the slave reports for the master group \p group
+    SlaveGroupReport& slaveGroupReport(const std::string& group)
+    {
+        return slave_group_reports_.at(group);
+    }
     int reportStepIdx() const { return report_step_idx_; }
 
     int phasePos(int canonical_phase_idx)
@@ -266,6 +283,7 @@ private:
         {"M4", {50.0, 1, 50.0, 50.0, 1, 1}},
     };
 
+    std::set<std::string> uncoupled_slaves_;
     std::unique_ptr<Opm::Simulator<TypeTag>> simulator_;
     std::unique_ptr<Master> master_;
     int report_step_idx_{0};
@@ -291,9 +309,26 @@ private:
         master_->initStartOfReportStep(report_step_idx_);
 
         for (const auto& [slave_name, groups] : master_groups_of_slave_) {
-            master_->setSlaveActivated(master_->getSlaveIdx(slave_name));
+            if (uncoupled_slaves_.count(slave_name) == 0) {
+                master_->setSlaveActivated(master_->getSlaveIdx(slave_name));
+            }
+        }
+        setSlaveData_();
+    }
+
+    // Sets the data the slaves report.  A slave that is not coupled reports
+    // nothing, and the master then assumes zero data for it
+    // (see ReservoirCouplingMasterReportStep::receiveProductionDataFromSlaves()).
+    void setSlaveData_()
+    {
+        for (const auto& [slave_name, groups] : master_groups_of_slave_) {
             std::vector<Master::SlaveGroupProductionData> production_data(groups.size());
             std::vector<Master::SlaveGroupInjectionData> injection_data(groups.size());
+            if (uncoupled_slaves_.count(slave_name) > 0) {
+                master_->setSlaveGroupProductionData(slave_name, std::move(production_data));
+                master_->setSlaveGroupInjectionData(slave_name, std::move(injection_data));
+                continue;
+            }
             for (std::size_t i = 0; i < groups.size(); ++i) {
                 const auto& report = slave_group_reports_.at(groups[i]);
                 auto& prod = production_data[i];
@@ -315,6 +350,15 @@ private:
             master_->setSlaveGroupProductionData(slave_name, std::move(production_data));
             master_->setSlaveGroupInjectionData(slave_name, std::move(injection_data));
         }
+    }
+
+    // As at the start of a time step: the group rates, with the master groups'
+    // rates taken from the slave reports, then the guide rates.
+    void updateGroupData_()
+    {
+        wellModel().updateAndCommunicateGroupData(report_step_idx_,
+                                                  /*update_wellgrouptarget=*/false);
+        wellModel().updateGuideRates(report_step_idx_, /*sim_time=*/0.0);
     }
 };
 
@@ -718,6 +762,102 @@ BOOST_AUTO_TEST_CASE(AllEligibleGroupsExcluded)
     checkRate(result.injectionTarget("M1", RcPhase::Water), 300.0 + 150.0);
     checkRate(result.injectionTarget("M2", RcPhase::Water), 300.0 + 200.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 300.0 + 300.0);
+}
+
+//! \brief A slave that is not coupled: its master groups get no constraints, and
+//!   take no share of FIELD's targets
+//!
+//! S2 (M3 and M4) has not activated, and reports zeros.  Both its groups are
+//! excluded from the distributions of production and of both injection phases,
+//! including M3, which is available for higher-level control.  M1 and M2 share
+//! all of FIELD's targets by 100 : 200.
+BOOST_AUTO_TEST_CASE(UncoupledSlave)
+{
+    using Mode = Opm::Group::ProductionCMode;
+    // Make S2 not coupled
+    commonSetupForAllTests(flat_deck, {}, {}, /*uncoupled_slaves=*/{"S2"});
+    BOOST_REQUIRE(!master().slaveIsCoupled(master().getSlaveIdx("S2")));
+    const auto result = calculateConstraints();
+
+    for (const std::string name : {"M3", "M4"}) {
+        BOOST_CHECK_EQUAL(result.production.count(name), 0);
+        BOOST_CHECK_EQUAL(result.injection.count({name, RcPhase::Water}), 0);
+        BOOST_CHECK_EQUAL(result.injection.count({name, RcPhase::Gas}), 0);
+        BOOST_CHECK_EQUAL(master().effectiveGCW(name), 0);
+        BOOST_CHECK_EQUAL(master().effectiveInjectionGCW(name, Opm::Phase::WATER), 0);
+        BOOST_CHECK_EQUAL(master().effectiveInjectionGCW(name, Opm::Phase::GAS), 0);
+    }
+    const int oil = phasePos(IndexTraits::oilPhaseIdx);
+    checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 0.0);
+
+    checkRate(result.productionTarget("M1"), 1000.0 * 100.0 / 300.0);
+    checkRate(result.productionTarget("M2"), 1000.0 * 200.0 / 300.0);
+    checkRate(result.productionLimit("M1", Mode::LRAT), 2000.0 * 100.0 / 300.0);
+    checkRate(result.productionLimit("M2", Mode::LRAT), 2000.0 * 200.0 / 300.0);
+    for (const auto phase : {RcPhase::Water, RcPhase::Gas}) {
+        checkRate(result.injectionTarget("M1", phase), 1000.0 * 100.0 / 300.0);
+        checkRate(result.injectionTarget("M2", phase), 1000.0 * 200.0 / 300.0);
+    }
+}
+
+//! \brief A second calculation after an excluded group returns to group control
+//!
+//! M1 has no producers and no water injectors under group control in the first
+//! calculation.  Then its slave reports group-controlled producers and water
+//! injectors again.  The second calculation must not keep the exclusion of the
+//! first one: it gives the targets of NoExclusion.
+BOOST_AUTO_TEST_CASE(RecalculateAfterGroupReturns)
+{
+    // Make M1 have no producers and no water injectors under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1"},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1"});
+    auto result = calculateConstraints();
+    BOOST_REQUIRE_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_REQUIRE_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+
+    slaveGroupReport("M1").num_group_controlled_producers = 1;
+    slaveGroupReport("M1").num_group_controlled_water_injectors = 1;
+    resendSlaveData();
+    result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 1);
+    BOOST_CHECK_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 1);
+    const int oil = phasePos(IndexTraits::oilPhaseIdx);
+    checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 50.0);
+    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M2"), 950.0 * 200.0 / 600.0);
+    checkRate(result.productionTarget("M3"), 950.0 * 300.0 / 600.0);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 950.0 * 200.0 / 600.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 950.0 * 300.0 / 600.0);
+}
+
+//! \brief A second calculation with the same exclusion gives the same targets
+//!
+//! M1 has no producers and no water injectors under group control in both
+//! calculations.  The second calculation excludes M1 again and redistributes
+//! again, so M2 and M3 are sent their redistributed targets, not those before the
+//! exclusion (316.67 and 475).
+BOOST_AUTO_TEST_CASE(RecalculateWithSameExclusion)
+{
+    // Make M1 have no producers and no water injectors under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1"},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1"});
+    calculateConstraints();
+    resendSlaveData();
+    const auto result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_CHECK_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
+    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
