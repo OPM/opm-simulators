@@ -240,6 +240,14 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
                                   /*is_producer=*/true, /*injection_phase=*/Opm::Phase::OIL};
     }
 
+    FractionCalculator injectionFractionCalculator(Opm::Phase phase)
+    {
+        auto& gsh = groupStateHelper();
+        return FractionCalculator{schedule(), gsh, gsh.summaryState(), reportStepIdx(),
+                                  &guideRate(), gsh.getInjectionGuideTargetMode(phase),
+                                  /*is_producer=*/false, phase};
+    }
+
 private:
     //! The master groups of each slave, in the order the slave reports them
     const std::map<std::string, std::vector<std::string>> master_groups_of_slave_{
@@ -503,6 +511,93 @@ BOOST_AUTO_TEST_CASE(NestedExclusion)
     // Without M1 as the always-included child, P has no group-controlled wells
     // and drops out of FIELD's guide-rate sum
     checkClose(fcalc.localFraction("M2", ""), 200.0 / 500.0);
+}
+
+//! \brief The fraction fallback (FractionCalculator::groupControlledWells()) for
+//!   injection: an excluded master group counts for its own fraction of the water
+//!   target, and not for its siblings'
+//!
+//! The injection counterpart of FractionFallback.  M1 has no water injectors
+//! under group control, but has gas injectors under group control.
+BOOST_AUTO_TEST_CASE(InjectionFractionFallback)
+{
+    // Make M1 have no water injectors under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1"});
+    calculateConstraints();
+    BOOST_REQUIRE_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 0);
+
+    auto water = injectionFractionCalculator(Opm::Phase::WATER);
+    // M1's own target: M1 is the always-included child
+    checkClose(water.localFraction("M1", "M1"), 100.0 / 600.0);
+    checkClose(water.fraction("M1", "FIELD", /*always_include_this=*/true), 100.0 / 600.0);
+    // Without M1 as the always-included child, M1 has no group-controlled
+    // injectors, and so no guide rate
+    checkClose(water.localFraction("M1", ""), 0.0);
+    // M2's target: FIELD's guide-rate sum is M2's 200 plus M3's 300.  M1 is
+    // excluded, and the fallback only counts the always-included child and its
+    // ancestors, so M2 does not bring M1 back; M4 is not available for
+    // higher-level control.  So M2's fraction is 200 / 500, with M2 as the
+    // always-included child or without one.
+    checkClose(water.localFraction("M2", "M2"), 200.0 / 500.0);
+    checkClose(water.localFraction("M2", ""), 200.0 / 500.0);
+
+    // Gas: nothing is excluded
+    auto gas = injectionFractionCalculator(Opm::Phase::GAS);
+    checkClose(gas.localFraction("M1", "M1"), 100.0 / 600.0);
+    checkClose(gas.localFraction("M2", ""), 200.0 / 600.0);
+}
+
+//! \brief The exclusion step skips a master group not available for higher-level
+//!   injection control (item 8 = NO)
+//!
+//! The injection counterpart of ItemEightNoIsSkippedByExclusion.  M4 reports no
+//! water injectors under group control; its effective injection GCW is left at
+//! 1, and the water targets are those without exclusion.
+BOOST_AUTO_TEST_CASE(ItemEightNoIsSkippedByInjectionExclusion)
+{
+    // Make M4 have no water injectors under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{},
+                           /*groups_without_group_controlled_water_injectors=*/{"M4"});
+    const auto result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveInjectionGCW("M4", Opm::Phase::WATER), 1);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 950.0 * 200.0 / 600.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 950.0 * 300.0 / 600.0);
+    checkRate(result.injectionTarget("M4", RcPhase::Water), 50.0);
+}
+
+//! \brief The nested case for injection: M1, the only child of P, has no water
+//!   injectors under group control
+//!
+//! M1's slave injectors inject 150 on their own limits (see
+//! RescoupConstraintsFixture::slave_group_reports_).
+//! The injection counterpart of NestedExclusion.  The water targets are the same
+//! as for the flat tree, and production is untouched.
+BOOST_AUTO_TEST_CASE(NestedInjectionExclusion)
+{
+    // Make M1 have no water injectors under group control
+    commonSetupForAllTests(nested_deck,
+                           /*groups_without_group_controlled_producers=*/{},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1"});
+    const auto result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M2"), 950.0 * 200.0 / 600.0);
+
+    auto water = injectionFractionCalculator(Opm::Phase::WATER);
+    // M1's own target: P's guide rate is M1's 100, counted by the fallback, of
+    // FIELD's sum 100 + 200 + 300
+    checkClose(water.localFraction("P", "M1"), 100.0 / 600.0);
+    // M1 is P's only child, so it gets all of P's target
+    checkClose(water.localFraction("M1", "M1"), 1.0);
+    checkClose(water.localFraction("M2", ""), 200.0 / 500.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
