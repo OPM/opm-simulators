@@ -271,12 +271,11 @@ class WellComparisonManager:
     # Rename files to rank them according to maximum deviations
     @with_file_lock
     def reorder_files(self):
+        # No case was plotted, for instance because the failed simulations
+        # wrote no summary
         if not os.path.exists(self.max_devs_file):
-            print(
-                f"Case ranking data file {self.max_devs_file} does not exist",
-                file=sys.stderr,
-            )
-            return False
+            print("No plotted cases to rank")
+            return True
 
         try:
             with open(self.max_devs_file, 'rb') as f:
