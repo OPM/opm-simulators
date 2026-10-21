@@ -1,0 +1,27 @@
+-- The TABDIMS record lacks its terminating slash, so the parser takes START
+-- for one of its items and fails in the RUNSPEC section.
+
+RUNSPEC
+
+DIMENS
+1 1 1 /
+
+OIL
+GAS
+
+COMPS
+3 /
+
+TABDIMS
+1 1 1
+
+START
+1 'JAN' 2016 /
+
+GRID
+
+PROPS
+
+SOLUTION
+
+SCHEDULE
