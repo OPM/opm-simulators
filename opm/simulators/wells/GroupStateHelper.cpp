@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
+#include <opm/simulators/wells/GroupControlRetention.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
@@ -1344,25 +1345,33 @@ updateNONEProductionGroups()
 #endif
 
     for (std::size_t i = 0; i < num_gpc; ++i) {
-        if (production_control_used[i] > 0) {
-            continue;
-        }
         const auto& gname = gnames[i];
-        if (group_state.production_control(gname) == Group::ProductionCMode::NONE ||
-            group_state.production_control(gname) == Group::ProductionCMode::FLD) {
-            continue;
-        }
-        // Gas lift optimization requires non-NONE/FLD control mode
-        if (glo.active() && glo.has_group(gname)) {
-            continue;
-        }
+        bool rc_slave_master_target = false;
 #ifdef RESERVOIR_COUPLING_ENABLED
+        // A slave group with a target from the master has the master's control mode, set in
+        // the first time step of the sync step, and the later time steps need it.
+        if (this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().hasMasterProductionTarget(gname))
+        {
+            const auto master_cmode = this->reservoirCouplingSlave().masterProductionTarget(gname).second;
+            rc_slave_master_target = this->getProductionFilterFlag_(gname, master_cmode)
+                != ReservoirCoupling::GrupSlav::FilterFlag::SLAV;
+        }
         // RC master hierarchy groups distribute targets to slaves —
         // do not reset their production control to NONE
-        if (rc_hierarchy.count(gname) > 0) {
+        const bool rc_master_hierarchy = rc_hierarchy.count(gname) > 0;
+#else
+        const bool rc_master_hierarchy = false;
+#endif
+        // Gas lift optimization requires non-NONE/FLD control mode
+        const bool gas_lift_group = glo.active() && glo.has_group(gname);
+        if (GroupStateHelpers::keepsProductionControl(group_state.production_control(gname),
+                                                      /*targeted=*/production_control_used[i] > 0,
+                                                      gas_lift_group,
+                                                      rc_master_hierarchy,
+                                                      rc_slave_master_target)) {
             continue;
         }
-#endif
         if (this->comm_.rank() == 0) {
             this->deferredLogger().info(
                 "Production group " + gname

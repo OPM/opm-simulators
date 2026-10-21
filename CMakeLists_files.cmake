@@ -493,6 +493,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
+  tests/test_group_control_retention.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
   tests/test_equil.cpp
@@ -1316,6 +1317,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GasLiftStage2.hpp
   opm/simulators/wells/GasLiftWellState.hpp
   opm/simulators/wells/GlobalWellInfo.hpp
+  opm/simulators/wells/GroupControlRetention.hpp
   opm/simulators/wells/GroupEconomicLimitsChecker.hpp
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/GroupStateHelper.hpp
