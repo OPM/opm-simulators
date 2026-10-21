@@ -1181,6 +1181,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ISTLSolver.hpp
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
   opm/simulators/linalg/Preconditioner2InverseOperator.hpp
+  opm/simulators/linalg/system/CpuSystemBackend.hpp
   opm/simulators/linalg/system/MultiComm.hpp
   opm/simulators/linalg/system/SystemCprwPressureStage.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
