@@ -285,6 +285,24 @@ public:
         return Opm::CompositionalConfig::EOSType::PR;
     }
 
+    template <class Context>
+    unsigned pvtRegionIndex(const Context&, unsigned, unsigned) const
+    {
+        return 0;
+    }
+
+    template <class Context>
+    Scalar rockCompressibility(const Context&, unsigned, unsigned) const
+    {
+        return 0.0;
+    }
+
+    template <class Context>
+    Scalar rockReferencePressure(const Context&, unsigned, unsigned) const
+    {
+        return 1.0e5;
+    }
+
     /*!
      * \copydoc FvBaseProblem::finishInit
      */
