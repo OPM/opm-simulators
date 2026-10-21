@@ -77,11 +77,11 @@ public:
     //! \todo: We should have indices for the well equations and well primary variables separately.
     static constexpr int Bhp = numStaticWellEq - numWellControlEq;
 
-    static constexpr bool has_wfrac_variable = Indices::waterIsActive() && Indices::oilIsActive();
-    static constexpr bool has_gfrac_variable = Indices::gasIsActive() && Indices::numPhases > 1;
-    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
-    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
-    static constexpr int SFrac = !Indices::enableSolvent ? -1000 : has_wfrac_variable+has_gfrac_variable+1;
+    static constexpr bool has_wfrac_variable() { return Indices::waterIsActive() && Indices::oilIsActive(); }
+    static constexpr bool has_gfrac_variable() { return Indices::gasIsActive() && Indices::numPhases > 1; }
+    static constexpr int WFrac() { return has_wfrac_variable() ? 1 : -1000; }
+    static constexpr int GFrac() { return has_gfrac_variable() ? has_wfrac_variable() + 1 : -1000; }
+    static constexpr int SFrac() { return !Indices::enableSolvent ? -1000 : has_wfrac_variable()+has_gfrac_variable()+1; }
 
     using Scalar = typename FluidSystem::Scalar;
     using IndexTraits = typename FluidSystem::IndexTraitsType;

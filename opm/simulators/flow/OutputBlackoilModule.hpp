@@ -139,7 +139,7 @@ class OutputBlackOilModule : public GenericOutputModule<GetPropType<TypeTag, Pro
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     static constexpr bool enableDissolvedGas =
-        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
 
     template<class VectorType>
     static Scalar value_or_zero(int idx, const VectorType& v)

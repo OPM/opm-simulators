@@ -223,19 +223,19 @@ getFrictionPressureLoss(const int seg,
     if (seg != seg_upwind) {
         if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
-            constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
+            const int SPres = Indices::numEq + PrimaryVariables::SPres();
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if constexpr (PrimaryVariables::has_wfrac_variable) {
-                constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+            if (PrimaryVariables::has_wfrac_variable()) {
+                const int WFrac = Indices::numEq + PrimaryVariables::WFrac();
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if constexpr (PrimaryVariables::has_gfrac_variable) {
-                constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+            if (PrimaryVariables::has_gfrac_variable()) {
+                const int GFrac = Indices::numEq + PrimaryVariables::GFrac();
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
             }
@@ -305,13 +305,13 @@ pressureDropSpiralICD(const int seg,
         std::vector<bool> zero_mask(nvar, false);
         if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
-            zero_mask[PrimaryVariables::SPres] = true;
+            zero_mask[PrimaryVariables::SPres()] = true;
         } else {
-            if constexpr (PrimaryVariables::has_wfrac_variable) {
-                zero_mask[PrimaryVariables::WFrac] = true;
+            if (PrimaryVariables::has_wfrac_variable()) {
+                zero_mask[PrimaryVariables::WFrac()] = true;
             }
-            if constexpr (PrimaryVariables::has_gfrac_variable) {
-                zero_mask[PrimaryVariables::GFrac] = true;
+            if (PrimaryVariables::has_gfrac_variable()) {
+                zero_mask[PrimaryVariables::GFrac()] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
             mass_rate.clearDerivatives();
@@ -417,13 +417,13 @@ pressureDropAutoICD(const int seg,
         std::vector<bool> zero_mask(nvar, false);
         if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
-            zero_mask[PrimaryVariables::SPres] = true;
+            zero_mask[PrimaryVariables::SPres()] = true;
         } else {
-            if constexpr (PrimaryVariables::has_wfrac_variable) {
-                zero_mask[PrimaryVariables::WFrac] = true;
+            if (PrimaryVariables::has_wfrac_variable()) {
+                zero_mask[PrimaryVariables::WFrac()] = true;
             }
-            if constexpr (PrimaryVariables::has_gfrac_variable) {
-                zero_mask[PrimaryVariables::GFrac] = true;
+            if (PrimaryVariables::has_gfrac_variable()) {
+                zero_mask[PrimaryVariables::GFrac()] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
             mass_rate.clearDerivatives();
@@ -496,19 +496,19 @@ pressureDropValve(const int seg,
     if (seg != seg_upwind) {
         if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
-            constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
+            const int SPres = Indices::numEq + PrimaryVariables::SPres();
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if constexpr (PrimaryVariables::has_wfrac_variable) {
-                constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+            if (PrimaryVariables::has_wfrac_variable()) {
+                const int WFrac = Indices::numEq + PrimaryVariables::WFrac();
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if constexpr (PrimaryVariables::has_gfrac_variable) {
-                constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+            if (PrimaryVariables::has_gfrac_variable()) {
+                const int GFrac = Indices::numEq + PrimaryVariables::GFrac();
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
             }
@@ -550,16 +550,16 @@ accelerationPressureLossContribution(const int seg,
     if (seg != seg_upwind) {
         if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
-            constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
+            const int SPres = Indices::numEq + PrimaryVariables::SPres();
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
         } else {
-            if constexpr (PrimaryVariables::has_wfrac_variable) {
-                constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+            if (PrimaryVariables::has_wfrac_variable()) {
+                const int WFrac = Indices::numEq + PrimaryVariables::WFrac();
                 density.setDerivative(WFrac, 0.0);
             }
-            if constexpr (PrimaryVariables::has_gfrac_variable) {
-                constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+            if (PrimaryVariables::has_gfrac_variable()) {
+                const int GFrac = Indices::numEq + PrimaryVariables::GFrac();
                 density.setDerivative(GFrac, 0.0);
             }
             mass_rate.clearDerivatives();

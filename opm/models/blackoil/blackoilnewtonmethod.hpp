@@ -255,14 +255,14 @@ protected:
 
         if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
-            if constexpr (Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+            if (Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max()) {
                 deltaSw = update[Indices::activeWaterSwitchIdx()];
                 deltaSo -= deltaSw;
             }
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            if constexpr (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+            if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
                 deltaSg = update[Indices::activeCompositionSwitchIdx()];
                 deltaSo -= deltaSg;
             }

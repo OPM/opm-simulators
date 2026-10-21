@@ -1695,7 +1695,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             well->addWellPressureEquations(jacobian,
                                            weights,
-                                           pressureVarIndex,
+                                           activePressureVarIndex(),
                                            use_well_weights,
                                            contract_d_diagonal,
                                            this->wellState());

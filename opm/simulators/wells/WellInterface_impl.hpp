@@ -2055,7 +2055,7 @@ namespace Opm
             }
         }
 
-        if constexpr (! Indices::gasIsActive()) {
+        if (! Indices::gasIsActive()) {
             return;
         }
 
@@ -2215,9 +2215,9 @@ namespace Opm
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const
     {
-        if constexpr (Indices::oilIsActive()) {
+        if (Indices::oilIsActive()) {
             return fs.pressure(FluidSystem::oilPhaseIdx);
-        } else if constexpr (Indices::gasIsActive()) {
+        } else if (Indices::gasIsActive()) {
             return fs.pressure(FluidSystem::gasPhaseIdx);
         } else {
             return fs.pressure(FluidSystem::waterPhaseIdx);

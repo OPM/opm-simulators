@@ -83,14 +83,8 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag, VectorTy
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     // primary variable indices
-    static constexpr unsigned waterSwitchIdx = Indices::activeWaterSwitchIdx();
-    static constexpr unsigned pressureSwitchIdx = Indices::activePressureSwitchIdx();
-    static constexpr unsigned compositionSwitchIdx = Indices::activeCompositionSwitchIdx();
     static constexpr unsigned saltConcentrationIdx  = Indices::saltConcentrationIdx;
     static constexpr unsigned solventSaturationIdx  = Indices::activeSolventSaturationIdx();
-
-    static constexpr bool compositionSwitchEnabled =
-        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
 
     // phase indices from the fluid system
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -220,7 +214,7 @@ public:
     makeEvaluation(unsigned varIdx, unsigned timeIdx,
                    LinearizationType linearizationType = LinearizationType()) const
     {
-        const Scalar scale = varIdx == pressureSwitchIdx ? this->getPressureScale() : Scalar{1.0};
+        const Scalar scale = varIdx == Indices::activePressureSwitchIdx() ? this->getPressureScale() : Scalar{1.0};
         if (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx] * scale; // finite differences
         }
@@ -436,19 +430,19 @@ public:
         switch (primaryVarsMeaningWater()) {
         case WaterMeaning::Sw:
         {
-            (*this)[waterSwitchIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
+            (*this)[Indices::activeWaterSwitchIdx()] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
             break;
         }
         case WaterMeaning::Rvw:
         {
             const auto& rvw = BlackOil::getRvw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-            (*this)[waterSwitchIdx] = rvw;
+            (*this)[Indices::activeWaterSwitchIdx()] = rvw;
             break;
         }
         case WaterMeaning::Rsw:
         {
             const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-            (*this)[waterSwitchIdx] = Rsw;
+            (*this)[Indices::activeWaterSwitchIdx()] = Rsw;
             break;
         }
         case WaterMeaning::Disabled:
@@ -458,18 +452,18 @@ public:
         }
         switch (primaryVarsMeaningGas()) {
         case GasMeaning::Sg:
-            (*this)[compositionSwitchIdx] = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
+            (*this)[Indices::activeCompositionSwitchIdx()] = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
             break;
         case GasMeaning::Rs:
         {
             const auto& rs = BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-            (*this)[compositionSwitchIdx] = rs;
+            (*this)[Indices::activeCompositionSwitchIdx()] = rs;
             break;
         }
         case GasMeaning::Rv:
         {
             const auto& rv = BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-            (*this)[compositionSwitchIdx] = rv;
+            (*this)[Indices::activeCompositionSwitchIdx()] = rv;
             break;
         }
         case GasMeaning::Disabled:
@@ -515,10 +509,10 @@ public:
         Scalar saltConcentration = 0.0;
         const Scalar& T = asImp_().temperature_(problem, globalDofIdx);
         if (primaryVarsMeaningWater() == WaterMeaning::Sw) {
-            sw = (*this)[waterSwitchIdx];
+            sw = (*this)[Indices::activeWaterSwitchIdx()];
         }
         if (primaryVarsMeaningGas() == GasMeaning::Sg) {
-            sg = (*this)[compositionSwitchIdx];
+            sg = (*this)[Indices::activeCompositionSwitchIdx()];
         }
         if (primaryVarsMeaningWater() == WaterMeaning::Rsw) {
             sw = 1.0;
@@ -554,7 +548,7 @@ public:
         // Scalar rsolw = 0.0; // not needed at the moment since we dont allow for vapwat in combination with rsolw
         if constexpr (enableSolvent) {
             if (SolventModule::isSolubleInWater()) {
-                const Scalar p = (*this)[pressureSwitchIdx]; // cap-pressure?
+                const Scalar p = (*this)[Indices::activePressureSwitchIdx()]; // cap-pressure?
                 const Scalar solLimit =
                     SolventModule::solubilityLimit(pvtRegionIndex(), T , p, saltConcentration);
                 if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
@@ -590,13 +584,13 @@ public:
                 assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
             }
             // the hydrocarbon gas saturation is set to 0.0
-            if constexpr (compositionSwitchEnabled) {
+            if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
                 (*this)[Indices::activeCompositionSwitchIdx()] = 0.0;
             }
 
             changed = primaryVarsMeaningGas() != GasMeaning::Sg;
             if (changed) {
-                if constexpr (compositionSwitchEnabled) {
+                if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
                 }
 
@@ -676,7 +670,7 @@ public:
             }
             case WaterMeaning::Rvw:
             {
-                const Scalar& rvw = (*this)[waterSwitchIdx];
+                const Scalar& rvw = (*this)[Indices::activeWaterSwitchIdx()];
                 Scalar p = this->pressure_();
                 if (primaryVarsMeaningPressure() == PressureMeaning::Po) {
                     std::array<Scalar, numPhases> pC{};

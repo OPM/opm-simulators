@@ -169,7 +169,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                 if (flux_residual > maximum_residual[eq_idx]) {
                     maximum_residual[eq_idx] = flux_residual;
                 }
-            } else if (enable_energy && eq_idx == Temperature) { // energy equation
+            } else if (enable_energy && eq_idx == Temperature()) { // energy equation
                 const Scalar energy_residual = abs_residual[seg][eq_idx];
                 if (energy_residual > maximum_residual[eq_idx]) {
                     maximum_residual[eq_idx] = energy_residual;
@@ -202,7 +202,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             } else if (flux_residual > relaxed_inner_tolerance_flow_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, baseif_.name()});
             }
-        } else if (enable_energy && eq_idx == Temperature) {
+        } else if (enable_energy && eq_idx == Temperature()) {
             const Scalar energy_residual = maximum_residual[eq_idx];
             // TODO: possibly the dummy_phase should be something else, while requires extension to WellConvergenceMetric
             constexpr int dummy_phase = -1;
@@ -217,7 +217,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
             } else if (energy_residual > relaxed_inner_tolerance_flow_ms_well) {
                 report.setWellFailed({CR::WellFailure::Type::Energy, CR::Severity::Normal, dummy_phase, baseif_.name()});
             }
-        } else if (eq_idx == SPres) { // pressure equation
+        } else if (eq_idx == SPres()) { // pressure equation
             const Scalar pressure_residual = maximum_residual[eq_idx];
             const int dummy_component = -1;
             if (std::isnan(pressure_residual)) {
@@ -239,7 +239,7 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
-                                  std::abs(linSys_.residual()[0][SPres]),
+                                  std::abs(linSys_.residual()[0][SPres()]),
                                   well_is_stopped,
                                   report,
                                   deferred_logger);
@@ -515,9 +515,9 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
             Scalar residual = 0.;
             if (eq_idx < baseif_.numConservationQuantities()) {
                 residual = std::abs(linSys_.residual()[seg][eq_idx]) * B_avg[eq_idx];
-            } else if (eq_idx == Temperature) {
+            } else if (eq_idx == Temperature()) {
                 residual = std::abs(linSys_.residual()[seg][eq_idx]);
-            } else if (eq_idx == SPres) {
+            } else if (eq_idx == SPres()) {
                 // skip seg 0 because it holds the control equation
                 if (seg > 0) {
                     residual = std::abs(linSys_.residual()[seg][eq_idx]);
@@ -640,15 +640,15 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
     // Energy residual is scaled onto the mass-balance scale, so the same
     // rate tolerance applies.
     if constexpr (enable_energy) {
-        if (residuals[Temperature] > rate_tolerance) {
-            sum += residuals[Temperature] / rate_tolerance;
+        if (residuals[Temperature()] > rate_tolerance) {
+            sum += residuals[Temperature()] / rate_tolerance;
             ++count;
         }
     }
 
     const Scalar pressure_tolerance = tolerance_pressure_ms_wells;
-    if (residuals[SPres] > pressure_tolerance) {
-        sum += residuals[SPres] / pressure_tolerance;
+    if (residuals[SPres()] > pressure_tolerance) {
+        sum += residuals[SPres()] / pressure_tolerance;
         ++count;
     }
 
@@ -656,8 +656,8 @@ getResidualMeasureValue(const WellState<Scalar, IndexTraits>& well_state,
                                                          tolerance_wells,
                                                          tolerance_pressure_ms_wells,
                                                          deferred_logger);
-    if (residuals[SPres + 1] > control_tolerance) {
-        sum += residuals[SPres + 1] / control_tolerance;
+    if (residuals[SPres() + 1] > control_tolerance) {
+        sum += residuals[SPres() + 1] / control_tolerance;
         ++count;
     }
 

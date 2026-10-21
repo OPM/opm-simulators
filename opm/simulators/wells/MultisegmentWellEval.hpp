@@ -55,11 +55,11 @@ public:
 protected:
     using IndexTraits = typename FluidSystem::IndexTraitsType;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
-    static constexpr int SPres = PrimaryVariables::SPres;
+    static constexpr int SPres() { return PrimaryVariables::SPres(); }
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     static constexpr bool enable_energy = PrimaryVariables::enable_energy;
-    static constexpr int Temperature = PrimaryVariables::Temperature;
+    static constexpr int Temperature() { return PrimaryVariables::Temperature(); }
 
     using Equations = MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, Indices::numEq>;
     using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices>;

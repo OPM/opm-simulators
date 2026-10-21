@@ -125,7 +125,7 @@ private:
     using typename FlowProblemType::DimMatrix;
 
     static constexpr bool enableDissolvedGas =
-        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };

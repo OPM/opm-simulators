@@ -256,6 +256,14 @@ struct BlackOilTwoPhaseIndices
     static constexpr unsigned activePressureSwitchIdx() { return pressureSwitchIdx; }
     static constexpr unsigned activeCompositionSwitchIdx() { return compositionSwitchIdx; }
     static constexpr unsigned activeSolventSaturationIdx() { return solventSaturationIdx; }
+
+    //! True if a composition switching variable (Rs/Rv or gas saturation of the
+    //! hydrocarbon phases) can exist. Used for type-level decisions such as the
+    //! storage in the fluid state.
+    static constexpr bool hasCompositionSwitch = compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+
+    //! True if the gas phase can be active (upper bound known at compile time).
+    static constexpr bool mayHaveGas = disabledCanonicalCompIdx != 2;
 };
 
 } // namespace Opm

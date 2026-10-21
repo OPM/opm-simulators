@@ -167,53 +167,53 @@ update(const WellState<Scalar, IndexTraits>& well_state,
     }
 
     if (ws.primaryvar.size() > 0) {
-        if constexpr (has_wfrac_variable) {
-             value_[WFrac] = ws.primaryvar[WFrac];
+        if (has_wfrac_variable()) {
+             value_[WFrac()] = ws.primaryvar[WFrac()];
         }
-        if constexpr (has_gfrac_variable) {
-             value_[GFrac] = ws.primaryvar[GFrac];
+        if (has_gfrac_variable()) {
+             value_[GFrac()] = ws.primaryvar[GFrac()];
         }
         if constexpr (Indices::enableSolvent) {
-            value_[SFrac] = ws.primaryvar[SFrac];
+            value_[SFrac()] = ws.primaryvar[SFrac()];
          }
     } else if (std::abs(total_well_rate) > 0.) {
-        if constexpr (has_wfrac_variable) {
+        if (has_wfrac_variable()) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            value_[WFrac] = well_.scalingFactor(water_pos) * ws.surface_rates[water_pos] / total_well_rate;
+            value_[WFrac()] = well_.scalingFactor(water_pos) * ws.surface_rates[water_pos] / total_well_rate;
         }
-        if constexpr (has_gfrac_variable) {
+        if (has_gfrac_variable()) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            value_[GFrac] = well_.scalingFactor(gas_pos) *
+            value_[GFrac()] = well_.scalingFactor(gas_pos) *
                             (ws.surface_rates[gas_pos] -
                              (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
         }
         if constexpr (Indices::enableSolvent) {
-            value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
+            value_[SFrac()] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
         }
     } else { // total_well_rate == 0
         if (well_.isInjector()) {
             // only single phase injection handled
-            if constexpr (has_wfrac_variable) {
+            if (has_wfrac_variable()) {
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     auto phase = well_.wellEcl().getInjectionProperties().injectorType;
                     if (phase == InjectorType::WATER) {
-                        value_[WFrac] = 1.0;
+                        value_[WFrac()] = 1.0;
                     } else {
-                        value_[WFrac] = 0.0;
+                        value_[WFrac()] = 0.0;
                     }
                 }
             }
-            if constexpr (has_gfrac_variable) {
+            if (has_gfrac_variable()) {
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     auto phase = well_.wellEcl().getInjectionProperties().injectorType;
                     if (phase == InjectorType::GAS) {
-                        value_[GFrac] = (1.0 - well_.rsRvInj());
+                        value_[GFrac()] = (1.0 - well_.rsRvInj());
                         if constexpr (Indices::enableSolvent) {
-                            value_[GFrac] = 1.0 - well_.rsRvInj() - well_.wsolvent();
-                            value_[SFrac] = well_.wsolvent();
+                            value_[GFrac()] = 1.0 - well_.rsRvInj() - well_.wsolvent();
+                            value_[SFrac()] = well_.wsolvent();
                         }
                     } else {
-                        value_[GFrac] = 0.0;
+                        value_[GFrac()] = 0.0;
                     }
                 }
             }
@@ -223,12 +223,12 @@ update(const WellState<Scalar, IndexTraits>& well_state,
             // this will happen.
         } else if (well_.isProducer()) { // producers
             // TODO: the following are not addressed for the solvent case yet
-            if constexpr (has_wfrac_variable) {
-                value_[WFrac] = 1.0 / np;
+            if (has_wfrac_variable()) {
+                value_[WFrac()] = 1.0 / np;
             }
 
-            if constexpr (has_gfrac_variable) {
-                value_[GFrac] = 1.0 / np;
+            if (has_gfrac_variable()) {
+                value_[GFrac()] = 1.0 / np;
             }
         } else {
             OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
@@ -274,22 +274,22 @@ updateNewton(const BVectorWell& dwells,
                                                             : 1.0;
 
     // update the second and third well variable (The flux fractions)
-    if constexpr (has_wfrac_variable) {
-        const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
-        const Scalar dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
-        value_[WFrac] = value_[WFrac] - dx2_limited;
+    if (has_wfrac_variable()) {
+        const int sign2 = dwells[0][WFrac()] > 0 ? 1: -1;
+        const Scalar dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac()] * relaxation_factor_fractions), dFLimit);
+        value_[WFrac()] = value_[WFrac()] - dx2_limited;
     }
 
-    if constexpr (has_gfrac_variable) {
-        const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
-        const Scalar dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
-        value_[GFrac] = value_[GFrac] - dx3_limited;
+    if (has_gfrac_variable()) {
+        const int sign3 = dwells[0][GFrac()] > 0 ? 1: -1;
+        const Scalar dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac()] * relaxation_factor_fractions), dFLimit);
+        value_[GFrac()] = value_[GFrac()] - dx3_limited;
     }
 
     if constexpr (Indices::enableSolvent) {
-        const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
-        const Scalar dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
-        value_[SFrac] = value_[SFrac] - dx4_limited;
+        const int sign4 = dwells[0][SFrac()] > 0 ? 1: -1;
+        const Scalar dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac()]) * relaxation_factor_fractions, dFLimit);
+        value_[SFrac()] = value_[SFrac()] - dx4_limited;
     }
 
     this->processFractions();
@@ -353,18 +353,18 @@ copyToWellState(WellState<Scalar, IndexTraits>& well_state,
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            F[water_pos] = value_[WFrac];
+            F[water_pos] = value_[WFrac()];
             F[oil_pos] -= F[water_pos];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            F[gas_pos] = value_[GFrac];
+            F[gas_pos] = value_[GFrac()];
             F[oil_pos] -= F[gas_pos];
         }
 
         if constexpr (Indices::enableSolvent) {
-            F_solvent = value_[SFrac];
+            F_solvent = value_[SFrac()];
             F[oil_pos] -= F_solvent;
         }
     }
@@ -374,12 +374,12 @@ copyToWellState(WellState<Scalar, IndexTraits>& well_state,
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            F[gas_pos] = value_[GFrac];
+            F[gas_pos] = value_[GFrac()];
             F[water_pos] -= F[gas_pos];
         }
 
         if constexpr (Indices::enableSolvent) {
-            F_solvent = value_[SFrac];
+            F_solvent = value_[SFrac()];
             F[water_pos] -= F_solvent;
         }
     }
@@ -473,30 +473,30 @@ volumeFraction(const int compIdx) const
         return 1.0;
     }
 
-    if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
-        return evaluation_[GFrac];
+    if (has_gfrac_variable() && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
+        return evaluation_[GFrac()];
     }
 
     if (Indices::enableSolvent && compIdx == Indices::contiSolventEqIdx) {
-        return evaluation_[SFrac];
+        return evaluation_[SFrac()];
     }
 
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        if (has_wfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
-            return evaluation_[WFrac];
+        if (has_wfrac_variable() && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
+            return evaluation_[WFrac()];
         }
     }
     // Compute the Oil fraction if oil is present
     // or the WATER fraction for a gas-water case
     EvalWell well_fraction{1.0};
-    if (has_wfrac_variable && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        well_fraction -= evaluation_[WFrac];
+    if (has_wfrac_variable() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        well_fraction -= evaluation_[WFrac()];
     }
-    if (has_gfrac_variable) {
-        well_fraction -= evaluation_[GFrac];
+    if (has_gfrac_variable()) {
+        well_fraction -= evaluation_[GFrac()];
     }
     if constexpr (Indices::enableSolvent) {
-        well_fraction -= evaluation_[SFrac];
+        well_fraction -= evaluation_[SFrac()];
     }
     return well_fraction;
 }
@@ -591,17 +591,17 @@ processFractions()
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            F[water_pos] = value_[WFrac];
+            F[water_pos] = value_[WFrac()];
             F[oil_pos] -= F[water_pos];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            F[gas_pos] = value_[GFrac];
+            F[gas_pos] = value_[GFrac()];
             F[oil_pos] -= F[gas_pos];
         }
         if constexpr (Indices::enableSolvent) {
-            F_solvent = value_[SFrac];
+            F_solvent = value_[SFrac()];
             F[oil_pos] -= F_solvent;
         }
     }
@@ -611,11 +611,11 @@ processFractions()
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            F[gas_pos] = value_[GFrac];
+            F[gas_pos] = value_[GFrac()];
             F[water_pos] -= F[gas_pos];
         }
         if constexpr (Indices::enableSolvent) {
-            F_solvent = value_[SFrac];
+            F_solvent = value_[SFrac()];
             F[water_pos] -= F_solvent;
         }
     }
@@ -678,17 +678,17 @@ processFractions()
         }
     }
 
-    if constexpr (has_wfrac_variable) {
+    if (has_wfrac_variable()) {
         const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-        value_[WFrac] = F[water_pos];
+        value_[WFrac()] = F[water_pos];
     }
 
-    if constexpr (has_gfrac_variable) {
+    if (has_gfrac_variable()) {
         const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-        value_[GFrac] = F[gas_pos];
+        value_[GFrac()] = F[gas_pos];
     }
     if constexpr (Indices::enableSolvent) {
-        value_[SFrac] = F_solvent;
+        value_[SFrac()] = F_solvent;
     }
 }
 
@@ -701,36 +701,36 @@ scaledWellFractions(std::vector<Scalar>& fractions,
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
         fractions[oil_pos] = 1.0;
-        if (has_wfrac_variable) {
+        if (has_wfrac_variable()) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            fractions[water_pos] = value_[WFrac];
+            fractions[water_pos] = value_[WFrac()];
             fractions[oil_pos] -= fractions[water_pos];
         }
-        if (has_gfrac_variable) {
+        if (has_gfrac_variable()) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[GFrac];
+            fractions[gas_pos] = value_[GFrac()];
             fractions[oil_pos] -= fractions[gas_pos];
             if constexpr (Indices::enableSolvent) {
                 // solvent counted as gas, as in copyToWellState()
-                fractions[gas_pos] += value_[SFrac];
-                fractions[oil_pos] -= value_[SFrac];
+                fractions[gas_pos] += value_[SFrac()];
+                fractions[oil_pos] -= value_[SFrac()];
             }
         }
     }
     else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         fractions[water_pos] = 1.0;
-        if (has_gfrac_variable) {
+        if (has_gfrac_variable()) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[GFrac];
+            fractions[gas_pos] = value_[GFrac()];
             fractions[water_pos] -= fractions[gas_pos];
             if constexpr (Indices::enableSolvent) {
-                fractions[gas_pos] += value_[SFrac];
-                fractions[water_pos] -= value_[SFrac];
+                fractions[gas_pos] += value_[SFrac()];
+                fractions[water_pos] -= value_[SFrac()];
             }
         }
     }
-    else if (has_gfrac_variable) {
+    else if (has_gfrac_variable()) {
         const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         fractions[gas_pos] = 1.0;
     }
@@ -747,30 +747,30 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells,
     Scalar relaxation_factor = 1.0;
 
     if (FluidSystem::numActivePhases() > 1) {
-        if constexpr (has_wfrac_variable) {
-            const Scalar relaxation_factor_w = relaxationFactorFraction(value_[WFrac],
-                                                                        dwells[0][WFrac],
+        if (has_wfrac_variable()) {
+            const Scalar relaxation_factor_w = relaxationFactorFraction(value_[WFrac()],
+                                                                        dwells[0][WFrac()],
                                                                         this->well_.name(),
-                                                                        "WFrac",
+                                                                        "WFrac()",
                                                                         deferred_logger);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
-        if constexpr (has_gfrac_variable) {
-            const Scalar relaxation_factor_g = relaxationFactorFraction(value_[GFrac],
-                                                                        dwells[0][GFrac],
+        if (has_gfrac_variable()) {
+            const Scalar relaxation_factor_g = relaxationFactorFraction(value_[GFrac()],
+                                                                        dwells[0][GFrac()],
                                                                         this->well_.name(),
-                                                                        "GFrac",
+                                                                        "GFrac()",
                                                                         deferred_logger);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
         }
 
 
-        if constexpr (has_wfrac_variable && has_gfrac_variable) {
+        if (has_wfrac_variable() && has_gfrac_variable()) {
             // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
             // not be negative oil fraction later
-            const Scalar original_sum = value_[WFrac] + value_[GFrac];
-            const Scalar relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
+            const Scalar original_sum = value_[WFrac()] + value_[GFrac()];
+            const Scalar relaxed_update = (dwells[0][WFrac()] + dwells[0][GFrac()]) * relaxation_factor;
             const Scalar possible_updated_sum = original_sum - relaxed_update;
             // We only relax if fraction is above 1.
             // The newton solver should handle the rest

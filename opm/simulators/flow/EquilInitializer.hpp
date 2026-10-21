@@ -76,13 +76,13 @@ class EquilInitializer
 
     enum { dimWorld = GridView::dimensionworld };
     static constexpr bool enableDissolution =
-        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     static constexpr bool enableDissolvedGas =
-        Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
 
