@@ -59,9 +59,9 @@ struct TestFluidSystem
         void updatePhase(const FluidState&, unsigned) {}
         Eval molarVolume(unsigned) const { return Eval{1.0}; }
         Eval correctedMolarVolume(unsigned) const { return Eval{1.0}; }
-        void setRegionIndex(unsigned region) { regionIdx = region; }
-        unsigned regionIndex() const { return regionIdx; }
-        unsigned regionIdx = 0;
+        void setPvtRegionIndex(unsigned pvtRegionIdx) { pvtRegionIdx_ = pvtRegionIdx; }
+        unsigned pvtRegionIndex() const { return pvtRegionIdx_; }
+        unsigned pvtRegionIdx_ = 0;
     };
 
     // Water is 100 kg/m3 denser in each further PVT region.
@@ -69,7 +69,7 @@ struct TestFluidSystem
     static auto density(const FluidState&, const Cache& cache, unsigned phase)
     {
         return typename FluidState::ValueType{
-            phase == waterPhaseIdx ? 1000.0 + 100.0 * cache.regionIndex() : 1000.0};
+            phase == waterPhaseIdx ? 1000.0 + 100.0 * cache.pvtRegionIndex() : 1000.0};
     }
 
     template<class FluidState, class Cache>

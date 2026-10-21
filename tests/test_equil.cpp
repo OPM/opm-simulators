@@ -204,7 +204,7 @@ void initDefaultFluidSystem()
     FluidSystem::initBegin(/*numPvtRegions=*/1);
     FluidSystem::setEnableDissolvedGas(false);
     FluidSystem::setEnableVaporizedOil(false);
-    FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
+    FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*pvtRegionIdx=*/0);
 
     auto gasPvt = std::make_shared<Opm::GasPvtMultiplexer<double>>();
     gasPvt->setApproach(Opm::GasPvtApproach::DryGas);
