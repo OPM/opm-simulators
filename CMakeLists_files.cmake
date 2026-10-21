@@ -748,6 +748,7 @@ list (APPEND TEST_DATA_FILES
   tests/RC-01_MAST_PRED.DATA
   tests/RC_MASTER_GROUP_EXCLUSION.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_NESTED.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
   tests/include/permx_model5.grdecl

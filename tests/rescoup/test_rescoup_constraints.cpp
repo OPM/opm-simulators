@@ -39,6 +39,8 @@
  *   (GR 100)  (GR 200)  (GR 300)  (item 8 = NO, own limits 50)
  * \endcode
  * M1 and M2 belong to slave S1, M3 and M4 to slave S2.
+ * RC_MASTER_GROUP_EXCLUSION_NESTED.DATA puts a plain group P between FIELD and
+ * M1, and RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA puts both M1 and M2 under P.
  */
 
 #define BOOST_TEST_MODULE RescoupConstraints
@@ -103,6 +105,7 @@ initMasterSimulator(const std::string& filename)
 
 const std::string flat_deck{"RC_MASTER_GROUP_EXCLUSION.DATA"};
 const std::string nested_deck{"RC_MASTER_GROUP_EXCLUSION_NESTED.DATA"};
+const std::string sibling_deck{"RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA"};
 
 //! What the slave reports for one of its groups, in SM3/day
 struct SlaveGroupReport
@@ -129,7 +132,7 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
     using RcPhase = Opm::ReservoirCoupling::Phase;
 
     //! \brief Build the well model and the master, and update the group data
-    //! \param data_file The deck: flat_deck or nested_deck
+    //! \param data_file The deck: flat_deck, nested_deck or sibling_deck
     //! \param groups_without_group_controlled_producers Master groups whose slave
     //!   reports no producers under group control
     //! \param groups_without_group_controlled_water_injectors Master groups whose slave
@@ -598,6 +601,123 @@ BOOST_AUTO_TEST_CASE(NestedInjectionExclusion)
     // M1 is P's only child, so it gets all of P's target
     checkClose(water.localFraction("M1", "M1"), 1.0);
     checkClose(water.localFraction("M2", ""), 200.0 / 500.0);
+}
+
+//! \brief The nested case with siblings: M1 and M2 are the children of a plain
+//!   group P, and M1 has no producers and no water injectors under group control
+//!
+//! M1's slave wells produce and inject 150 on their own limits (see
+//! RescoupConstraintsFixture::slave_group_reports_).  P has no guide rate of its own, so
+//! M1's rate is a reduction on P that passes up to FIELD, and P's guide rate is
+//! the sum of its children's.  The targets are the same as for the flat tree.
+BOOST_AUTO_TEST_CASE(NestedExclusionWithSibling)
+{
+    // Make M1 have no producers and no water injectors under group control
+    commonSetupForAllTests(sibling_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1"},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1"});
+    const auto result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    const int oil = phasePos(IndexTraits::oilPhaseIdx);
+    checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 200.0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
+    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
+
+    auto production = productionFractionCalculator();
+    auto water = injectionFractionCalculator(Opm::Phase::WATER);
+    for (auto* fcalc : {&production, &water}) {
+        // M1's own target.  P has no guide rate of its own, so its guide rate is
+        // the sum of its children's (FractionCalculator::guideRate()), with M1
+        // counted as the always-included child: 100 + 200 = 300.  FIELD's sum is
+        // P's 300 plus M3's 300 = 600; M4 is not available for higher-level
+        // control.
+        checkClose(fcalc->localFraction("P", "M1"), 300.0 / 600.0);
+        checkClose(fcalc->localFraction("M1", "M1"), 100.0 / 300.0);
+        // M2's target: P counts only M2, so FIELD's sum is 200 + 300, and M2 is
+        // the only child left in P's sum
+        checkClose(fcalc->localFraction("P", ""), 200.0 / 500.0);
+        checkClose(fcalc->localFraction("M2", ""), 1.0);
+    }
+}
+
+//! \brief Two master groups excluded at once: M1 and M2 have no producers and no
+//!   water injectors under group control
+//!
+//! The reduction on FIELD is 50 (from M4) + 150 (from M1) + 200 (from M2) = 400,
+//! the rates M1 and M2 produce on their own limits (see
+//! RescoupConstraintsFixture::slave_group_reports_) included, and M3, the only group left in
+//! the distribution, is sent the rest, 600.  Each excluded group is sent its share
+//! if it alone rejoined: M1 shares 1000 - 400 + 150 with M3 by 100 : 300, M2
+//! shares 1000 - 400 + 200 with M3 by 200 : 300.
+BOOST_AUTO_TEST_CASE(TwoGroupsExcluded)
+{
+    // Make M1 and M2 have no producers and no water injectors under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2"},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1", "M2"});
+    const auto result = calculateConstraints();
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M2"), 0);
+    const int oil = phasePos(IndexTraits::oilPhaseIdx);
+    checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 400.0);
+
+    checkRate(result.productionTarget("M3"), 600.0);
+    checkRate(result.productionTarget("M1"), 750.0 * 100.0 / 400.0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 600.0);
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 750.0 * 100.0 / 400.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
+}
+
+//! \brief Every master group available for higher-level control is excluded:
+//!   M1, M2 and M3 have no producers and no water injectors under group control
+//!
+//! No group is left in FIELD's guide-rate distribution, and the reduction on FIELD
+//! is the rate of all four groups, 700.  Each excluded group is sent its share if
+//! it alone rejoined, as in TwoGroupsExcluded: with no other group in the sum, that
+//! is all of FIELD's target the others leave, 1000 - 700 + its own rate.  The
+//! three targets add up to more than FIELD's target; each holds only if its group
+//! is the only one that returns to group control.
+BOOST_AUTO_TEST_CASE(AllEligibleGroupsExcluded)
+{
+    using Mode = Opm::Group::ProductionCMode;
+    // Make M1, M2 and M3 have no producers and no water injectors under group
+    // control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"},
+                           /*groups_without_group_controlled_water_injectors=*/{"M1", "M2", "M3"});
+    const auto result = calculateConstraints();
+
+    for (const std::string name : {"M1", "M2", "M3"}) {
+        BOOST_CHECK_EQUAL(master().effectiveGCW(name), 0);
+        BOOST_CHECK_EQUAL(master().effectiveInjectionGCW(name, Opm::Phase::WATER), 0);
+    }
+    BOOST_CHECK_EQUAL(groupState().number_of_wells_under_group_control("FIELD"), 0);
+    const int oil = phasePos(IndexTraits::oilPhaseIdx);
+    checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 700.0);
+
+    // FIELD's ORAT target less the reduction, 1000 - 700 = 300, plus the group's
+    // own rate, which is in the reduction and is added back for its own target.
+    // The group is alone in FIELD's guide-rate sum for its own target, so its
+    // fraction is 1.
+    checkRate(result.productionTarget("M1"), 300.0 + 150.0);
+    checkRate(result.productionTarget("M2"), 300.0 + 200.0);
+    checkRate(result.productionTarget("M3"), 300.0 + 300.0);
+    checkRate(result.productionTarget("M4"), 50.0);
+    // The same for FIELD's LRAT limit: 2000 - 700 = 1300, plus M1's own liquid
+    // rate, which equals its oil rate
+    checkRate(result.productionLimit("M1", Mode::LRAT), 1300.0 + 150.0);
+    // The same for FIELD's water injection target: 1000 less the water the four
+    // groups inject, 700, plus the group's own
+    checkRate(result.injectionTarget("M1", RcPhase::Water), 300.0 + 150.0);
+    checkRate(result.injectionTarget("M2", RcPhase::Water), 300.0 + 200.0);
+    checkRate(result.injectionTarget("M3", RcPhase::Water), 300.0 + 300.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
