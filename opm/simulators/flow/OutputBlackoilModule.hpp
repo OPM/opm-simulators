@@ -313,10 +313,17 @@ public:
 
         // Quantities that only the black-oil formulation reports.
         using M = UnitSystem::measure;
+
+        this->assignBuffer(sol, "BO", M::oil_formation_volume_factor,
+                           this->formationVolFactor_[oilPhaseIdx], oilPhaseIdx);
         this->assignBuffer(sol, "1OVERBO", M::oil_inverse_formation_volume_factor,
                            this->invB_[oilPhaseIdx], oilPhaseIdx);
+
+        this->assignBuffer(sol, "BG", M::gas_formation_volume_factor,
+                           this->formationVolFactor_[gasPhaseIdx], gasPhaseIdx);
         this->assignBuffer(sol, "1OVERBG", M::gas_inverse_formation_volume_factor,
                            this->invB_[gasPhaseIdx], gasPhaseIdx);
+
         this->assignBuffer(sol, "OILKR", M::identity,
                            this->relativePermeability_[oilPhaseIdx], oilPhaseIdx);
         this->assignBuffer(sol, "GASKR", M::identity,
@@ -328,8 +335,11 @@ public:
 
         // avoid output with generic fluid system and disabled water phase
         if constexpr (numPhases > 2) {
+            this->assignBuffer(sol, "BW", M::water_formation_volume_factor,
+                               this->formationVolFactor_[waterPhaseIdx], waterPhaseIdx);
             this->assignBuffer(sol, "1OVERBW", M::water_inverse_formation_volume_factor,
                                this->invB_[waterPhaseIdx], waterPhaseIdx);
+
             this->assignBuffer(sol, "WATKR", M::identity,
                                this->relativePermeability_[waterPhaseIdx], waterPhaseIdx);
         }
@@ -837,10 +847,16 @@ protected:
             if (!FluidSystem::phaseIsActive(phase)) {
                 continue;
             }
-            // The black-oil phase ordering is the one the keyword names assume,
-            // so no reordering is needed here.
-            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, invB_[phase],
+
+            // The black-oil phase ordering is the one the keyword names
+            // assume, so no reordering is needed here.
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize,
+                                             this->formationVolFactor_[phase],
                                              std::string("B")  + phaseChar[phase], true);
+
+            BaseType::allocBufferIfRequested(rstKeywords, bufferSize, this->invB_[phase],
+                                             std::string("1OVERB") + phaseChar[phase], true);
+
             BaseType::allocBufferIfRequested(rstKeywords, bufferSize, relativePermeability_[phase],
                                              std::string("KR") + phaseChar[phase], true);
         }
@@ -854,6 +870,7 @@ private:
     ScalarBuffer rv_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
+    std::array<ScalarBuffer, numPhases> formationVolFactor_;
     std::array<ScalarBuffer, numPhases> invB_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
     template <typename T>
@@ -1340,6 +1357,19 @@ private:
             Entry{PhaseEntry{&this->saturation_,
                              [](const unsigned phase, const Context& ectx)
                              { return getValue(ectx.fs.saturation(phase)); }
+                  }
+            },
+            Entry{PhaseEntry{&this->formationVolFactor_,
+                            [](const unsigned phase, const Context& ectx)
+                            {
+                                constexpr auto zero = Scalar{};
+
+                                const auto recipFVF = getValue(ectx.fs.invB(phase));
+
+                                return (recipFVF > zero)
+                                    ? static_cast<Scalar>(1) / recipFVF
+                                    : zero; // Convenient lie.  Could possibly 'throw' here.
+                            }
                   }
             },
             Entry{PhaseEntry{&this->invB_,
@@ -2023,6 +2053,27 @@ private:
                                 return FluidSystem::density(fsInitial,
                                                             phase,
                                                             ectx.intQuants.pvtRegionIndex());
+                            }
+                  },
+                  simulator_.episodeIndex() < 0 &&
+                  FluidSystem::phaseIsActive(oilPhaseIdx) &&
+                  FluidSystem::phaseIsActive(gasPhaseIdx)
+            },
+            Entry{PhaseEntry{&this->formationVolFactor_,
+                            [&problem = this->simulator_.problem()]
+                            (const unsigned phase, const Context& ectx)
+                            {
+                                constexpr auto zero = Scalar{};
+
+                                const auto& fsInitial = problem.initialFluidState(ectx.globalDofIdx);
+
+                                const auto recipFVF = getValue
+                                    (FluidSystem::inverseFormationVolumeFactor
+                                     (fsInitial, phase, ectx.intQuants.pvtRegionIndex()));
+
+                                return (recipFVF > zero)
+                                    ? static_cast<Scalar>(1) / recipFVF
+                                    : zero; // Convenient lie.  Could possibly 'throw' here.
                             }
                   },
                   simulator_.episodeIndex() < 0 &&
