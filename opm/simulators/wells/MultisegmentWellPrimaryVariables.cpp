@@ -29,6 +29,7 @@
 
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoildyntwophaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
