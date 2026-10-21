@@ -519,8 +519,6 @@ protected:
                                      "initializtion when using XMF or YMF");
         }
 
-        const bool has_temp = fp.has_double("TEMPI");
-
         // const bool has_gas = fp.has_double("SGAS");
         assert(fp.has_double("SGAS"));
 
@@ -545,11 +543,8 @@ protected:
 
         pressureData = fp.get_double("PRESSURE");
 
-        if (has_temp) {
-            tempiData = fp.get_double("TEMPI");
-        } else {
-            ; // TODO: throw?
-        }
+        // Without TEMPI in the deck, this is the temperature from RTEMPVD or RTEMP.
+        tempiData = fp.get_double("TEMPI");
 
         if (gas_active) // && FluidSystem::phaseIsActive(oilPhaseIdx))
             gasSaturationData = fp.get_double("SGAS");
