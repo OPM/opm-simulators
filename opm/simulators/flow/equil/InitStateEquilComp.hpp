@@ -217,8 +217,10 @@ private:
  *
  * Each PVT region among the cells of an equilibration region has a water column
  * of its own, integrated with its water, and each cell takes the column of its
- * PVT region. A datum below the water-oil contact gives the pressure of all of
- * these waters, so there they must reach the contact at the same pressure.
+ * PVT region. A datum below the water-oil contact anchors the water columns of
+ * PVT regions with water-zone cells; they must reach the contact at the same
+ * pressure. Regions confined above the contact take their water pressure from
+ * the hydrocarbon pressure there.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -794,16 +796,19 @@ private:
             // No cells anywhere in this region.
             return reg;
         }
+        const Scalar deepestCellDepth = span[1];
         if (span[1] - span[0] < minimumSpanExtent) {
             span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
         }
 
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        std::vector<unsigned> waterPvtRegions;
         if (waterActive) {
             reg.zwoc = record.waterOilContactDepth();
             if (pvtRegions.size() > 1) {
-                // Only PVT regions with cells below the contact can have a water
-                // column connected to another one. Include cells on all ranks.
+                // Only PVT regions with cells below the contact have water
+                // columns that can anchor the hydrocarbon there. Include cells
+                // on all ranks.
                 std::vector<int> present(pvtRegions.back() + 1, 0);
                 for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
                     if (std::cmp_equal(eqlnum[cell], regionIdx) &&
@@ -813,20 +818,10 @@ private:
                 }
                 comm.max(present.data(), static_cast<int>(present.size()));
 
-                std::vector<unsigned> waterPvtRegions;
                 for (const auto pvtRegion : pvtRegions) {
                     if (present[pvtRegion] != 0) {
-                        waterPvtRegions.push_back(pvtRegion + 1);
+                        waterPvtRegions.push_back(pvtRegion);
                     }
-                }
-                if (waterPvtRegions.size() > 1) {
-                    OpmLog::warning(fmt::format(
-                        "Equilibration region {} has water-zone cells in PVT regions {}. "
-                        "Their water pressures are integrated in separate columns. Where "
-                        "the cells connect (including numerical-aquifer NNCs), differing "
-                        "water densities may cause an initial pressure imbalance and "
-                        "crossflow. Check PVTNUM and initial water pressures across "
-                        "connections.", regionIdx + 1, fmt::join(waterPvtRegions, ", ")));
                 }
             }
         }
@@ -845,7 +840,13 @@ private:
         reg.anchoredAtWaterContact = waterActive && (record.datumDepth() >= reg.zwoc);
 
         if (datumInWater) {
-            integrateWaterPressure(reg, span, gravity, numSamplePoints,
+            // A PVT region confined above the contact has no water zone to
+            // which the datum applies. Its connate water follows the hydrocarbon
+            // pressure at the contact instead. With no water-zone cells, retain
+            // the existing interpretation of the datum for every PVT region.
+            const auto& datumPvtRegions =
+                waterPvtRegions.empty() ? reg.pvtRegions : waterPvtRegions;
+            integrateWaterPressure(reg, datumPvtRegions, span, gravity, numSamplePoints,
                                    record.datumDepth(), record.datumDepthPressure());
             hcDatum = reg.zwoc;
             hcPressure = waterContactPressure(reg, record.datumDepth(), regionIdx)
@@ -877,24 +878,42 @@ private:
             setupTwoPhaseRegion(reg, record, span, gravity, numSamplePoints, regionIdx);
         }
 
-        // With the datum in the hydrocarbon the water follows from the contact.
-        if (waterActive && !datumInWater) {
+        // Anchor any water columns not fixed by the datum at the contact.
+        if (waterActive) {
             setupWaterZone(reg, record, span, gravity, numSamplePoints, regionIdx);
         }
-        else if (waterActive) {
-            OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact "
-                                 "is at {} m.", regionIdx + 1, reg.zwoc));
+
+        if (waterPvtRegions.size() > 1) {
+            Scalar minPressure = std::numeric_limits<Scalar>::max();
+            Scalar maxPressure = std::numeric_limits<Scalar>::lowest();
+            for (const auto pvtRegion : waterPvtRegions) {
+                const Scalar pressure = reg.waterPressure.at(pvtRegion).value(deepestCellDepth);
+                minPressure = std::min(minPressure, pressure);
+                maxPressure = std::max(maxPressure, pressure);
+            }
+            const Scalar difference = maxPressure - minPressure;
+            const Scalar scale = std::max(std::abs(minPressure), std::abs(maxPressure));
+            if (difference > 1.0e-10 * scale) {
+                auto displayedRegions = waterPvtRegions;
+                for (auto& pvtRegion : displayedRegions) {
+                    ++pvtRegion;
+                }
+                OpmLog::warning(fmt::format(
+                    "Equilibration region {} has water-zone cells in PVT regions {} "
+                    "with pressures differing by {:.6g} bar at {} m. If those cells "
+                    "connect (including numerical-aquifer NNCs), initial crossflow "
+                    "may occur. Check PVTNUM and initial pressures.",
+                    regionIdx + 1, fmt::join(displayedRegions, ", "),
+                    unit::convert::to(difference, unit::barsa), deepestCellDepth));
+            }
         }
 
         return reg;
     }
 
-    /// The water phase of a region: connate above the water-oil contact, fully
-    /// water-saturated below it, with its own hydrostatic pressure.
-    ///
-    /// The water pressure is integrated from the contact rather than derived
-    /// from the hydrocarbon pressure: the two only agree there, and away from
-    /// it the water gradient is the steeper one.
+    /// Complete the water columns at the water-oil contact using the
+    /// hydrocarbon pressure there. Columns already anchored by a water datum
+    /// retain that anchor and their own hydrostatic gradient.
     void setupWaterZone(Region& reg,
                         const EquilRecord& record,
                         const std::array<Scalar, 2>& span,
@@ -915,22 +934,24 @@ private:
         const Scalar pcow = record.waterOilContactCapillaryPressure();
         const Scalar pContact = hcPressure->value(reg.zwoc) - pcow;
 
-        integrateWaterPressure(reg, span, gravity, numSamplePoints, reg.zwoc, pContact);
+        integrateWaterPressure(reg, reg.pvtRegions, span, gravity, numSamplePoints,
+                               reg.zwoc, pContact);
 
         OpmLog::info(fmt::format("Equilibration region {}: the water-oil contact "
                                  "is at {} m.", regionIdx + 1, reg.zwoc));
     }
 
-    /// Integrates the water pressure of each PVT region of \p reg over \p span
-    /// from \p depth, where it is \p pressure.
+    /// Integrates the water pressure of the selected PVT regions over \p span
+    /// from \p depth, where it is \p pressure. Existing columns keep their anchor.
     void integrateWaterPressure(Region& reg,
+                                const std::vector<unsigned>& pvtRegions,
                                 const std::array<Scalar, 2>& span,
                                 const Scalar gravity,
                                 const int numSamplePoints,
                                 const Scalar depth,
                                 const Scalar pressure) const
     {
-        for (const auto pvtRegion : reg.pvtRegions) {
+        for (const auto pvtRegion : pvtRegions) {
             const WaterODE ode(reg.tempVdTable, eosType_, pvtRegion, gravity);
             reg.waterPressure.try_emplace(pvtRegion, ode,
                                           typename WaterPressFunc::InitCond{depth, pressure},
@@ -939,9 +960,8 @@ private:
     }
 
     /// The water pressure at the water-oil contact when the datum at \p datum,
-    /// below the contact, gives it. The datum states the pressure of the water
-    /// of every PVT region in the region, so their columns must reach the
-    /// contact at one pressure for the hydrocarbon to be anchored there.
+    /// below the contact, gives it. The water columns anchored at the datum
+    /// must reach the contact at one pressure to anchor the hydrocarbon there.
     static Scalar waterContactPressure(const Region& reg,
                                        const Scalar datum,
                                        const std::size_t regionIdx)

@@ -1255,25 +1255,71 @@ BOOST_AUTO_TEST_CASE(DatumInDifferentWatersIsRejected)
                           });
 }
 
+BOOST_AUTO_TEST_CASE(DatumInWaterIgnoresPvtRegionAboveContact)
+{
+    // Only PVT region 2 has cells below the contact. The datum in that water
+    // column anchors the hydrocarbon, while the connate water of PVT region 1
+    // follows from the contact, not from the datum.
+    const WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "7*1 13*2",
+                                                    "EQUIL\n"
+                                                    " 2045 150 2035 0 2000 0 /\n"
+                                                    " 2060 155 2085 0 2050 0 /\n"));
+    const std::vector<int> eqlnum(20, 0);
+    std::vector<int> pvtnum(20, 1);
+    std::fill(pvtnum.begin(), pvtnum.begin() + 7, 0);
+    const auto allBrine = fix.compute(eqlnum, {}, {}, std::vector<int>(20, 1)).fluidStates();
+
+    WarningCapture warnings;
+    const auto states = fix.compute(eqlnum, {}, {}, pvtnum).fluidStates();
+    BOOST_CHECK(warnings.messages.str().find("water-zone cells") == std::string::npos);
+
+    const auto pressure = [](const auto& fs, const unsigned phaseIdx) {
+        return Opm::getValue(fs.pressure(phaseIdx));
+    };
+    constexpr auto water = WaterFluidSystem::waterPhaseIdx;
+    constexpr auto oil = WaterFluidSystem::oilPhaseIdx;
+    for (std::size_t c = 0; c < states.size(); ++c) {
+        BOOST_TEST_CONTEXT("Cell " << c) {
+            BOOST_CHECK_EQUAL(pressure(states[c], oil), pressure(allBrine[c], oil));
+            if (c >= 7) {
+                BOOST_CHECK_EQUAL(pressure(states[c], water), pressure(allBrine[c], water));
+            }
+        }
+    }
+
+    // Both connate-water columns meet at the contact. Fresh water therefore
+    // has the higher pressure just above it because its gradient is shallower.
+    const Scalar fresh = pressure(states[6], water);
+    const Scalar brine = pressure(allBrine[6], water);
+    const Scalar pMid = 0.5 * (fresh + brine) / barsa;
+    const Scalar expected = (waterDensity(1150.0, 1.01, 2.5e-5, pMid)
+                             - waterDensity(1000.0, 1.03, 4.0e-5, pMid))
+                            * gravity * (2035.0 - fix.depths[6]);
+    BOOST_CHECK_CLOSE(fresh - brine, expected, 0.1);
+}
+
 BOOST_AUTO_TEST_CASE(DatumInTheSameWaterIsAccepted)
 {
     // PVT regions that share their water, as when they differ in the rock only,
-    // equilibrate as one.
+    // equilibrate as one and need no crossflow warning for either datum.
+    constexpr auto sameWater = "PVTW\n"
+                               " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
+                               " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
+                               "DENSITY\n"
+                               " 800.0 1000.0 1.0 /\n"
+                               " 800.0 1000.0 1.0 /\n";
     const WaterEquilFixture fix(twoWaterRegionsDeck("20*1", "10*1 10*2",
                                                     "EQUIL\n"
                                                     " 2045 150 2035 0 2000 0 /\n"
                                                     " 2060 155 2085 0 2050 0 /\n",
-                                                    "PVTW\n"
-                                                    " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
-                                                    " 75.0 1.03 4.0E-5 0.3 0.0 /\n"
-                                                    "DENSITY\n"
-                                                    " 800.0 1000.0 1.0 /\n"
-                                                    " 800.0 1000.0 1.0 /\n"));
+                                                    sameWater));
     const std::vector<int> eqlnum(20, 0);
     std::vector<int> pvtnum(20, 0);
     std::fill(pvtnum.begin() + 10, pvtnum.end(), 1);
     const std::vector<Scalar> connate(20, connateSw);
     const std::vector<Scalar> maxWater(20, 1.0);
+
+    WarningCapture warnings;
     const auto states = fix.compute(eqlnum, connate, maxWater, pvtnum).fluidStates();
     const auto single = fix.compute(eqlnum, connate, maxWater).fluidStates();
     for (std::size_t c = 0; c < states.size(); ++c) {
@@ -1283,6 +1329,15 @@ BOOST_AUTO_TEST_CASE(DatumInTheSameWaterIsAccepted)
                               Opm::getValue(single[c].pressure(phaseIdx)));
         }
     }
+    BOOST_CHECK(warnings.messages.str().find("water-zone cells") == std::string::npos);
+
+    const WaterEquilFixture above(twoWaterRegionsDeck("20*1", "10*1 10*2",
+                                                      "EQUIL\n"
+                                                      " 2010 150 2035 0 2000 0 /\n"
+                                                      " 2060 155 2085 0 2050 0 /\n",
+                                                      sameWater));
+    above.compute(eqlnum, connate, maxWater, pvtnum);
+    BOOST_CHECK(warnings.messages.str().find("water-zone cells") == std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(PvtRegionsMayVaryWithoutWater)
