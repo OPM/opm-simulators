@@ -33,11 +33,12 @@ namespace Opm
 
 // Backend traits for the CPU instantiation of SystemPreconditioner.
 //
-// Collects the matrix, vector and sub-solver types and the few operations
-// SystemPreconditioner needs on them, so that the algorithm is written once
-// against the Backend interface.
+// Collects the types and the few operations that differ between the CPU and
+// GPU paths, so that a single SystemPreconditioner serves both.  The
+// GPU counterpart is gpuistl::GpuSystemBackend.
 template <typename ScalarT, class ResOp, class ResCommT = Dune::Amg::SequentialInformation>
 struct CpuSystemBackend {
+    static constexpr bool isGpu = false;
     static constexpr bool isParallel = !std::is_same_v<ResCommT, Dune::Amg::SequentialInformation>;
     static constexpr bool hasPerfectUpdate = true;
 

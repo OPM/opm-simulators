@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
@@ -52,16 +53,22 @@ using ParResOperator = Dune::OverlappingSchwarzOperator<RRMatrix<Scalar>, ResVec
 
 // Preconditioner for the coupled reservoir-well system.
 //
-// Templated on scalar type, reservoir operator and communication types to
-// unify sequential and parallel implementations.  The matrix, vector and
-// sub-solver types come from the Backend traits struct, which defaults to
-// CpuSystemBackend<Scalar, ResOp, ResComm>.  The 3-stage algorithm:
+// The Backend traits struct supplies the matrix, vector and sub-solver types,
+// so that sequential, parallel and GPU runs share one implementation.  It
+// defaults to CpuSystemBackend<Scalar, ResOp, ResComm>; the GPU solver uses
+// gpuistl::GpuSystemBackend (see gpuistl::GpuSystemPreconditioner).
+// The 3-stage algorithm:
 //   1. Reservoir CPR solve
 //   2. Well solve + reservoir smoothing
 //   3. Final well solve
 //
 // For parallel runs, copyOwnerToAll synchronises overlap DOFs before
 // each reservoir sub-solve.
+//
+// On the GPU backend the reservoir sub-solvers run on the device, while the
+// well sub-solver stays on the CPU: the well system is small, so the cost of
+// moving its right-hand side and solution across is negligible. The CPRW
+// pressure stage (add_wells) is CPU only.
 template <class Scalar,
           class ResOp,
           class ResComm = Dune::Amg::SequentialInformation,
@@ -78,6 +85,7 @@ public:
     using ResWork = typename Backend::ResWork;
     using WellWork = typename Backend::WellWork;
 
+    static constexpr bool isGpu = Backend::isGpu;
     static constexpr bool isParallel = Backend::isParallel;
 
     using ResFlexibleSolverType = typename Backend::ResSolver;
@@ -140,11 +148,15 @@ public:
 
     void updateForChangedWellStructure()
     {
-        if (cprwStage_) {
-            // The coarse system carries one unknown per well, so a changed
-            // well structure changes its dimension and pattern.
-            weights_ = weightsCalculator_();
-            cprwStage_->buildStructure(weights_);
+        if constexpr (!isGpu) {
+            if (cprwStage_) {
+                // The coarse system carries one unknown per well, so a changed
+                // well structure changes its dimension and pattern.
+                weights_ = weightsCalculator_();
+                cprwStage_->buildStructure(weights_);
+            } else {
+                Backend::updateResSolver(*resSolver_);
+            }
         } else {
             Backend::updateResSolver(*resSolver_);
         }
@@ -224,6 +236,7 @@ private:
     static constexpr int dummyWellPressureIndex = std::numeric_limits<int>::min();
     Opm::PropertyTree wellprm_;
 
+    // Only used on the CPU: the GPU reservoir sub-solvers build their own operator.
     std::unique_ptr<typename Backend::ResOperator> rop_;
     std::unique_ptr<WellOperator> wop_;
     std::unique_ptr<ResFlexibleSolverType> resSolver_;
@@ -232,6 +245,7 @@ private:
 
     // Non-null when the pressure stage includes the well unknowns (CPRW).
     // Then resSolver_ is not built and stage 1 goes through cprwStage_.
+    // CPU only.
     using CprwStage = SystemCprwPressureStage<Scalar, ResComm>;
     std::unique_ptr<CprwStage> cprwStage_;
     std::function<SysVector()> weightsCalculator_;
@@ -246,27 +260,34 @@ private:
     ResWork resRes_;
     WellWork wRes_;
 
+    // GPU backend only: host-side copies of the well right-hand side and
+    // correction, used to run the CPU well sub-solver.
+    ConditionalStorage<isGpu, WellVector<Scalar>> hostWRes_;
+    ConditionalStorage<isGpu, WellVector<Scalar>> hostDwSol_;
+
     template <class MatA, class MatB, class MatC, class MatD>
     void applyPressureStage(const MatA& A, const MatB& B, const MatC& C, const MatD& D)
     {
-        if (cprwStage_) {
-            dresSol_ = 0.0;
-            dwSol_ = 0.0;
-            tmp_resRes_ = resRes_;
-            syncResVector(tmp_resRes_);
-            cprwStage_->apply(tmp_resRes_, wRes_, weights_, dresSol_, dwSol_);
-            resSol_ += dresSol_;
-            // resRes_ -= A * dresSol_
-            A.mmv(dresSol_, resRes_);
-            // wRes_ -= B * dresSol_
-            B.mmv(dresSol_, wRes_);
-            if (cprwStage_->prolongatesWellPressure()) {
-                wSol_ += dwSol_;
-                // resRes_ -= C * dwSol_ ;  wRes_ -= D * dwSol_
-                C.mmv(dwSol_, resRes_);
-                D.mmv(dwSol_, wRes_);
+        if constexpr (!isGpu) {
+            if (cprwStage_) {
+                dresSol_ = 0.0;
+                dwSol_ = 0.0;
+                tmp_resRes_ = resRes_;
+                syncResVector(tmp_resRes_);
+                cprwStage_->apply(tmp_resRes_, wRes_, weights_, dresSol_, dwSol_);
+                resSol_ += dresSol_;
+                // resRes_ -= A * dresSol_
+                A.mmv(dresSol_, resRes_);
+                // wRes_ -= B * dresSol_
+                B.mmv(dresSol_, wRes_);
+                if (cprwStage_->prolongatesWellPressure()) {
+                    wSol_ += dwSol_;
+                    // resRes_ -= C * dwSol_ ;  wRes_ -= D * dwSol_
+                    C.mmv(dwSol_, resRes_);
+                    D.mmv(dwSol_, wRes_);
+                }
+                return;
             }
-            return;
         }
 
         Dune::InverseOperatorResult res_result;
@@ -283,10 +304,12 @@ private:
 
     void updatePressureStage()
     {
-        if (cprwStage_) {
-            weights_ = weightsCalculator_();
-            cprwStage_->update(weights_);
-            return;
+        if constexpr (!isGpu) {
+            if (cprwStage_) {
+                weights_ = weightsCalculator_();
+                cprwStage_->update(weights_);
+                return;
+            }
         }
         Backend::updateResSolver(*resSolver_);
     }
@@ -296,8 +319,18 @@ private:
     void applyWellSolver(WellWork& sol, const WellWork& rhs)
     {
         Dune::InverseOperatorResult well_result;
-        tmp_wRes_ = rhs;
-        wellSolver_->apply(sol, tmp_wRes_, well_result);
+        if constexpr (isGpu) {
+            if (hostWRes_->size() == 0) {
+                return;
+            }
+            rhs.copyToHost(*hostWRes_);
+            *hostDwSol_ = 0.0;
+            wellSolver_->apply(*hostDwSol_, *hostWRes_, well_result);
+            sol.copyFromHost(*hostDwSol_);
+        } else {
+            tmp_wRes_ = rhs;
+            wellSolver_->apply(sol, tmp_wRes_, well_result);
+        }
     }
 
     void syncResVector(ResWork& v)
@@ -335,45 +368,73 @@ private:
                 = [weightsCalculator]() { return ResWork(Backend::res(weightsCalculator())); };
         }
 
-        if constexpr (isParallel) {
-            rop_ = std::make_unique<typename Backend::ResOperator>(*S_.A, *resComm_);
-            resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, *resComm_, resprmsmoother, resWeightCalc, pressureIndex_);
-        } else {
-            rop_ = std::make_unique<typename Backend::ResOperator>(*S_.A);
-            resSmoother_ = std::make_unique<ResFlexibleSolverType>(
-                *rop_, resprmsmoother, resWeightCalc, pressureIndex_);
-        }
-
-        if (addWells) {
-            if (!weightsCalculator) {
+        if constexpr (isGpu) {
+            if (addWells) {
                 OPM_THROW(std::invalid_argument,
-                          "The CPRW pressure stage (add_wells) needs a weights calculator, but "
-                          "none was configured. Set reservoir_solver.preconditioner.weight_type.");
+                          "The CPRW pressure stage (add_wells) of system_cpr is not "
+                          "supported with --linear-solver-accelerator=gpu.");
             }
-            weightsCalculator_ = weightsCalculator;
-            weights_ = weightsCalculator_();
-
-            auto coarseprm = resprm.get_child_optional("preconditioner.coarsesolver")
-                ? resprm.get_child("preconditioner.coarsesolver")
-                : PropertyTree();
-            const auto wellTransfer = wellTransferFromString(
-                // Same default as setupPropertyTree ships, so a JSON that omits
-                // the key gets the same preconditioner as the built-in setup.
-                prm.get("well_transfer", std::string{"classic"}));
-            const auto diagonal = wellCoarseDiagonalFromString(
-                prm.get("well_coarse_diagonal", std::string{"contract_d"}));
-            cprwStage_ = std::make_unique<CprwStage>(S_, coarseprm, pressureIndex_,
-                                                     wellTransfer, resComm_, diagonal,
-                                                     prm.get("verbosity", 0));
-            cprwStage_->buildStructure(weights_);
+            // The GPU wrapper builds its own operator around the reservoir matrix.
+            resSmoother_ = std::make_unique<ResFlexibleSolverType>(*S_.A,
+                                                                   /*parallel=*/false,
+                                                                   resprmsmoother,
+                                                                   pressureIndex_,
+                                                                   resWeightCalc,
+                                                                   /*forceSerial=*/true,
+                                                                   /*comm=*/nullptr);
+            resSolver_ = std::make_unique<ResFlexibleSolverType>(*S_.A,
+                                                                 /*parallel=*/false,
+                                                                 resprm,
+                                                                 pressureIndex_,
+                                                                 resWeightCalc,
+                                                                 /*forceSerial=*/true,
+                                                                 /*comm=*/nullptr);
         } else {
             if constexpr (isParallel) {
-                resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                    *rop_, *resComm_, resprm, resWeightCalc, pressureIndex_);
+                rop_ = std::make_unique<typename Backend::ResOperator>(*S_.A, *resComm_);
+                resSmoother_ = std::make_unique<ResFlexibleSolverType>(
+                    *rop_, *resComm_, resprmsmoother, resWeightCalc, pressureIndex_);
             } else {
-                resSolver_ = std::make_unique<ResFlexibleSolverType>(
-                    *rop_, resprm, resWeightCalc, pressureIndex_);
+                rop_ = std::make_unique<typename Backend::ResOperator>(*S_.A);
+                resSmoother_ = std::make_unique<ResFlexibleSolverType>(
+                    *rop_, resprmsmoother, resWeightCalc, pressureIndex_);
+            }
+
+            if (addWells) {
+                if (!weightsCalculator) {
+                    OPM_THROW(
+                        std::invalid_argument,
+                        "The CPRW pressure stage (add_wells) needs a weights calculator, but "
+                        "none was configured. Set reservoir_solver.preconditioner.weight_type.");
+                }
+                weightsCalculator_ = weightsCalculator;
+                weights_ = weightsCalculator_();
+
+                auto coarseprm = resprm.get_child_optional("preconditioner.coarsesolver")
+                    ? resprm.get_child("preconditioner.coarsesolver")
+                    : PropertyTree();
+                const auto wellTransfer = wellTransferFromString(
+                    // Same default as setupPropertyTree ships, so a JSON that omits
+                    // the key gets the same preconditioner as the built-in setup.
+                    prm.get("well_transfer", std::string {"classic"}));
+                const auto diagonal = wellCoarseDiagonalFromString(
+                    prm.get("well_coarse_diagonal", std::string {"contract_d"}));
+                cprwStage_ = std::make_unique<CprwStage>(S_,
+                                                         coarseprm,
+                                                         pressureIndex_,
+                                                         wellTransfer,
+                                                         resComm_,
+                                                         diagonal,
+                                                         prm.get("verbosity", 0));
+                cprwStage_->buildStructure(weights_);
+            } else {
+                if constexpr (isParallel) {
+                    resSolver_ = std::make_unique<ResFlexibleSolverType>(
+                        *rop_, *resComm_, resprm, resWeightCalc, pressureIndex_);
+                } else {
+                    resSolver_ = std::make_unique<ResFlexibleSolverType>(
+                        *rop_, resprm, resWeightCalc, pressureIndex_);
+                }
             }
         }
 
@@ -402,6 +463,10 @@ private:
         Backend::resize(dwSol_, numWell, numWellDofs);
         Backend::resize(tmp_wRes_, numWell, numWellDofs);
         Backend::resize(wRes_, numWell, numWellDofs);
+        if constexpr (isGpu) {
+            hostWRes_->resize(numWell);
+            hostDwSol_->resize(numWell);
+        }
     }
 };
 
