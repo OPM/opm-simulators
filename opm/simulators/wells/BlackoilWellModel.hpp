@@ -117,7 +117,7 @@ template<class Scalar> class WellContributions;
             using IndexTraits = typename FluidSystem::IndexTraitsType;
             using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
-            static std::size_t activePressureVarIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
+            static constexpr std::size_t activePressureVarIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::activeSolventSaturationIdx();

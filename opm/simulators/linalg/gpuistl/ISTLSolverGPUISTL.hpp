@@ -77,7 +77,7 @@ public:
     using GPUVector = Opm::gpuistl::GpuVector<real_type>;
     using GPUVectorInt = Opm::gpuistl::GpuVector<int>;
 
-    static std::size_t activePressureIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
+    static constexpr std::size_t activePressureIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
 
 
 #if HAVE_MPI

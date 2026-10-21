@@ -61,7 +61,7 @@ protected:
                   "ISTLSolverSystem (with system_cpr preconditioner) only supports "
                   "3-equation blackoil models. This model has different equation count.");
 
-    static std::size_t activePressureIndex() { return Indices::activePressureSwitchIdx(); }
+    static constexpr std::size_t activePressureIndex() { return Indices::activePressureSwitchIdx(); }
 
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
