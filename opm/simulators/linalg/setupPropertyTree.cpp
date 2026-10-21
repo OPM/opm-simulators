@@ -617,6 +617,7 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 {
     using namespace std::string_literals;
     const bool add_wells = (conf == "system_cprw");
+    const bool useGpu = p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU;
     PropertyTree prm;
 
     // Outer solver
@@ -657,7 +658,12 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // Apply the configured smoother once without loopsolver's extra defect
     // updates and convergence bookkeeping.
     prm.put("preconditioner.reservoir_smoother.solver", "preconditioner2inverseoperator"s);
-    prm.put("preconditioner.reservoir_smoother.preconditioner.type", "paroverilu0"s);
+    // Same smoother choice per accelerator backend as the CPR fine smoother.
+    if (useGpu) {
+        prm.put("preconditioner.reservoir_smoother.preconditioner.type", "dilu"s);
+    } else {
+        prm.put("preconditioner.reservoir_smoother.preconditioner.type", "paroverilu0"s);
+    }
     prm.put("preconditioner.reservoir_smoother.preconditioner.relaxation", 1.0);
 
     // --- Reservoir solver (CPR with AMG coarse solver) ---
@@ -685,8 +691,14 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.tol", 1e-1);
     prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.solver", "loopsolver"s);
     prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.verbosity", 0);
-    prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type", "amg"s);
-    setupDuneAMG(prm, "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+    if (useGpu) {
+        setupGpuAmgBackend(prm,
+                           "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type",
+                           "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+    } else {
+        prm.put("preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.type", "amg"s);
+        setupDuneAMG(prm, "preconditioner.reservoir_solver.preconditioner.coarsesolver.preconditioner.");
+    }
 
     // --- Well solver ---
     prm.put("preconditioner.well_solver.maxiter", 1);

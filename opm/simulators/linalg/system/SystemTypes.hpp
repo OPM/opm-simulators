@@ -19,6 +19,7 @@
 #ifndef OPM_SYSTEMTYPES_HEADER_INCLUDED
 #define OPM_SYSTEMTYPES_HEADER_INCLUDED
 
+#include <opm/material/common/ConditionalStorage.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <dune/istl/bcrsmatrix.hh>
@@ -159,11 +160,14 @@ struct WellDofLayout
 // SystemPreconditioner.
 //
 // The block and vector types come from the Blocks traits struct.  The
-// default, SystemBlockTypes, gives the CPU matrix.
+// default, SystemBlockTypes, gives the CPU matrix; the GPU solver
+// instantiates the same class with device matrices (see
+// gpuistl/GpuSystemTypes.hpp).
 // --------------------------------------------------------------------------
 template<typename Scalar>
 struct SystemBlockTypes
 {
+    static constexpr bool isGpu = false;
     using RR = RRMatrix<Scalar>;
     using RW = RWMatrix<Scalar>;
     using WR = WRMatrix<Scalar>;
@@ -195,34 +199,49 @@ public:
     // pressure stage; null when the well DOFs are not aggregated.
     const WellDofLayout* wellLayout = nullptr;
 
+    // GPU matrices only: host copy of D, on which the well sub-solver runs.
+    ConditionalStorage<Blocks::isGpu, const WWMatrix<Scalar>*> hostD;
+
     // Sub-block access: S[_0][_0], S[_0][_1], S[_1][_0], S[_1][_1]
     inline SystemMatrixRow0<Scalar> operator[](Dune::index_constant<0>) const;
     inline SystemMatrixRow1<Scalar> operator[](Dune::index_constant<1>) const;
 
-    // Matrix-vector products required by Dune linear operators.
+    // Matrix-vector products required by Dune linear operators.  The well
+    // blocks are skipped when there are no well unknowns, as in a run
+    // without open wells: the products are no-ops then, and the GPU matrices
+    // reject empty vectors.
     // y = S * x  =  (A*x0 + C*x1;  B*x0 + D*x1)
     // Achieved by: y0 = A*x0 (mv), then y0 += C*x1 (umv); similarly for y1.
     void mv(const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->mv (x[_0], y[_0]);   C->umv(x[_1], y[_0]);
-        B->mv (x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        A->mv(x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->umv(x[_1], y[_0]);
+            B->mv (x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        }
     }
 
     // y += S * x  =  (y0 += A*x0 + C*x1;  y1 += B*x0 + D*x1)
     void umv(const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->umv(x[_0], y[_0]);   C->umv(x[_1], y[_0]);
-        B->umv(x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        A->umv(x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->umv(x[_1], y[_0]);
+            B->umv(x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        }
     }
 
     // y += alpha * S * x  =  (y0 += alpha*(A*x0 + C*x1);  y1 += alpha*(B*x0 + D*x1))
     void usmv(field_type alpha, const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->usmv(alpha, x[_0], y[_0]);   C->usmv(alpha, x[_1], y[_0]);
-        B->usmv(alpha, x[_0], y[_1]);   D->usmv(alpha, x[_1], y[_1]);
+        A->usmv(alpha, x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->usmv(alpha, x[_1], y[_0]);
+            B->usmv(alpha, x[_0], y[_1]);   D->usmv(alpha, x[_1], y[_1]);
+        }
     }
 };
 

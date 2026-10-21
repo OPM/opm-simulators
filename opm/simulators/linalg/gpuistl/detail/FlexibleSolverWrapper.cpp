@@ -17,6 +17,7 @@
 #include "config.h"
 
 #include <functional>
+#include <type_traits>
 #include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
 
 #include <dune/common/parallel/communication.hh>
@@ -67,33 +68,45 @@ namespace
             std::reference_wrapper<typename Wrapper::AbstractPreconditionerType>,
             std::shared_ptr<typename Wrapper::GpuCommunicationType>>;
 
-            // We need the block size at compile time to instantiate the correct types
-            // hence we need to dispatch on the block size
-            return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
-                // Get the block size from the decltype of the blockSizeVal,
-                // making it a compile time constant
-                constexpr int block_size = decltype(blockSizeVal)::value;
+            // Guard: Dune::Communication<int> is the sequential communicator and is only
+            // ever used via the serial path above (forceSerial=true).  Without if constexpr
+            // the compiler would still instantiate the MPI branch for that type and try to
+            // resolve methods like .communicator() / .copyOwnerToAll() / .indexSet() that
+            // do not exist on Dune::Communication<int>.
+            if constexpr (!std::is_same_v<Comm, Dune::Communication<int>>) {
+                // We need the block size at compile time to instantiate the correct types
+                // hence we need to dispatch on the block size
+                return matrix.dispatchOnBlocksize([&](auto blockSizeVal) -> return_type {
+                    // Get the block size from the decltype of the blockSizeVal,
+                    // making it a compile time constant
+                    constexpr int block_size = decltype(blockSizeVal)::value;
 
-                // We are running in parallel (MPI) so we need a communication type, this
-                // time for GPU
-                using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
-                using SchwarzOperator
-                    = Dune::OverlappingSchwarzOperator<GpuSparseMatrixWrapper<real_type>, Vector, Vector, CudaCommunication>;
+                    // We are running in parallel (MPI) so we need a communication type, this
+                    // time for GPU
+                    using CudaCommunication = GpuOwnerOverlapCopy<real_type, Comm>;
+                    using SchwarzOperator
+                        = Dune::OverlappingSchwarzOperator<GpuSparseMatrixWrapper<real_type>, Vector, Vector, CudaCommunication>;
 
-                using SolverType = Dune::FlexibleSolver<SchwarzOperator>;
+                    using SolverType = Dune::FlexibleSolver<SchwarzOperator>;
 
-                // Create the communication object that will handle the GPU and MPI communication
-                auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(*comm);
-                // Create the operator that will (through the communication object) handle the
-                // GPU and MPI communication
-                auto operatorPtr = std::make_unique<SchwarzOperator>(matrix, *cudaCommunication);
-                auto solverPtr = std::make_unique<SolverType>(*operatorPtr, *cudaCommunication, prm, weightCalculator, pressureIndex);
-                auto preconditioner = std::ref(solverPtr->preconditioner());
+                    // Create the communication object that will handle the GPU and MPI communication
+                    auto cudaCommunication = makeGpuOwnerOverlapCopy<real_type, block_size, Comm>(*comm);
+                    // Create the operator that will (through the communication object) handle the
+                    // GPU and MPI communication
+                    auto operatorPtr = std::make_unique<SchwarzOperator>(matrix, *cudaCommunication);
+                    auto solverPtr = std::make_unique<SolverType>(*operatorPtr, *cudaCommunication, prm, weightCalculator, pressureIndex);
+                    auto preconditioner = std::ref(solverPtr->preconditioner());
 
-                return std::make_tuple(
-                    std::move(operatorPtr), std::move(solverPtr), preconditioner,
-                    std::static_pointer_cast<typename Wrapper::GpuCommunicationType>(cudaCommunication));
-            });
+                    return std::make_tuple(
+                        std::move(operatorPtr), std::move(solverPtr), preconditioner,
+                        std::static_pointer_cast<typename Wrapper::GpuCommunicationType>(cudaCommunication));
+                });
+            } else {
+                // Serial communicator cannot legally reach this branch at runtime
+                // (the !parallel || forceSerial guard above routes it to the serial path).
+                OPM_THROW(std::logic_error,
+                    "FlexibleSolverWrapper: parallel branch reached with serial communicator.");
+            }
         }
 #else
         else {
@@ -145,18 +158,29 @@ FlexibleSolverWrapper<Matrix, Vector, Comm>::update()
 
 } // namespace Opm::gpuistl::detail
 
-#if HAVE_MPI
-using CommunicationType = Dune::OwnerOverlapCopyCommunication<int, int>;
-#else
-using CommunicationType = Dune::Communication<int>;
-#endif
+// Serial instantiation — always needed; GpuSystemPreconditioner uses
+// Dune::Communication<int> unconditionally (it is sequential-only).
+#define INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_SERIAL(real_type)                  \
+    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<              \
+        ::Opm::gpuistl::GpuSparseMatrixWrapper<real_type>,                     \
+        ::Opm::gpuistl::GpuVector<real_type>,                                  \
+        Dune::Communication<int>>
 
-#define INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(real_type)                                                                 \
-    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<::Opm::gpuistl::GpuSparseMatrixWrapper<real_type>,           \
-                                                                 ::Opm::gpuistl::GpuVector<real_type>,                 \
-                                                                 CommunicationType>
-
+INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_SERIAL(double);
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(float);
+INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_SERIAL(float);
 #endif
-INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER(double);
+
+// Parallel (MPI) instantiation — only when MPI is available.
+#if HAVE_MPI
+#define INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_MPI(real_type)                     \
+    template class ::Opm::gpuistl::detail::FlexibleSolverWrapper<              \
+        ::Opm::gpuistl::GpuSparseMatrixWrapper<real_type>,                     \
+        ::Opm::gpuistl::GpuVector<real_type>,                                  \
+        Dune::OwnerOverlapCopyCommunication<int, int>>
+
+INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_MPI(double);
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_FLEXIBLE_SOLVER_WRAPPER_MPI(float);
+#endif
+#endif
