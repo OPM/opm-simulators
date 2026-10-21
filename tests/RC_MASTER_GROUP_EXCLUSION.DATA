@@ -15,6 +15,9 @@
 --             /       |       |       \
 --           M1       M2       M3       M4
 --
+-- FIELD also has an LRAT limit of 2000, so that a test can check the limits
+-- the master sends besides the ORAT target.
+--
 -- M1 and M2 are master groups of slave S1, M3 and M4 of slave S2.
 -- M1, M2, M3: available for higher-level control (item 8 = YES), with guide
 --             rates 100, 200, 300 for production and both injection phases.
@@ -164,7 +167,7 @@ GRUPMAST
 -- higher-level control, so they take part in FIELD's guide-rate distribution.
 GCONPROD
 -- group  cmode   oil     water  gas  liquid  action  item8  guide rate  phase
- 'FIELD' 'ORAT'  1000.0  1*     1*   1*      'RATE' /
+ 'FIELD' 'ORAT'  1000.0  1*     1*   2000.0  'RATE' /
  'M1'    'ORAT'  5000.0  1*     1*   1*      'RATE'  'YES'  100.0       'OIL' /
  'M2'    'ORAT'  5000.0  1*     1*   1*      'RATE'  'YES'  200.0       'OIL' /
  'M3'    'ORAT'  5000.0  1*     1*   1*      'RATE'  'YES'  300.0       'OIL' /

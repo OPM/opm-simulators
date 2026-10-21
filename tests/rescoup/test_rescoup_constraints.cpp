@@ -33,7 +33,7 @@
  *
  * Group hierarchy (RC_MASTER_GROUP_EXCLUSION.DATA):
  * \code
- *              FIELD (ORAT 1000, WATER RATE 1000, GAS RATE 1000)
+ *              FIELD (ORAT 1000, LRAT 2000, WATER RATE 1000, GAS RATE 1000)
  *          /       |       |       \
  *        M1       M2       M3       M4
  *   (GR 100)  (GR 200)  (GR 300)  (item 8 = NO, own limits 50)
@@ -194,6 +194,23 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
         {
             return injection.at({group, phase});
         }
+        //! The limit for the rate type \p mode in SM3/day, or -1 if the group
+        //! hierarchy has no limit for it
+        double productionLimit(const std::string& group, Opm::Group::ProductionCMode mode) const
+        {
+            using Mode = Opm::Group::ProductionCMode;
+            const auto& pc = production.at(group);
+            double limit = -1.0;
+            switch (mode) {
+            case Mode::ORAT: limit = pc.oil_limit; break;
+            case Mode::WRAT: limit = pc.water_limit; break;
+            case Mode::GRAT: limit = pc.gas_limit; break;
+            case Mode::LRAT: limit = pc.liquid_limit; break;
+            case Mode::RESV: limit = pc.resv_limit; break;
+            default: BOOST_FAIL("No limit for this control mode");
+            }
+            return limit < 0.0 ? limit : metric_rate(limit);
+        }
     };
 
     Result calculateConstraints()
@@ -323,8 +340,13 @@ BOOST_AUTO_TEST_CASE(FixtureSetup)
 //!
 //! M4 is not available for higher-level control, so its rate of 50 is a reduction
 //! on FIELD.  M1, M2, M3 share 1000 - 50 = 950 by 100 : 200 : 300.
+//!
+//! FIELD's LRAT limit of 2000 is shared the same way: the slaves report no water
+//! production, so the liquid rates equal the oil rates, and so do the guide rates
+//! for liquid.  M4 has no LRAT limit of its own, and takes no share of FIELD's.
 BOOST_AUTO_TEST_CASE(NoExclusion)
 {
+    using Mode = Opm::Group::ProductionCMode;
     commonSetupForAllTests();
     const auto result = calculateConstraints();
 
@@ -334,6 +356,22 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
     checkRate(result.productionTarget("M4"), 50.0);
     for (const std::string name : {"M1", "M2", "M3", "M4"}) {
         BOOST_CHECK_EQUAL(master().effectiveGCW(name), 1);
+    }
+
+    // FIELD's LRAT limit less M4's liquid rate, 2000 - 50 = 1950, is shared by the
+    // guide rates of GCONPROD item 9.  These are oil guide rates (item 10), which
+    // are scaled to liquid by each group's liquid / oil rate ratio, 1 here.
+    checkRate(result.productionLimit("M1", Mode::LRAT), 1950.0 * 100.0 / 600.0);
+    checkRate(result.productionLimit("M2", Mode::LRAT), 1950.0 * 200.0 / 600.0);
+    checkRate(result.productionLimit("M3", Mode::LRAT), 1950.0 * 300.0 / 600.0);
+    // M4 has no LRAT limit of its own, and takes no share of FIELD's (GCONPROD
+    // item 8 = NO)
+    BOOST_CHECK_EQUAL(result.productionLimit("M4", Mode::LRAT), -1.0);
+    // The limit for the active control mode is the target, and the hierarchy has
+    // no limits for the other rate types
+    checkRate(result.productionLimit("M2", Mode::ORAT), result.productionTarget("M2"));
+    for (const auto mode : {Mode::WRAT, Mode::GRAT, Mode::RESV}) {
+        BOOST_CHECK_EQUAL(result.productionLimit("M2", mode), -1.0);
     }
 }
 
@@ -345,8 +383,14 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
 //! The master assumes that M1 keeps producing its reported 150, so M2 and M3 only
 //! need to produce the rest, 1000 - 200 = 800, which they share by 200 : 300.
 //! M1 is sent its share if it rejoined: (1000 - 50) * 100 / (100 + 200 + 300).
+//!
+//! The LRAT limits are recalculated with the targets: M2 and M3 share
+//! 2000 - 200 = 1800, and M1 is sent (2000 - 50) * 100 / 600.  Without the
+//! exclusion, M2 and M3 would have 650 (= 1950 * 200 / 600) and 975
+//! (= 1950 * 300 / 600), see NoExclusion.
 BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 {
+    using Mode = Opm::Group::ProductionCMode;
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     const auto result = calculateConstraints();
 
@@ -361,6 +405,11 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
     checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
     checkRate(result.productionTarget("M4"), 50.0);
+
+    checkRate(result.productionLimit("M2", Mode::LRAT), 1800.0 * 200.0 / 500.0);
+    checkRate(result.productionLimit("M3", Mode::LRAT), 1800.0 * 300.0 / 500.0);
+    checkRate(result.productionLimit("M1", Mode::LRAT), 1950.0 * 100.0 / 600.0);
+    BOOST_CHECK_EQUAL(result.productionLimit("M4", Mode::LRAT), -1.0);
 }
 
 //! \brief The fraction fallback: an excluded master group counts for its own
