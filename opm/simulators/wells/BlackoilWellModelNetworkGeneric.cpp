@@ -318,6 +318,14 @@ updatePressures(const int reportStepIdx,
 
         if (!previous_domain_pressures.empty()) {
             for (auto& [name, new_pressure]: domain_pressures) {
+                if (network.domain == details::NetworkDomain::Production
+                    && this->node_pressure_overrides_.count(name) > 0) {
+                    // Imposed by a reservoir coupling master: neither damped nor part of
+                    // the imbalance, which only measures this network's own iteration.  It
+                    // is already at the imposed value, see setNodePressureOverrides(), so
+                    // what is computed from it before this update is not stale.
+                    continue;
+                }
                 if (previous_domain_pressures.count(name) <= 0) {
                     if (std::abs(new_pressure) > network_imbalance) {
                         network_imbalance = std::abs(new_pressure);
@@ -547,6 +555,40 @@ initializeWell(WellInterfaceGeneric<Scalar,IndexTraits>& well)
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+setNodePressureOverrides(std::map<std::string, Scalar> overrides)
+{
+    this->node_pressure_overrides_ = std::move(overrides);
+    this->applyNodePressureOverrides_();
+    this->syncLegacyProductionState_();
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+applyNodePressureOverrides_()
+{
+    auto& pressures = this->nodePressures(details::NetworkDomain::Production);
+    for (const auto& [name, pressure] : this->node_pressure_overrides_) {
+        if (const auto it = pressures.find(name); it != pressures.end()) {
+            it->second = pressure;
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
+resetState()
+{
+    this->node_pressures_ = this->last_valid_node_pressures_;
+    this->branch_data_ = this->last_valid_branch_data_;
+    this->domain_node_pressures_ = this->last_valid_domain_node_pressures_;
+    this->domain_branch_data_ = this->last_valid_domain_branch_data_;
+    // The restored pressures predate the overrides in force now.
+    this->applyNodePressureOverrides_();
+    this->syncLegacyProductionState_();
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelNetworkGeneric<Scalar, IndexTraits>::
 imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well, const Scalar limit)
 {
     well.setDynamicThpLimit(limit);
@@ -570,7 +612,8 @@ computePressures(const Network::ExtNetwork& network,
     NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
                                VFPProdProperties<Scalar>>
         network_pressure_computation(
-            well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm);
+            well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm,
+            &this->node_pressure_overrides_);
 
     auto [node_pressures, branch_data] = network_pressure_computation.run();
     return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};

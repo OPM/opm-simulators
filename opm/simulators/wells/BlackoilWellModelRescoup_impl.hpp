@@ -42,6 +42,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/wells/BlackoilWellModelNetworkPressureComputation.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveGroupConstraints.hpp>
 #include <opm/simulators/wells/rescoup/RescoupReceiveSlaveGroupData.hpp>
@@ -215,6 +216,13 @@ receiveCoupledNetworkActiveStatus()
     OPM_TIMEFUNCTION();
     assert(this->isReservoirCouplingSlave());
     this->reservoirCouplingSlave().receiveCoupledNetworkActiveStatusFromMaster();
+    if (!this->reservoirCouplingSlave().connectedToMasterCoupledNetwork()) {
+        // No master pressures this sync step: the node pressures are the slave's own again.
+        this->network_.setNodePressureOverrides({});
+        for (auto& well : this->wellContainer()) {
+            well->setLogAllControlSwitches(false);
+        }
+    }
 }
 
 template<typename TypeTag>
@@ -238,7 +246,7 @@ receiveMasterGroupNodePressuresFromMaster()
     OPM_TIMEFUNCTION();
     assert(this->isReservoirCouplingSlave());
     auto& rescoup_slave = this->reservoirCouplingSlave();
-    const auto [num_pressures, _is_final] =
+    const auto [num_pressures, is_final] =
         rescoup_slave.receiveNumMasterGroupNodePressuresFromMaster();
     if (num_pressures > 0) {
         rescoup_slave.receiveMasterGroupNodePressuresFromMaster(num_pressures);
@@ -262,30 +270,52 @@ receiveMasterGroupNodePressuresFromMaster()
     // own WCONPROD records -- so the messages are still received (the
     // protocol is unchanged) but nothing is imposed.
     //
-    // TODO (follow-up PR): when the slave group is a fixed-pressure node with
-    // branches below it, the pressure belongs at the top of the slave's own
-    // network solve rather than directly on the wells; the slave's branches
-    // and their pressure losses then decide the wells' THP limits.  The
-    // plumbing exists -- the solver already reads
-    // Network::Node::terminal_pressure() when walking up branches -- but
-    // surfacing the master-sent value into the solver needs a runtime
-    // override path (e.g. a fixed-pressure override map on
-    // BlackoilWellModelNetwork) so we do not mutate the parsed Schedule
-    // network at runtime.  Until then the direct write below is exact only
-    // for a slave group that is itself a well group, where there is no
-    // branch between the node and the wells.
+    // The pressure is also the fixed pressure of the node in the slave's own network (see
+    // BlackoilWellModelNetworkGeneric::setNodePressureOverrides()), so that the pressures of
+    // the nodes below it, which are the THP limits of the wells in groups below the node, are
+    // the master's pressure plus the pressure drops in the slave's branches.  Without it the
+    // slave's own network update, which follows in every iteration, sets the THP limits of
+    // the wells from the node's own fixed pressure, and the well control update (before it)
+    // and the well solve (after it) would see different limits.  The direct write below only
+    // reaches wells in a group that is the node itself.
     const auto& pressures = rescoup_slave.masterGroupNodePressures();
+    std::map<std::string, Scalar> overrides;
+    for (const auto& [group_name, pressure] : pressures) {
+        if (this->slaveGroupIsFixedPressureNodeInOwnNetwork_(group_name)) {
+            overrides[group_name] = pressure;
+        }
+    }
+    this->network_.setNodePressureOverrides(overrides);
+    // A well whose THP limit comes from the master's pressure, in the node itself or in a node
+    // below it, can sit on the boundary between its group target and that limit: on THP
+    // control its rate exceeds the target, on GRUP the THP it needs is below the limit, and
+    // it switches between the two in every exchange while the master's pressure follows the
+    // rates.  Flow's limit on the number of well
+    // switches ends this, but only counts switches after NUPCOL iterations, which the
+    // exchanges (made before the Newton iterations) never reach.  Count the switches
+    // during the exchange so that such a well is kept on THP control.
+    for (auto& well : this->wellContainer()) {
+        well->setLogAllControlSwitches(false);
+    }
     if (pressures.empty()) return;
     const auto& summary_state = this->well_model_.summaryState();
     auto& well_state = this->wellState();
     for (auto& well : this->wellContainer()) {
         if (!well->isProducer() || !well->wellEcl().predictionMode()) continue;
         const auto& group_name = well->wellEcl().groupName();
+        if (this->wellIsBelowOverriddenNode_(group_name, overrides)) {
+            well->setLogAllControlSwitches(!is_final);
+        }
         const auto it = pressures.find(group_name);
         if (it == pressures.end()) continue;
         if (!this->slaveGroupIsFixedPressureNodeInOwnNetwork_(group_name)) continue;
         well->setDynamicThpLimit(it->second);
         auto& ws = well_state[well->indexOfWell()];
+        // The exchange is made in the first substep of a sync step only.  The well objects are
+        // rebuilt at the start of every substep, and a limit that is not in the well state is
+        // lost then (see BlackoilWellModelNetworkGeneric::initializeWell()), so the later
+        // substeps would solve the wells against the limit of their own deck.
+        ws.network_thp_limit = it->second;
         if (ws.production_cmode == Well::ProducerCMode::THP) {
             ws.thp = well->getTHPConstraint(summary_state);
         }
@@ -799,6 +829,19 @@ slaveGroupIsFixedPressureNodeInOwnNetwork_(const std::string& group_name) const
     if (!network.active()) return false;
     if (!network.has_node(group_name)) return false;
     return network.node(group_name).terminal_pressure().has_value();
+}
+
+template<typename TypeTag>
+bool
+BlackoilWellModelRescoup<TypeTag>::
+wellIsBelowOverriddenNode_(const std::string& group_name,
+                           const std::map<std::string, Scalar>& overrides) const
+{
+    if (overrides.empty()) return false;
+    const int episodeIdx = this->simulator_.episodeIndex();
+    const auto& network = this->schedule()[episodeIdx].network();
+    if (!network.active() || !network.has_node(group_name)) return false;
+    return nodeFollowsOverriddenNode(network, group_name, overrides);
 }
 
 

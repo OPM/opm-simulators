@@ -123,6 +123,23 @@ public:
 
     void setFromRestart(const std::optional<std::map<std::string, double>>& restart_pressures);
 
+    //! \brief Pressures that a reservoir coupling master imposes on nodes of the
+    //!        production network, by node (group) name.
+    //!
+    //! A reservoir coupling slave takes the pressure of a node that is a master
+    //! group's leaf in the master's network from the master.  The pressure
+    //! computation uses it as the fixed pressure of the node, instead of the one
+    //! in the deck, and the nodes below it follow from it with the pressure drops
+    //! in their branches.  So the THP limits of the slave's wells are the master's pressure
+    //! plus those drops whenever they are set, and not only after the master's
+    //! message is received.  The node itself is not damped by updatePressures().
+    //! Only production network nodes with a fixed pressure in the deck are
+    //! overridden.
+    //! The cached pressures of the overridden nodes are set to the imposed values at once, so
+    //! that what is computed from them before the next pressure update, such as the common THP
+    //! of an auto-choke group below such a node, uses the current imposed pressure.
+    void setNodePressureOverrides(std::map<std::string, Scalar> overrides);
+
     //! \brief Initialize wells according to network configuration.
     void initialize(const int report_step);
 
@@ -160,13 +177,10 @@ public:
         this->last_valid_domain_branch_data_ = this->domain_branch_data_;
     }
 
-    void resetState()
-    {
-        this->node_pressures_ = this->last_valid_node_pressures_;
-        this->branch_data_ = this->last_valid_branch_data_;
-        this->domain_node_pressures_ = this->last_valid_domain_node_pressures_;
-        this->domain_branch_data_ = this->last_valid_domain_branch_data_;
-    }
+    /// Restores the state saved by commitState().  The node pressure
+    /// overrides are kept, as they are the current boundary condition, so
+    /// they are applied to the restored pressures again.
+    void resetState();
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -185,6 +199,9 @@ public:
     bool operator==(const BlackoilWellModelNetworkGeneric<Scalar,IndexTraits>& rhs) const;
 
 protected:
+    /// See setNodePressureOverrides().
+    std::map<std::string, Scalar> node_pressure_overrides_;
+
     //! \brief Apply a network THP limit and retain it across well
     //! reconstruction or network detachment.
     void imposeWellThpLimit(WellInterfaceGeneric<Scalar,IndexTraits>& well,
@@ -250,6 +267,10 @@ protected:
     {
         return domain_invalid_nodes_[details::domainIndex(domain)];
     }
+
+    /// Sets the cached production node pressures of the overridden nodes to
+    /// the override values.  Does not sync the legacy state.
+    void applyNodePressureOverrides_();
 
     void syncLegacyProductionState_()
     {
