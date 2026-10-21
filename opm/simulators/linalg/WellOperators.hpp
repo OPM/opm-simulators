@@ -33,8 +33,16 @@
 #include <dune/istl/paamg/smoother.hh>
 
 #include <cstddef>
+#include <type_traits>
 
 namespace Opm::detail {
+
+// Other matrix types (e.g. MixedMatrixWrapper) only provide mv/usmv, not row iterators.
+template <class M>
+struct IsBCRSMatrix : std::false_type {};
+
+template <class B, class A>
+struct IsBCRSMatrix<Dune::BCRSMatrix<B, A>> : std::true_type {};
 
 // y = A x and y += alpha A x over rows [0, rowEnd), summing each row in a local block:
 // accumulating straight into y[i] makes the compiler store y[i] after every block.
@@ -278,7 +286,10 @@ public:
     void apply( const X& x, Y& y ) const override
     {
       OPM_TIMEBLOCK(apply);
-      detail::rowAccumulatedMv(A_, x, y, A_.N());
+      if constexpr (detail::IsBCRSMatrix<M>::value)
+          detail::rowAccumulatedMv(A_, x, y, A_.N());
+      else
+          A_.mv(x, y);
 
       // add well model modification to y
       wellOper_.apply(x, y);
@@ -288,7 +299,10 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
       OPM_TIMEBLOCK(applyscaleadd);
-      detail::rowAccumulatedUsmv(alpha, A_, x, y, A_.N());
+      if constexpr (detail::IsBCRSMatrix<M>::value)
+          detail::rowAccumulatedUsmv(alpha, A_, x, y, A_.N());
+      else
+          A_.usmv(alpha, x, y);
 
       // add scaled well model modification to y
       wellOper_.applyscaleadd(alpha, x, y);
