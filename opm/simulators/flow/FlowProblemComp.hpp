@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/grid/LookUpData.hh>
@@ -118,6 +119,9 @@ public:
 
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
+        // the CPR solves of compositional systems converge far more reliably
+        // when the fine smoother also runs before the pressure correction
+        Parameters::SetDefault<Parameters::CprPreSmooth>(1);
 
         Parameters::Register<Parameters::NormalizeExplicitSwat>(
             "Treat the explicit initial saturations of compositional runs as "
