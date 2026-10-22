@@ -113,9 +113,30 @@ prepareStep(const SimulatorTimerInterface& timer)
     OPM_TIMEFUNCTION();
     if (this->enable_state_rollback_) {
         auto& newtonMethod = this->simulator_.model().newtonMethod();
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                      && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (residentNewtonActive_) {
+                // The device owns the latest switching decisions. Publish them
+                // before snapshotting or restoring the CPU timestep history.
+                newtonMethod.setSwitchHistory(this->simulator_.model().gpuNewtonDispatcher()
+                                                  .bridge().materializeSwitchHistory());
+            }
+        }
+#endif
         if (timer.lastStepFailed()) {
             // Discard switching decisions made by the failed attempt.
             newtonMethod.restorePrimaryVariableSwitches();
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
+                          && gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+                if (residentNewtonActive_) {
+                    auto& bridge = this->simulator_.model().gpuNewtonDispatcher().bridge();
+                    bridge.importSwitchHistory(newtonMethod.switchHistory());
+                    OpmLog::info("[GPU Newton rollback] restored timestep switch history");
+                }
+            }
+#endif
         }
         else {
             newtonMethod.capturePrimaryVariableSwitches();
