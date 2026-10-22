@@ -268,7 +268,7 @@ public:
 
 private:
     // Out of line so the accessor above stays small enough to inline in the assembly loop.
-    [[noreturn, gnu::cold, gnu::noinline]] static void throwIntensiveQuantityError_(bool cacheDisabled)
+    [[noreturn]] static void throwIntensiveQuantityError_(bool cacheDisabled)
     {
         if (cacheDisabled) {
             OPM_THROW(std::logic_error,
