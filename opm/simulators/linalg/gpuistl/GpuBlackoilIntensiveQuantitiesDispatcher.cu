@@ -302,8 +302,15 @@ unsigned GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::applyNewtonUpdate
         }
     }
     const auto before = state.transferCounters();
-    launchBlackoilNewtonUpdate<typename Bridge::DeviceTypeTagPublic>(
-        state, params, relaxation, useSOR, stabilize);
+    detail::GpuMemoryCounts updateMemory;
+    {
+        const detail::ScopedGpuMemoryAccounting updateAccounting(updateMemory);
+        launchBlackoilNewtonUpdate<typename Bridge::DeviceTypeTagPublic>(
+            state, params, relaxation, useSOR, stabilize);
+    }
+    if (updateMemory.allocations != 0 || updateMemory.hostToDeviceCalls != 0) {
+        OPM_THROW(std::logic_error, "Resident Newton kernel launch allocated or uploaded GPU state");
+    }
     const auto status = state.readUpdateStatus();
     if (status[0]) {
         OPM_THROW_PROBLEM(NumericalProblem, std::format(
