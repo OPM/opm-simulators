@@ -888,7 +888,7 @@ public:
                 case GasMeaning::Disabled:
                     break;
                 default:
-                    OPM_THROW(std::logic_error, "No valid primary variable selected for water");
+                    OPM_THROW(std::logic_error, "No valid primary variable selected for gas");
             }
         }
         return changed;
