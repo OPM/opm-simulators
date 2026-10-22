@@ -51,13 +51,11 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
     , m_gpuMatrix(gpuMatrix)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
-    , m_gpuLevelSets(m_levelSets.dataPtr(), m_levelSets.dataSize())
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
     , m_splitMatrix(splitMatrix)
     , m_tuneThreadBlockSizes(tuneKernels)
     , m_mixedPrecisionScheme(makeMatrixStorageMPScheme(mixedPrecisionScheme))
     , m_reorder(reorder)
-    , m_diagIdxs(m_gpuMatrix.N())
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
@@ -107,7 +105,12 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
         }
     }
 
-    // Precompute diagaonal block element indices and handle the actual reordering if that is enabled.
+    // Split storage addresses the diagonal directly and needs no diagonal index buffer.
+    if (!m_splitMatrix) {
+        m_diagIdxs = GpuBuffer<size_t>(m_gpuMatrix.N());
+    }
+
+    // Precompute diagonal block indices and reorder the values when enabled.
     if (m_reorder) {
         if (!m_splitMatrix) {
             detail::computeDiagIndices<field_type>(m_gpuMatrixReordered->getRowIndices().data(),
@@ -118,6 +121,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuM
         }
         reorderAndSplitMatrix(m_moveThreadBlockSize);
     } else {
+        m_gpuLevelSets = GpuBuffer<size_t>(m_levelSets.dataPtr(), m_levelSets.dataSize());
         detail::computeDiagIndicesNoReorder<field_type>(m_gpuMatrix.getRowIndices().data(),
                                                         m_gpuMatrix.getColumnIndices().data(),
                                                         m_gpuLevelSets.data(),
@@ -161,7 +165,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
             OPM_GPU_SAFE_CALL(
                 cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
         }
-        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), 0));
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), m_stream.get()));
     }
 
     // ensure that main stream only continues after this stream is completed

@@ -153,8 +153,6 @@ private:
     GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     GpuVector<int> m_gpuReorderToNatural;
-    //! \brief Stores the inverted diagonal that we use in ILU0
-    GpuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
     bool m_splitMatrix;
     //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards

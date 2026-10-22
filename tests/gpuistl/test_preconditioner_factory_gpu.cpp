@@ -27,6 +27,7 @@
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_preconditioner_utils.hpp>
 
 using ScalarT = double;
 constexpr static int Dim = 1;
@@ -42,6 +43,43 @@ using GpuMatrixType = Opm::gpuistl::GpuSparseMatrixWrapper<ScalarT>;
 using GpuVectorType = Opm::gpuistl::GpuVector<ScalarT>;
 using GpuOperatorType = Dune::MatrixAdapter<GpuMatrixType, GpuVectorType, GpuVectorType>;
 using FactoryTypeGpu = Opm::PreconditionerFactory<GpuOperatorType, CommSeq>;
+
+BOOST_AUTO_TEST_CASE(TestMakeCPUMatrix)
+{
+    using Block = Dune::FieldMatrix<ScalarT, 2, 2>;
+    using Matrix = Dune::BCRSMatrix<Block>;
+    Matrix matrix(3, 3, 5, Matrix::row_wise);
+    for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
+        for (std::size_t col = 0; col < matrix.M(); ++col) {
+            if (row.index() == col || row.index() + col == 2) row.insert(col);
+        }
+    }
+    for (auto row = matrix.begin(); row != matrix.end(); ++row) {
+        for (auto block = row->begin(); block != row->end(); ++block) {
+            for (int i = 0; i < 2; ++i) {
+                for (int j = 0; j < 2; ++j) {
+                    (*block)[i][j] = 100 * row.index() + 10 * block.index() + 2 * i + j + 1;
+                }
+            }
+        }
+    }
+    auto gpuMatrix = GpuMatrixType::fromMatrix(matrix);
+    GpuOperatorType op(gpuMatrix);
+    for (bool copyValues : {false, true}) {
+        const auto copy = Opm::gpuistl::detail::makeCPUMatrix<GpuOperatorType, Block>(op, copyValues);
+        BOOST_REQUIRE_EQUAL(copy.N(), matrix.N());
+        BOOST_REQUIRE_EQUAL(copy.M(), matrix.M());
+        BOOST_REQUIRE_EQUAL(copy.nonzeroes(), matrix.nonzeroes());
+        for (std::size_t row = 0; row < matrix.N(); ++row) {
+            BOOST_REQUIRE_EQUAL(copy[row].size(), matrix[row].size());
+            auto copiedBlock = copy[row].begin();
+            for (auto block = matrix[row].begin(); block != matrix[row].end(); ++block, ++copiedBlock) {
+                BOOST_REQUIRE_EQUAL(copiedBlock.index(), block.index());
+                if (copyValues) BOOST_CHECK(*copiedBlock == *block);
+            }
+        }
+    }
+}
 
 BOOST_AUTO_TEST_CASE(TestMatrixAdapter)
 {

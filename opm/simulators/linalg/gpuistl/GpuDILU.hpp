@@ -147,14 +147,13 @@ private:
     //! \brief If mixed precision is enabled, store a float matrix
     std::unique_ptr<FloatMat> m_gpuMatrixReorderedLowerFloat;
     std::unique_ptr<FloatMat> m_gpuMatrixReorderedUpperFloat;
-    std::unique_ptr<FloatVec> m_gpuMatrixReorderedDiagFloat;
     std::unique_ptr<FloatVec> m_gpuDInvFloat;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     GpuVector<int> m_gpuReorderToNatural;
     //! \brief Potentially stores the level sets on the GPU
-    GpuBuffer<size_t> m_gpuLevelSets; // TODO: make this an optional to not spend time on the copy if not needed
+    GpuBuffer<size_t> m_gpuLevelSets; // Only allocated for the unreordered path.
     //! \brief Stores the inverted diagonal that we use in DILU
     GpuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
