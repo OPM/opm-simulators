@@ -62,7 +62,7 @@ public:
     using FluidState = CompositionalFluidState<T, FluidSystem>;
 
     template <typename T>
-    FluidState<T> toFluidState() const;
+    FluidState<T> toFluidState(unsigned eos_region) const;
 
     void update(const SingleWellState& well_state);
 

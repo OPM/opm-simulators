@@ -46,6 +46,7 @@ namespace Opm {
 ///                      default reproduces the value used in production; the unit
 ///                      test tightens it so the finite-difference comparison is
 ///                      not dominated by flash-convergence noise.
+/// \param eos_region   reservoir EOS region of the flash and the phase properties
 ///
 /// This is a free-function extraction of the wellbore flash that previously
 /// lived inline in CompWell, so it can be unit tested (e.g. by a finite
@@ -53,21 +54,22 @@ namespace Opm {
 /// Simulator. The behaviour is intentionally identical to the original.
 template <typename FluidSystem, typename T>
 void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_state,
-                             const typename FluidSystem::Scalar flash_tolerance = 1.e-6)
+                             const typename FluidSystem::Scalar flash_tolerance = 1.e-6,
+                             const unsigned eos_region = 0)
 {
     using Scalar = typename FluidSystem::Scalar;
 
     bool single_phase = false;
     if constexpr (std::is_same_v<T, Scalar>) {
         single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar(
-            fluid_state, PTFlashMethod::Ssi, flash_tolerance, /*eosRegionIdx=*/0);
+            fluid_state, PTFlashMethod::Ssi, flash_tolerance, eos_region);
     } else { // Evaluation
         single_phase = PTFlash<Scalar, FluidSystem>::solve(
-            fluid_state, PTFlashMethod::Ssi, flash_tolerance, /*eosRegionIdx=*/0);
+            fluid_state, PTFlashMethod::Ssi, flash_tolerance, eos_region);
     }
 
     constexpr Scalar R = Constants<Scalar>::R;
-    typename FluidSystem::template ParameterCache<T> param_cache {/*eosRegionIdx=*/0};
+    typename FluidSystem::template ParameterCache<T> param_cache {eos_region};
     param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
     const auto Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx)) /
                      (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
@@ -107,7 +109,7 @@ void flashWellboreFluidState(CompositionalFluidState<T, FluidSystem>& fluid_stat
 }
 
 /// Flash a fluid state, holding an overall composition, at the given surface
-/// pressure and temperature.
+/// pressure and temperature, with the first reservoir EOS region.
 template <typename FluidSystem, typename T>
 void flashAtSurfaceConditions(CompositionalFluidState<T, FluidSystem>& fluid_state,
                               const typename FluidSystem::Scalar pressure,

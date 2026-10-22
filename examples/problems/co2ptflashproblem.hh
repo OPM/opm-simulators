@@ -284,6 +284,11 @@ public:
         return 0;
     }
 
+    unsigned eosRegionIndex(unsigned /*globalDofIdx*/) const
+    {
+        return 0;
+    }
+
     template <class Context>
     Scalar rockCompressibility(const Context&, unsigned, unsigned) const
     {

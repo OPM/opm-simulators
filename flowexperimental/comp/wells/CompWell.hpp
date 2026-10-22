@@ -89,7 +89,8 @@ public:
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data,
+             unsigned eos_region);
 
     void init() override;
 
@@ -128,6 +129,10 @@ private:
     // primary variables
     PrimaryVariables primary_variables_;
     WellEquations well_equations_;
+
+    // reservoir EOS region of the wellbore flash, from the cell of the first
+    // connection
+    unsigned eos_region_;
 
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept

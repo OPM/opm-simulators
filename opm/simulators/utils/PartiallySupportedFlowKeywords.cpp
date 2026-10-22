@@ -474,7 +474,7 @@ partiallySupported()
             "TABDIMS",
             {
                {7,{false, allow_values<int> {20}, "TABDIMS(NRVPVT): should be defaulted (20) – ignored as not used"}}, // MAX_RV_NODES"
-               {9,{false, allow_values<int> {1}, "TABDIMS(NMEOSR): must be greater than or equal to 1"}}, // NUM_EOS_RES
+               {9,{false, [](int x) { return x >= 1; }, "TABDIMS(NMEOSR): must be greater than or equal to 1"}}, // NUM_EOS_RES
                {10,{false, allow_values<int> {1}, "TABDIMS(NMEOSS): should be equal to 1 - ignored as not used"}}, // NUM_EOS_SURFACE
                {12,{false, allow_values<int> {1}, "TABDIMS(MXNTHR): should be equal to 1 - ignored as not used"}}, // MAX_THERMAL_REGIONS
                {14,{false, allow_values<int> {0}, "TABDIMS(MXNPMR): should be equal to 0 - ignored as not used"}}, // MAX_PRESSURE_MAINTAINANCE_REGIONS
