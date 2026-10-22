@@ -31,6 +31,7 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/material/common/Valgrind.hpp>
 #include <algorithm>
 #include <cmath>
