@@ -167,6 +167,7 @@ struct TestProblem
     double temperature_ = 300.0;
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return temperature_; }
+    unsigned eosRegionIndex(unsigned) const { return 0; }
     template<class Context>
     unsigned pvtRegionIndex(const Context&, unsigned, unsigned) const { return 0; }
     // the porosity below carries the compressibility
