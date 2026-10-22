@@ -194,6 +194,7 @@ public:
             throw std::runtime_error("Boundary conditions (BCCON) are not supported "
                                      "by compositional modeling yet");
         }
+        this->updateNum("EOSNUM", eosnum_, eclState.getTableManager().getTabdims().getNumEosRes());
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -493,6 +494,7 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
+            eosnum_,
             vanguard.cellCenterDepths(),
             eqlnum,
             this->pvtnum_,
@@ -1056,6 +1058,8 @@ private:
     /// Set by EQUIL until the initial flash has been checked, see
     /// EQUIL::Comp::InitialStateComputer::twoPhaseCheckRegions().
     std::optional<std::vector<int>> twoPhaseCheckRegions_;
+    // Zero-based reservoir EOS region of each cell, empty for a single region.
+    std::vector<int> eosnum_;
 
     bool zmf_initialization_ {false};
 
