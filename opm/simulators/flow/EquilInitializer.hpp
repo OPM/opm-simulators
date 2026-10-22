@@ -120,13 +120,18 @@ public:
                                                                        ElementMapper,
                                                                        CartesianIndexMapper>;
 
+        const auto* editedDepths = vanguard.cellDepthsEdited()
+            ? &vanguard.cellCenterDepths() : nullptr;
+
         Initializer initialState(materialLawManager,
                                  eclState,
                                  vanguard.grid(),
                                  vanguard.gridView(),
                                  vanguard.cartesianMapper(),
                                  simulator.problem().gravity()[dimWorld - 1],
-                                 simulator.problem().numPressurePointsEquil());
+                                 simulator.problem().numPressurePointsEquil(),
+                                 /*applySwatInit=*/true,
+                                 editedDepths);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numElems);

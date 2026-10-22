@@ -664,7 +664,8 @@ public:
                          const CartesianIndexMapper& cartMapper,
                          const Scalar grav,
                          const int num_pressure_points = 2000,
-                         const bool applySwatInit = true);
+                         const bool applySwatInit = true,
+                         const std::vector<Scalar>* editedCellDepths = nullptr);
 
     using Vec = std::vector<Scalar>;
     using PVec = std::vector<Vec>; // One per phase.
@@ -689,7 +690,8 @@ private:
     void updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg);
 
     void updateCellProps_(const GridView& gridView,
-                          const NumericalAquifers& aquifer);
+                          const NumericalAquifers& aquifer,
+                          const std::vector<Scalar>* editedCellDepths);
 
     void applyNumericalAquifers_(const GridView& gridView,
                                  const NumericalAquifers& aquifer,
@@ -754,6 +756,7 @@ private:
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
+    bool depthEdited_ = false;
     std::vector<std::pair<Scalar,Scalar>> cellCenterXY_;
     std::vector<std::pair<Scalar,Scalar>> cellZSpan_;
     std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
