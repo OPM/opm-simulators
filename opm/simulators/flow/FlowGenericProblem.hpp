@@ -29,6 +29,7 @@
 #define OPM_FLOW_GENERIC_PROBLEM_HPP
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/common/UniformXTabulated2DFunctionBuilder.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <opm/simulators/flow/SolutionContainers.hpp>
@@ -62,6 +63,7 @@ class FlowGenericProblem
 public:
     using Scalar = typename FluidSystem::Scalar;
     using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
+    using TabulatedTwoDFunctionBuilder = UniformXTabulated2DFunctionBuilder<Scalar>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     struct RockParams {
