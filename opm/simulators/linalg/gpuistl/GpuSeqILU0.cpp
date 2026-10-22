@@ -258,7 +258,7 @@ GpuSeqILU0<M, X, Y, l>::findBufferSize()
                                                              CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                              numberOfRows,
                                                              numberOfNonzeroBlocks,
-                                                             m_descriptionL->get(),
+                                                             m_descriptionU->get(),
                                                              nonZeroValues,
                                                              rowIndices,
                                                              columnIndices,

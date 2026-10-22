@@ -418,7 +418,7 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
     tmpD = 1;
 
     auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize) {
-        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
+        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
     };
     m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(
         tuneLowerSolveThreadBlockSizeInApply, "(in ILU apply) Triangular lower solve");

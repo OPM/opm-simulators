@@ -521,7 +521,7 @@ GpuDILU<M, X, Y, l>::tuneThreadBlockSizes()
     tmpD = 1;
 
     auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize) {
-        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
+        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
     };
     m_lowerSolveThreadBlockSize
         = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "(in DILU apply) Triangular lower solve");
