@@ -353,6 +353,10 @@ protected:
     void updateMiscnum_();
     void updatePlmixnum_();
 
+    //! Read a region keyword as zero-based indices, checked against num_regions.
+    template<class T>
+    void updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions);
+
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const GridView& gridView_;
@@ -415,10 +419,6 @@ protected:
     {
         return [this](unsigned elemIdx) { return lookUpData_.template getFieldPropIdx<Grid>(elemIdx);};
     }
-
-private:
-    template<class T>
-    void updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions);
 };
 
 } // namespace Opm
