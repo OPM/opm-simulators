@@ -1363,7 +1363,8 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      const CartesianIndexMapper& cartMapper,
                      const Scalar grav,
                      const int num_pressure_points,
-                     const bool applySwatInit)
+                     const bool applySwatInit,
+                     const std::vector<Scalar>* editedCellDepths)
     : temperature_(grid.size(/*codim=*/0), eclipseState.getTableManager().rtemp()),
       saltConcentration_(grid.size(/*codim=*/0)),
       saltSaturation_(grid.size(/*codim=*/0)),
@@ -1398,7 +1399,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     // Querry cell depth, cell top-bottom.
     // numerical aquifer cells might be specified with different depths.
     const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
-    updateCellProps_(gridView, num_aquifers);
+    updateCellProps_(gridView, num_aquifers, editedCellDepths);
 
     // Get the equilibration records.
     const std::vector<EquilRecord> rec = getEquil(eclipseState);
@@ -1748,8 +1749,10 @@ void InitialStateComputer<FluidSystem,
                           ElementMapper,
                           CartesianIndexMapper>::
 updateCellProps_(const GridView& gridView,
-                 const NumericalAquifers& aquifer)
+                 const NumericalAquifers& aquifer,
+                 const std::vector<Scalar>* editedCellDepths)
 {
+    depthEdited_ = (editedCellDepths != nullptr);
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     int numElements = gridView.size(/*codim=*/0);
     cellCenterDepth_.resize(numElements);
@@ -1770,6 +1773,16 @@ updateCellProps_(const GridView& gridView,
         const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
         cellZSpan_[elemIdx] = Details::cellZSpan<Scalar>(element);
         cellZMinMax_[elemIdx] = Details::cellZMinMax<Scalar>(element);
+        if (editedCellDepths) {
+            // DEPTH edited in the EDIT section: shift the cell rigidly so
+            // that its centre is at the edited depth.
+            const Scalar shift = (*editedCellDepths)[elemIdx] - cellCenterDepth_[elemIdx];
+            cellCenterDepth_[elemIdx] += shift;
+            cellZSpan_[elemIdx].first += shift;
+            cellZSpan_[elemIdx].second += shift;
+            cellZMinMax_[elemIdx].first += shift;
+            cellZMinMax_[elemIdx].second += shift;
+        }
         if (!num_aqu_cells.empty()) {
             const auto search = num_aqu_cells.find(cartIx);
             if (search != num_aqu_cells.end()) {
@@ -1916,6 +1929,14 @@ calcPressSatRsRv(const RMap& reg,
 
         const auto acc = rec[r].initializationTargetAccuracy();
         if (acc > 0) {
+            if (this->depthEdited_) {
+                OpmLog::warning("DEPTH has been edited in the EDIT section, but equilibration "
+                                "region " + std::to_string(r + 1) + " uses a tilted block "
+                                "accuracy (EQUIL item 9 > 0). The cells are shifted rigidly "
+                                "to the edited depths, but the block geometry used for the "
+                                "tilted cross-sections is not, so the result may be wrong. "
+                                "Use item 9 = 0 or < 0.");
+            }
             // The grid blocks are treated as being tilted
             // First check if the region has cells
             if (cells.empty()) {

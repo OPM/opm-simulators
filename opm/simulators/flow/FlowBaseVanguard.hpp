@@ -251,6 +251,17 @@ public:
         return cellCenterDepth_[globalSpaceIdx];
     }
 
+    /*!
+     * \brief Whether DEPTH was assigned in the EDIT section (same on all ranks).
+     */
+    bool cellDepthsEdited() const
+    {
+        const auto& comm = this->gridView().comm();
+        int depthEdited = (comm.rank() == 0)
+            && this->eclState().globalFieldProps().depth_edited();
+        return comm.max(depthEdited) != 0;
+    }
+
     const std::vector<Scalar>& cellCenterDepths() const
     {
         return cellCenterDepth_;

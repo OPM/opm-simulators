@@ -880,6 +880,42 @@ BOOST_AUTO_TEST_CASE(DeckWithCO2STORE)
     }
 }
 
+// A DEPTH edit that shifts all cells by +100 m, combined with datum and
+// contact depths shifted by the same amount, must give the same initial state
+// as the unedited deck.
+BOOST_AUTO_TEST_CASE(DeckWithDepthEdit)
+{
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+
+    auto simulator1 = initSimulator<TypeTag>("equil_co2store_gw.DATA");
+    EquilFixture::Initializer ref(simulator1->problem().materialLawManager(),
+                                  simulator1->vanguard().eclState(),
+                                  simulator1->vanguard().grid(),
+                                  simulator1->vanguard().gridView(),
+                                  simulator1->vanguard().cartesianMapper(), 9.80665);
+
+    auto simulator2 = initSimulator<TypeTag>("equil_co2store_gw_depthedit.DATA");
+    BOOST_REQUIRE(simulator2->vanguard().cellDepthsEdited());
+    EquilFixture::Initializer edited(simulator2->problem().materialLawManager(),
+                                     simulator2->vanguard().eclState(),
+                                     simulator2->vanguard().grid(),
+                                     simulator2->vanguard().gridView(),
+                                     simulator2->vanguard().cartesianMapper(), 9.80665,
+                                     2000, true, &simulator2->vanguard().cellCenterDepths());
+
+    const double reltol = 1.0e-5;
+    const auto numCells = simulator1->vanguard().grid().size(0);
+    for (int cell = 0; cell < numCells; ++cell) {
+        BOOST_CHECK_CLOSE(simulator2->vanguard().cellCenterDepth(cell),
+                          centerDepth(*simulator1, cell) + 100.0, reltol);
+        for (const auto phase : {FluidSystem::gasPhaseIdx, FluidSystem::waterPhaseIdx}) {
+            BOOST_CHECK_CLOSE(edited.press()[phase][cell], ref.press()[phase][cell], reltol);
+            BOOST_CHECK_SMALL(edited.saturation()[phase][cell] - ref.saturation()[phase][cell], 1.0e-8);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(DeckWithWetGas)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
