@@ -75,8 +75,7 @@ waterDensity_(const T& pressure, const Scalar temperature) const
     FluidState<T> fluid_state;
     fluid_state.setPressure(FluidSystem::waterPhaseIdx, pressure);
     fluid_state.setTemperature(temperature);
-    typename FluidSystem::template ParameterCache<T> param_cache
-        {CompositionalConfig::EOSType::PR};
+    typename FluidSystem::template ParameterCache<T> param_cache {/*eosRegionIdx=*/0};
     param_cache.setPvtRegionIndex(this->pvt_region_idx_);
     return FluidSystem::density(fluid_state, param_cache, FluidSystem::waterPhaseIdx);
 }

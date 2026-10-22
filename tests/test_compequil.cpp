@@ -151,7 +151,6 @@ struct BasicEquilFixture
                      const std::vector<int>& pvtnum = {}) const
     {
         return Computer(eclState,
-                        eclState.compositionalConfig().eosType(0),
                         {depths.begin(), depths.end()},
                         eqlnum,
                         pvtnum,
@@ -454,9 +453,7 @@ BOOST_AUTO_TEST_CASE(GasCapAboveContact)
     const CompVec liquid = tableComposition(2050.0);
     Scalar psat = 0.0;
     CompVec vapor{};
-    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
-                                       fix.eclState.compositionalConfig().eosType(0),
-                                       psat, vapor));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, /*eosRegionIdx=*/0, psat, vapor));
     BOOST_CHECK_SMALL(std::abs(psat - 160.5601 * barsa), 0.05 * barsa);
 
     for (std::size_t c = 0; c < states.size(); ++c) {
@@ -844,8 +841,7 @@ BOOST_AUTO_TEST_CASE(GasOilContactOutsideDepthTables)
             const Scalar temperature = aboveTable ? 373.15 : 393.15;
             Scalar psat{};
             CompVec vapor{};
-            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature,
-                                               fix.eclState.compositionalConfig().eosType(0),
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature, /*eosRegionIdx=*/0,
                                                psat, vapor));
 
             const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();

@@ -232,7 +232,7 @@ toFluidState() const
     fluid_state.setTemperature(temperature_);
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i, /*eosRegionIdx=*/0));
     }
 
     fluid_state.setLvalue(-1.);
