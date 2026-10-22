@@ -159,13 +159,8 @@ public:
     }
 
     /**
-     * \brief Solve the resident system and return only the final update to host.
+     * \brief Solve the resident system directly into a device correction.
      */
-    bool hasGpuSolver() const
-    {
-        return dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get()) != nullptr;
-    }
-
     bool solveGpu(gpuistl::GpuVector<typename Vector::field_type>& x)
     {
         auto* gpuSolver = dynamic_cast<gpuistl::ISTLSolverGPUISTL<TypeTag>*>(istlSolver_.get());
