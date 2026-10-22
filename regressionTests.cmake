@@ -612,6 +612,7 @@ add_test_compareECLFiles(
 set(_network_tuning_tests
   NETWORK-01
   NETWORK-01_STANDARD
+  NETWORK-GSATPROD-GCONSUMP
 )
 
 add_multiple_tests(

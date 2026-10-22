@@ -22,10 +22,12 @@
 
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
@@ -41,11 +43,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <map>
 #include <ranges>
 #include <set>
 #include <stack>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -111,6 +115,77 @@ namespace detail {
         return clamped;
     }
 } // namespace detail
+
+namespace detail {
+    /// Whether or not a node takes part in the extended network, i.e., is
+    /// attached to at least one branch.
+    inline bool isConnectedNetworkNode(const Network::ExtNetwork& network,
+                                       const std::string& name)
+    {
+        return network.has_node(name)
+            && (network.uptree_branch(name).has_value()
+                || !network.downtree_branches(name).empty());
+    }
+} // namespace detail
+
+/// @brief  Net gas consumption (GCONSUMP consumption minus import, SI units)
+///         to remove from the flow at each node of a production network.
+///
+/// The node at which a group's consumption and import apply depends on
+/// GCONSUMP item 4:
+///   - 'NO-NODES': not applied to the network.
+///   - Named node: applied at that node, whether or not it is a source
+///     (leaf) node.  Ignored if the node is not part of the network.
+///   - Defaulted: applied at the nearest network node at or above the group
+///     in the group tree, but only if that node is a source node.  This
+///     follows the source node rates, which include the rates of subordinate
+///     groups scaled by their network efficiency factors.
+template<typename Scalar>
+std::map<std::string, Scalar>
+networkGasConsumptionRates(const Network::ExtNetwork& network,
+                           const ScheduleState& sched_state,
+                           const SummaryState& summary_state)
+{
+    std::map<std::string, Scalar> node_rates;
+    if (!network.active()) {
+        return node_rates;
+    }
+
+    const auto& gconsump = sched_state.gconsump();
+    for (const auto& group_name : gconsump.group_names()) {
+        const auto gc = gconsump.get(group_name, summary_state);
+        const auto net_rate = static_cast<Scalar>(gc.consumption_rate - gc.import_rate);
+        if (net_rate == Scalar{0} || gc.network_node == GConSump::NO_NODES) {
+            continue;
+        }
+
+        if (!gc.network_node.empty()) {
+            if (detail::isConnectedNetworkNode(network, gc.network_node)) {
+                node_rates[gc.network_node] += net_rate;
+            }
+            continue;
+        }
+
+        Scalar efficiency = 1.0;
+        std::string name = group_name;
+        while (sched_state.groups.has(name)) {
+            if (detail::isConnectedNetworkNode(network, name)) {
+                if (network.downtree_branches(name).empty()) {
+                    node_rates[name] += efficiency * net_rate;
+                }
+                break;
+            }
+            if (name == "FIELD") {
+                break;
+            }
+            const auto& group = sched_state.groups(name);
+            efficiency *= group.getGroupEfficiencyFactor(/*network=*/true);
+            name = group.parent();
+        }
+    }
+
+    return node_rates;
+}
 
 /// @brief  Helper class to insulate the NetworkPressureComputation class from
 ///         the differences between production and injection VFP tables.
@@ -253,6 +328,9 @@ template<typename GenericWellModel, typename VfpProperties, typename Communicati
 class NetworkPressureComputation
 {
 public:
+    /// @param node_gas_consumption Net gas rate (consumption minus import, SI
+    ///        units) to remove from the flow at each node, see
+    ///        networkGasConsumptionRates().  Applies to production networks.
     NetworkPressureComputation(const GenericWellModel& well_model,
                                const Network::ExtNetwork& network,
                                const VfpProperties& vfp_props,
@@ -260,7 +338,9 @@ public:
                                const int report_step_idx,
                                const Communication& comm,
                                const std::map<std::string, typename GenericWellModel::Scalar>*
-                                   terminal_pressure_overrides = nullptr)
+                                   terminal_pressure_overrides = nullptr,
+                               std::map<std::string, typename GenericWellModel::Scalar>
+                                   node_gas_consumption = {})
         : well_model_(well_model)
         , network_(network)
         , vfp_props_(vfp_props)
@@ -268,6 +348,7 @@ public:
         , report_step_idx_(report_step_idx)
         , comm_(comm)
         , terminal_pressure_overrides_(terminal_pressure_overrides)
+        , node_gas_consumption_(std::move(node_gas_consumption))
     {
     }
 
@@ -449,12 +530,35 @@ private:
         rates[IndexTraits::gasPhaseIdx] += alq;
     }
 
+    /// Remove the net gas consumption at a node from the flow leaving it.
+    /// The gas rate is limited below by zero, since a branch cannot carry
+    /// more gas out of a node than the node receives (or imports).
+    void applyGasConsumption(const std::string& node,
+                             std::vector<Scalar>& rates) const
+    {
+        const auto it = node_gas_consumption_.find(node);
+        if (it == node_gas_consumption_.end()) {
+            return;
+        }
+        if (rates.empty()) {
+            rates.assign(3, 0.0);
+        }
+        if (rates.size() <= static_cast<std::size_t>(IndexTraits::gasPhaseIdx)) {
+            return;
+        }
+        auto& gas_rate = rates[IndexTraits::gasPhaseIdx];
+        gas_rate = std::max(gas_rate - it->second, Scalar{0});
+    }
+
     void accumulateInflows(const std::vector<std::string>& root_to_child_nodes,
                            std::map<std::string, std::vector<Scalar>>& node_inflows) const
     {
         const auto child_to_root_nodes = std::ranges::reverse_view(root_to_child_nodes);
 
+        // A node comes after all of its descendants in this order, so its
+        // inflow is complete when it is visited.
         for (const auto& node : child_to_root_nodes) {
+            applyGasConsumption(node, node_inflows[node]);
             const auto upbranch = network_.uptree_branch(node);
             if (!upbranch) {
                 continue;
@@ -579,6 +683,7 @@ private:
     const int report_step_idx_;
     const Communication& comm_;
     const std::map<std::string, Scalar>* terminal_pressure_overrides_;
+    std::map<std::string, Scalar> node_gas_consumption_;
     std::map<std::string, Scalar> node_pressures_;
     std::map<std::string, data::BranchData> branch_data_;
     std::set<std::string> invalid_nodes_;

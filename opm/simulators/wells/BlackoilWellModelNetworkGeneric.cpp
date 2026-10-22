@@ -44,6 +44,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <map>
+#include <string>
+#include <utility>
 
 namespace Opm {
 
@@ -609,11 +612,19 @@ computePressures(const Network::ExtNetwork& network,
         return {};
     }
 
+    auto node_gas_consumption = std::map<std::string, Scalar>{};
+    if (well_model_.phaseUsage().phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        node_gas_consumption = networkGasConsumptionRates<Scalar>(network,
+                                                                  well_model_.schedule()[reportStepIdx],
+                                                                  well_model_.summaryState());
+    }
+
     NetworkPressureComputation<BlackoilWellModelGeneric<Scalar, IndexTraits>,
                                VFPProdProperties<Scalar>>
         network_pressure_computation(
             well_model_, network, vfp_prod_props, unit_system, reportStepIdx, comm,
-            &this->node_pressure_overrides_);
+            &this->node_pressure_overrides_,
+            std::move(node_gas_consumption));
 
     auto [node_pressures, branch_data] = network_pressure_computation.run();
     return {std::move(node_pressures), std::move(branch_data), network_pressure_computation.invalidNodes()};

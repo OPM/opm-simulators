@@ -30,10 +30,21 @@
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
+#include <opm/common/utility/TimeService.hpp>
+
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Schedule/Network/Branch.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Network/Node.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
@@ -50,6 +61,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace Opm;
@@ -331,6 +343,11 @@ struct NetworkSetup
     MockWellModel well_model;
     Network::ExtNetwork network;
 };
+
+double sm3PerDay(const double value)
+{
+    return convert::from(value, cubic(meter) / day);
+}
 
 BOOST_AUTO_TEST_SUITE(NetworkPressureComputationTests)
 
@@ -691,4 +708,218 @@ BOOST_AUTO_TEST_CASE(node_follows_overridden_node_agrees_with_the_pressure_compu
     }
 }
 
+namespace {
+    std::pair<std::map<std::string, double>, std::map<std::string, data::BranchData>>
+    runProductionWithGasConsumption(NetworkSetup& s,
+                                    const std::map<std::string, double>& consumption_sm3_day)
+    {
+        auto consumption = std::map<std::string, double>{};
+        for (const auto& [node, rate] : consumption_sm3_day) {
+            consumption[node] = sm3PerDay(rate);
+        }
+
+        using Comm = Dune::Communication<int>;
+        const auto comm = Comm{};
+        const auto unit_system = UnitSystem{};
+        NetworkPressureComputation<MockWellModel, VFPProdProperties<double>, Comm> comp(
+            s.well_model, s.network, s.vfp_prod_props, unit_system, 0, comm,
+            /*terminal_pressure_overrides=*/nullptr, consumption);
+        return comp.run();
+    }
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(production_gas_consumption_at_source_node)
+{
+    // Leaf G1 produces 5000 Sm3/d gas, of which 1000 Sm3/d is consumed at G1.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const auto [pressures, branch_data] = runProductionWithGasConsumption(s, {{"G1", 1000.0}});
+
+    BOOST_CHECK_CLOSE(branch_data.at("G1").gas_rate, sm3PerDay(4000.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").gas_rate, sm3PerDay(4000.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").oil_rate, sm3PerDay(500.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").water_rate, sm3PerDay(500.0), 1e-7);
+    // The table has a single GOR point, so the pressure is unaffected.
+    BOOST_CHECK_CLOSE(pressures.at("G1"), convert::from(31.0, bars), 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(production_gas_consumption_at_intermediate_node)
+{
+    // Consumption at the non-leaf node M5S affects branch M5S -> PLAT-A
+    // only, and adds to the consumption at G1.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const auto [pressures, branch_data] =
+        runProductionWithGasConsumption(s, {{"G1", 1000.0}, {"M5S", 2000.0}});
+
+    BOOST_CHECK_CLOSE(branch_data.at("G1").gas_rate, sm3PerDay(4000.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").gas_rate, sm3PerDay(2000.0), 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(production_gas_consumption_limited_to_available_gas)
+{
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const auto [pressures, branch_data] = runProductionWithGasConsumption(s, {{"G1", 6000.0}});
+
+    BOOST_CHECK_EQUAL(branch_data.at("G1").gas_rate, 0.0);
+    BOOST_CHECK_EQUAL(branch_data.at("M5S").gas_rate, 0.0);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").oil_rate, sm3PerDay(500.0), 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(production_gas_import)
+{
+    // A net import (negative consumption) adds gas at the node.
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const auto [pressures, branch_data] = runProductionWithGasConsumption(s, {{"M5S", -1500.0}});
+
+    BOOST_CHECK_CLOSE(branch_data.at("G1").gas_rate, sm3PerDay(5000.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").gas_rate, sm3PerDay(6500.0), 1e-7);
+}
+
+BOOST_AUTO_TEST_CASE(production_gas_consumption_at_unknown_node_is_ignored)
+{
+    auto s = NetworkSetup{NetworkScenario::Production};
+    const auto [pressures, branch_data] = runProductionWithGasConsumption(s, {{"NOT-A-NODE", 1000.0}});
+
+    BOOST_CHECK_CLOSE(branch_data.at("G1").gas_rate, sm3PerDay(5000.0), 1e-7);
+    BOOST_CHECK_CLOSE(branch_data.at("M5S").gas_rate, sm3PerDay(5000.0), 1e-7);
+}
+
 BOOST_AUTO_TEST_SUITE_END() // NetworkPressureComputationTests
+
+// ===========================================================================
+
+BOOST_AUTO_TEST_SUITE(NetworkGasConsumptionRates)
+
+namespace {
+    Schedule makeSchedule(const std::string& schedule_string)
+    {
+        const auto deck = Parser{}.parseString(schedule_string);
+        EclipseGrid grid(10, 10, 10);
+        const TableManager table(deck);
+        const FieldPropsManager fp(deck, Phases{true, true, true}, grid, table);
+        const Runspec runspec(deck);
+
+        return { deck, grid, fp, NumericalAquifers{}, runspec, std::make_shared<Python>() };
+    }
+
+    // Group tree and extended network:
+    //
+    //   FIELD
+    //    |-- PLAT    (node, fixed pressure, not a source)
+    //    |    |-- PROD   (source node PROD -> PLAT)
+    //    |    |    `-- SUB1   (GEFAC 0.5, not a node)
+    //    |    |         `-- SUB2   (GEFAC 0.8, not a node)
+    //    |    |-- L2     (source node L2 -> PLAT)
+    //    |    `-- MAN    (not a node)
+    //    |-- OTHER  (not a node)
+    //    `-- GX     (not a node)
+    std::string consumptionDeck(const std::string& gconsump)
+    {
+        return R"(
+START
+ 1 JAN 2026 /
+RUNSPEC
+NETWORK
+ 4 3 /
+
+SCHEDULE
+
+GRUPTREE
+ 'PLAT'  'FIELD' /
+ 'OTHER' 'FIELD' /
+ 'GX'    'FIELD' /
+ 'PROD'  'PLAT'  /
+ 'L2'    'PLAT'  /
+ 'MAN'   'PLAT'  /
+ 'SUB1'  'PROD'  /
+ 'SUB2'  'SUB1'  /
+/
+
+GEFAC
+ 'SUB1' 0.5 'YES' /
+ 'SUB2' 0.8 'YES' /
+/
+
+BRANPROP
+ 'PROD'  'PLAT'  9999 /
+ 'L2'    'PLAT'  9999 /
+/
+
+NODEPROP
+ 'PLAT'  50.0 /
+ 'PROD'  1*   /
+ 'L2'    1*   /
+/
+)" + gconsump + R"(
+TSTEP
+ 1 /
+)";
+    }
+
+    std::map<std::string, double>
+    consumptionRates(const Schedule& schedule)
+    {
+        const auto st = SummaryState{TimeService::now(), 0.0};
+        return networkGasConsumptionRates<double>(schedule[0].network(), schedule[0], st);
+    }
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(Item4_Defaulted_And_Named)
+{
+    const auto schedule = makeSchedule(consumptionDeck(R"(
+GCONSUMP
+-- Group   Consumption  Import  Node
+  'PROD'   1000.0       200.0   1* /           -- source node: 800
+  'SUB1'   100.0        1*      1* /           -- below source PROD: 0.5*100 = 50
+  'SUB2'   100.0        1*      1* /           -- below source PROD: 0.8*0.5*100 = 40
+  'PLAT'   3000.0       1*      1* /           -- not a source node: ignored
+  'MAN'    500.0        1*      1* /           -- nearest node PLAT is not a source: ignored
+  'L2'     400.0        1*      'NO-NODES' /   -- excluded from the network
+  'OTHER'  700.0        1*      'PLAT' /       -- named non-source node: 700
+  'GX'     50.0         1*      'PROD' /       -- named source node: 50
+/
+)"));
+
+    const auto rates = consumptionRates(schedule);
+
+    BOOST_CHECK_EQUAL(rates.size(), std::size_t{2});
+    BOOST_REQUIRE(rates.count("PROD") == 1);
+    BOOST_REQUIRE(rates.count("PLAT") == 1);
+    BOOST_CHECK_CLOSE(rates.at("PROD"), sm3PerDay(800.0 + 50.0 + 40.0 + 50.0), 1e-10);
+    BOOST_CHECK_CLOSE(rates.at("PLAT"), sm3PerDay(700.0), 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(Item4_Names_Own_Non_Source_Node)
+{
+    const auto schedule = makeSchedule(consumptionDeck(R"(
+GCONSUMP
+-- Group   Consumption  Import  Node
+  'PLAT'   3000.0       1000.0  'PLAT' /
+/
+)"));
+
+    const auto rates = consumptionRates(schedule);
+
+    BOOST_CHECK_EQUAL(rates.size(), std::size_t{1});
+    BOOST_CHECK_CLOSE(rates.at("PLAT"), sm3PerDay(2000.0), 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(No_Network)
+{
+    const auto schedule = makeSchedule(R"(
+START
+ 1 JAN 2026 /
+SCHEDULE
+GRUPTREE
+ 'PROD'  'FIELD' /
+/
+GCONSUMP
+ 'PROD'  1000.0 /
+/
+TSTEP
+ 1 /
+)");
+
+    BOOST_CHECK(consumptionRates(schedule).empty());
+}
+
+BOOST_AUTO_TEST_SUITE_END() // NetworkGasConsumptionRates
