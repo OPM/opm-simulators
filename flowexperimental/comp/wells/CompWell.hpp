@@ -108,7 +108,8 @@ public:
              const std::vector<CompConnectionData>& well_connection_data,
              Scalar dwell_fraction_max,
              Scalar dbhp_max_rel,
-             unsigned pvt_region_idx);
+             unsigned pvt_region_idx,
+             unsigned eos_region);
 
     void init() override;
 
@@ -157,6 +158,9 @@ private:
     const Scalar dbhp_max_rel_;
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
+    // reservoir EOS region of the wellbore flash, from the cell of the first
+    // open connection
+    const unsigned eos_region_;
 
     // primary variables
     PrimaryVariables primary_variables_;

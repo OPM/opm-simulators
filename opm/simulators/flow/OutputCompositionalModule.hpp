@@ -843,7 +843,7 @@ private:
             getValue(fluidState.pressure(oilPhaseIdx)),
             moleFractions,
             getValue(fluidState.temperature(oilPhaseIdx)),
-            /*eosRegionIdx=*/0);
+            this->simulator_.problem().eosRegionIndex(globalDofIdx));
         if (!psat) {
             // A false result means only that no saturation pressure was resolved;
             // it does not distinguish a physically absent boundary from numerical

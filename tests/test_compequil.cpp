@@ -334,7 +334,7 @@ std::vector<Scalar> supersaturatedDepths(const BasicEquilFixture<FS>& fix,
                                          const typename BasicEquilFixture<FS>::Computer& computer)
 {
     using Saturation = Opm::SaturationPressure<Scalar, FS>;
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    constexpr unsigned eosRegionIdx = 0;
     std::vector<Scalar> depths;
     for (std::size_t c = 0; c < computer.fluidStates().size(); ++c) {
         const auto& fs = computer.fluidStates()[c];
@@ -342,9 +342,9 @@ std::vector<Scalar> supersaturatedDepths(const BasicEquilFixture<FS>& fix,
         const Scalar pressure = computer.referencePressures()[c];
         Scalar saturation{};
         CompVec incipient{};
-        if ((Saturation::bubblePressure(z, fs.temperature(0), eosType, saturation, incipient)
+        if ((Saturation::bubblePressure(z, fs.temperature(0), eosRegionIdx, saturation, incipient)
              && (saturation > pressure))
-            || (Saturation::dewPressure(z, fs.temperature(0), eosType, saturation, incipient)
+            || (Saturation::dewPressure(z, fs.temperature(0), eosRegionIdx, saturation, incipient)
                 && (saturation > pressure))) {
             depths.push_back(fix.depths[c]);
         }
@@ -359,8 +359,8 @@ template <class FS>
 void reportFlashedCells(const BasicEquilFixture<FS>& fix,
                         const typename BasicEquilFixture<FS>::Computer& computer)
 {
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
-    const auto liquidFraction = [&computer, eosType](const std::size_t c) {
+    constexpr unsigned eosRegionIdx = 0;
+    const auto liquidFraction = [&computer, eosRegionIdx](const std::size_t c) {
         const auto& initial = computer.fluidStates()[c];
         Opm::CompositionalFluidState<Scalar, FS> fs;
         fs.setTemperature(initial.temperature(0));
@@ -375,11 +375,11 @@ void reportFlashedCells(const BasicEquilFixture<FS>& fix,
         }
         for (int comp = 0; comp < 3; ++comp) {
             fs.setMoleFraction(comp, z[comp] / sum);
-            fs.setKvalue(comp, fs.wilsonK_(comp));
+            fs.setKvalue(comp, fs.wilsonK_(comp, eosRegionIdx));
         }
         fs.setLvalue(-1.0);
         Opm::PTFlash<Scalar, FS>::flash_solve_scalar(fs, Opm::PTFlashMethod::SsiNewton,
-                                                     1.0e-8, eosType);
+                                                     1.0e-8, eosRegionIdx);
         return fs.L();
     };
     const std::vector<Scalar> depths(fix.depths.begin(), fix.depths.end());
@@ -1955,7 +1955,7 @@ BOOST_AUTO_TEST_CASE(SaturatedType1GasCapIsNotReportedAsTwoPhase)
     // A fixture sets up the fluid system that the bubble point needs.
     const EquilFixture init(deckString("EQUIL\n 2050 150 2300 0 2050 0 /\n"));
     BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
-                                       init.eclState.compositionalConfig().eosType(0),
+                                       /*eosRegionIdx=*/0,
                                        psat, vapour));
 
     const std::string vapourRow = std::to_string(vapour[0]) + " " + std::to_string(vapour[1])

@@ -137,6 +137,10 @@ public:
             "disabled (the default), the input SWAT is retained.");
     }
 
+    //! The zero-based reservoir EOS region of a cell.
+    unsigned eosRegionIndex(const unsigned globalDofIdx) const
+    { return eosnum_.empty() ? 0 : eosnum_[globalDofIdx]; }
+
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
@@ -313,6 +317,7 @@ public:
     void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const unsigned eosRegionIdx = eosRegionIndex(globalDofIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
@@ -335,7 +340,7 @@ public:
             }
 
             {
-                typename FluidSystem::template ParameterCache<Scalar> paramCache(/*eosRegionIdx=*/0);
+                typename FluidSystem::template ParameterCache<Scalar> paramCache(eosRegionIdx);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
                 fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
@@ -369,7 +374,7 @@ public:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const auto& Ktmp = fs.wilsonK_(compIdx, /*eosRegionIdx=*/0);
+            const auto& Ktmp = fs.wilsonK_(compIdx, eosRegionIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 
@@ -710,7 +715,8 @@ protected:
         // A failing flash on one rank must not leave the others in the reduction below.
         const auto& comm = this->simulator().vanguard().grid().comm();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto& fs : initialFluidStates_) {
+        for (std::size_t cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            auto& fs = initialFluidStates_[cell];
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
@@ -723,7 +729,8 @@ protected:
                 zmf_oil_and_gas = true;
             }
 
-            typename FluidSystem::template ParameterCache<Scalar> param_cache(/*eosRegionIdx=*/0);
+            const unsigned eos_region = eosRegionIndex(cell);
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_region);
 
             // Hydrocarbon moles per unit pore volume as given. Each given phase holds its
             // input composition, ZMF or XMF/YMF, before the flash, so this is the molar
@@ -761,11 +768,11 @@ protected:
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
                 flash_fs.setMoleFraction(c, z[c] / sum_z);
-                flash_fs.setKvalue(c, flash_fs.wilsonK_(c, /*eosRegionIdx=*/0));
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c, eos_region));
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, flash_method, flash_tolerance, /*eosRegionIdx=*/0, flash_verbosity);
+                flash_fs, flash_method, flash_tolerance, eos_region, flash_verbosity);
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();

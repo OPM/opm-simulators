@@ -177,6 +177,7 @@ struct TestProblem
 {
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return 300.0; }
+    unsigned eosRegionIndex(unsigned) const { return 0; }
     template<class Context>
     TestMaterialLaw::Params materialLawParams(const Context&, unsigned, unsigned) const { return {}; }
     template<class Context>

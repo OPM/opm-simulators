@@ -146,6 +146,7 @@ CompWellModel<TypeTag>::
 createWellContainer()
 {
     const auto nw = wells_ecl_.size();
+    const auto& problem = simulator_.problem();
     well_container_.clear();
     for (auto w = 0 * nw; w < nw; ++w) {
         const auto& well_name = wells_ecl_[w].name();
@@ -158,9 +159,11 @@ createWellContainer()
         // as for the black-oil wells, the PVT region of the first connection cell
         const unsigned pvt_region_idx
             = simulator_.problem().pvtRegionIndex(well_connection_data_[w].front().cell_index);
+        // The wellbore takes the EOS region of the cell of its first open connection.
+        const auto eos_region = problem.eosRegionIndex(well_connection_data_[w].front().cell_index);
         well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
                                                                           dwell_fraction_max_, dbhp_max_rel_,
-                                                                          pvt_region_idx));
+                                                                          pvt_region_idx, eos_region));
     }
 }
 

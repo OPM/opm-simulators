@@ -199,7 +199,7 @@ template <typename FluidSystem, typename Indices>
 template <typename T>
 typename CompWellPrimaryVariables<FluidSystem, Indices>::template FluidState<T>
 CompWellPrimaryVariables<FluidSystem, Indices>::
-toFluidState() const
+toFluidState(const unsigned eos_region) const
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWellPrimaryVariables::toFluidState");
 
@@ -232,7 +232,7 @@ toFluidState() const
     fluid_state.setTemperature(temperature_);
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setKvalue(i, fluid_state.wilsonK_(i, /*eosRegionIdx=*/0));
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i, eos_region));
     }
 
     fluid_state.setLvalue(-1.);
