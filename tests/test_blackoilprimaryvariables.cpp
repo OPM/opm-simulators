@@ -24,6 +24,22 @@ struct ZeroCapillaryMaterialLaw
     }
 };
 
+struct SaturationDependentCapillaryMaterialLaw
+{
+    struct Params {};
+
+    template<class Container, class FluidState>
+    static void capillaryPressures(Container& result, const Params&, const FluidState& state)
+    {
+        result[FluidSystem::waterPhaseIdx] = 1000.0 * state.saturation(FluidSystem::waterPhaseIdx);
+        result[FluidSystem::oilPhaseIdx] = 2000.0 * state.saturation(FluidSystem::oilPhaseIdx);
+        result[FluidSystem::gasPhaseIdx] = 3000.0 * state.saturation(FluidSystem::gasPhaseIdx);
+    }
+
+private:
+    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+};
+
 template<class TypeTag>
 class StubBlackoilPrimaryVariablesProblem
 {
@@ -77,6 +93,10 @@ struct ClassicalBlackoilPrimaryVariablesTestTypeTag {
     using InheritsFrom = std::tuple<TestTypeTag>;
 };
 
+struct CapillaryBlackoilPrimaryVariablesTestTypeTag {
+    using InheritsFrom = std::tuple<ClassicalBlackoilPrimaryVariablesTestTypeTag>;
+};
+
 } // namespace TTag
 
 template<class TypeTag>
@@ -89,6 +109,12 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::ClassicalBlackoilPrimaryVariablesTestTypeTag>
 {
     using type = ::ZeroCapillaryMaterialLaw;
+};
+
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::CapillaryBlackoilPrimaryVariablesTestTypeTag>
+{
+    using type = ::SaturationDependentCapillaryMaterialLaw;
 };
 
 } // namespace Opm::Properties
@@ -189,7 +215,62 @@ std::shared_ptr<GasPvt> makeWetGasPvt(double rvSat)
     return gasPvt;
 }
 
+// Keep the supplied instance's temperature distinct from the static system's.
+// A temperature-dependent PVT makes mixing the two systems observable in both
+// the resulting Rs value and the decision whether a gas phase appears.
+struct TemperatureDependentFluidSystem : FluidSystem
+{
+    struct TemperatureDependentOilPvt
+    {
+        double saturatedGasDissolutionFactor(unsigned, double temperature,
+                                             double, double, double) const
+        {
+            return 0.001 * temperature;
+        }
+    };
+
+    double reservoirTemperature(unsigned = 0) const { return 350.0; }
+    TemperatureDependentOilPvt oilPvt() const { return {}; }
+};
+
 } // namespace
+
+BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesUsesExplicitFluidSystemTemperature)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(true);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(0.25));
+    Problem problem;
+    TemperatureDependentFluidSystem supplied;
+
+    // Disappearing gas must use Rs_sat(350 K) = 0.35 from the supplied system.
+    // Reading the static temperature instead produces Rs_sat(300 K) = 0.30.
+    auto disappearing = makePrimaryVariables(
+        PrimaryVariables::GasMeaning::Sg, 0.2, -0.01,
+        PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.e5);
+    auto legacy = disappearing;
+    BOOST_REQUIRE(disappearing.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0));
+    BOOST_CHECK(disappearing.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+    BOOST_CHECK_CLOSE(disappearing[Indices::compositionSwitchIdx], 0.35, 1.e-12);
+
+    // The legacy overload continues to use the static system's PVT.
+    BOOST_REQUIRE(legacy.adaptPrimaryVariables(problem, 0, 1.0, 1.0));
+    BOOST_CHECK_CLOSE(legacy[Indices::compositionSwitchIdx], 0.25, 1.e-12);
+
+    // Rs = 0.325 is below the instance's saturation limit of 0.35, so gas
+    // must stay absent. The wrong temperature lowers the limit to 0.30 and
+    // incorrectly switches this cell to gas saturation.
+    auto undersaturated = makePrimaryVariables(
+        PrimaryVariables::GasMeaning::Rs, 0.2, 0.325,
+        PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.e5);
+    BOOST_CHECK(!undersaturated.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0));
+    BOOST_CHECK(undersaturated.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+    BOOST_CHECK_CLOSE(undersaturated[Indices::compositionSwitchIdx], 0.325, 1.e-12);
+}
 
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesToGasSaturationInWaterFilledCells)
 {
@@ -338,6 +419,46 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromRvToGasSaturation)
     BOOST_CHECK(priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Po);
     BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], 0.8, 1e-12);
     BOOST_CHECK_CLOSE(priVars[Indices::pressureSwitchIdx], 1.5e5, 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesConvertsPressureWithNonzeroCapillaryPressure)
+{
+    using CapillaryTypeTag = Opm::Properties::TTag::CapillaryBlackoilPrimaryVariablesTestTypeTag;
+    using CapillaryPrimaryVariables = Opm::BlackOilPrimaryVariables<CapillaryTypeTag>;
+    using CapillaryProblem = Opm::GetPropType<CapillaryTypeTag, Opm::Properties::Problem>;
+
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(false);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(true);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    FluidSystem::setGasPvt(makeWetGasPvt(0.15));
+    CapillaryProblem problem;
+
+    // Oil disappears: the capillary state has (Sw, So, Sg) = (0.4, 0, 0.7).
+    // Pg = Po + Pc_g - Pc_o = 150000 + 2100 - 0.
+    CapillaryPrimaryVariables disappearing(makePrimaryVariables(
+        PrimaryVariables::GasMeaning::Sg, 0.4, 0.7,
+        PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.5e5));
+    BOOST_REQUIRE(disappearing.adaptPrimaryVariables(problem, 0, 1.0, 1.1));
+    BOOST_CHECK(disappearing.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv);
+    BOOST_CHECK(disappearing.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg);
+    BOOST_CHECK_CLOSE(disappearing[Indices::pressureSwitchIdx], 152100.0, 1e-12);
+    BOOST_CHECK_CLOSE(disappearing[Indices::compositionSwitchIdx], 0.15, 1e-12);
+    BOOST_CHECK_CLOSE(disappearing[Indices::waterSwitchIdx], 0.4, 1e-12);
+
+    // Oil reappears: (Sw, So, Sg) = (0.4, 0, 0.6) at the phase boundary.
+    // Po = Pg + Pc_o - Pc_g = 150000 + 0 - 1800.
+    CapillaryPrimaryVariables appearing(makePrimaryVariables(
+        PrimaryVariables::GasMeaning::Rv, 0.4, 0.3,
+        PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Pg, 1.5e5));
+    BOOST_REQUIRE(appearing.adaptPrimaryVariables(problem, 0, 1.0, 1.1));
+    BOOST_CHECK(appearing.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg);
+    BOOST_CHECK(appearing.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Po);
+    BOOST_CHECK_CLOSE(appearing[Indices::pressureSwitchIdx], 148200.0, 1e-12);
+    BOOST_CHECK_CLOSE(appearing[Indices::compositionSwitchIdx], 0.6, 1e-12);
+    BOOST_CHECK_CLOSE(appearing[Indices::waterSwitchIdx], 0.4, 1e-12);
 }
 
 // Exercise the shared update through real primary variables, including the
