@@ -889,15 +889,17 @@ BOOST_AUTO_TEST_CASE(DeckWithDepthEdit)
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
 
     auto simulator1 = initSimulator<TypeTag>("equil_co2store_gw.DATA");
-    EquilFixture::Initializer ref(simulator1->problem().materialLawManager(),
+    const auto matLawMgr1 = simulator1->problem().materialLawManager();
+    EquilFixture::Initializer ref(*matLawMgr1,
                                   simulator1->vanguard().eclState(),
                                   simulator1->vanguard().grid(),
                                   simulator1->vanguard().gridView(),
                                   simulator1->vanguard().cartesianMapper(), 9.80665);
 
     auto simulator2 = initSimulator<TypeTag>("equil_co2store_gw_depthedit.DATA");
+    const auto matLawMgr2 = simulator1->problem().materialLawManager();
     BOOST_REQUIRE(simulator2->vanguard().cellDepthsEdited());
-    EquilFixture::Initializer edited(simulator2->problem().materialLawManager(),
+    EquilFixture::Initializer edited(*matLawMgr2,
                                      simulator2->vanguard().eclState(),
                                      simulator2->vanguard().grid(),
                                      simulator2->vanguard().gridView(),
