@@ -1179,6 +1179,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    rock_regions_default
+  FILENAME
+    ROCK_REGIONS_DEFAULT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    rock
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    rocktab
+  FILENAME
+    ROCKTAB
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    rock
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    rocktabh
+  FILENAME
+    ROCKTABH
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    rock
+)
+
+add_test_compareECLFiles(
+  CASENAME
     base_model_1_addzcorn
   FILENAME
     BASE_MODEL_1_ADDZCORN
