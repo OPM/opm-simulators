@@ -62,7 +62,8 @@ namespace DeckDependent {
                                   const Dune::CartesianIndexMapper<Dune::CpGrid>&, \
                                   const T,                                         \
                                   const int,                                       \
-                                  const bool);
+                                  const bool,                                      \
+                                  const std::vector<T>*);
 
 #define INSTANTIATE_COMP(T, ML1, ML2, GridView, Mapper)                            \
 INSTANTIATE_COMP1(T, GridView, Mapper)                                             \
