@@ -208,14 +208,42 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::reportTransferCounter
 {
     if (impl_->bridge) {
         const auto& c = impl_->bridge->transferCounters();
+        // Later transfer optimizations expose independent counter groups.
+        // Keep the report useful on this focused branch and compose their
+        // diagnostics when those features are merged.
+        std::uint64_t sourceDownloads = 0, sourceBytes = 0;
+        std::uint64_t allSourceDownloads = 0, allSourceBytes = 0;
+        std::uint64_t fipDownloads = 0, fipBytes = 0;
+        std::uint64_t blockDownloads = 0, blockBytes = 0;
+        std::uint64_t trueImpesUpdates = 0;
+        if constexpr (requires { impl_->bridge->sourceTransferCounters(); }) {
+            const auto& source = impl_->bridge->sourceTransferCounters();
+            allSourceDownloads = source.intensiveQuantityDownloads;
+            allSourceBytes = source.intensiveQuantityDownloadBytes;
+            sourceDownloads = source.sourceIntensiveQuantityDownloads;
+            sourceBytes = source.sourceIntensiveQuantityDownloadBytes;
+        }
+        if constexpr (requires { impl_->bridge->outputTransferCounters(); }) {
+            const auto& output = impl_->bridge->outputTransferCounters();
+            fipDownloads = output.compactFipDownloads;
+            fipBytes = output.compactFipDownloadBytes;
+            blockDownloads = output.blockStateDownloads;
+            blockBytes = output.blockStateDownloadBytes;
+        }
+        if constexpr (requires { impl_->trueImpesWeightUpdates; }) {
+            trueImpesUpdates = impl_->trueImpesWeightUpdates;
+        }
         OpmLog::info(std::format(
-            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={}",
+            "[GPU Newton transfers] updates={} pv_uploads={} pv_upload_bytes={} pv_downloads={} pv_download_bytes={} correction_downloads={} correction_download_bytes={} iq_downloads={} iq_download_bytes={} bridge_allocations={} static_upload_batches={} bridge_allocation_bytes={} static_upload_calls={} static_upload_bytes={} solver_correction_allocations={} correction_history_uploads={} correction_history_upload_bytes={} source_iq_downloads={} source_iq_download_bytes={} compact_fip_downloads={} compact_fip_download_bytes={} block_state_downloads={} block_state_download_bytes={} gpu_trueimpes_updates={}",
             c.successfulNewtonUpdates, c.primaryVariableUploads, c.primaryVariableUploadBytes,
             c.primaryVariableDownloads, c.primaryVariableDownloadBytes, c.correctionDownloads,
-            c.correctionDownloadBytes, c.intensiveQuantityDownloads, c.intensiveQuantityDownloadBytes,
+            c.correctionDownloadBytes, c.intensiveQuantityDownloads + allSourceDownloads,
+            c.intensiveQuantityDownloadBytes + allSourceBytes,
             c.ownedBufferAllocations, c.staticUploadBatches, c.ownedBufferAllocationBytes,
             c.staticUploadCalls, c.staticUploadBytes, c.solverCorrectionAllocations,
-            c.correctionHistoryUploads, c.correctionHistoryUploadBytes));
+            c.correctionHistoryUploads, c.correctionHistoryUploadBytes,
+            sourceDownloads, sourceBytes, fipDownloads, fipBytes,
+            blockDownloads, blockBytes, trueImpesUpdates));
     }
 }
 
