@@ -79,8 +79,7 @@ waterDensity_(const T& pressure, const Scalar temperature) const
     FluidState<T> fluid_state;
     fluid_state.setPressure(FluidSystem::waterPhaseIdx, pressure);
     fluid_state.setTemperature(temperature);
-    typename FluidSystem::template ParameterCache<T> param_cache
-        {CompositionalConfig::EOSType::PR};
+    typename FluidSystem::template ParameterCache<T> param_cache {/*eosRegionIdx=*/0};
     param_cache.setPvtRegionIndex(this->pvt_region_idx_);
     return FluidSystem::density(fluid_state, param_cache, FluidSystem::waterPhaseIdx);
 }
@@ -238,7 +237,7 @@ streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>
         fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
         fluid_state.setTemperature(temperature);
         for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx));
+            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx, /*eosRegionIdx=*/0));
         }
         fluid_state.setLvalue(-1.);
         flashFluidState_(fluid_state);

@@ -152,7 +152,6 @@ struct BasicEquilFixture
                      const int numSamplePoints = 100) const
     {
         return Computer(eclState,
-                        eclState.compositionalConfig().eosType(0),
                         {depths.begin(), depths.end()},
                         eqlnum,
                         pvtnum,
@@ -289,7 +288,7 @@ std::vector<Scalar> supersaturatedDepths(const BasicEquilFixture<FS>& fix,
                                          const typename BasicEquilFixture<FS>::Computer& computer)
 {
     using Saturation = Opm::SaturationPressure<Scalar, FS>;
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    constexpr unsigned eosRegionIdx = 0;
     std::vector<Scalar> depths;
     for (std::size_t c = 0; c < computer.fluidStates().size(); ++c) {
         const auto& fs = computer.fluidStates()[c];
@@ -297,9 +296,9 @@ std::vector<Scalar> supersaturatedDepths(const BasicEquilFixture<FS>& fix,
         const Scalar pressure = computer.referencePressures()[c];
         Scalar saturation{};
         CompVec incipient{};
-        if ((Saturation::bubblePressure(z, fs.temperature(0), eosType, saturation, incipient)
+        if ((Saturation::bubblePressure(z, fs.temperature(0), eosRegionIdx, saturation, incipient)
              && (saturation > pressure))
-            || (Saturation::dewPressure(z, fs.temperature(0), eosType, saturation, incipient)
+            || (Saturation::dewPressure(z, fs.temperature(0), eosRegionIdx, saturation, incipient)
                 && (saturation > pressure))) {
             depths.push_back(fix.depths[c]);
         }
@@ -314,8 +313,7 @@ template <class FS>
 void reportFlashedCells(const BasicEquilFixture<FS>& fix,
                         const typename BasicEquilFixture<FS>::Computer& computer)
 {
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
-    const auto liquidFraction = [&computer, eosType](const std::size_t c) {
+    const auto liquidFraction = [&computer](const std::size_t c) {
         const auto& initial = computer.fluidStates()[c];
         Opm::CompositionalFluidState<Scalar, FS> fs;
         fs.setTemperature(initial.temperature(0));
@@ -330,11 +328,11 @@ void reportFlashedCells(const BasicEquilFixture<FS>& fix,
         }
         for (int comp = 0; comp < 3; ++comp) {
             fs.setMoleFraction(comp, z[comp] / sum);
-            fs.setKvalue(comp, fs.wilsonK_(comp));
+            fs.setKvalue(comp, fs.wilsonK_(comp, /*eosRegionIdx=*/0));
         }
         fs.setLvalue(-1.0);
         Opm::PTFlash<Scalar, FS>::flash_solve_scalar(fs, Opm::PTFlashMethod::SsiNewton,
-                                                     1.0e-8, eosType);
+                                                     1.0e-8, /*eosRegionIdx=*/0);
         return fs.L();
     };
     const std::vector<Scalar> depths(fix.depths.begin(), fix.depths.end());
@@ -455,9 +453,7 @@ BOOST_AUTO_TEST_CASE(GasCapAboveContact)
     const CompVec liquid = tableComposition(2050.0);
     Scalar psat = 0.0;
     CompVec vapor{};
-    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
-                                       fix.eclState.compositionalConfig().eosType(0),
-                                       psat, vapor));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, /*eosRegionIdx=*/0, psat, vapor));
     BOOST_CHECK_SMALL(std::abs(psat - 160.5601 * barsa), 0.05 * barsa);
 
     for (std::size_t c = 0; c < states.size(); ++c) {
@@ -845,8 +841,7 @@ BOOST_AUTO_TEST_CASE(GasOilContactOutsideDepthTables)
             const Scalar temperature = aboveTable ? 373.15 : 393.15;
             Scalar psat{};
             CompVec vapor{};
-            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature,
-                                               fix.eclState.compositionalConfig().eosType(0),
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature, /*eosRegionIdx=*/0,
                                                psat, vapor));
 
             const auto states = fix.compute(std::vector<int>(20, 0)).fluidStates();
@@ -1856,9 +1851,7 @@ BOOST_AUTO_TEST_CASE(SaturatedType1GasCapIsNotReportedAsTwoPhase)
     CompVec vapour{};
     // A fixture sets up the fluid system that the bubble point needs.
     const EquilFixture init(deckString("EQUIL\n 2050 150 2300 0 2050 0 /\n"));
-    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
-                                       init.eclState.compositionalConfig().eosType(0),
-                                       psat, vapour));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, /*eosRegionIdx=*/0, psat, vapour));
 
     const std::string vapourRow = std::to_string(vapour[0]) + " " + std::to_string(vapour[1])
                                   + " " + std::to_string(vapour[2]) + "  0  150.0\n";
@@ -2037,11 +2030,11 @@ BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCap)
     const auto computer = fix.compute(std::vector<int>(20, 0));
     const auto rows = solvdRows(computer);
 
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    constexpr unsigned eosRegionIdx = 0;
     const CompVec contactLiquid = tableComposition(2050.0);
     Scalar contactPsat{};
     CompVec contactVapour{};
-    BOOST_REQUIRE(SatP::bubblePressure(contactLiquid, 373.15, eosType,
+    BOOST_REQUIRE(SatP::bubblePressure(contactLiquid, 373.15, eosRegionIdx,
                                        contactPsat, contactVapour));
 
     for (std::size_t i = 0; i < numReportDepths; ++i) {
@@ -2066,7 +2059,7 @@ BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCap)
                 const CompVec liquid = tableComposition(depth);
                 Scalar psat{};
                 CompVec vapour{};
-                BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, eosType, psat, vapour));
+                BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, eosRegionIdx, psat, vapour));
                 BOOST_CHECK_CLOSE(row.psat, psat, 1.0e-8);
                 for (int comp = 0; comp < 3; ++comp) {
                     BOOST_CHECK_SMALL(row.oil[comp] - liquid[comp], 1.0e-12);
@@ -2104,7 +2097,7 @@ BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCapWithTemperatureGradient)
     const auto computer = fix.compute(std::vector<int>(20, 0));
     const auto rows = solvdRows(computer);
 
-    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    constexpr unsigned eosRegionIdx = 0;
     const CompVec contactLiquid = tableComposition(2050.0);
     for (std::size_t i = 0; i < numReportDepths; ++i) {
         BOOST_TEST_CONTEXT("Row " << i) {
@@ -2113,7 +2106,7 @@ BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCapWithTemperatureGradient)
             const Scalar temperature = 363.15 + 0.2 * (depth - 2000.0);
             Scalar psat{};
             CompVec vapour{};
-            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature, eosType, psat, vapour));
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature, eosRegionIdx, psat, vapour));
             BOOST_CHECK_CLOSE(rows[i].psat, psat, 1.0e-8);
         }
     }
@@ -2228,9 +2221,7 @@ BOOST_AUTO_TEST_CASE(SolvdReportFollowsTheCellsWithFewSamplePoints)
     CompVec vapour{};
     // A fixture sets up the fluid system that the bubble point needs.
     const EquilFixture init(deckString("EQUIL\n 2050 150 2300 0 2050 0 /\n"));
-    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
-                                       init.eclState.compositionalConfig().eosType(0),
-                                       psat, vapour));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, /*eosRegionIdx=*/0, psat, vapour));
 
     const std::string vapourRow = std::to_string(vapour[0]) + " " + std::to_string(vapour[1])
                                   + " " + std::to_string(vapour[2]) + "  0  150.0\n";

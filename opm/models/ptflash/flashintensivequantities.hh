@@ -195,7 +195,7 @@ public:
         }
         else {
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                 const Evaluation Ktmp = fluidState_.wilsonK_(compIdx);
+                 const Evaluation Ktmp = fluidState_.wilsonK_(compIdx, /*eosRegionIdx=*/0);
                  fluidState_.setKvalue(compIdx, Ktmp);
              }
              const Evaluation& Ltmp = -1.0;
@@ -209,8 +209,8 @@ public:
             OpmLog::debug(fmt::format("Updating the intensive quantities for cell {}",
                                       elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
         }
-        const auto& eos_type = problem.getEosType();
-        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity);
+        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, /*eosRegionIdx=*/0,
+                           flashVerbosity);
 
         if (flashVerbosity >= 5) {
             std::string phaseCompositions;
@@ -229,7 +229,7 @@ public:
         }
 
         // Update phases
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache(eos_type);
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache(/*eosRegionIdx=*/0);
         // the water properties of the cell's PVT region
         paramCache.setPvtRegionIndex(problem.pvtRegionIndex(elemCtx, dofIdx, timeIdx));
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);

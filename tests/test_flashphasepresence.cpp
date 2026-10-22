@@ -48,13 +48,13 @@ struct TestFluidSystem
 
     static bool phaseIsActive(unsigned phase) { return phase < numPhases; }
     static double molarMass(unsigned) { return 0.02; }
-    static double acentricFactor(unsigned) { return 0.0; }
-    static double criticalTemperature(unsigned) { return 300.0; }
-    static double criticalPressure(unsigned) { return 1.0e6; }
+    static double acentricFactor(unsigned, unsigned) { return 0.0; }
+    static double criticalTemperature(unsigned, unsigned) { return 300.0; }
+    static double criticalPressure(unsigned, unsigned) { return 1.0e6; }
 
     template<class Eval>
     struct ParameterCache {
-        explicit ParameterCache(int) {}
+        explicit ParameterCache(unsigned) {}
         template<class FluidState>
         void updatePhase(const FluidState&, unsigned) {}
         Eval molarVolume(unsigned) const { return Eval{1.0}; }
@@ -82,7 +82,7 @@ struct FixedFlash
     static inline double liquidFraction = 0.4;
 
     template<class FluidState, class Method>
-    static void solve(FluidState& fs, Method, double, int, int)
+    static void solve(FluidState& fs, Method, double, unsigned, int)
     {
         fs.setLvalue(Evaluation{liquidFraction});
         for (unsigned phase = 0; phase < 2; ++phase) {
@@ -177,7 +177,6 @@ struct TestProblem
 {
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return 300.0; }
-    int getEosType() const { return 0; }
     template<class Context>
     TestMaterialLaw::Params materialLawParams(const Context&, unsigned, unsigned) const { return {}; }
     template<class Context>
