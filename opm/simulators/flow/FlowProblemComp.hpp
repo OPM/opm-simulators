@@ -46,8 +46,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -126,13 +124,6 @@ public:
             "the vapour or liquid equation-of-state root, and water and the "
             "flashed phases are then rescaled to fill the pore volume. When "
             "disabled (the default), the input SWAT is retained.");
-    }
-
-    Opm::CompositionalConfig::EOSType getEosType() const
-    {
-        auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-        return eclState.compositionalConfig().eosType(0);
     }
 
     /*!
@@ -330,8 +321,7 @@ public:
             }
 
             {
-                const auto& eos_type = getEosType();
-                typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
+                typename FluidSystem::template ParameterCache<Scalar> paramCache(/*eosRegionIdx=*/0);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
                 fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
@@ -365,7 +355,7 @@ public:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const auto& Ktmp = fs.wilsonK_(compIdx);
+            const auto& Ktmp = fs.wilsonK_(compIdx, /*eosRegionIdx=*/0);
             fs.setKvalue(compIdx, Ktmp);
         }
 
@@ -456,7 +446,6 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
-            getEosType(),
             vanguard.cellCenterDepths(),
             eqlnum,
             this->pvtnum_,
@@ -648,7 +637,6 @@ protected:
     void normalizeExplicitSwat_()
     {
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
-        const auto eos_type = getEosType();
         // Flash as the model does, so that this converges wherever the model's flash does.
         const Scalar flash_tolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
@@ -672,7 +660,7 @@ protected:
                 zmf_oil_and_gas = true;
             }
 
-            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(/*eosRegionIdx=*/0);
 
             // Hydrocarbon moles per unit pore volume as given. Each given phase holds its
             // input composition, ZMF or XMF/YMF, before the flash, so this is the molar
@@ -710,11 +698,11 @@ protected:
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
                 flash_fs.setMoleFraction(c, z[c] / sum_z);
-                flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c, /*eosRegionIdx=*/0));
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity);
+                flash_fs, flash_method, flash_tolerance, /*eosRegionIdx=*/0, flash_verbosity);
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();
