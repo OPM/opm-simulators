@@ -27,6 +27,7 @@
 #ifndef OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 #define OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 #include <opm/grid/polyhedralgrid/levelcartesianindexmapper.hh>
 
@@ -247,7 +248,18 @@ protected:
         this->grid_ = std::make_unique<Grid>
             (this->eclState().getInputGrid(),
              this->eclState().fieldProps().porv(true),
-             this->edgeConformal());
+             this->edgeConformal(),
+             this->minpvMergeCells());
+
+        // The grid can have fewer cells than the deck has active cells, for instance if cells are
+        // removed because of MINPV. The properties of the cells are given for the active cells,
+        // so they must follow the cells of the grid, as they do for the CpGrid.
+        {
+            auto& eclState = this->eclState();
+            eclState.reset_actnum(UgGridHelpers::createACTNUM(*this->grid_));
+            const int* globalCell = this->grid_->globalCellPtr();
+            eclState.set_active_indices(std::vector<int>(globalCell, globalCell + this->grid_->size(0)));
+        }
 
         this->cartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->grid_);
