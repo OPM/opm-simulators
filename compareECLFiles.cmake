@@ -356,7 +356,10 @@ function(add_test_compare_parallel_simulation)
         ${TEST_ARGS}
     )
     set_tests_properties(${TEST_NAME_PREFIX}${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
-                         PROPERTIES PROCESSORS ${MPI_PROCS})
+                         PROPERTIES PROCESSORS ${MPI_PROCS}
+                                    FILENAME ${PARAM_FILENAME}
+                                    SIMULATOR ${PARAM_SIMULATOR}
+                                    TESTNAME ${PARAM_CASENAME})
   endif()
 endfunction()
 

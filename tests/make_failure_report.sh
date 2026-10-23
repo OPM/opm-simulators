@@ -38,6 +38,16 @@ do
     file_name2=$(awk -v test="${failed_test}" -v prop="FILENAME2" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
     test_name=$(awk -v test="${failed_test}" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
     JOBLIST+="-r $RESULT_DIR/tests/results/$binary+$test_name/$file_name1 -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name2 -c $test_name -o plot -t $file_name1 -u $file_name2\\n"
+  elif grep -q -E "compareParallelSim" <<< $failed_test
+  then
+    failed_test=$(echo "${failed_test}" | sed -e 's/.*://')
+    # Extract test properties
+    binary=$(awk -v test="${failed_test}" -v prop="SIMULATOR" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    file_name=$(awk -v test="${failed_test}" -v prop="FILENAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    test_name=$(awk -v test="${failed_test}" -v prop="TESTNAME" -f ${SOURCE_DIR}/getprop.awk $RESULT_DIR/CTestTestfile.cmake)
+    # The parallel run's results are in mpi/ below the serial run's
+    result_path=$RESULT_DIR/tests/results/parallel/$binary+$test_name
+    JOBLIST+="-r $result_path/$file_name -s $result_path/mpi/$file_name -c ${test_name}_parallel -o plot -t Serial -u Parallel\\n"
   fi
 done
 
