@@ -170,6 +170,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
     enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
     allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
+    ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
 
     const int output_param = Parameters::Get<Parameters::EclOutputInterval>();
     if (output_param >= 0) {
@@ -207,7 +208,7 @@ void FlowGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
     summaryState_ = std::move(params.summaryState_);
 }
 
-void FlowGenericVanguard::readDeck(const std::string& filename)
+void FlowGenericVanguard::readDeck(const std::string& filename, const std::string& ignoredKeywords)
 {
     Dune::Timer setupTimer;
     setupTimer.start();
@@ -220,7 +221,8 @@ void FlowGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "normal", "100", "", false, false, false, {}, /*slaveMode=*/false);
+                  nullptr, "normal", "normal", "100", ignoredKeywords, false, false, false, {},
+                  /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
@@ -339,7 +341,7 @@ void FlowGenericVanguard::init()
     // set eclState if not already set as in opm flow
     // it means that setParams is called
     if(!eclState_){
-        this->readDeck(fileName_);
+        this->readDeck(fileName_, ignoredKeywords_);
         this->defineSimulationModel(std::move(this->modelParams_));
     }
 

@@ -156,7 +156,7 @@ TEST_FOR_TYPE_NAMED(WFC, WellFilterCake)
 BOOST_AUTO_TEST_CASE(EnabledTemperatureModel)
 {
     using TypeTag = Opm::Properties::TTag::TestSequentialTemperatureTypeTag;
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*ignoredKeywords=*/"");
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
     Simulator simulator;
     auto data_out = Opm::TemperatureModel<TypeTag>::serializationTestObject(simulator);
@@ -651,7 +651,7 @@ BOOST_GLOBAL_FIXTURE(AquiferFixture);
 BOOST_AUTO_TEST_CASE(TYPE) \
 { \
     using TT = Opm::Properties::TTag::TestRestartTypeTag; \
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA"); \
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*ignoredKeywords=*/""); \
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
     Simulator sim; \
     auto data_out = Opm::TYPE<TT>::serializationTestObject(sim); \
@@ -672,7 +672,7 @@ TEST_FOR_AQUIFER(AquiferFetkovich)
 BOOST_AUTO_TEST_CASE(AquiferNumerical)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*ignoredKeywords=*/"");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferNumerical<TT>::serializationTestObject(sim);
@@ -690,7 +690,7 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
 BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA", /*ignoredKeywords=*/"");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferConstantFlux<TT>::serializationTestObject(sim);

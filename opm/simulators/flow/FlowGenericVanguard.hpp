@@ -154,8 +154,9 @@ public:
     /*!
      * \brief Read a deck.
      * \param filename file to read
+     * \param ignoredKeywords ':'-separated unknown keywords to ignore
      */
-    static void readDeck(const std::string& filename);
+    static void readDeck(const std::string& filename, const std::string& ignoredKeywords);
 
     /*!
      * \brief Set the simulation configuration objects.
@@ -394,6 +395,7 @@ protected:
     bool enableEclOutput_;
     bool allow_splitting_inactive_wells_;
 
+    std::string ignoredKeywords_;
     std::optional<int> outputInterval_;
     bool useMultisegmentWell_;
     bool enableExperiments_;

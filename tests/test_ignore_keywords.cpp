@@ -23,12 +23,20 @@
 #define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/utils/readDeck.hpp>
+
+#include <opm/common/utility/OpmInputError.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -38,12 +46,14 @@ namespace
 struct Fixture {
     Fixture()
     {
-        // UNKNOWNA and UNKNOWNB are not known to the parser.
+        // UNKNOWNA (RUNSPEC) and UNKNOWNB (SCHEDULE) are not known to the parser.
         const std::string deck = R"(RUNSPEC
 DIMENS
   2 2 1 /
 START
   1 JAN 2020 /
+UNKNOWNA
+  1 2 3 /
 GRID
 DXV
   2*100.0 /
@@ -61,8 +71,6 @@ PERMZ
   4*10.0 /
 PORO
   4*0.3 /
-UNKNOWNA
-  1 2 3 /
 PROPS
 SOLUTION
 SCHEDULE
@@ -120,6 +128,35 @@ BOOST_FIXTURE_TEST_CASE(OnlyListedKeywordsAreIgnored, Fixture)
 BOOST_FIXTURE_TEST_CASE(IgnoredKeywordsParse, Fixture)
 {
     BOOST_CHECK_EQUAL(initialize("--ignore-keywords=UNKNOWNA:UNKNOWNB"), EXIT_SUCCESS);
+}
+
+BOOST_FIXTURE_TEST_CASE(SpacesAroundIgnoredKeywords, Fixture)
+{
+    BOOST_CHECK_EQUAL(initialize("--ignore-keywords= UNKNOWNA : UNKNOWNB "), EXIT_SUCCESS);
+}
+
+BOOST_FIXTURE_TEST_CASE(RunspecParseIgnoresListedKeywords, Fixture)
+{
+    // flow_comp and flowexp_comp parse RUNSPEC alone before reading the deck.
+    const auto parseRunspec = [this](const std::string& ignored) {
+        Opm::ParseContext parseContext;
+        Opm::ignoreKeywords(parseContext, ignored);
+        Opm::Parser {}.parseFile(deck_file, parseContext,
+                                 std::vector {Opm::Ecl::SectionType::RUNSPEC});
+    };
+    BOOST_CHECK_THROW(parseRunspec(""), Opm::OpmInputError);
+    BOOST_CHECK_NO_THROW(parseRunspec("UNKNOWNA"));
+}
+
+BOOST_FIXTURE_TEST_CASE(VanguardReadDeckIgnoresListedKeywords, Fixture)
+{
+    // The flowexp variants read the deck through the vanguard.
+    const auto readDeck = [this](const std::string& ignored) {
+        Opm::FlowGenericVanguard::modelParams_ = {};
+        Opm::FlowGenericVanguard::readDeck(deck_file, ignored);
+    };
+    BOOST_CHECK_THROW(readDeck(""), std::runtime_error);
+    BOOST_CHECK_NO_THROW(readDeck("UNKNOWNA:UNKNOWNB"));
 }
 
 bool

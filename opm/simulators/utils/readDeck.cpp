@@ -825,11 +825,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                 parseContext->update(ParseContext::SCHEDULE_GCONSALE_INVALID_INJECTION, InputErrorAction::WARN);
             }
             parseContext->setInputSkipMode(inputSkipMode);
-            for (const auto& keyword : split_string(ignoredKeywords, ':')) {
-                if (!keyword.empty()) {
-                    parseContext->ignoreKeyword(keyword);
-                }
-            }
+            ignoreKeywords(*parseContext, ignoredKeywords);
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
@@ -924,6 +920,16 @@ std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsi
         parseContext->update(InputErrorAction::DELAYED_EXIT1);
 
     return parseContext;
+}
+
+void Opm::ignoreKeywords(ParseContext& parseContext, const std::string& keywords)
+{
+    for (const auto& entry : split_string(keywords, ':')) {
+        const auto keyword = trim_copy(entry);
+        if (!keyword.empty()) {
+            parseContext.ignoreKeyword(keyword);
+        }
+    }
 }
 
 void Opm::setupStreamLogging(const std::string& stdout_log_id)
