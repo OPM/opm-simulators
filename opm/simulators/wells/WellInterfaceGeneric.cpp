@@ -27,6 +27,8 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/eval_uda.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
 #include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
@@ -265,6 +267,7 @@ WellInterfaceGeneric<Scalar, IndexTraits>::
 getInjMult(const int local_perf_index,
            const Scalar bhp,
            const Scalar perf_pres,
+           const SummaryState& summary_state,
            DeferredLogger& dlogger) const
 {
     assert(!this->isProducer());
@@ -282,7 +285,11 @@ getInjMult(const int local_perf_index,
                                                   : this->well_ecl_.getConnections()[perf_ecl_index].injmult();
         const Scalar pres = is_wrev ? bhp : perf_pres;
 
-        const auto frac_press = injmult.fracture_pressure;
+        const auto frac_press = static_cast<Scalar>(
+            UDA::eval_well_uda(injmult.fracture_pressure,
+                               this->name(),
+                               summary_state,
+                               summary_state.get_udq_undefined()));
         const auto gradient = injmult.multiplier_gradient;
         if (pres > frac_press) {
             multiplier = 1. + (pres - frac_press) * gradient;
