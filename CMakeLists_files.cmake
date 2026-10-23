@@ -749,6 +749,8 @@ list (APPEND TEST_DATA_FILES
   tests/RC_MASTER_GROUP_EXCLUSION.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_NESTED.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA
+  tests/include/rc_master_group_exclusion_controls.inc
+  tests/include/rc_master_group_exclusion_model.inc
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
   tests/include/permx_model5.grdecl
