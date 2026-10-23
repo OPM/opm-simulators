@@ -25,6 +25,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
+#include <opm/simulators/utils/readDeck.hpp>
 
 #include <fmt/format.h>
 
@@ -91,9 +92,11 @@ main(int argc, char** argv)
     auto inputFilename
         = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
 
-    // Use the selected simulator mode during this early RUNSPEC parse as well.
+    // Use the selected simulator mode and ignored keywords during this early RUNSPEC
+    // parse as well.
     Opm::ParseContext parseContext;
     parseContext.setInputSkipMode(Opm::Parameters::Get<Opm::Parameters::InputSkipMode>());
+    Opm::ignoreKeywords(parseContext, Opm::Parameters::Get<Opm::Parameters::IgnoreKeywords>());
     const auto deck = Opm::Parser {}.parseFile(inputFilename, parseContext,
                                                std::vector {Opm::Ecl::SectionType::RUNSPEC});
     const auto runspec = Opm::Runspec(deck);

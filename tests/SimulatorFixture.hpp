@@ -149,7 +149,7 @@ initSimulator(const char* filename,
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     setupSimulatorParameters<TypeTag>(filename, test_name, threads_per_process);
-    FlowGenericVanguard::readDeck(filename);
+    FlowGenericVanguard::readDeck(filename, /*ignoredKeywords=*/"");
     return std::make_unique<Simulator>();
 }
 

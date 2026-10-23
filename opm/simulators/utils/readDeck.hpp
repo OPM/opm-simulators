@@ -67,6 +67,9 @@ prepareResultOutputDirectory(const std::string& baseName, const std::filesystem:
 
 std::unique_ptr<ParseContext> setupParseContext(const bool exitOnAllErrors);
 
+// Ignore the unknown keywords in a ':'-separated list.
+void ignoreKeywords(ParseContext& parseContext, const std::string& keywords);
+
 // Setup the OpmLog backends for screen output
 void setupStreamLogging(const std::string& stdout_log_id);
 
@@ -96,6 +99,7 @@ void readDeck(Parallel::Communication         comm,
               const std::string&              parsingStrictness,
               const std::string&              actionParsingStrictness,
               const std::string&              inputSkipMode,
+              const std::string&              ignoredKeywords,
               bool                            initFromRestart,
               bool                            checkDeck,
               bool                            keepKeywords,

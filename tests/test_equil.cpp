@@ -149,7 +149,7 @@ initSimulator(const char *filename)
                                    /*handleHelp*/true,
                                    /*myRank*/0);
 
-    Opm::FlowGenericVanguard::readDeck(filename);
+    Opm::FlowGenericVanguard::readDeck(filename, /*ignoredKeywords=*/"");
 
     return std::make_unique<Simulator>();
 }

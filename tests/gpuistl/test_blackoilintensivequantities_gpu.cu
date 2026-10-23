@@ -445,7 +445,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
                                    /*handleHelp=*/false,
                                    /*myRank=*/0);
 
-    Opm::FlowGenericVanguard::readDeck(deckPath);
+    Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
     auto sim = std::make_unique<Simulator>();
     sim->model().applyInitialSolution();
 
@@ -684,7 +684,7 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                                               /*handleHelp=*/false,
                                               /*myRank=*/0);
 
-    Opm::FlowGenericVanguard::readDeck(deckPath);
+    Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
     auto sim = std::make_unique<Simulator>();
     sim->model().applyInitialSolution();
     sim->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
@@ -775,7 +775,7 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
                                         /*handleHelp=*/false,
                                         /*myRank=*/0);
 
-    Opm::FlowGenericVanguard::readDeck(deckPath);
+    Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
     auto sim = std::make_unique<Simulator>();
 
     // The Simulator constructor only calls finishInit; the solution vector
