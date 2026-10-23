@@ -495,6 +495,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_dilu.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
+  tests/test_edit_depth.cpp
   tests/test_equil.cpp
   tests/test_extbocontainer.cpp
   tests/test_extraconvergenceoutputthread.cpp
@@ -686,6 +687,7 @@ endif()
 list (APPEND TEST_DATA_FILES
   tests/blackoilintensivequantities_gpu.DATA
   tests/drsdt_initial_rs.DATA
+  tests/edit_depth.DATA
   tests/equil_base.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
