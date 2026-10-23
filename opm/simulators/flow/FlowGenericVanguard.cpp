@@ -137,6 +137,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
     ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
     edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
+    minpvMergeCells_ = Parameters::Get<Parameters::MinpvMergeCells>();
 
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
@@ -479,6 +480,9 @@ void FlowGenericVanguard::registerParameters_()
         ("Order cells owned by rank before ghost/overlap cells.");
     Parameters::Register<Parameters::EdgeConformal>
         ("Edge conformal cornerpoint processing.");
+    Parameters::Register<Parameters::MinpvMergeCells>
+        ("Merge the cells that MINPV removes into the cell below, instead of collapsing them and connecting the cells "
+         "above and below (only for PolyhedralGrid).");
 
 #if HAVE_MPI
     Parameters::Register<Parameters::AddCorners>
