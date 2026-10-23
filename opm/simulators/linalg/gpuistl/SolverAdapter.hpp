@@ -19,7 +19,6 @@
 #ifndef OPM_SOLVERADAPTER_HPP
 #define OPM_SOLVERADAPTER_HPP
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
 #include <dune/istl/schwarz.hh>

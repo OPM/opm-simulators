@@ -24,12 +24,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 
 #include <opm/simulators/linalg/AmgxPreconditioner.hpp>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -93,7 +93,7 @@ createMatrix(int N)
     } else {
         // For GPU matrix, create CPU matrix first then convert
         using ScalarType = typename MatrixType::field_type;
-        using CpuMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<ScalarType, 1, 1>>;
+        using CpuMatrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<ScalarType, 1, 1>>;
         CpuMatrix cpu_matrix;
         setupLaplace2d(N, cpu_matrix);
         return MatrixType::fromMatrix(cpu_matrix);
@@ -214,7 +214,7 @@ testAmgxPreconditioner()
         using Vector = Opm::gpuistl::GpuVector<Scalar>;
         testAmgxPreconditionerGeneric<Matrix, Vector>();
     } else {
-        using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
+        using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
         using Vector = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
         testAmgxPreconditionerGeneric<Matrix, Vector>();
     }
@@ -229,7 +229,7 @@ testAmgxPreconditionerUpdate()
         using Vector = Opm::gpuistl::GpuVector<Scalar>;
         testAmgxPreconditionerUpdateGeneric<Matrix, Vector>();
     } else {
-        using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
+        using Matrix = Opm::BlockSparseMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
         using Vector = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
         testAmgxPreconditionerUpdateGeneric<Matrix, Vector>();
     }

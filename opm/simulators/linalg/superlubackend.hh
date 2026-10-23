@@ -40,6 +40,7 @@
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/BlockSparseMatrix.hpp>
 
 namespace Opm::Properties::TTag {
 
@@ -151,7 +152,7 @@ public:
         using DoubleEqVector = Dune::FieldVector<double, numEq>;
         using DoubleEqMatrix = Dune::FieldMatrix<double, numEq, numEq>;
         using DoubleVector = Dune::BlockVector<DoubleEqVector>;
-        using DoubleMatrix = Dune::BCRSMatrix<DoubleEqMatrix>;
+        using DoubleMatrix = BlockSparseMatrix<DoubleEqMatrix>;
 
         // copy the inputs into the double precision data structures
         DoubleVector bDouble(b);
