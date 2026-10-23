@@ -44,6 +44,7 @@
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -211,13 +212,28 @@ public:
     localConvergenceData(std::vector<Scalar>& R_sum,
                          std::vector<Scalar>& maxCoeff,
                          std::vector<Scalar>& B_avg,
-                         std::vector<int>& maxCoeffCell);
+                         std::vector<int>& maxCoeffCell,
+                         std::vector<Scalar>& maxCoeffTruePv);
+
+    /// \brief Pore volume floor used in the per-cell CNV measure, i.e.
+    /// cnv_pv_floor_fraction_ times the median cell pore volume. Zero if
+    /// the floor is disabled or not yet computed.
+    Scalar cnvPvFloor() const
+    { return std::max(cnvPvFloor_, Scalar{0}); }
 
     /// \brief Compute pore-volume/cell count split among "converged",
     /// "relaxed converged", "unconverged" cells based on CNV point
     /// measures. Also returns list of cells where CNV is greater than
-    /// its strict tolerance
-    CnvPvSplitData characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt);
+    /// its strict tolerance.
+    /// \param[in] pvOutlierCap Per-cell cap (e.g. relaxed_pv_outlier_cap_multiplier_
+    ///            times the mean eligible cell pore volume) applied to each
+    ///            cell's pore volume before it is added to the returned PV
+    ///            split, so a handful of outsized cells cannot dominate the
+    ///            split. Does not affect the per-cell CNV value itself, only
+    ///            the pore-volume weight it contributes to the split.
+    CnvPvSplitData characteriseCnvPvSplit(const std::vector<Scalar>& B_avg,
+                                          const double dt,
+                                          const Scalar pvOutlierCap);
 
     /// \brief Compute the number of Newtons required by each cell in order to
     /// satisfy the solution change convergence criteria at the last time step.
@@ -280,7 +296,9 @@ public:
                      std::vector<Scalar>& B_avg,
                      std::vector<Scalar>& R_sum,
                      std::vector<Scalar>& maxCoeff,
-                     std::vector<int>& maxCoeffCell);
+                     std::vector<int>& maxCoeffCell,
+                     const Scalar pvTrue = 0.0,
+                     std::vector<Scalar>* maxCoeffTruePv = nullptr);
 
     //! \brief Returns true if an NLDD solver exists
     bool hasNlddSolver() const
@@ -300,6 +318,14 @@ protected:
 
     /// \brief The number of cells of the global grid.
     long int global_nc_;
+
+    /// \brief Pore volume floor for the per-cell CNV measure, see
+    /// cnvPvFloor(). Negative until computed on the first convergence check.
+    Scalar cnvPvFloor_{-1.0};
+
+    /// \brief Compute cnv_pv_floor_fraction_ times the global median
+    /// pore volume of the (non numerical aquifer) interior cells.
+    Scalar computeCnvPvFloor() const;
 
     SolutionVector solUpd_;
 
