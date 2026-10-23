@@ -489,6 +489,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_compositionalcontainer.cpp
   tests/test_compwell_equations.cpp
   tests/test_compwell_jacobian.cpp
+  tests/test_compwell_pvt_region.cpp
   tests/test_compwell_zero_rate_targets.cpp
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
