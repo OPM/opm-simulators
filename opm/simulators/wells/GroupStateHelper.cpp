@@ -1346,7 +1346,7 @@ updateNONEProductionGroups()
 
     for (std::size_t i = 0; i < num_gpc; ++i) {
         const auto& gname = gnames[i];
-        bool rc_slave_master_target = false;
+        std::optional<ReservoirCoupling::GrupSlav::FilterFlag> master_target_filter;
 #ifdef RESERVOIR_COUPLING_ENABLED
         // A slave group with a target from the master has the master's control mode, set in
         // the first time step of the sync step, and the later time steps need it.
@@ -1354,8 +1354,7 @@ updateNONEProductionGroups()
             && this->reservoirCouplingSlave().hasMasterProductionTarget(gname))
         {
             const auto master_cmode = this->reservoirCouplingSlave().masterProductionTarget(gname).second;
-            rc_slave_master_target = this->getProductionFilterFlag_(gname, master_cmode)
-                != ReservoirCoupling::GrupSlav::FilterFlag::SLAV;
+            master_target_filter = this->getProductionFilterFlag_(gname, master_cmode);
         }
         // RC master hierarchy groups distribute targets to slaves —
         // do not reset their production control to NONE
@@ -1369,7 +1368,7 @@ updateNONEProductionGroups()
                                                       /*targeted=*/production_control_used[i] > 0,
                                                       /*gas_lift_group=*/gas_lift_group,
                                                       /*rc_master_hierarchy=*/rc_master_hierarchy,
-                                                      /*rc_slave_master_target=*/rc_slave_master_target)) {
+                                                      /*master_target_filter=*/master_target_filter)) {
             continue;
         }
         if (this->comm_.rank() == 0) {

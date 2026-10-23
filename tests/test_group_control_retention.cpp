@@ -23,11 +23,14 @@
 
 #include <opm/simulators/wells/GroupControlRetention.hpp>
 
+#include <optional>
+
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 using Opm::GroupStateHelpers::keepsProductionControl;
+using FilterFlag = Opm::ReservoirCoupling::GrupSlav::FilterFlag;
 
 // A production group with a control mode other than NONE and FLD (say ORAT), that no well
 // under group control has as its target, that is not in the gas lift optimization, not in a
@@ -38,7 +41,7 @@ BOOST_AUTO_TEST_CASE(untargeted_group_is_reset)
                                         /*targeted=*/false,
                                         /*gas_lift_group=*/false,
                                         /*rc_master_hierarchy=*/false,
-                                        /*rc_slave_master_target=*/false));
+                                        /*master_target_filter=*/std::nullopt));
 }
 
 // The same group, but a well under group control has it as its target: it keeps its control
@@ -49,7 +52,7 @@ BOOST_AUTO_TEST_CASE(targeted_group_keeps_its_control)
                                        /*targeted=*/true,
                                        /*gas_lift_group=*/false,
                                        /*rc_master_hierarchy=*/false,
-                                       /*rc_slave_master_target=*/false));
+                                       /*master_target_filter=*/std::nullopt));
 }
 
 // A group whose control mode is already NONE or FLD (field_or_none) has nothing to reset,
@@ -60,7 +63,7 @@ BOOST_AUTO_TEST_CASE(none_and_fld_have_nothing_to_reset)
                                        /*targeted=*/false,
                                        /*gas_lift_group=*/false,
                                        /*rc_master_hierarchy=*/false,
-                                       /*rc_slave_master_target=*/false));
+                                       /*master_target_filter=*/std::nullopt));
 }
 
 // An untargeted group in the gas lift optimization keeps its control mode, as the
@@ -71,7 +74,7 @@ BOOST_AUTO_TEST_CASE(gas_lift_group_keeps_its_control)
                                        /*targeted=*/false,
                                        /*gas_lift_group=*/true,
                                        /*rc_master_hierarchy=*/false,
-                                       /*rc_slave_master_target=*/false));
+                                       /*master_target_filter=*/std::nullopt));
 }
 
 // An untargeted reservoir coupling master group, or an ancestor of one, keeps its control
@@ -82,18 +85,32 @@ BOOST_AUTO_TEST_CASE(master_hierarchy_group_keeps_its_control)
                                        /*targeted=*/false,
                                        /*gas_lift_group=*/false,
                                        /*rc_master_hierarchy=*/true,
-                                       /*rc_slave_master_target=*/false));
+                                       /*master_target_filter=*/std::nullopt));
 }
 
 // An untargeted reservoir coupling slave group with a target from the master keeps the
-// master's control mode.  Its wells can all be on THP control, but the master sends the
-// target in the first time step of a sync step only, and the mode must stay for the later
-// time steps, or the slave stops at "cmode mismatch between slave and master".
+// master's control mode when the GRUPSLAV flag lets the master's target apply, MAST or BOTH.
+// Its wells can all be on THP control, but the master sends the target in the first time
+// step of a sync step only, and the mode must stay for the later time steps, or the slave
+// stops at "cmode mismatch between slave and master".
 BOOST_AUTO_TEST_CASE(slave_group_with_master_target_keeps_its_control)
 {
-    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
-                                       /*targeted=*/false,
-                                       /*gas_lift_group=*/false,
-                                       /*rc_master_hierarchy=*/false,
-                                       /*rc_slave_master_target=*/true));
+    for (const auto filter : {FilterFlag::MAST, FilterFlag::BOTH}) {
+        BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
+                                           /*targeted=*/false,
+                                           /*gas_lift_group=*/false,
+                                           /*rc_master_hierarchy=*/false,
+                                           /*master_target_filter=*/filter));
+    }
+}
+
+// With the flag SLAV the slave's own limit is the one used and the mode is not the master's,
+// so an untargeted group is reset like any other.
+BOOST_AUTO_TEST_CASE(slave_group_with_slav_flag_is_reset)
+{
+    BOOST_CHECK(!keepsProductionControl(/*field_or_none=*/false,
+                                        /*targeted=*/false,
+                                        /*gas_lift_group=*/false,
+                                        /*rc_master_hierarchy=*/false,
+                                        /*master_target_filter=*/FilterFlag::SLAV));
 }

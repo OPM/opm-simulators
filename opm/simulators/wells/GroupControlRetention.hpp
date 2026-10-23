@@ -20,6 +20,10 @@
 #ifndef OPM_GROUP_CONTROL_RETENTION_HPP
 #define OPM_GROUP_CONTROL_RETENTION_HPP
 
+#include <opm/input/eclipse/Schedule/ResCoup/GrupSlav.hpp>
+
+#include <optional>
+
 namespace Opm::GroupStateHelpers {
 
 /// Whether a production group keeps its control mode when the groups without
@@ -32,20 +36,26 @@ namespace Opm::GroupStateHelpers {
 ///   control mode other than NONE and FLD.
 /// @param rc_master_hierarchy The group is a reservoir coupling master group or one of
 ///   its ancestors, which distribute targets to the slaves.
-/// @param rc_slave_master_target The group is a reservoir coupling slave group whose
-///   control mode comes from the master, which sends its target only in the first time
-///   step of a sync step, so the mode has to survive the time steps after it.
+/// @param master_target_filter Set when the group is a reservoir coupling slave group with a
+///   target from the master: the GRUPSLAV flag for that target.  The master sends the target
+///   in the first time step of a sync step only, and the control mode it gives the group
+///   (not for SLAV, where the slave's own limit is the one used) has to survive the time steps
+///   after it.  Not set when the group has no target from a master.
 inline bool keepsProductionControl(const bool field_or_none,
                                    const bool targeted,
                                    const bool gas_lift_group,
                                    const bool rc_master_hierarchy,
-                                   const bool rc_slave_master_target)
+                                   const std::optional<ReservoirCoupling::GrupSlav::FilterFlag>
+                                       master_target_filter)
 {
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
+    const bool master_sets_control_mode =
+        master_target_filter.has_value() && *master_target_filter != FilterFlag::SLAV;
     return targeted
         || field_or_none
         || gas_lift_group
         || rc_master_hierarchy
-        || rc_slave_master_target;
+        || master_sets_control_mode;
 }
 
 } // namespace Opm::GroupStateHelpers
