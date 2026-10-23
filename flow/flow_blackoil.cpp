@@ -22,6 +22,13 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
+#include <opm/input/eclipse/Schedule/Action/Actions.hpp>
+
+#include <cstddef>
+#include <tuple>
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
@@ -45,7 +52,39 @@ template<class TypeTag>
 struct AvoidElementContext<TypeTag, TTag::FlowProblemTPFA>
 { static constexpr bool value = true; };
 
+
+namespace TTag {
+// Same as FlowProblemTPFA without the convective-mixing (DRSDTCON) terms in the flux.
+struct FlowProblemTPFANoConvectiveMixing
+{ using InheritsFrom = std::tuple<FlowProblemTPFA>; };
+}
+
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowProblemTPFANoConvectiveMixing>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Properties
+
+namespace {
+
+// Convective mixing can be compiled out when no report step activates DRSDTCON.
+// Decks with actions keep the general type, since an action may turn it on later.
+bool deckNeedsConvectiveMixing()
+{
+    const auto& schedule = Opm::FlowGenericVanguard::modelParams_.eclSchedule_;
+    if (!schedule) {
+        return true;
+    }
+    for (std::size_t step = 0; step < schedule->size(); ++step) {
+        const auto& state = (*schedule)[step];
+        if (state.oilvap().drsdtConvective() || !state.actions().empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // anonymous namespace
 
 namespace Opm {
 
@@ -67,7 +106,12 @@ int flowBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFile
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::FlowProblemTPFA>
+    if (deckNeedsConvectiveMixing()) {
+        FlowMain<Properties::TTag::FlowProblemTPFA>
+            mainfunc {argc, argv, outputCout, outputFiles};
+        return mainfunc.execute();
+    }
+    FlowMain<Properties::TTag::FlowProblemTPFANoConvectiveMixing>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
@@ -76,7 +120,8 @@ int flowBlackoilTpfaMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowProblemTPFA;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
-    auto ret = mainObject->runStatic<TypeTag>();
+    auto ret = mainObject->runStaticSelect<TypeTag, Properties::TTag::FlowProblemTPFANoConvectiveMixing>(
+        [] { return !deckNeedsConvectiveMixing(); });
     // Destruct mainObject as the destructor calls MPI_Finalize!
     mainObject.reset();
     return ret;

@@ -177,6 +177,23 @@ public:
         return exitCode;
     }
 
+    //! \brief Like runStatic<TypeTag>(), but runs AltTypeTag when useAlt() is true
+    //! after the deck has been read. Both types must register the same parameters.
+    template <class TypeTag, class AltTypeTag, class Predicate>
+    int runStaticSelect(Predicate&& useAlt)
+    {
+        int exitCode = EXIT_SUCCESS;
+        if (initialize_<TypeTag>(exitCode)) {
+            if (isSimulationRank_) {
+                this->setupVanguard();
+                return useAlt()
+                    ? flowMain<AltTypeTag>(argc_, argv_, outputCout_, outputFiles_)
+                    : flowMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
+            }
+        }
+        return exitCode;
+    }
+
     //! \brief Used for test_outputdir.
     int justInitialize()
     {

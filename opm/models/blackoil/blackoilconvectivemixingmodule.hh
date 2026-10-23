@@ -104,6 +104,13 @@ public:
                 info.Psi_[i] = control.getPsi(i);
             }
         }
+        bool anyActive = false;
+        for (std::size_t i = 0; i < numRegions; ++i) {
+            anyActive = anyActive || control.drsdtConvective(i);
+        }
+        if (!anyActive) {
+            info.active_.clear();
+        }
     }
 
     template <class CMMParam>
