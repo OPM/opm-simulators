@@ -1182,6 +1182,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/system/MultiComm.hpp
   opm/simulators/linalg/system/SystemCprwPressureStage.hpp
   opm/simulators/linalg/system/SystemPreconditioner.hpp
+  opm/simulators/linalg/system/SystemPreconditioner_impl.hpp
   opm/simulators/linalg/system/SystemPreconditionerFactory.hpp
   opm/simulators/linalg/system/SystemTypes.hpp
   opm/simulators/linalg/system/WellMatrixMerger.hpp
