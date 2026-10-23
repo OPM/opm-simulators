@@ -365,6 +365,10 @@ public:
         }
     }
 
+    using BlackoilWellModelGeneric<double, IndexTraits>::closeWellForRetry;
+
+    void setRollbackEnabled(bool value) { enable_state_rollback_ = value; }
+
     void setSerializationTestData()
     {
         initial_step_ =  true;
@@ -610,6 +614,40 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
 }
 #endif // HAVE_DUNE_FEM
+
+BOOST_AUTO_TEST_CASE(RestoredClosureIsNotARetryClosure)
+{
+    Opm::Schedule schedule{};
+    Opm::SummaryState summary;
+    Opm::EclipseState es;
+    Opm::PhaseUsage phaseUsage;
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+
+    // Restart reconstruction and a failed-attempt closure can have identical
+    // timestamps and reasons. Only the latter must block a schedule OPEN.
+    constexpr double restart_time = 2 * 86400.0;
+    model.wellTestState().close_well("RESTORED", Opm::WellTestConfig::Reason::PHYSICAL,
+                                    restart_time);
+    model.closeWellForRetry("FAILING", restart_time);
+    BOOST_CHECK_EQUAL(model.wellTestState().lastTestTime("RESTORED"), restart_time);
+    BOOST_CHECK_EQUAL(model.wellTestState().lastTestTime("FAILING"), restart_time);
+    BOOST_CHECK(!model.wasClosedForRetry("RESTORED"));
+    BOOST_CHECK(model.wasClosedForRetry("FAILING"));
+    BOOST_CHECK(!model.wasDynamicallyShutThisTimeStep("FAILING"));
+
+    // Further failed attempts must not discard the retry guard. Closure state
+    // is restored separately by the normal well-state recovery path.
+    model.setRollbackEnabled(true);
+    model.advanceTimeLevel();
+    model.closeWellForRetry("ANOTHER_FAILING", restart_time);
+    model.updateFailed();
+    BOOST_CHECK(model.wasClosedForRetry("FAILING"));
+    BOOST_CHECK(model.wasClosedForRetry("ANOTHER_FAILING"));
+    BOOST_CHECK(!model.wasClosedForRetry("RESTORED"));
+}
+
 
 namespace Opm {
 

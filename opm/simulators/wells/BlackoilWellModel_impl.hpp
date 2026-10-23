@@ -704,6 +704,7 @@ namespace Opm {
     timeStepSucceeded(const double simulationTime, const double dt)
     {
         this->closed_this_step_.clear();
+        this->retry_shut_wells_.clear();
 
         // time step is finished and we are not any more at the beginning of an report step
         this->report_step_starts_ = false;
@@ -963,26 +964,15 @@ namespace Opm {
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if (this->wellTestState().well_is_closed(well_name)) {
-                    // The well was shut this timestep, we are most likely retrying
-                    // a timestep without the well in question, after it caused
-                    // repeated timestep cuts. It should therefore not be opened,
-                    // even if it was new or received new targets this report step.
-                    //
-                    // The time stamp alone cannot establish that, since a shut-in
-                    // decided at the *end* of the previous step carries that
-                    // step's end time, which coincides with the current step's
-                    // start time. Such shut-ins are the ones a new WCON keyword
-                    // may undo, and are exactly what wasDynamicallyShutThisTimeStep()
-                    // reports; mid-step ones from forceShutWellByName() are not
-                    // registered there, so they still block the re-open.
-                    const bool closed_this_step =
-                        (this->wellTestState().lastTestTime(well_name) == simulator_.time()) &&
-                        !this->wasDynamicallyShutThisTimeStep(well_name);
+                    // Only a closure imposed to retry the current timestep blocks
+                    // reopening. Restored closures also carry the current time,
+                    // but must honor an explicit schedule OPEN request.
+                    const bool closed_for_retry = this->wasClosedForRetry(well_name);
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
                     if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
-                        if (!closed_this_step) {
+                        if (!closed_for_retry) {
                             this->wellTestState().open_well(well_name);
                             this->wellTestState().open_completions(well_name);
                             this->well_open_times_.insert_or_assign(well_name,
