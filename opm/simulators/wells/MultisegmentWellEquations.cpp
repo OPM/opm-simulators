@@ -38,6 +38,7 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
 
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
@@ -202,7 +203,7 @@ void MultisegmentWellEquations<Scalar, IndexTraits, numWellEq, numEq>::createSol
         if (duneDSolver_) {
             return;
         }
-        duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
+        duneDSolver_ = std::make_shared<Opm::UMFPack<DiagMatWell,BVectorWell,BVectorWell>>(duneD_, 0);
     }
 #else
     OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK. "
@@ -283,7 +284,7 @@ extract(WellContributions<Scalar>& wellContribs) const
     if constexpr (std::is_same_v<Scalar,float>) {
         OPM_THROW(std::runtime_error, "Cannot use UMFPack with floats");
     } else {
-        Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
+        Opm::UMFPack<DiagMatWell,BVectorWell,BVectorWell> umfpackMatrix(duneD_, 0);
         double* Dvals = umfpackMatrix.getInternalMatrix().getValues();
         auto* Dcols = umfpackMatrix.getInternalMatrix().getColStart();
         auto* Drows = umfpackMatrix.getInternalMatrix().getRowIndex();

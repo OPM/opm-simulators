@@ -25,6 +25,7 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
 #include <opm/simulators/linalg/BlockVector.hpp>
 #include <dune/common/fmatrix.hh>
@@ -33,10 +34,6 @@
 
 #include <memory>
 #include <type_traits>
-
-namespace Dune {
-template<class M> class UMFPack;
-}
 
 namespace Opm
 {
@@ -155,7 +152,7 @@ private:
     /// This is a shared_ptr as MultisegmentWell is copied in computeWellPotentials...
     struct EmptyType {};
     using UMFPackSolver = std::conditional_t<std::is_same_v<Scalar,double>,
-                                             std::shared_ptr<Dune::UMFPack<DiagMatWell>>,
+                                             std::shared_ptr<Opm::UMFPack<DiagMatWell,BVectorWell,BVectorWell>>,
                                              EmptyType>; // TODO: c++20: add no_unique_address
     mutable UMFPackSolver duneDSolver_;
 

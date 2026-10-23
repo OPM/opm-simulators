@@ -23,15 +23,13 @@
 #ifndef OPM_MSWELLHELPERS_HEADER_INCLUDED
 #define OPM_MSWELLHELPERS_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
+
 #include <dune/istl/matrix.hh>
 
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-
-namespace Dune {
-template<class Matrix> class UMFPack;
-}
 
 namespace Opm {
 
@@ -77,7 +75,7 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
-    applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
+    applyUMFPack(Opm::UMFPack<MatrixType, VectorType, VectorType>& linsolver,
                  VectorType x);
 
     /// Coarse CPRW diagonal for a multisegment well: lambda' D(:,p), summed
@@ -135,7 +133,7 @@ namespace mswellhelpers
     Dune::Matrix<typename MatrixType::block_type>
     invertWithUMFPack(const int size,
                       const int bsize,
-                      Dune::UMFPack<MatrixType>& linsolver);
+                      Opm::UMFPack<MatrixType, VectorType, VectorType>& linsolver);
 
 
 
