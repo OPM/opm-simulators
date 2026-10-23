@@ -2174,14 +2174,14 @@ if(opm-common_EMBEDDED_PYTHON)
     TEST_ARGS
       --solver-max-time-step-in-days=10
   )
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22 AND opm-common_PYTHON_BUILD_DIR)
     if(USE_DEV_SIMULATOR_IN_TESTS)
       set(test_name compareECLFiles_flow_blackoil+PYACTION_WCONPROD)
     else()
       set(test_name compareECLFiles_flow+PYACTION_WCONPROD)
     endif()
     set_tests_properties(${test_name} PROPERTIES
-                          ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_DIR}/python)
+                          ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_PYTHON_BUILD_DIR})
   endif()
 endif()
 
