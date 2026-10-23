@@ -496,6 +496,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
   tests/test_equil.cpp
+  tests/test_explicitinitialsaturations.cpp
   tests/test_extbocontainer.cpp
   tests/test_extraconvergenceoutputthread.cpp
   tests/test_extractMatrix.cpp
@@ -685,6 +686,12 @@ endif()
 
 list (APPEND TEST_DATA_FILES
   tests/blackoilintensivequantities_gpu.DATA
+  tests/COMP_EXPLICIT_DRY_SOIL.DATA
+  tests/COMP_EXPLICIT_INVALID_TEMPERATURE.DATA
+  tests/COMP_EXPLICIT_SATURATIONS_OVERFULL.DATA
+  tests/COMP_EXPLICIT_SATURATIONS_SCALED.DATA
+  tests/COMP_EXPLICIT_SOIL_RTEMP.DATA
+  tests/COMP_EXPLICIT_SOIL_SGAS.DATA
   tests/drsdt_initial_rs.DATA
   tests/equil_base.DATA
   tests/equil_capillary.DATA
@@ -692,6 +699,12 @@ list (APPEND TEST_DATA_FILES
   tests/equil_capillary_swatinit.DATA
   tests/equil_deadfluids.DATA
   tests/equil_pbvd_and_pdvd.DATA
+  tests/include/comp_explicit_composition.inc
+  tests/include/comp_explicit_grid.inc
+  tests/include/comp_explicit_props.inc
+  tests/include/comp_explicit_runspec.inc
+  tests/include/comp_explicit_schedule.inc
+  tests/include/comp_explicit_water.inc
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data
@@ -1054,6 +1067,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/EclGenericWriter_impl.hpp
   opm/simulators/flow/EclWriter.hpp
   opm/simulators/flow/EquilInitializer.hpp
+  opm/simulators/flow/ExplicitInitialSaturations.hpp
   opm/simulators/flow/ExtboContainer.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FacePropertiesTPSA.hpp

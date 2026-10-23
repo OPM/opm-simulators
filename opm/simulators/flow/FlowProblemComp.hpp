@@ -32,9 +32,11 @@
 
 
 #include <opm/models/ptflash/flashparameters.hh>
+#include <opm/simulators/flow/ExplicitInitialSaturations.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/grid/LookUpData.hh>
@@ -48,8 +50,17 @@
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 
+#include <dune/grid/common/rangegenerators.hh>
+
+#include <fmt/format.h>
+
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <functional>
+#include <optional>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace Opm::Parameters {
@@ -519,59 +530,97 @@ protected:
                                      "initializtion when using XMF or YMF");
         }
 
-        // const bool has_gas = fp.has_double("SGAS");
-        assert(fp.has_double("SGAS"));
-
         std::size_t numDof = this->model().numGridDof();
 
         initialFluidStates_.resize(numDof);
 
-        std::vector<double> waterSaturationData;
-        std::vector<double> gasSaturationData;
-        std::vector<double> soilData;
-        std::vector<double> pressureData;
-        std::vector<double> tempiData;
-
         const bool water_active = FluidSystem::phaseIsActive(waterPhaseIdx);
         const bool gas_active = FluidSystem::phaseIsActive(gasPhaseIdx);
         const bool oil_active = FluidSystem::phaseIsActive(oilPhaseIdx);
+        const std::array activePhases {water_active, oil_active, gas_active};
+        constexpr std::array saturationKeywords {"SWAT", "SOIL", "SGAS"};
+        std::array<const std::vector<double>*, 3> saturationData {};
+        bool allActiveSaturationsSupplied = true;
+        for (std::size_t phase = 0; phase < activePhases.size(); ++phase) {
+            if (!activePhases[phase]) {
+                continue;
+            }
+            if (fp.has_double(saturationKeywords[phase])) {
+                saturationData[phase] = &fp.get_double(saturationKeywords[phase]);
+            } else {
+                allActiveSaturationsSupplied = false;
+            }
+        }
 
-        if (water_active && Indices::numPhases > 2)
-            waterSaturationData = fp.get_double("SWAT");
-        else
-            waterSaturationData.resize(numDof);
-
-        pressureData = fp.get_double("PRESSURE");
+        const auto& pressureData = fp.get_double("PRESSURE");
 
         // Without TEMPI in the deck, this is the temperature from RTEMPVD or RTEMP.
-        tempiData = fp.get_double("TEMPI");
+        const auto& tempiData = fp.get_double("TEMPI");
 
-        if (gas_active) // && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = fp.get_double("SGAS");
-        else
-            gasSaturationData.resize(numDof);
+        const auto cellName = [&vanguard](const std::size_t dofIdx) {
+            std::array<int, 3> ijk;
+            vanguard.cartesianCoordinate(dofIdx, ijk);
+            return fmt::format("cell ({}, {}, {})", ijk[0] + 1, ijk[1] + 1, ijk[2] + 1);
+        };
 
+        // Invalid input on one rank must not leave the others entering the
+        // collective operations in normalizeExplicitSwat_().
+        const auto& comm = vanguard.grid().comm();
+        DeferredLogger deferredLogger;
+        std::vector<bool> ownedCells;
+        if (allActiveSaturationsSupplied) {
+            ownedCells.resize(numDof, false);
+            for (const auto& element : elements(vanguard.gridView(), Dune::Partitions::interior)) {
+                ownedCells[this->elementMapper().index(element)] = true;
+            }
+        }
+        std::uint64_t normalizedCellCount = 0;
+        double maxNormalizationDeviation = 0.0;
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
             // dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
 
-            Scalar temperatureLoc = tempiData[dofIdx];
-            assert(std::isfinite(temperatureLoc) && temperatureLoc > 0);
+            std::array<std::optional<double>, 3> supplied;
+            for (std::size_t phase = 0; phase < saturationData.size(); ++phase) {
+                if (saturationData[phase]) {
+                    supplied[phase] = (*saturationData[phase])[dofIdx];
+                }
+            }
+            ExplicitInitialSaturations completed;
+            try {
+                completed = completeExplicitSaturations(supplied, activePhases);
+            } catch (const std::invalid_argument& error) {
+                throw std::invalid_argument("Invalid explicit saturations in "
+                                            + cellName(dofIdx) + ": " + error.what());
+            }
+            const auto& saturations = completed.saturations;
+            if (allActiveSaturationsSupplied && ownedCells[dofIdx]
+                && completed.normalizationDeviation > 0.0) {
+                ++normalizedCellCount;
+                maxNormalizationDeviation
+                    = std::max(maxNormalizationDeviation, completed.normalizationDeviation);
+            }
+
+            const Scalar temperatureLoc = tempiData[dofIdx];
+            if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0) {
+                throw std::invalid_argument(fmt::format("Invalid temperature in {}: "
+                                                       "expected a finite, positive value, got {} K",
+                                                       cellName(dofIdx), temperatureLoc));
+            }
             dofFluidState.setTemperature(temperatureLoc);
 
             if (gas_active) {
                 dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                            gasSaturationData[dofIdx]);
+                                            saturations[2]);
             }
             if (oil_active) {
                 dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                            1.0
-                                            - waterSaturationData[dofIdx]
-                                            - gasSaturationData[dofIdx]);
+                                            saturations[1]);
             }
             if (water_active) {
                 dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                            waterSaturationData[dofIdx]);
+                                            saturations[0]);
             }
 
             //////
@@ -625,6 +674,20 @@ protected:
                     }
                 }
             }
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(deferredLogger,
+                                     "FlowProblemComp: invalid explicit initial state: ",
+                                     comm.rank() == 0, comm);
+
+        const auto globalNormalizedCellCount = comm.sum(normalizedCellCount);
+        const auto globalMaxDeviation = comm.max(maxNormalizationDeviation);
+        if (globalNormalizedCellCount > 0 && comm.rank() == 0) {
+            OpmLog::warning(
+                "EXPLICIT_SATURATION_NORMALIZATION",
+                fmt::format("Normalized explicit saturations in {} cells; "
+                            "largest absolute deviation of their input sum from 1: {:.6g}",
+                            globalNormalizedCellCount,
+                            globalMaxDeviation));
         }
 
         if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
