@@ -79,7 +79,7 @@ struct StandardPreconditioners<Operator, Comm, typename std::enable_if_t<Opm::is
         F::addCreator("dilu", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) -> PrecPtr {
             return op.getmat().dispatchOnBlocksize([&](auto blockSizeVal) -> PrecPtr {
                 constexpr int blockSize = decltype(blockSizeVal)::value;
-                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op);
+                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op, false);
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
                 const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
@@ -94,7 +94,7 @@ struct StandardPreconditioners<Operator, Comm, typename std::enable_if_t<Opm::is
         F::addCreator("opmilu0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) -> PrecPtr {
             return op.getmat().dispatchOnBlocksize([&](auto blockSizeVal) -> PrecPtr {
                 constexpr int blockSize = decltype(blockSizeVal)::value;
-                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op);
+                const auto cpuMatrix = gpuistl::detail::makeCPUMatrix<O, Dune::FieldMatrix<field_type, blockSize, blockSize>>(op, false);
                 const bool split_matrix = prm.get<bool>("split_matrix", true);
                 const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
                 const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);

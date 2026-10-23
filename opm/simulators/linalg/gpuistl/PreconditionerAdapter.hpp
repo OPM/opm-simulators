@@ -109,11 +109,11 @@ public:
 
     static constexpr bool shouldCallPre()
     {
-        return detail::shouldCallPreconditionerPost<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
     }
     static constexpr bool shouldCallPost()
     {
-        return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPost<CudaPreconditionerType>();
     }
 
     std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>

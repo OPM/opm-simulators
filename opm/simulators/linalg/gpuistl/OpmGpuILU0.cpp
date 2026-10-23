@@ -50,7 +50,6 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const OpmGpuILU0<M, X, Y, l>::matrix_type& gp
     , m_gpuMatrixReorderedUpperFloat(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
-    , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
     , m_splitMatrix(splitMatrix)
     , m_tuneThreadBlockSizes(tuneKernels)
     , m_mixedPrecisionScheme(makeMatrixStorageMPScheme(mixedPrecisionScheme))
@@ -131,7 +130,7 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d)
             OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs].get()));
             OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
         }
-        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), 0));
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), m_stream.get()));
 
 
         // ensure that main stream only continues after this stream is completed
@@ -418,7 +417,7 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
     tmpD = 1;
 
     auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize) {
-        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
+        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
     };
     m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(
         tuneLowerSolveThreadBlockSizeInApply, "(in ILU apply) Triangular lower solve");

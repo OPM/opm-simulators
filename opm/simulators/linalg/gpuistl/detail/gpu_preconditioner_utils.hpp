@@ -38,19 +38,20 @@ namespace Opm::gpuistl::detail {
 
 /**
  * This function creates a CPU matrix from the operator holding a GPU matrix.
+ * Set copyValues=false when only its sparsity pattern is needed. Numerical
+ * values are then unspecified; no matrix values are transferred from the GPU.
  *
  * This is a workaround for now since some of the GPU preconditioners need a
  * CPU matrix for the initial setup (graph coloring). The CPU matrix is only
  * used in the constructor, **not** in the update function or the apply function.
  */
 template<class Operator, class BlockType>
-Dune::BCRSMatrix<BlockType> makeCPUMatrix(const Operator& op) {
+Dune::BCRSMatrix<BlockType> makeCPUMatrix(const Operator& op, bool copyValues = true) {
     // TODO: Make this more efficient. Maybe we can simply copy the memory areas directly?
     //       Do note that this function is anyway going away when we have a GPU
     //       constructor for the preconditioners, so it is not a priority.
     const auto& gpuMatrix = op.getmat();
 
-    const auto nonZeros = gpuMatrix.getNonZeroValues().asStdVector();
     const auto rowIndices = gpuMatrix.getRowIndices().asStdVector();
     const auto columnIndices = gpuMatrix.getColumnIndices().asStdVector();
 
@@ -65,6 +66,11 @@ Dune::BCRSMatrix<BlockType> makeCPUMatrix(const Operator& op) {
         }
     }
 
+    if (!copyValues) {
+        return matrix;
+    }
+
+    const auto nonZeros = gpuMatrix.getNonZeroValues().asStdVector();
     for (std::size_t i = 0; i < N; ++i) {
         for (auto j = rowIndices[i]; j != rowIndices[i + 1]; ++j) {
             const auto columnIndex = columnIndices[j];
