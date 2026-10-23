@@ -1365,11 +1365,11 @@ updateNONEProductionGroups()
 #endif
         // Gas lift optimization requires non-NONE/FLD control mode
         const bool gas_lift_group = glo.active() && glo.has_group(gname);
-        if (GroupStateHelpers::keepsProductionControl(group_state.production_control(gname),
+        if (GroupStateHelpers::keepsProductionControl(/*field_or_none=*/group_state.has_field_or_none_control(gname),
                                                       /*targeted=*/production_control_used[i] > 0,
-                                                      gas_lift_group,
-                                                      rc_master_hierarchy,
-                                                      rc_slave_master_target)) {
+                                                      /*gas_lift_group=*/gas_lift_group,
+                                                      /*rc_master_hierarchy=*/rc_master_hierarchy,
+                                                      /*rc_slave_master_target=*/rc_slave_master_target)) {
             continue;
         }
         if (this->comm_.rank() == 0) {

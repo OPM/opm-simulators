@@ -27,39 +27,51 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-using Opm::Group;
 using Opm::GroupStateHelpers::keepsProductionControl;
-
-namespace {
-
-constexpr auto ORAT = Group::ProductionCMode::ORAT;
-
-} // namespace
 
 BOOST_AUTO_TEST_CASE(untargeted_group_is_reset)
 {
-    BOOST_CHECK(!keepsProductionControl(ORAT, false, false, false, false));
+    BOOST_CHECK(!keepsProductionControl(/*field_or_none=*/false,
+                                        /*targeted=*/false,
+                                        /*gas_lift_group=*/false,
+                                        /*rc_master_hierarchy=*/false,
+                                        /*rc_slave_master_target=*/false));
 }
 
 BOOST_AUTO_TEST_CASE(targeted_group_keeps_its_control)
 {
-    BOOST_CHECK(keepsProductionControl(ORAT, true, false, false, false));
+    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
+                                       /*targeted=*/true,
+                                       /*gas_lift_group=*/false,
+                                       /*rc_master_hierarchy=*/false,
+                                       /*rc_slave_master_target=*/false));
 }
 
 BOOST_AUTO_TEST_CASE(none_and_fld_have_nothing_to_reset)
 {
-    BOOST_CHECK(keepsProductionControl(Group::ProductionCMode::NONE, false, false, false, false));
-    BOOST_CHECK(keepsProductionControl(Group::ProductionCMode::FLD, false, false, false, false));
+    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/true,
+                                       /*targeted=*/false,
+                                       /*gas_lift_group=*/false,
+                                       /*rc_master_hierarchy=*/false,
+                                       /*rc_slave_master_target=*/false));
 }
 
 BOOST_AUTO_TEST_CASE(gas_lift_group_keeps_its_control)
 {
-    BOOST_CHECK(keepsProductionControl(ORAT, false, true, false, false));
+    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
+                                       /*targeted=*/false,
+                                       /*gas_lift_group=*/true,
+                                       /*rc_master_hierarchy=*/false,
+                                       /*rc_slave_master_target=*/false));
 }
 
 BOOST_AUTO_TEST_CASE(master_hierarchy_group_keeps_its_control)
 {
-    BOOST_CHECK(keepsProductionControl(ORAT, false, false, true, false));
+    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
+                                       /*targeted=*/false,
+                                       /*gas_lift_group=*/false,
+                                       /*rc_master_hierarchy=*/true,
+                                       /*rc_slave_master_target=*/false));
 }
 
 // A slave group whose control mode is the master's has no wells under group control
@@ -67,5 +79,9 @@ BOOST_AUTO_TEST_CASE(master_hierarchy_group_keeps_its_control)
 // of the sync step, or the slave stops at "cmode mismatch between slave and master".
 BOOST_AUTO_TEST_CASE(slave_group_with_master_target_keeps_its_control)
 {
-    BOOST_CHECK(keepsProductionControl(ORAT, false, false, false, true));
+    BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
+                                       /*targeted=*/false,
+                                       /*gas_lift_group=*/false,
+                                       /*rc_master_hierarchy=*/false,
+                                       /*rc_slave_master_target=*/true));
 }

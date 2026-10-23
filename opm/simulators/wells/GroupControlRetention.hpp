@@ -20,14 +20,13 @@
 #ifndef OPM_GROUP_CONTROL_RETENTION_HPP
 #define OPM_GROUP_CONTROL_RETENTION_HPP
 
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
-
 namespace Opm::GroupStateHelpers {
 
 /// Whether a production group keeps its control mode when the groups without
 /// active constraints are set to NONE at the end of a time step.
 ///
-/// @param cmode Production control mode of the group.
+/// @param field_or_none The production control mode of the group is NONE or FLD, so
+///   there is nothing to reset.
 /// @param targeted A well under group control has the group as its target.
 /// @param gas_lift_group The group is in the gas lift optimization, which needs a
 ///   control mode other than NONE and FLD.
@@ -36,15 +35,14 @@ namespace Opm::GroupStateHelpers {
 /// @param rc_slave_master_target The group is a reservoir coupling slave group whose
 ///   control mode comes from the master, which sends its target only in the first time
 ///   step of a sync step, so the mode has to survive the time steps after it.
-inline bool keepsProductionControl(const Group::ProductionCMode cmode,
+inline bool keepsProductionControl(const bool field_or_none,
                                    const bool targeted,
                                    const bool gas_lift_group,
                                    const bool rc_master_hierarchy,
                                    const bool rc_slave_master_target)
 {
     return targeted
-        || cmode == Group::ProductionCMode::NONE
-        || cmode == Group::ProductionCMode::FLD
+        || field_or_none
         || gas_lift_group
         || rc_master_hierarchy
         || rc_slave_master_target;
