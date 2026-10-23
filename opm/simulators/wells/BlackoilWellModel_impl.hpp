@@ -755,7 +755,8 @@ namespace Opm {
         // including ranks without local wells and schedules with shut wells.
         // Actions may introduce the first well during this report step.
         if (this->schedule_.numWells(reportStepIdx) != 0
-            || !this->schedule_[reportStepIdx].actions().empty()) {
+            || !this->schedule_[reportStepIdx].actions().empty()
+            || this->isReservoirCouplingMaster()) {
             rateConverter_->template defineState<ElementContext>(simulator_);
         }
 
