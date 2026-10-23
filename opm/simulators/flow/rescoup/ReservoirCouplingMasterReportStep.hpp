@@ -67,6 +67,7 @@ class ReservoirCouplingMasterReportStep {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
+    using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
@@ -149,6 +150,21 @@ public:
     /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
+    /// @brief Whether the slave of a master group has sent production data, which a slave
+    ///   with no slave groups (history mode) has not.
+    bool hasSlaveGroupProductionData(const std::string &group_name) const;
+
+    /// @brief Get the lift gas rate of the slave group of a master group
+    /// @param group_name Name of the master group
+    /// @param network If true, the rate with network efficiency factors (GEFAC/WEFAC item 3)
+    /// @return Lift gas rate (ALQ) of the slave group's producers, 0 if the slave has sent no
+    ///   production data
+    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const;
+
+    /// @brief How much more lift gas the slave group of a master group can take, 0 if the
+    ///   slave has sent no production data
+    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const;
 
     /// @brief Get the number of a slave group's injectors under group control for a phase
     /// @param master_group_name Name of the master group
@@ -251,7 +267,14 @@ public:
     ) const;
 
     void sendNumGroupConstraintsToSlave(
-        std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_constraints
+        std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_constraints,
+        std::size_t num_gas_lift_limits
+    ) const;
+
+    /// @brief Send the gas lift limits (GLIFTOPT) for the slave's groups.
+    ///   Rank-0-only on the master comm.
+    void sendGasLiftGroupLimitsToSlave(
+        std::size_t slave_idx, const std::vector<GasLiftGroupLimits>& gas_lift_limits
     ) const;
 
     /// @brief Send the count of master-computed network-leaf node pressures
@@ -347,6 +370,11 @@ public:
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
 private:
+    /// @brief The production data of the slave group of a master group; nullptr if the slave has
+    ///   sent none.  Throws for a name that is not a master group.
+    const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+    slaveGroupProductionDataOrNull_(const std::string &group_name) const;
+
     /// Flow rates of a master group used for the flow-change time step limit
     struct GroupFlows {
         Scalar production_reservoir{};

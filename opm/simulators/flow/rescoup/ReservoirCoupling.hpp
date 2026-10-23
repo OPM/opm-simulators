@@ -137,6 +137,7 @@ private:
 
 enum class MessageTag : int {
     CoupledNetworkActiveStatus,
+    GasLiftGroupLimits,
     InjectionGroupTargets,
     MasterGroupNames,
     MasterGroupNamesSize,
@@ -268,6 +269,12 @@ struct SlaveGroupProductionData {
     // well_potentials are summed from the current well potentials with all the
     // efficiency factors, as GOPP etc. of the slave run.
     Scalar gas_lift_rate{0.0};                // Lift gas rate (GGLIR)
+    // Lift gas rate with the network efficiency factors (as network_surface_rates), for
+    // network nodes with NODEPROP item 4 = YES.
+    Scalar network_gas_lift_rate{0.0};
+    // How much more lift gas the group's gas lift wells can take.  The master shares a
+    // GLIFTOPT limit on a group above several master groups in proportion to it.
+    Scalar gas_lift_headroom{0.0};
     ProductionRates<Scalar> well_potentials;  // Production potentials (GOPP, GWPP, GGPP)
     ProductionRates<Scalar> history_rates;    // Production history rates (GOPRH, ...)
     int num_flowing_producers{0};             // Number of flowing producers (GMWPR)
@@ -318,6 +325,20 @@ struct ProductionGroupConstraints {
     Scalar gas_limit;
     Scalar liquid_limit;
     Scalar resv_limit;
+};
+
+/// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group.
+///
+/// @details The master derives them from GLIFTOPT records on the master group and on
+/// its ancestors, see RescoupConstraintsCalculator::calculateGasLiftGroupLimits_().
+/// A value of -1 means no limit.
+template <class Scalar>
+struct GasLiftGroupLimits {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar max_lift_gas;          // Maximum lift gas supply rate (GLIFTOPT item 2)
+    Scalar max_total_gas;         // Maximum total gas rate, produced + lift gas (GLIFTOPT item 3)
 };
 
 /// @brief Per-rate-type production limits received from master hierarchy.

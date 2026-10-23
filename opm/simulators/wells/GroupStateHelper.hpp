@@ -47,6 +47,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -255,6 +256,18 @@ public:
     Scalar getProductionGroupTargetForMode(const Group& group,
                                            const Group::ProductionCMode cmode) const;
 
+    /// @brief Get the limit on one production rate type of a group, if any.
+    /// @details Returns the group's own GCONPROD limit for rate_type (ORAT, WRAT, GRAT,
+    ///          LRAT or RESV) when the group has that control. For a reservoir coupling slave
+    ///          group, the limit imposed by the master for that rate type is combined
+    ///          with it according to the GRUPSLAV filter flag, so a slave group without
+    ///          GCONPROD still gets the master's limits.
+    /// @param group The production group
+    /// @param rate_type The production rate type
+    /// @return The limit, or std::nullopt if the group has no limit for rate_type
+    std::optional<Scalar> getProductionGroupRateLimit(const Group& group,
+                                                      const Group::ProductionCMode rate_type) const;
+
     /// @brief Get the guide rate target mode for a production group
     /// @param group The production group
     /// @return The GuideRateModel::Target based on the group's production control mode
@@ -455,6 +468,33 @@ public:
                              const bool injector,
                              const bool network = false) const;
 
+    /// @brief Sum the lift gas rates (ALQ) of the open producers below a group.
+    /// @details Like the GGLIR summary vector, a well counts if its VFP table has ALQ
+    ///          type GRAT or if it has no VFP table.  Efficiency factors are applied as in
+    ///          sumWellPhaseRates().  The sum is rank-local: only owned wells count, and,
+    ///          as in sumWellPhaseRates(), a reservoir coupling master group contributes
+    ///          its slave's lift gas on rank 0 only.
+    Scalar sumWellGasLiftRates(const Group& group, const bool network = false) const;
+
+    /// @brief Sum how much more lift gas the gas lift wells below a group can take.
+    /// @details For each producer with WLIFTOPT item 2 = YES: its maximum lift gas rate
+    ///          (WLIFTOPT item 3, or else the largest ALQ of its VFP table) minus its
+    ///          current lift gas rate.  Wells and efficiency factors are counted as in
+    ///          sumWellGasLiftRates(), and the sum is rank-local in the same way.
+    Scalar sumWellGasLiftHeadroom(const Group& group) const;
+
+    /// @brief Gas lift limits of a group: maximum lift gas and maximum total gas.
+    /// @details The group's GLIFTOPT record, and for a reservoir coupling slave group
+    ///          the limits the master imposes; the smaller value applies.
+    /// @return (max lift gas, max total gas), each nullopt if there is no limit
+    std::pair<std::optional<Scalar>, std::optional<Scalar>>
+    getGasLiftGroupLimits(const Group& group) const;
+
+    /// @brief Lift gas rate the slave reported for a reservoir coupling master group.
+    /// @return The rate, or 0 if the group is not a master group (or in a non-MPI build).
+    ///         The value is the same on all ranks.
+    Scalar reservoirCouplingMasterGroupGasLiftRate(const Group& group, const bool network) const;
+
     bool terminalOutput() const
     {
          return this->terminal_output_;
@@ -560,6 +600,16 @@ public:
                        const Group::ProductionCMode& offended_control) const;
 
 private:
+
+    //! \brief Sum value(well, well_state) times the efficiency factor over the open
+    //!        producers below a group whose lift gas is a gas rate (ALQ type GRAT, or no
+    //!        VFP table).  A reservoir coupling master group contributes master_value()
+    //!        on rank 0 only.  Rank-local: only owned wells count.
+    template <class WellValue, class MasterValue>
+    Scalar sumOverGasLiftWells_(const Group& group,
+                                const bool network,
+                                const WellValue& value,
+                                const MasterValue& master_value) const;
 
     //! \brief Calculate group target by applying local rate adjustments and guide rate fractions through group hierarchy.
     //!

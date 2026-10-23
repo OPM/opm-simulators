@@ -19,12 +19,15 @@
 
 #include <config.h>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
+#include <opm/simulators/wells/GroupControlRetention.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupSatelliteInjection.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -36,6 +39,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <sstream>
 #include <stack>
 #include <set>
@@ -540,6 +544,39 @@ getProductionGroupTargetForMode(const Group& group,
                                 const Group::ProductionCMode cmode) const
 {
     return this->getProductionGroupTargetForMode_(group, cmode);
+}
+
+template<typename Scalar, typename IndexTraits>
+std::optional<Scalar>
+GroupStateHelper<Scalar, IndexTraits>::
+getProductionGroupRateLimit(const Group& group,
+                            const Group::ProductionCMode rate_type) const
+{
+    std::optional<Scalar> limit;
+    if (group.has_control(rate_type)) {
+        const auto controls = group.productionControls(this->summaryState());
+        switch (rate_type) {
+        case Group::ProductionCMode::ORAT: limit = controls.oil_target; break;
+        case Group::ProductionCMode::WRAT: limit = controls.water_target; break;
+        case Group::ProductionCMode::GRAT: limit = controls.gas_target; break;
+        case Group::ProductionCMode::LRAT: limit = controls.liquid_target; break;
+        case Group::ProductionCMode::RESV: limit = controls.resv_target; break;
+        default: break;
+        }
+    }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave()
+        && this->isReservoirCouplingSlaveGroup(group))
+    {
+        // Use "no limit" as the slave-local target when the slave deck has none, so
+        // that the master limit is taken as is for both MAST and BOTH.
+        constexpr Scalar no_limit = std::numeric_limits<Scalar>::max();
+        const Scalar effective = this->getEffectiveProductionLimit_(
+            group.name(), rate_type, limit.value_or(no_limit));
+        limit = (effective < no_limit) ? std::optional<Scalar>{effective} : std::nullopt;
+    }
+#endif
+    return limit;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -1175,6 +1212,148 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellPhaseRates(bool res_rates,
 
 template <typename Scalar, typename IndexTraits>
 Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
+                                                          const bool network) const
+{
+    return this->sumOverGasLiftWells_(
+        group, network,
+        [](const Well&, const SingleWellState<Scalar, IndexTraits>& ws) {
+            return ws.alq_state.get();
+        },
+        [this, network](const Group& master_group) {
+            return this->reservoirCouplingMasterGroupGasLiftRate(master_group, network);
+        });
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftHeadroom(const Group& group) const
+{
+    const auto& sched_state = this->schedule_[this->report_step_];
+    const auto& glo = this->schedule_.glo(this->report_step_);
+    return this->sumOverGasLiftWells_(
+        group, /*network=*/false,
+        [this, &sched_state, &glo](const Well& well_ecl,
+                                   const SingleWellState<Scalar, IndexTraits>& ws) -> Scalar {
+            if (!glo.has_well(well_ecl.name()) || !glo.well(well_ecl.name()).use_glo()) {
+                return 0.0;
+            }
+            Scalar max_rate = 0.0;
+            if (const auto& rate = glo.well(well_ecl.name()).max_rate(); rate.has_value()) {
+                max_rate = *rate;
+            }
+            else {
+                const int vfp_table = well_ecl.productionControls(this->summary_state_).vfp_table_number;
+                if (sched_state.vfpprod.has(vfp_table)) {
+                    max_rate = sched_state.vfpprod(vfp_table).getALQAxis().back();
+                }
+            }
+            return std::max(max_rate - ws.alq_state.get(), Scalar{0});
+        },
+        [this](const Group& master_group) -> Scalar {
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (this->isReservoirCouplingMaster()) {
+                return this->reservoirCouplingMaster().getMasterGroupGasLiftHeadroom(master_group.name());
+            }
+#endif
+            return 0.0;
+        });
+}
+
+template <typename Scalar, typename IndexTraits>
+template <class WellValue, class MasterValue>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::sumOverGasLiftWells_(const Group& group,
+                                                           const bool network,
+                                                           const WellValue& value,
+                                                           const MasterValue& master_value) const
+{
+    if (this->isReservoirCouplingMasterGroup(group)) {
+        // Only obtain the slave's value once (on rank 0); see sumWellPhaseRates()
+        return this->isRank0() ? master_value(group) : Scalar{0};
+    }
+    Scalar rate = 0.0;
+    for (const std::string& group_name : group.groups()) {
+        const auto& group_tmp = this->schedule_.getGroup(group_name, this->report_step_);
+        rate += group_tmp.getGroupEfficiencyFactor(network)
+            * this->sumOverGasLiftWells_(group_tmp, network, value, master_value);
+    }
+
+    const auto& sched_state = this->schedule_[this->report_step_];
+    for (const std::string& well_name : group.wells()) {
+        const auto well_index = this->wellState().index(well_name);
+        if (!well_index.has_value()
+            || !this->wellState().wellIsOwned(well_index.value(), well_name))
+        {
+            continue;
+        }
+        const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_);
+        const auto& ws = this->wellState().well(well_index.value());
+        if (!well_ecl.isProducer() || ws.status == Well::Status::SHUT) {
+            continue;
+        }
+        const int vfp_table = well_ecl.productionControls(this->summary_state_).vfp_table_number;
+        if (sched_state.vfpprod.has(vfp_table)
+            && sched_state.vfpprod(vfp_table).getALQType() != VFPProdTable::ALQ_TYPE::ALQ_GRAT)
+        {
+            continue;
+        }
+        rate += well_ecl.getEfficiencyFactor(network) * ws.efficiency_scaling_factor
+            * value(well_ecl, ws);
+    }
+    return rate;
+}
+
+template <typename Scalar, typename IndexTraits>
+std::pair<std::optional<Scalar>, std::optional<Scalar>>
+GroupStateHelper<Scalar, IndexTraits>::
+getGasLiftGroupLimits(const Group& group) const
+{
+    std::optional<Scalar> max_lift_gas, max_total_gas;
+    const auto& glo = this->schedule_.glo(this->report_step_);
+    if (glo.has_group(group.name())) {
+        const auto& gl_group = glo.group(group.name());
+        if (gl_group.max_lift_gas().has_value()) {
+            max_lift_gas = static_cast<Scalar>(*gl_group.max_lift_gas());
+        }
+        if (gl_group.max_total_gas().has_value()) {
+            max_total_gas = static_cast<Scalar>(*gl_group.max_total_gas());
+        }
+    }
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingSlave() && this->isReservoirCouplingSlaveGroup(group)) {
+        // GLIFTOPT has no GRUPSLAV filter flag, so both the slave's own limit and the
+        // master's apply.
+        if (const auto* limits = this->reservoirCouplingSlave().masterGasLiftLimits(group.name())) {
+            const auto combine = [](std::optional<Scalar>& local, const Scalar master) {
+                if (master >= 0) {
+                    local = local.has_value() ? std::min(*local, master) : master;
+                }
+            };
+            combine(max_lift_gas, limits->max_lift_gas);
+            combine(max_total_gas, limits->max_total_gas);
+        }
+    }
+#endif
+    return {max_lift_gas, max_total_gas};
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
+GroupStateHelper<Scalar, IndexTraits>::
+reservoirCouplingMasterGroupGasLiftRate([[maybe_unused]] const Group& group,
+                                        [[maybe_unused]] const bool network) const
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (this->isReservoirCouplingMaster() && this->isReservoirCouplingMasterGroup(group)) {
+        return this->reservoirCouplingMaster().getMasterGroupGasLiftRate(group.name(), network);
+    }
+#endif
+    return 0.0;
+}
+
+template <typename Scalar, typename IndexTraits>
+Scalar
 GroupStateHelper<Scalar, IndexTraits>::sumWellResRates(const Group& group,
                                                       const int phasePos,
                                                       const bool injector) const
@@ -1344,25 +1523,33 @@ updateNONEProductionGroups()
 #endif
 
     for (std::size_t i = 0; i < num_gpc; ++i) {
-        if (production_control_used[i] > 0) {
-            continue;
-        }
         const auto& gname = gnames[i];
-        if (group_state.production_control(gname) == Group::ProductionCMode::NONE ||
-            group_state.production_control(gname) == Group::ProductionCMode::FLD) {
-            continue;
-        }
-        // Gas lift optimization requires non-NONE/FLD control mode
-        if (glo.active() && glo.has_group(gname)) {
-            continue;
-        }
+        bool rc_slave_master_target = false;
 #ifdef RESERVOIR_COUPLING_ENABLED
+        // A slave group with a target from the master has the master's control mode, set in
+        // the first time step of the sync step, and the later time steps need it.
+        if (this->isReservoirCouplingSlave()
+            && this->reservoirCouplingSlave().hasMasterProductionTarget(gname))
+        {
+            const auto master_cmode = this->reservoirCouplingSlave().masterProductionTarget(gname).second;
+            rc_slave_master_target = this->getProductionFilterFlag_(gname, master_cmode)
+                != ReservoirCoupling::GrupSlav::FilterFlag::SLAV;
+        }
         // RC master hierarchy groups distribute targets to slaves —
         // do not reset their production control to NONE
-        if (rc_hierarchy.count(gname) > 0) {
+        const bool rc_master_hierarchy = rc_hierarchy.count(gname) > 0;
+#else
+        const bool rc_master_hierarchy = false;
+#endif
+        // Gas lift optimization requires non-NONE/FLD control mode
+        const bool gas_lift_group = glo.active() && glo.has_group(gname);
+        if (GroupStateHelpers::keepsProductionControl(group_state.production_control(gname),
+                                                      /*targeted=*/production_control_used[i] > 0,
+                                                      gas_lift_group,
+                                                      rc_master_hierarchy,
+                                                      rc_slave_master_target)) {
             continue;
         }
-#endif
         if (this->comm_.rank() == 0) {
             this->deferredLogger().info(
                 "Production group " + gname
