@@ -50,6 +50,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <map>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -954,6 +956,19 @@ run()
     int restarts = 0;
     SimulatorReport report;
 
+    // The adaptive stepper is shared with well models that do not implement
+    // the black-oil group economic WGR sampler. Keep their default path valid
+    // and reject an explicit request for this unsupported control.
+    const auto economicWaterGasRatios = [&](bool committed) -> std::map<std::string, Scalar> {
+        auto& well_model = solver_().model().wellModel();
+        if constexpr (requires { well_model.groupEconomicWaterGasRatios(simulator.episodeIndex(), committed); }) {
+            return well_model.groupEconomicWaterGasRatios(simulator.episodeIndex(), committed);
+        } else {
+            OPM_THROW(std::invalid_argument,
+                      "Group economic WGR accuracy control is not supported by this well model");
+        }
+    };
+
     // sub step time loop
     while (!this->substep_timer_.done()) {
         // if we just chopped the timestep due to convergence i.e. restarts>0
@@ -966,11 +981,48 @@ run()
             detail::logTimer(this->substep_timer_);
         }
 
+        const double economic_tolerance = Parameters::Get<Parameters::GroupEconomicWgrStepTolerance>();
+        if (!std::isfinite(economic_tolerance) || economic_tolerance < 0) {
+            OPM_THROW(std::invalid_argument, "GroupEconomicWgrStepTolerance must be finite and non-negative");
+        }
+        std::map<std::string, Scalar> economic_start;
+        if (economic_tolerance > 0) {
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (isReservoirCouplingMaster_() || isReservoirCouplingSlave_()) {
+                OPM_THROW(std::invalid_argument,
+                          "Group economic WGR accuracy control is not supported with reservoir coupling");
+            }
+#endif
+            economic_start = economicWaterGasRatios(true);
+        }
         maybeUpdateLastSubstepOfSyncTimestep_(dt);  // Needed for reservoir coupling
         auto substep_report = runSubStep_();
         markFirstSubStepAsFinished_();  // Needed for reservoir coupling
 
-        if (substep_report.converged || checkContinueOnUnconvergedSolution_(dt)) {
+        // Reject before endTimeStep() commits closures, actions and output.
+        // A retry then restores the last accepted reservoir and well/group state.
+        double economic_retry_step = 0;
+        double economic_next_step = std::numeric_limits<double>::infinity();
+        if (substep_report.converged && !economic_start.empty()) {
+            const auto economic_end = economicWaterGasRatios(false);
+            double change = 0;
+            for (const auto& [name, initial] : economic_start) {
+                if (const auto it = economic_end.find(name); it != economic_end.end()) {
+                    change = std::max(change, std::abs(double(it->second - initial)));
+                }
+            }
+            if (change > 0) {
+                economic_next_step = dt * 0.8 * economic_tolerance / change;
+            }
+            if (change > economic_tolerance) {
+                economic_retry_step = dt * std::clamp(0.8 * economic_tolerance / change, 0.1, 0.5);
+                substep_report.converged = false;
+                this->cause_of_failure_ = "Group economic WGR accuracy limit";
+                OpmLog::info(fmt::format("Rejecting timestep for group economic WGR change {:.6g} > {:.6g}",
+                                         change, economic_tolerance));
+            }
+        }
+        if (economic_retry_step == 0 && (substep_report.converged || checkContinueOnUnconvergedSolution_(dt))) {
             Dune::Timer perfTimer;
             perfTimer.start();
             // Pass substep to eclwriter for summary output
@@ -1006,6 +1058,7 @@ run()
             auto dt_estimate = timeStepControlComputeEstimate_(
                                      dt_taken, iterations, this->substep_timer_);
 
+            dt_estimate = std::min(dt_estimate, economic_next_step);
             assert(dt_estimate > 0);
             dt_estimate = maybeRestrictTimeStepGrowth_(dt_taken, dt_estimate, restarts);
             restarts = 0;         // solver converged, reset restarts counter
@@ -1032,7 +1085,7 @@ run()
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
 
-            double new_time_step = restartFactor_() * dt;
+            double new_time_step = economic_retry_step > 0 ? economic_retry_step : restartFactor_() * dt;
             if (substep_report.time_step_rejected) {
                 const double tol = Parameters::Get<Parameters::TimeStepControlTolerance>();
                 const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>();
@@ -1043,7 +1096,7 @@ run()
             }
             checkTimeStepMinLimit_(new_time_step);
             bool wells_shut = false;
-            if (new_time_step > minTimeStepBeforeClosingWells_()) {
+            if (economic_retry_step > 0 || new_time_step > minTimeStepBeforeClosingWells_()) {
                 chopTimeStep_(new_time_step);
             } else {
                 wells_shut = chopTimeStepOrCloseFailingWells_(new_time_step);
