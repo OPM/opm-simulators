@@ -151,7 +151,7 @@ mmv (const X& x, Y& y) const
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
 VectorType
-applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
+applyUMFPack(Opm::UMFPack<MatrixType, VectorType, VectorType>& linsolver,
              VectorType x)
 {
 #if HAVE_SUITESPARSE_UMFPACK
@@ -191,7 +191,7 @@ template <typename VectorType, typename MatrixType>
 Dune::Matrix<typename MatrixType::block_type>
 invertWithUMFPack(const int size,
                   const int bsize,
-                  Dune::UMFPack<MatrixType>& linsolver)
+                  Opm::UMFPack<MatrixType, VectorType, VectorType>& linsolver)
 {
 #if HAVE_SUITESPARSE_UMFPACK
     VectorType e(size);
@@ -381,11 +381,11 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
     INSTANTIATE_PARALLELLMSWELLB(T, 5, 5)
 
 #define INSTANTIATE_UMF(T,Dim)                                             \
-    template Vec<T,Dim> applyUMFPack(Dune::UMFPack<Mat<T,Dim>>&,           \
+    template Vec<T,Dim> applyUMFPack(Opm::UMFPack<Mat<T,Dim>, Vec<T,Dim>, Vec<T,Dim>>&,           \
                                      Vec<T,Dim>);                          \
     template Dune::Matrix<typename Mat<T,Dim>::block_type>                 \
     invertWithUMFPack<Vec<T,Dim>,Mat<T,Dim>>(const int, const int,         \
-                                             Dune::UMFPack<Mat<T,Dim>>&);
+                                             Opm::UMFPack<Mat<T,Dim>, Vec<T,Dim>, Vec<T,Dim>>&);
 
 #define INSTANTIATE_IMPL(T,...)                                    \
     template __VA_ARGS__                                           \
