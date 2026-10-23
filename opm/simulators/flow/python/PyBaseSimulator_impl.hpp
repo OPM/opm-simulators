@@ -140,6 +140,22 @@ getPrimaryVarMeaningMap(const std::string& variable) const
     return getFluidState().getPrimaryVarMeaningMap(variable);
 }
 
+// Returns the Schedule object the simulator uses, so that changes made to it
+// from Python (e.g. shutting a well) take effect in the simulation.
+template<class TypeTag>
+std::shared_ptr<Schedule>
+PyBaseSimulator<TypeTag>::getSchedule() const
+{
+    if (!this->has_run_init_) {
+        throw std::logic_error("get_schedule() called before step_init()");
+    }
+    // The Python type for Schedule is registered by opm-common's Python
+    // module. Import it here, or pybind11 cannot convert the return value
+    // when the script itself has not imported opm.io.
+    py::module_::import("opm.io.schedule");
+    return this->main_->schedulePtr();
+}
+
 template<class TypeTag>
 void PyBaseSimulator<TypeTag>::setPorosity(PyCArray array)
 {
