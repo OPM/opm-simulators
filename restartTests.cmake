@@ -296,6 +296,29 @@ add_test_compare_restarted_simulation(
     --enable-tuning=true
 )
 
+# Restart with wells closed by WTEST.  One is reopened by WCONPROD at the
+# restart step, the other by WTEST one test interval after its closure.
+add_test_compare_restarted_simulation(
+  CASENAME
+    wtest_restart
+  FILENAME
+    WTEST_RESTART
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    1
+  DIR
+    wtest/restart
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary

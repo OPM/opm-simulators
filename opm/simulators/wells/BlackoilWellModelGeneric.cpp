@@ -298,6 +298,11 @@ initFromRestartFile(const RestartValue& restartValues,
     }
 
     this->active_wgstate_.wtest_state(std::move(wtestState));
+    for (const auto& well : this->wells_ecl_) {
+        if (this->wellTestState().well_is_closed(well.name())) {
+            this->restart_closed_wells_.insert(well.name());
+        }
+    }
     this->commitWGState();
     initial_step_ = false;
 }
@@ -1770,6 +1775,7 @@ forceShutWellByName(const std::string& wellname,
                              });
     if (it != well_container_generic_.end()) {
         wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+        this->restart_closed_wells_.erase(wellname);
 
         // Non-owning ranks have no snapshot entry, and do not report WPWE.
         const auto snapshot = this->wellStatusSnapshot();

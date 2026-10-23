@@ -619,6 +619,7 @@ namespace Opm {
                                             DeferredLogger& deferred_logger)
     {
         for (const std::string& well_name : this->getWellsForTesting(timeStepIdx, simulationTime)) {
+            this->restart_closed_wells_.erase(well_name);
             const Well& wellEcl = this->schedule().getWell(well_name, timeStepIdx);
             if (wellEcl.getStatus() == Well::Status::SHUT)
                 continue;
@@ -704,6 +705,7 @@ namespace Opm {
     timeStepSucceeded(const double simulationTime, const double dt)
     {
         this->closed_this_step_.clear();
+        this->restart_closed_wells_.clear();
 
         // time step is finished and we are not any more at the beginning of an report step
         this->report_step_starts_ = false;
@@ -974,10 +976,13 @@ namespace Opm {
                     // start time. Such shut-ins are the ones a new WCON keyword
                     // may undo, and are exactly what wasDynamicallyShutThisTimeStep()
                     // reports; mid-step ones from forceShutWellByName() are not
-                    // registered there, so they still block the re-open.
+                    // registered there, so they still block the re-open.  Wells
+                    // read as closed from a restart file carry the restart time,
+                    // but were shut before the restart, so they may be re-opened.
                     const bool closed_this_step =
                         (this->wellTestState().lastTestTime(well_name) == simulator_.time()) &&
-                        !this->wasDynamicallyShutThisTimeStep(well_name);
+                        !this->wasDynamicallyShutThisTimeStep(well_name) &&
+                        !this->restart_closed_wells_.contains(well_name);
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
