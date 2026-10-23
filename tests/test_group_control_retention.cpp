@@ -29,6 +29,9 @@
 
 using Opm::GroupStateHelpers::keepsProductionControl;
 
+// A production group with a control mode other than NONE and FLD (say ORAT), that no well
+// under group control has as its target, that is not in the gas lift optimization, not in a
+// reservoir coupling master hierarchy and has no target from a master: it is reset to NONE.
 BOOST_AUTO_TEST_CASE(untargeted_group_is_reset)
 {
     BOOST_CHECK(!keepsProductionControl(/*field_or_none=*/false,
@@ -38,6 +41,8 @@ BOOST_AUTO_TEST_CASE(untargeted_group_is_reset)
                                         /*rc_slave_master_target=*/false));
 }
 
+// The same group, but a well under group control has it as its target: it keeps its control
+// mode.
 BOOST_AUTO_TEST_CASE(targeted_group_keeps_its_control)
 {
     BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
@@ -47,6 +52,8 @@ BOOST_AUTO_TEST_CASE(targeted_group_keeps_its_control)
                                        /*rc_slave_master_target=*/false));
 }
 
+// A group whose control mode is already NONE or FLD (field_or_none) has nothing to reset,
+// whatever the other conditions are.
 BOOST_AUTO_TEST_CASE(none_and_fld_have_nothing_to_reset)
 {
     BOOST_CHECK(keepsProductionControl(/*field_or_none=*/true,
@@ -56,6 +63,8 @@ BOOST_AUTO_TEST_CASE(none_and_fld_have_nothing_to_reset)
                                        /*rc_slave_master_target=*/false));
 }
 
+// An untargeted group in the gas lift optimization keeps its control mode, as the
+// optimization needs a mode other than NONE and FLD.
 BOOST_AUTO_TEST_CASE(gas_lift_group_keeps_its_control)
 {
     BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
@@ -65,6 +74,8 @@ BOOST_AUTO_TEST_CASE(gas_lift_group_keeps_its_control)
                                        /*rc_slave_master_target=*/false));
 }
 
+// An untargeted reservoir coupling master group, or an ancestor of one, keeps its control
+// mode: it distributes targets to the slaves.
 BOOST_AUTO_TEST_CASE(master_hierarchy_group_keeps_its_control)
 {
     BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
@@ -74,9 +85,10 @@ BOOST_AUTO_TEST_CASE(master_hierarchy_group_keeps_its_control)
                                        /*rc_slave_master_target=*/false));
 }
 
-// A slave group whose control mode is the master's has no wells under group control
-// when they are all on THP control, but the mode must stay for the later time steps
-// of the sync step, or the slave stops at "cmode mismatch between slave and master".
+// An untargeted reservoir coupling slave group with a target from the master keeps the
+// master's control mode.  Its wells can all be on THP control, but the master sends the
+// target in the first time step of a sync step only, and the mode must stay for the later
+// time steps, or the slave stops at "cmode mismatch between slave and master".
 BOOST_AUTO_TEST_CASE(slave_group_with_master_target_keeps_its_control)
 {
     BOOST_CHECK(keepsProductionControl(/*field_or_none=*/false,
