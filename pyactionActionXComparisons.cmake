@@ -442,6 +442,29 @@ add_test_compareSeparateECLFiles(
     BOTH
 )
 
+add_test_compareSeparateECLFiles(
+  CASENAME
+    pyaction_udq_m3
+  DIR1
+    udq_pyaction
+  FILENAME1
+    UDQ_M3_PYACTION
+  DIR2
+    udq_actionx
+  FILENAME2
+    UDQ_M3
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  IGNORE_EXTRA_KW
+    BOTH
+)
+
 if(MPI_FOUND)
   # We pass allow-distributed-wells=true, because wells appear inactive with
   # with PYACTION but active with ACTIONX
@@ -903,5 +926,32 @@ if(MPI_FOUND)
       BOTH
     MPI_PROCS
       4
+  )
+
+  add_test_compareSeparateECLFiles(
+    CASENAME
+      pyaction_udq_m3_4_procs
+    DIR1
+      udq_pyaction
+    FILENAME1
+      UDQ_M3_PYACTION
+    DIR2
+      udq_actionx
+    FILENAME2
+      UDQ_M3
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      ${abs_tol}
+    REL_TOL
+      ${rel_tol}
+    IGNORE_EXTRA_KW
+      BOTH
+    MPI_PROCS
+      4
+    TEST_ARGS
+      --allow-distributed-wells=true
   )
 endif()
