@@ -49,6 +49,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp>
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -239,6 +240,8 @@ private:
  * gives the water instead. As in the black-oil equilibration, the water-oil
  * capillary pressure curve of such a cell is then scaled so that it holds that
  * water at the pressure difference between the hydrocarbon and the water.
+ * Where the curve cannot be scaled to hold it, the cell takes the water at
+ * which the resulting curve reaches that difference.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -248,11 +251,10 @@ public:
     using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
 
     /// Scales the water-oil capillary pressure curve of a cell (first argument)
-    /// to hold a water saturation (third) at a capillary pressure (second).
-    /// Returns the water saturation, and whether the curve cannot hold it
-    /// there, in which case the cell keeps its saturation end point.
-    /// EclMaterialLawManager::applySwatinit() does this.
-    using SwatinitScaling = std::function<std::pair<Scalar, bool>(unsigned, Scalar, Scalar)>;
+    /// to hold its SWATINIT water (third) at a capillary pressure (second), and
+    /// returns the water saturation the cell takes there. swatinitScaling()
+    /// builds it from the material law.
+    using SwatinitScaling = std::function<Scalar(unsigned, Scalar, Scalar)>;
 
     /// \param[in] inputState      Input state, provides EQUIL, ZMFVD or COMPVD,
     ///                            RTEMP(VD).
@@ -1064,11 +1066,9 @@ private:
         return limits.empty() ? fallback : limits[cell];
     }
 
-    /// The SWATINIT water of \p cell, with the capillary pressure curve of the
-    /// cell scaled to hold it at \p pcow, the hydrocarbon pressure less the
-    /// water pressure. The cell keeps \p endPoint without SWATINIT, and where
-    /// the curve cannot hold the water: at or below the free water level, or
-    /// where it has no capillary pressure at that saturation.
+    /// The water of \p cell at \p pcow, the hydrocarbon pressure less the water
+    /// pressure, given its SWATINIT water; see SwatinitScaling. The cell keeps
+    /// \p endPoint without SWATINIT.
     Scalar swatinitWater(const std::size_t cell,
                          const Scalar pcow,
                          const Scalar endPoint) const
@@ -1076,9 +1076,7 @@ private:
         if (swatinit_.empty()) {
             return endPoint;
         }
-        const auto [sw, keepEndPoint] =
-            scaleSwatinit_(static_cast<unsigned>(cell), pcow, swatinit_[cell]);
-        return keepEndPoint ? endPoint : sw;
+        return scaleSwatinit_(static_cast<unsigned>(cell), pcow, swatinit_[cell]);
     }
 
     /// EQUIL item 10 type 1: the table gives the total composition and the
@@ -1463,6 +1461,26 @@ void reportTwoPhaseCells(const std::vector<int>& checkRegions,
                                     depthRange(shallowest[r], deepest[r]),
                                     (least == most) ? least : least + " to " + most));
     }
+}
+
+/// The SWATINIT scaling of \p materialLawManager for InitialStateComputer.
+/// Where EclMaterialLawManager::applySwatinit() cannot scale the curve to hold
+/// the SWATINIT water (at or below the free water level, where the curve has no
+/// capillary pressure at that water, or where PPCWMAX limits the scaling), the
+/// water is read off the resulting curve, as in the black-oil equilibration.
+template <class FluidSystem, class MaterialLawManager>
+typename InitialStateComputer<FluidSystem>::SwatinitScaling
+swatinitScaling(MaterialLawManager& materialLawManager)
+{
+    using Scalar = typename FluidSystem::Scalar;
+    return [&materialLawManager](const unsigned cell, const Scalar pcow, const Scalar swatinit)
+    {
+        const auto [sw, fromCurve] = materialLawManager.applySwatinit(cell, pcow, swatinit);
+        return fromCurve ? satFromPc<FluidSystem>(materialLawManager,
+                                                  FluidSystem::waterPhaseIdx,
+                                                  static_cast<int>(cell), pcow)
+                         : sw;
+    };
 }
 
 } // namespace Opm::EQUIL::Comp
