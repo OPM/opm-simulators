@@ -587,6 +587,93 @@ initializeWellPerfData()
 }
 
 template<typename Scalar, typename IndexTraits>
+std::map<std::string, Scalar>
+BlackoilWellModelGeneric<Scalar, IndexTraits>::
+groupEconomicWaterGasRatios(const int reportStep, const bool committed)
+{
+    std::map<std::string, Scalar> ratios;
+    const auto& limits = this->schedule()[reportStep].gecon();
+    const auto& pu = this->phaseUsage();
+    if (limits.size() == 0 || !pu.phaseIsActive(IndexTraits::waterPhaseIdx)
+                           || !pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        return ratios;
+    }
+    const int water = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+    const int gas = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+    // Before the first accepted step, committed rates are initialization
+    // guesses, not a solved physical baseline. Refine consecutive trial solves
+    // there; timeStepSucceeded() clears report_step_starts_ on acceptance.
+    const bool use_committed = committed && (reportStep != 0 || !this->report_step_starts_);
+    auto& state = use_committed ? this->last_valid_wgstate_ : this->active_wgstate_;
+    // Rollback occurs inside the next solver step, after the adaptive loop
+    // samples its baseline. Never sample the previous rejected candidate here.
+    typename GroupStateHelperType::WellStateGuard state_guard(this->groupStateHelper(), state.well_state);
+    // Economic closures are committed at the end of a step, while that step's
+    // rates still include the well. Exclude those rates when sampling the start
+    // of the next attempt, using the same efficiency/ownership rules as GECON.
+    const auto closedRate = [&](const auto& self, const Group& group, int phase) -> Scalar {
+        Scalar rate = 0;
+        for (const auto& name : group.groups()) {
+            const auto& child = this->schedule().getGroup(name, reportStep);
+            rate += child.getGroupEfficiencyFactor() * self(self, child, phase);
+        }
+        for (const auto& name : group.wells()) {
+            if (state.well_test_state.well_is_closed(name)) {
+                rate += this->groupStateHelper().wellRateContributionToGroup(
+                    name, phase, false, false, false);
+            }
+        }
+        return rate;
+    };
+    const auto statusChanged = [&](const auto& self, const Group& group) -> bool {
+        for (const auto& name : group.groups()) {
+            if (self(self, this->schedule().getGroup(name, reportStep))) {
+                return true;
+            }
+        }
+        for (const auto& name : group.wells()) {
+            if (this->active_wgstate_.well_test_state.well_is_closed(name)
+                != this->last_valid_wgstate_.well_test_state.well_is_closed(name)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (const auto& name : this->schedule().groupNames(reportStep)) {
+        if (!limits.has_group(name)) {
+            continue;
+        }
+        const auto props = limits.get_group_prop(this->summaryState(), name);
+        const auto limit = props.maxWaterGasRatio();
+        if (!limit || !std::isfinite(*limit) || *limit <= 0
+            || props.workover() != GroupEconProductionLimits::EconWorkover::WELL) {
+            continue;
+        }
+        const auto& group = this->schedule().getGroup(name, reportStep);
+        // WTEST and explicit reopening can change the producing set during
+        // beginTimeStep(). That discrete jump cannot shrink with dt. Omit the
+        // end sample for this group and resume from the next committed state.
+        // Well testing may only update the owner rank. All ranks must make
+        // the same decision before entering the rate-sum collectives below.
+        const bool changed = !committed && this->comm().max(int(statusChanged(statusChanged, group)));
+        if (changed) {
+            OpmLog::info(fmt::format("Skipping group economic WGR change check for changed well-test status in group {}", name));
+            continue;
+        }
+        const Scalar wr = this->comm().sum(this->groupStateHelper().sumWellSurfaceRates(group, water, false)
+                                           - closedRate(closedRate, group, water));
+        const Scalar gr = this->comm().sum(this->groupStateHelper().sumWellSurfaceRates(group, gas, false)
+                                           - closedRate(closedRate, group, gas));
+        if (wr <= 0) {
+            ratios[name] = 0;
+        } else if (gr > 0 && std::isfinite(wr) && std::isfinite(gr)) {
+            ratios[name] = (wr / gr) / *limit;
+        }
+    }
+    return ratios;
+}
+
+template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 checkGEconLimits(
         const Group& group,
