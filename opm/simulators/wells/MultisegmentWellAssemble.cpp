@@ -27,6 +27,7 @@
 
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoildyntwophaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
@@ -190,9 +191,9 @@ assembleControlEq(const GroupStateHelperType& groupStateHelper,
 
     MultisegmentWellEquationAccess<Scalar, IndexTraits, numWellEq,Indices::numEq> eqns(eqns1);
     // using control_eq to update the matrix and residuals
-    eqns.residual()[0][SPres] = control_eq.value();
+    eqns.residual()[0][SPres()] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+        eqns.D()[0][0][SPres()][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -216,14 +217,14 @@ assembleAccelerationTerm(const int seg_target,
     */
 
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg_target][SPres] -= accelerationTerm.value();
-    eqns.D()[seg_target][seg][SPres][SPres] -= accelerationTerm.derivative(SPres + Indices::numEq);
-    eqns.D()[seg_target][seg][SPres][WQTotal] -= accelerationTerm.derivative(WQTotal + Indices::numEq);
-    if constexpr (has_wfrac_variable) {
-        eqns.D()[seg_target][seg_upwind][SPres][WFrac] -= accelerationTerm.derivative(WFrac + Indices::numEq);
+    eqns.residual()[seg_target][SPres()] -= accelerationTerm.value();
+    eqns.D()[seg_target][seg][SPres()][SPres()] -= accelerationTerm.derivative(SPres() + Indices::numEq);
+    eqns.D()[seg_target][seg][SPres()][WQTotal] -= accelerationTerm.derivative(WQTotal + Indices::numEq);
+    if (has_wfrac_variable()) {
+        eqns.D()[seg_target][seg_upwind][SPres()][WFrac()] -= accelerationTerm.derivative(WFrac() + Indices::numEq);
     }
-    if constexpr (has_gfrac_variable) {
-        eqns.D()[seg_target][seg_upwind][SPres][GFrac] -= accelerationTerm.derivative(GFrac + Indices::numEq);
+    if (has_gfrac_variable()) {
+        eqns.D()[seg_target][seg_upwind][SPres()][GFrac()] -= accelerationTerm.derivative(GFrac() + Indices::numEq);
     }
 }
 
@@ -240,9 +241,9 @@ assembleHydroPressureLoss(const int seg,
     */
 
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] -= hydro_pressure_drop_seg.value();
+    eqns.residual()[seg][SPres()] -= hydro_pressure_drop_seg.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][seg_density][SPres][pv_idx] -= hydro_pressure_drop_seg.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][seg_density][SPres()][pv_idx] -= hydro_pressure_drop_seg.derivative(pv_idx + Indices::numEq);
     }
 
 }
@@ -260,8 +261,8 @@ assemblePressureEqExtraDerivatives(const int seg,
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
     // disregard residual
     // Frac - derivatives are zero (they belong to upwind^2)
-    eqns.D()[seg][seg_upwind][SPres][SPres] += extra_derivatives.derivative(SPres + Indices::numEq);
-    eqns.D()[seg][seg_upwind][SPres][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
+    eqns.D()[seg][seg_upwind][SPres()][SPres()] += extra_derivatives.derivative(SPres() + Indices::numEq);
+    eqns.D()[seg][seg_upwind][SPres()][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
 }
 
 
@@ -278,20 +279,20 @@ assemblePressureEq(const int seg,
         This method does *not* need communication.
     */
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] += pressure_equation.value();
-    eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if constexpr (has_wfrac_variable) {
-        eqns.D()[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
+    eqns.residual()[seg][SPres()] += pressure_equation.value();
+    eqns.D()[seg][seg][SPres()][SPres()] += pressure_equation.derivative(SPres() + Indices::numEq);
+    eqns.D()[seg][seg][SPres()][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
+    if (has_wfrac_variable()) {
+        eqns.D()[seg][seg_upwind][SPres()][WFrac()] += pressure_equation.derivative(WFrac() + Indices::numEq);
     }
-    if constexpr (has_gfrac_variable) {
-        eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
+    if (has_gfrac_variable()) {
+        eqns.D()[seg][seg_upwind][SPres()][GFrac()] += pressure_equation.derivative(GFrac() + Indices::numEq);
     }
 
     // contribution from the outlet segment
-    eqns.residual()[seg][SPres] -= outlet_pressure.value();
+    eqns.residual()[seg][SPres()] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][outlet_segment_index][SPres()][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -309,8 +310,8 @@ assembleTrivialEq(const int seg,
         This method does *not* need communication.
     */
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] = value;
-    eqns.D()[seg][seg][SPres][WQTotal] = 1.;
+    eqns.residual()[seg][SPres()] = value;
+    eqns.D()[seg][seg][SPres()][WQTotal] = 1.;
 }
 
 template<class FluidSystem, class Indices>
@@ -346,21 +347,21 @@ assembleOutflowTerm(const int seg,
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] -= segment_rate.value();
     eqns.D()[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
-    if constexpr (has_wfrac_variable) {
-        eqns.D()[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
+    if (has_wfrac_variable()) {
+        eqns.D()[seg][seg_upwind][comp_idx][WFrac()] -= segment_rate.derivative(WFrac() + Indices::numEq);
     }
-    if constexpr (has_gfrac_variable) {
-        eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
+    if (has_gfrac_variable()) {
+        eqns.D()[seg][seg_upwind][comp_idx][GFrac()] -= segment_rate.derivative(GFrac() + Indices::numEq);
     }
     // pressure derivative should be zero for non-thermal cases
 
     if constexpr (enable_energy) {
         // Only the energy equation depends on pressure and temperature; the mass
         // surface rates carry no SPres/Temperature derivatives.
-        if (comp_idx == Temperature) {
+        if (comp_idx == Temperature()) {
             // energy flux depends on the pressure and temperature
-            eqns.D()[seg][seg_upwind][comp_idx][SPres] -= segment_rate.derivative(SPres + Indices::numEq);
-            eqns.D()[seg][seg_upwind][comp_idx][Temperature] -= segment_rate.derivative(Temperature + Indices::numEq);
+            eqns.D()[seg][seg_upwind][comp_idx][SPres()] -= segment_rate.derivative(SPres() + Indices::numEq);
+            eqns.D()[seg][seg_upwind][comp_idx][Temperature()] -= segment_rate.derivative(Temperature() + Indices::numEq);
         }
     }
 }
@@ -381,21 +382,21 @@ assembleInflowTerm(const int seg,
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += inlet_rate.value();
     eqns.D()[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
-    if constexpr (has_wfrac_variable) {
-        eqns.D()[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
+    if (has_wfrac_variable()) {
+        eqns.D()[seg][inlet_upwind][comp_idx][WFrac()] += inlet_rate.derivative(WFrac() + Indices::numEq);
     }
-    if constexpr (has_gfrac_variable) {
-        eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
+    if (has_gfrac_variable()) {
+        eqns.D()[seg][inlet_upwind][comp_idx][GFrac()] += inlet_rate.derivative(GFrac() + Indices::numEq);
     }
     // pressure derivative should be zero for non-thermal cases
 
     if constexpr (enable_energy) {
         // Only the energy equation depends on pressure and temperature; the mass
         // surface rates carry no SPres/Temperature derivatives.
-        if (comp_idx == Temperature) {
+        if (comp_idx == Temperature()) {
             // energy flux depends on the pressure and temperature
-            eqns.D()[seg][inlet_upwind][comp_idx][SPres] += inlet_rate.derivative(SPres + Indices::numEq);
-            eqns.D()[seg][inlet_upwind][comp_idx][Temperature] += inlet_rate.derivative(Temperature + Indices::numEq);
+            eqns.D()[seg][inlet_upwind][comp_idx][SPres()] += inlet_rate.derivative(SPres() + Indices::numEq);
+            eqns.D()[seg][inlet_upwind][comp_idx][Temperature()] += inlet_rate.derivative(Temperature() + Indices::numEq);
         }
     }
 }

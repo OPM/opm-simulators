@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/flow/Main.hpp>
 
+#include <opm/models/blackoil/blackoildynamicphases.hh>
+
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
@@ -375,6 +377,13 @@ void Main::readDeck(const std::string& deckFilename,
 
 void Main::setupVanguard()
 {
+    {
+        const auto& phases = this->eclipseState_->runspec().phases();
+        BlackOilDynamicPhases::set(phases.active(Phase::OIL),
+                                   phases.active(Phase::WATER),
+                                   phases.active(Phase::GAS));
+    }
+
     FlowGenericVanguard::modelParams_.setupTime_ = this->setupTime_;
     FlowGenericVanguard::modelParams_.actionState_ = std::move(this->actionState_);
     FlowGenericVanguard::modelParams_.eclSchedule_ = this->schedule_;

@@ -228,7 +228,7 @@ protected:
                                  const EqVector& currentResidual)
     {
         static constexpr bool enableSolvent =
-            Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
+            Indices::activeSolventSaturationIdx() != std::numeric_limits<unsigned>::max();
         static constexpr bool enableExtbo =
             Indices::zFractionIdx != std::numeric_limits<unsigned>::max();
         static constexpr bool enablePolymer =
@@ -255,21 +255,21 @@ protected:
 
         if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
-            if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSw = update[Indices::waterSwitchIdx];
+            if (Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                deltaSw = update[Indices::activeWaterSwitchIdx()];
                 deltaSo -= deltaSw;
             }
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            if constexpr (Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSg = update[Indices::compositionSwitchIdx];
+            if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                deltaSg = update[Indices::activeCompositionSwitchIdx()];
                 deltaSo -= deltaSg;
             }
         }
         if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
-            if constexpr (Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max()) {
-                deltaSs = update[Indices::solventSaturationIdx];
+            if constexpr (Indices::activeSolventSaturationIdx() != std::numeric_limits<unsigned>::max()) {
+                deltaSs = update[Indices::activeSolventSaturationIdx()];
                 deltaSo -= deltaSs;
             }
         }
@@ -296,23 +296,23 @@ protected:
             Scalar delta = update[pvIdx];
 
             // limit pressure delta
-            if (pvIdx == Indices::pressureSwitchIdx) {
+            if (pvIdx == Indices::activePressureSwitchIdx()) {
                 if (std::abs(delta) > bparams_.dpMaxRel_ * currentValue[pvIdx]) {
                     delta = signum(delta) * bparams_.dpMaxRel_ * currentValue[pvIdx];
                 }
             }
             // water saturation delta
-            else if (pvIdx == Indices::waterSwitchIdx)
+            else if (pvIdx == Indices::activeWaterSwitchIdx())
                 if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
                     delta *= satAlpha;
                 }
                 else {
                     //Ensure Rvw and Rsw factor does not become negative
-                    if (delta > currentValue[ Indices::waterSwitchIdx]) {
-                        delta = currentValue[ Indices::waterSwitchIdx];
+                    if (delta > currentValue[ Indices::activeWaterSwitchIdx()]) {
+                        delta = currentValue[ Indices::activeWaterSwitchIdx()];
                     }
                 }
-            else if (pvIdx == Indices::compositionSwitchIdx) {
+            else if (pvIdx == Indices::activeCompositionSwitchIdx()) {
                 // the switching primary variable for composition is tricky because the
                 // "reasonable" value ranges it exhibits vary widely depending on its
                 // interpretation since it can represent Sg, Rs or Rv. For now, we only
@@ -323,20 +323,20 @@ protected:
                 }
                 else {
                     // Ensure Rv and Rs factor does not become negative
-                    if (delta > currentValue[Indices::compositionSwitchIdx]) {
-                        delta = currentValue[Indices::compositionSwitchIdx];
+                    if (delta > currentValue[Indices::activeCompositionSwitchIdx()]) {
+                        delta = currentValue[Indices::activeCompositionSwitchIdx()];
                     }
                 }
             }
-            else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
+            else if (enableSolvent && pvIdx == Indices::activeSolventSaturationIdx()) {
                 // solvent saturation updates are also subject to the Appleyard chop
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                     delta *= satAlpha;
                 }
                 else {
                     // Ensure Rssolw factor does not become negative
-                    if (delta > currentValue[Indices::solventSaturationIdx]) {
-                        delta = currentValue[Indices::solventSaturationIdx];
+                    if (delta > currentValue[Indices::activeSolventSaturationIdx()]) {
+                        delta = currentValue[Indices::activeSolventSaturationIdx()];
                     }
                 }
             }
@@ -370,7 +370,7 @@ protected:
             nextValue[pvIdx] = currentValue[pvIdx] - delta;
 
             // keep the solvent saturation between 0 and 1
-            if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
+            if (enableSolvent && pvIdx == Indices::activeSolventSaturationIdx()) {
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                     nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
                 }
@@ -419,7 +419,7 @@ protected:
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.tempMin_, bparams_.tempMax_);
             }
 
-            if (pvIdx == Indices::pressureSwitchIdx) {
+            if (pvIdx == Indices::activePressureSwitchIdx()) {
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.pressMin_, bparams_.pressMax_);
             }
 

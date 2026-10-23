@@ -56,6 +56,12 @@ struct BlackOilOnePhaseIndices
     static constexpr bool waterEnabled = canonicalCompIdx == 1;
     static constexpr bool gasEnabled = canonicalCompIdx == 2;
 
+    //! Runtime-style accessors for phase activity. These are constexpr here, so
+    //! code written against them is folded at compile time for static indices.
+    static constexpr bool waterIsActive() { return waterEnabled; }
+    static constexpr bool gasIsActive() { return gasEnabled; }
+    static constexpr bool oilIsActive() { return oilEnabled; }
+
     //! Are solvents involved?
     static constexpr bool enableSolvent = numSolventsV > 0;
 
@@ -253,6 +259,21 @@ struct BlackOilOnePhaseIndices
     //! Index of the continuity equation for energy
     static constexpr int contiEnergyEqIdx =
         enableFullyImplicitThermal ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine: -1000;
+
+    //! Accessors for the primary variable indices. These are constexpr here;
+    //! indices that are not in use are std::numeric_limits<unsigned>::max().
+    static constexpr unsigned activeWaterSwitchIdx() { return waterSwitchIdx; }
+    static constexpr unsigned activePressureSwitchIdx() { return pressureSwitchIdx; }
+    static constexpr unsigned activeCompositionSwitchIdx() { return compositionSwitchIdx; }
+    static constexpr unsigned activeSolventSaturationIdx() { return solventSaturationIdx; }
+
+    //! True if a composition switching variable (Rs/Rv or gas saturation of the
+    //! hydrocarbon phases) can exist. Used for type-level decisions such as the
+    //! storage in the fluid state.
+    static constexpr bool hasCompositionSwitch = false;
+
+    //! True if the gas phase can be active (upper bound known at compile time).
+    static constexpr bool mayHaveGas = canonicalCompIdx == 2;
 };
 
 } // namespace Opm

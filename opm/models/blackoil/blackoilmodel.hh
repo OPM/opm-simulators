@@ -344,8 +344,6 @@ private:
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    static constexpr bool compositionSwitchEnabled =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
     static constexpr bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
@@ -354,7 +352,6 @@ private:
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     static constexpr bool enableFullyImplicitThermal = energyModuleType == EnergyModules::FullyImplicitThermal;
-    static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, enableBioeffects>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
@@ -418,13 +415,13 @@ public:
      */
     std::string primaryVarName(unsigned pvIdx) const
     {
-        if (pvIdx == Indices::waterSwitchIdx) {
+        if (pvIdx == Indices::activeWaterSwitchIdx()) {
             return "water_switching";
         }
-        else if (pvIdx == Indices::pressureSwitchIdx) {
+        else if (pvIdx == Indices::activePressureSwitchIdx()) {
             return "pressure_switching";
         }
-        else if (pvIdx == Indices::compositionSwitchIdx) {
+        else if (pvIdx == Indices::activeCompositionSwitchIdx()) {
             return "composition_switching";
         }
 
@@ -505,13 +502,13 @@ public:
         }
 
         // saturations are always in the range [0, 1]!
-        if (Indices::waterSwitchIdx == pvIdx) {
+        if (Indices::activeWaterSwitchIdx() == pvIdx) {
             return 1.0;
         }
 
         // oil pressures usually are in the range of 100 to 500 bars for typical oil
         // reservoirs (which is the only relevant application for the black-oil model).
-        else if (int(Indices::pressureSwitchIdx) == int(pvIdx)) {
+        else if (int(Indices::activePressureSwitchIdx()) == int(pvIdx)) {
             return 1.0 / 300e5;
         }
 
@@ -544,7 +541,7 @@ public:
         }
 
         // if the primary variable is either the gas saturation, Rs or Rv
-        assert(Indices::compositionSwitchIdx == pvIdx);
+        assert(Indices::activeCompositionSwitchIdx() == pvIdx);
 
         switch (this->solution(0)[globalDofIdx].primaryVarsMeaningGas()) {
         case PrimaryVariables::GasMeaning::Sg: return 1.0; // gas saturation

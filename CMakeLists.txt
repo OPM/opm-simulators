@@ -770,6 +770,7 @@ macro(opm-simulators_targets_hook)
     polymer
     solvent
     solvent_foam
+    twophase
   )
 
   foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
