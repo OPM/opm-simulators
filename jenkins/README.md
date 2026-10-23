@@ -23,7 +23,12 @@ The binary used is from the build identified by the configuration
 environment variable.
 
 **run-norne.sh**:
-This script will execute the Norne case, and generate a document with
-plots of the results. It is meant to be executed after a build.
-The binary used is from the build identified by the configuration
-environment variable.
+This script will execute the Norne case. It is meant to be executed after
+a build. The binary used is from the build identified by the configuration
+given as the first argument, and the case is run in parallel if the number
+of processes is given as the second argument.
+
+**plot-norne.sh**:
+This script generates documents with plots of the Norne wells, after the
+runs by run-norne.sh. They include the serial run and, if the number of
+processes is given as the second argument, the parallel run.
