@@ -467,9 +467,12 @@ protected:
             const auto input = lookUpData.assignFieldPropsDoubleOnLeaf(eclState.fieldProps(),
                                                                         "SWATINIT");
             swatinit.assign(input.begin(), input.end());
-            scaleSwatinit = [&materialLawManager = this->materialLawManager()]
-                (const unsigned cell, const Scalar pcow, const Scalar sw)
-            { return materialLawManager.applySwatinit(cell, pcow, sw); };
+            // Reading the water off the curve indexes the water phase, so it
+            // is only compiled where that phase is.
+            if constexpr (Indices::waterEnabled) {
+                scaleSwatinit =
+                    EQUIL::Comp::swatinitScaling<FluidSystem>(this->materialLawManager());
+            }
         }
 
         StateComputer initialState(
