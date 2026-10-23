@@ -248,7 +248,8 @@ protected:
         this->grid_ = std::make_unique<Grid>
             (this->eclState().getInputGrid(),
              this->eclState().fieldProps().porv(true),
-             this->edgeConformal());
+             this->edgeConformal(),
+             this->minpvMergeCells());
 
         // The grid can have fewer cells than the deck has active cells, for instance if cells are
         // removed because of MINPV. The properties of the cells are given for the active cells,
