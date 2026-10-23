@@ -369,7 +369,7 @@ BOOST_FIXTURE_TEST_SUITE(RescoupConstraintsTests, RescoupConstraintsFixture)
 //! \brief The fixture gives the master groups the reported rates and the deck's guide rates
 BOOST_AUTO_TEST_CASE(FixtureSetup)
 {
-    commonSetupForAllTests();
+    commonSetupForAllTests(flat_deck);
 
     auto& gsh = groupStateHelper();
     for (const std::string name : {"M1", "M2", "M3", "M4"}) {
@@ -402,7 +402,7 @@ BOOST_AUTO_TEST_CASE(FixtureSetup)
 BOOST_AUTO_TEST_CASE(NoExclusion)
 {
     using Mode = Opm::Group::ProductionCMode;
-    commonSetupForAllTests();
+    commonSetupForAllTests(flat_deck);
     const auto result = calculateConstraints();
 
     checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
@@ -433,6 +433,8 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
 //! \brief M1 has no producers under group control: it is excluded, and M2, M3
 //!   share the rest of FIELD's target
 //!
+//! M1's slave producers produce 150 on their own limits (see
+//! RescoupConstraintsFixture::slave_group_reports_).
 //! The reduction on FIELD is the sum of the rates of the groups that are not in
 //! the guide-rate distribution: M4's 50 (item 8 = NO) plus the excluded M1's 150.
 //! The master assumes that M1 keeps producing its reported 150, so M2 and M3 only
@@ -446,6 +448,7 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
 BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 {
     using Mode = Opm::Group::ProductionCMode;
+    // Make M1 have no producers under group control
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     const auto result = calculateConstraints();
 
@@ -471,6 +474,7 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 //!   fraction, and not for its siblings'
 BOOST_AUTO_TEST_CASE(FractionFallback)
 {
+    // Make M1 have no producers under group control
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     calculateConstraints();
     BOOST_REQUIRE_EQUAL(master().effectiveGCW("M1"), 0);
@@ -497,6 +501,7 @@ BOOST_AUTO_TEST_CASE(FractionFallback)
 //! are not recalculated, and the targets of the others do not change.
 BOOST_AUTO_TEST_CASE(ItemEightNoIsSkippedByExclusion)
 {
+    // Make M4 have no producers under group control
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M4"});
     const auto result = calculateConstraints();
 
@@ -515,6 +520,7 @@ BOOST_AUTO_TEST_CASE(ItemEightNoIsSkippedByExclusion)
 //! Gas: nothing is excluded, so M1, M2, M3 share 950 by 100 : 200 : 300.
 BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeInjectionPerPhase)
 {
+    // Make M1 have no water injectors under group control
     commonSetupForAllTests(flat_deck,
                            /*groups_without_group_controlled_producers=*/{},
                            /*groups_without_group_controlled_water_injectors=*/{"M1"});
@@ -544,6 +550,7 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeInjectionPerPhase)
 //! as for the flat tree.
 BOOST_AUTO_TEST_CASE(NestedExclusion)
 {
+    // Make M1 have no producers under group control
     commonSetupForAllTests(nested_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     const auto result = calculateConstraints();
 
