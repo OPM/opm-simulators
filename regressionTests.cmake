@@ -314,6 +314,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    equil_1d_compvd_water_gascap_swatinit
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_SWATINIT
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    equil_1d_compvd_water_gascap_swatinit_ppcwmax
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_SWATINIT_PPCWMAX
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    equil_1d_compvd_water_gascap_swatinit_ppcwmax_swl
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_SWATINIT_PPCWMAX_SWL
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
     equil_1d_compvd_oil
   FILENAME
     EQUIL_1D_COMPVD_OIL
