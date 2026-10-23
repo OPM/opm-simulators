@@ -64,6 +64,9 @@ namespace Opm::Satfunc::PhaseChecks {
         /// Intended to be called by derived types only.
         void setCritical();
 
+        /// Put epsilon margins in checks to accept rounding errors
+        static constexpr Scalar epsilon_{1e-5};
+
     private:
         /// Collection of violation flags.
         ///
