@@ -168,7 +168,7 @@ initialLinearization(SimulatorReportSingle& report,
     ParentType::initialLinearization(report,
                                      minIter,
                                      maxIter,
-                                     timer);                                 
+                                     timer);
 
     // -----------   Check if converged   -----------
     std::vector<Scalar> residual_norms;
@@ -429,6 +429,24 @@ solveJacobianSystem(BVector& x)
     auto& jacobian = this->simulator_.model().linearizer().jacobian().istlMatrix();
     auto& residual = this->simulator_.model().linearizer().residual();
     auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+        if (this->simulator_.model().linearizer().gpuSystemActive()) {
+            auto& linearizer = this->simulator_.model().linearizer();
+            Dune::Timer perfTimer;
+            perfTimer.start();
+            if (linSolver.prepareGpu(linearizer.gpuJacobian(),
+                                     linearizer.flattenedGpuResidual()))
+            {
+                this->linear_solve_setup_time_ = perfTimer.stop();
+                x = 0.0;
+                linSolver.solveGpu(x);
+                return;
+            }
+        }
+    }
+#endif
 
     const int numSolvers = linSolver.numAvailableSolvers();
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {
