@@ -34,7 +34,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -82,8 +81,6 @@ NonlinearSystemBlackOilReservoir(Simulator& simulator,
     : ParentType(simulator, param, well_model, terminal_output)
     , conv_monitor_(param.monitor_params_)
 {
-    // compute global sum of number of cells
-    global_nc_ = detail::countGlobalCells(this->grid_);
     this->convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
     // TODO: remember to fix!
     if (this->param_.nonlinear_solver_ == "nldd") {
