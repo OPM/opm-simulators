@@ -729,6 +729,7 @@ macro(opm-simulators_targets_hook)
   if(MPI_FOUND)
     target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
     target_sources(test_rescoup_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+    target_sources(test_parallel_transmissibility PRIVATE $<TARGET_OBJECTS:moduleVersion>)
   endif()
 
   set(FLOW_MODELS
