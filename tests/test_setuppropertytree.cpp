@@ -154,3 +154,20 @@ BOOST_AUTO_TEST_CASE(SystemCPRWEnablesAddWells)
 }
 
 BOOST_AUTO_TEST_SUITE_END() // SystemCPR
+
+// The CPR preconditioners smooth once after the pressure correction, and
+// before it as many times as CprPreSmooth asks.
+BOOST_AUTO_TEST_CASE(PreSmoothingFollowsCprPreSmooth)
+{
+    Opm::FlowLinearSolverParameters p;
+    BOOST_CHECK_EQUAL(Opm::setupCPR("cpr_trueimpes", p).get<int>("preconditioner.pre_smooth"), 0);
+    BOOST_CHECK_EQUAL(Opm::setupCPRW("cprw", p).get<int>("preconditioner.pre_smooth"), 0);
+
+    p.cpr_pre_smooth_ = 1;
+    const auto cpr = Opm::setupCPR("cpr_trueimpes", p);
+    const auto cprw = Opm::setupCPRW("cprw", p);
+    BOOST_CHECK_EQUAL(cpr.get<int>("preconditioner.pre_smooth"), 1);
+    BOOST_CHECK_EQUAL(cprw.get<int>("preconditioner.pre_smooth"), 1);
+    BOOST_CHECK_EQUAL(cpr.get<int>("preconditioner.post_smooth"), 1);
+    BOOST_CHECK_EQUAL(cprw.get<int>("preconditioner.post_smooth"), 1);
+}
