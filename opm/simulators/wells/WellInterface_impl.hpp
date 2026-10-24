@@ -2541,22 +2541,31 @@ namespace Opm
 
         // The search for the bhp at the thp limit only covers bhp values above the bhp limit.
         // At the bhp limit itself, the thp limit holds if the bhp-curve is not above it.
-        auto rates = frates_explicit(bhp_limit);
-        std::optional<Scalar> bhp;
-        if (flows(rates) &&
-            WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state,
-                                                            this->getRefDensity(), deferred_logger) <= bhp_limit) {
-            bhp = bhp_limit;
-        } else {
+        const auto search_bhp = [this, &simulator, &well_state, &summary_state, &deferred_logger,
+                                 &flows, &frates_explicit, bhp_limit]() -> std::optional<Scalar> {
+            const auto rates = frates_explicit(bhp_limit);
+            if (flows(rates) &&
+                WellBhpThpCalculator(*this).calculateBhpFromThp(
+                    well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(),
+                    deferred_logger) <= bhp_limit) {
+                return bhp_limit;
+            }
             // Without iterations: they make each refusal costly.
-            bhp = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates_explicit, summary_state,
-                                                                       this->maxPerfPress(simulator),
-                                                                       this->getRefDensity(),
-                                                                       this->getALQ(well_state),
-                                                                       this->getTHPConstraint(summary_state),
-                                                                       deferred_logger);
+            return WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(
+                frates_explicit, summary_state, this->maxPerfPress(simulator),
+                this->getRefDensity(), this->getALQ(well_state),
+                this->getTHPConstraint(summary_state), deferred_logger);
+        };
+        const auto operability = this->operability_status_;
+        auto bhp = search_bhp();
+        if (!bhp && !operability.use_vfpexplicit) {
+            // As after a failed local solve, fall back to explicit fractions in the vfp lookup.
+            // A well re-opened with them keeps them for the rest of the time step.
+            this->operability_status_.use_vfpexplicit = true;
+            bhp = search_bhp();
         }
         if (!bhp) {
+            this->operability_status_ = operability;
             return false;
         }
 
@@ -2564,10 +2573,9 @@ namespace Opm
         // bhp-curve instead, the local solve falls back to zero rate and stops the well
         // again. The rates are computed for the open well, a stopped multisegment well
         // has zero rates.
-        const auto operability = this->operability_status_;
         this->openWell();
         this->operability_status_.resetOperability();
-        rates.assign(this->number_of_phases_, 0.0);
+        std::vector<Scalar> rates(this->number_of_phases_, 0.0);
         if (this->thp_update_iterations) {
             this->computeWellRatesWithBhpIterations(simulator, *bhp, groupStateHelper, rates);
             // The iterated rates can differ from the ones the search used. Allow the 0.1 bar
