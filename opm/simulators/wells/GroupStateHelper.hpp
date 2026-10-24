@@ -255,6 +255,18 @@ public:
     Scalar getProductionGroupTargetForMode(const Group& group,
                                            const Group::ProductionCMode cmode) const;
 
+    /// @brief Get the limit on one production rate type of a group, if any.
+    /// @details Returns the group's own GCONPROD limit for rate_type (ORAT, WRAT, GRAT,
+    ///          LRAT or RESV) when the group has that control. For a reservoir coupling slave
+    ///          group, the limit imposed by the master for that rate type is combined
+    ///          with it according to the GRUPSLAV filter flag, so a slave group without
+    ///          GCONPROD still gets the master's limits.
+    /// @param group The production group
+    /// @param rate_type The production rate type
+    /// @return The limit, or std::nullopt if the group has no limit for rate_type
+    std::optional<Scalar> getProductionGroupRateLimit(const Group& group,
+                                                      const Group::ProductionCMode rate_type) const;
+
     /// @brief Get the guide rate target mode for a production group
     /// @param group The production group
     /// @return The GuideRateModel::Target based on the group's production control mode
