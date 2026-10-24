@@ -1734,6 +1734,15 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 }
 
 template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+closeWellForRetry(const std::string& well_name, const double simulation_time)
+{
+    this->wellTestState().close_well(well_name, WellTestConfig::Reason::PHYSICAL,
+                                   simulation_time);
+    this->retry_shut_wells_.insert(well_name);
+}
+
+template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 forceShutWellByName(const std::string& wellname,
                     const double simulation_time,
@@ -1769,7 +1778,7 @@ forceShutWellByName(const std::string& wellname,
                                  }
                              });
     if (it != well_container_generic_.end()) {
-        wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+        this->closeWellForRetry(wellname, simulation_time);
 
         // Non-owning ranks have no snapshot entry, and do not report WPWE.
         const auto snapshot = this->wellStatusSnapshot();

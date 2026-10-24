@@ -286,6 +286,12 @@ public:
     }
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
+    /// A closure imposed to retry a failed timestep must survive OPEN requests.
+    bool wasClosedForRetry(const std::string& well_name) const
+    {
+        return this->retry_shut_wells_.count(well_name) != 0;
+    }
+
     void logPrimaryVars() const;
 
     template<class Serializer>
@@ -654,6 +660,15 @@ protected:
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
+
+    // Wells force-shut between attempts of the current timestep. Deliberately
+    // retained across rollback, and cleared on timestep success. Unlike a
+    // timestamp, this distinguishes retry closures from restored closures and
+    // closures made at the end of the previous accepted timestep. Checkpoints
+    // are written after success, so this transient marker is not serialized.
+    std::unordered_set<std::string> retry_shut_wells_;
+
+    void closeWellForRetry(const std::string& well_name, double simulation_time);
 
     WellPerformanceEventTracker well_performance_event_tracker_;
 

@@ -596,6 +596,35 @@ macro(opm-simulators_tests_hook)
     if(USE_DEV_SIMULATOR_IN_TESTS)
       set(drsdt_simulator flow_blackoil)
     endif()
+    if(HAVE_OPM_TESTS)
+      find_program(REOPENING_PYTHON_EXECUTABLE NAMES python3)
+      if(TARGET summary)
+        set(reopening_summary $<TARGET_FILE:summary>)
+      else()
+        find_program(REOPENING_SUMMARY_EXECUTABLE NAMES summary
+          HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+        set(reopening_summary ${REOPENING_SUMMARY_EXECUTABLE})
+      endif()
+      if(TARGET rst_deck)
+        set(reopening_rst_deck $<TARGET_FILE:rst_deck>)
+      else()
+        find_program(REOPENING_RST_DECK_EXECUTABLE NAMES rst_deck
+          HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+        set(reopening_rst_deck ${REOPENING_RST_DECK_EXECUTABLE})
+      endif()
+      if(REOPENING_PYTHON_EXECUTABLE AND reopening_summary AND reopening_rst_deck)
+        add_test(NAME well_reopening_unrst_restart
+          COMMAND ${REOPENING_PYTHON_EXECUTABLE}
+            ${PROJECT_SOURCE_DIR}/tests/check_well_reopening_restart.py
+            --flow $<TARGET_FILE:${drsdt_simulator}>
+            --summary ${reopening_summary}
+            --rst-deck ${reopening_rst_deck}
+            --deck ${OPM_TESTS_ROOT}/spe1/SPE1CASE1.DATA
+            --output ${PROJECT_BINARY_DIR}/tests/results/well_reopening_restart)
+        set_tests_properties(well_reopening_unrst_restart PROPERTIES
+          LABELS "regression;economic_limits;restart" TIMEOUT 360 PROCESSORS 1)
+      endif()
+    endif()
     add_test(
       NAME
         drsdt_initial_rs_no_free_gas
