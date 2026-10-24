@@ -33,6 +33,7 @@
 
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
+#include <flowexperimental/comp/CompAquiferModel.hpp>
 #include <flowexperimental/comp/EmptyModel.hpp>
 #include <flowexperimental/comp/wells/CompWellModel.hpp>
 
@@ -144,7 +145,7 @@ struct Problem<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
 
 template<class TypeTag, int NumComp, bool EnableWater>
 struct AquiferModel<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>> {
-    using type = EmptyModel<TypeTag>;
+    using type = CompAquiferModel<TypeTag>;
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>

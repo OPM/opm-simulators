@@ -57,6 +57,8 @@ public:
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = FluidSystem::numPhases };
     static constexpr int numEq = BlackoilIndices::numEq;
+    static constexpr bool hasInvB
+        = requires(const typename IntensiveQuantities::FluidState& fs) { fs.invB(0u); };
 
     using Eval = GetPropType<TypeTag, Properties::Evaluation>;
     using Toolbox = MathToolbox<Eval>;
@@ -272,6 +274,22 @@ private:
         return water_flux;
     }
 
+    template <class ElemCtx>
+    Scalar inverseFormationVolumeFactor(const ElemCtx& elem_ctx, const std::size_t dof_idx) const
+    {
+        const auto& fs = elem_ctx.intensiveQuantities(dof_idx, /*timeIdx*/ 0).fluidState();
+        if constexpr (hasInvB) {
+            return Toolbox::value(fs.invB(this->phaseIdx_()));
+        } else {
+            // Water density at surface conditions comes from DENSITY.
+            const auto& density
+                = this->simulator_.vanguard().eclState().getTableManager().getDensityTable();
+            const auto region
+                = this->simulator_.problem().pvtRegionIndex(elem_ctx, dof_idx, /*timeIdx*/ 0);
+            return Toolbox::value(fs.density(this->phaseIdx_())) / density[region].water;
+        }
+    }
+
     Scalar calculateAquiferFluxRate() const
     {
         Scalar aquifer_flux = 0.0;
@@ -316,8 +334,7 @@ private:
 
                 const Scalar water_flux = getWaterFlux(elem_ctx,face_idx);
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;
-                const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
-                const Scalar invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
+                const Scalar invB = this->inverseFormationVolumeFactor(elem_ctx, up_id);
                 const Scalar face_area = face.area();
                 aquifer_flux += water_flux * invB * face_area;
             }
