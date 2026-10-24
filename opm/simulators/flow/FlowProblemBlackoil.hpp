@@ -1488,12 +1488,21 @@ protected:
 
     void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
     {
+        // The single-precision cutoff can erase a resolved phase in Flow's
+        // extended double-precision UNRST output and change its primary-variable
+        // meaning. In that mode remove roundoff only; retain the legacy cutoff
+        // for the default restart mode.
+        const bool doubleRestart = Parameters::Get<Parameters::EclOutputDoublePrecision>()
+            && !this->simulator().vanguard().eclState().getIOConfig().getEclCompatibleRST();
+        const Scalar saturationTolerance = doubleRestart
+            ? std::min(smallSaturationTolerance_, Scalar{64} * std::numeric_limits<Scalar>::epsilon())
+            : smallSaturationTolerance_;
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
         Scalar sumSaturation = 0.0;
         for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance_)
+                if (elemFluidState.saturation(phaseIdx) < saturationTolerance)
                     elemFluidState.setSaturation(phaseIdx, 0.0);
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
@@ -1501,7 +1510,7 @@ protected:
 
         }
         if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance_)
+            if (solventSaturation < saturationTolerance)
                 solventSaturation = 0.0;
 
             sumSaturation += solventSaturation;

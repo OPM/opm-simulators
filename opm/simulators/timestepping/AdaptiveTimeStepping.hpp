@@ -35,6 +35,7 @@ struct TimeStepVerbosity { static constexpr int value = 1; };
 struct InitialTimeStepInDays { static constexpr double value = 1.0;  };
 struct FullTimeStepInitially { static constexpr bool value = false; };
 struct TimeStepControl { static constexpr auto value = "pid+newtoniteration"; };
+struct GroupEconomicWgrStepTolerance { static constexpr double value = 0.0; };
 struct TimeStepControlTolerance { static constexpr double value = 1e-1; };
 struct TimeStepControlTargetIterations { static constexpr int value = 30; };
 struct TimeStepControlTargetNewtonIterations { static constexpr int value = 8; };

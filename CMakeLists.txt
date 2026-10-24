@@ -608,6 +608,91 @@ macro(opm-simulators_tests_hook)
     )
   endif()
 
+  # Check economic-event behavior independently of stored binary references.
+  if(BUILD_FLOW AND HAVE_OPM_TESTS)
+    find_program(GECON_PYTHON_EXECUTABLE NAMES python3)
+    if(TARGET summary)
+      set(gecon_summary $<TARGET_FILE:summary>)
+    else()
+      find_program(GECON_SUMMARY_EXECUTABLE NAMES summary
+        HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+      set(gecon_summary ${GECON_SUMMARY_EXECUTABLE})
+    endif()
+    if(GECON_PYTHON_EXECUTABLE AND gecon_summary)
+      add_test(
+        NAME gecon_economic_events
+        COMMAND
+          ${GECON_PYTHON_EXECUTABLE}
+          ${PROJECT_SOURCE_DIR}/tests/check_gecon_economic_events.py
+          --flow $<TARGET_FILE:${drsdt_simulator}>
+          --summary ${gecon_summary}
+          --deck ${OPM_TESTS_ROOT}/gecon/GECON-02.DATA
+          --output ${PROJECT_BINARY_DIR}/tests/results/gecon_economic_events
+      )
+      set_tests_properties(gecon_economic_events PROPERTIES
+        LABELS "regression;economic_limits"
+        TIMEOUT 360
+        PROCESSORS 1
+      )
+      add_test(
+        NAME gecon_wgr_timestep_control
+        COMMAND
+          ${GECON_PYTHON_EXECUTABLE}
+          ${PROJECT_SOURCE_DIR}/tests/check_gecon_economic_events.py
+          --adaptive-control
+          --flow $<TARGET_FILE:${drsdt_simulator}>
+          --summary ${gecon_summary}
+          --deck ${OPM_TESTS_ROOT}/gecon/GECON-02.DATA
+          --output ${PROJECT_BINARY_DIR}/tests/results/gecon_wgr_timestep_control
+      )
+      set_tests_properties(gecon_wgr_timestep_control PROPERTIES
+        LABELS "regression;economic_limits"
+        TIMEOUT 960
+        PROCESSORS 1
+      )
+      if(TARGET compareECL)
+        set(gecon_compare $<TARGET_FILE:compareECL>)
+      else()
+        find_program(GECON_COMPARE_EXECUTABLE NAMES compareECL
+          HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+        set(gecon_compare ${GECON_COMPARE_EXECUTABLE})
+      endif()
+      if(gecon_compare)
+        set(gecon_consistency_command
+          ${GECON_PYTHON_EXECUTABLE}
+          ${PROJECT_SOURCE_DIR}/tests/check_gecon_restart.py
+          --flow $<TARGET_FILE:${drsdt_simulator}>
+          --summary ${gecon_summary}
+          --compare ${gecon_compare}
+          --deck ${OPM_TESTS_ROOT}/gecon/GECON-02.DATA
+          --output ${PROJECT_BINARY_DIR}/tests/results/gecon_consistency)
+        if(TARGET rst_deck)
+          set(gecon_rst_deck $<TARGET_FILE:rst_deck>)
+        else()
+          find_program(GECON_RST_DECK_EXECUTABLE NAMES rst_deck
+            HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+          set(gecon_rst_deck ${GECON_RST_DECK_EXECUTABLE})
+        endif()
+        if(gecon_rst_deck)
+          add_test(NAME gecon_wgr_unrst_restart
+            COMMAND ${gecon_consistency_command} --mode unrst --rst-deck ${gecon_rst_deck})
+          set_tests_properties(gecon_wgr_unrst_restart PROPERTIES
+            LABELS "regression;economic_limits;restart" TIMEOUT 1200 PROCESSORS 1)
+        endif()
+        if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+          add_test(NAME gecon_wgr_parallel
+            COMMAND ${gecon_consistency_command} --mode mpi
+              --mpi-exec ${MPIEXEC_EXECUTABLE}
+              --mpi-numproc-flag=${MPIEXEC_NUMPROC_FLAG})
+          set_tests_properties(gecon_wgr_parallel PROPERTIES
+            LABELS "regression;economic_limits;parallel" TIMEOUT 1200 PROCESSORS 2)
+        endif()
+      endif()
+    else()
+      message(STATUS "Skipping gecon_economic_events: Python 3 or summary tool not found")
+    endif()
+  endif()
+
   if(BUILD_FLOW)
     add_test(
       NAME
