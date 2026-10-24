@@ -48,20 +48,20 @@ struct TestFluidSystem
 
     static bool phaseIsActive(unsigned phase) { return phase < numPhases; }
     static double molarMass(unsigned) { return 0.02; }
-    static double acentricFactor(unsigned) { return 0.0; }
-    static double criticalTemperature(unsigned) { return 300.0; }
-    static double criticalPressure(unsigned) { return 1.0e6; }
+    static double acentricFactor(unsigned, unsigned) { return 0.0; }
+    static double criticalTemperature(unsigned, unsigned) { return 300.0; }
+    static double criticalPressure(unsigned, unsigned) { return 1.0e6; }
 
     template<class Eval>
     struct ParameterCache {
-        explicit ParameterCache(int) {}
+        explicit ParameterCache(unsigned) {}
         template<class FluidState>
         void updatePhase(const FluidState&, unsigned) {}
         Eval molarVolume(unsigned) const { return Eval{1.0}; }
         Eval correctedMolarVolume(unsigned) const { return Eval{1.0}; }
-        void setRegionIndex(unsigned region) { regionIdx = region; }
-        unsigned regionIndex() const { return regionIdx; }
-        unsigned regionIdx = 0;
+        void setPvtRegionIndex(unsigned pvtRegionIdx) { pvtRegionIdx_ = pvtRegionIdx; }
+        unsigned pvtRegionIndex() const { return pvtRegionIdx_; }
+        unsigned pvtRegionIdx_ = 0;
     };
 
     // Water is 100 kg/m3 denser in each further PVT region.
@@ -69,7 +69,7 @@ struct TestFluidSystem
     static auto density(const FluidState&, const Cache& cache, unsigned phase)
     {
         return typename FluidState::ValueType{
-            phase == waterPhaseIdx ? 1000.0 + 100.0 * cache.regionIndex() : 1000.0};
+            phase == waterPhaseIdx ? 1000.0 + 100.0 * cache.pvtRegionIndex() : 1000.0};
     }
 
     template<class FluidState, class Cache>
@@ -82,7 +82,7 @@ struct FixedFlash
     static inline double liquidFraction = 0.4;
 
     template<class FluidState, class Method>
-    static void solve(FluidState& fs, Method, double, int, int)
+    static void solve(FluidState& fs, Method, double, unsigned, int)
     {
         fs.setLvalue(Evaluation{liquidFraction});
         for (unsigned phase = 0; phase < 2; ++phase) {
@@ -177,7 +177,7 @@ struct TestProblem
 {
     template<class Context>
     double temperature(const Context&, unsigned, unsigned) const { return 300.0; }
-    int getEosType() const { return 0; }
+    unsigned eosRegionIndex(unsigned) const { return 0; }
     template<class Context>
     TestMaterialLaw::Params materialLawParams(const Context&, unsigned, unsigned) const { return {}; }
     template<class Context>

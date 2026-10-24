@@ -2603,7 +2603,7 @@ namespace Opm
         }
 
         typename FluidSystem::template ParameterCache<ValueType> paramCache;
-        paramCache.setRegionIndex(fluid_state.pvtRegionIndex());
+        paramCache.setPvtRegionIndex(fluid_state.pvtRegionIndex());
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;

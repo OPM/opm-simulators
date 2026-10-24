@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
     // create a parameter cache
     using ParamCache = typename FluidSystem::template ParameterCache<Scalar>;
     ParamCache paramCache(1);
-    BOOST_CHECK_EQUAL(paramCache.regionIndex(), 1);
+    BOOST_CHECK_EQUAL(paramCache.pvtRegionIndex(), 1);
     BOOST_CHECK_EQUAL(FluidSystem::numRegions(), 1);
     BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
 

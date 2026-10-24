@@ -46,8 +46,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -128,12 +126,9 @@ public:
             "disabled (the default), the input SWAT is retained.");
     }
 
-    Opm::CompositionalConfig::EOSType getEosType() const
-    {
-        auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-        return eclState.compositionalConfig().eosType(0);
-    }
+    //! The zero-based reservoir EOS region of a cell.
+    unsigned eosRegionIndex(const unsigned globalDofIdx) const
+    { return eosnum_.empty() ? 0 : eosnum_[globalDofIdx]; }
 
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
@@ -168,6 +163,7 @@ public:
             throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
                                      "by compositional modeling yet");
         }
+        this->updateNum("EOSNUM", eosnum_, eclState.getTableManager().getTabdims().getNumEosRes());
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -308,6 +304,7 @@ public:
     void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const unsigned eosRegionIdx = eosRegionIndex(globalDofIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
@@ -330,8 +327,7 @@ public:
             }
 
             {
-                const auto& eos_type = getEosType();
-                typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
+                typename FluidSystem::template ParameterCache<Scalar> paramCache(eosRegionIdx);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
                 fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
@@ -365,7 +361,7 @@ public:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const auto& Ktmp = fs.wilsonK_(compIdx);
+            const auto& Ktmp = fs.wilsonK_(compIdx, eosRegionIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 
@@ -456,7 +452,7 @@ protected:
 
         EQUIL::Comp::InitialStateComputer<FluidSystem> initialState(
             eclState,
-            getEosType(),
+            eosnum_,
             vanguard.cellCenterDepths(),
             eqlnum,
             this->pvtnum_,
@@ -648,7 +644,6 @@ protected:
     void normalizeExplicitSwat_()
     {
         using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
-        const auto eos_type = getEosType();
         // Flash as the model does, so that this converges wherever the model's flash does.
         const Scalar flash_tolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flash_verbosity = Parameters::Get<Parameters::FlashVerbosity>();
@@ -659,7 +654,8 @@ protected:
         // A failing flash on one rank must not leave the others in the reduction below.
         const auto& comm = this->simulator().vanguard().grid().comm();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto& fs : initialFluidStates_) {
+        for (std::size_t cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            auto& fs = initialFluidStates_[cell];
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
@@ -672,7 +668,8 @@ protected:
                 zmf_oil_and_gas = true;
             }
 
-            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_type);
+            const unsigned eos_region = eosRegionIndex(cell);
+            typename FluidSystem::template ParameterCache<Scalar> param_cache(eos_region);
 
             // Hydrocarbon moles per unit pore volume as given. Each given phase holds its
             // input composition, ZMF or XMF/YMF, before the flash, so this is the molar
@@ -710,11 +707,11 @@ protected:
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
                 flash_fs.setMoleFraction(c, z[c] / sum_z);
-                flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c, eos_region));
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity);
+                flash_fs, flash_method, flash_tolerance, eos_region, flash_verbosity);
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();
@@ -777,6 +774,8 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+    // Zero-based reservoir EOS region of each cell, empty for a single region.
+    std::vector<int> eosnum_;
 
     bool zmf_initialization_ {false};
 
