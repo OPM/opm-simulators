@@ -204,7 +204,7 @@ public:
                 typedef typename std::decay<decltype(fs)>::type::ValueType FsValueType;
                 typename FluidSystem::template ParameterCache<FsValueType> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
-                paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setPvtRegionIndex(pvtRegionIdx);
                 paramCache.updatePhase(fs, this->phaseIdx_());
                 const auto& h = FluidSystem::enthalpy(fs, paramCache, this->phaseIdx_());
                 fs.setEnthalpy(this->phaseIdx_(), h);

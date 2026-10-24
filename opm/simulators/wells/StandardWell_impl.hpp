@@ -2724,7 +2724,7 @@ namespace Opm
                 typedef typename std::decay<decltype(fs)>::type::ValueType FsValueType;
                 typename FluidSystem::template ParameterCache<FsValueType> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
-                paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setPvtRegionIndex(pvtRegionIdx);
                 paramCache.updatePhase(fs, phaseIdx);
 
                 const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
