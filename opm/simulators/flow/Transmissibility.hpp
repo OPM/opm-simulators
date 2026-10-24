@@ -233,6 +233,17 @@ protected:
                                DimVector& faceAreaNormal,
                                /*isCpGrid=*/std::true_type) const;
 
+    /// Marks the grids other than the CpGrid that give the face center and the area normal
+    /// as the CpGrid defines them, which its transmissibilities are computed from.
+    struct CpFaceGeometry {};
+
+    template <class Intersection>
+    void computeFaceProperties(const Intersection& intersection,
+                               FaceInfo& inside,
+                               FaceInfo& outside,
+                               DimVector& faceAreaNormal,
+                               CpFaceGeometry) const;
+
     /*
      * \brief Applies additional transmissibilities specified via NNC keyword.
      *
