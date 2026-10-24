@@ -1579,22 +1579,25 @@ protected:
     void updateExplicitQuantities_(const bool first_step_after_restart)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
-        const bool invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
-        const bool invalidateFromMinPressure = this->updateMinPressure_();
-
-        // update hysteresis and max oil saturation used in vappars
-        const bool invalidateFromHyst = this->updateHysteresis_();
-        const bool invalidateFromMaxOilSat = this->updateMaxOilSaturation_();
+        // max water saturation, min pressure, hysteresis and max oil
+        // saturation in one sweep over the cached intensive quantities
+        const bool perDofActive = this->updateExplicitQuantitiesFused_(changedCells_);
 
         // deal with DRSDT and DRVDT
         const bool invalidateDRDT = !first_step_after_restart && this->updateCompositionChangeLimits_();
 
-        // the derivatives may have changed
-        const bool invalidateIntensiveQuantities
-            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat || invalidateDRDT;
-        if (invalidateIntensiveQuantities) {
+        // the derivatives may have changed; an unchanged cell would recompute to the same values
+        if (invalidateDRDT) {
             OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
+        else if (perDofActive) {
+            OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
+            if constexpr (requires { this->model().invalidateAndUpdateIntensiveQuantities(0u, changedCells_); }) {
+                this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, changedCells_);
+            } else {
+                this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            }
         }
 
         this->updateRockCompTransMultVal_();
@@ -1729,6 +1732,9 @@ private:
 
         return !isSubStep;
     }
+
+private:
+    std::vector<char> changedCells_{};
 };
 
 } // namespace Opm
