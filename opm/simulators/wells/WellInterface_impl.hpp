@@ -1317,9 +1317,15 @@ namespace Opm
                 number_of_well_reopenings_++;
                 return;
             }
+            const bool stopped_before_solve = this->wellIsStopped();
             bool converged = this->iterateWellEquations(
                 simulator, dt, groupStateHelper, well_state
             );
+            // Re-openings by the local solve count as well: a producer with a thp limit is
+            // rarely re-opened below.
+            if (stopped_before_solve && !this->wellIsStopped()) {
+                this->number_of_well_reopenings_++;
+            }
 
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(groupStateHelper);
