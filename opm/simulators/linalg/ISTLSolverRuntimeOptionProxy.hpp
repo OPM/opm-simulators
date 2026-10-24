@@ -28,8 +28,10 @@
 
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/ISTLSolverGPUISTL.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/ISTLSolverGPUSystem.hpp>
 #elif HAVE_CUDA
 #include <opm/simulators/linalg/gpuistl/ISTLSolverGPUISTL.hpp>
+#include <opm/simulators/linalg/gpuistl/ISTLSolverGPUSystem.hpp>
 #endif
 
 #include <opm/simulators/linalg/system/ISTLSolverSystem.hpp>
@@ -167,15 +169,24 @@ private:
         if (useSystemCpr) {
             using Indices = GetPropType<TypeTag, Properties::Indices>;
             const auto backend = Parameters::linearSolverAcceleratorTypeFromCLI();
-            if (backend != Parameters::LinearSolverAcceleratorType::CPU) {
-                OPM_THROW(std::invalid_argument,
-                          "The system_cpr preconditioner currently only "
-                          "supports --linear-solver-accelerator=cpu");
-            }
             // System solver types are hardcoded for 3-equation blackoil (see SystemTypes.hpp).
             if constexpr (Indices::numEq == 3) {
-                istlSolver_ = std::make_unique<ISTLSolverSystem<TypeTag>>(
-                    simulator, std::forward<Args>(args)...);
+                if (backend == Parameters::LinearSolverAcceleratorType::CPU) {
+                    istlSolver_ = std::make_unique<ISTLSolverSystem<TypeTag>>(
+                        simulator, std::forward<Args>(args)...);
+                }
+#if HAVE_CUDA
+                else if (backend == Parameters::LinearSolverAcceleratorType::GPU) {
+                    istlSolver_ = std::make_unique<gpuistl::ISTLSolverGPUSystem<TypeTag>>(
+                        simulator, std::forward<Args>(args)...);
+                }
+#endif
+                else {
+                    OPM_THROW(std::invalid_argument,
+                              fmt::format(fmt::runtime("The system_cpr preconditioner does not "
+                                                       "support --linear-solver-accelerator={}"),
+                                          Parameters::toString(backend)));
+                }
             } else {
                 OPM_THROW(std::invalid_argument,
                           "The system_cpr preconditioner is only supported for "

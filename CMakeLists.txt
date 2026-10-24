@@ -525,6 +525,7 @@ macro(opm-simulators_tests_hook)
                  GpuSeqILU0
                  GpuSparseMatrix
                  GpuSparseTable
+                 GpuSystemTypes
                  GpuVector
                  GpuView
                  HypreInterfaceGPU

@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSystemPreconditionerFactory.hpp>
 
 // NOTE: This is very rudimentary, and will be improved once we
 // incorporate MPI in the ISTLSolverGPUISTL class.
@@ -35,6 +36,13 @@ template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSpa
 template class ::Dune::FlexibleSolver<Dune::MatrixAdapter<::Opm::gpuistl::GpuSparseMatrixWrapper<float>,
                                                           ::Opm::gpuistl::GpuVector<float>,
                                                           ::Opm::gpuistl::GpuVector<float>>>;
+#endif
+
+// Outer solver of the coupled reservoir-well system on the GPU.
+template class ::Dune::FlexibleSolver<::Opm::gpuistl::GpuSystemSeqOp<double>>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class ::Dune::FlexibleSolver<::Opm::gpuistl::GpuSystemSeqOp<float>>;
 #endif
 
 #if HAVE_MPI
