@@ -211,8 +211,13 @@ private:
      // we will need two to handle the changes between time stepping
      CompWellState<FluidSystem> comp_well_states_;
 
-     // saved state at beginning of report step, used to restore on failed timestep
+     // last accepted state, saved at the start of each report step and after each
+     // successful time step; a failed time step restarts from it
      CompWellState<FluidSystem> last_valid_comp_well_states_;
+
+     // limits of a Newton update of the wells, as for the black-oil wells
+     Scalar dwell_fraction_max_;
+     Scalar dbhp_max_rel_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
@@ -239,6 +244,11 @@ private:
      void assemble(const double dt);
 
      void calculateExplicitQuantities();
+
+     // flow_comp registers the black-oil model parameters, flowexp_comp does
+     // not, so fall back to the default unless the parameter was given
+     template <class Param>
+     static Scalar wellNewtonLimit_();
 };
 
 } // end of namespace Opm
