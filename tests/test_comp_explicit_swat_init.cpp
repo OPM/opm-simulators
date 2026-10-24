@@ -32,12 +32,25 @@
 namespace
 {
 
-// Initial SWAT per cell with --normalize-explicit-swat=true. In the probe decks,
-// cells 6-8 depend on whether the hydrocarbon is given as gas or oil, and SSHIFT
-// moves every cell but the single-phase gas in cell 9.
-const std::map<std::string_view, std::vector<float>> probeCases {
+enum class SaturationCheck { WaterOnly, AllPhases, Dry };
+
+struct ProbeCase
+{
+    std::vector<float> expectedSwat;
+    SaturationCheck check = SaturationCheck::WaterOnly;
+};
+
+// RTEMP is 150 C in every cell. These values also apply when SWAT is
+// inferred from SOIL and SGAS, or the supplied pair is rounded from float32.
+const std::vector<float> rtempSwat {
+    0.1626093f, 0.0392756f, 0.4371724f, 0.7565116f, 0.1626093f,
+    0.0343808f, 0.0278085f, 0.2000000f, 0.2000000f};
+
+// The EXPLICIT_SWAT probes use flash SWAT normalization. Their cells 6-8
+// distinguish hydrocarbon input as gas or oil; SSHIFT changes molar volumes.
+const std::map<std::string_view, ProbeCase> probeCases {
     {"EXPLICIT_SWAT_PROBES_SGAS",
-     {0.1626093f,
+     {{0.1626093f,
       0.0392756f,
       0.4371724f,
       0.7565116f,
@@ -45,9 +58,9 @@ const std::map<std::string_view, std::vector<float>> probeCases {
       0.2801100f,
       0.2697011f,
       0.8957410f,
-      0.2000000f}},
+      0.2000000f}}},
     {"EXPLICIT_SWAT_PROBES_SOIL",
-     {0.1626093f,
+     {{0.1626093f,
       0.0392756f,
       0.4371724f,
       0.7565116f,
@@ -55,9 +68,9 @@ const std::map<std::string_view, std::vector<float>> probeCases {
       0.0343808f,
       0.0278085f,
       0.2000000f,
-      0.2000000f}},
+      0.2000000f}}},
     {"EXPLICIT_SWAT_PROBES_SSHIFT",
-     {0.1614406f,
+     {{0.1614406f,
       0.0389520f,
       0.4350555f,
       0.7549224f,
@@ -65,9 +78,9 @@ const std::map<std::string_view, std::vector<float>> probeCases {
       0.2814685f,
       0.2704936f,
       0.9109980f,
-      0.2000000f}},
+      0.2000000f}}},
     {"EXPLICIT_SWAT_PROBES_XMF_YMF",
-     {0.1626093f,
+     {{0.1626093f,
       0.0392756f,
       0.4371724f,
       0.7565116f,
@@ -75,15 +88,21 @@ const std::map<std::string_view, std::vector<float>> probeCases {
       0.0612444f,
       0.0504184f,
       0.3269900f,
-      0.2000000f}},
-    {"EXPLICIT_SWAT_NEAR_DEW_POINT", {0.2000029f, 0.1626093f}},
-    {"EXPLICIT_SWAT_ZERO_COMPONENT", {0.2000000f, 0.1830071f}},
+      0.2000000f}}},
+    {"EXPLICIT_SWAT_NEAR_DEW_POINT", {{0.2000029f, 0.1626093f}}},
+    {"EXPLICIT_SWAT_ZERO_COMPONENT", {{0.2000000f, 0.1830071f}}},
+    {"COMP_EXPLICIT_SOIL_RTEMP", {rtempSwat, SaturationCheck::AllPhases}},
+    {"COMP_EXPLICIT_SOIL_SGAS", {rtempSwat, SaturationCheck::AllPhases}},
+    {"COMP_EXPLICIT_SATURATIONS_SCALED",
+     {{0.2f, 0.05f, 0.5f, 0.8f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f}, SaturationCheck::AllPhases}},
+    {"COMP_EXPLICIT_DRY_SOIL", {std::vector<float>(9), SaturationCheck::Dry}},
 };
 
 int
-checkProbeCase(std::string_view caseName, const std::vector<float>& expected)
+checkProbeCase(std::string_view caseName, const ProbeCase& probe)
 {
     try {
+        const auto& expected = probe.expectedSwat;
         Opm::EclIO::ERst restart(std::string {caseName} + ".UNRST");
         if (!restart.hasReportStepNumber(0)) {
             std::cerr << caseName << ": no initial restart step\n";
@@ -91,6 +110,28 @@ checkProbeCase(std::string_view caseName, const std::vector<float>& expected)
         }
 
         restart.loadReportStepNumber(0);
+        std::vector<float> sgas;
+        std::vector<float> soil;
+        if (probe.check != SaturationCheck::WaterOnly) {
+            sgas = restart.getRestartData<float>("SGAS", 0);
+            soil = restart.getRestartData<float>("SOIL", 0);
+            if (sgas.size() != expected.size() || soil.size() != expected.size()) {
+                std::cerr << caseName << ": unexpected hydrocarbon saturation count\n";
+                return 1;
+            }
+        }
+        if (probe.check == SaturationCheck::Dry) {
+            for (std::size_t cell = 0; cell < sgas.size(); ++cell) {
+                if (!(sgas[cell] >= 0.0f && soil[cell] >= 0.0f
+                      && std::abs(sgas[cell] + soil[cell] - 1.0f) <= 1.0e-5f)) {
+                    std::cerr << caseName << " cell " << cell + 1
+                              << ": dry phase saturations do not fill the pore volume\n";
+                    return 1;
+                }
+            }
+            std::cout << caseName << ": dry phase saturations fill the pore volume\n";
+            return 0;
+        }
         const auto& swat = restart.getRestartData<float>("SWAT", 0);
         if (swat.size() != expected.size()) {
             std::cerr << caseName << ": expected " << expected.size() << " SWAT values, got "
@@ -100,7 +141,10 @@ checkProbeCase(std::string_view caseName, const std::vector<float>& expected)
 
         bool ok = true;
         for (std::size_t cell = 0; cell < swat.size(); ++cell) {
-            if (!(std::abs(swat[cell] - expected[cell]) <= 1.0e-5f)) {
+            if (!(std::abs(swat[cell] - expected[cell]) <= 1.0e-5f
+                  && (probe.check == SaturationCheck::WaterOnly
+                      || (sgas[cell] >= 0.0f && soil[cell] >= 0.0f
+                          && std::abs(swat[cell] + sgas[cell] + soil[cell] - 1.0f) <= 1.0e-5f)))) {
                 std::cerr << caseName << " cell " << cell + 1 << " initial SWAT: " << swat[cell]
                           << " (expected " << expected[cell] << ")\n";
                 ok = false;

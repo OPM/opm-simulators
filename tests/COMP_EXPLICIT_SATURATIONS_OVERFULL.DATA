@@ -1,0 +1,46 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2024, SINTEF Digital, TNO
+-- Copyright (C) 2026, SINTEF Digital
+
+-- Cell (1,1,1) has an invalid overfull pair.
+
+RUNSPEC
+OIL
+GAS
+WATER
+
+INCLUDE
+ 'include/comp_explicit_runspec.inc' /
+
+GRID
+INCLUDE
+ 'include/comp_explicit_grid.inc' /
+
+PROPS
+INCLUDE
+ 'include/comp_explicit_props.inc' /
+
+INCLUDE
+ 'include/comp_explicit_water.inc' /
+
+SOLUTION
+INCLUDE
+ 'include/comp_explicit_composition.inc' /
+
+SOIL
+ 0.8 0.95 0.5 0.2 0.8 0.8 0.8 0.8 0 /
+
+SWAT
+ 0.3 0.05 0.5 0.8 0.2 0.2 0.2 0.2 0.2 /
+
+RPTRST
+ BASIC=2 PRESSURE SGAS SOIL SWAT XMF YMF ZMF /
+
+SCHEDULE
+INCLUDE
+ 'include/comp_explicit_schedule.inc' /
+END
