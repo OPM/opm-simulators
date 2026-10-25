@@ -282,6 +282,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellInterfaceIndices.cpp
   opm/simulators/wells/WellPerformanceEventTracker.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
+  opm/simulators/wells/WellReservoirResponse.cpp
   opm/simulators/wells/WellState.cpp
   opm/simulators/wells/WellTest.cpp
   opm/simulators/wells/WGState.cpp
@@ -567,6 +568,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
+  tests/test_wellreservoirresponse.cpp
   tests/test_wellstate.cpp
 )
 
@@ -1408,6 +1410,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellInterfaceIndices.hpp
   opm/simulators/wells/WellPerformanceEventTracker.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
+  opm/simulators/wells/WellReservoirResponse.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WellTracerRate.hpp
