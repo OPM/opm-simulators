@@ -37,7 +37,7 @@ class CompWellPrimaryVariables
 public:
     // the water phase is immiscible with the hydrocarbon components: it gets
     // one conservation equation of its own and takes no part in the flash
-    static constexpr bool has_water = FluidSystem::waterEnabled;
+    static constexpr bool has_water = Indices::waterEnabled;
     static constexpr int numWellConservationEq = FluidSystem::numComponents + (has_water ? 1 : 0);
     static constexpr int numWellControlEq = 1;
     static constexpr int numWellEq = numWellConservationEq + numWellControlEq;

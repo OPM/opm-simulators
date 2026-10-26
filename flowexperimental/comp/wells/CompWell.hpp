@@ -47,6 +47,10 @@ public:
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
     constexpr static unsigned num_comp = FluidSystem::numComponents;
+    constexpr static int num_phases = FluidSystem::numPhases;
+    constexpr static bool waterEnabled = Indices::waterEnabled;
+    // water follows the hydrocarbon components in the rates and well equations
+    constexpr static unsigned water_comp_idx = num_comp;
 
     using EvalWell = typename PrimaryVariables::EvalWell;
     using BVectorWell = typename WellEquations::BVectorWell;
@@ -66,8 +70,6 @@ public:
     // it is part of the secondary variables used in the assembling of the well equations
     struct SurfaceConditions
     {
-        // one entry per fluid-system phase, so a water entry only with a water phase
-        static constexpr int num_phases = FluidSystem::numPhases;
         std::array<EvalWell, num_phases> surface_densities_{};
         std::array<EvalWell, num_phases> volume_fractions_{};
         std::array<std::array<EvalWell, num_comp>, num_phases> mass_fractions_{};
@@ -92,7 +94,7 @@ public:
 
         // mass fraction of the water phase in the surface stream
         EvalWell waterMassFraction() const {
-            if constexpr (FluidSystem::waterEnabled) {
+            if constexpr (waterEnabled) {
                 return surface_densities_[FluidSystem::waterPhaseIdx] *
                        volume_fractions_[FluidSystem::waterPhaseIdx] / density();
             } else {

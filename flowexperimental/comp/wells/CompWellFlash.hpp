@@ -215,7 +215,9 @@ struct WellboreContents
 /// Masses [kg], mass fractions and density of the wellbore mixture of the
 /// flashed hydrocarbon system and water of density water_density. The flashed
 /// fluid state may hold plain scalars where the flash derivatives do not
-/// matter; the results have the value type of the water fraction.
+/// matter; the results have the value type of the water fraction. Their
+/// derivatives, including those through the flash, are checked against
+/// finite differences in tests/test_compwell_jacobian.cpp.
 template <typename FluidSystem, typename TFlash, typename T, typename Scalar>
 WellboreContents<T, FluidSystem::numComponents>
 wellboreContents(const CompositionalFluidState<TFlash, FluidSystem>& hydrocarbons,
