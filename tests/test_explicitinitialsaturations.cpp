@@ -25,6 +25,7 @@
 #include <opm/simulators/flow/ExplicitInitialSaturations.hpp>
 
 #include <array>
+#include <cstddef>
 #include <limits>
 #include <optional>
 #include <stdexcept>
