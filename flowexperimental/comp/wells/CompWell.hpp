@@ -64,7 +64,7 @@ public:
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
     // it is part of the secondary variables used in the assembling of the well equations
-    struct SurfaceConditons
+    struct SurfaceConditions
     {
         // one entry per fluid-system phase, so a water entry only with a water phase
         static constexpr int num_phases = FluidSystem::numPhases;
@@ -181,7 +181,7 @@ private:
     EvalWell water_mass_{0.};
     EvalWell water_mass_fraction_{0.};
     // quantities used to calculate the quantities under the surface conditions
-    SurfaceConditons surface_conditions_;
+    SurfaceConditions surface_conditions_;
 
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,

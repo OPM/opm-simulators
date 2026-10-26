@@ -187,7 +187,7 @@ updateSurfaceQuantities(const Simulator& simulator)
         // The stream is water alone, so the hydrocarbon surface split carries
         // no weight and needs no flash.
         if constexpr (FluidSystem::waterEnabled) {
-            this->surface_conditions_ = SurfaceConditons{};
+            this->surface_conditions_ = SurfaceConditions{};
             this->surface_conditions_.surface_densities_[FluidSystem::waterPhaseIdx]
                 = surface_water_density;
             this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = 1.;
@@ -688,7 +688,7 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
     auto& surface_phase_rates = well_state.surface_phase_rates;
     if (well_state.producer) { // producer
         const auto& surface_cond = this->surface_conditions_;
-        for (int p = 0; p < SurfaceConditons::num_phases; ++p) {
+        for (int p = 0; p < SurfaceConditions::num_phases; ++p) {
             surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
         }
     } else { // injector
