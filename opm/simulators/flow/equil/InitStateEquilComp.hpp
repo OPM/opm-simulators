@@ -166,7 +166,7 @@ public:
         fs.setPressure(FluidSystem::waterPhaseIdx, press);
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
-        paramCache.setRegionIndex(pvtRegion_);
+        paramCache.setPvtRegionIndex(pvtRegion_);
 
         return FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx) * g_;
     }

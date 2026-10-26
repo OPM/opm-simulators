@@ -456,7 +456,7 @@ public:
         {
             OPM_TIMEBLOCK_LOCAL(UpdateViscosity, Subsystem::PvtProps);
             typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-            paramCache.setRegionIndex(pvtRegionIdx);
+            paramCache.setPvtRegionIndex(pvtRegionIdx);
             paramCache.updateAll(fluidState_);
 
             const auto& mu = FluidSystem::viscosity(fluidState, paramCache, phaseIdx);
