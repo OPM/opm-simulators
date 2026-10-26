@@ -249,6 +249,37 @@ wellboreContents(const CompositionalFluidState<TFlash, FluidSystem>& hydrocarbon
     return contents;
 }
 
+/// Contents of a wellbore that holds water alone, without a flash of
+/// hydrocarbons that are not there. Their masses are zero, and for the
+/// derivatives with respect to the water fraction they take the overall
+/// composition of fluid_state and the water density.
+template <typename FluidSystem, typename T, typename Scalar>
+WellboreContents<T, FluidSystem::numComponents>
+waterOnlyWellboreContents(const CompositionalFluidState<Scalar, FluidSystem>& fluid_state,
+                          const T& water_volume_fraction,
+                          const T& water_density,
+                          const Scalar wellbore_volume)
+{
+    constexpr int num_comp = FluidSystem::numComponents;
+    Scalar mass_per_mole = 0.;
+    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        mass_per_mole += fluid_state.moleFraction(comp_idx) * FluidSystem::molarMass(comp_idx);
+    }
+
+    // at the water density, the mass fractions are the volume fractions
+    WellboreContents<T, num_comp> contents;
+    contents.water_mass_fraction = water_volume_fraction;
+    contents.water_mass = water_volume_fraction * water_density * wellbore_volume;
+    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        contents.mass_fractions[comp_idx] = (1. - water_volume_fraction)
+            * fluid_state.moleFraction(comp_idx) * FluidSystem::molarMass(comp_idx) / mass_per_mole;
+        contents.component_masses[comp_idx]
+            = contents.mass_fractions[comp_idx] * water_density * wellbore_volume;
+    }
+    contents.density = water_density;
+    return contents;
+}
+
 } // end of namespace Opm
 
 #endif // OPM_COMP_WELL_FLASH_HPP

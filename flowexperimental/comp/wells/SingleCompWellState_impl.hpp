@@ -96,10 +96,11 @@ update_injector_targets(const Well& well,
     switch (inj_controls.injector_type) {
         case InjectorType::WATER:
             if constexpr (FluidSystem::waterEnabled) {
-                // The wellbore holds water alone. It still needs a hydrocarbon
-                // composition the flash accepts, and a water injector has no stream
-                // to take one from. A well without open local connections has no
-                // well equations, so it can wait for a connection to open.
+                // The wellbore holds water alone. Its hydrocarbon composition is
+                // flashed once hydrocarbons enter, and a water injector has no
+                // stream to take one from, so it starts with the cell's. A well
+                // without open local connections has no well equations, so it can
+                // wait for a connection to open.
                 if (!this->connection_data.cell_index.empty()) {
                     this->total_molar_fractions
                         = cell_mole_fractions[this->connection_data.cell_index.front()];

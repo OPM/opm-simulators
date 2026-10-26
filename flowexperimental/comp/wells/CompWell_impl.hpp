@@ -92,19 +92,22 @@ calculateExplicitQuantities(const Simulator& simulator,
         // flash calculation in the wellbore to obtain the explicit
         // component masses
         auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
-
-        flashFluidState_(fluid_state_scalar);
+        const Scalar water_fraction = getValue(this->primary_variables_.getWaterVolumeFraction());
 
         Scalar water_density = 0.;
         if constexpr (waterEnabled) {
             water_density = waterDensity_(fluid_state_scalar.pressure(FluidSystem::waterPhaseIdx),
                                           fluid_state_scalar.temperature(0));
         }
-        const auto contents
-            = wellboreContents(fluid_state_scalar,
-                               getValue(this->primary_variables_.getWaterVolumeFraction()),
-                               water_density,
-                               this->wellbore_volume_);
+        WellboreContents<Scalar, num_comp> contents;
+        if (water_fraction < 1.) {
+            flashFluidState_(fluid_state_scalar);
+            contents = wellboreContents(fluid_state_scalar, water_fraction, water_density,
+                                        this->wellbore_volume_);
+        } else {
+            contents = waterOnlyWellboreContents(fluid_state_scalar, water_fraction,
+                                                 water_density, this->wellbore_volume_);
+        }
         this->prev_component_masses_ = contents.component_masses;
         this->prev_water_mass_ = contents.water_mass;
     }
@@ -135,35 +138,32 @@ CompWell<TypeTag>::
 updateWellboreContents()
 {
     const EvalWell water_fraction = this->primary_variables_.getWaterVolumeFraction();
-    const auto update = [this, &water_fraction](const auto& hydrocarbons) {
-        EvalWell water_density = 0.;
+    const auto water_density = [this](const Scalar temperature) {
+        EvalWell density = 0.;
         if constexpr (waterEnabled) {
-            water_density = waterDensity_(this->primary_variables_.getBhp(),
-                                          getValue(hydrocarbons.temperature(0)));
+            density = waterDensity_(this->primary_variables_.getBhp(), temperature);
         }
-
-        const auto contents = wellboreContents(hydrocarbons,
-                                               water_fraction,
-                                               water_density,
-                                               this->wellbore_volume_);
-        this->component_masses_ = contents.component_masses;
-        this->water_mass_ = contents.water_mass;
-        this->mass_fractions_ = contents.mass_fractions;
-        this->water_mass_fraction_ = contents.water_mass_fraction;
-        this->fluid_density_ = contents.density;
+        return density;
     };
 
-    // With water alone in the wellbore every derivative of the flash is
-    // multiplied by 1 - water_fraction = 0, so the scalar flash is enough.
+    WellboreContents<EvalWell, num_comp> contents;
     if (getValue(water_fraction) < 1.) {
         auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
         flashFluidState_(fluid_state);
-        update(fluid_state);
+        contents = wellboreContents(fluid_state, water_fraction,
+                                    water_density(getValue(fluid_state.temperature(0))),
+                                    this->wellbore_volume_);
     } else {
-        auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
-        flashFluidState_(fluid_state);
-        update(fluid_state);
+        const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+        contents = waterOnlyWellboreContents(fluid_state, water_fraction,
+                                             water_density(fluid_state.temperature(0)),
+                                             this->wellbore_volume_);
     }
+    this->component_masses_ = contents.component_masses;
+    this->water_mass_ = contents.water_mass;
+    this->mass_fractions_ = contents.mass_fractions;
+    this->water_mass_fraction_ = contents.water_mass_fraction;
+    this->fluid_density_ = contents.density;
 }
 
 template <typename TypeTag>
