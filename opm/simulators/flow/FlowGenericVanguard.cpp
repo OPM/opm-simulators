@@ -494,8 +494,8 @@ void FlowGenericVanguard::registerParameters_()
          "above and below (only for PolyhedralGrid).");
     Parameters::Register<Parameters::LgrBackend>
         ("How LGRs are refined: 'trilinear' (default) or 'conforming', the "
-         "corner-point builder that also handles graded boxes, block MINPV, "
-         "faults and LGRPILLR.");
+         "corner-point builder that also handles graded boxes, block MINPV "
+         "and faults.");
     Parameters::Register<Parameters::RefineBeforeRedistribute>
         ("With --lgr-backend=conforming: refine the grid before load "
          "balancing and distribute the refined cells, balanced by refined "
