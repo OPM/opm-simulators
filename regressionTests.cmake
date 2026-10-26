@@ -2763,6 +2763,91 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    bc_wt_tracer
+  FILENAME
+    BC_WT_TRACER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    bc_ot_tracer_rate
+  FILENAME
+    BC_OT_TRACER_RATE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    bc_ot_tracer_free
+  FILENAME
+    BC_OT_TRACER_FREE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    bc_gt_tracer_rate
+  FILENAME
+    BC_GT_TRACER_RATE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    bc_gt_tracer_free
+  FILENAME
+    BC_GT_TRACER_FREE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
     tracer_multiphase
   FILENAME
     TRACER_2WT_2GT
