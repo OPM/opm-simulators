@@ -218,6 +218,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    equil_1d_compvd_water_contacts_in_cell
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_CONTACTS_IN_CELL
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
     equil_1d_compvd_water_gascap
   FILENAME
     EQUIL_1D_COMPVD_WATER_GASCAP
@@ -238,6 +255,23 @@ add_test_compareECLFiles(
     equil_1d_compvd_water_gascap_contact_mismatch
   FILENAME
     EQUIL_1D_COMPVD_WATER_GASCAP_CONTACT_MISMATCH
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/equilibration
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    equil_1d_compvd_water_gascap_row_gap
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_ROW_GAP
   SIMULATOR
     flow_comp
   REFERENCE_SIMULATOR
