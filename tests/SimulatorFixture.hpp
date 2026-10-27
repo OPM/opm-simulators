@@ -60,6 +60,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -101,18 +102,20 @@ struct SimulatorFixture
  * \param filename Path to the Eclipse deck file
  * \param test_name Name of the test (used in argv[0])
  * \param threads_per_process Number of threads per process (default: 1)
+ * \param options More command line options, such as "--lgr-backend=conforming"
  */
 template <class TypeTag>
 void setupSimulatorParameters(const std::string& filename,
                               const char* test_name = "test_simulator",
-                              int threads_per_process = 1)
+                              int threads_per_process = 1,
+                              const std::vector<std::string>& options = {})
 {
     const std::string filename_arg = "--ecl-deck-file-name=" + filename;
 
-    const char* argv[] = {
-        test_name,
-        filename_arg.c_str()
-    };
+    std::vector<const char*> argv { test_name, filename_arg.c_str() };
+    for (const auto& option : options) {
+        argv.push_back(option.c_str());
+    }
 
     Parameters::reset();
     registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
@@ -123,8 +126,8 @@ void setupSimulatorParameters(const std::string& filename,
     Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
     Parameters::SetDefault<Parameters::ThreadsPerProcess>(threads_per_process);
     Parameters::endRegistration();
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
-                              argv,
+    setupParameters_<TypeTag>(/*argc=*/static_cast<int>(argv.size()),
+                              argv.data(),
                               /*registerParams=*/false,
                               /*allowUnused=*/false,
                               /*handleHelp=*/true,
@@ -138,18 +141,22 @@ void setupSimulatorParameters(const std::string& filename,
  * \param filename Path to the Eclipse deck file
  * \param test_name Name of the test (used in argv[0])
  * \param threads_per_process Number of threads per process (default: 1)
+ * \param parsing_strictness Parsing strictness of the deck (default: "normal")
+ * \param options More command line options, such as "--lgr-backend=conforming"
  * \return Unique pointer to the initialized simulator
  */
 template <class TypeTag>
 std::unique_ptr<GetPropType<TypeTag, Properties::Simulator>>
 initSimulator(const char* filename,
               const char* test_name = "test_simulator",
-              int threads_per_process = 1)
+              int threads_per_process = 1,
+              const std::string& parsing_strictness = "normal",
+              const std::vector<std::string>& options = {})
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    setupSimulatorParameters<TypeTag>(filename, test_name, threads_per_process);
-    FlowGenericVanguard::readDeck(filename, /*ignoredKeywords=*/"");
+    setupSimulatorParameters<TypeTag>(filename, test_name, threads_per_process, options);
+    FlowGenericVanguard::readDeck(filename, /*ignoredKeywords=*/"", parsing_strictness);
     return std::make_unique<Simulator>();
 }
 

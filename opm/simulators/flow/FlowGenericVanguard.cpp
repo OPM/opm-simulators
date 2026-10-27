@@ -137,6 +137,22 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
     ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
     edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
+    lgrBackend_ = Parameters::Get<Parameters::LgrBackend>();
+    if (lgrBackend_ != "trilinear" && lgrBackend_ != "conforming") {
+        throw std::invalid_argument(fmt::format("Unknown value for --lgr-backend: '{}'. "
+                                                "Accepted values are 'trilinear' and 'conforming'.",
+                                                lgrBackend_));
+    }
+    // Conforming refines before load balancing unless told otherwise: refining
+    // each box on its owning rank needs every box to fit on one rank.
+    const std::string refineBefore = Parameters::Get<Parameters::RefineBeforeRedistribute>();
+    if (refineBefore != "auto" && refineBefore != "true" && refineBefore != "false") {
+        throw std::invalid_argument(fmt::format("Unknown value for --refine-before-redistribute: '{}'. "
+                                                "Accepted values are 'auto', 'true' and 'false'.",
+                                                refineBefore));
+    }
+    refineBeforeRedistribute_ = (refineBefore == "auto") ? (lgrBackend_ == "conforming")
+                                                         : (refineBefore == "true");
 
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
@@ -208,7 +224,8 @@ void FlowGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
     summaryState_ = std::move(params.summaryState_);
 }
 
-void FlowGenericVanguard::readDeck(const std::string& filename, const std::string& ignoredKeywords)
+void FlowGenericVanguard::readDeck(const std::string& filename, const std::string& ignoredKeywords,
+                                   const std::string& parsingStrictness)
 {
     Dune::Timer setupTimer;
     setupTimer.start();
@@ -221,7 +238,7 @@ void FlowGenericVanguard::readDeck(const std::string& filename, const std::strin
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "normal", "100", ignoredKeywords, false, false, false, {},
+                  nullptr, parsingStrictness, "normal", "100", ignoredKeywords, false, false, false, {},
                   /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
 }
@@ -480,6 +497,16 @@ void FlowGenericVanguard::registerParameters_()
         ("Order cells owned by rank before ghost/overlap cells.");
     Parameters::Register<Parameters::EdgeConformal>
         ("Edge conformal cornerpoint processing.");
+    Parameters::Register<Parameters::LgrBackend>
+        ("How LGRs are refined: 'conforming' (default), the corner-point "
+         "builder that also handles graded boxes, block MINPV and faults, "
+         "or 'trilinear'.");
+    Parameters::Register<Parameters::RefineBeforeRedistribute>
+        ("With --lgr-backend=conforming: refine the grid before load "
+         "balancing and distribute the refined cells, balanced by refined "
+         "cell count, instead of refining each box on its owning rank: "
+         "'auto' does so with --lgr-backend=conforming and not otherwise, "
+         "'true' or 'false' chooses.");
 
 #if HAVE_MPI
     Parameters::Register<Parameters::AddCorners>

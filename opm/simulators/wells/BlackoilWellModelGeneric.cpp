@@ -497,6 +497,9 @@ initializeWellPerfData()
 
     int well_index = 0;
 
+    // Connection cells this rank's wells miss on all of their ranks.
+    std::string missingCells;
+
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
 
@@ -522,9 +525,7 @@ initializeWellPerfData()
 
         for (const auto& connection : well.getConnections()) {
 
-            const int active_index = well.is_lgr_well()
-                ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
-                : this->compressedIndexForInterior(connection.global_index());
+            const int active_index = this->compressedIndexForConnection(connection);
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 
@@ -577,11 +578,26 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        checker.checkAllConnectionsFound();
+        // The verdict is reduced over the ranks of this well only.  Go on
+        // with the other wells, whose ranks meet in the calls below, and
+        // stop after the loop.
+        if (const auto [found, msg] = checker.checkAllConnectionsFound(); !found) {
+            missingCells += (missingCells.empty() ? "" : "\n") + msg;
+        }
 
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
         ++well_index;
+    }
+
+    // A rank that stops alone leaves the others waiting for it, so every
+    // rank stops when any rank misses a connection cell.
+    if (this->comm_.max(missingCells.empty() ? 0 : 1) > 0) {
+        if (missingCells.empty()) {
+            missingCells = "Connection cells of a well were not found "
+                           "in grid on another rank";
+        }
+        OPM_THROW(std::runtime_error, missingCells);
     }
 }
 
@@ -2006,9 +2022,7 @@ getCellsForConnections(const Well& well) const
 
     for (const auto& connection : connectionSet)
     {
-        int compressed_idx = well.is_lgr_well()
-            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)
-            : this->compressedIndexForInterior(connection.global_index());
+        int compressed_idx = this->compressedIndexForConnection(connection);
 
         if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
             wellCells.push_back(compressed_idx);

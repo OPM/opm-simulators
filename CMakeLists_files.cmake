@@ -518,6 +518,10 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_keyword_validator.cpp
   tests/test_LgrBlockData.cpp
   tests/test_LgrTransIndex.cpp
+  tests/test_lgr_block_data.cpp
+  tests/test_lgr_sealed_fault_ranks.cpp
+  tests/test_lgr_well_ranks.cpp
+  tests/test_lgr_zero_cells.cpp
   tests/test_linearleastsquares.cpp
   tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
@@ -711,6 +715,7 @@ list (APPEND TEST_DATA_FILES
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data
+  tests/LGR_RESTART_UNREFINED.DATA
   tests/TESTTIMER.DATA
   tests/TESTWELLMODEL.DATA
   tests/liveoil.DATA

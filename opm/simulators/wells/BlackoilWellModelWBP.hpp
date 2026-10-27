@@ -30,6 +30,8 @@
 
 #include <cstddef>
 #include <optional>
+#include <set>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -64,9 +66,12 @@ private:
     {
         std::optional<typename std::vector<WellInterfaceGeneric<Scalar, IndexTraits>*>::size_type> openWellIdx_{};
         std::size_t wbpCalcIdx_{};
+        // Completed in an LGR: no calculator, WBP not reported.
+        bool skipped_{false};
     };
 
     std::vector<WBPCalcID> wbpCalcMap_{};
+    std::set<std::string> warnedLgrWells_{};
 };
 
 
