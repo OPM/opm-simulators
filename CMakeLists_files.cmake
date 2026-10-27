@@ -544,6 +544,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_SatfuncConsistencyChecks_parallel.cpp
   tests/test_SatfuncConsistencyCheckManager.cpp
   tests/test_stoppedwells.cpp
+  tests/test_tarjan.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
   tests/test_timer.cpp
   tests/test_tpsa_conversions.cpp
@@ -552,6 +553,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_matrix.cpp
   tests/test_tpsa_preconditioner.cpp
   tests/test_tpsa_primaryvariables.cpp
+  tests/test_upwindtransportmatrix.cpp
   tests/test_vfpproperties.cpp
   tests/test_SystemCprwPressureStage.cpp
   tests/test_MswCprWellDiagonal.cpp
@@ -1268,6 +1270,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/PressureAverage.hpp
   opm/simulators/utils/PropsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
+  opm/simulators/utils/Tarjan.hpp
+  opm/simulators/utils/UpwindTransportSolver.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
   opm/simulators/utils/compressPartition.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
