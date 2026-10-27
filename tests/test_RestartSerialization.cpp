@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
@@ -366,6 +367,7 @@ public:
     }
 
     using BlackoilWellModelGeneric<double, IndexTraits>::closeWellForRetry;
+    using BlackoilWellModelGeneric<double, IndexTraits>::honorOpenRequest;
 
     void setRollbackEnabled(bool value) { enable_state_rollback_ = value; }
 
@@ -646,6 +648,25 @@ BOOST_AUTO_TEST_CASE(RestoredClosureIsNotARetryClosure)
     BOOST_CHECK(model.wasClosedForRetry("FAILING"));
     BOOST_CHECK(model.wasClosedForRetry("ANOTHER_FAILING"));
     BOOST_CHECK(!model.wasClosedForRetry("RESTORED"));
+
+    // Precondition: both wells are still closed before the OPEN request.
+    BOOST_CHECK(model.wellTestState().well_is_closed("RESTORED"));
+    BOOST_CHECK(model.wellTestState().well_is_closed("FAILING"));
+
+    // OPEN must reopen the restored well while the retry-closed well stays shut.
+    Opm::Events restored_events;
+    restored_events.addEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL);
+    model.honorOpenRequest("RESTORED", restored_events, restart_time);
+
+    Opm::Events failing_events;
+    failing_events.addEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL);
+    model.honorOpenRequest("FAILING", failing_events, restart_time);
+
+    BOOST_CHECK(!model.wellTestState().well_is_closed("RESTORED"));
+    BOOST_CHECK(model.wellTestState().well_is_closed("FAILING"));
+    // Both requests are consumed.
+    BOOST_CHECK(!restored_events.hasEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL));
+    BOOST_CHECK(!failing_events.hasEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL));
 }
 
 

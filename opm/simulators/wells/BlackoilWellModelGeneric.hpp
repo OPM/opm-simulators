@@ -67,6 +67,7 @@ namespace Opm {
     template<typename Scalar, typename IndexTraits> class GasLiftGroupInfo;
     template<typename Scalar, typename IndexTraits> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
+    class Events;
     class Group;
     class GuideRateConfig;
     class RegionVariableCollection;
@@ -669,6 +670,12 @@ protected:
     std::unordered_set<std::string> retry_shut_wells_;
 
     void closeWellForRetry(const std::string& well_name, double simulation_time);
+
+    /// Consume an OPEN request for a closed well. Reopen the well and its
+    /// completions unless the closure was imposed to retry the current timestep.
+    void honorOpenRequest(const std::string& well_name,
+                          Events& well_events,
+                          double simulation_time);
 
     WellPerformanceEventTracker well_performance_event_tracker_;
 

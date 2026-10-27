@@ -963,25 +963,8 @@ namespace Opm {
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                if (this->wellTestState().well_is_closed(well_name)) {
-                    // Only a closure imposed to retry the current timestep blocks
-                    // reopening. Restored closures also carry the current time,
-                    // but must honor an explicit schedule OPEN request.
-                    const bool closed_for_retry = this->wasClosedForRetry(well_name);
-                    // TODO: more checking here, to make sure this standard more specific and complete
-                    // maybe there is some WCON keywords will not open the well
-                    auto& events = this->wellState().well(w).events;
-                    if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
-                        if (!closed_for_retry) {
-                            this->wellTestState().open_well(well_name);
-                            this->wellTestState().open_completions(well_name);
-                            this->well_open_times_.insert_or_assign(well_name,
-                                                                    this->simulator_.time());
-                            this->well_close_times_.erase(well_name);
-                        }
-                        events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
-                    }
-                }
+                this->honorOpenRequest(well_name, this->wellState().well(w).events,
+                                       this->simulator_.time());
 
                 // WELOPEN/COMPDAT can reopen individual connections shut at run
                 // time by physical/economic limits, without touching the rest
