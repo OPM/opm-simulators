@@ -336,3 +336,179 @@ BOOST_AUTO_TEST_CASE(G2)
         well_model.endEpisode();
     }
 }
+
+namespace {
+
+// A gas lift well with a synthetic inflow and VFP response. The well has no
+// solution at the THP limit for ALQ values below min_flow_alq, as a well that
+// needs lift gas to flow against its THP limit, and none above max_flow_alq.
+// In between the lift gas lowers the bhp.
+template<class IndexTraits>
+class SyntheticGasLiftWell : public Opm::GasLiftSingleWellGeneric<double, IndexTraits>
+{
+    using Base = Opm::GasLiftSingleWellGeneric<double, IndexTraits>;
+
+public:
+    SyntheticGasLiftWell(const Opm::WellInterfaceGeneric<double, IndexTraits>& well,
+                         Opm::DeferredLogger& deferred_logger,
+                         Opm::WellState<double, IndexTraits>& well_state,
+                         const Opm::GroupState<double>& group_state,
+                         const Opm::SummaryState& summary_state,
+                         Opm::GasLiftGroupInfo<double, IndexTraits>& group_info,
+                         const Opm::Schedule& schedule,
+                         const int report_step_idx,
+                         typename Base::GLiftSyncGroups& sync_groups,
+                         const Opm::Parallel::Communication& comm,
+                         const double min_flow_alq,
+                         const double max_flow_alq)
+        : Base(deferred_logger, well_state, group_state, well.wellEcl(), summary_state,
+               group_info, schedule, report_step_idx, sync_groups, comm, /*glift_debug=*/false)
+        , well_(well)
+        , min_flow_alq_(min_flow_alq)
+        , max_flow_alq_(max_flow_alq)
+    {
+        this->optimize_ = true;
+        this->min_alq_ = 0.0;
+        this->max_alq_ = 20.0 * this->increment_;
+        this->orig_alq_ = 0.0;
+        this->alpha_w_ = 1.0;
+        this->alpha_g_ = 0.0;
+        this->max_iterations_ = 1000;
+        this->oil_pos_ = IndexTraits::oilPhaseIdx;
+        this->gas_pos_ = IndexTraits::gasPhaseIdx;
+        this->water_pos_ = IndexTraits::waterPhaseIdx;
+    }
+
+    double increment() const { return this->increment_; }
+    double maxAlq() const { return this->max_alq_; }
+    void setMaxAlq(const double alq) { this->max_alq_ = alq; }
+
+    const Opm::WellInterfaceGeneric<double, IndexTraits>& getWell() const override
+    {
+        return well_;
+    }
+
+private:
+    static constexpr double p_res = 200.0e5;
+
+    bool checkThpControl_() const override { return true; }
+
+    std::optional<double> computeBhpAtThpLimit_(double alq, double, bool) const override
+    {
+        if (alq < min_flow_alq_ - 1e-8 || alq > max_flow_alq_ + 1e-8) {
+            return std::nullopt; // no solution at the THP limit
+        }
+        return p_res - 10.0e5 - 1.0e5 * (alq - min_flow_alq_) / this->increment_;
+    }
+
+    typename Base::RatesAndBhp computeWellRates_(double bhp, bool bhp_is_limited, bool) const override
+    {
+        const double oil = 1.0e-8 * (p_res - bhp);
+        return {oil, 10.0 * oil, 0.0, bhp, bhp_is_limited};
+    }
+
+    const Opm::WellInterfaceGeneric<double, IndexTraits>& well_;
+    double min_flow_alq_;
+    double max_flow_alq_;
+};
+
+} // anonymous namespace
+
+BOOST_AUTO_TEST_CASE(WellTestALQ)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_welltest", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    well_model.beginReportStep(0);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+    well_model.prepareTimeStep(deferred_logger);
+    well_model.updateWellControls(deferred_logger);
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    const auto& comm = simulator->vanguard().grid().comm();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state,
+                                 simulator->episodeIndex(), iterCtx, deferred_logger,
+                                 well_state, group_state, comm, /*glift_debug=*/false};
+    group_info.initialize();
+
+    const auto increment = schedule.glo(0).gaslift_increment();
+    typename Synthetic::GLiftSyncGroups sync_groups;
+    const double no_limit = 1.0e6;
+    auto makeWell = [&](const double min_flow_alq, const double max_flow_alq) {
+        return Synthetic {well, deferred_logger, well_state, group_state, summary_state,
+                          group_info, schedule, simulator->episodeIndex(), sync_groups,
+                          comm, min_flow_alq, max_flow_alq};
+    };
+
+    // The well flows at ALQ = 0: no ALQ increase is needed to start the search.
+    {
+        auto glift = makeWell(0.0, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_GE(alq, 0.0);
+    }
+
+    // The well has no solution at the THP limit until it gets three increments of
+    // lift gas. The test must raise the ALQ until the well flows, not give up at 0.
+    {
+        const double min_flow_alq = 3.0 * increment;
+        auto glift = makeWell(min_flow_alq, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_GE(alq, min_flow_alq - 1e-8);
+        BOOST_CHECK_LE(alq, glift.maxAlq() + 1e-8);
+    }
+
+    // As above, but the well can only flow at that one ALQ, so a further increase
+    // is not possible. The ALQ that made the well flow is still a valid test ALQ.
+    {
+        const double min_flow_alq = 3.0 * increment;
+        auto glift = makeWell(min_flow_alq, min_flow_alq);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_CLOSE(alq, min_flow_alq, 1e-6);
+    }
+
+    // The maximum ALQ is not reached by whole increments and the well only flows at
+    // the maximum: the last increment is limited to the maximum, as in the optimization.
+    {
+        const double max_alq = 2.5 * increment;
+        auto glift = makeWell(max_alq, no_limit);
+        glift.setMaxAlq(max_alq);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_CLOSE(alq, max_alq, 1e-6);
+    }
+
+    // The well cannot flow with any ALQ up to the maximum: the test fails.
+    {
+        auto glift = makeWell(100.0 * increment, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(!success);
+    }
+}

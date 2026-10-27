@@ -206,15 +206,26 @@ wellTestALQ()
     }
 
     Scalar temp_alq = std::max(this->min_alq_, Scalar(0.0));
-    auto cur_alq = temp_alq;
+    const Scalar start_alq = temp_alq;
     Scalar cur_bhp = this->well_state_.well(this->well_name_).bhp;
+    // A well that needs lift gas to hold its THP limit has no solution at the
+    // starting ALQ. As in the normal optimization, increase the ALQ until the
+    // well can flow, or the maximum ALQ is reached. The last increment is limited to
+    // the maximum ALQ, which is also tried when the increments do not reach it.
     auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    while (!init_rates && this->increment_ > Scalar(0.0) &&
+           temp_alq < this->max_alq_ && !checkALQequal_(temp_alq, this->max_alq_)) {
+        temp_alq = std::min(temp_alq + this->increment_, this->max_alq_);
+        init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    }
+    auto cur_alq = temp_alq;
     if (!init_rates) {
         this->displayDebugMessage_(fmt::format(
-            "wellTestALQ: failed to compute initial rates for ALQ = {}, bhp = {}",
-            temp_alq, cur_bhp));
+            "wellTestALQ: failed to compute initial rates for ALQ = {} to {}, bhp = {}",
+            start_alq, temp_alq, cur_bhp));
         return {cur_alq, false};
     }
+    const bool alq_was_increased = temp_alq > start_alq;
     LimitedRatesAndBhp new_rates = *init_rates;
     std::optional<LimitedRatesAndBhp> rates;
     Scalar old_gradient = 0.0;
@@ -263,6 +274,11 @@ wellTestALQ()
     }
     if (state.it > this->max_iterations_) {
         warnMaxIterationsExceeded_();
+    }
+    // If the ALQ had to be increased before the well could flow, that ALQ is a valid
+    // test ALQ even when a further increase gives no economic gain.
+    if (!success && alq_was_increased) {
+        success = true;
     }
     if (success) {
         this->well_state_.well(this->well_name_).alq_state.update_count(increase);
