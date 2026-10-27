@@ -608,6 +608,20 @@ macro(opm-simulators_tests_hook)
     )
   endif()
 
+  if("3" IN_LIST OPM_COMPILE_COMPONENTS)
+    # Equivalent explicit saturation inputs, with temperature supplied by RTEMP.
+    add_test(
+      NAME
+        runSimulator/comp_explicit_saturation_inputs
+      COMMAND
+        ${PROJECT_SOURCE_DIR}/tests/run-comp-explicit-saturation-inputs-test.sh
+          -e $<TARGET_FILE:flow_comp>
+          -c $<TARGET_FILE:test_comp_explicit_swat_init>
+          -i ${PROJECT_SOURCE_DIR}/tests
+          -r ${PROJECT_BINARY_DIR}/tests/results/flow_comp+comp_explicit_saturation_inputs
+    )
+  endif()
+
   if(BUILD_FLOW)
     add_test(
       NAME
