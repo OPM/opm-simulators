@@ -40,8 +40,10 @@
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/models/parallel/threadmanager.hpp>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
@@ -150,6 +152,44 @@ public:
     {
         this->doInit(rst, simulator_.model().numGridDof(),
                      gasPhaseIdx, oilPhaseIdx, waterPhaseIdx);
+
+        const std::string solver = Parameters::Get<Parameters::TracerSolver>();
+        if (solver != "istl" && solver != "reorder") {
+            throw std::invalid_argument("Unknown tracer solver '" + solver +
+                                        "', use 'istl' or 'reorder'");
+        }
+        this->useReorderSolver_ = solver == "reorder";
+
+        // The reorder solver cannot be used for diffusion/dispersion fluxes
+        if (this->useReorderSolver_) {
+            bool hasDispersion = false;
+            if constexpr (enableDispersion) {
+                hasDispersion = dispersionActive_ && !this->tracerPhaseIdx_.empty();
+            }
+            bool hasDiffusion = false;
+            if constexpr (enableDiffusion) {
+                for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size();
+                     ++tracerIdx) {
+                    const auto& tracerConfig = this->eclState_.tracer()[tracerIdx];
+                    hasDiffusion = hasDiffusion || tracerConfig.free_diffusion_coefficient != 0.0 ||
+                                   (hasSolutionPart_(this->tracerPhaseIdx_[tracerIdx]) &&
+                                    tracerConfig.solution_diffusion_coefficient != 0.0);
+                }
+            }
+            if (hasDiffusion || hasDispersion) {
+                const std::string unsupported = hasDiffusion && hasDispersion
+                    ? "diffusion (TRDIF) and dispersion (DISPERC)"
+                    : (hasDiffusion ? "diffusion (TRDIF)" : "dispersion (DISPERC)");
+                throw std::invalid_argument("The reorder tracer solver does not support " +
+                                            unsupported + ", use --tracer-solver=istl");
+            }
+        }
+
+        reorderRetrySteps_ = Parameters::Get<Parameters::TracerReorderRetrySteps>();
+        if (reorderRetrySteps_ < 0) {
+            throw std::invalid_argument("The number of tracer reorder retry steps must not be "
+                                        "negative, got " + std::to_string(reorderRetrySteps_));
+        }
     }
 
     void prepareTracerBatches()
@@ -1387,6 +1427,39 @@ protected:
         }
     }
 
+    template<class TrRe>
+    bool solveBatch_(TrRe& tr, std::vector<TracerVector>& dx)
+    {
+        // Istl solver
+        if (!this->useReorderSolver_) {
+            return this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+        }
+
+        // Run istl solver fallback for some number of time steps before retrying reorder
+        if (tr.reorderSkipSteps_ > 0) {
+            --tr.reorderSkipSteps_;
+            if (tr.reorderSkipSteps_ == 0) {
+                OpmLog::info(fmt::format("Tracer model: retrying the reorder solver for the {} "
+                                         "tracers in the next time step",
+                                         FluidSystem::phaseName(tr.phaseIdx_)));
+            }
+            return this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+        }
+
+        // Reorder solver
+        if (this->linearSolveReorder_(*tr.mat, dx, tr.residual_)) {
+            return true;
+        }
+
+        // Initiate fallback istl solver, which will be done for some number of future time steps
+        // as well
+        tr.reorderSkipSteps_ = reorderRetrySteps_;
+        OpmLog::warning(fmt::format("Tracer model: the reorder solver failed for the {} tracers. "
+                                    "Using the ISTL solver for this and the next {} time steps.",
+                                    FluidSystem::phaseName(tr.phaseIdx_), reorderRetrySteps_));
+        return this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+    }
+
     void advanceTracerFields()
     {
         assembleTracerEquations_();
@@ -1403,7 +1476,7 @@ protected:
                 dx[tIdx] = 0.0;
             }
 
-            const bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+            const bool converged = solveBatch_(tr, dx);
             if (!converged) {
                 OpmLog::warning("### Tracer model: Linear solver did not converge. ###");
             }
@@ -1524,6 +1597,7 @@ protected:
         std::vector<TV> storageOfTimeIndex1_;
         std::vector<TV> residual_;
         std::unique_ptr<TracerMatrix> mat;
+        int reorderSkipSteps_ = 0;
         // Molecular diffusion coefficients [m2/s] of the free tracer and of the tracer in solution
         // (TRDIFxxx), common to all tracers in the batch
         Scalar freeDiffusionCoefficient_ = 0.0;
@@ -1586,6 +1660,8 @@ protected:
     };
 
     std::unordered_map<unsigned, std::vector<AquiferTracerCellSpec>> aquifer_tracer_cells_;
+
+    int reorderRetrySteps_ = 0;
 };
 
 } // namespace Opm
