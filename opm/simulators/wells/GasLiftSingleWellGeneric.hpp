@@ -309,6 +309,10 @@ protected:
     virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq, Scalar current_bhp,
                                                         bool debug_output = true) const = 0;
 
+    template<class Probe>
+    auto findFirstFlowingALQ_(Scalar alq, Probe&& probe) const
+        -> std::pair<decltype(probe(alq)), Scalar>;
+
     std::pair<std::optional<Scalar>,Scalar>
     computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const;
 

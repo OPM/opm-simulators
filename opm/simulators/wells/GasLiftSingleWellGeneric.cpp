@@ -206,15 +206,24 @@ wellTestALQ()
     }
 
     Scalar temp_alq = std::max(this->min_alq_, Scalar(0.0));
-    auto cur_alq = temp_alq;
+    const Scalar start_alq = temp_alq;
     Scalar cur_bhp = this->well_state_.well(this->well_name_).bhp;
-    auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    // A well that needs lift gas to hold its THP limit has no solution at the
+    // starting ALQ. As in the normal optimization, increase the ALQ until the
+    // well can flow, or the maximum ALQ is reached.
+    auto flowing = findFirstFlowingALQ_(temp_alq, [&](Scalar alq) {
+        return computeLimitedWellRatesWithALQ_(alq, cur_bhp);
+    });
+    auto init_rates = std::move(flowing.first);
+    temp_alq = flowing.second;
+    auto cur_alq = temp_alq;
     if (!init_rates) {
         this->displayDebugMessage_(fmt::format(
-            "wellTestALQ: failed to compute initial rates for ALQ = {}, bhp = {}",
-            temp_alq, cur_bhp));
+            "wellTestALQ: failed to compute initial rates for ALQ = {} to {}, bhp = {}",
+            start_alq, temp_alq, cur_bhp));
         return {cur_alq, false};
     }
+    const bool alq_was_increased = temp_alq > start_alq;
     LimitedRatesAndBhp new_rates = *init_rates;
     std::optional<LimitedRatesAndBhp> rates;
     Scalar old_gradient = 0.0;
@@ -263,6 +272,11 @@ wellTestALQ()
     }
     if (state.it > this->max_iterations_) {
         warnMaxIterationsExceeded_();
+    }
+    // If the ALQ had to be increased before the well could flow, that ALQ is a valid
+    // test ALQ even when a further increase gives no economic gain.
+    if (!success && alq_was_increased) {
+        success = true;
     }
     if (success) {
         this->well_state_.well(this->well_name_).alq_state.update_count(increase);
@@ -397,24 +411,35 @@ checkInitialALQmodified_(Scalar alq, Scalar initial_alq) const
     }
 }
 
+// Try the ALQ, then increase it in steps of the ALQ increment until the probe returns a
+// value or the maximum ALQ is reached. The last step is limited to the maximum ALQ, which
+// is also tried when the increments do not reach it. Returns the result of the probe (empty
+// if no ALQ worked) and the last ALQ that was tried.
+template<typename Scalar, typename IndexTraits>
+template<class Probe>
+auto GasLiftSingleWellGeneric<Scalar, IndexTraits>::
+findFirstFlowingALQ_(Scalar alq, Probe&& probe) const
+    -> std::pair<decltype(probe(alq)), Scalar>
+{
+    auto result = probe(alq);
+    while (!result && this->increment_ > Scalar(0.0) &&
+           alq < this->max_alq_ && !checkALQequal_(alq, this->max_alq_)) {
+        alq = std::min(alq + this->increment_, this->max_alq_);
+        result = probe(alq);
+    }
+    return {std::move(result), alq};
+}
+
 template<typename Scalar, typename IndexTraits>
 std::pair<std::optional<Scalar>,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
 {
-    auto alq = this->orig_alq_;
-    Scalar bhp = this->well_state_.well(this->well_name_).bhp;
-    Scalar new_alq = alq;
-    std::optional<Scalar> new_bhp;
-    while ((alq < this->max_alq_) || checkALQequal_(alq, this->max_alq_)) {
-        if (new_bhp = computeBhpAtThpLimit_(alq, bhp); new_bhp) {
-            new_alq = alq;
-            break;
-        }
-        alq += this->increment_;
-    }
-    return {new_bhp, new_alq};
+    const Scalar bhp = this->well_state_.well(this->well_name_).bhp;
+    return findFirstFlowingALQ_(this->orig_alq_, [&](Scalar alq) {
+        return computeBhpAtThpLimit_(alq, bhp);
+    });
 }
 
 template<typename Scalar, typename IndexTraits>
