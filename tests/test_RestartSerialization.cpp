@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
@@ -365,6 +366,11 @@ public:
         }
     }
 
+    using BlackoilWellModelGeneric<double, IndexTraits>::closeWellForRetry;
+    using BlackoilWellModelGeneric<double, IndexTraits>::honorOpenRequest;
+
+    void setRollbackEnabled(bool value) { enable_state_rollback_ = value; }
+
     void setSerializationTestData()
     {
         initial_step_ =  true;
@@ -610,6 +616,59 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
 }
 #endif // HAVE_DUNE_FEM
+
+BOOST_AUTO_TEST_CASE(RestoredClosureIsNotARetryClosure)
+{
+    Opm::Schedule schedule{};
+    Opm::SummaryState summary;
+    Opm::EclipseState es;
+    Opm::PhaseUsage phaseUsage;
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+
+    // Restart reconstruction and a failed-attempt closure can have identical
+    // timestamps and reasons. Only the latter must block a schedule OPEN.
+    constexpr double restart_time = 2 * 86400.0;
+    model.wellTestState().close_well("RESTORED", Opm::WellTestConfig::Reason::PHYSICAL,
+                                    restart_time);
+    model.closeWellForRetry("FAILING", restart_time);
+    BOOST_CHECK_EQUAL(model.wellTestState().lastTestTime("RESTORED"), restart_time);
+    BOOST_CHECK_EQUAL(model.wellTestState().lastTestTime("FAILING"), restart_time);
+    BOOST_CHECK(!model.wasClosedForRetry("RESTORED"));
+    BOOST_CHECK(model.wasClosedForRetry("FAILING"));
+    BOOST_CHECK(!model.wasDynamicallyShutThisTimeStep("FAILING"));
+
+    // Further failed attempts must not discard the retry guard. Closure state
+    // is restored separately by the normal well-state recovery path.
+    model.setRollbackEnabled(true);
+    model.advanceTimeLevel();
+    model.closeWellForRetry("ANOTHER_FAILING", restart_time);
+    model.updateFailed();
+    BOOST_CHECK(model.wasClosedForRetry("FAILING"));
+    BOOST_CHECK(model.wasClosedForRetry("ANOTHER_FAILING"));
+    BOOST_CHECK(!model.wasClosedForRetry("RESTORED"));
+
+    // Precondition: both wells are still closed before the OPEN request.
+    BOOST_CHECK(model.wellTestState().well_is_closed("RESTORED"));
+    BOOST_CHECK(model.wellTestState().well_is_closed("FAILING"));
+
+    // OPEN must reopen the restored well while the retry-closed well stays shut.
+    Opm::Events restored_events;
+    restored_events.addEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL);
+    model.honorOpenRequest("RESTORED", restored_events, restart_time);
+
+    Opm::Events failing_events;
+    failing_events.addEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL);
+    model.honorOpenRequest("FAILING", failing_events, restart_time);
+
+    BOOST_CHECK(!model.wellTestState().well_is_closed("RESTORED"));
+    BOOST_CHECK(model.wellTestState().well_is_closed("FAILING"));
+    // Both requests are consumed.
+    BOOST_CHECK(!restored_events.hasEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL));
+    BOOST_CHECK(!failing_events.hasEvent(Opm::ScheduleEvents::REQUEST_OPEN_WELL));
+}
+
 
 namespace Opm {
 

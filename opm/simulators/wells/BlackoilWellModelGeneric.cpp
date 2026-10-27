@@ -46,6 +46,7 @@
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
@@ -1734,6 +1735,40 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 }
 
 template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+closeWellForRetry(const std::string& well_name, const double simulation_time)
+{
+    this->wellTestState().close_well(well_name, WellTestConfig::Reason::PHYSICAL,
+                                   simulation_time);
+    this->retry_shut_wells_.insert(well_name);
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+honorOpenRequest(const std::string& well_name,
+                 Events& well_events,
+                 const double simulation_time)
+{
+    if (!this->wellTestState().well_is_closed(well_name)) {
+        return;
+    }
+
+    // Retry closures block reopening; restored closures do not.
+    const bool closed_for_retry = this->wasClosedForRetry(well_name);
+    // TODO: more checking here, to make sure this standard more specific and complete
+    // maybe there is some WCON keywords will not open the well
+    if (well_events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
+        if (!closed_for_retry) {
+            this->wellTestState().open_well(well_name);
+            this->wellTestState().open_completions(well_name);
+            this->well_open_times_.insert_or_assign(well_name, simulation_time);
+            this->well_close_times_.erase(well_name);
+        }
+        well_events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
 bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 forceShutWellByName(const std::string& wellname,
                     const double simulation_time,
@@ -1769,7 +1804,7 @@ forceShutWellByName(const std::string& wellname,
                                  }
                              });
     if (it != well_container_generic_.end()) {
-        wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+        this->closeWellForRetry(wellname, simulation_time);
 
         // Non-owning ranks have no snapshot entry, and do not report WPWE.
         const auto snapshot = this->wellStatusSnapshot();
