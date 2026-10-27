@@ -33,12 +33,17 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
+#include <opm/simulators/flow/NumericalAquiferEquilibrationCheck.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/flow/HybridNewton.hpp>
@@ -51,6 +56,8 @@
 #endif
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -58,6 +65,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm {
@@ -391,6 +399,10 @@ public:
                 "Saturation function end-points do not "
                 "meet requisite consistency conditions"
             };
+        }
+
+        if (!initconfig.restartRequested() && initconfig.hasEquil()) {
+            this->checkNumericalAquiferEquilibration_();
         }
 
         // TODO: move to the end for later refactoring of the function finishInit()
@@ -1598,6 +1610,105 @@ protected:
         }
 
         this->updateRockCompTransMultVal_();
+    }
+
+    // Phase potential difference, from cell 1 to cell 2, of largest magnitude
+    // among the phases which are present and mobile in the upstream cell,
+    // using the initial fluid states.  Zero if no phase can flow.
+    Scalar largestMobilePotentialDifference_(const unsigned elemIdx1,
+                                             const unsigned elemIdx2,
+                                             const Scalar g) const
+    {
+        const auto& fs1 = this->initialFluidStates_[elemIdx1];
+        const auto& fs2 = this->initialFluidStates_[elemIdx2];
+
+        using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+        std::array<Scalar, numPhases> kr1{}, kr2{};
+        MaterialLaw::relativePermeabilities(kr1, this->materialLawParams(elemIdx1), fs1);
+        MaterialLaw::relativePermeabilities(kr2, this->materialLawParams(elemIdx2), fs2);
+
+        const Scalar dz = this->dofCenterDepth(elemIdx1) - this->dofCenterDepth(elemIdx2);
+        Scalar largest = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const Scalar rho = 0.5 * (fs1.density(phaseIdx) + fs2.density(phaseIdx));
+            const Scalar dPhi = (fs1.pressure(phaseIdx) - fs2.pressure(phaseIdx)) - rho * g * dz;
+            const auto& fsUp = (dPhi > 0.0) ? fs1 : fs2;
+            const Scalar krUp = (dPhi > 0.0) ? kr1[phaseIdx] : kr2[phaseIdx];
+            if (fsUp.saturation(phaseIdx) > 0.0 && krUp > 0.0 &&
+                std::abs(dPhi) > std::abs(largest))
+            {
+                largest = dPhi;
+            }
+        }
+        return largest;
+    }
+
+    // Stops the simulation, unless explicitly allowed, if numerical aquifers
+    // connect cells of different equilibration regions which are not in
+    // hydrostatic equilibrium with each other after equilibration.
+    void checkNumericalAquiferEquilibration_() const
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& eclState = vanguard.eclState();
+        if (!eclState.aquifer().hasNumericalAquifer() ||
+            !FluidSystem::phaseIsActive(waterPhaseIdx) ||
+            !eclState.fieldProps().has_int("EQLNUM"))
+        {
+            return;
+        }
+
+        std::unordered_map<std::size_t, std::size_t> aquiferOfCell;
+        for (const auto& [cartIdx, cell] : eclState.aquifer().numericalAquifers().allAquiferCells()) {
+            aquiferOfCell.emplace(cartIdx, cell->aquifer_id);
+        }
+
+        const auto eqlnum = this->lookUpData_.template
+            assignFieldPropsIntOnLeaf<int>(eclState.fieldProps(), "EQLNUM", /*needsTranslation=*/false);
+        const Scalar g = this->gravity_[dim - 1];
+
+        // Each connection to an aquifer cell is visited from the interior
+        // cell on the other side, and connections between two aquifer
+        // cells from the cell with the lower Cartesian index.
+        std::vector<NumericalAquiferEquilibrationMismatch> mismatches;
+        const auto& gridView = this->gridView();
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            const unsigned cellIdx = this->elementMapper().index(elem);
+            const auto cellCart = vanguard.cartesianIndex(cellIdx);
+            const bool cellIsAquifer = aquiferOfCell.count(cellCart) > 0;
+            for (const auto& intersection : intersections(gridView, elem)) {
+                if (!intersection.neighbor()) {
+                    continue;
+                }
+                const unsigned aquIdx = this->elementMapper().index(intersection.outside());
+                const auto aquCart = vanguard.cartesianIndex(aquIdx);
+                const auto aquifer = aquiferOfCell.find(aquCart);
+                if (aquifer == aquiferOfCell.end() ||
+                    (cellIsAquifer && cellCart > aquCart) ||
+                    eqlnum[aquIdx] == eqlnum[cellIdx] ||
+                    !(this->transmissibility(cellIdx, aquIdx) > 0.0))
+                {
+                    continue;
+                }
+
+                const Scalar dPhi = this->largestMobilePotentialDifference_(aquIdx, cellIdx, g);
+                if (std::abs(dPhi) > numericalAquiferEquilibrationTolerance) {
+                    mismatches.push_back({aquifer->second, eqlnum[aquIdx], eqlnum[cellIdx], dPhi});
+                }
+            }
+        }
+
+        const bool allow = Parameters::Get<Parameters::AllowInconsistentAquiferEquilibration>();
+        const auto& comm = vanguard.grid().comm();
+        if (reportNumericalAquiferEquilibration(mismatches, eclState, comm, allow) > 0 && !allow) {
+            comm.barrier();
+            throw std::domain_error {
+                "Numerical aquifers are not in hydrostatic equilibrium "
+                "with the cells they are connected to"
+            };
+        }
     }
 
     bool satfuncConsistencyRequirementsMet() const

@@ -46,6 +46,10 @@ struct ExplicitRockCompaction { static constexpr bool value = false; };
 // Whether or not to check saturation function consistency requirements.
 struct CheckSatfuncConsistency { static constexpr bool value = true; };
 
+// Allow numerical aquifers which connect cells of different equilibration
+// regions that are not in hydrostatic equilibrium with each other.
+struct AllowInconsistentAquiferEquilibration { static constexpr bool value = false; };
+
 // Maximum number of reported failures for each saturation function
 // consistency check.
 struct NumSatfuncConsistencySamplePoints { static constexpr int value = 5; };
