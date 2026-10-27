@@ -13,8 +13,8 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
-import tempfile
 
 
 def require(condition, message):
@@ -27,8 +27,10 @@ def main():
     for name in ('flow', 'summary', 'rst-deck', 'deck', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     args = parser.parse_args()
-    args.output.mkdir(parents=True, exist_ok=True)
-    root = Path(tempfile.mkdtemp(prefix='reopening-', dir=args.output.resolve()))
+    root = args.output.resolve() / 'reopening'
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
     print('Well reopening restart artifacts: ' + str(root), flush=True)
     commands = []
     env = dict(os.environ, OMP_NUM_THREADS='1', HWLOC_COMPONENTS='-opencl',
