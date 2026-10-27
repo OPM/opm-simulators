@@ -461,6 +461,13 @@ init(const std::vector<Scalar>& cellPressures,
 
             auto& new_well = this->well(w);
             new_well.init_timestep(prev_well);
+            // Keep the lift gas rate (ALQ) set by gas lift optimisation across report steps,
+            // unless the schedule changes the well (new targets, status etc.), in which case
+            // the optimisation starts over from the default ALQ.
+            // updateWellsDefaultALQ() below also resets it if the schedule changes the default.
+            if (!new_well.events.hasEvent(WellState::event_mask)) {
+                new_well.alq_state = prev_well.alq_state;
+            }
 
             // Preserve the retained limit across time steps and shut periods
             // unless the schedule explicitly re-specifies THP or VFP controls.
