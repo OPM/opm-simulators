@@ -34,8 +34,12 @@
  *   - the per-component mass fractions, and
  *   - the wellbore fluid density,
  * against central finite differences computed by perturbing the scalar primary
- * variables and re-flashing. It also checks the surface phase rates of a
- * connection stream.
+ * variables and re-flashing. It does the same for the wellbore contents of
+ * wellboreContents(), where water fills a volume fraction of the wellbore that
+ * is a primary variable as well, and compares the contents of a wellbore that
+ * holds water alone, from waterOnlyWellboreContents() without a flash, with
+ * the flashed ones. It also checks the surface phase rates of a connection
+ * stream.
  */
 #include "config.h"
 
@@ -292,12 +296,177 @@ void checkWellboreFlashDerivatives()
     }
 }
 
+// The wellbore contents also depend on the water volume fraction w.
+// Derivative slot layout: 0 -> pressure, 1 -> z0, 2 -> z1, 3 -> w.
+constexpr int numContentsDeriv = numDeriv + 1;
+constexpr int wIdx = numDeriv;
+constexpr Scalar w0 = 0.3;
+
+using ContentsEvaluation = Opm::DenseAd::Evaluation<Scalar, numContentsDeriv>;
+
+// A slightly compressible water, standing in for the fluid system's water PVT.
+template <typename T>
+T waterDensity(const T& pressure)
+{
+    return 1000.0 * (1.0 + 4.5e-10 * (pressure - 1.0e5));
+}
+
+template <typename T>
+Opm::WellboreContents<T, numComponents>
+wellboreContentsAt(const T& pressure,
+                   const std::array<T, numComponents>& z,
+                   const T& water_fraction)
+{
+    auto fs = makeWellboreFluidState<T>(pressure, z, temperature);
+    Opm::flashWellboreFluidState(fs, flash_tolerance);
+    return Opm::wellboreContents(fs, water_fraction, waterDensity(pressure), wellbore_volume);
+}
+
+std::array<ContentsEvaluation, numComponents> compositionVariables()
+{
+    std::array<ContentsEvaluation, numComponents> z;
+    z[0] = ContentsEvaluation::createVariable(z0_0, z0Idx);
+    z[1] = ContentsEvaluation::createVariable(z1_0, z1Idx);
+    z[2] = 1.0 - z[0] - z[1];
+    return z;
+}
+
+void checkWellboreContentsDerivatives()
+{
+    const auto pressure = ContentsEvaluation::createVariable(p0, pIdx);
+    const auto water_fraction = ContentsEvaluation::createVariable(w0, wIdx);
+    const auto ad = wellboreContentsAt(pressure, compositionVariables(), water_fraction);
+
+    BOOST_REQUIRE_GT(ad.water_mass_fraction.value(), 0.0);
+    BOOST_REQUIRE_LT(ad.water_mass_fraction.value(), 1.0);
+    // the pressure dependence of the water density must reach the water mass
+    BOOST_REQUIRE_GT(ad.water_mass.derivative(pIdx), 0.0);
+
+    Scalar mass_scale = ad.water_mass.value();
+    for (const auto& mass : ad.component_masses) {
+        mass_scale = std::max(mass_scale, mass.value());
+    }
+    const Scalar density_scale = ad.density.value();
+
+    const std::array<Scalar, numContentsDeriv> base_value{p0, z0_0, z1_0, w0};
+    const std::array<Scalar, numContentsDeriv> eps{p0 * 1.e-5, 1.e-4, 1.e-4, 1.e-4};
+    // Scale of each primary variable, so that the absolute floor below is
+    // small against the derivatives with respect to pressure as well.
+    const std::array<Scalar, numContentsDeriv> variable_scale{p0, 1.0, 1.0, 1.0};
+
+    const auto contentsAt = [](const std::array<Scalar, numContentsDeriv>& v) {
+        const std::array<Scalar, numComponents> z{v[z0Idx], v[z1Idx], 1.0 - v[z0Idx] - v[z1Idx]};
+        return wellboreContentsAt<Scalar>(v[pIdx], z, v[wIdx]);
+    };
+
+    for (int s = 0; s < numContentsDeriv; ++s) {
+        auto vp = base_value;
+        auto vm = base_value;
+        vp[s] += eps[s];
+        vm[s] -= eps[s];
+        const auto qp = contentsAt(vp);
+        const auto qm = contentsAt(vm);
+
+        const auto check = [&](const ContentsEvaluation& quantity, const Scalar plus,
+                               const Scalar minus, const Scalar scale, const std::string& what) {
+            const Scalar ad_deriv = quantity.derivative(s);
+            const Scalar fd_deriv = (plus - minus) / (2.0 * eps[s]);
+            const Scalar tol = 1.e-3 * std::abs(ad_deriv) + 1.e-6 * scale / variable_scale[s];
+            BOOST_CHECK_MESSAGE(std::abs(ad_deriv - fd_deriv) <= tol,
+                what << "/dx[" << s << "]: AD=" << ad_deriv << " FD=" << fd_deriv
+                     << " |diff|=" << std::abs(ad_deriv - fd_deriv) << " tol=" << tol);
+        };
+
+        for (int c = 0; c < numComponents; ++c) {
+            check(ad.component_masses[c], qp.component_masses[c], qm.component_masses[c],
+                  mass_scale, "d(mass[" + std::to_string(c) + "])");
+            check(ad.mass_fractions[c], qp.mass_fractions[c], qm.mass_fractions[c],
+                  1.0, "d(massfrac[" + std::to_string(c) + "])");
+        }
+        check(ad.water_mass, qp.water_mass, qm.water_mass, mass_scale, "d(water mass)");
+        check(ad.water_mass_fraction, qp.water_mass_fraction, qm.water_mass_fraction,
+              1.0, "d(water massfrac)");
+        check(ad.density, qp.density, qm.density, density_scale, "d(density)");
+    }
+}
+
+// With water alone in the wellbore, the flashed hydrocarbon quantities are
+// multiplied by 1 - w = 0, so the contents without a flash must match the
+// flashed ones in all but the derivatives with respect to w. Those take the
+// hydrocarbons at the overall composition and the water density; they must
+// not vanish, or the well matrix is singular.
+void checkWaterOnlyWellboreContents()
+{
+    const auto pressure = ContentsEvaluation::createVariable(p0, pIdx);
+    const auto water_fraction = ContentsEvaluation::createVariable(1.0, wIdx);
+    const auto flashed = wellboreContentsAt(pressure, compositionVariables(), water_fraction);
+
+    const std::array<Scalar, numComponents> z{z0_0, z1_0, 1.0 - z0_0 - z1_0};
+    const auto fs = makeWellboreFluidState<Scalar>(p0, z, temperature);
+    const auto water_density = waterDensity(pressure);
+    const auto contents
+        = Opm::waterOnlyWellboreContents(fs, water_fraction, water_density, wellbore_volume);
+
+    const auto checkClose = [](const Scalar expected, const Scalar actual,
+                               const std::string& what) {
+        const Scalar tol = 1.e-12 * std::max(1.0, std::abs(expected));
+        BOOST_CHECK_MESSAGE(std::abs(expected - actual) <= tol,
+            what << ": expected " << expected << ", got " << actual);
+    };
+    const auto checkAsFlashed = [&](const ContentsEvaluation& expected,
+                                    const ContentsEvaluation& actual,
+                                    const std::string& what) {
+        checkClose(expected.value(), actual.value(), what);
+        for (int s = 0; s < numContentsDeriv; ++s) {
+            if (s != wIdx) {
+                checkClose(expected.derivative(s), actual.derivative(s),
+                           what + "/dx[" + std::to_string(s) + "]");
+            }
+        }
+    };
+
+    Scalar mass_per_mole = 0.0;
+    for (int c = 0; c < numComponents; ++c) {
+        mass_per_mole += z[c] * FluidSystem::molarMass(c);
+    }
+    const Scalar water_filled_mass = water_density.value() * wellbore_volume;
+    for (int c = 0; c < numComponents; ++c) {
+        const std::string name = "[" + std::to_string(c) + "]";
+        checkAsFlashed(flashed.component_masses[c], contents.component_masses[c], "mass" + name);
+        checkAsFlashed(flashed.mass_fractions[c], contents.mass_fractions[c], "massfrac" + name);
+
+        const Scalar overall_mass_fraction = z[c] * FluidSystem::molarMass(c) / mass_per_mole;
+        checkClose(-overall_mass_fraction * water_filled_mass,
+                   contents.component_masses[c].derivative(wIdx), "d(mass" + name + ")/dw");
+        checkClose(-overall_mass_fraction, contents.mass_fractions[c].derivative(wIdx),
+                   "d(massfrac" + name + ")/dw");
+    }
+    checkAsFlashed(flashed.water_mass, contents.water_mass, "water mass");
+    checkAsFlashed(flashed.water_mass_fraction, contents.water_mass_fraction, "water massfrac");
+    checkAsFlashed(flashed.density, contents.density, "density");
+    checkClose(water_filled_mass, contents.water_mass.derivative(wIdx), "d(water mass)/dw");
+    checkClose(1.0, contents.water_mass_fraction.derivative(wIdx), "d(water massfrac)/dw");
+    checkClose(0.0, contents.density.derivative(wIdx), "d(density)/dw");
+}
+
 } // anonymous namespace
 
 BOOST_AUTO_TEST_CASE(WellboreFlashDerivatives)
 {
     registerFluidSystemComponents();
     checkWellboreFlashDerivatives();
+}
+
+BOOST_AUTO_TEST_CASE(WellboreContentsDerivatives)
+{
+    registerFluidSystemComponents();
+    checkWellboreContentsDerivatives();
+}
+
+BOOST_AUTO_TEST_CASE(WaterOnlyWellboreContents)
+{
+    registerFluidSystemComponents();
+    checkWaterOnlyWellboreContents();
 }
 
 BOOST_AUTO_TEST_CASE(WellboreFlashDerivativesWithVolumeShift)

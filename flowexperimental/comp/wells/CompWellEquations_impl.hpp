@@ -92,6 +92,28 @@ clear()
 template <typename Scalar, int numWellEq, int numEq>
 void
 CompWellEquations<Scalar, numWellEq, numEq>::
+sumAndPinRows(const int last_row, const int variable_offset)
+{
+    auto& D = duneD_[0][0];
+    auto& residual = resWell_[0];
+    for (int row = 0; row < last_row; ++row) {
+        D[last_row] += D[row];
+        residual[last_row] += residual[row];
+        D[row] = 0.0;
+        D[row][row + variable_offset] = 1.0;
+        residual[row] = 0.0;
+    }
+    for (auto& B : duneB_[0]) {
+        for (int row = 0; row < last_row; ++row) {
+            B[last_row] += B[row];
+            B[row] = 0.0;
+        }
+    }
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
 solve(BVectorWell& dx_well) const
 {
     invDuneD_.mv(resWell_, dx_well);
@@ -102,9 +124,9 @@ void
 CompWellEquations<Scalar, numWellEq, numEq>::
 invert()
 {
-    // On a singular well matrix, fall back to the identity to keep the Newton
-    // update finite. Singularity surfaces differently per block size (throw or
-    // silent inf/NaN), so guard against both below.
+    // A singular well matrix has no valid Schur complement. Throw, so that the
+    // well assembly backs off or the time step is cut, rather than treating
+    // the identity as its inverse.
     bool singular = false;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
@@ -125,10 +147,7 @@ invert()
     }
 
     if (singular) {
-        invDuneD_[0][0] = 0.0;
-        for (std::size_t i = 0; i < invDuneD_[0][0].rows; ++i) {
-           invDuneD_[0][0][i][i] = 1.0;
-        }
+        throw NumericalProblem("Singular compositional well matrix");
     }
 }
 

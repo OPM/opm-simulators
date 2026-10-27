@@ -38,6 +38,7 @@ init(const std::vector<Well>& wells_ecl,
      const std::vector<std::vector<CompConnectionData> >& well_connection_data,
      const SummaryState& summary_state,
      const std::vector<bool>& locally_owned_wells,
+     const WellGroupEvents& events,
      const CompWellState* prev_well_state)
 {
     this->base_init(wells_ecl, cell_pressures, well_temperatures, cell_mole_fractions,
@@ -48,9 +49,15 @@ init(const std::vector<Well>& wells_ecl,
         return;
     }
 
+    // As for the black-oil wells, a well keeps its previous control unless
+    // the schedule updates the well at this report step.
+    constexpr auto event_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                              | ScheduleEvents::PRODUCTION_UPDATE
+                              | ScheduleEvents::INJECTION_UPDATE;
     for (const auto& well_name : this->wells_.wells()) {
         if (prev_well_state->wells_.has(well_name)) {
-            this->wells_[well_name].copyRuntimeStateFrom(prev_well_state->wells_[well_name]);
+            this->wells_[well_name].copyRuntimeStateFrom(prev_well_state->wells_[well_name],
+                                                         !events.hasEvent(well_name, event_mask));
         }
     }
 }
@@ -91,7 +98,7 @@ initSingleWell(const Well& well,
                const SummaryState& summary_state)
 {
     if (well.isInjector()) {
-        initSingleInjector(well, cell_pressures, temperature, conn_data, summary_state);
+        initSingleInjector(well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
     } else {
         initSingleProducer(well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
     }
@@ -103,6 +110,7 @@ void CompWellState<FluidSystem>::
 initSingleInjector(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
+                   const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<CompConnectionData>& conn_data,
                    const SummaryState& summary_state)
 {
@@ -114,7 +122,7 @@ initSingleInjector(const Well& well,
                                     false) );
     ws.status = well.getStatus();
     if (ws.status != WellStatus::SHUT) {
-        ws.update_injector_targets(well, summary_state);
+        ws.update_injector_targets(well, cell_mole_fractions, summary_state);
     }
 }
 

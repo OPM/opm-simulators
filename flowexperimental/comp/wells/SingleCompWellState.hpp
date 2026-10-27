@@ -53,7 +53,8 @@ public:
     // connection_transmissibility_factor
     std::vector<Scalar> transmissibility_factor {};
     std::vector<int> satnum_id {};
-    std::vector<std::size_t> ecl_index {};
+    // local index of the connection cell
+    std::vector<std::size_t> cell_index {};
     // global Cartesian index of the connection cell
     std::vector<std::size_t> global_index {};
 };
@@ -78,6 +79,8 @@ public:
     Scalar temperature{0};
 
     std::vector<Scalar> surface_phase_rates;
+    // volume fraction of water in the wellbore; stays zero without a water phase
+    Scalar wellbore_water_volume_fraction{0.};
     std::vector<Scalar> phase_fractions; // V or L
     std::vector<Scalar> reservoir_phase_rates;
     // WZMF
@@ -97,9 +100,11 @@ public:
                                  const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                                  const SummaryState& st);
 
-    void update_injector_targets(const Well& well, const SummaryState& st);
+    void update_injector_targets(const Well& well,
+                                 const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                                 const SummaryState& st);
 
-    void copyRuntimeStateFrom(const SingleCompWellState& other);
+    void copyRuntimeStateFrom(const SingleCompWellState& other, bool keep_control);
 
     Scalar get_total_surface_rate() const;
 };
