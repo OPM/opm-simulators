@@ -620,29 +620,16 @@ CompWell<TypeTag>::
 updateStatus_(const Simulator& simulator,
               const SingleWellState& well_state)
 {
-    // At the start of the time step, sum the connection potentials at the
-    // BHP limit, including each connection's hydrostatic offset. A producer
-    // needs positive potential and an injector negative potential to flow.
+    // At the start of the time step, find the well's net rate at its BHP
+    // limit, including each connection's hydrostatic offset. A producer
+    // needs a negative rate and an injector a positive rate to flow.
     const auto& summary_state = simulator.vanguard().summaryState();
     const bool producer = this->well_ecl_.isProducer();
     const Scalar bhp_limit = producer
         ? this->well_ecl_.productionControls(summary_state).bhp_limit
         : this->well_ecl_.injectionControls(summary_state).bhp_limit;
-    Scalar potential = 0.;
-    std::vector<EvalWell> mob(FluidSystem::numPhases, 0.);
-    for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
-        const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[con_idx], 0);
-        assert(int_quantities);
-        const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
-        getMobility(simulator, con_idx, mob);
-        Scalar total_mobility = 0.;
-        for (const auto& m : mob) {
-            total_mobility += getValue(m);
-        }
-        potential += this->well_index_[con_idx] * total_mobility
-            * (cell_pressure - bhp_limit - this->connection_pressure_diffs_[con_idx]);
-    }
-    this->stopped_ = producer ? potential <= 0. : potential >= 0.;
+    const Scalar rate_at_bhp_limit = reservoirRateAtBhp_(simulator, bhp_limit);
+    this->stopped_ = producer ? rate_at_bhp_limit >= 0. : rate_at_bhp_limit <= 0.;
 
     const bool had_rate = well_state.get_total_surface_rate() != 0.;
     if (this->stopped_ && had_rate) {
@@ -654,6 +641,32 @@ updateStatus_(const Simulator& simulator,
         const Scalar rate = 10. * unit::cubic(unit::meter) / unit::day;
         this->primary_variables_.setTotalRate(producer ? -rate : rate);
     }
+}
+
+template <typename TypeTag>
+typename CompWell<TypeTag>::Scalar
+CompWell<TypeTag>::
+reservoirRateAtBhp_(const Simulator& simulator,
+                    const Scalar bhp) const
+{
+    // Sum the volumetric connection rates of calculateSingleConnectionRate().
+    // The phase mobilities of a producing connection add up to the total
+    // mobility that an injecting connection uses.
+    Scalar rate = 0.;
+    std::vector<EvalWell> mob(FluidSystem::numPhases, 0.);
+    for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
+        const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[con_idx], 0);
+        assert(int_quantities);
+        const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
+        getMobility(simulator, con_idx, mob);
+        Scalar total_mobility = 0.;
+        for (const auto& m : mob) {
+            total_mobility += getValue(m);
+        }
+        rate += this->well_index_[con_idx] * total_mobility
+            * (bhp + this->connection_pressure_diffs_[con_idx] - cell_pressure);
+    }
+    return rate;
 }
 
 template <typename TypeTag>

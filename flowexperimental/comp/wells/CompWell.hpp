@@ -241,6 +241,11 @@ private:
     void updateStatus_(const Simulator& simulator,
                        const SingleWellState& well_state);
 
+    // Net reservoir volume rate of all connections at the given BHP, using
+    // the current cell states. Positive for injection.
+    Scalar reservoirRateAtBhp_(const Simulator& simulator,
+                               const Scalar bhp) const;
+
     template <typename T>
     void
     updateSurfaceCondition_(const StandardCond& surface_cond,
