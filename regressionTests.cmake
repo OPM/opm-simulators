@@ -1496,6 +1496,25 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    waghyst3
+  FILENAME
+    WAGHYSTR-03
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    waghystr
+  TEST_ARGS
+    --solver-max-time-step-in-days=1.0
+)
+
+add_test_compareECLFiles(
+  CASENAME
     gpmaint11
   FILENAME
     GPMAINT-11
