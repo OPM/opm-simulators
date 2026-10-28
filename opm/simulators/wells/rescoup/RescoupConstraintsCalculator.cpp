@@ -19,8 +19,13 @@
 #include <config.h>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/wells/rescoup/RescoupConstraintsCalculator.hpp>
+#include <opm/simulators/wells/FractionCalculator.hpp>
 
 #include <array>
+#include <functional>
+#include <limits>
+#include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -549,6 +554,10 @@ excludeAndRedistributeProductionTargets_(
         }
     }
 
+    // Step 3b: share the unused part of each controlling target among the
+    // excluded groups below it, instead of offering all of it to each of them.
+    this->shareUnusedTargetAmongExcludedGroups_(excluded_groups, all_production_constraints);
+
     // Step 4: the master completes its own time step, assuming that the
     // production and injection rates of the slave groups remain constant over
     // the time step.  A master group not available for higher-level control
@@ -660,6 +669,256 @@ makeProductionGroupConstraints_(
         constraints.liquid_limit,
         constraints.resv_limit
     };
+}
+
+// Step 3b of excludeAndRedistributeProductionTargets_().
+//
+// Step 3 gives an excluded group the target it would get on returning to the
+// guide-rate distribution on its own (see Phase 2 in the overview above): its
+// guide-rate share of the controlling ancestor's target less the reductions, with
+// its own rate added back.  That is not a consistent allocation once two or more
+// groups are excluded: each group's target is worked out with the other excluded
+// groups at their rates, so the targets add up to more than the ancestor's
+// target.  As long as their wells sit at their own (THP or BHP) limits this does
+// no harm, but anything that lets them produce more -- gas lift, or just their
+// rates rising over a long sync step -- then works towards a sum of targets above
+// the ancestor's target.  Without reservoir coupling the ancestor's own
+// constraint check would catch this within the time step; here the master only
+// sees it at the next sync step.
+//
+// So, for each controlling ancestor and rate type, the unused part of its
+// target is worked out -- its target less its current rate, less how far the
+// targets of the participating master groups below it are above their current
+// rates (a group above its target counts negative: its target cuts it) -- and
+// shared among the excluded groups below it.  Each excluded group gets its
+// current rate plus its share, and never more than the target from Step 3, unless
+// its rate is above that already, when it is held at its rate.  The
+// shares are in proportion to the groups' guide rates, as the target of the
+// ancestor is in the distribution; when none of the groups has a guide rate they
+// are in proportion to how far each group's Step 3 target exceeds its rate.  A
+// negative unused part (the ancestor still produces above its target when the
+// participating groups are at their targets) is taken from the groups in
+// proportion to their rates; the target from Step 3 does not limit that: with no
+// participating group it is the group's rate less all of the excess, which would
+// cut each group by all of it.  When participating groups are present
+// they take up the unused part, so the excluded groups are held at their
+// current rates; only when none is present is the room shared among the
+// excluded groups.
+//
+// The price is that an excluded group's target is often its current rate, so a
+// small rise in its rate switches its wells to group control, and from the next
+// recalculation it takes part in the distribution again.  If its wells cannot
+// produce the share it then gets, the parent's target is under-delivered until
+// they are back on their own limits and the group is excluded again.
+//
+// The same is done for the per-rate-type limits (ORAT, WRAT, GRAT, LRAT), each
+// with the ancestor that defines that limit.  RESV targets and limits are left
+// as Step 3 computed them: the unused part needs the current reservoir rate of
+// the ancestor and of the groups below it, and the master has none for a
+// production group (the slaves report them, but GroupState keeps reservoir
+// rates for injection groups only).  The same overshoot is therefore possible
+// for excluded groups under an ancestor with a RESV target.  The master's own
+// wells are left too: their room up to their targets is not deducted from the
+// unused part.
+template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+shareUnusedTargetAmongExcludedGroups_(
+    const std::set<std::string>& excluded_groups,
+    std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints)
+{
+    using CMode = Group::ProductionCMode;
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    const auto& group_state = this->group_state_helper_.groupState();
+
+    auto rate_for_mode = [this](const std::string& name, const CMode mode) -> Scalar {
+        const auto rates = this->group_state_helper_.getProductionGroupRateVector(name);
+        switch (mode) {
+        case CMode::ORAT: return rates.oil_rat;
+        case CMode::WRAT: return rates.wat_rat;
+        case CMode::GRAT: return rates.gas_rat;
+        case CMode::LRAT: return rates.oil_rat + rates.wat_rat;
+        default: return Scalar{0};
+        }
+    };
+    // The value of a constraint for a rate type: the active target, or one of
+    // the per-rate-type limits (-1 when there is none).
+    auto limit_for_mode = [](ProductionGroupConstraints& pc, const CMode mode) -> Scalar* {
+        switch (mode) {
+        case CMode::ORAT: return &pc.oil_limit;
+        case CMode::WRAT: return &pc.water_limit;
+        case CMode::GRAT: return &pc.gas_limit;
+        case CMode::LRAT: return &pc.liquid_limit;
+        default: return nullptr;
+        }
+    };
+    auto value_for_mode = [&limit_for_mode](ProductionGroupConstraints& pc, const CMode mode) -> Scalar* {
+        if (pc.cmode == mode) {
+            return &pc.target;
+        }
+        return limit_for_mode(pc, mode);
+    };
+    // The ancestor whose target or limit for the rate type the group's
+    // constraint is a share of, as GroupConstraintCalculator finds it, together
+    // with the product of the efficiency factors from the group up to it.
+    auto controlling_ancestor = [this, &group_state](const std::string& name, const CMode mode,
+                                                     const bool is_target)
+        -> std::optional<std::pair<std::string, Scalar>>
+    {
+        const Group* group = &this->schedule_.getGroup(name, this->report_step_idx_);
+        Scalar efficiency = 1.0;
+        while (!group->is_field() && group->productionGroupControlAvailable()) {
+            efficiency *= group->getGroupEfficiencyFactor();
+            group = &this->schedule_.getGroup(group->parent(), this->report_step_idx_);
+            const bool controls = is_target
+                ? !group_state.has_field_or_none_control(group->name())
+                : group->has_control(mode);
+            if (controls) {
+                return std::make_pair(group->name(), efficiency);
+            }
+        }
+        return std::nullopt;
+    };
+    auto is_below = [this](std::string name, const std::string& ancestor) {
+        while (name != "FIELD") {
+            name = this->schedule_.getGroup(name, this->report_step_idx_).parent();
+            if (name == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    struct Member {
+        Scalar* value;       // the constraint to adjust
+        Scalar* active_limit;  // for the active rate type: its copy of the target in the limit, else null
+        Scalar step3_value;  // its value from Step 3
+        Scalar rate;         // the group's current rate for the rate type
+        Scalar efficiency;   // efficiency factor from the group up to the ancestor
+        Scalar guide_rate;   // the group's guide rate for the rate type
+    };
+    for (const CMode mode : {CMode::ORAT, CMode::WRAT, CMode::GRAT, CMode::LRAT}) {
+        GroupStateHelpers::FractionCalculator<Scalar, IndexTraits> fraction_calculator{
+            this->schedule_, this->group_state_helper_, this->summary_state_, this->report_step_idx_,
+            &this->group_state_helper_.guideRate(),
+            this->group_state_helper_.getProductionGuideTargetModeFromControlMode(mode),
+            /*is_producer=*/true, /*injection_phase=*/Phase::OIL};
+        // Excluded groups by controlling ancestor
+        std::map<std::string, std::vector<Member>> excluded_by_ancestor;
+        for (std::size_t slave_idx = 0; slave_idx < all_production_constraints.size(); ++slave_idx) {
+            const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+            for (auto& pc : all_production_constraints[slave_idx]) {
+                const auto& name = master_groups[pc.group_name_idx];
+                if (excluded_groups.count(name) == 0) {
+                    continue;
+                }
+                Scalar* value = value_for_mode(pc, mode);
+                if (value == nullptr || *value < 0) {
+                    continue;
+                }
+                const auto ancestor = controlling_ancestor(name, mode, /*is_target=*/pc.cmode == mode);
+                // A group with an efficiency factor of 0 takes nothing of what the ancestor
+                // has left, and the shares below are divided by the factor.
+                if (!ancestor.has_value() || !(ancestor->second > 0)) {
+                    continue;
+                }
+                // The group is excluded from the guide-rate distribution, so it is counted
+                // as the always-included child to get its guide rate.
+                const Scalar guide_rate = fraction_calculator.guideRate(
+                    name, /*always_included_child=*/name, /*always_use_potentials=*/false);
+                // The limit of the active rate type is a copy of the target (see
+                // GroupConstraintCalculator::groupProductionConstraints()), and the slave reads
+                // both, so they must be changed together.
+                Scalar* const active_limit = (pc.cmode == mode) ? limit_for_mode(pc, mode) : nullptr;
+                excluded_by_ancestor[ancestor->first].push_back(
+                    Member{value, active_limit, *value, rate_for_mode(name, mode), ancestor->second,
+                           std::max(Scalar{0}, guide_rate)});
+            }
+        }
+        for (auto& [ancestor, members] : excluded_by_ancestor) {
+            const Group& top = this->schedule_.getGroup(ancestor, this->report_step_idx_);
+            // How far the ancestor is below its target; negative when it is above it.
+            const Scalar slack = this->group_state_helper_.getProductionGroupTargetForMode(top, mode)
+                - rate_for_mode(ancestor, mode);
+            // How far the targets or limits of the participating master groups below the
+            // ancestor are above their current rates.  A group above its target is cut by it,
+            // which brings the ancestor down: its excess counts negative.
+            Scalar room = 0.0;
+            for (std::size_t slave_idx = 0; slave_idx < all_production_constraints.size(); ++slave_idx) {
+                const auto& master_groups = rescoup_master.getMasterGroupNamesForSlave(slave_idx);
+                for (auto& pc : all_production_constraints[slave_idx]) {
+                    const auto& name = master_groups[pc.group_name_idx];
+                    if (excluded_groups.count(name) > 0
+                        || !this->group_state_helper_.isMasterGroupEligibleForGuideRate(name)
+                        || !is_below(name, ancestor)) {
+                        continue;
+                    }
+                    const Scalar* value = value_for_mode(pc, mode);
+                    if (value == nullptr || *value < 0) {
+                        continue;
+                    }
+                    const auto chain = controlling_ancestor(name, mode, /*is_target=*/pc.cmode == mode);
+                    const Scalar efficiency = chain.has_value() ? chain->second : Scalar{1};
+                    room += efficiency * (*value - rate_for_mode(name, mode));
+                }
+            }
+            // What is left of the ancestor's target when the participating groups are at their
+            // targets and the excluded ones at their rates.  The participating groups take it
+            // up as long as their targets add up to the ancestor's target less the rates of
+            // the others, so the excluded groups are then held at their current rates.  Only
+            // when the participating groups cannot take it all do the excluded groups get the
+            // rest, and only when the ancestor is still above its target do they give up some.
+            // The targets of the participating groups come from the same distribution, so they
+            // add up to at most the ancestor's target less the rates of the others, and
+            // room <= slack: unused is then only negative when the ancestor is above its
+            // target, or by rounding.  It is not limited to 0 below an ancestor under its
+            // target: if the participating groups could ever take more than is left, the
+            // ancestor would be above its target with all of them at their targets, and the
+            // excluded groups should give up the difference.
+            const Scalar unused = slack - room;
+            // The weights of the shares, in the units of the ancestor: the guide rates of the
+            // groups, or, when none of them has one, how far each group's Step 3 target is
+            // above its rate.  Above the ancestor's target the groups are cut in proportion
+            // to their rates.
+            Scalar guide_rate_sum = 0.0;
+            for (const auto& m : members) {
+                guide_rate_sum += m.guide_rate;
+            }
+            const bool by_guide_rate = unused >= 0 && guide_rate_sum > 0;
+            auto weight_of = [&](const Member& m) {
+                if (unused < 0) {
+                    return m.efficiency * m.rate;
+                }
+                return by_guide_rate ? m.guide_rate
+                                     : m.efficiency * std::max(Scalar{0}, m.step3_value - m.rate);
+            };
+            Scalar weight_sum = 0.0;
+            for (const auto& m : members) {
+                weight_sum += weight_of(m);
+            }
+            for (auto& m : members) {
+                Scalar share = 0.0;
+                if (weight_sum > 0) {
+                    share = unused * weight_of(m) / weight_sum / m.efficiency;
+                }
+                // The target from Step 3 is the most a group gets of unused target, on top of its
+                // rate: a group above it is held at its rate, not cut to it.  That also makes the
+                // result continuous at nothing unused, where the sign of a rounding error would
+                // otherwise decide between the two cases.  It is no limit on a cut: with no
+                // participating group it is the group's rate less all of the excess, which
+                // would cut each group by all of it.
+                *m.value = (unused >= 0)
+                    ? std::clamp(m.rate + share, Scalar{0}, std::max(m.step3_value, m.rate))
+                    : std::max(Scalar{0}, m.rate + share);
+                if (m.active_limit) {
+                    *m.active_limit = *m.value;
+                }
+            }
+            this->deferred_logger_.debug(fmt::format(
+                "RC redistribution: {} unused {} {:.4f} shared among {} excluded groups",
+                ancestor, Group::ProductionCMode2String(mode), unused, members.size()));
+        }
+    }
 }
 
 template <class Scalar, class IndexTraits>
