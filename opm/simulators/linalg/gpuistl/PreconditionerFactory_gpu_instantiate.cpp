@@ -21,6 +21,7 @@
 #include <dune/istl/operators.hh>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSystemPreconditionerFactory.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #if HAVE_MPI
 #include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
@@ -38,6 +39,13 @@ template class ::Opm::PreconditionerFactory<Dune::MatrixAdapter<::Opm::gpuistl::
                                                                 ::Opm::gpuistl::GpuVector<float>,
                                                                 ::Opm::gpuistl::GpuVector<float>>,
                                             ::Opm::CommSeq>;
+#endif
+
+// Coupled reservoir-well system on the GPU.
+template class ::Opm::PreconditionerFactory<::Opm::gpuistl::GpuSystemSeqOp<double>, ::Opm::CommSeq>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class ::Opm::PreconditionerFactory<::Opm::gpuistl::GpuSystemSeqOp<float>, ::Opm::CommSeq>;
 #endif
 
 #if HAVE_MPI

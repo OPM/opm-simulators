@@ -21,6 +21,8 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/material/common/ConditionalStorage.hpp>
+
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/multitypeblockmatrix.hh>
@@ -157,58 +159,92 @@ struct WellDofLayout
 // Dune::OverlappingSchwarzOperator (mv, usmv, N, M, field_type) as well as
 // sub-block access via the index syntax  S[_0][_0]  used by
 // SystemPreconditioner.
+//
+// The block and vector types come from the Blocks traits struct.  The
+// default, SystemBlockTypes, gives the CPU matrix; the GPU solver
+// instantiates the same class with device matrices (see
+// gpuistl/GpuSystemTypes.hpp).
 // --------------------------------------------------------------------------
+template <typename Scalar>
+struct SystemBlockTypes {
+    static constexpr bool isGpu = false;
+    using RR = RRMatrix<Scalar>;
+    using RW = RWMatrix<Scalar>;
+    using WR = WRMatrix<Scalar>;
+    using WW = WWMatrix<Scalar>;
+    using Vector = SystemVector<Scalar>;
+};
+
 template<typename Scalar> struct SystemMatrixRow0;  // forward
 template<typename Scalar> struct SystemMatrixRow1;
 
-template<typename Scalar>
+template <typename Scalar, class Blocks = SystemBlockTypes<Scalar>>
 class SystemMatrix
 {
 public:
     using size_type  = std::size_t;
     using field_type = Scalar;
+    using VectorType = typename Blocks::Vector;
 
     static constexpr size_type N() { return 2; }
     static constexpr size_type M() { return 2; }
 
     // Block pointers — set directly by the owning solver.
-    const RRMatrix<Scalar>* A = nullptr;  // (0,0) reservoir
-    const RWMatrix<Scalar>* C = nullptr;  // (0,1) reservoir–well coupling
-    const WRMatrix<Scalar>* B = nullptr;  // (1,0) well–reservoir coupling
-    const WWMatrix<Scalar>* D = nullptr;  // (1,1) well
+    const typename Blocks::RR* A = nullptr; // (0,0) reservoir
+    const typename Blocks::RW* C = nullptr; // (0,1) reservoir–well coupling
+    const typename Blocks::WR* B = nullptr; // (1,0) well–reservoir coupling
+    const typename Blocks::WW* D = nullptr; // (1,1) well
 
     // Aggregation of the well block rows into wells.  Only needed by the CPRW
     // pressure stage; null when the well DOFs are not aggregated.
     const WellDofLayout* wellLayout = nullptr;
 
+    // GPU matrices only: host copy of D, on which the well sub-solver runs.
+    ConditionalStorage<Blocks::isGpu, const WWMatrix<Scalar>*> hostD;
+
     // Sub-block access: S[_0][_0], S[_0][_1], S[_1][_0], S[_1][_1]
     inline SystemMatrixRow0<Scalar> operator[](Dune::index_constant<0>) const;
     inline SystemMatrixRow1<Scalar> operator[](Dune::index_constant<1>) const;
 
-    // Matrix-vector products required by Dune linear operators.
+    // Matrix-vector products required by Dune linear operators.  The well
+    // blocks are skipped when there are no well unknowns, as in a run
+    // without open wells: the products are no-ops then, and the GPU matrices
+    // reject empty vectors.
     // y = S * x  =  (A*x0 + C*x1;  B*x0 + D*x1)
     // Achieved by: y0 = A*x0 (mv), then y0 += C*x1 (umv); similarly for y1.
-    void mv(const SystemVector<Scalar>& x, SystemVector<Scalar>& y) const
+    void mv(const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->mv (x[_0], y[_0]);   C->umv(x[_1], y[_0]);
-        B->mv (x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        A->mv(x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->umv(x[_1], y[_0]);
+            B->mv(x[_0], y[_1]);
+            D->umv(x[_1], y[_1]);
+        }
     }
 
     // y += S * x  =  (y0 += A*x0 + C*x1;  y1 += B*x0 + D*x1)
-    void umv(const SystemVector<Scalar>& x, SystemVector<Scalar>& y) const
+    void umv(const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->umv(x[_0], y[_0]);   C->umv(x[_1], y[_0]);
-        B->umv(x[_0], y[_1]);   D->umv(x[_1], y[_1]);
+        A->umv(x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->umv(x[_1], y[_0]);
+            B->umv(x[_0], y[_1]);
+            D->umv(x[_1], y[_1]);
+        }
     }
 
     // y += alpha * S * x  =  (y0 += alpha*(A*x0 + C*x1);  y1 += alpha*(B*x0 + D*x1))
-    void usmv(field_type alpha, const SystemVector<Scalar>& x, SystemVector<Scalar>& y) const
+    void usmv(field_type alpha, const VectorType& x, VectorType& y) const
     {
         using namespace Dune::Indices;
-        A->usmv(alpha, x[_0], y[_0]);   C->usmv(alpha, x[_1], y[_0]);
-        B->usmv(alpha, x[_0], y[_1]);   D->usmv(alpha, x[_1], y[_1]);
+        A->usmv(alpha, x[_0], y[_0]);
+        if (x[_1].dim() > 0) {
+            C->usmv(alpha, x[_1], y[_0]);
+            B->usmv(alpha, x[_0], y[_1]);
+            D->usmv(alpha, x[_1], y[_1]);
+        }
     }
 };
 
@@ -231,12 +267,14 @@ struct SystemMatrixRow1
     const WWMatrix<Scalar>& operator[](Dune::index_constant<1>) const { return D; }
 };
 
-template<typename Scalar>
-SystemMatrixRow0<Scalar> SystemMatrix<Scalar>::operator[](Dune::index_constant<0>) const
+template <typename Scalar, class Blocks>
+SystemMatrixRow0<Scalar>
+SystemMatrix<Scalar, Blocks>::operator[](Dune::index_constant<0>) const
 { return {*A, *C}; }
 
-template<typename Scalar>
-SystemMatrixRow1<Scalar> SystemMatrix<Scalar>::operator[](Dune::index_constant<1>) const
+template <typename Scalar, class Blocks>
+SystemMatrixRow1<Scalar>
+SystemMatrix<Scalar, Blocks>::operator[](Dune::index_constant<1>) const
 { return {*B, *D}; }
 
 } // namespace Opm
