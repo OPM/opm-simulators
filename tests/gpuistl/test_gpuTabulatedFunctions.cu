@@ -175,7 +175,7 @@ XTabulatedFunction buildSlopedGuideXTab(InterpolationPolicy policy)
 
     XTabBuilder builder(policy);
 
-    auto f = [](Scalar x, Scalar y) { return x + y; };
+    auto f = [](Scalar x, Scalar y) { return x * y; };
 
     for (unsigned i = 0; i < m; ++i) {
         const Scalar x = xMin + Scalar(i) / (m - 1) * (xMax - xMin);
