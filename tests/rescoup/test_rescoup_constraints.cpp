@@ -63,11 +63,13 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <cmath>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm::Properties::TTag {
@@ -107,6 +109,10 @@ initMasterSimulator(const std::string& filename)
 const std::string flat_deck{"RC_MASTER_GROUP_EXCLUSION.DATA"};
 const std::string nested_deck{"RC_MASTER_GROUP_EXCLUSION_NESTED.DATA"};
 const std::string sibling_deck{"RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA"};
+const std::string ancestor_deck{"RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA"};
+const std::string efficiency_deck{"RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA"};
+const std::string water_gas_deck{"RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA"};
+const std::string zero_guide_rates_deck{"RC_MASTER_GROUP_EXCLUSION_ZERO_GUIDE_RATES.DATA"};
 
 //! What the slave reports for one of its groups, in SM3/day
 struct SlaveGroupReport
@@ -117,6 +123,8 @@ struct SlaveGroupReport
     double gas_injection_rate{0.0};
     int num_group_controlled_water_injectors{1};
     int num_group_controlled_gas_injectors{1};
+    double water_rate{0.0};
+    double gas_rate{0.0};
 };
 
 //! \brief A well model built from a master deck, with a reservoir coupling master
@@ -231,6 +239,16 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
             }
             return limit < 0.0 ? limit : metric_rate(limit);
         }
+        //! The master sends the limit of the active rate type, ORAT in these decks, as well as the
+        //! target, and it is the same value: the slave reads both.
+        void checkOratLimitIsTarget(const std::vector<std::string>& groups) const
+        {
+            for (const auto& group : groups) {
+                BOOST_CHECK_SMALL(productionLimit(group, Opm::Group::ProductionCMode::ORAT)
+                                      - productionTarget(group),
+                                  1e-9);
+            }
+        }
     };
 
     Result calculateConstraints()
@@ -275,7 +293,11 @@ private:
         {"S2", {"M3", "M4"}},
     };
 
-    //! The slave reports, by master group
+    //! The slave reports, by master group.  The fields of SlaveGroupReport, in order, are
+    //!   oil_rate, num_group_controlled_producers, water_injection_rate, gas_injection_rate,
+    //!   num_group_controlled_water_injectors, num_group_controlled_gas_injectors;
+    //! water_rate and gas_rate are left at 0 here, tests that need them set them with
+    //! slaveGroupReport().
     std::map<std::string, SlaveGroupReport> slave_group_reports_{
         {"M1", {150.0, 1, 150.0, 150.0, 1, 1}},
         {"M2", {200.0, 1, 200.0, 200.0, 1, 1}},
@@ -336,6 +358,13 @@ private:
                 prod.surface_rates[RcPhase::Oil] = si_rate(report.oil_rate);
                 prod.network_surface_rates[RcPhase::Oil] = si_rate(report.oil_rate);
                 prod.reservoir_rates[RcPhase::Oil] = si_rate(report.oil_rate);
+                for (const auto& [phase, rate] : {std::pair{RcPhase::Water, report.water_rate},
+                                                  std::pair{RcPhase::Gas, report.gas_rate}}) {
+                    prod.potentials[phase] = si_rate(rate);
+                    prod.surface_rates[phase] = si_rate(rate);
+                    prod.network_surface_rates[phase] = si_rate(rate);
+                    prod.reservoir_rates[phase] = si_rate(rate);
+                }
                 prod.num_group_controlled_producers = report.num_group_controlled_producers;
                 auto& inj = injection_data[i];
                 inj.surface_rates[RcPhase::Water] = si_rate(report.water_injection_rate);
@@ -404,6 +433,7 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
     using Mode = Opm::Group::ProductionCMode;
     commonSetupForAllTests(flat_deck);
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
     checkRate(result.productionTarget("M2"), 950.0 * 200.0 / 600.0);
@@ -439,10 +469,14 @@ BOOST_AUTO_TEST_CASE(NoExclusion)
 //! the guide-rate distribution: M4's 50 (item 8 = NO) plus the excluded M1's 150.
 //! The master assumes that M1 keeps producing its reported 150, so M2 and M3 only
 //! need to produce the rest, 1000 - 200 = 800, which they share by 200 : 300.
-//! M1 is sent its share if it rejoined: (1000 - 50) * 100 / (100 + 200 + 300).
+//! M1 is sent its current rate, 150, plus its share of what FIELD leaves unused (see
+//! RescoupConstraintsCalculator::shareUnusedTargetAmongExcludedGroups_()).  That is
+//! nothing here: FIELD has 1000 - 700 = 300 left, and M2 and M3 can still take
+//! (320 - 200) + (480 - 300) = 300 up to their targets.  It is not the share
+//! (1000 - 50) * 100 / (100 + 200 + 300) that M1 would get if it rejoined.
 //!
 //! The LRAT limits are recalculated with the targets: M2 and M3 share
-//! 2000 - 200 = 1800, and M1 is sent (2000 - 50) * 100 / 600.  Without the
+//! 2000 - 200 = 1800, and M1 is sent its current liquid rate, 150.  Without the
 //! exclusion, M2 and M3 would have 650 (= 1950 * 200 / 600) and 975
 //! (= 1950 * 300 / 600), see NoExclusion.
 BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
@@ -451,6 +485,7 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
     // Make M1 have no producers under group control
     commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     BOOST_CHECK_EQUAL(master().effectiveGCW("M2"), 1);
@@ -461,12 +496,15 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
 
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
+    // The limit of the active rate type is a copy of the target, and it is shared too: it is
+    // not the 158.33 that M1 got in Step 3
+    checkRate(result.productionLimit("M1", Mode::ORAT), 150.0);
     checkRate(result.productionTarget("M4"), 50.0);
 
     checkRate(result.productionLimit("M2", Mode::LRAT), 1800.0 * 200.0 / 500.0);
     checkRate(result.productionLimit("M3", Mode::LRAT), 1800.0 * 300.0 / 500.0);
-    checkRate(result.productionLimit("M1", Mode::LRAT), 1950.0 * 100.0 / 600.0);
+    checkRate(result.productionLimit("M1", Mode::LRAT), 150.0);
     BOOST_CHECK_EQUAL(result.productionLimit("M4", Mode::LRAT), -1.0);
 }
 
@@ -553,11 +591,12 @@ BOOST_AUTO_TEST_CASE(NestedExclusion)
     // Make M1 have no producers under group control
     commonSetupForAllTests(nested_deck, /*groups_without_group_controlled_producers=*/{"M1"});
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
 
     auto fcalc = productionFractionCalculator();
     checkClose(fcalc.fraction("M1", "FIELD", /*always_include_this=*/true), 100.0 / 600.0);
@@ -668,13 +707,14 @@ BOOST_AUTO_TEST_CASE(NestedExclusionWithSibling)
                            /*groups_without_group_controlled_producers=*/{"M1"},
                            /*groups_without_group_controlled_water_injectors=*/{"M1"});
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     const int oil = phasePos(IndexTraits::oilPhaseIdx);
     checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 200.0);
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
     checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
     checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
@@ -702,9 +742,11 @@ BOOST_AUTO_TEST_CASE(NestedExclusionWithSibling)
 //! The reduction on FIELD is 50 (from M4) + 150 (from M1) + 200 (from M2) = 400,
 //! the rates M1 and M2 produce on their own limits (see
 //! RescoupConstraintsFixture::slave_group_reports_) included, and M3, the only group left in
-//! the distribution, is sent the rest, 600.  Each excluded group is sent its share
-//! if it alone rejoined: M1 shares 1000 - 400 + 150 with M3 by 100 : 300, M2
-//! shares 1000 - 400 + 200 with M3 by 200 : 300.
+//! the distribution, is sent the rest, 600.  M3 can still take that up to its target,
+//! so FIELD has nothing unused to give the excluded groups, and the production targets
+//! of M1 and M2 are their current rates, 150 and 200.  Their injection targets are the
+//! shares they would get if they alone rejoined: M1 shares 1000 - 400 + 150 with M3 by
+//! 100 : 300, M2 shares 1000 - 400 + 200 with M3 by 200 : 300.
 BOOST_AUTO_TEST_CASE(TwoGroupsExcluded)
 {
     // Make M1 and M2 have no producers and no water injectors under group control
@@ -712,6 +754,7 @@ BOOST_AUTO_TEST_CASE(TwoGroupsExcluded)
                            /*groups_without_group_controlled_producers=*/{"M1", "M2"},
                            /*groups_without_group_controlled_water_injectors=*/{"M1", "M2"});
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     BOOST_CHECK_EQUAL(master().effectiveGCW("M2"), 0);
@@ -719,8 +762,8 @@ BOOST_AUTO_TEST_CASE(TwoGroupsExcluded)
     checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 400.0);
 
     checkRate(result.productionTarget("M3"), 600.0);
-    checkRate(result.productionTarget("M1"), 750.0 * 100.0 / 400.0);
-    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.productionTarget("M1"), 150.0);
+    checkRate(result.productionTarget("M2"), 200.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 600.0);
     checkRate(result.injectionTarget("M1", RcPhase::Water), 750.0 * 100.0 / 400.0);
     checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
@@ -730,11 +773,13 @@ BOOST_AUTO_TEST_CASE(TwoGroupsExcluded)
 //!   M1, M2 and M3 have no producers and no water injectors under group control
 //!
 //! No group is left in FIELD's guide-rate distribution, and the reduction on FIELD
-//! is the rate of all four groups, 700.  Each excluded group is sent its share if
-//! it alone rejoined, as in TwoGroupsExcluded: with no other group in the sum, that
-//! is all of FIELD's target the others leave, 1000 - 700 + its own rate.  The
-//! three targets add up to more than FIELD's target; each holds only if its group
-//! is the only one that returns to group control.
+//! is the rate of all four groups, 700.  No participating group takes up what FIELD
+//! leaves unused, 1000 - 700 = 300, so it is shared among the three excluded groups in
+//! proportion to their guide rates, 100 : 200 : 300: 50, 100 and 150.  Each production
+//! target is the group's rate plus its share, and with M4's 50 they add up to FIELD's
+//! target.  The injection targets are still the
+//! shares each group would get if it alone rejoined, and add up to more than FIELD's
+//! target.
 BOOST_AUTO_TEST_CASE(AllEligibleGroupsExcluded)
 {
     using Mode = Opm::Group::ProductionCMode;
@@ -744,6 +789,7 @@ BOOST_AUTO_TEST_CASE(AllEligibleGroupsExcluded)
                            /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"},
                            /*groups_without_group_controlled_water_injectors=*/{"M1", "M2", "M3"});
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     for (const std::string name : {"M1", "M2", "M3"}) {
         BOOST_CHECK_EQUAL(master().effectiveGCW(name), 0);
@@ -753,19 +799,19 @@ BOOST_AUTO_TEST_CASE(AllEligibleGroupsExcluded)
     const int oil = phasePos(IndexTraits::oilPhaseIdx);
     checkRate(metric_rate(groupState().production_reduction_rates("FIELD")[oil]), 700.0);
 
-    // FIELD's ORAT target less the reduction, 1000 - 700 = 300, plus the group's
-    // own rate, which is in the reduction and is added back for its own target.
-    // The group is alone in FIELD's guide-rate sum for its own target, so its
-    // fraction is 1.
-    checkRate(result.productionTarget("M1"), 300.0 + 150.0);
-    checkRate(result.productionTarget("M2"), 300.0 + 200.0);
-    checkRate(result.productionTarget("M3"), 300.0 + 300.0);
+    // FIELD's ORAT target less the reduction, 1000 - 700 = 300, is unused, and the
+    // excluded groups share it by their guide rates, 100 : 200 : 300
+    checkRate(result.productionTarget("M1"), 150.0 + 300.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M2"), 200.0 + 300.0 * 200.0 / 600.0);
+    checkRate(result.productionTarget("M3"), 300.0 + 300.0 * 300.0 / 600.0);
     checkRate(result.productionTarget("M4"), 50.0);
-    // The same for FIELD's LRAT limit: 2000 - 700 = 1300, plus M1's own liquid
-    // rate, which equals its oil rate
-    checkRate(result.productionLimit("M1", Mode::LRAT), 1300.0 + 150.0);
-    // The same for FIELD's water injection target: 1000 less the water the four
-    // groups inject, 700, plus the group's own
+    // The same for FIELD's LRAT limit: 2000 - 700 = 1300 is unused, and M1 gets 100 / 600
+    // of it, plus its own liquid rate, which equals its oil rate (and the guide rates
+    // for liquid equal the oil guide rates)
+    checkRate(result.productionLimit("M1", Mode::LRAT), 150.0 + 1300.0 * 100.0 / 600.0);
+    // The injection targets are still those each group would get if it alone rejoined:
+    // FIELD's water injection target, 1000, less the water the four groups inject, 700,
+    // plus the group's own
     checkRate(result.injectionTarget("M1", RcPhase::Water), 300.0 + 150.0);
     checkRate(result.injectionTarget("M2", RcPhase::Water), 300.0 + 200.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 300.0 + 300.0);
@@ -856,12 +902,13 @@ BOOST_AUTO_TEST_CASE(RecalculateWithSameExclusion)
     calculateConstraints();
     resendSlaveData();
     const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
 
     BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
     BOOST_CHECK_EQUAL(master().effectiveInjectionGCW("M1", Opm::Phase::WATER), 0);
     checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
     checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
-    checkRate(result.productionTarget("M1"), 950.0 * 100.0 / 600.0);
+    checkRate(result.productionTarget("M1"), 150.0);
     checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
     checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
