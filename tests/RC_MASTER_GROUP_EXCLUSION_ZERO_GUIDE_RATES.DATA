@@ -1,0 +1,61 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Reservoir coupling master deck for the unit tests in
+-- tests/rescoup/test_rescoup_constraints.cpp.  No slave is started: the test
+-- sets the data the slaves would have reported, and the master group to slave
+-- mapping that spawning the slaves would have set from GRUPMAST.  The deck must
+-- be read with --parsing-strictness=low, as for a coupled run.
+--
+-- Group hierarchy: as in RC_MASTER_GROUP_EXCLUSION.DATA, but M1, M2 and M3 have guide
+-- rates of 0 (GCONPROD item 9).  A master group must have a guide rate, so this is the
+-- way to give a group none worth using.
+--
+--         FIELD (ORAT = 1000, LRAT = 2000, WATER RATE = 1000, GAS RATE = 1000)
+--             /       |       |       \
+--           M1       M2       M3       M4
+--
+-- M1 and M2 are master groups of slave S1, M3 and M4 of slave S2.
+-- M1, M2, M3: available for higher-level control (item 8 = YES).
+-- M4:         not available for higher-level control (item 8 = NO), on its
+--             own limits of 50.
+--
+-- The decks RC_MASTER_GROUP_EXCLUSION*.DATA differ only in the group hierarchy
+-- (GRUPTREE) and the group controls given after the include.  The rest is in
+-- include/rc_master_group_exclusion_model.inc (the one-cell model) and
+-- include/rc_master_group_exclusion_controls.inc (the slaves and the group controls).
+--
+RUNSPEC
+
+TITLE
+RC_MASTER_GROUP_EXCLUSION_ZERO_GUIDE_RATES
+
+INCLUDE
+  'include/rc_master_group_exclusion_model.inc' /
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'M1' 'FIELD' /
+ 'M2' 'FIELD' /
+ 'M3' 'FIELD' /
+ 'M4' 'FIELD' /
+/
+
+INCLUDE
+  'include/rc_master_group_exclusion_controls.inc' /
+
+GCONPROD
+ 'M1' 'ORAT' 5000.0 1* 1* 1* 'RATE' 'YES' 0.0 'OIL' /
+ 'M2' 'ORAT' 5000.0 1* 1* 1* 'RATE' 'YES' 0.0 'OIL' /
+ 'M3' 'ORAT' 5000.0 1* 1* 1* 'RATE' 'YES' 0.0 'OIL' /
+/
+
+TSTEP
+1 /
+
+END

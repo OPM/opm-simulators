@@ -750,8 +750,12 @@ list (APPEND TEST_DATA_FILES
   tests/GLIFT1.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/RC_MASTER_GROUP_EXCLUSION.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_ZERO_GUIDE_RATES.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_NESTED.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA
+  tests/RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA
   tests/include/rc_master_group_exclusion_controls.inc
   tests/include/rc_master_group_exclusion_model.inc
   tests/include/flowl_b_vfp.ecl

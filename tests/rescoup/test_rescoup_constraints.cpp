@@ -508,6 +508,35 @@ BOOST_AUTO_TEST_CASE(ExcludeAndRedistributeProduction)
     BOOST_CHECK_EQUAL(result.productionLimit("M4", Mode::LRAT), -1.0);
 }
 
+//! \brief An excluded group above the target it would get if it rejoined is not cut when
+//!   nothing is unused
+//!
+//! M1 is excluded and produces more than its Step 3 target, (1000 - 50) * 100 / 600 = 158.33,
+//! and M2 and M3 can take up the rest of FIELD's target, so nothing is unused and M1 is held
+//! at its rate.  What is unused is zero up to rounding, and the result must not depend on the
+//! sign of the rounding error: M1's target is its rate at rates on both sides of any value,
+//! and the targets add up to FIELD's 1000.
+BOOST_AUTO_TEST_CASE(ExcludedGroupAboveItsStep3TargetIsHeldAtItsRate)
+{
+    for (const double rate : {380.0, 399.0, 400.0, 401.0, 420.0}) {
+        slaveGroupReport("M1").oil_rate = rate;
+        // Make M1 have no producers under group control
+        commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
+        const auto result = calculateConstraints();
+
+        BOOST_TEST_CONTEXT("M1 produces " << rate) {
+            checkRate(result.productionTarget("M1"), rate);
+            // M2 and M3 share the rest of FIELD's target after M1's rate and M4's 50
+            checkRate(result.productionTarget("M2"), (1000.0 - rate - 50.0) * 200.0 / 500.0);
+            checkRate(result.productionTarget("M3"), (1000.0 - rate - 50.0) * 300.0 / 500.0);
+            checkRate(result.productionTarget("M1") + result.productionTarget("M2")
+                          + result.productionTarget("M3") + result.productionTarget("M4"),
+                      1000.0);
+            result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+        }
+    }
+}
+
 //! \brief The fraction fallback: an excluded master group counts for its own
 //!   fraction, and not for its siblings'
 BOOST_AUTO_TEST_CASE(FractionFallback)
@@ -912,6 +941,241 @@ BOOST_AUTO_TEST_CASE(RecalculateWithSameExclusion)
     checkRate(result.injectionTarget("M2", RcPhase::Water), 800.0 * 200.0 / 500.0);
     checkRate(result.injectionTarget("M3", RcPhase::Water), 800.0 * 300.0 / 500.0);
     checkRate(result.injectionTarget("M1", RcPhase::Water), 950.0 * 100.0 / 600.0);
+}
+
+//! \brief A participating group above its own target does not take room from the excluded
+//!   groups
+//!
+//! M1 is excluded.  M3 produces 600, above its target of 800 * 300 / 500 = 480, so FIELD,
+//! at 150 + 200 + 600 + 50 = 1000, is exactly at its target.  The room M2 has up to its
+//! target is 320 - 200 = 120, and M3 has none; the 120 is more than FIELD has left, which
+//! is nothing.  FIELD has nothing unused for M1, whose target is then its current rate: the
+//! negative difference is not taken from M1.
+BOOST_AUTO_TEST_CASE(ParticipatingGroupAboveItsTarget)
+{
+    using Mode = Opm::Group::ProductionCMode;
+    slaveGroupReport("M3").oil_rate = 600.0;
+    // Make M1 have no producers under group control
+    commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
+    checkRate(result.productionTarget("M1"), 150.0);
+    // FIELD's LRAT limit of 2000 has 1000 left, and M2 and M3 can take that up to their
+    // limits, (720 - 200) + (1080 - 600) = 1000.  M1 is held at its liquid rate.
+    checkRate(result.productionLimit("M1", Mode::LRAT), 150.0);
+}
+
+//! \brief FIELD above its target, and the participating groups can bring it down: the
+//!   excluded group is not cut
+//!
+//! M1 is excluded, and M2 produces 600, so FIELD produces 150 + 600 + 300 + 50 = 1100,
+//! 100 above its target.  M2 and M3 are sent 800 * 200 / 500 = 320 and 480.  M2 is cut by
+//! 280 to its target and M3 may rise by 180, which together bring FIELD down by 100,
+//! to its target.  So FIELD has nothing to take from M1, and M1's target is its current
+//! rate.
+BOOST_AUTO_TEST_CASE(FieldAboveItsTargetWithParticipatingGroups)
+{
+    using Mode = Opm::Group::ProductionCMode;
+    slaveGroupReport("M2").oil_rate = 600.0;
+    // Make M1 have no producers under group control
+    commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    checkRate(result.productionTarget("M2"), 800.0 * 200.0 / 500.0);
+    checkRate(result.productionTarget("M3"), 800.0 * 300.0 / 500.0);
+    checkRate(result.productionTarget("M1"), 150.0);
+    // FIELD's LRAT limit of 2000 is not reached, 1100 is produced, so M1 is held at its
+    // liquid rate
+    checkRate(result.productionLimit("M1", Mode::LRAT), 150.0);
+}
+
+//! \brief A participating group above its target is not counted twice when FIELD is above
+//!   its target
+//!
+//! M1 and M3 are excluded, and M2 produces 600, so FIELD produces
+//! 150 + 600 + 300 + 50 = 1100, 100 above its target.  M2, alone in the distribution, is
+//! sent 1000 - (150 + 300) - 50 = 500, which is 100 below its rate.  That cut brings FIELD
+//! to its target, so M1 and M3 are not cut as well: their targets are their current rates.
+BOOST_AUTO_TEST_CASE(ParticipatingGroupAboveItsTargetUnderFieldAboveItsTarget)
+{
+    slaveGroupReport("M2").oil_rate = 600.0;
+    // Make M1 and M3 have no producers under group control
+    commonSetupForAllTests(flat_deck, /*groups_without_group_controlled_producers=*/{"M1", "M3"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M3"), 0);
+    checkRate(result.productionTarget("M2"), 500.0);
+    checkRate(result.productionTarget("M1"), 150.0);
+    checkRate(result.productionTarget("M3"), 300.0);
+}
+
+//! \brief FIELD above its target takes from the excluded groups in proportion to their
+//!   rates, when no group participates
+//!
+//! M1, M2 and M3 are excluded, and M3 produces 700, so FIELD produces
+//! 150 + 200 + 700 + 50 = 1100, 100 above its target.  The 100 is taken from the groups in
+//! proportion to their rates, 150 : 200 : 700, and the targets add up to FIELD's target
+//! with M4's 50.  A group is not cut by the whole 100: with all the groups excluded, each is
+//! alone in the distribution and its target from Step 3 is its rate less all of the 100.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsAboveFieldsTarget)
+{
+    slaveGroupReport("M3").oil_rate = 700.0;
+    // Make M1, M2 and M3 have no producers under group control
+    commonSetupForAllTests(flat_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    checkRate(result.productionTarget("M1"), 150.0 - 100.0 * 150.0 / 1050.0);
+    checkRate(result.productionTarget("M2"), 200.0 - 100.0 * 200.0 / 1050.0);
+    checkRate(result.productionTarget("M3"), 700.0 - 100.0 * 700.0 / 1050.0);
+    checkRate(result.productionTarget("M1") + result.productionTarget("M2")
+                  + result.productionTarget("M3") + result.productionTarget("M4"),
+              1000.0);
+}
+
+//! \brief Excluded groups with efficiency factors
+//!
+//! RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA gives M1 the factor 0 and M2 the factor 0.5;
+//! M1 and M2 are excluded.  The rates count with the factors: FIELD's reduction is
+//! 50 (M4) + 0 * 150 (M1) + 0.5 * 200 (M2) = 150, so M3 is sent 1000 - 150 = 850.
+//!
+//! M1's production does not count for FIELD, so it takes nothing of what FIELD has
+//! left.  It is left out of the sharing, as dividing a share by its factor would give a
+//! target that is not a number, and its target is its own limit, 5000.  FIELD has
+//! 1000 - (100 + 300 + 50) = 550 left, which M3 can still take up to its target
+//! (850 - 300), so M2 is held at its current rate, 200.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsWithEfficiencyFactors)
+{
+    // Make M1 and M2 have no producers under group control
+    commonSetupForAllTests(efficiency_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M2"), 0);
+    checkRate(result.productionTarget("M3"), 850.0);
+    BOOST_REQUIRE(std::isfinite(result.productionTarget("M1")));
+    checkRate(result.productionTarget("M1"), 5000.0);
+    checkRate(result.productionTarget("M2"), 200.0);
+}
+
+//! \brief Excluded groups below an ancestor with a target of its own
+//!
+//! In RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA the plain group P has an ORAT target of
+//! 400, and M1 and M2 are its children.  M1 and M2 are excluded, so the target that
+//! controls them is P's, not FIELD's.  P produces 150 + 200 = 350, and has 50 left.  No
+//! participating group is below P (M3 is not), so the 50 is shared among M1 and M2 by
+//! their guide rates, 100 : 200: M1 is sent 150 + 50 / 3, M2 200 + 100 / 3.
+//!
+//! P is not under FIELD's guide-rate distribution, so its rate of 350 is a reduction on
+//! FIELD, and M3 is sent 1000 - 350 - 50 = 600; what is left of P's target does not
+//! change that.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsBelowAnAncestorWithATarget)
+{
+    // Make M1 and M2 have no producers under group control
+    commonSetupForAllTests(ancestor_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M1"), 0);
+    BOOST_CHECK_EQUAL(master().effectiveGCW("M2"), 0);
+    checkRate(result.productionTarget("M1"), 150.0 + 50.0 * 100.0 / 300.0);
+    checkRate(result.productionTarget("M2"), 200.0 + 50.0 * 200.0 / 300.0);
+    checkRate(result.productionTarget("M3"), 1000.0 - 350.0 - 50.0);
+}
+
+//! \brief Excluded groups with limits on water and gas production
+//!
+//! RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA gives FIELD a WRAT limit of 600 and a GRAT
+//! limit of 1500 too.  The slaves report water rates of half and gas rates of twice the oil
+//! rates, 75, 100, 150 and 25 of water for M1 to M4 and 300, 400, 600 and 100 of gas, so
+//! FIELD produces 350 of water and 1400 of gas.  M1, M2 and M3 are excluded, and share what
+//! is left of each limit by their guide rates for that phase.  The guide rates of the
+//! deck are oil guide rates, scaled to water and gas by each group's water / oil and
+//! gas / oil rates, equal for the groups here, so the shares are in proportion to
+//! 100 : 200 : 300 as for oil.  Water: 600 - 350 = 250, M1 gets 250 / 6 more.  Gas:
+//! 1500 - 1400 = 100, M1 gets 100 / 6.  The oil targets are not changed by them.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsWithWaterAndGasLimits)
+{
+    using Mode = Opm::Group::ProductionCMode;
+    for (const auto& [group, oil] : std::map<std::string, double>{
+             {"M1", 150.0}, {"M2", 200.0}, {"M3", 300.0}, {"M4", 50.0}}) {
+        slaveGroupReport(group).water_rate = 0.5 * oil;
+        slaveGroupReport(group).gas_rate = 2.0 * oil;
+    }
+    // Make M1, M2 and M3 have no producers under group control
+    commonSetupForAllTests(water_gas_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    const std::map<std::string, double> weight{{"M1", 100.0}, {"M2", 200.0}, {"M3", 300.0}};
+    for (const auto& [group, oil] : std::map<std::string, double>{
+             {"M1", 150.0}, {"M2", 200.0}, {"M3", 300.0}}) {
+        checkRate(result.productionLimit(group, Mode::WRAT),
+                  0.5 * oil + 250.0 * weight.at(group) / 600.0);
+        checkRate(result.productionLimit(group, Mode::GRAT),
+                  2.0 * oil + 100.0 * weight.at(group) / 600.0);
+        checkRate(result.productionTarget(group), oil + 300.0 * weight.at(group) / 600.0);
+    }
+    // The liquid limit counts the water: 2000 - 1050 = 950 left
+    checkRate(result.productionLimit("M1", Mode::LRAT), 1.5 * 150.0 + 950.0 * 100.0 / 600.0);
+}
+
+//! \brief Excluded groups with guide rates of 0 share by their potentials
+//!
+//! RC_MASTER_GROUP_EXCLUSION_ZERO_GUIDE_RATES.DATA gives M1, M2 and M3 guide rates of 0.
+//! The guide rate of a group is then its potential, which the slaves report as equal to the
+//! rates here, 150, 200 and 300.  M1, M2 and M3 are excluded and share what FIELD has
+//! left, 1000 - 700 = 300, in proportion to that: M1 gets 300 * 150 / 650 more.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsWithZeroGuideRates)
+{
+    // Make M1, M2 and M3 have no producers under group control
+    commonSetupForAllTests(zero_guide_rates_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    checkRate(result.productionTarget("M1"), 150.0 + 300.0 * 150.0 / 650.0);
+    checkRate(result.productionTarget("M2"), 200.0 + 300.0 * 200.0 / 650.0);
+    checkRate(result.productionTarget("M3"), 300.0 + 300.0 * 300.0 / 650.0);
+}
+
+//! \brief Excluded groups with neither a guide rate nor a potential share by headroom
+//!
+//! As ExcludedGroupsWithZeroGuideRates, but M1, M2 and M3 produce nothing and have no
+//! potential either.  Nothing tells the groups apart but how far the target each would
+//! get from Step 3 is above its rate.  With all of them excluded each is alone in the
+//! distribution and gets 1000 - 50 = 950, the same for all of them: they share what FIELD
+//! has left, 950, equally.
+BOOST_AUTO_TEST_CASE(ExcludedGroupsWithoutGuideRatesOrPotentials)
+{
+    for (const std::string group : {"M1", "M2", "M3"}) {
+        slaveGroupReport(group).oil_rate = 0.0;
+    }
+    // Make M1, M2 and M3 have no producers under group control
+    commonSetupForAllTests(zero_guide_rates_deck,
+                           /*groups_without_group_controlled_producers=*/{"M1", "M2", "M3"});
+    const auto result = calculateConstraints();
+    result.checkOratLimitIsTarget({"M1", "M2", "M3"});
+
+    for (const std::string group : {"M1", "M2", "M3"}) {
+        checkRate(result.productionTarget(group), 950.0 / 3.0);
+    }
+    checkRate(result.productionTarget("M1") + result.productionTarget("M2")
+                  + result.productionTarget("M3") + result.productionTarget("M4"),
+              1000.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
