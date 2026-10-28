@@ -1071,22 +1071,26 @@ private:
     /*!
      * \brief Rs of the oil when a cell switches from Sg to Rs as primary variable.
      *
-     * With Sg as primary variable the oil is treated as saturated, i.e. its Rs
-     * is \p rsSat.  A negative Sg means that the cell holds less gas than this
-     * saturated oil would contain, so the Rs is initialised from the ratio of the
-     * gas and oil components actually present (including any oil vaporised in
-     * the "negative" gas).  This avoids starting from a far too high Rs when
+     * With Sg as primary variable the oil is treated as saturated.  A negative
+     * Sg means that the cell holds less gas than this saturated oil would
+     * contain, so the Rs is initialised from the ratio of the gas and oil
+     * components actually present (including any oil vaporised in the
+     * "negative" gas).  This avoids starting from a far too high Rs when
      * undersaturated oil enters a cell without oil, e.g. a water-filled cell
      * below the oil-water contact.  Starting from the saturated Rs then requires
      * a very large Newton update of Rs while the oil saturation is still tiny,
      * which gives a nearly singular Jacobian and linear solver failures.
      *
-     * The result is only an initial value for the Newton iterations, so the gas
+     * The components are evaluated with the Rs and Rv of the current state as
+     * in BlackOilIntensiveQuantities::updateRsRvRsw(), i.e. including the
+     * oil saturation dependence of VAPPARS and the DRSDT/DRVDT limits.  The
+     * result is only an initial value for the Newton iterations, so the gas
      * properties are evaluated at the oil pressure.  It is limited to
-     * [0, rsSat].
+     * [0, \p rsSwitch].
      *
      * \param so Oil saturation implied by the Sg primary variable, 1 - Sw - Ss - Sg.
      * \param sg Gas saturation (negative when the gas phase disappears).
+     * \param rsSwitch Rs of saturated oil after the switch, used as upper limit.
      */
     Scalar gasOilRatioOfPresentComponents_(const Problem& problem,
                                            unsigned globalDofIdx,
@@ -1094,23 +1098,32 @@ private:
                                            Scalar po,
                                            Scalar so,
                                            Scalar sg,
-                                           Scalar rsSat) const
+                                           Scalar rsSwitch) const
     {
+        const Scalar soMax = std::max(so, static_cast<Scalar>(problem.maxOilSaturation(globalDofIdx)));
+
+        const Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+        const Scalar rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, T, po,
+                                                                                 so, soMax);
+        const Scalar rs = std::min(rsMax, rsSat);
+
         Scalar rv = 0.0;
         if (FluidSystem::enableVaporizedOil()) {
             const Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
-            const Scalar rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, T, po);
+            const Scalar rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, T, po,
+                                                                                      so, soMax);
             rv = std::min(rvMax, rvSat);
         }
-        const Scalar bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, T, po, rsSat);
+
+        const Scalar bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, T, po, rs);
         const Scalar bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, T, po, rv,
                                                                              /*Rvw=*/Scalar{0.0});
-        const Scalar gasComponent = rsSat * bo * so + bg * sg;
+        const Scalar gasComponent = rs * bo * so + bg * sg;
         const Scalar oilComponent = bo * so + rv * bg * sg;
         if (!(oilComponent > 0.0)) {
-            return rsSat;
+            return rsSwitch;
         }
-        return std::clamp(gasComponent / oilComponent, Scalar{0.0}, rsSat);
+        return std::clamp(gasComponent / oilComponent, Scalar{0.0}, rsSwitch);
     }
 
     OPM_HOST_DEVICE Scalar pressure_() const

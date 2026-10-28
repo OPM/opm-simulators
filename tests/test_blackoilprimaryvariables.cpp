@@ -7,6 +7,7 @@
 #define BOOST_TEST_MODULE BlackoilPrimaryVariables
 #include <boost/test/unit_test.hpp>
 
+#include <cmath>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -58,8 +59,11 @@ public:
 
     double maxOilSaturation(unsigned) const
     {
-        return 1.0;
+        return maxOilSaturation_;
     }
+
+    // Historical maximum oil saturation (VAPPARS).
+    double maxOilSaturation_ = 1.0;
 
     double maxOilVaporizationFactor(unsigned, unsigned) const
     {
@@ -383,6 +387,56 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAccountsForVaporizedOil)
     const double gasComponent = rsSat * so / Bo + sg / Bg;
     const double oilComponent = so / Bo + rvSat * sg / Bg;
     BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], gasComponent / oilComponent, 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsUsesHistoryDependentRv)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(true);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(true);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    const double rsSat = 0.25;
+    const double rvSat = 0.15;
+    const double Bo = 1.25;
+    const double Bg = 0.005;
+    const double vapPar1 = 0.5;
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat, Bo));
+    auto gasPvt = makeWetGasPvt(rvSat, Bg);
+    gasPvt->template getRealPvt<Opm::GasPvtApproach::WetGas>().setVapPars(vapPar1, 0.0);
+    FluidSystem::setGasPvt(gasPvt);
+
+    // The oil saturation is below its historical maximum, so VAPPARS
+    // reduces the Rv of the saturated gas as in the intensive quantities.
+    Problem problem;
+    problem.maxOilSaturation_ = 0.9;
+    const double sw = 0.2;
+    const double sg = -5.0e-4;
+    auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                        sw,
+                                        sg,
+                                        PrimaryVariables::WaterMeaning::Sw,
+                                        PrimaryVariables::PressureMeaning::Po,
+                                        1.5e5);
+
+    const bool changed = priVars.adaptPrimaryVariables(problem,
+                                                       /*globalDofIdx=*/0,
+                                                       /*swMaximum=*/1.0,
+                                                       /*thresholdWaterFilledCell=*/1.1);
+
+    BOOST_CHECK(changed);
+    BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+
+    const double so = 1.0 - sw - sg;
+    const double rv = rvSat * std::pow(so / problem.maxOilSaturation_, vapPar1);
+    auto componentRatio = [&](const double rvUsed) {
+        return (rsSat * so / Bo + sg / Bg) / (so / Bo + rvUsed * sg / Bg);
+    };
+    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], componentRatio(rv), 1e-10);
+
+    // Not vacuous: ignoring VAPPARS gives a different Rs.
+    BOOST_CHECK_GT(std::abs(componentRatio(rv) - componentRatio(rvSat)), 1.0e-6);
 }
 
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromRsToGasSaturation)
