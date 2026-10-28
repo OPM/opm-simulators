@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <map>
 #include <numeric>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -54,7 +55,7 @@ gatherMismatches(const std::vector<Opm::NumericalAquiferEquilibrationMismatch>& 
         sendBuffer.push_back(static_cast<double>(m.aquiferId));
         sendBuffer.push_back(m.aquiferRegion);
         sendBuffer.push_back(m.cellRegion);
-        sendBuffer.push_back(m.potentialDifference);
+        sendBuffer.push_back(m.pressureDifference);
     }
 
     const int sendSize = static_cast<int>(sendBuffer.size());
@@ -89,14 +90,14 @@ std::string describeMismatches(const std::vector<Opm::NumericalAquiferEquilibrat
     for (const auto& m : mismatches) {
         auto& s = summary[{m.aquiferId, m.aquiferRegion, m.cellRegion}];
         ++s.count;
-        s.maxDifference = std::max(s.maxDifference, std::abs(m.potentialDifference));
+        s.maxDifference = std::max(s.maxDifference, std::abs(m.pressureDifference));
     }
 
     std::string out;
     for (const auto& [key, s] : summary) {
         const auto& [id, aquiferRegion, cellRegion] = key;
         out += fmt::format("  Aquifer {} (cells in EQLNUM region {}): {} connection(s) to cells in "
-                           "EQLNUM region {}, initial potential difference of a mobile phase up to {:.4g} {}\n",
+                           "EQLNUM region {}, driving an initial flow with pressure differences up to {:.4g} {}\n",
                            id, aquiferRegion, s.count, cellRegion,
                            units.from_si(M::pressure_drop, s.maxDifference),
                            units.name(M::pressure_drop));
@@ -109,50 +110,61 @@ std::string describeMismatches(const std::vector<Opm::NumericalAquiferEquilibrat
 namespace Opm {
 
 std::size_t
-reportNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrationMismatch>& localMismatches,
-                                    const EclipseState& eclState,
-                                    const Parallel::Communication& comm,
-                                    const bool allowMismatch)
+checkNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrationMismatch>& localMismatches,
+                                   const EclipseState& eclState,
+                                   const Parallel::Communication& comm,
+                                   const bool allowMismatch)
 {
     const auto mismatches = gatherMismatches(localMismatches, comm);
-    if (mismatches.empty() || comm.rank() != 0) {
-        return mismatches.size();
+    if (mismatches.empty()) {
+        return 0;
     }
 
-    std::vector<std::size_t> ids;
-    for (const auto& m : mismatches) {
-        ids.push_back(m.aquiferId);
+    if (comm.rank() == 0) {
+        std::vector<std::size_t> ids;
+        for (const auto& m : mismatches) {
+            ids.push_back(m.aquiferId);
+        }
+        std::ranges::sort(ids);
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+
+        const auto& units = eclState.getDeckUnitSystem();
+
+        auto message = fmt::format(
+            "Numerical aquifer(s) {} connect cells which are initialised from different "
+            "equilibration regions (EQLNUM), and which are therefore not in hydrostatic "
+            "equilibrium with each other:\n{}"
+            "Fluid then flows through the aquifer(s) between these regions from the start "
+            "of the simulation, giving an initial transient which may also cause "
+            "convergence problems.\n\n",
+            fmt::join(ids, ", "), describeMismatches(mismatches, units));
+
+        const auto split = NumericalAquiferRegionSplit {
+            eclState.aquifer().numericalAquifers(), ids,
+            eclState.getInputGrid(), eclState.globalFieldProps()
+        };
+        message += split.deckChanges(units);
+
+        message += fmt::format(
+            "\nTo run the case unchanged, accepting the initial transient, use "
+            "--allow-inconsistent-aquifer-equilibration=true.{}",
+            allowMismatch ? " This option is set, so the simulation continues." : "");
+
+        if (allowMismatch) {
+            OpmLog::warning(message);
+        }
+        else {
+            OpmLog::error(message);
+        }
     }
-    std::ranges::sort(ids);
-    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
-    const auto& units = eclState.getDeckUnitSystem();
-
-    auto message = fmt::format(
-        "Numerical aquifer(s) {} connect cells which are initialised from different "
-        "equilibration regions (EQLNUM), and which are therefore not in hydrostatic "
-        "equilibrium with each other:\n{}"
-        "Water then flows through the aquifer(s) between these regions from the start "
-        "of the simulation, giving an initial transient which may also cause "
-        "convergence problems.\n\n",
-        fmt::join(ids, ", "), describeMismatches(mismatches, units));
-
-    const auto split = NumericalAquiferRegionSplit {
-        eclState.aquifer().numericalAquifers(), ids,
-        eclState.getInputGrid(), eclState.globalFieldProps()
-    };
-    message += split.deckChanges(units);
-
-    message += fmt::format(
-        "\nTo run the case unchanged, accepting the initial transient, use "
-        "--allow-inconsistent-aquifer-equilibration=true.{}",
-        allowMismatch ? " This option is set, so the simulation continues." : "");
-
-    if (allowMismatch) {
-        OpmLog::warning(message);
-    }
-    else {
-        OpmLog::error(message);
+    if (!allowMismatch) {
+        // Make sure the report is written before any process stops.
+        comm.barrier();
+        throw std::domain_error {
+            "Numerical aquifers are not in hydrostatic equilibrium "
+            "with the cells they are connected to"
+        };
     }
 
     return mismatches.size();

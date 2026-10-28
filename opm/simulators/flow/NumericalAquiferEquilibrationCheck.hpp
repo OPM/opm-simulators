@@ -30,34 +30,35 @@ namespace Opm {
 class EclipseState;
 
 /// Connection of a numerical aquifer cell to a cell of another
-/// equilibration region with a significant initial potential difference of
-/// a phase which is mobile in the upstream cell.
+/// equilibration region across which a phase flows initially.
 struct NumericalAquiferEquilibrationMismatch
 {
     std::size_t aquiferId{};
     int aquiferRegion{};          //!< EQLNUM region of the aquifer cell
     int cellRegion{};             //!< EQLNUM region of the connected cell
-    double potentialDifference{}; //!< Phase potential, aquifer minus cell [Pa]
+    double pressureDifference{};  //!< Driving pressure difference of the
+                                  //!< flowing phase, aquifer minus cell [Pa]
 };
 
-/// Initial potential differences [Pa] below this limit are not considered
-/// to give an initial transient.
+/// Initial driving pressure differences [Pa] below this limit are not
+/// considered to give an initial transient.
 inline constexpr double numericalAquiferEquilibrationTolerance = 1.0e4;
 
-/// Reports numerical aquifers which are not in hydrostatic equilibrium with
-/// the cells they are connected to, because the cells belong to different
-/// equilibration regions.
+/// Checks numerical aquifers for initial flow between equilibration regions.
 ///
 /// Collective.  The mismatches found on all processes are gathered, and the
 /// I/O rank logs a description which includes the deck changes resolving
 /// the issue, as an error, or as a warning if \p allowMismatch is true.
 ///
+/// \throw std::domain_error On all processes, if any process found a
+///        mismatch and \p allowMismatch is false.
+///
 /// \return Total number of mismatched connections on all processes.
 std::size_t
-reportNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrationMismatch>& localMismatches,
-                                    const EclipseState& eclState,
-                                    const Parallel::Communication& comm,
-                                    bool allowMismatch);
+checkNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrationMismatch>& localMismatches,
+                                   const EclipseState& eclState,
+                                   const Parallel::Communication& comm,
+                                   bool allowMismatch);
 
 } // namespace Opm
 

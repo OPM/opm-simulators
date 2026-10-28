@@ -497,6 +497,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_control_retention.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
+  tests/test_numaquifer_equilibration.cpp
   tests/test_equil.cpp
   tests/test_extbocontainer.cpp
   tests/test_extraconvergenceoutputthread.cpp
@@ -543,6 +544,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_SatfuncCheckPoint.cpp
   tests/test_SatfuncConsistencyChecks.cpp
   tests/test_SatfuncConsistencyChecks_parallel.cpp
+  tests/test_NumericalAquiferEquilibrationCheck.cpp
   tests/test_SatfuncConsistencyCheckManager.cpp
   tests/test_stoppedwells.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
@@ -690,6 +692,9 @@ list (APPEND TEST_DATA_FILES
   tests/blackoilintensivequantities_gpu.DATA
   tests/drsdt_initial_rs.DATA
   tests/equil_base.DATA
+  tests/numaquifer_equil_immobile.DATA
+  tests/numaquifer_equil_mismatch.DATA
+  tests/numaquifer_equil_tolerance.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
   tests/equil_capillary_swatinit.DATA
