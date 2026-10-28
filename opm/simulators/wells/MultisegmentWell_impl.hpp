@@ -1269,7 +1269,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderBHPLimit(const WellStateType& /*well_state*/,
+    checkOperabilityUnderBHPLimit(const WellStateType& well_state,
                                   const Simulator& simulator,
                                   DeferredLogger& deferred_logger)
     {
@@ -1310,7 +1310,7 @@ namespace Opm
                 const Scalar thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
                                                                                    this->getRefDensity(),
-                                                                                   this->wellEcl().alq_value(summaryState),
+                                                                                   this->getALQ(well_state),
                                                                                    thp_limit,
                                                                                    deferred_logger);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
