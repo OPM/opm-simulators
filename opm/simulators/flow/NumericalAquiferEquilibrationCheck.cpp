@@ -141,7 +141,7 @@ checkNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrati
 
         const auto split = NumericalAquiferRegionSplit {
             eclState.aquifer().numericalAquifers(), ids,
-            eclState.getInputGrid(), eclState.globalFieldProps()
+            eclState.getInputGrid(), eclState.globalFieldProps(), eclState.getLgrs()
         };
         message += split.deckChanges(units);
 
