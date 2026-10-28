@@ -121,8 +121,8 @@ foreach(case IN ITEMS
   )
 endforeach()
 
-# Wells with a connection in every layer, in every row and along a deviated
-# path, so the connections differ in depth and cell.
+# Exercise wells connected across layers, across rows, and along a deviated
+# path. The layered and deviated cases also vary connection depth.
 foreach(case IN ITEMS
     SIMPLE_COMP_WATER_MOBILE_LAYERS
     SIMPLE_COMP_WATER_MOBILE_ROWS

@@ -158,8 +158,8 @@ private:
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
 
-    // a well that cannot flow at its bhp limit is stopped for the time step:
-    // it takes a zero rate and its bhp floats
+    // A well that cannot flow at its BHP limit is stopped for the time step.
+    // Its surface rate is zero, while its BHP is free to adjust.
     bool stopped_{false};
 
     // primary variables
@@ -174,8 +174,8 @@ private:
     const Scalar wellbore_volume_ {21.6*0.001};
     // hydrocarbon volume fraction below which the wellbore counts as holding water alone
     static constexpr Scalar min_hydrocarbon_fraction_ {1.e-8};
-    // pressure of each connection relative to the bhp: the hydrostatic head of
-    // the wellbore fluid, kept from the start of the time step
+    // Hydrostatic pressure offset of each connection from BHP, calculated
+    // from the wellbore density at the start of the time step.
     std::vector<Scalar> connection_pressure_diffs_;
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};

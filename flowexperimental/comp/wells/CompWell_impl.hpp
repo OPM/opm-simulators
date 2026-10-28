@@ -112,9 +112,8 @@ calculateExplicitQuantities(const Simulator& simulator,
         this->prev_component_masses_ = contents.component_masses;
         this->prev_water_mass_ = contents.water_mass;
 
-        // As for the black-oil wells, the hydrostatic head between the
-        // reference depth and the connections is fixed at the start of the
-        // time step. The single wellbore node gives one fluid density.
+        // Keep each connection's hydrostatic pressure offset fixed for the
+        // time step, using the density of the single wellbore node.
         const Scalar gravity = simulator.problem().gravity()[2];
         for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
             this->connection_pressure_diffs_[con_idx] = contents.density * gravity
@@ -334,10 +333,9 @@ assembleWellEq(const Simulator& simulator,
             ? 1.0 / simulator.model().dofTotalVolume(this->well_cells_[con_idx])
             : 1.0;
 
-        // here we use perf index, need to check how the things are done in the StandardWellAssemble
-        // assemble the well equations related to the production/injection mass rates for each component
+        // Add this connection's mass rates and their derivatives to the
+        // well equations and Jacobian blocks.
         for (unsigned comp_idx = 0; comp_idx < PrimaryVariables::numWellConservationEq; ++comp_idx) {
-            // the signs need to be checked
             this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
             for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
                 this->well_equations_.C()[0][con_idx][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq) * res_eq_scale;
@@ -622,10 +620,9 @@ CompWell<TypeTag>::
 updateStatus_(const Simulator& simulator,
               const SingleWellState& well_state)
 {
-    // As the black-oil wells do by default, decide at the start of each time
-    // step whether the well can flow at its bhp limit: whether its
-    // connections, each at the limit plus its hydrostatic head, give a net
-    // flow in the direction of the well.
+    // At the start of the time step, sum the connection potentials at the
+    // BHP limit, including each connection's hydrostatic offset. A producer
+    // needs positive potential and an injector negative potential to flow.
     const auto& summary_state = simulator.vanguard().summaryState();
     const bool producer = this->well_ecl_.isProducer();
     const Scalar bhp_limit = producer
@@ -651,8 +648,8 @@ updateStatus_(const Simulator& simulator,
     if (this->stopped_ && had_rate) {
         OpmLog::debug(fmt::format("Well {} cannot flow at its bhp limit and is stopped", this->name()));
     } else if (!this->stopped_ && !had_rate) {
-        // As at a report step, the well restarts from a nonzero rate: a rate
-        // control at a zero rate can leave the well matrix singular.
+        // Seed a reopened well with a nonzero rate; starting a rate-controlled
+        // well at zero can make its matrix singular.
         OpmLog::debug(fmt::format("Well {} can flow again and is reopened", this->name()));
         const Scalar rate = 10. * unit::cubic(unit::meter) / unit::day;
         this->primary_variables_.setTotalRate(producer ? -rate : rate);
@@ -785,7 +782,7 @@ updateConnectionQuantities(const Simulator& simulator,
                 / tables.getDensityTable()[this->pvt_region_idx_].water;
         }
         std::ranges::copy(rates, conn_data.surface_phase_rates.begin() + con * num_phases);
-        // the bhp plus the hydrostatic head of the wellbore fluid
+        // Report the connection pressure used in the flow calculation.
         conn_data.pressure[con] = well_state.bhp + this->connection_pressure_diffs_[con];
     }
 }
