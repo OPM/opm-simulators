@@ -512,3 +512,51 @@ BOOST_AUTO_TEST_CASE(WellTestALQ)
         BOOST_CHECK(!success);
     }
 }
+
+// The ALQ set by gas lift optimization is kept to the next report step, unless the
+// well gets a new target from the schedule.
+BOOST_AUTO_TEST_CASE(AlqCarryOver)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT2.DATA", "test_glift1_alq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    const double day = 86400.0;
+    const double alq = 50000.0 / day;
+    auto alqOfWell = [&well_model]() {
+        return well_model.wellState().well("B-1H").alq_state.get();
+    };
+
+    // Report step 0: set an ALQ as the optimization would do
+    simulator->setEpisodeIndex(0);
+    well_model.beginReportStep(0);
+    BOOST_CHECK_SMALL(alqOfWell(), 1e-12);
+    well_model.wellState().well("B-1H").alq_state.set(alq);
+    well_model.commitWGState();
+
+    // Report step 1: no event for the well, the ALQ is kept
+    simulator->setEpisodeIndex(1);
+    well_model.beginReportStep(1);
+    BOOST_CHECK_CLOSE(alqOfWell(), alq, 1e-8);
+    well_model.commitWGState();
+
+    // Report step 2: WLIFTOPT lowers the maximum ALQ, which is no well event. The ALQ is
+    // kept here and limited to the maximum when the optimization starts.
+    simulator->setEpisodeIndex(2);
+    well_model.beginReportStep(2);
+    BOOST_CHECK_CLOSE(alqOfWell(), alq, 1e-8);
+    well_model.commitWGState();
+
+    // Report step 3: new target for the well, the ALQ is reset to the default
+    simulator->setEpisodeIndex(3);
+    well_model.beginReportStep(3);
+    BOOST_CHECK_SMALL(alqOfWell(), 1e-12);
+}
