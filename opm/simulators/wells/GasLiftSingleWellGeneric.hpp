@@ -345,7 +345,7 @@ protected:
                                                       const std::string& gr_name_dont_limit) const;
 
     std::pair<std::optional<LimitedRatesAndBhp>,Scalar >
-    getInitialRatesWithLimit_() const;
+    getInitialRatesWithLimit_();
 
     LimitedRatesAndBhp getLimitedRatesAndBhp_(const RatesAndBhp& rates) const;
 
@@ -398,6 +398,10 @@ protected:
     std::unique_ptr<GasLiftWellState<Scalar>> runOptimizeLoop_(bool increase);
 
     void setAlqMinRate_(const GasLiftWell& well);
+    void limitAlqToMax_();
+    void reconcileRatesAfterAlqLimit_(const RatesAndBhp& old_rates,
+                                      const LimitedRatesAndBhp& new_rates);
+    void setWellStatePotentials_(Scalar oil_pot, Scalar gas_pot, Scalar water_pot);
     std::unique_ptr<GasLiftWellState<Scalar>> tryIncreaseLiftGas_();
     std::unique_ptr<GasLiftWellState<Scalar>> tryDecreaseLiftGas_();
 
@@ -429,6 +433,7 @@ protected:
     Scalar max_alq_;
     Scalar min_alq_;
     Scalar orig_alq_;
+    bool alq_limited_ = false;
 
     Scalar alpha_w_;
     Scalar alpha_g_;
