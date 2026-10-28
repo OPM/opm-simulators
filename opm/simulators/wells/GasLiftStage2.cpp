@@ -418,13 +418,20 @@ optimizeGroup_(const Group& group)
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
     const auto max_totalgas = getGroupMaxTotalGas_(group);
+    const auto max_alq = getGroupMaxALQ_(group);
     bool restricted_by_max_totalgas = false;
-    if (max_totalgas) {
+    bool restricted_by_max_alq = false;
+    if (max_totalgas || max_alq) {
         auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
-        restricted_by_max_totalgas = (gas_rate + alq) > max_totalgas;
+        restricted_by_max_totalgas = max_totalgas && (gas_rate + alq) > *max_totalgas;
+        // The lift gas carried over from the previous report step can be above the limit, for
+        // example when GLIFTOPT has lowered it, and stage 1 does not take lift gas away to meet
+        // a group limit.
+        restricted_by_max_alq = max_alq && alq > *max_alq;
     }
 
-    if (restricted_by_max_totalgas || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
+    if (restricted_by_max_totalgas || restricted_by_max_alq
+        || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
