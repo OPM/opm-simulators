@@ -765,7 +765,10 @@ public:
                     }
                     Scalar rs = std::min(rsMax, rsSat);
                     if constexpr (!enableExtbo) {
-                        rs = gasOilRatioOfPresentComponents_(problem, globalDofIdx, T, po, s - sg, sg, rs);
+                        const Scalar so = s - sg;
+                        if (so < maxOilSaturationForComponentRs_) {
+                            rs = gasOilRatioOfPresentComponents_(problem, globalDofIdx, T, po, so, sg, rs);
+                        }
                     }
                     (*this)[Indices::compositionSwitchIdx] = rs;
                     changed = true;
@@ -1081,6 +1084,12 @@ private:
      * a very large Newton update of Rs while the oil saturation is still tiny,
      * which gives a nearly singular Jacobian and linear solver failures.
      *
+     * It is only used for oil saturations below maxOilSaturationForComponentRs_.
+     * At larger oil saturations a wrong initial Rs is corrected within a Newton
+     * iteration, while Sg is often a Newton overshoot limited by the maximum
+     * saturation change rather than an estimate of a real gas deficit.  The
+     * saturated Rs is then the better initial value.
+     *
      * The components are evaluated with the Rs and Rv of the current state as
      * in BlackOilIntensiveQuantities::updateRsRvRsw(), i.e. including the
      * oil saturation dependence of VAPPARS and the DRSDT/DRVDT limits.  The
@@ -1154,6 +1163,10 @@ private:
     unsigned short pvtRegionIdx_{};
     Scalar pcFactor_{};
     inline static Scalar pressureScale_ = 1.0;
+
+    // Oil saturation below which gasOilRatioOfPresentComponents_() is used
+    // to initialise Rs when the gas phase disappears.
+    static constexpr Scalar maxOilSaturationForComponentRs_ = 0.1;
 };
 
 } // namespace Opm

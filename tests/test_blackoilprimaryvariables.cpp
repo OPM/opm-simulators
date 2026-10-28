@@ -266,8 +266,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromGasSaturationToRs)
     FluidSystem::setGasPvt(makeWetGasPvt(0.0, Bg));
 
     Problem problem;
-    const double sw = 0.2;
-    const double sg = -5.0e-4;
+    const double sw = 0.95;
+    const double sg = -5.0e-6;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
@@ -284,8 +284,9 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromGasSaturationToRs)
     BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
     BOOST_CHECK(priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Po);
 
-    // Rs is initialised from the gas/oil component ratio, i.e. the saturated
-    // oil's dissolved gas reduced by the "negative" free gas.
+    // At a small oil saturation, Rs is initialised from the gas/oil component
+    // ratio, i.e. the saturated oil's dissolved gas reduced by the "negative"
+    // free gas.
     const double so = 1.0 - sw - sg;
     const double expectedRs = (rsSat * so / Bo + sg / Bg) / (so / Bo);
     BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], expectedRs, 1e-10);
@@ -305,7 +306,7 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsWithoutGasDe
 
     Problem problem;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
-                                        0.2,
+                                        0.95,
                                         -1.0e-14,
                                         PrimaryVariables::WaterMeaning::Sw,
                                         PrimaryVariables::PressureMeaning::Po,
@@ -318,7 +319,7 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsWithoutGasDe
 
     BOOST_CHECK(changed);
     BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
-    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], 0.25, 1e-8);
+    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], 0.25, 1e-6);
 }
 
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsLimitsRsToZero)
@@ -334,7 +335,7 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsLimitsRsToZero)
 
     Problem problem;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
-                                        0.2,
+                                        0.97,
                                         -0.05,
                                         PrimaryVariables::WaterMeaning::Sw,
                                         PrimaryVariables::PressureMeaning::Po,
@@ -348,6 +349,38 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsLimitsRsToZero)
     BOOST_CHECK(changed);
     BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
     BOOST_CHECK_SMALL(priVars[Indices::compositionSwitchIdx], 1e-12);
+}
+
+BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsAtLargeOilSaturation)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(true);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    const double rsSat = 0.25;
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat));
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0, 0.005));
+
+    // A Newton overshoot of Sg in a cell with much oil is not taken as a gas
+    // deficit; the oil is initialised as saturated.
+    Problem problem;
+    auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                        0.2,
+                                        -0.2,
+                                        PrimaryVariables::WaterMeaning::Sw,
+                                        PrimaryVariables::PressureMeaning::Po,
+                                        1.5e5);
+
+    const bool changed = priVars.adaptPrimaryVariables(problem,
+                                                       /*globalDofIdx=*/0,
+                                                       /*swMaximum=*/1.0,
+                                                       /*thresholdWaterFilledCell=*/1.1);
+
+    BOOST_CHECK(changed);
+    BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], rsSat, 1e-10);
 }
 
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAccountsForVaporizedOil)
@@ -366,8 +399,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAccountsForVaporizedOil)
     FluidSystem::setGasPvt(makeWetGasPvt(rvSat, Bg));
 
     Problem problem;
-    const double sw = 0.2;
-    const double sg = -5.0e-4;
+    const double sw = 0.95;
+    const double sg = -5.0e-6;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
@@ -411,8 +444,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsUsesHistoryDependentRv)
     // reduces the Rv of the saturated gas as in the intensive quantities.
     Problem problem;
     problem.maxOilSaturation_ = 0.9;
-    const double sw = 0.2;
-    const double sg = -5.0e-4;
+    const double sw = 0.95;
+    const double sg = -5.0e-6;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
