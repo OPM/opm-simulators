@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -377,6 +378,12 @@ findTHP(const std::vector<Scalar>& bhp_array,
 
     if (!std::isfinite(bhp)) {
         throw NumericalProblem("findTHP: Error bhp is not finite");
+    }
+    // Non-finite table values (e.g. from garbage flow rates) make the
+    // bracketing search below meaningless; throw so the time step can be chopped
+    // instead of hitting the assert on `found` further down.
+    if (!std::ranges::all_of(bhp_array, [](const Scalar v) { return std::isfinite(v); })) {
+        throw NumericalProblem("findTHP: bhp_array contains non-finite values");
     }
     Scalar thp = -1e100;
 
