@@ -319,9 +319,15 @@ public:
     void finalize()
     { jacobian_->finalize(); }
 
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+#if HAVE_CUDA
     bool gpuSystemActive() const { return gpuSystemActive_; }
 
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+    // TODO: Make the GPU state and its host interface independent of the compiler
+    // used for this translation unit. TpfaLinearizerGpuParams currently contains
+    // kernel launches, so these accessors and the owning member below require
+    // GPU compilation. Keep affected TypeTag instantiations in GPU translation
+    // units until the state layout is shared with ordinary C++ translation units.
     //! GPU matrix and residual from the most recent GPU linearization.
     auto& gpuJacobian()
     {
@@ -337,6 +343,7 @@ public:
     {
         return gpuParams_->flattenedResidual();
     }
+#endif
 #endif
 
     /*!

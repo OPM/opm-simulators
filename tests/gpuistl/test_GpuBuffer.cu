@@ -27,6 +27,7 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <type_traits>
@@ -49,6 +50,18 @@ BOOST_AUTO_TEST_CASE(TestDefaultConstruction)
     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>();
     BOOST_CHECK_EQUAL(0u, bufferOnGPU.size());
     BOOST_CHECK(bufferOnGPU.data() == nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(TestMemsetZeroByteRange)
+{
+    const std::vector<unsigned char> initial(11, 0xab);
+    Opm::gpuistl::GpuBuffer<unsigned char> buffer(initial);
+    Opm::gpuistl::detail::gpuMemsetZero(buffer.data() + 3, 5);
+    const auto result = buffer.asStdVector();
+    const std::vector<unsigned char> expected {0xab, 0xab, 0xab, 0, 0, 0, 0, 0,
+                                              0xab, 0xab, 0xab};
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+    BOOST_CHECK_NO_THROW(Opm::gpuistl::detail::gpuMemsetZero(nullptr, 0));
 }
 
 BOOST_AUTO_TEST_CASE(TestConstructionSize)

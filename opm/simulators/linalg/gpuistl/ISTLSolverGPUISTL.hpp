@@ -216,8 +216,8 @@ public:
     /**
      * \brief Prepare the solver from GPU-resident matrix and residual data.
      *
-     * This overload performs device-to-device copies and does not require a
-     * host representation of either argument.
+     * This overload borrows the matrix and copies the right-hand side on the
+     * device. It does not require a host representation of either argument.
      */
     void prepare(GPUMatrix& M, GPUVector& b)
     {

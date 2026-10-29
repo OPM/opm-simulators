@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
@@ -43,10 +44,12 @@
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_memcpy.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #endif
 
 #include <opm/common/utility/SparseTable.hpp>
@@ -285,13 +288,8 @@ public:
         boundaryInfoBuffer_ =
             gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
                 boundaryInfo, *dynamicGpuFluidSystemPtr_);
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipMemset(residualBuffer_.data(), 0,
-                                  residualBuffer_.size() * sizeof(VectorBlockGPU)));
-#else
-        OPM_GPU_SAFE_CALL(cudaMemset(residualBuffer_.data(), 0,
-                                   residualBuffer_.size() * sizeof(VectorBlockGPU)));
-#endif
+        gpuistl::detail::gpuMemsetZero(residualBuffer_.data(),
+                                     residualBuffer_.size() * sizeof(VectorBlockGPU));
     }
 
     auto domainView()
@@ -322,17 +320,11 @@ public:
     auto& flattenedResidual()
     {
         static_assert(sizeof(VectorBlockGPU) == numEq * sizeof(Scalar));
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipMemcpy(flattenedResidual_.data(),
-                                    residualBuffer_.data(),
-                                    flattenedResidual_.dim() * sizeof(Scalar),
-                                    hipMemcpyDeviceToDevice));
-#else
-        OPM_GPU_SAFE_CALL(cudaMemcpy(flattenedResidual_.data(),
-                                     residualBuffer_.data(),
-                                     flattenedResidual_.dim() * sizeof(Scalar),
-                                     cudaMemcpyDeviceToDevice));
-#endif
+        static_assert(std::is_trivially_copyable_v<VectorBlockGPU>);
+        gpuistl::detail::gpuMemcpyDeviceToDevice(
+            flattenedResidual_.data(),
+            reinterpret_cast<const Scalar*>(residualBuffer_.data()),
+            flattenedResidual_.dim());
         return flattenedResidual_;
     }
 
