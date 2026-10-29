@@ -442,7 +442,8 @@ std::vector<TestPoint<Scalar>> gridPoints()
                                            340 * bar, 390 * bar, 450 * bar};
     // None of the Rs values is on the saturated curve at any of the pressures, so that
     // the branch in inverseFormationVolumeFactorAndViscosity() is not decided by the
-    // last bits of RsSat (switchPoints() tests the switch with suitable margins).
+    // last bits of RsSat (switchPoints() tests the switch with suitable margins). Nor is
+    // any of them a PVTO Rs; rsNodePoints() covers those.
     const std::vector<Scalar> rsValues = {0.0, 15.0, 37.0, 55.0, 80.0, 110.0, 140.0};
 
     std::vector<TestPoint<Scalar>> points;
@@ -480,6 +481,33 @@ std::vector<TestPoint<Scalar>> switchPoints(const CpuPvt<Scalar>& cpuPvt)
             for (const Scalar factor : rsFactors) {
                 points.push_back({regionIdx, p, factor * rsSat, 0.3, 0.7, 1});
                 points.push_back({regionIdx, p, factor * rsSat, 0, 1, 1});
+            }
+        }
+    }
+    return points;
+}
+
+//! Points with Rs at the first, a middle and the last Rs node of each region's 2D tables.
+//! The value is continuous at a node, but the derivative w.r.t. Rs depends on the segment
+//! that is chosen, so this checks that the CPU and the GPU choose the same one.
+template <class Scalar>
+std::vector<TestPoint<Scalar>> rsNodePoints(const CpuPvt<Scalar>& cpuPvt)
+{
+    constexpr Scalar bar = 1e5;
+    std::vector<TestPoint<Scalar>> points;
+    for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+        const auto& table = cpuPvt.inverseOilBTable()[regionIdx];
+        const std::size_t lastIdx = table.numX() - 1;
+        for (const std::size_t xIdx : {std::size_t{0}, lastIdx / 2, lastIdx}) {
+            const Scalar rs = table.xAt(xIdx);
+            for (const Scalar p : {60 * bar, 125 * bar, 280 * bar}) {
+                // As in gridPoints(), the branch in inverseFormationVolumeFactorAndViscosity()
+                // must not be decided by the last bits of RsSat.
+                const Scalar rsSat = cpuPvt.saturatedGasDissolutionFactor(regionIdx, temperature<Scalar>(), p);
+                BOOST_REQUIRE(std::abs(rs - rsSat) > Scalar(1e-3) * rsSat);
+                for (const Scalar sg : {Scalar{0.0}, Scalar{0.3}}) {
+                    points.push_back({regionIdx, p, rs, sg, 1 - sg, 1});
+                }
             }
         }
     }
@@ -564,6 +592,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EvaluationMethodsMatchCpu, Scalar, Scalars)
     // derivatives are compared.
     const Fixture<Scalar> fx;
     compareStateDependentMethods<Evaluation<Scalar>>(fx, gridPoints<Scalar>());
+    compareStateDependentMethods<Evaluation<Scalar>>(fx, rsNodePoints(fx.cpuPvt));
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(InverseFormationVolumeFactorAndViscosityMatchesCpu, Scalar, Scalars)
@@ -571,6 +600,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(InverseFormationVolumeFactorAndViscosityMatchesCpu
     const Fixture<Scalar> fx;
     compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, fx.gpuViewPvt,
                      gridPoints<Scalar>(), "inverseFormationVolumeFactorAndViscosity (grid)");
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, fx.gpuViewPvt,
+                     rsNodePoints(fx.cpuPvt), "inverseFormationVolumeFactorAndViscosity (Rs nodes)");
 
     const auto points = switchPoints(fx.cpuPvt);
 
@@ -660,9 +691,17 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ViewsStayValidAfterMovingOwner, Scalar, Scalars)
     GpuBufPvt<Scalar> movedPvt = std::move(fx.gpuBufPvt);
     const auto viewAfterMove = Opm::gpuistl::make_view(movedPvt);
 
+    // Move-assigning into an existing owning GPU object frees the tables it owned, but
+    // must leave the moved-in tables, and thereby the views above, untouched.
+    GpuBufPvt<Scalar> assignedPvt = Opm::gpuistl::copy_to_gpu(fx.cpuPvt);
+    assignedPvt = std::move(movedPvt);
+    const auto viewAfterAssignment = Opm::gpuistl::make_view(assignedPvt);
+
     const auto points = gridPoints<Scalar>();
     compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, viewBeforeMove, points,
                      "inverseFormationVolumeFactorAndViscosity (view before move)");
     compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, viewAfterMove, points,
                      "inverseFormationVolumeFactorAndViscosity (view after move)");
+    compareCpuAndGpu(InverseFormationVolumeFactorAndViscosity{}, fx.cpuPvt, viewAfterAssignment, points,
+                     "inverseFormationVolumeFactorAndViscosity (view after move assignment)");
 }
