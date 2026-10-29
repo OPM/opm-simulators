@@ -44,6 +44,12 @@ GRUPTREE
  'M3' 'FIELD' /
  'M4' 'FIELD' /
  'P' 'FIELD' /
+ 'S' 'FIELD' /
+/
+
+-- A satellite group with a lift gas supply rate of 43200 Sm3/day (0.5 Sm3/s)
+GSATPROD
+ 'S' 0 0 0 0 43200 /
 /
 
 -- A producer without a VFP table, under a group of the master itself.  Its ALQ is a

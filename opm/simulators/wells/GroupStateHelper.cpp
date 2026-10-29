@@ -40,6 +40,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <sstream>
 #include <stack>
@@ -1233,7 +1234,7 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
                                                           const bool network) const
 {
     const auto& sched_state = this->schedule_[this->report_step_];
-    return this->sumOverGasLiftWells_(
+    Scalar rate = this->sumOverGasLiftWells_(
         group, network,
         [this, &sched_state](const Well& well_ecl, const SingleWellState<Scalar, IndexTraits>& ws) {
             return wellALQInSI(this->schedule_, sched_state, this->summary_state_, well_ecl, ws);
@@ -1241,6 +1242,25 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
         [this, network](const Group& master_group) {
             return this->reservoirCouplingMasterGroupGasLiftRate(master_group, network);
         });
+    // The lift gas supply of satellite groups (GSATPROD), as in the group ALQ of the gas lift
+    // optimization and in GGLIR.  Only obtained once (on rank 0), see sumOverGasLiftWells_().
+    // The ALQ of the network (NODEPROP item 4) is that of the wells.
+    if (!network && this->isRank0()) {
+        std::function<Scalar(const Group&)> satellite_lift_gas = [&](const Group& g) -> Scalar {
+            if (this->isReservoirCouplingMasterGroup(g)) {
+                return Scalar{0};
+            }
+            Scalar sum = this->satelliteProductionRate_(sched_state, g, GSatProd::Rate::GLift,
+                                                        /*res_rates=*/false);
+            for (const std::string& group_name : g.groups()) {
+                const auto& child = this->schedule_.getGroup(group_name, this->report_step_);
+                sum += child.getGroupEfficiencyFactor() * satellite_lift_gas(child);
+            }
+            return sum;
+        };
+        rate += satellite_lift_gas(group);
+    }
+    return rate;
 }
 
 template <typename Scalar, typename IndexTraits>

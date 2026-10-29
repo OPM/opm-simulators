@@ -1196,4 +1196,23 @@ BOOST_AUTO_TEST_CASE(GasLiftRateOfAWellWithoutVfpTableIsInSiUnits)
     checkClose(groupStateHelper().sumWellGasLiftHeadroom(group), 1.0);
 }
 
+//! \brief The lift gas rate of a group includes the lift gas supply of a satellite group
+//!
+//! As the group ALQ of the gas lift optimization (GasLiftGroupInfo) and GGLIR.  A satellite
+//! group has no wells, so it adds nothing to the headroom.
+BOOST_AUTO_TEST_CASE(GasLiftRateIncludesSatelliteGroups)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& gsh = groupStateHelper();
+    // 43200 Sm3/day is 0.5 Sm3/s
+    checkClose(gsh.sumWellGasLiftRates(schedule.getGroup("S", /*report_step=*/0)), 0.5);
+    // The well of P is 1.0 Sm3/s
+    checkClose(gsh.sumWellGasLiftRates(schedule.getGroup("FIELD", /*report_step=*/0)), 1.5);
+    checkClose(gsh.sumWellGasLiftHeadroom(schedule.getGroup("FIELD", /*report_step=*/0)), 1.0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
