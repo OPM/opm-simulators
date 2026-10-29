@@ -33,6 +33,7 @@
 
 #include <opm/common/utility/FileSystem.hpp>
 #include <opm/io/eclipse/ESmry.hpp>
+#include <opm/output/eclipse/WStat.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -147,6 +148,8 @@ ZMF
 SUMMARY
 WBHP
 /
+WSTAT
+/
 WOPR
 /
 WGPR
@@ -191,8 +194,11 @@ constexpr std::size_t first_step = 4;
 
 const std::vector<std::string> rates = {"WOPR", "WGPR", "WOIR", "WGIR"};
 
-// Run the deck and return time, well BHPs and rates, and connection-cell
-// pressures under their summary keys.
+constexpr auto wstat_prod = static_cast<float>(Opm::WStat::numeric::PROD);
+constexpr auto wstat_stop = static_cast<float>(Opm::WStat::numeric::STOP);
+
+// Run the deck and return time, well BHPs, statuses and rates, and
+// connection-cell pressures under their summary keys.
 std::map<std::string, std::vector<float>>
 run(const std::filesystem::path& dir, const std::string& name, const std::string& deck_text)
 {
@@ -219,6 +225,7 @@ run(const std::filesystem::path& dir, const std::string& name, const std::string
     }
     for (const std::string well : {"INJ", "PROD"}) {
         result["WBHP:" + well] = smry.get("WBHP:" + well);
+        result["WSTAT:" + well] = smry.get("WSTAT:" + well);
         for (const auto& rate : rates) {
             result[rate + ":" + well] = smry.get(rate + ":" + well);
         }
@@ -279,14 +286,19 @@ TSTEP
             }
             BOOST_CHECK_CLOSE(bhp[step], cell_pressure[step], 0.05f);
             BOOST_CHECK_GT(bhp[step], bhp[step - 1]);
+            BOOST_CHECK_EQUAL(smry.at("WSTAT:PROD")[step], wstat_stop);
         }
     }
     for (auto step = reopened; step < bhp.size(); ++step) {
         BOOST_TEST_CONTEXT("reopened producer at day " << time[step]) {
-            BOOST_CHECK_GT(smry.at("WOPR:PROD")[step], 0.1f);
-            BOOST_CHECK_GT(smry.at("WGPR:PROD")[step], 1.0f);
+            // It reopens as its cell pressure passes the limit, so by the end of
+            // that report step it may produce little.
+            const bool first = step == reopened;
+            BOOST_CHECK_GT(smry.at("WOPR:PROD")[step], first ? 0.0f : 0.1f);
+            BOOST_CHECK_GT(smry.at("WGPR:PROD")[step], first ? 0.0f : 1.0f);
             BOOST_CHECK_SMALL(smry.at("WOIR:PROD")[step], 1.0e-6f);
             BOOST_CHECK_SMALL(smry.at("WGIR:PROD")[step], 1.0e-6f);
+            BOOST_CHECK_EQUAL(smry.at("WSTAT:PROD")[step], wstat_prod);
         }
     }
 
@@ -321,6 +333,7 @@ TSTEP
             }
             BOOST_CHECK_CLOSE(bhp[step], cell_pressure[step], 0.05f);
             BOOST_CHECK_LT(bhp[step], bhp[step - 1]);
+            BOOST_CHECK_EQUAL(smry.at("WSTAT:INJ")[step], wstat_stop);
             BOOST_CHECK_GT(smry.at("WGPR:PROD")[step], 1.0f);
         }
     }

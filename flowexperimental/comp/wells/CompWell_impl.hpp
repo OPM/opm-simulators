@@ -120,7 +120,6 @@ calculateExplicitQuantities(const Simulator& simulator,
                 * (this->connection_depths_[con_idx] - this->reference_depth_);
         }
     }
-    updateStatus_(simulator, well_state);
 }
 
 template <typename TypeTag>
@@ -417,7 +416,7 @@ assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
     EvalWell control_eq;
-    if (this->stopped_) {
+    if (well_state.stopped) {
         control_eq = this->primary_variables_.getTotalRate();
     } else if (this->well_ecl_.isProducer()) {
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -577,11 +576,14 @@ iterateWellEq(const Simulator& simulator,
 {
     constexpr int max_iter = 200;
     const auto& summary_state = simulator.vanguard().summaryState();
+    // A flowing well is only stopped in the first Newton iteration of a time step,
+    // where the reservoir is at the converged state of the previous one.
+    const bool allow_stop = simulator.problem().iterationContext().iteration() == 0;
 
     for (int it = 0; it <= max_iter; ++it) {
         // Check the bhp limit in every iteration, not only after convergence: a well on a rate
         // target it cannot reach within its bhp limit might otherwise never converge.
-        updateWellControl(summary_state, well_state, /*check_rate_limits=*/false);
+        updateWellControl(summary_state, well_state, /*check_rate_limits=*/false, allow_stop);
 
         if (!assembleWellEqWithBackoff(simulator, well_state, dt)) {
             // Newton steps from the last assembled state keep failing; leave
@@ -595,7 +597,8 @@ iterateWellEq(const Simulator& simulator,
         // the latest total rate with the previous surface split.
         const bool converged = this->getConvergence();
         if (converged
-            && !updateWellControl(summary_state, well_state, /*check_rate_limits=*/true)) {
+            && !updateWellControl(summary_state, well_state, /*check_rate_limits=*/true,
+                                  allow_stop)) {
             // The last assembly is at the current well state.
             updateConnectionQuantities(simulator, well_state);
             return true;
@@ -612,61 +615,6 @@ iterateWellEq(const Simulator& simulator,
     }
     updateConnectionQuantities(simulator, well_state);
     return false;
-}
-
-template <typename TypeTag>
-void
-CompWell<TypeTag>::
-updateStatus_(const Simulator& simulator,
-              const SingleWellState& well_state)
-{
-    // At the start of the time step, find the well's net rate at its BHP
-    // limit, including each connection's hydrostatic offset. A producer
-    // needs a negative rate and an injector a positive rate to flow.
-    const auto& summary_state = simulator.vanguard().summaryState();
-    const bool producer = this->well_ecl_.isProducer();
-    const Scalar bhp_limit = producer
-        ? this->well_ecl_.productionControls(summary_state).bhp_limit
-        : this->well_ecl_.injectionControls(summary_state).bhp_limit;
-    const Scalar rate_at_bhp_limit = reservoirRateAtBhp_(simulator, bhp_limit);
-    this->stopped_ = producer ? rate_at_bhp_limit >= 0. : rate_at_bhp_limit <= 0.;
-
-    const bool had_rate = well_state.get_total_surface_rate() != 0.;
-    if (this->stopped_ && had_rate) {
-        OpmLog::debug(fmt::format("Well {} cannot flow at its bhp limit and is stopped", this->name()));
-    } else if (!this->stopped_ && !had_rate) {
-        // Seed a reopened well with a nonzero rate; starting a rate-controlled
-        // well at zero can make its matrix singular.
-        OpmLog::debug(fmt::format("Well {} can flow again and is reopened", this->name()));
-        const Scalar rate = 10. * unit::cubic(unit::meter) / unit::day;
-        this->primary_variables_.setTotalRate(producer ? -rate : rate);
-    }
-}
-
-template <typename TypeTag>
-typename CompWell<TypeTag>::Scalar
-CompWell<TypeTag>::
-reservoirRateAtBhp_(const Simulator& simulator,
-                    const Scalar bhp) const
-{
-    // Sum the volumetric connection rates of calculateSingleConnectionRate().
-    // The phase mobilities of a producing connection add up to the total
-    // mobility that an injecting connection uses.
-    Scalar rate = 0.;
-    std::vector<EvalWell> mob(FluidSystem::numPhases, 0.);
-    for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
-        const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[con_idx], 0);
-        assert(int_quantities);
-        const Scalar cell_pressure = getValue(int_quantities->fluidState().pressure(FluidSystem::oilPhaseIdx));
-        getMobility(simulator, con_idx, mob);
-        Scalar total_mobility = 0.;
-        for (const auto& m : mob) {
-            total_mobility += getValue(m);
-        }
-        rate += this->well_index_[con_idx] * total_mobility
-            * (bhp + this->connection_pressure_diffs_[con_idx] - cell_pressure);
-    }
-    return rate;
 }
 
 template <typename TypeTag>
@@ -716,9 +664,6 @@ CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
     this->primary_variables_.updateNewton(dwells, this->dwell_fraction_max_, this->dbhp_max_rel_);
-    if (this->stopped_) {
-        this->primary_variables_.setTotalRate(0.);
-    }
 }
 
 template <typename TypeTag>
@@ -728,6 +673,9 @@ updateWellState(const CompWell::BVectorWell& xw,
                 SingleWellState& well_state)
 {
     updatePrimaryVariablesNewton(xw);
+    if (well_state.stopped) {
+        this->primary_variables_.setTotalRate(0.);
+    }
     updateWellStateFromPrimaryVariables(well_state);
 }
 
@@ -834,10 +782,41 @@ bool
 CompWell<TypeTag>::
 updateWellControl(const SummaryState& summary_state,
                   SingleWellState& well_state,
-                  const bool check_rate_limits) const
+                  const bool check_rate_limits,
+                  const bool allow_stop)
 {
-    if (this->stopped_) {
-        return false;
+    const bool producer = this->well_ecl_.isProducer();
+    const Scalar bhp_limit = producer
+        ? this->well_ecl_.productionControls(summary_state).bhp_limit
+        : this->well_ecl_.injectionControls(summary_state).bhp_limit;
+    if (well_state.stopped) {
+        // Once converged, a stopped well's BHP is where it has no net flow.
+        // Beyond its limit, the well can flow at the limit and reopens there.
+        const bool can_flow = producer ? well_state.bhp > bhp_limit : well_state.bhp < bhp_limit;
+        if (!check_rate_limits || !can_flow) {
+            return false;
+        }
+        well_state.stopped = false;
+        well_state.bhp = bhp_limit;
+        if (producer) {
+            well_state.production_cmode = WellProducerCMode::BHP;
+        } else {
+            well_state.injection_cmode = WellInjectorCMode::BHP;
+        }
+        OpmLog::debug(fmt::format("Well {} can flow again and is reopened", this->name()));
+        return true;
+    }
+    // A well on BHP control whose surface rate has the wrong sign cannot flow at
+    // its limit and is stopped. This is checked before the well equations
+    // converge, since an injector whose cell is above its limit may not converge.
+    const bool bhp_control = producer ? well_state.production_cmode == WellProducerCMode::BHP
+                                      : well_state.injection_cmode == WellInjectorCMode::BHP;
+    const Scalar total_rate = well_state.get_total_surface_rate();
+    if (allow_stop && bhp_control && (producer ? total_rate > 0. : total_rate < 0.)) {
+        well_state.stopped = true;
+        OpmLog::debug(fmt::format("Well {} cannot flow at its bhp limit and is stopped",
+                                  this->name()));
+        return true;
     }
     std::string from;
     if (this->well_ecl_.isInjector()) {
@@ -851,7 +830,6 @@ updateWellControl(const SummaryState& summary_state,
         const auto current_control = well_state.production_cmode;
 
         if (production_controls.hasControl(Well::ProducerCMode::BHP) && current_control != WellProducerCMode::BHP) {
-            const Scalar bhp_limit = production_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
             if (current_bhp < bhp_limit) {
                 well_state.bhp = bhp_limit;
@@ -903,7 +881,6 @@ updateWellControl(const SummaryState& summary_state,
         const auto injection_controls = this->well_ecl_.injectionControls(summary_state);
         const auto current_control = well_state.injection_cmode;
         if (injection_controls.hasControl(Well::InjectorCMode::BHP) && current_control != WellInjectorCMode::BHP) {
-            const Scalar bhp_limit = injection_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
             OpmLog::debug(fmt::format("Well {} BHP control check: current_bhp={:.6e}, bhp_limit={:.6e}, exceeds_limit={}",
                                       this->well_ecl_.name(), current_bhp, bhp_limit, (current_bhp > bhp_limit)));

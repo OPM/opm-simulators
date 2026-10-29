@@ -158,10 +158,6 @@ private:
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
 
-    // A well that cannot flow at its BHP limit is stopped for the time step.
-    // Its surface rate is zero, while its BHP is free to adjust.
-    bool stopped_{false};
-
     // primary variables
     PrimaryVariables primary_variables_;
     // the last primary variables the well equations could be assembled for
@@ -236,15 +232,8 @@ private:
 
     bool updateWellControl(const SummaryState& summary_state,
                            SingleWellState& well_state,
-                           bool check_rate_limits) const;
-
-    void updateStatus_(const Simulator& simulator,
-                       const SingleWellState& well_state);
-
-    // Net reservoir volume rate of all connections at the given BHP, using
-    // the current cell states. Positive for injection.
-    Scalar reservoirRateAtBhp_(const Simulator& simulator,
-                               const Scalar bhp) const;
+                           bool check_rate_limits,
+                           bool allow_stop);
 
     template <typename T>
     void

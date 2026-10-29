@@ -75,6 +75,8 @@ public:
     bool producer;
 
     WellStatus status{WellStatus::OPEN};
+    // the well cannot flow at its BHP limit: zero surface rate, floating BHP
+    bool stopped{false};
     Scalar bhp{0};
     Scalar temperature{0};
 
