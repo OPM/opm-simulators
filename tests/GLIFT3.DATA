@@ -1,0 +1,171 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2020 Equinor
+
+-- The model and the first report step are in include/glift_model.inc
+INCLUDE
+  'include/glift_model.inc' /
+
+-- Report step 1: ORAT limit on B-1H
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  2000  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 1 FEB 2020 /
+/
+
+-- Report step 2: higher ORAT limit on B-1H
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  4500  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 1 MAR 2020 /
+/
+
+-- Report step 3: GRAT limit on B-1H
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    GRAT  1*  1*     2.0e5    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 1 APR 2020 /
+/
+
+-- Report step 4: B-1H is shut
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      SHUT    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 2 APR 2020 /
+/
+
+-- Report step 5: ORAT limit on B-1H, all wells on THP control, lift gas limit on PLAT-A
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  50  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+--Add more wells to check interation with group control
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+-- Group lift gas limits for gas lift optimization
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+DATES
+ 1 MAY 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+-- Report step 6: ORAT limit on PLAT-A
+GCONPROD
+ 'PLAT-A' ORAT 25000 /
+/
+
+DATES
+ 1 JUN 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+-- Report step 7: GRAT limit on M5S and ORAT limit on PLAT-A
+GCONPROD
+ 'M5S' GRAT 2* 5e5 /
+ 'PLAT-A' ORAT 25000 /
+/
+GLIFTOPT
+ 'PLAT-A'  450000 /  --
+/
+
+DATES
+ 1 JLY 2020 /
+/
+
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'B-3H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-1H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+   'C-2H'      OPEN    THP  1*  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+WLIFTOPT
+ 'B-1H'   YES   150000   1.01   -1.0  /
+ 'B-2H'   YES   150000   1.01   -1.0  /
+ 'B-3H'   YES   150000   1.01   -1.0  /
+ 'C-1H'   YES   150000   1.01   -1.0  /
+ 'C-2H'   YES   150000   1.01   -1.0  /
+/
+
+-- Report step 8: group targets removed, higher lift gas limit on PLAT-A
+GCONPROD
+ 'M5S' NONE /
+ 'PLAT-A' NONE/
+/
+
+GLIFTOPT
+ 'PLAT-A'  800000 800000 /  --
+/
+
+DATES
+ 1 AUG 2020 /
+/
+
+END

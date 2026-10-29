@@ -440,6 +440,10 @@ protected:
     // Set by limitAlqToMax_() when it reduced the ALQ to the maximum. The group rates and the
     // well potentials are then reconciled with the reduced ALQ in getInitialRatesWithLimit_().
     bool alq_limited_ = false;
+    // The initial rates and ALQ after the group rates were reconciled with the limited ALQ,
+    // see getInitialRatesWithLimit_(): the baseline of the group rates for both the increase and
+    // the decrease pass of the optimization.
+    std::optional<std::pair<LimitedRatesAndBhp, Scalar>> reconciled_initial_rates_;
 
     Scalar alpha_w_;
     Scalar alpha_g_;

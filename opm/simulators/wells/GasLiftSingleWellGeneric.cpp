@@ -769,6 +769,11 @@ std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 getInitialRatesWithLimit_()
 {
+    // Rebuilding the rates from the updated well potentials would not give the rates the group
+    // rates were reconciled with, if the rate was limited by a group.
+    if (this->reconciled_initial_rates_) {
+        return {this->reconciled_initial_rates_->first, this->reconciled_initial_rates_->second};
+    }
     std::optional<LimitedRatesAndBhp> limited_rates;
     Scalar initial_alq = this->orig_alq_;
     if (auto [rates, alq] = computeInitialWellRates_(); rates) {
@@ -778,11 +783,14 @@ getInitialRatesWithLimit_()
         auto temp_rates = getLimitedRatesAndBhp_(*rates);
         RatesAndBhp old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
+        initial_alq = alq;
+        // The ALQ was reduced to the maximum in limitAlqToMax_(). Move the group rates and the
+        // well potentials to the rates with the reduced ALQ, and keep them as the baseline of
+        // the second pass.
         if (this->alq_limited_) {
             reconcileRatesAfterAlqLimit_(old_rates, *limited_rates);
+            this->reconciled_initial_rates_ = std::pair{*limited_rates, initial_alq};
         }
-
-        initial_alq = alq;
     }
     return {limited_rates, initial_alq};
 }
@@ -1381,18 +1389,17 @@ setWellStatePotentials_(Scalar oil_pot, Scalar gas_pot, Scalar water_pot)
 // The group rates and the well potentials of the well state are from before the ALQ
 // was limited, while the rates of the optimization are computed with the limited ALQ.
 // Move the group rates and the well potentials to the rates with the limited ALQ.
-// Calling this again does nothing since the well potentials then equal the new rates.
+// The rates the well contributed to its groups are the potentials limited by the targets
+// of the well (see GasLiftGroupInfo::getProducerWellRates_()), so the old rates are limited
+// in the same way before they are subtracted.  This is done once, since the caller keeps the
+// reconciled rates in reconciled_initial_rates_ until the ALQ is limited again.
 template<typename Scalar, typename IndexTraits>
 void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 reconcileRatesAfterAlqLimit_(const RatesAndBhp& old_rates,
                              const LimitedRatesAndBhp& new_rates)
 {
     if (this->group_info_.hasWell(this->well_name_)) {
-        const LimitedRatesAndBhp old_limited {old_rates.oil, old_rates.oil,
-                                              old_rates.gas, old_rates.gas,
-                                              old_rates.water, old_rates.water,
-                                              old_rates.bhp, false, false, false, false};
-        updateGroupRates_(old_limited, new_rates, /*delta_alq=*/0.0);
+        updateGroupRates_(getLimitedRatesAndBhp_(old_rates), new_rates, /*delta_alq=*/0.0);
     }
     setWellStatePotentials_(new_rates.oil_pot, new_rates.gas_pot, new_rates.water_pot);
 }
@@ -1415,6 +1422,7 @@ limitAlqToMax_()
     this->well_state_.well(this->well_name_).alq_state.set(this->max_alq_);
     this->orig_alq_ = this->max_alq_;
     this->alq_limited_ = true;
+    this->reconciled_initial_rates_.reset();
     // The group rates were initialized with the ALQ of the well state. The group
     // info is not initialized when the object is only used for a well test.
     if (!this->group_info_.hasWell(this->well_name_)) {

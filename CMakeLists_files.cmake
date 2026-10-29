@@ -776,6 +776,8 @@ list (APPEND TEST_DATA_FILES
   tests/INJECTION_TOPUP_PHASE_VALIDATION.DATA
   tests/GLIFT1.DATA
   tests/GLIFT2.DATA
+  tests/GLIFT3.DATA
+  tests/GLIFT4.DATA
   tests/RC-01_MAST_PRED.DATA
   tests/RC_MASTER_GROUP_EXCLUSION.DATA
   tests/RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA
@@ -788,6 +790,7 @@ list (APPEND TEST_DATA_FILES
   tests/include/rc_master_group_exclusion_model.inc
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
+  tests/include/glift_model.inc
   tests/include/permx_model5.grdecl
   tests/include/pvt_live_oil_dgas.ecl
   tests/include/relperm.inc
