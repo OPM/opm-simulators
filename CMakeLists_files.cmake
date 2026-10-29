@@ -1226,6 +1226,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PressureSolverPolicy.hpp
   opm/simulators/linalg/PressureTransferPolicy.hpp
   opm/simulators/linalg/PropertyTree.hpp
+  opm/simulators/linalg/RowAccumulatedSpMV.hpp
   opm/simulators/linalg/residreductioncriterion.hh
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
