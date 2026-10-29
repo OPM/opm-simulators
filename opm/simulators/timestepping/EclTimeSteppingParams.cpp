@@ -39,6 +39,7 @@ void registerEclTimeSteppingParameters()
          "synchronizes with its slaves at slave report-step boundaries. "
          "If false (default), the master synchronizes at every master actual time step. "
          "Has no effect in non-rescoup runs.");
+    Parameters::Hide<Parameters::RescoupSyncAtReportSteps>();
     Parameters::Register<Parameters::RescoupSpawnWrapper>
         ("Developer flag for reservoir coupling, for debugging slave processes.  "
          "If set, the master spawns this executable instead of the simulator for "
