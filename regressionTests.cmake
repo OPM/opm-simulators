@@ -2780,6 +2780,57 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    diff_wt_tracer
+  FILENAME
+    DIFF_WT_TRACER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    disp_wt_tracer
+  FILENAME
+    DISP_WT_TRACER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    diff_2wt_tracer
+  FILENAME
+    DIFF_2WT_TRACER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_onephase
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
     bc_ot_tracer_rate
   FILENAME
     BC_OT_TRACER_RATE
@@ -2838,6 +2889,74 @@ add_test_compareECLFiles(
     flow
   DEV_SIMULATOR
     flow_gaswater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    diff_gt_tracer_twophase
+  FILENAME
+    DIFF_GT_TRACER_TWOPHASE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gasoildiffuse
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    disp_gt_tracer_twophase
+  FILENAME
+    DISP_GT_TRACER_TWOPHASE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gasoildiffuse
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    bc_gt_tracer_solution
+  FILENAME
+    BC_GT_TRACER_SOLUTION
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    diff_gt_tracer_solution
+  FILENAME
+    DIFF_GT_TRACER_SOLUTION
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gasoildiffuse
   ABS_TOL
     ${abs_tol}
   REL_TOL
