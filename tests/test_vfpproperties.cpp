@@ -35,6 +35,7 @@
 #include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/common/Exceptions.hpp>
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -98,6 +99,47 @@ BOOST_AUTO_TEST_CASE(findInterpData)
     BOOST_CHECK_EQUAL(eval5.ind_[0], 4);
     BOOST_CHECK_EQUAL(eval5.ind_[1], 5);
     BOOST_CHECK_EQUAL(eval5.factor_, 1.0);
+}
+
+BOOST_AUTO_TEST_CASE(findTHPFinite)
+{
+    const std::vector<double> thp_array = {1.0, 2.0, 4.0};
+    const std::vector<double> bhp_array = {10.0, 20.0, 40.0};
+
+    // interpolation inside the table
+    BOOST_CHECK_CLOSE(Opm::VFPHelpers<double>::findTHP(bhp_array, thp_array, 15.0), 1.5, 1.0e-10);
+    BOOST_CHECK_CLOSE(Opm::VFPHelpers<double>::findTHP(bhp_array, thp_array, 30.0), 3.0, 1.0e-10);
+    // extrapolation on both sides
+    BOOST_CHECK_CLOSE(Opm::VFPHelpers<double>::findTHP(bhp_array, thp_array, 50.0), 5.0, 1.0e-10);
+    BOOST_CHECK_CLOSE(Opm::VFPHelpers<double>::findTHP(bhp_array, thp_array, 5.0), 0.5, 1.0e-10);
+}
+
+// Non-finite input must give a NumericalProblem (so that the time step can be
+// chopped), not an assertion failure or an arbitrary result.
+BOOST_AUTO_TEST_CASE(findTHPNonFinite)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const std::vector<double> thp_array = {1.0, 2.0, 4.0};
+    const std::vector<double> good_bhp = {10.0, 20.0, 40.0};
+
+    // non-finite bhp
+    BOOST_CHECK_THROW(Opm::VFPHelpers<double>::findTHP(good_bhp, thp_array, nan),
+                      Opm::NumericalProblem);
+    BOOST_CHECK_THROW(Opm::VFPHelpers<double>::findTHP(good_bhp, thp_array, inf),
+                      Opm::NumericalProblem);
+
+    // non-finite bhp_array, e.g. from garbage flow rates; an all-NaN array
+    // compares as "sorted" and used to end in assert(found == true)
+    for (const auto& bad_bhp : {std::vector<double>{nan, nan, nan},
+                                std::vector<double>{10.0, nan, 40.0},
+                                std::vector<double>{10.0, 20.0, inf},
+                                std::vector<double>{-inf, 20.0, 40.0}}) {
+        for (const bool find_largest : {true, false}) {
+            BOOST_CHECK_THROW(Opm::VFPHelpers<double>::findTHP(bad_bhp, thp_array, 15.0, find_largest),
+                              Opm::NumericalProblem);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END() // HelperTests
