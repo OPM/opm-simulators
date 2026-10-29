@@ -525,8 +525,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SizesAfterCopyToGpu, Scalar, Scalars)
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(CopyToGpuRejectsUninitializedPvt, Scalar, Scalars)
 {
+    // No regions
     CpuPvt<Scalar> uninitialized;
     BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu(uninitialized), std::logic_error);
+
+    // Regions, but initEnd() not called, so the tables it fills are empty
+    CpuPvt<Scalar> withoutInitEnd;
+    withoutInitEnd.setNumRegions(numRegions);
+    BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu(withoutInitEnd), std::logic_error);
 }
 
 //! Compares the methods that depend on the state (pressure, Rs), with the state passed
