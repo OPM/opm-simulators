@@ -1372,20 +1372,19 @@ setWellStatePotentials_(Scalar oil_pot, Scalar gas_pot, Scalar water_pot)
 // The group rates and the well potentials of the well state are from before the ALQ
 // was limited, while the rates of the optimization are computed with the limited ALQ.
 // Move the group rates and the well potentials to the rates with the limited ALQ.
-// Calling this again does nothing since the well potentials then equal the new rates.
+// The rates the well contributed to its groups are the potentials limited by the targets
+// of the well (see GasLiftGroupInfo::getProducerWellRates_()), so the old rates are limited
+// in the same way before they are subtracted.  This is done once, when the ALQ was limited.
 template<typename Scalar, typename IndexTraits>
 void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 reconcileRatesAfterAlqLimit_(const RatesAndBhp& old_rates,
                              const LimitedRatesAndBhp& new_rates)
 {
     if (this->group_info_.hasWell(this->well_name_)) {
-        const LimitedRatesAndBhp old_limited {old_rates.oil, old_rates.oil,
-                                              old_rates.gas, old_rates.gas,
-                                              old_rates.water, old_rates.water,
-                                              old_rates.bhp, false, false, false, false};
-        updateGroupRates_(old_limited, new_rates, /*delta_alq=*/0.0);
+        updateGroupRates_(getLimitedRatesAndBhp_(old_rates), new_rates, /*delta_alq=*/0.0);
     }
     setWellStatePotentials_(new_rates.oil_pot, new_rates.gas_pot, new_rates.water_pot);
+    this->alq_limited_ = false;
 }
 
 // The ALQ of the well can be above the maximum ALQ, for example if the maximum was

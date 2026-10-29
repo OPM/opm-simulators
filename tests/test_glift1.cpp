@@ -663,3 +663,76 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMax)
     // uninitialized group info (well test): the ALQ is limited without a group lookup
     test(high_alq, max_alq, /*init_groups=*/false);
 }
+
+// The group rates of a well that is limited by its own target are those of the limited rates.
+// Reducing the ALQ to the maximum moves the group rates from the limited rates with the old ALQ
+// to the limited rates with the new, and does not subtract the potentials, which are above the target.
+// GLIFT3.DATA is GLIFT1.DATA with an ORAT limit on B-1H in report step 5.
+BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithWellTarget)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT3.DATA", "test_glift3_maxalq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    simulator->setEpisodeIndex(5);
+    well_model.beginReportStep(5);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    const auto& comm = simulator->vanguard().grid().comm();
+    const double increment = schedule.glo(5).gaslift_increment();
+    const double high_alq = 25.0 * increment; // above the maximum ALQ of the synthetic well
+    typename Synthetic::GLiftSyncGroups sync_groups;
+
+    const auto oil_pos = well_state.phaseUsageInfo().canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    const double target = well.wellEcl().productionControls(summary_state).oil_rate;
+    well_state.well("B-1H").alq_state.set(high_alq);
+    const double old_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    BOOST_REQUIRE_GT(old_pot, target);
+
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                 deferred_logger, well_state, group_state, comm,
+                                 /*glift_debug=*/false};
+    group_info.initialize();
+    const double group_oil = group_info.oilRate("PLAT-A");
+    Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                     group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+    glift.setOrigAlq(high_alq);
+    glift.limitAlq();
+    const double new_oil = glift.initialOilRate();
+    const double new_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    // The test needs the potential to be above the target also with the limited ALQ, and to
+    // differ from the old one
+    BOOST_REQUIRE_GT(new_pot, target);
+    BOOST_CHECK(std::abs(new_pot - old_pot) > 1e-12);
+    // Limited by the target before and after: the group oil rate does not change
+    BOOST_CHECK_SMALL(new_oil - target, 1e-10);
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+    // doing it again changes nothing
+    glift.initialOilRate();
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+}
