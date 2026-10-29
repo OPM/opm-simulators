@@ -110,6 +110,7 @@ const std::string flat_deck{"RC_MASTER_GROUP_EXCLUSION.DATA"};
 const std::string nested_deck{"RC_MASTER_GROUP_EXCLUSION_NESTED.DATA"};
 const std::string sibling_deck{"RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA"};
 const std::string gaslift_deck{"RC_MASTER_GROUP_EXCLUSION_GASLIFT.DATA"};
+const std::string gliftopt_deck{"RC_MASTER_GROUP_EXCLUSION_GLIFTOPT.DATA"};
 const std::string ancestor_deck{"RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA"};
 const std::string efficiency_deck{"RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA"};
 const std::string water_gas_deck{"RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA"};
@@ -126,6 +127,8 @@ struct SlaveGroupReport
     int num_group_controlled_gas_injectors{1};
     double water_rate{0.0};
     double gas_rate{0.0};
+    double gas_lift_rate{0.0};
+    double gas_lift_headroom{0.0};
 };
 
 //! \brief A well model built from a master deck, with a reservoir coupling master
@@ -215,6 +218,7 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
     {
         std::map<std::string, Opm::ReservoirCoupling::ProductionGroupConstraints<double>> production;
         std::map<std::pair<std::string, RcPhase>, double> injection;  //!< targets in SM3/day
+        std::map<std::string, Opm::ReservoirCoupling::GasLiftGroupLimits<double>> gas_lift;
         double productionTarget(const std::string& group) const
         {
             return metric_rate(production.at(group).target);
@@ -222,6 +226,18 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
         double injectionTarget(const std::string& group, RcPhase phase) const
         {
             return injection.at({group, phase});
+        }
+        //! The maximum lift gas rate of the slave group in SM3/day, or -1 if it has none
+        double maxLiftGas(const std::string& group) const
+        {
+            const double limit = gas_lift.at(group).max_lift_gas;
+            return limit < 0.0 ? limit : metric_rate(limit);
+        }
+        //! The maximum total gas rate of the slave group in SM3/day, or -1 if it has none
+        double maxTotalGas(const std::string& group) const
+        {
+            const double limit = gas_lift.at(group).max_total_gas;
+            return limit < 0.0 ? limit : metric_rate(limit);
         }
         //! The limit for the rate type \p mode in SM3/day, or -1 if the group
         //! hierarchy has no limit for it
@@ -262,6 +278,9 @@ struct RescoupConstraintsFixture : ToleranceAndUnitFixture
             const auto& groups = master().getMasterGroupNamesForSlave(slave_idx);
             for (const auto& pc : constraints.production_constraints[slave_idx]) {
                 result.production.emplace(groups[pc.group_name_idx], pc);
+            }
+            for (const auto& gl : constraints.gas_lift_limits[slave_idx]) {
+                result.gas_lift.emplace(groups[gl.group_name_idx], gl);
             }
             for (const auto& it : constraints.injection_targets[slave_idx]) {
                 result.injection.emplace(std::pair{groups[it.group_name_idx], it.phase},
@@ -366,6 +385,8 @@ private:
                     prod.network_surface_rates[phase] = si_rate(rate);
                     prod.reservoir_rates[phase] = si_rate(rate);
                 }
+                prod.gas_lift_rate = si_rate(report.gas_lift_rate);
+                prod.gas_lift_headroom = si_rate(report.gas_lift_headroom);
                 prod.num_group_controlled_producers = report.num_group_controlled_producers;
                 auto& inj = injection_data[i];
                 inj.surface_rates[RcPhase::Water] = si_rate(report.water_injection_rate);
@@ -1234,6 +1255,110 @@ BOOST_AUTO_TEST_CASE(NetworkGasLiftRateLeavesOutStoppedWells)
     wellModel().wellState().well("W1").status = Opm::Well::Status::STOP;
     BOOST_CHECK_SMALL(gsh.sumWellGasLiftRates(group, /*network=*/true), 1e-12);
     checkClose(gsh.sumWellGasLiftRates(group, /*network=*/false), 1.0);
+}
+
+//! \brief What the slaves report for the gas lift limit tests of RC_MASTER_GROUP_EXCLUSION_GLIFTOPT.DATA
+//!
+//! In SM3/day: the lift gas rate, its headroom and the gas rate of each master group.  M2 has an
+//! efficiency factor of 0.5 up to P, so what it uses counts for half in P and FIELD.
+void setGasLiftReports(RescoupConstraintsFixture& fixture,
+                       const std::map<std::string, std::array<double, 3>>& use_headroom_gas)
+{
+    for (const auto& [group, values] : use_headroom_gas) {
+        auto& report = fixture.slaveGroupReport(group);
+        report.gas_lift_rate = values[0];
+        report.gas_lift_headroom = values[1];
+        report.gas_rate = values[2];
+    }
+}
+
+//! \brief The limits of every level are combined: the smallest share holds
+//!
+//! M1 and M2 are below P (max lift gas 1000 and max total gas 2500) and FIELD (max lift gas 1600).
+//! With the lift gas use and headroom of the groups below, in the units of the ancestor, the
+//! slack of a limit is shared in proportion to the headroom (M2 counts half, M3 has a limit of its
+//! own, 400, and M4 no headroom):
+//!   P:     use 200 + 0.5 * 100 = 250, slack 750, headroom weights 300 : 50
+//!   FIELD: use 200 + 50 + 150 + 50 = 450, slack 1150, headroom weights 300 : 50 : 50 : 0
+//! so M1 gets 200 + 300 / 350 * 750 from P and 200 + 300 / 400 * 1150 from FIELD, and the
+//! smaller holds.  A level that does not hold is not a limit: M4 has none of P's.
+BOOST_AUTO_TEST_CASE(GasLiftLimitsOfAllLevelsAreCombined)
+{
+    setGasLiftReports(*this, {{"M1", {200.0, 300.0, 800.0}},
+                                {"M2", {100.0, 100.0, 400.0}},
+                                {"M3", {150.0, 50.0, 600.0}},
+                                {"M4", {50.0, 0.0, 0.0}}});
+    commonSetupForAllTests(gliftopt_deck);
+    const auto result = calculateConstraints();
+
+    const double p_slack = 1000.0 - (200.0 + 0.5 * 100.0);
+    const double field_slack = 1600.0 - (200.0 + 0.5 * 100.0 + 150.0 + 50.0);
+    // M1: P holds (842.857 < 1062.5)
+    checkRate(result.maxLiftGas("M1"), std::min(200.0 + 300.0 / 350.0 * p_slack,
+                                                       200.0 + 300.0 / 400.0 * field_slack));
+    // M2: P holds, in the units of M2 (divided by its factor)
+    checkRate(result.maxLiftGas("M2"),
+                      std::min((0.5 * 100.0 + 50.0 / 350.0 * p_slack) / 0.5,
+                               (0.5 * 100.0 + 50.0 / 400.0 * field_slack) / 0.5));
+    // M3: FIELD holds, below its own limit of 400
+    checkRate(result.maxLiftGas("M3"), std::min(400.0, 150.0 + 50.0 / 400.0 * field_slack));
+    // M4: only FIELD's limit applies, and M4 has no headroom, so it gets what it uses
+    checkRate(result.maxLiftGas("M4"), 50.0);
+}
+
+//! \brief A GLIFTOPT limit on the master group itself is given to the slave group in full
+//!
+//! M3 has a limit of 400.  Its slave group can take most of the slack of FIELD, so the limit of
+//! FIELD (150 + 600 / 950 * 1150 = 875.7) does not hold.
+BOOST_AUTO_TEST_CASE(GasLiftLimitOnTheMasterGroupIsGivenInFull)
+{
+    setGasLiftReports(*this, {{"M1", {200.0, 300.0, 800.0}},
+                                {"M2", {100.0, 100.0, 400.0}},
+                                {"M3", {150.0, 600.0, 600.0}},
+                                {"M4", {50.0, 0.0, 0.0}}});
+    commonSetupForAllTests(gliftopt_deck);
+    const auto result = calculateConstraints();
+
+    checkRate(result.maxLiftGas("M3"), 400.0);
+}
+
+//! \brief Over the limit, the slave groups are cut in proportion to what they use
+//!
+//! M1 uses 900 and M2 400, which counts 200 in P: 1100 against the limit of 1000, and the master
+//! has no wells of its own below P.  M1 gets 900 * 1000 / 1100 and M2 (200 * 1000 / 1100) / 0.5.
+BOOST_AUTO_TEST_CASE(GasLiftLimitOverBudgetIsSharedInProportionToTheUse)
+{
+    setGasLiftReports(*this, {{"M1", {900.0, 300.0, 800.0}},
+                                {"M2", {400.0, 100.0, 400.0}},
+                                {"M3", {150.0, 50.0, 600.0}},
+                                {"M4", {50.0, 0.0, 0.0}}});
+    commonSetupForAllTests(gliftopt_deck);
+    const auto result = calculateConstraints();
+
+    checkRate(result.maxLiftGas("M1"), 900.0 * 1000.0 / 1100.0);
+    checkRate(result.maxLiftGas("M2"), (0.5 * 400.0 * 1000.0 / 1100.0) / 0.5);
+}
+
+//! \brief The limit on the total gas counts the produced gas and the lift gas
+//!
+//! P has a maximum total gas of 2500.  M1 produces 800 and lifts 200, M2 produces 400 and lifts
+//! 100 (counted half in P): 1000 + 250 = 1250 against 2500, and the slack is shared as for the
+//! lift gas limit, in proportion to the headroom.  M3 and M4 are not below P, and FIELD has no
+//! limit on the total gas: they have none.
+BOOST_AUTO_TEST_CASE(GasLiftTotalGasLimitCountsProducedAndLiftGas)
+{
+    setGasLiftReports(*this, {{"M1", {200.0, 300.0, 800.0}},
+                                {"M2", {100.0, 100.0, 400.0}},
+                                {"M3", {150.0, 50.0, 600.0}},
+                                {"M4", {50.0, 0.0, 0.0}}});
+    commonSetupForAllTests(gliftopt_deck);
+    const auto result = calculateConstraints();
+
+    const double slack = 2500.0 - (1000.0 + 0.5 * 500.0);
+    checkRate(result.maxTotalGas("M1"), 1000.0 + 300.0 / 350.0 * slack);
+    checkRate(result.maxTotalGas("M2"), (0.5 * 500.0 + 50.0 / 350.0 * slack) / 0.5);
+    BOOST_CHECK_EQUAL(result.maxTotalGas("M3"), -1.0);
+    BOOST_CHECK_EQUAL(result.maxTotalGas("M4"), -1.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
