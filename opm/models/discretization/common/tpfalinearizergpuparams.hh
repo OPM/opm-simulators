@@ -30,9 +30,16 @@
 #ifndef TPFA_LINEARIZER_GPU_PARAMS_HH
 #define TPFA_LINEARIZER_GPU_PARAMS_HH
 
+namespace Opm {
+template <class TypeTag> class TpfaLinearizerGpuParams;
+}
+
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <utility>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -45,11 +52,13 @@
 #include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/cuda_check_last_error.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/cuda_check_last_error.hpp>
 #endif
 
 #include <opm/common/utility/SparseTable.hpp>
@@ -143,7 +152,7 @@ private:
     using GpuModelBufferType = SimpleFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>;
     using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
 
-    using GpuModel = SimpleFIBlackOilModel<TypeTag>;
+    using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
 
     FullDomain<gpuistl::GpuBuffer<int>> domainBuffer_;
     SparseTable<NeighborInfoGPU, gpuistl::GpuBuffer> neighborInfoBuffer_;
@@ -170,6 +179,9 @@ private:
     GpuModelBufferType gpuModelBuffer_;
     GpuFlowProblemBufferType gpuFlowProblemBuffer_;
     gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
+    std::array<std::vector<GPUBOIQ>, 2> intensiveQuantityStaging_;
+    std::vector<VectorBlockGPU> sourceResidualStaging_;
+    std::vector<MatrixBlockGPU> sourceJacobianStaging_;
     std::size_t sourceCapacity_{0};
 
 public:
@@ -275,7 +287,8 @@ public:
         // system pointers while retaining the device allocations for both levels.
         for (unsigned timeIdx = 0; timeIdx < 2; ++timeIdx) {
             const auto& cache = model.intensiveQuantityCache()[timeIdx];
-            std::vector<GPUBOIQ> staging;
+            auto& staging = intensiveQuantityStaging_[timeIdx];
+            staging.clear();
             staging.reserve(cache.size());
             for (const auto& iq : cache) {
                 staging.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(
@@ -333,8 +346,14 @@ public:
                                   const std::vector<MatrixBlockCPU>& jacobianContributions)
     {
         // Convert CPU blocks to their device-compatible representations.
-        std::vector<VectorBlockGPU> gpuResidualContributions;
-        std::vector<MatrixBlockGPU> gpuJacobianContributions;
+        if (indices.size() != residualContributions.size()
+            || indices.size() != jacobianContributions.size()) {
+            OPM_THROW(std::invalid_argument, "GPU source contribution sizes do not match");
+        }
+        auto& gpuResidualContributions = sourceResidualStaging_;
+        auto& gpuJacobianContributions = sourceJacobianStaging_;
+        gpuResidualContributions.clear();
+        gpuJacobianContributions.clear();
         gpuResidualContributions.reserve(indices.size());
         gpuJacobianContributions.reserve(indices.size());
         for (std::size_t i = 0; i < indices.size(); ++i) {
@@ -345,10 +364,14 @@ public:
             return;
         }
         if (sourceCapacity_ < indices.size()) {
-            sourceCapacity_ = std::max<std::size_t>(20, indices.size());
-            sourceIndices_ = gpuistl::GpuBuffer<unsigned>(sourceCapacity_);
-            sourceResidualDeltas_ = gpuistl::GpuBuffer<VectorBlockGPU>(sourceCapacity_);
-            sourceJacobianDeltas_ = gpuistl::GpuBuffer<MatrixBlockGPU>(sourceCapacity_);
+            const auto capacity = std::max<std::size_t>(20, indices.size());
+            gpuistl::GpuBuffer<unsigned> newIndices(capacity);
+            gpuistl::GpuBuffer<VectorBlockGPU> newResidualDeltas(capacity);
+            gpuistl::GpuBuffer<MatrixBlockGPU> newJacobianDeltas(capacity);
+            sourceIndices_ = std::move(newIndices);
+            sourceResidualDeltas_ = std::move(newResidualDeltas);
+            sourceJacobianDeltas_ = std::move(newJacobianDeltas);
+            sourceCapacity_ = capacity;
         }
         sourceIndices_.copyFromHost(indices.data(), indices.size());
         sourceResidualDeltas_.copyFromHost(gpuResidualContributions.data(), indices.size());
@@ -361,6 +384,7 @@ public:
             residualBuffer_.data(),
             diagMatAddressView_.data(),
             indices.size());
+        OPM_CUDA_CHECK_LAST_ERROR;
     }
 
     auto& residualView()

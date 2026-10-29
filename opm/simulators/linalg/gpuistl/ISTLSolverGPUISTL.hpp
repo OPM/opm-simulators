@@ -20,6 +20,7 @@
 #include <dune/istl/operators.hh>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
@@ -221,27 +222,33 @@ public:
      */
     void prepare(GPUMatrix& M, GPUVector& b)
     {
-        if (isParallel()) {
-            OPM_THROW(std::logic_error, "Resident GPU preparation requires a serial system");
-        }
-        // Rebuild when ownership or matrix identity changes. The caller keeps
-        // the borrowed matrix alive through every solve using this preparation.
-        if (m_externalMatrix != &M || !m_gpuSolver) {
-            eraseMatrix();
-            m_externalMatrix = &M;
-            const auto weightsCalculator = getWeightsCalculator();
-            m_gpuSolver = std::make_unique<SolverType>(
-                M, isParallel(), m_propertyTree, pressureIndex,
-                weightsCalculator, m_forceSerial, m_comm.get());
-        } else {
-            m_gpuSolver->update();
-        }
+        try {
+            if (isParallel()) {
+                OPM_THROW(std::logic_error, "Resident GPU preparation requires a serial system");
+            }
+            if (M.N() * M.blockSize() != b.dim()) {
+                OPM_THROW(std::invalid_argument, "Resident GPU matrix and RHS dimensions do not match");
+            }
+            // Rebuild when ownership or matrix identity changes. The caller keeps
+            // the borrowed matrix alive through every solve using this preparation.
+            if (m_externalMatrix != &M || !m_gpuSolver) {
+                eraseMatrix();
+                m_externalMatrix = &M;
+                const auto weightsCalculator = getWeightsCalculator();
+                m_gpuSolver = std::make_unique<SolverType>(
+                    M, isParallel(), m_propertyTree, pressureIndex,
+                    weightsCalculator, m_forceSerial, m_comm.get());
+            } else {
+                m_gpuSolver->update();
+            }
 
-        if (!m_rhs) {
-            m_rhs = std::make_unique<GPUVector>(b);
-        } else {
-            *m_rhs = b;
+            if (!m_rhs) {
+                m_rhs = std::make_unique<GPUVector>(b);
+            } else {
+                *m_rhs = b;
+            }
         }
+        OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("Failed to prepare the resident GPU linear system.");
     }
 
     /**
@@ -351,6 +358,18 @@ public:
         ++m_solveCount;
         m_lastSeenIterations = result.iterations;
         return checkConvergence(result);
+    }
+
+    /// Solve the resident system with a zero initial guess and download the update.
+    bool solveResident(Vector& x)
+    {
+        if (!m_x || m_x->dim() != x.dim()) {
+            m_x = std::make_unique<GPUVector>(x.dim());
+        }
+        *m_x = real_type{0};
+        const bool converged = solve(*m_x);
+        m_x->copyToHost(x);
+        return converged;
     }
 
     /**

@@ -56,7 +56,7 @@
 
 #include <cassert>
 #include <cstddef>
-#include <exception>   // current_exception, rethrow_exception
+#include <exception>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -223,7 +223,7 @@ public:
      */
     void eraseMatrix()
     {
-#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+#if HAVE_CUDA
         gpuParams_.reset();
 #endif
         gpuSystemActive_ = false;
@@ -323,11 +323,8 @@ public:
     bool gpuSystemActive() const { return gpuSystemActive_; }
 
 #if OPM_IS_COMPILING_WITH_GPU_COMPILER
-    // TODO: Make the GPU state and its host interface independent of the compiler
-    // used for this translation unit. TpfaLinearizerGpuParams currently contains
-    // kernel launches, so these accessors and the owning member below require
-    // GPU compilation. Keep affected TypeTag instantiations in GPU translation
-    // units until the state layout is shared with ordinary C++ translation units.
+    // Kernel-dependent operations are instantiated by GPU translation units.
+    // The owner below has the same layout in host and GPU translation units.
     //! GPU matrix and residual from the most recent GPU linearization.
     auto& gpuJacobian()
     {
@@ -970,7 +967,7 @@ private:
                                                // GPUs. Autotune this later.
 
                 if (!gpuParams_) {
-                    gpuParams_ = std::make_unique<GpuParams>(domain,
+                    auto params = std::make_unique<GpuParams>(domain,
                                                         neighborInfo_,
                                                         *gpuJacobian_,
                                                         *gpuBufferDiagMatAddress_,
@@ -980,6 +977,9 @@ private:
                                                         model_(),
                                                         problem_(),
                                                         numCells);
+                    gpuParams_ = GpuParamsOwner(params.release(), [](GpuParams* ptr) {
+                        std::default_delete<GpuParams>{}(ptr);
+                    });
                 } else {
                     gpuParams_->refreshForLinearization(model_(), boundaryInfo_, numCells);
                 }
@@ -1326,6 +1326,8 @@ public:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    // Thread-safe on the GPU, but floating-point atomic additions make the numerical
+    // result depend on the order in which boundary faces are calculated.
     template <class LocalIntensiveQuantities,
               class LocalResidualT,
               class ModelT,
@@ -1348,10 +1350,10 @@ public:
             const unsigned globI = boundaryInfoElement.cell;
             const LocalIntensiveQuantities& insideIntQuants
                 = model.intensiveQuantities(globI, /*timeIdx*/ 0);
-            if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
-                LocalResidualT::computeBoundaryFlux(
-                    adres, problem, boundaryInfoElement.bcdata, insideIntQuants, globI);
-            }
+            // LocalResidualT carries the device fluid system. The linearizer's
+            // TypeTag still names the host fluid system, so it cannot gate this call.
+            LocalResidualT::computeBoundaryFlux(
+                adres, problem, boundaryInfoElement.bcdata, insideIntQuants, globI);
             adres *= boundaryInfoElement.bcdata.faceArea;
             TpfaLinearizer<TypeTag>::setResAndJacobi(res, bMat, adres);
             auto* residualPtr = &(residual.data()[globI]);
@@ -1430,9 +1432,11 @@ private:
 #if HAVE_CUDA
     std::unique_ptr<gpuistl::GpuSparseMatrixWrapper<Scalar>> gpuJacobian_;
     std::unique_ptr<gpuistl::GpuBuffer<MatrixBlockGPU*>> gpuBufferDiagMatAddress_;
-#if OPM_IS_COMPILING_WITH_GPU_COMPILER
-    std::unique_ptr<TpfaLinearizerGpuParams<TypeTag>> gpuParams_;
-#endif
+    // Type-erased destruction keeps this owner usable with an incomplete state
+    // in ordinary C++ translation units. Only GPU code constructs that state.
+    using GpuParams = TpfaLinearizerGpuParams<TypeTag>;
+    using GpuParamsOwner = std::unique_ptr<GpuParams, void (*)(GpuParams*)>;
+    GpuParamsOwner gpuParams_{nullptr, nullptr};
 #endif
 
     // the right-hand side

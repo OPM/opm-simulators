@@ -87,6 +87,9 @@ NonlinearSystemBlackOilReservoir(Simulator& simulator,
     this->convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
     // TODO: remember to fix!
     if (this->param_.nonlinear_solver_ == "nldd") {
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+            OPM_THROW(std::invalid_argument, "GPU assembly does not support NLDD.");
+        }
         if (terminal_output) {
             OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
         }

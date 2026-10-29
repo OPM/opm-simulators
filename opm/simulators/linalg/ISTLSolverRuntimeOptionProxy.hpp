@@ -168,11 +168,7 @@ public:
             OPM_THROW(std::logic_error, "GPU solve requested without the gpuISTL backend");
         }
 
-        gpuistl::GpuVector<typename Vector::field_type> gpuX(x.dim());
-        gpuX = typename Vector::field_type{0};
-        const bool converged = gpuSolver->solve(gpuX);
-        gpuX.copyToHost(x);
-        return converged;
+        return gpuSolver->solveResident(x);
     }
 #endif
 
