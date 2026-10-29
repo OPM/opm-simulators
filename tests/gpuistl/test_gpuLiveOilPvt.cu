@@ -55,6 +55,7 @@
 #include <concepts>
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -210,43 +211,86 @@ struct InvBAndMu {
     Evaluation<Scalar> mu;
 };
 
-// Functors evaluating one LiveOilPvt method. They are templated on the PVT type, so the
-// same functor is used for the CPU reference and in the kernel.
+//! \p value as an \c Eval: the plain value if \c Eval is a scalar type, otherwise an AD
+//! variable with index \p varIdx.
+template <class Eval, class Scalar>
+OPM_HOST_DEVICE Eval makeVariable(Scalar value, int varIdx)
+{
+    if constexpr (std::is_same_v<Eval, Scalar>) {
+        return value;
+    } else {
+        return Eval::createVariable(value, varIdx);
+    }
+}
 
+// Functors evaluating one LiveOilPvt method. They are templated on the PVT type, so the
+// same functor is used for the CPU reference and in the kernel. The functors templated
+// on Eval pass the state to the method as Eval, so the method is evaluated with plain
+// scalars or with AD variables (pressure: 0, Rs or So: 1, SoMax: 2), as the fluid
+// system does.
+
+template <class Eval>
 struct InverseFormationVolumeFactor {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.inverseFormationVolumeFactor(pt.regionIdx, temperature<Scalar>(), pt.p, pt.rs); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.inverseFormationVolumeFactor(pt.regionIdx, Eval(temperature<Scalar>()),
+                                                makeVariable<Eval>(pt.p, 0),
+                                                makeVariable<Eval>(pt.rs, 1));
+    }
 };
 
+template <class Eval>
 struct Viscosity {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.viscosity(pt.regionIdx, temperature<Scalar>(), pt.p, pt.rs); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.viscosity(pt.regionIdx, Eval(temperature<Scalar>()),
+                             makeVariable<Eval>(pt.p, 0),
+                             makeVariable<Eval>(pt.rs, 1));
+    }
 };
 
+template <class Eval>
 struct SaturatedInverseFormationVolumeFactor {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, temperature<Scalar>(), pt.p); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.saturatedInverseFormationVolumeFactor(pt.regionIdx, Eval(temperature<Scalar>()),
+                                                         makeVariable<Eval>(pt.p, 0));
+    }
 };
 
+template <class Eval>
 struct SaturatedViscosity {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.saturatedViscosity(pt.regionIdx, temperature<Scalar>(), pt.p); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.saturatedViscosity(pt.regionIdx, Eval(temperature<Scalar>()),
+                                      makeVariable<Eval>(pt.p, 0));
+    }
 };
 
+template <class Eval>
 struct SaturatedGasDissolutionFactor {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature<Scalar>(), pt.p); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.saturatedGasDissolutionFactor(pt.regionIdx, Eval(temperature<Scalar>()),
+                                                 makeVariable<Eval>(pt.p, 0));
+    }
 };
 
+template <class Eval>
 struct SaturatedGasDissolutionFactorVappars {
     template <class Pvt, class Scalar>
-    OPM_HOST_DEVICE Scalar operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
-    { return pvt.saturatedGasDissolutionFactor(pt.regionIdx, temperature<Scalar>(), pt.p, pt.so, pt.soMax); }
+    OPM_HOST_DEVICE Eval operator()(const Pvt& pvt, const TestPoint<Scalar>& pt) const
+    {
+        return pvt.saturatedGasDissolutionFactor(pt.regionIdx, Eval(temperature<Scalar>()),
+                                                 makeVariable<Eval>(pt.p, 0),
+                                                 makeVariable<Eval>(pt.so, 1),
+                                                 makeVariable<Eval>(pt.soMax, 2));
+    }
 };
 
 struct GasReferenceDensity {
@@ -339,9 +383,23 @@ bool isClose(const Evaluation<Scalar>& a, const Evaluation<Scalar>& b)
     return close;
 }
 
-template <std::floating_point Scalar>
-void checkResults(const std::vector<Scalar>& cpu,
-                  const std::vector<Scalar>& gpu,
+template <class Scalar>
+bool isClose(const InvBAndMu<Scalar>& a, const InvBAndMu<Scalar>& b)
+{
+    return isClose(a.invB, b.invB) && isClose(a.mu, b.mu);
+}
+
+template <class Scalar>
+std::ostream& operator<<(std::ostream& os, const InvBAndMu<Scalar>& result)
+{
+    return os << "(" << result.invB << ", " << result.mu << ")";
+}
+
+//! Checks that each GPU result is close to its CPU result. Result is a scalar, an
+//! Evaluation or InvBAndMu.
+template <class Result, class Scalar>
+void checkResults(const std::vector<Result>& cpu,
+                  const std::vector<Result>& gpu,
                   const std::vector<TestPoint<Scalar>>& points,
                   const std::string& name)
 {
@@ -350,24 +408,9 @@ void checkResults(const std::vector<Scalar>& cpu,
         BOOST_CHECK_MESSAGE(isClose(cpu[i], gpu[i]),
                             name << " at point " << i << " (region " << points[i].regionIdx
                                  << ", p = " << points[i].p << ", Rs = " << points[i].rs
-                                 << "): CPU = " << cpu[i] << ", GPU = " << gpu[i]);
-    }
-}
-
-template <class Scalar>
-void checkResults(const std::vector<InvBAndMu<Scalar>>& cpu,
-                  const std::vector<InvBAndMu<Scalar>>& gpu,
-                  const std::vector<TestPoint<Scalar>>& points,
-                  const std::string& name)
-{
-    BOOST_REQUIRE_EQUAL(cpu.size(), gpu.size());
-    for (std::size_t i = 0; i < cpu.size(); ++i) {
-        BOOST_CHECK_MESSAGE(isClose(cpu[i].invB, gpu[i].invB) && isClose(cpu[i].mu, gpu[i].mu),
-                            name << " at point " << i << " (region " << points[i].regionIdx
-                                 << ", p = " << points[i].p << ", Rs = " << points[i].rs
-                                 << ", Sg = " << points[i].sg << "): CPU = (" << cpu[i].invB
-                                 << ", " << cpu[i].mu << "), GPU = (" << gpu[i].invB
-                                 << ", " << gpu[i].mu << ")");
+                                 << ", Sg = " << points[i].sg << ", So = " << points[i].so
+                                 << ", SoMax = " << points[i].soMax << "): CPU = " << cpu[i]
+                                 << ", GPU = " << gpu[i]);
     }
 }
 
@@ -477,18 +520,35 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CopyToGpuRejectsUninitializedPvt, Scalar, Scalars)
     BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu(uninitialized), std::logic_error);
 }
 
+//! Compares the methods that depend on the state (pressure, Rs), with the state passed
+//! as Eval.
+template <class Eval, class Scalar>
+void compareStateDependentMethods(const Fixture<Scalar>& fx, const std::vector<TestPoint<Scalar>>& points)
+{
+    compareCpuAndGpu(InverseFormationVolumeFactor<Eval>{}, fx.cpuPvt, fx.gpuViewPvt, points, "inverseFormationVolumeFactor");
+    compareCpuAndGpu(Viscosity<Eval>{}, fx.cpuPvt, fx.gpuViewPvt, points, "viscosity");
+    compareCpuAndGpu(SaturatedInverseFormationVolumeFactor<Eval>{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedInverseFormationVolumeFactor");
+    compareCpuAndGpu(SaturatedViscosity<Eval>{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedViscosity");
+    compareCpuAndGpu(SaturatedGasDissolutionFactor<Eval>{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedGasDissolutionFactor");
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(ScalarMethodsMatchCpu, Scalar, Scalars)
 {
     const Fixture<Scalar> fx;
     const auto points = gridPoints<Scalar>();
-    compareCpuAndGpu(InverseFormationVolumeFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "inverseFormationVolumeFactor");
-    compareCpuAndGpu(Viscosity{}, fx.cpuPvt, fx.gpuViewPvt, points, "viscosity");
-    compareCpuAndGpu(SaturatedInverseFormationVolumeFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedInverseFormationVolumeFactor");
-    compareCpuAndGpu(SaturatedViscosity{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedViscosity");
-    compareCpuAndGpu(SaturatedGasDissolutionFactor{}, fx.cpuPvt, fx.gpuViewPvt, points, "saturatedGasDissolutionFactor");
+    compareStateDependentMethods<Scalar>(fx, points);
     compareCpuAndGpu(GasReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "gasReferenceDensity");
     compareCpuAndGpu(OilReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "oilReferenceDensity");
     compareCpuAndGpu(VapPar2{}, fx.cpuPvt, fx.gpuViewPvt, points, "vapPar2");
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(EvaluationMethodsMatchCpu, Scalar, Scalars)
+{
+    // The fluid system calls these methods with AD values, which go through other
+    // table functions than inverseFormationVolumeFactorAndViscosity(). Values and
+    // derivatives are compared.
+    const Fixture<Scalar> fx;
+    compareStateDependentMethods<Evaluation<Scalar>>(fx, gridPoints<Scalar>());
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(InverseFormationVolumeFactorAndViscosityMatchesCpu, Scalar, Scalars)
@@ -531,17 +591,22 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SaturatedGasDissolutionFactorWithVappars, Scalar, 
         // So < SoMax: the VAPPARS correction pow(So/SoMax, vapPar2) is applied
         points.push_back({regionIdx, p, 0, 0, 0.3, 0.8});
         points.push_back({regionIdx, p, 0, 0, 0.0005, 0.8}); // So below the cut-off eps
+        points.push_back({regionIdx, p, 0, 0, 0.5, 1.2}); // SoMax > 1 is clamped to 1
         // So >= SoMax, and SoMax <= 0.01: no correction
         points.push_back({regionIdx, p, 0, 0, 0.8, 0.8});
         points.push_back({regionIdx, p, 0, 0, 0.005, 0.009});
     }
 
-    // The correction is active for the first point of each region
+    // The correction is active for the first point of each region, and with AD values it
+    // depends on So, so the derivatives of pow() and max() are compared as well.
     const Scalar uncorrected = cpuPvt.saturatedGasDissolutionFactor(0, temperature<Scalar>(), p);
-    BOOST_CHECK_LT(SaturatedGasDissolutionFactorVappars{}(cpuPvt, points[0]), uncorrected);
+    BOOST_CHECK_LT(SaturatedGasDissolutionFactorVappars<Scalar>{}(cpuPvt, points[0]), uncorrected);
+    BOOST_CHECK_NE(SaturatedGasDissolutionFactorVappars<Evaluation<Scalar>>{}(cpuPvt, points[0]).derivative(1), 0);
 
-    compareCpuAndGpu(SaturatedGasDissolutionFactorVappars{}, cpuPvt, gpuViewPvt, points,
+    compareCpuAndGpu(SaturatedGasDissolutionFactorVappars<Scalar>{}, cpuPvt, gpuViewPvt, points,
                      "saturatedGasDissolutionFactor (VAPPARS)");
+    compareCpuAndGpu(SaturatedGasDissolutionFactorVappars<Evaluation<Scalar>>{}, cpuPvt, gpuViewPvt, points,
+                     "saturatedGasDissolutionFactor (VAPPARS, AD)");
     compareCpuAndGpu(VapPar2{}, cpuPvt, gpuViewPvt, points, "vapPar2 (VAPPARS)");
 }
 
@@ -556,14 +621,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RegionsAreIndexedCorrectly, Scalar, Scalars)
     const std::vector<TestPoint<Scalar>> points = {{0, p, rs, 0, 1, 1},
                                                    {1, p, rs, 0, 1, 1}};
 
-    const auto cpuInvB = evaluateOnCpu(InverseFormationVolumeFactor{}, fx.cpuPvt, points);
-    const auto cpuMu = evaluateOnCpu(Viscosity{}, fx.cpuPvt, points);
+    const auto cpuInvB = evaluateOnCpu(InverseFormationVolumeFactor<Scalar>{}, fx.cpuPvt, points);
+    const auto cpuMu = evaluateOnCpu(Viscosity<Scalar>{}, fx.cpuPvt, points);
     BOOST_CHECK_NE(cpuInvB[0], cpuInvB[1]);
     BOOST_CHECK_NE(cpuMu[0], cpuMu[1]);
 
-    checkResults(cpuInvB, evaluateOnGpu(InverseFormationVolumeFactor{}, fx.gpuViewPvt, points), points,
+    checkResults(cpuInvB, evaluateOnGpu(InverseFormationVolumeFactor<Scalar>{}, fx.gpuViewPvt, points), points,
                  "inverseFormationVolumeFactor (regions)");
-    checkResults(cpuMu, evaluateOnGpu(Viscosity{}, fx.gpuViewPvt, points), points,
+    checkResults(cpuMu, evaluateOnGpu(Viscosity<Scalar>{}, fx.gpuViewPvt, points), points,
                  "viscosity (regions)");
     compareCpuAndGpu(GasReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "gasReferenceDensity (regions)");
     compareCpuAndGpu(OilReferenceDensity{}, fx.cpuPvt, fx.gpuViewPvt, points, "oilReferenceDensity (regions)");
