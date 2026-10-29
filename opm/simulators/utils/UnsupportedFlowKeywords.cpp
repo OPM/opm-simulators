@@ -276,7 +276,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"HMWPIMLT", {true, std::nullopt}},
         {"HMxxxxxx", {true, std::nullopt}},
         {"HRFIN", {true, std::nullopt}},
-        {"HWELLS", {false, std::nullopt}},
         {"HWKRO", {true, std::nullopt}},
         {"HWKRORG", {true, std::nullopt}},
         {"HWKRORW", {true, std::nullopt}},
