@@ -96,8 +96,10 @@ template struct CheckCopySemantics<float>;
 
 // Two PVT regions with different numbers of Rs rows (3 and 5) and different numbers
 // of undersaturated points per row. Rows with only the saturated point are extended
-// by LiveOilPvt::extendPvtoTable_(). Region 1 has a row with four pressure points, so
-// that the bisection in the pressure direction is exercised.
+// by LiveOilPvt::extendPvtoTable_(). Region 1 has a row (Rs = 60) with seven pressure
+// points, and the row at Rs = 30 is extended from it to seven points as well. Seven
+// points are needed for the bisection in the pressure direction to iterate twice and
+// take both sides of the pivot comparison (with four points the loop is never entered).
 constexpr const char* deckString = R"(
 RUNSPEC
 DIMENS
@@ -138,7 +140,10 @@ PVTO
    60.0  110.0  1.21   1.10
          160.0  1.20   1.12
          210.0  1.19   1.15
-         260.0  1.18   1.19 /
+         260.0  1.18   1.19
+         310.0  1.17   1.23
+         360.0  1.16   1.27
+         410.0  1.15   1.31 /
    90.0  140.0  1.30   0.95 /
   120.0  170.0  1.40   0.85
          230.0  1.38   0.88 /
@@ -429,8 +434,12 @@ template <class Scalar>
 std::vector<TestPoint<Scalar>> gridPoints()
 {
     constexpr Scalar bar = 1e5;
+    // In region 1, 125-340 bar hit every interior segment of the seven-point rows at
+    // Rs = 30 and Rs = 60, 390 bar extrapolates beyond the Rs = 30 row and 450 bar beyond
+    // both.
     const std::vector<Scalar> pressures = {10 * bar, 45 * bar, 75 * bar, 100 * bar, 125 * bar,
-                                           180 * bar, 240 * bar, 320 * bar};
+                                           180 * bar, 240 * bar, 280 * bar, 320 * bar,
+                                           340 * bar, 390 * bar, 450 * bar};
     // None of the Rs values is on the saturated curve at any of the pressures, so that
     // the branch in inverseFormationVolumeFactorAndViscosity() is not decided by the
     // last bits of RsSat (switchPoints() tests the switch with suitable margins).
