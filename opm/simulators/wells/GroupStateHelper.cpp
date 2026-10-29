@@ -1328,7 +1328,11 @@ GroupStateHelper<Scalar, IndexTraits>::sumOverGasLiftWells_(const Group& group,
         }
         const auto& well_ecl = this->schedule_.getWell(well_name, this->report_step_);
         const auto& ws = this->wellState().well(well_index.value());
-        if (!well_ecl.isProducer() || ws.status == Well::Status::SHUT) {
+        // A stopped well keeps its ALQ.  The lift gas of the network is that of the open wells,
+        // as in NetworkPressureComputation; GGLIR counts all wells that are not shut.
+        if (!well_ecl.isProducer()
+            || (network ? ws.status != Well::Status::OPEN : ws.status == Well::Status::SHUT))
+        {
             continue;
         }
         const int vfp_table = well_ecl.productionControls(this->summary_state_).vfp_table_number;

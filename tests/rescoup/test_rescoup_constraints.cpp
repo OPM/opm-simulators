@@ -1215,4 +1215,25 @@ BOOST_AUTO_TEST_CASE(GasLiftRateIncludesSatelliteGroups)
     checkClose(gsh.sumWellGasLiftHeadroom(schedule.getGroup("FIELD", /*report_step=*/0)), 1.0);
 }
 
+//! \brief The lift gas of the network is that of the open wells
+//!
+//! As in the lift gas of the network without reservoir coupling (NetworkPressureComputation), a
+//! stopped well, which keeps its ALQ, is left out.  GGLIR counts it, as it counts any well that
+//! is not shut.
+BOOST_AUTO_TEST_CASE(NetworkGasLiftRateLeavesOutStoppedWells)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& group = schedule.getGroup("P", /*report_step=*/0);
+    const auto& gsh = groupStateHelper();
+    checkClose(gsh.sumWellGasLiftRates(group, /*network=*/true), 1.0);
+
+    wellModel().wellState().well("W1").status = Opm::Well::Status::STOP;
+    BOOST_CHECK_SMALL(gsh.sumWellGasLiftRates(group, /*network=*/true), 1e-12);
+    checkClose(gsh.sumWellGasLiftRates(group, /*network=*/false), 1.0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
