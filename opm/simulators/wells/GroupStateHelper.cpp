@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -54,6 +55,22 @@ bool hasInjectionTopupControl(const Group::GroupInjectionProperties& injection)
 {
     return (injection.injection_controls & static_cast<int>(Group::InjectionCMode::RESV)) != 0
         || (injection.injection_controls & static_cast<int>(Group::InjectionCMode::VREP)) != 0;
+}
+
+// The ALQ of a well in SI units.  Without a VFP table the unit of the ALQ is not known to
+// the input, so it is a rate in the input units, as for the summary vector GGLIR.
+template <class Scalar, class IndexTraits>
+Scalar wellALQInSI(const Schedule& schedule,
+                   const ScheduleState& sched_state,
+                   const SummaryState& summary_state,
+                   const Well& well,
+                   const SingleWellState<Scalar, IndexTraits>& ws)
+{
+    const int vfp_table = well.productionControls(summary_state).vfp_table_number;
+    if (!sched_state.vfpprod.has(vfp_table)) {
+        return schedule.getUnits().to_si(UnitSystem::measure::gas_surface_rate, ws.alq_state.get());
+    }
+    return ws.alq_state.get();
 }
 
 std::string phaseName(const Phase phase)
@@ -1215,10 +1232,11 @@ Scalar
 GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftRates(const Group& group,
                                                           const bool network) const
 {
+    const auto& sched_state = this->schedule_[this->report_step_];
     return this->sumOverGasLiftWells_(
         group, network,
-        [](const Well&, const SingleWellState<Scalar, IndexTraits>& ws) {
-            return ws.alq_state.get();
+        [this, &sched_state](const Well& well_ecl, const SingleWellState<Scalar, IndexTraits>& ws) {
+            return wellALQInSI(this->schedule_, sched_state, this->summary_state_, well_ecl, ws);
         },
         [this, network](const Group& master_group) {
             return this->reservoirCouplingMasterGroupGasLiftRate(master_group, network);
@@ -1248,7 +1266,8 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftHeadroom(const Group& group
                     max_rate = sched_state.vfpprod(vfp_table).getALQAxis().back();
                 }
             }
-            return std::max(max_rate - ws.alq_state.get(), Scalar{0});
+            return std::max(max_rate - wellALQInSI(this->schedule_, sched_state, this->summary_state_, well_ecl, ws),
+                            Scalar{0});
         },
         [this](const Group& master_group) -> Scalar {
 #ifdef RESERVOIR_COUPLING_ENABLED

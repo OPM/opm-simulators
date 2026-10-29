@@ -1,0 +1,77 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Reservoir coupling master deck for the unit tests in
+-- tests/rescoup/test_rescoup_constraints.cpp.  No slave is started: the test
+-- sets the data the slaves would have reported, and the master group to slave
+-- mapping that spawning the slaves would have set from GRUPMAST.  The deck must
+-- be read with --parsing-strictness=low, as for a coupled run.
+--
+-- Group hierarchy:
+--
+--         FIELD (ORAT = 1000, LRAT = 2000, WATER RATE = 1000, GAS RATE = 1000)
+--             /       |       |       \
+--           M1       M2       M3       M4
+--
+-- M1 and M2 are master groups of slave S1, M3 and M4 of slave S2.
+-- M1, M2, M3: available for higher-level control (item 8 = YES), with guide
+--             rates 100, 200, 300 for production and both injection phases.
+-- M4:         not available for higher-level control (item 8 = NO), on its
+--             own limits of 50.
+--
+-- The decks RC_MASTER_GROUP_EXCLUSION*.DATA differ only in the group hierarchy
+-- (GRUPTREE).  The rest is in include/rc_master_group_exclusion_model.inc (the
+-- one-cell model) and include/rc_master_group_exclusion_controls.inc (the
+-- slaves and the group controls).
+--
+RUNSPEC
+
+TITLE
+RC_MASTER_GROUP_EXCLUSION_GASLIFT
+
+INCLUDE
+  'include/rc_master_group_exclusion_model.inc' /
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'M1' 'FIELD' /
+ 'M2' 'FIELD' /
+ 'M3' 'FIELD' /
+ 'M4' 'FIELD' /
+ 'P' 'FIELD' /
+/
+
+-- A producer without a VFP table, under a group of the master itself.  Its ALQ is a
+-- lift gas rate in the input units (METRIC: Sm3/day).
+WELSPECS
+ 'W1' 'P' 1 1 2005 'OIL' /
+/
+
+COMPDAT
+ 'W1' 1 1 1 1 'OPEN' 2* 0.2 /
+/
+
+WCONPROD
+ 'W1' 'OPEN' 'ORAT' 100 4* 1* 1* 1* 86400 /
+/
+
+LIFTOPT
+ 12500.0 /
+
+-- Maximum lift gas rate twice the ALQ, so that the headroom is the ALQ
+WLIFTOPT
+ 'W1' 'YES' 172800 /
+/
+
+INCLUDE
+  'include/rc_master_group_exclusion_controls.inc' /
+
+TSTEP
+1 /
+
+END

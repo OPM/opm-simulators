@@ -109,6 +109,7 @@ initMasterSimulator(const std::string& filename)
 const std::string flat_deck{"RC_MASTER_GROUP_EXCLUSION.DATA"};
 const std::string nested_deck{"RC_MASTER_GROUP_EXCLUSION_NESTED.DATA"};
 const std::string sibling_deck{"RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA"};
+const std::string gaslift_deck{"RC_MASTER_GROUP_EXCLUSION_GASLIFT.DATA"};
 const std::string ancestor_deck{"RC_MASTER_GROUP_EXCLUSION_ANCESTOR.DATA"};
 const std::string efficiency_deck{"RC_MASTER_GROUP_EXCLUSION_EFFICIENCY.DATA"};
 const std::string water_gas_deck{"RC_MASTER_GROUP_EXCLUSION_WATER_GAS.DATA"};
@@ -1176,6 +1177,23 @@ BOOST_AUTO_TEST_CASE(ExcludedGroupsWithoutGuideRatesOrPotentials)
     checkRate(result.productionTarget("M1") + result.productionTarget("M2")
                   + result.productionTarget("M3") + result.productionTarget("M4"),
               1000.0);
+}
+
+//! \brief The lift gas rate of a well without a VFP table is in SI units
+//!
+//! The ALQ of such a well is a rate in the input units (the deck is METRIC: Sm3/day), as for
+//! the summary vector GGLIR, so 86400 Sm3/day is 1 Sm3/s.
+BOOST_AUTO_TEST_CASE(GasLiftRateOfAWellWithoutVfpTableIsInSiUnits)
+{
+    commonSetupForAllTests(gaslift_deck);
+
+    const auto& schedule = wellModel().schedule();
+    wellModel().wellState().updateWellsDefaultALQ(schedule, /*report_step=*/0, wellModel().summaryState());
+
+    const auto& group = schedule.getGroup("P", /*report_step=*/0);
+    checkClose(groupStateHelper().sumWellGasLiftRates(group), 1.0);
+    // The maximum of WLIFTOPT is twice the ALQ
+    checkClose(groupStateHelper().sumWellGasLiftHeadroom(group), 1.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
