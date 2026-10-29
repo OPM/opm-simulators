@@ -434,6 +434,10 @@ protected:
     Scalar min_alq_;
     Scalar orig_alq_;
     bool alq_limited_ = false;
+    // The initial rates and ALQ after the group rates were reconciled with the limited ALQ,
+    // see getInitialRatesWithLimit_(): the baseline of the group rates for both the increase and
+    // the decrease pass of the optimization.
+    std::optional<std::pair<LimitedRatesAndBhp, Scalar>> reconciled_initial_rates_;
 
     Scalar alpha_w_;
     Scalar alpha_g_;

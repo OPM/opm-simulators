@@ -760,6 +760,11 @@ std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 getInitialRatesWithLimit_()
 {
+    // Rebuilding the rates from the updated well potentials would not give the rates the group
+    // rates were reconciled with, if the rate was limited by a group.
+    if (this->reconciled_initial_rates_) {
+        return {this->reconciled_initial_rates_->first, this->reconciled_initial_rates_->second};
+    }
     std::optional<LimitedRatesAndBhp> limited_rates;
     Scalar initial_alq = this->orig_alq_;
     if (auto [rates, alq] = computeInitialWellRates_(); rates) {
@@ -769,11 +774,11 @@ getInitialRatesWithLimit_()
         auto temp_rates = getLimitedRatesAndBhp_(*rates);
         RatesAndBhp old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
+        initial_alq = alq;
         if (this->alq_limited_) {
             reconcileRatesAfterAlqLimit_(old_rates, *limited_rates);
+            this->reconciled_initial_rates_ = std::pair{*limited_rates, initial_alq};
         }
-
-        initial_alq = alq;
     }
     return {limited_rates, initial_alq};
 }
@@ -1405,6 +1410,7 @@ limitAlqToMax_()
     this->well_state_.well(this->well_name_).alq_state.set(this->max_alq_);
     this->orig_alq_ = this->max_alq_;
     this->alq_limited_ = true;
+    this->reconciled_initial_rates_.reset();
     // The group rates were initialized with the ALQ of the well state. The group
     // info is not initialized when the object is only used for a well test.
     if (!this->group_info_.hasWell(this->well_name_)) {

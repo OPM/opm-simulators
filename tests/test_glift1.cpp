@@ -736,3 +736,78 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithWellTarget)
     glift.initialOilRate();
     BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
 }
+
+// When the ALQ is limited to the maximum and a group target limits the rate of the well, the
+// reconciled rates are the baseline of both the increase and the decrease pass of the
+// optimization: the second pass must not rebuild unlimited rates from the updated potentials,
+// the cached group rates are those of the first.
+// GLIFT4.DATA is GLIFT1.DATA with an ORAT target on PLAT-A in report step 5.  The oil rate of the
+// group is above it, and the potential of B-1H is set below the rate it has with the maximum ALQ,
+// so the group does not allow the well to increase its rate.
+BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithGroupTarget)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT4.DATA", "test_glift4_maxalq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    simulator->setEpisodeIndex(5);
+    well_model.beginReportStep(5);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    const auto& comm = simulator->vanguard().grid().comm();
+    const double increment = schedule.glo(5).gaslift_increment();
+    const double high_alq = 25.0 * increment; // above the maximum ALQ of the synthetic well
+    typename Synthetic::GLiftSyncGroups sync_groups;
+
+    const auto oil_pos = well_state.phaseUsageInfo().canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    well_state.well("B-1H").alq_state.set(high_alq);
+    well_state.well("B-1H").well_potentials[oil_pos] = 0.01;
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                 deferred_logger, well_state, group_state, comm,
+                                 /*glift_debug=*/false};
+    group_info.initialize();
+    const double target = *group_info.oilTarget("PLAT-A");
+    const double initial_group_oil = group_info.oilRate("PLAT-A");
+    BOOST_REQUIRE_GT(initial_group_oil, target);
+    Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                     group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+    glift.setOrigAlq(high_alq);
+    glift.limitAlq();
+    const double first = glift.initialOilRate();
+    const double group_oil = group_info.oilRate("PLAT-A");
+    const double new_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    // the group limits the rate of the well in the first pass to the rate it had, which the group
+    // rate holds
+    BOOST_REQUIRE_LT(first, new_pot - 1e-6);
+    BOOST_CHECK_SMALL(first - 0.01, 1e-10);
+    BOOST_CHECK_SMALL(group_oil - initial_group_oil, 1e-10);
+    // the second pass starts from the same rates, and the group rates do not change
+    const double second = glift.initialOilRate();
+    BOOST_CHECK_SMALL(second - first, 1e-10);
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+}
