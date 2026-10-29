@@ -220,6 +220,7 @@ void
 CompWell<TypeTag>::
 calculateSingleConnectionRate(const Simulator& simulator,
                               const int con_idx,
+                              const bool allow_crossflow,
                               std::vector<EvalWell>& con_rates) const
 {
     // The components travel in the oil and gas phases; water is pure and gets
@@ -241,6 +242,9 @@ calculateSingleConnectionRate(const Simulator& simulator,
     const EvalWell drawdown = cell_pressure - connection_pressure;
 
     if (drawdown > 0.) { // producing connection
+        if (!allow_crossflow && this->well_ecl_.isInjector()) {
+            return;
+        }
         std::vector<EvalWell> cq_v(num_hydrocarbon_phases);
         for (unsigned phase_idx = 0; phase_idx < num_hydrocarbon_phases; ++phase_idx) {
             cq_v[phase_idx] = - mob[phase_idx] * tw * drawdown;
@@ -258,6 +262,9 @@ calculateSingleConnectionRate(const Simulator& simulator,
             con_rates[water_comp_idx] += cq_w * density;
         }
     } else { // injecting connection
+        if (!allow_crossflow && this->well_ecl_.isProducer()) {
+            return;
+        }
         // the injected fluid displaces every mobile phase in the cell
         EvalWell total_mobility = 0.;
         for (unsigned phase_idx = 0; phase_idx < num_phases; ++phase_idx) {
@@ -271,6 +278,27 @@ calculateSingleConnectionRate(const Simulator& simulator,
             con_rates[water_comp_idx] = cq_v * fluid_density_ * water_mass_fraction_;
         }
     }
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
+allDrawDownWrongDirection_(const Simulator& simulator) const
+{
+    const Scalar bhp = getValue(this->primary_variables_.getBhp());
+    const bool producer = this->well_ecl_.isProducer();
+    for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
+        const auto& int_quantities
+            = simulator.problem().model().cachedIntensiveQuantities(this->well_cells_[con_idx], 0);
+        assert(int_quantities);
+        const auto& fluid_state = int_quantities->fluidState();
+        const Scalar drawdown = getValue(fluid_state.pressure(FluidSystem::oilPhaseIdx))
+            - bhp - this->connection_pressure_diffs_[con_idx];
+        if (producer ? drawdown > 0. : drawdown < 0.) {
+            return false;
+        }
+    }
+    return true;
 }
 
 template <typename TypeTag>
@@ -315,12 +343,17 @@ assembleWellEq(const Simulator& simulator,
 
     assembleSourceTerm(dt);
 
+    // Without crossflow, a connection flowing against the direction of the
+    // well is closed, unless all of them would be, which leaves the well
+    // matrix singular.
+    const bool allow_crossflow = this->well_ecl_.getAllowCrossFlow()
+        || allDrawDownWrongDirection_(simulator);
     for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
         // one equation per hydrocarbon component plus one for water when enabled;
         // the water slot in the reservoir rate vector has the same position
         // (conti0EqIdx + numComponents) as the water conservation row here
         std::vector<EvalWell> connection_rates(PrimaryVariables::numWellConservationEq, 0.);
-        calculateSingleConnectionRate(simulator, con_idx, connection_rates);
+        calculateSingleConnectionRate(simulator, con_idx, allow_crossflow, connection_rates);
         auto& con_rates = this->connectionRates_[con_idx];
         for (unsigned comp_idx = 0; comp_idx < PrimaryVariables::numWellConservationEq; ++comp_idx) {
             con_rates[comp_idx] = PrimaryVariables::restrictEval(connection_rates[comp_idx]);

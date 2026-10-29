@@ -191,7 +191,12 @@ private:
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,
                                        const int con_idx,
+                                       const bool allow_crossflow,
                                        std::vector<EvalWell>& con_rates) const;
+
+    // whether no connection would flow in the direction of the well at the
+    // current BHP
+    bool allDrawDownWrongDirection_(const Simulator& simulator) const;
 
     void updateWellboreContents();
 
