@@ -138,6 +138,13 @@ protected:
                                std::vector<TracerVector>& x,
                                std::vector<TracerVector>& b);
 
+    /*!
+     * \brief Solve the tracer equations cell by cell in the order of the flow
+     */
+    bool linearSolveReorder_(const TracerMatrix& M,
+                             std::vector<TracerVector>& x,
+                             std::vector<TracerVector>& b);
+
     Scalar currentConcentration_(const Well& eclWell,
                                  const std::string& trName,
                                  const SummaryState& summaryState) const;
@@ -157,6 +164,7 @@ protected:
     std::vector<bool> enableSolTracers_;
     std::vector<TracerVector> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
+    bool useReorderSolver_ = false;
     std::vector<TracerVectorSingle> freeTracerConcentration_;
     std::vector<TracerVectorSingle> solTracerConcentration_;
 

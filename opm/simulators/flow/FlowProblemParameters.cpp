@@ -86,6 +86,12 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::ConserveInnerEnergyThermal>
         ("Conserve inner energy and not enthalpy "
          "even if THERMAL is used.");
+    Parameters::Register<Parameters::TracerSolver>
+        ("Linear solver for the tracer equations: 'istl' (Dune-ISTL solver) "
+         "or 'reorder' (solve cell-by-cell in the order of the flow)");
+    Parameters::Register<Parameters::TracerReorderRetrySteps>
+        ("Number of time steps that use the ISTL solver in tracer after the reorder solver "
+         "failed for the tracers of a phase, before the reorder solver is tried again");
     Parameters::Register<Parameters::EnableStateRollback>
         ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps");
 

@@ -50,6 +50,8 @@
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/utils/UpwindTransportSolver.hpp>
+#include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <fmt/format.h>
 
@@ -501,6 +503,44 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
         // return the result of the solver
         return converged;
     }
+}
+
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
+bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
+linearSolveReorder_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
+{
+    OPM_TIMEBLOCK(tracerSolveReorder);
+    for (auto& v : x) {
+        v = 0.0;
+    }
+
+    // A fallback to the ISTL solver communicates, so all ranks must agree on the result
+    bool solved = true;
+    try {
+        const auto statistics = solveReordered(M, b, x);
+        OpmLog::debug(fmt::format("Tracer reorder solver: {} components, {} loops, "
+                                  "largest component {} cells, {} Gauss-Seidel sweeps",
+                                  statistics.numComponents,
+                                  statistics.numLoops,
+                                  statistics.largestComponent,
+                                  statistics.maxIterations));
+    }
+    catch (const std::runtime_error& e) {
+        OpmLog::warning(fmt::format("Tracer reorder solver failed: {}", e.what()));
+        solved = false;
+    }
+    const auto& comm = gridView_.comm();
+    if (comm.min(static_cast<int>(solved)) == 0) {
+        return false;
+    }
+
+    // The overlap cells get the solution of the rank that owns them
+    if (comm.size() > 1) {
+        auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(x, gridView_);
+        gridView_.communicate(handle, Dune::InteriorBorder_All_Interface,
+                              Dune::ForwardCommunication);
+    }
+    return true;
 }
 
 } // namespace Opm
