@@ -583,18 +583,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     continue;
                 }
 
-                // Choose how the face center and the area normal are computed: the CpGrid has its own
-                // version, other grids that provide faceCenterEcl() and faceAreaNormalEcl() get the same
-                // definitions, and the remaining grids use the geometry of the face.
-                if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
-                    computeFaceProperties(intersection, inside, outside, faceAreaNormal, std::true_type{});
-                }
-                else if constexpr (requires(const Grid& g) { g.faceAreaNormalEcl(0); }) {
-                    computeFaceProperties(intersection, inside, outside, faceAreaNormal, CpFaceGeometry{});
-                }
-                else {
-                    computeFaceProperties(intersection, inside, outside, faceAreaNormal, std::false_type{});
-                }
+                typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
+                computeFaceProperties(intersection,
+                                      inside,
+                                      outside,
+                                      faceAreaNormal,
+                                      isCpGrid);
 
                 Scalar trans = computeHalfMean(computeHalfTrans_, permeability_);
 
@@ -1158,35 +1152,28 @@ computeFaceProperties(const Intersection& intersection,
                       DimVector& faceAreaNormal,
                       /*isCpGrid=*/std::false_type) const
 {
-    // default implementation for DUNE grids
-    const auto& geometry = intersection.geometry();
-    outside.faceCenter = inside.faceCenter = geometry.center();
+    if constexpr (requires(const Grid& g) { g.faceAreaNormalEcl(0); }) {
+        // The grid gives the face center and the area normal as the CpGrid defines them: the face center is the
+        // center of the side of each cell, and the area normal is computed from the nodes of the face. For faces
+        // that are not plane or at faults, this is different from the geometry of the face, and gives the
+        // transmissibilities of the CpGrid.
+        inside.faceCenter = grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx);
+        outside.faceCenter = grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx);
 
-    faceAreaNormal = intersection.centerUnitOuterNormal();
-    faceAreaNormal *= geometry.volume();
-}
-
-template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-template<class Intersection>
-void
-Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-computeFaceProperties(const Intersection& intersection,
-                      FaceInfo& inside,
-                      FaceInfo& outside,
-                      DimVector& faceAreaNormal,
-                      CpFaceGeometry) const
-{
-    // The face center is the center of the side of each cell, and the area normal is computed from the
-    // nodes of the face, as the CpGrid does it. For faces that are not plane or at faults, this is
-    // different from the geometry of the face, and gives the transmissibilities of the CpGrid.
-    inside.faceCenter = grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx);
-    outside.faceCenter = grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx);
-
-    if constexpr (requires { intersection.id(); }) {
-        faceAreaNormal = grid_.faceAreaNormalEcl(intersection.id());
+        if constexpr (requires { intersection.id(); }) {
+            faceAreaNormal = grid_.faceAreaNormalEcl(intersection.id());
+        }
+        else {
+            faceAreaNormal = grid_.faceAreaNormalEcl(intersection.impl().id());
+        }
     }
     else {
-        faceAreaNormal = grid_.faceAreaNormalEcl(intersection.impl().id());
+        // default implementation for DUNE grids
+        const auto& geometry = intersection.geometry();
+        outside.faceCenter = inside.faceCenter = geometry.center();
+
+        faceAreaNormal = intersection.centerUnitOuterNormal();
+        faceAreaNormal *= geometry.volume();
     }
 }
 
