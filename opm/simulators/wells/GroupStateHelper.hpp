@@ -206,6 +206,9 @@ public:
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
+    /// @param assume_group_released If true, 'name' is a group on individual control without
+    ///        group controlled wells, and its guide rate share is computed as if it was released
+    ///        to FLD with all its wells under group control.
     std::pair<bool, Scalar> checkGroupConstraintsInj(const std::string& name,
                                                      const std::string& parent,
                                                      const Group& group,
@@ -213,7 +216,8 @@ public:
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
                                                      const std::vector<Scalar>& resv_coeff,
-                                                     const bool check_guide_rate) const;
+                                                     const bool check_guide_rate,
+                                                     const bool assume_group_released = false) const;
 
     std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,

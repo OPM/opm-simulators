@@ -41,6 +41,9 @@ class FractionCalculator
 public:
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
+    //! \param released_group Optional group, on individual control without group controlled
+    //!        wells, to be treated as if released to FLD with all its wells under group control,
+    //!        i.e. the group participates in the guide rate distribution of its ancestors.
     FractionCalculator(const Schedule& schedule,
                        const GroupStateHelperType& groupStateHelper,
                        const SummaryState& summary_state,
@@ -48,7 +51,8 @@ public:
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
                        const bool is_producer,
-                       const Phase injection_phase);
+                       const Phase injection_phase,
+                       const std::string& released_group = "");
     Scalar fraction(const std::string& name,
                     const std::string& control_group_name,
                     const bool always_include_this);
@@ -68,6 +72,10 @@ private:
                         const bool always_use_potentials);
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
+    bool hasFieldOrNoneControl(const std::string& group_name) const;
+    bool isReleasedGroupMember(const std::string& name);
+    bool isReleasedGroupOrAncestor(const std::string& group_name);
+    int releasedGroupControlledWells(const std::string& group_name);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const GroupStateHelperType& groupStateHelper() const { return groupStateHelper_; }
 
@@ -79,6 +87,7 @@ private:
     GuideRateModel::Target target_;
     bool is_producer_;
     Phase injection_phase_;
+    std::string released_group_;
 };
 
 } // namespace Opm::GroupStateHelpers
