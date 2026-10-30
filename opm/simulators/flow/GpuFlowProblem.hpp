@@ -39,6 +39,7 @@
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 #include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -210,11 +211,8 @@ public:
      *
      * Only enabled when this problem itself uses CPU vector storage.
      */
-    template <class CpuProblem,
-              class StS = Storage<Scalar>,
-              std::enable_if_t<
-                  std::is_same_v<StS, ::Opm::VectorWithDefaultAllocator<Scalar>>,
-                  int> = 0>
+    template <class CpuProblem>
+        requires std::same_as<Storage<Scalar>, ::Opm::VectorWithDefaultAllocator<Scalar>>
     explicit GpuFlowProblem(const CpuProblem& cpu)
         : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
     {
@@ -265,11 +263,8 @@ public:
      *
      * Only enabled when this problem itself uses \c GpuBuffer storage.
      */
-    template <class CpuProblem,
-              class StS = Storage<Scalar>,
-              std::enable_if_t<
-                  std::is_same_v<StS, ::Opm::gpuistl::GpuBuffer<Scalar>>,
-                  int> = 0>
+    template <class CpuProblem>
+        requires std::same_as<Storage<Scalar>, ::Opm::gpuistl::GpuBuffer<Scalar>>
     explicit GpuFlowProblem(const CpuProblem& cpu)
         : materialLawManager_(*cpu.materialLawManager(), cpu.model().numGridDof())
         , porosity_(extractRockField(cpu, [](const CpuProblem& p, unsigned u) {
