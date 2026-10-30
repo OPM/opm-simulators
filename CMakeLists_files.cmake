@@ -1591,6 +1591,7 @@ if(HYPRE_FOUND)
     opm/simulators/linalg/hypreinterface/HypreErrorHandling.hpp
     opm/simulators/linalg/hypreinterface/HypreCpuTransfers.hpp
     opm/simulators/linalg/hypreinterface/HypreInterface.hpp
+    opm/simulators/linalg/hypreinterface/HypreNumericRap.hpp
     opm/simulators/linalg/hypreinterface/HypreSetup.hpp
     opm/simulators/linalg/hypreinterface/HypreUtils.hpp
   )
