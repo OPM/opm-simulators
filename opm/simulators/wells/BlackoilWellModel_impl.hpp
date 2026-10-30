@@ -30,6 +30,7 @@
 #endif
 
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/Actions.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
@@ -2237,33 +2238,51 @@ namespace Opm {
         std::vector< Scalar > B_avg(numConservationQuantities(), Scalar() );
         const auto& grid = simulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
-        ElementContext elemCtx(simulator_);
+        // Accumulate into thread-local storage before the existing MPI sum.
+        std::vector<std::vector<Scalar>> threadSums(
+            ThreadManager::maxThreads(),
+            std::vector<Scalar>(B_avg.size(), Scalar()));
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+        simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for (const auto& chunk : chunks) {
+                ElementContext elemCtx(simulator_);
+                auto& localSum = threadSums[ThreadManager::threadId()];
+                for (const auto& elem : chunk) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& fs = intQuants.fluidState();
 
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
-            {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
+                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+                    {
+                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                            continue;
+                        }
+
+                        const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                        auto& B  = localSum[ compIdx ];
+
+                        B += 1 / fs.invB(phaseIdx).value();
+                    }
+                    if constexpr (has_solvent_) {
+                        auto& B  = localSum[solventSaturationIdx];
+                        B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
+                    }
                 }
-
-                const unsigned compIdx = FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
-                auto& B  = B_avg[ compIdx ];
-
-                B += 1 / fs.invB(phaseIdx).value();
             }
-            if constexpr (has_solvent_) {
-                auto& B  = B_avg[solventSaturationIdx];
-                B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
+        });
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ", grid.comm())
+
+        for (const auto& localSum : threadSums) {
+            for (std::size_t i = 0; i < B_avg.size(); ++i) {
+                B_avg[i] += localSum[i];
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ", grid.comm())
 
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
