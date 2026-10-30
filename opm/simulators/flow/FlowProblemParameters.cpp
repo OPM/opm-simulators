@@ -94,6 +94,13 @@ void registerFlowProblemParameters()
          "failed for the tracers of a phase, before the reorder solver is tried again");
     Parameters::Register<Parameters::EnableStateRollback>
         ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps");
+    Parameters::Register<Parameters::ThresholdPressureDefaultPhases>
+        ("Phases contributing to defaulted threshold pressures, which are computed as the "
+         "maximum phase potential difference between connected cells of two equilibration "
+         "regions in the initial solution. "
+         "'mobile' (default): phases with non-zero mobility in the upstream cell. "
+         "'above-connate': phases whose saturation in the upstream cell exceeds the connate "
+         "saturation of the cell's unscaled saturation function tables (oil: exceeds zero).");
 
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
