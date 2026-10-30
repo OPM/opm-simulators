@@ -520,6 +520,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_invert.cpp
   tests/test_istlsolver_quasiimpes.cpp
   tests/test_keyword_validator.cpp
+  tests/test_LevelZeroRanks.cpp
   tests/test_LgrBlockData.cpp
   tests/test_LgrTransIndex.cpp
   tests/test_linearleastsquares.cpp
