@@ -654,6 +654,16 @@ macro(opm-simulators_tests_hook)
   endif()
 
   if(BUILD_FLOW)
+    # Expected values for "flow --build-info"; CMake regexes have no {n} quantifier.
+    string(REPLACE "." "\\." _flow_version "${${project}_LABEL}")
+    set(_digits "[0-9][0-9]")
+    set(FLOW_BUILD_INFO_REGEX
+      "version=${_flow_version}\n"
+      "hash=.+\n"
+      "build_time=[0-9][0-9][0-9][0-9]-${_digits}-${_digits} at ${_digits}:${_digits}:${_digits} hrs\n"
+      "build_type=$<CONFIG>\n"
+      "mpi=.+")
+
     add_test(
       NAME
         flow__version
@@ -663,7 +673,18 @@ macro(opm-simulators_tests_hook)
     set_tests_properties(flow__version
       PROPERTIES
       PASS_REGULAR_EXPRESSION
-        ${${project}_LABEL}
+        ${_flow_version}
+    )
+    add_test(
+      NAME
+        flow__build_info
+      COMMAND
+        $<TARGET_FILE:flow> --build-info
+    )
+    set_tests_properties(flow__build_info
+      PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        "${FLOW_BUILD_INFO_REGEX}"
     )
   endif()
 endmacro()
@@ -746,6 +767,8 @@ macro(opm-simulators_targets_hook)
     SOURCES
       opm/simulators/utils/moduleVersion.cpp
   )
+  # The build configuration (moduleBuildType)
+  target_compile_definitions(moduleVersion PRIVATE OPM_BUILD_TYPE="$<CONFIG>")
 
   # Strictly we only depend on the update-version target,
   # but this is not exposed in a super-build.
