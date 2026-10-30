@@ -728,7 +728,7 @@ namespace Opm {
             well->updateConnectionDFactor(simulator_, this->wellState().well(well->indexOfWell()));
         }
 
-        if (Indices::waterEnabled) {
+        if (Indices::waterIsActive()) {
             if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
                 // Split injector connection flow between matrix and fracture
                 // for wells with registered fracture contributions.
@@ -853,8 +853,8 @@ namespace Opm {
     {
         const auto pressIx = []()
         {
-            if (Indices::oilEnabled)   { return FluidSystem::oilPhaseIdx;   }
-            if (Indices::waterEnabled) { return FluidSystem::waterPhaseIdx; }
+            if (Indices::oilIsActive())   { return FluidSystem::oilPhaseIdx;   }
+            if (Indices::waterIsActive()) { return FluidSystem::waterPhaseIdx; }
 
             return FluidSystem::gasPhaseIdx;
         }();
@@ -1685,7 +1685,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             well->addWellPressureEquations(jacobian,
                                            weights,
-                                           pressureVarIndex,
+                                           activePressureVarIndex(),
                                            use_well_weights,
                                            contract_d_diagonal,
                                            this->wellState());

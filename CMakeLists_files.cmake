@@ -834,6 +834,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilbioeffectsparams.hpp
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
+  opm/models/blackoil/blackoildynamicphases.hh
+  opm/models/blackoil/blackoildyntwophaseindices.hh
   opm/models/blackoil/blackoilbrineparams.hpp
   opm/models/blackoil/blackoilconvectivemixingmodule.hh
   opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp
@@ -1159,6 +1161,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/TTagFlowProblemTPFA.hpp
   opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
+  opm/simulators/flow/TTagFlowProblemTwoPhase.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
   opm/simulators/flow/TpsaContainer.hpp
   opm/simulators/flow/TracerContainer.hpp

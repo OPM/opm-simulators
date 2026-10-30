@@ -73,7 +73,7 @@ protected:
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
 
     static constexpr bool compositionSwitchEnabled =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
 
 public:
     explicit BlackOilHybridNewton(Simulator& simulator)

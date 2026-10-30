@@ -119,13 +119,8 @@ class BlackOilIntensiveQuantities
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    static constexpr unsigned compositionSwitchIdx = Indices::compositionSwitchIdx;
-
-    static constexpr bool compositionSwitchEnabled =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
-    static constexpr bool waterEnabled = Indices::waterEnabled;
-    static constexpr bool gasEnabled = Indices::gasEnabled;
-    static constexpr bool oilEnabled = Indices::oilEnabled;
+    // true if the fluid state stores Rs/Rv, i.e. if a composition switch can exist
+    static constexpr bool compositionSwitchEnabled = Indices::hasCompositionSwitch;
 
     using Toolbox = MathToolbox<Evaluation>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
@@ -260,11 +255,11 @@ public:
     {
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
-        if constexpr (waterEnabled) {
+        if (Indices::waterIsActive()) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
-                assert(Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max());
-                if constexpr (Indices::waterSwitchIdx != std::numeric_limits<unsigned>::max()) {
-                    Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                assert(Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max());
+                if (Indices::activeWaterSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                    Sw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 }
             }
             else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw ||
@@ -276,18 +271,18 @@ public:
             } // else i.e. for MeaningWater() = Rvw, Sw is still 0.0;
         }
         Evaluation Sg = 0.0;
-        if constexpr (gasEnabled) {
+        if (Indices::gasIsActive()) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
-                assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
-                if constexpr (compositionSwitchEnabled) {
-                    Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                assert(Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max());
+                if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                    Sg = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
                 }
             }
             else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 Sg = 1.0 - Sw;
             }
             else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Disabled) {
-                if constexpr (waterEnabled) {
+                if (Indices::waterIsActive()) {
                     Sg = 1.0 - Sw; // two phase water + gas
                 } else {
                     // one phase case
@@ -304,10 +299,10 @@ public:
         if constexpr (enableSolvent) {
             if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                 if (getFluidSystem().phaseIsActive(oilPhaseIdx)) {
-                    So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                    So -= priVars.makeEvaluation(Indices::activeSolventSaturationIdx(), timeIdx);
                 }
                 else if (getFluidSystem().phaseIsActive(gasPhaseIdx)) {
-                    Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                    Sg -= priVars.makeEvaluation(Indices::activeSolventSaturationIdx(), timeIdx);
                 }
             }
         }
@@ -384,7 +379,7 @@ public:
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg) {
-            const Evaluation& pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& pg = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, pg + (pC[phaseIdx] - pC[gasPhaseIdx]));
@@ -392,7 +387,7 @@ public:
             }
         }
         else if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pw) {
-            const Evaluation& pw = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& pw = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, pw + (pC[phaseIdx] - pC[waterPhaseIdx]));
@@ -401,7 +396,7 @@ public:
         }
         else {
             assert(getFluidSystem().phaseIsActive(oilPhaseIdx));
-            const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            const Evaluation& po = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (getFluidSystem().phaseIsActive(phaseIdx)) {
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
@@ -445,54 +440,56 @@ public:
         // and oil phase compositions
 
         if constexpr (compositionSwitchEnabled) {
-            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-                fluidState_.setRs(Rs);
-            }
-            else {
-                if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
-                    Evaluation RsSat;
-                    if constexpr (enableExtbo) {
-                        RsSat = asImp_().rs();
-                    } else {
-                        RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                            oilPhaseIdx,
-                                                                            pvtRegionIdx,
-                                                                            SoMax);
-                    }
-                    fluidState_.setRs(min(RsMax, RsSat));
+            if (Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max()) {
+                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                    const auto& Rs = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
+                    fluidState_.setRs(Rs);
                 }
                 else {
-                    fluidState_.setRs(0.0);
+                    if (getFluidSystem().enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
+                        Evaluation RsSat;
+                        if constexpr (enableExtbo) {
+                            RsSat = asImp_().rs();
+                        } else {
+                            RsSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                                oilPhaseIdx,
+                                                                                pvtRegionIdx,
+                                                                                SoMax);
+                        }
+                        fluidState_.setRs(min(RsMax, RsSat));
+                    }
+                    else {
+                        fluidState_.setRs(0.0);
+                    }
                 }
-            }
 
-            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-                fluidState_.setRv(Rv);
-            }
-            else {
-                if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
-                    Evaluation RvSat;
-                    if constexpr (enableExtbo) {
-                        RvSat = asImp_().rv();
-                    } else {
-                        RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
-                                                                            gasPhaseIdx,
-                                                                            pvtRegionIdx,
-                                                                            SoMax);
-                    }
-                    fluidState_.setRv(min(RvMax, RvSat));
+                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                    const auto& Rv = priVars.makeEvaluation(Indices::activeCompositionSwitchIdx(), timeIdx);
+                    fluidState_.setRv(Rv);
                 }
                 else {
-                    fluidState_.setRv(0.0);
+                    if (getFluidSystem().enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
+                        Evaluation RvSat;
+                        if constexpr (enableExtbo) {
+                            RvSat = asImp_().rv();
+                        } else {
+                            RvSat = getFluidSystem().saturatedDissolutionFactor(fluidState_,
+                                                                                gasPhaseIdx,
+                                                                                pvtRegionIdx,
+                                                                                SoMax);
+                        }
+                        fluidState_.setRv(min(RvMax, RvSat));
+                    }
+                    else {
+                        fluidState_.setRv(0.0);
+                    }
                 }
             }
         }
 
         if constexpr (enableVapwat) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
-                const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                const auto& Rvw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 fluidState_.setRvw(Rvw);
             }
             else {
@@ -507,7 +504,7 @@ public:
 
         if constexpr (enableDisgasInWater) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
-                const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                const auto& Rsw = priVars.makeEvaluation(Indices::activeWaterSwitchIdx(), timeIdx);
                 fluidState_.setRsw(Rsw);
             }
             else {

@@ -102,9 +102,6 @@ public:
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static constexpr int dimensionworld = Grid::dimensionworld;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    static constexpr bool waterEnabled = Indices::waterEnabled;
-    static constexpr bool gasEnabled = Indices::gasEnabled;
-    static constexpr bool oilEnabled = Indices::oilEnabled;
 private:
     using Element = typename GridView::template Codim<0>::Entity;
 
@@ -195,17 +192,17 @@ public:
             }
         }
         if(phases.active(Phase::WATER)){
-            if(waterEnabled == false){
+            if(Indices::waterIsActive() == false){
                 throw std::runtime_error("Input specifies water while simulator has it disabled");
             }
         }
         if(phases.active(Phase::GAS)){
-            if(gasEnabled == false){
+            if(Indices::gasIsActive() == false){
                 throw std::runtime_error("Input specifies gas while simulator has it disabled");
             }
         }
         if(phases.active(Phase::OIL)){
-            if(oilEnabled == false){
+            if(Indices::oilIsActive() == false){
                 throw std::runtime_error("Input specifies oil while simulator has it disabled");
             }
         }

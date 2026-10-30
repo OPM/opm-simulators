@@ -119,7 +119,7 @@ protected:
     using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
     using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-    constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
+    static constexpr std::size_t activePressureIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
 
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;

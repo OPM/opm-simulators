@@ -59,17 +59,17 @@ public:
     // (*) Temperature is only present when energy is enabled;
     //     SPres shifts by one when Temperature is present.
 
-    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
-    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
+    static constexpr bool has_wfrac_variable() { return Indices::waterIsActive() && Indices::oilIsActive(); }
+    static constexpr bool has_gfrac_variable() { return Indices::gasIsActive() && Indices::numPhases > 1; }
     static constexpr bool enable_energy = Indices::enableFullyImplicitThermal;
 
     static constexpr int WQTotal = 0;
-    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
-    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
+    static constexpr int WFrac() { return has_wfrac_variable() ? 1 : -1000; }
+    static constexpr int GFrac() { return has_gfrac_variable() ? has_wfrac_variable() + 1 : -1000; }
     // Temperature comes before SPres: it is a conservation equation consistent
     // with reservoir equations, while SPres is well-specific.
-    static constexpr int Temperature = enable_energy ? has_wfrac_variable + has_gfrac_variable + 1 : -1000;
-    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1 + enable_energy;
+    static constexpr int Temperature() { return enable_energy ? has_wfrac_variable() + has_gfrac_variable() + 1 : -1000; }
+    static constexpr int SPres() { return has_wfrac_variable() + has_gfrac_variable() + 1 + enable_energy; }
 
     //  the number of well equations  TODO: it should have a more general strategy for it
     static constexpr int numWellEq = Indices::numPhases + 1 + enable_energy;

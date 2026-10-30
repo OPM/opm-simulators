@@ -139,7 +139,7 @@ class OutputBlackOilModule : public GenericOutputModule<GetPropType<TypeTag, Pro
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     static constexpr bool enableDissolvedGas =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
 
     template<class VectorType>
     static Scalar value_or_zero(int idx, const VectorType& v)
@@ -695,11 +695,11 @@ public:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                if (Indices::oilEnabled)
+                if (Indices::oilIsActive())
                     fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                else if (Indices::gasEnabled)
+                else if (Indices::gasIsActive())
                     fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                else if (Indices::waterEnabled)
+                else if (Indices::waterIsActive())
                     //single (water) phase
                     fs.setPressure(phaseIdx, pressure);
             }
@@ -1912,11 +1912,11 @@ private:
                    &flowsC = this->flowsC_,
                    &vanguard = this->simulator_.vanguard()](const Context& ectx)
                   {
-                      const auto gas_idx = Indices::gasEnabled ?
+                      const auto gas_idx = Indices::gasIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(gasCompIdx) : -1;
-                      const auto oil_idx = Indices::oilEnabled ?
+                      const auto oil_idx = Indices::oilIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(oilCompIdx) : -1;
-                      const auto water_idx = Indices::waterEnabled ?
+                      const auto water_idx = Indices::waterIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& flowsInfos = flowsInf[ectx.globalDofIdx];
                       if (!flowsC.blockFlows().empty()) {
@@ -1924,7 +1924,7 @@ private:
                           const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
                           if (std::ranges::binary_search(blockIdxs, cartesianIdx)) {
                               const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
-                              const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
+                              const auto compEnabled = std::array{ Indices::gasIsActive(), Indices::oilIsActive(), Indices::waterIsActive() };
                               for (const auto& flowsInfo : flowsInfos) {
                                   if (flowsInfo.faceId < 0) {
                                       continue;
@@ -1959,11 +1959,11 @@ private:
             Entry{[&floresInf = this->simulator_.problem().model().linearizer().getFloresInfo(),
                    &flowsC = this->flowsC_](const Context& ectx)
                   {
-                      const auto gas_idx = Indices::gasEnabled ?
+                      const auto gas_idx = Indices::gasIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(gasCompIdx) : -1;
-                      const auto oil_idx = Indices::oilEnabled ?
+                      const auto oil_idx = Indices::oilIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(oilCompIdx) : -1;
-                      const auto water_idx = Indices::waterEnabled ?
+                      const auto water_idx = Indices::waterIsActive() ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& floresInfos = floresInf[ectx.globalDofIdx];
                       for (const auto& floresInfo : floresInfos) {
@@ -1985,7 +1985,7 @@ private:
                     const unsigned cartesianIdx = vanguard.cartesianIndex(ectx.globalDofIdx);
                     if (std::ranges::binary_search(blockIdxs, cartesianIdx)) {
                         const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
-                        const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
+                        const auto compEnabled = std::array{ Indices::gasIsActive(), Indices::oilIsActive(), Indices::waterIsActive() };
                         for (const auto& velocityInfo : velocityInfos) {
                             if (velocityInfo.faceId < 0) {
                                 continue;

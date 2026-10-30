@@ -29,6 +29,7 @@
 
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoildyntwophaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
@@ -89,7 +90,7 @@ update(const WellState<Scalar, IndexTraits>& well_state,
         // calculate the total rate for each segment
         Scalar total_seg_rate = 0.0;
         // the segment pressure
-        value_[seg][SPres] = segment_pressure[seg];
+        value_[seg][SPres()] = segment_pressure[seg];
         // TODO: under what kind of circustances, the following will be wrong?
         // the definition of g makes the gas phase is always the last phase
         for (int p = 0; p < well_.numPhases(); p++) {
@@ -110,49 +111,49 @@ update(const WellState<Scalar, IndexTraits>& well_state,
 
         // todo to map old fraction to new perforations for now start from scratch.
         if (ws.primaryvar.size() == value_.size() * numWellEq) {
-            if (has_wfrac_variable) {
-                value_[seg][WFrac] = ws.primaryvar[seg * numWellEq + WFrac];
+            if (has_wfrac_variable()) {
+                value_[seg][WFrac()] = ws.primaryvar[seg * numWellEq + WFrac()];
             }
-            if (has_gfrac_variable) {
-                value_[seg][GFrac] = ws.primaryvar[seg * numWellEq + GFrac];
+            if (has_gfrac_variable()) {
+                value_[seg][GFrac()] = ws.primaryvar[seg * numWellEq + GFrac()];
             }
         } else if (std::abs(total_seg_rate) > 0.) {
-            if (has_wfrac_variable) {
+            if (has_wfrac_variable()) {
                 const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-                value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
+                value_[seg][WFrac()] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
             }
-            if (has_gfrac_variable) {
+            if (has_gfrac_variable()) {
                 const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-                value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
+                value_[seg][GFrac()] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
             }
         } else { // total_seg_rate == 0
             if (well_.isInjector()) {
                 // only single phase injection handled
                 auto phase = well.getInjectionProperties().injectorType;
 
-                if (has_wfrac_variable) {
+                if (has_wfrac_variable()) {
                     if (phase == InjectorType::WATER) {
-                        value_[seg][WFrac] = 1.0;
+                        value_[seg][WFrac()] = 1.0;
                     } else {
-                        value_[seg][WFrac] = 0.0;
+                        value_[seg][WFrac()] = 0.0;
                     }
                 }
 
-                if (has_gfrac_variable) {
+                if (has_gfrac_variable()) {
                     if (phase == InjectorType::GAS) {
-                        value_[seg][GFrac] = 1.0;
+                        value_[seg][GFrac()] = 1.0;
                     } else {
-                        value_[seg][GFrac] = 0.0;
+                        value_[seg][GFrac()] = 0.0;
                     }
                 }
 
             } else if (well_.isProducer()) { // producers
-                if (has_wfrac_variable) {
-                    value_[seg][WFrac] = 1.0 / well_.numPhases();
+                if (has_wfrac_variable()) {
+                    value_[seg][WFrac()] = 1.0 / well_.numPhases();
                 }
 
-                if (has_gfrac_variable) {
-                    value_[seg][GFrac] = 1.0 / well_.numPhases();
+                if (has_gfrac_variable()) {
+                    value_[seg][GFrac()] = 1.0 / well_.numPhases();
                 }
             }
         }
@@ -162,7 +163,7 @@ update(const WellState<Scalar, IndexTraits>& well_state,
     if constexpr (enable_energy) {
         const auto& segment_temperature = segments.temperature;
         for (std::size_t seg = 0; seg < value_.size(); ++seg) {
-            value_[seg][Temperature] = segment_temperature[seg];
+            value_[seg][Temperature()] = segment_temperature[seg];
         }
     }
     setEvaluationsFromValues();
@@ -179,16 +180,16 @@ updateNewton(const BVectorWell& dwells,
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
-        if (has_wfrac_variable) {
-            const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
-            value_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
+        if (has_wfrac_variable()) {
+            const int sign = dwells[seg][WFrac()] > 0. ? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][WFrac()]) * relaxation_factor, dFLimit);
+            value_[seg][WFrac()] = old_primary_variables[seg][WFrac()] - dx_limited;
         }
 
-        if (has_gfrac_variable) {
-            const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
-            value_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
+        if (has_gfrac_variable()) {
+            const int sign = dwells[seg][GFrac()] > 0. ? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][GFrac()]) * relaxation_factor, dFLimit);
+            value_[seg][GFrac()] = old_primary_variables[seg][GFrac()] - dx_limited;
         }
 
         // handling the overshooting or undershooting of the fractions
@@ -196,12 +197,12 @@ updateNewton(const BVectorWell& dwells,
 
         // update the segment pressure
         {
-            const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
+            const int sign = dwells[seg][SPres()] > 0.? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][SPres()]) * relaxation_factor, max_pressure_change);
             // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
             // so that bhp constaint can be an active control when needed.
             const Scalar lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
-            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, lower_limit);
+            value_[seg][SPres()] = std::max(old_primary_variables[seg][SPres()] - dx_limited, lower_limit);
         }
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
@@ -220,11 +221,11 @@ updateNewton(const BVectorWell& dwells,
 
         if constexpr (enable_energy) {
             // TODO: how to regularize the temperature update remains to be investigated
-            const int sign = dwells[seg][Temperature] > 0. ? 1 : -1;
+            const int sign = dwells[seg][Temperature()] > 0. ? 1 : -1;
             // currently we limit the temperature change to be 5 C/K in each iteration
             constexpr Scalar max_temperature_change = 5.0;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature]) * relaxation_factor, max_temperature_change);
-            value_[seg][Temperature] = std::max(old_primary_variables[seg][Temperature] - dx_limited, Scalar{0.0});
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][Temperature()]) * relaxation_factor, max_temperature_change);
+            value_[seg][Temperature()] = std::max(old_primary_variables[seg][Temperature()] - dx_limited, Scalar{0.0});
         }
     }
 
@@ -268,13 +269,13 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
             fractions[oil_pos] = 1.0;
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-                fractions[water_pos] = value_[seg][WFrac];
+                fractions[water_pos] = value_[seg][WFrac()];
                 fractions[oil_pos] -= fractions[water_pos];
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-                fractions[gas_pos] = value_[seg][GFrac];
+                fractions[gas_pos] = value_[seg][GFrac()];
                 fractions[oil_pos] -= fractions[gas_pos];
             }
         }
@@ -284,7 +285,7 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-                fractions[gas_pos] = value_[seg][GFrac];
+                fractions[gas_pos] = value_[seg][GFrac()];
                 fractions[water_pos] -= fractions[gas_pos];
             }
         }
@@ -316,11 +317,11 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
         }
 
         // update the segment pressure
-        segment_pressure[seg] = value_[seg][SPres];
+        segment_pressure[seg] = value_[seg][SPres()];
 
         // update the segment temperature if thermal is active
         if constexpr (enable_energy) {
-            segment_temperature[seg] = value_[seg][Temperature];
+            segment_temperature[seg] = value_[seg][Temperature()];
             if (seg == 0) {
                 ws.temperature = segment_temperature[seg];
             }
@@ -478,13 +479,13 @@ processFractions(const int seg)
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            fractions[water_pos] = value_[seg][WFrac];
+            fractions[water_pos] = value_[seg][WFrac()];
             fractions[oil_pos] -= fractions[water_pos];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[seg][GFrac];
+            fractions[gas_pos] = value_[seg][GFrac()];
             fractions[oil_pos] -= fractions[gas_pos];
         }
     }
@@ -494,7 +495,7 @@ processFractions(const int seg)
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[seg][GFrac];
+            fractions[gas_pos] = value_[seg][GFrac()];
             fractions[water_pos] -= fractions[gas_pos];
         }
     } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -547,14 +548,14 @@ processFractions(const int seg)
         }
     }
 
-    if constexpr (has_wfrac_variable) {
+    if (has_wfrac_variable()) {
         const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-        value_[seg][WFrac] = fractions[water_pos];
+        value_[seg][WFrac()] = fractions[water_pos];
     }
 
-    if constexpr (has_gfrac_variable) {
+    if (has_gfrac_variable()) {
         const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-        value_[seg][GFrac] = fractions[gas_pos];
+        value_[seg][GFrac()] = fractions[gas_pos];
     }
 }
 
@@ -564,25 +565,25 @@ MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int seg,
                const int compIdx) const
 {
-    if (has_wfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
-        return evaluation_[seg][WFrac];
+    if (has_wfrac_variable() && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx)) {
+        return evaluation_[seg][WFrac()];
     }
 
-    if (has_gfrac_variable && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
-        return evaluation_[seg][GFrac];
+    if (has_gfrac_variable() && compIdx == FluidSystem::canonicalToActiveCompIdx(FluidSystem::gasCompIdx)) {
+        return evaluation_[seg][GFrac()];
     }
 
     // Oil fraction
     EvalWell oil_fraction = 1.0;
-    if (has_wfrac_variable) {
-        oil_fraction -= evaluation_[seg][WFrac];
+    if (has_wfrac_variable()) {
+        oil_fraction -= evaluation_[seg][WFrac()];
     }
 
-    if (has_gfrac_variable) {
-        oil_fraction -= evaluation_[seg][GFrac];
+    if (has_gfrac_variable()) {
+        oil_fraction -= evaluation_[seg][GFrac()];
     }
     /* if (has_solvent) {
-        oil_fraction -= evaluation_[seg][SFrac];
+        oil_fraction -= evaluation_[seg][SFrac()];
     } */
 
     // oil_fraction may turn out negative due to round-off, in that case
@@ -661,7 +662,7 @@ getSegmentRateUpwinding(const int seg,
     const EvalWell segment_rate = evaluation_[seg][WQTotal] *
                                   this->volumeFractionScaled(seg_upwind, comp_idx);
 
-    assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
+    assert(segment_rate.derivative(SPres() + Indices::numEq) == 0.);
 
     return segment_rate;
 }
@@ -671,7 +672,7 @@ typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentPressure(const int seg) const
 {
-    return evaluation_[seg][SPres];
+    return evaluation_[seg][SPres()];
 }
 
 template<class FluidSystem, class Indices>
@@ -679,7 +680,7 @@ typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentTemperature(const int seg) const
 {
-    return evaluation_[seg][Temperature];
+    return evaluation_[seg][Temperature()];
 }
 
 template<class FluidSystem, class Indices>
@@ -745,15 +746,15 @@ scaledWellFractions(std::vector<Scalar>& fractions,
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         const int oil_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::oilPhaseIdx);
         fractions[oil_pos] = 1.0;
-        if (has_wfrac_variable) {
+        if (has_wfrac_variable()) {
             const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
-            fractions[water_pos] = value_[0][WFrac];
+            fractions[water_pos] = value_[0][WFrac()];
             fractions[oil_pos] -= fractions[water_pos];
         }
 
-        if (has_gfrac_variable) {
+        if (has_gfrac_variable()) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[0][GFrac];
+            fractions[gas_pos] = value_[0][GFrac()];
             fractions[oil_pos] -= fractions[gas_pos];
         }
     }
@@ -761,13 +762,13 @@ scaledWellFractions(std::vector<Scalar>& fractions,
         const int water_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::waterPhaseIdx);
         fractions[water_pos] = 1.0;
 
-        if (has_gfrac_variable) {
+        if (has_gfrac_variable()) {
             const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
-            fractions[gas_pos] = value_[0][GFrac];
+            fractions[gas_pos] = value_[0][GFrac()];
             fractions[water_pos] -= fractions[gas_pos];
         }
     }
-    else if (has_gfrac_variable) {
+    else if (has_gfrac_variable()) {
         const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         fractions[gas_pos] = 1.0;
     }
