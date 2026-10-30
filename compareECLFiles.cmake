@@ -994,6 +994,27 @@ if(MPI_FOUND)
   )
 endif()
 
+# Without ROCKOPTS and TABDIMS(13), ROCK has NTPVT records only, fewer than the
+# regions of the explicit ROCKNUM array it is allocated through. Flow must stop
+# with an error.
+add_test_runSimulator(
+  CASENAME
+    rocktab_rocknum_too_few_rock
+  FILENAME
+    ROCKTAB_ROCKNUM_TOO_FEW_ROCK
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  DIR
+    rock
+)
+set_tests_properties(
+  runSimulator/rocktab_rocknum_too_few_rock
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "Rock compressibility \\(ROCK\\) table index 3 .* out of bounds for number of tables 2"
+)
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe

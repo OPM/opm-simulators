@@ -1278,6 +1278,40 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    rocktab_rocknum
+  FILENAME
+    ROCKTAB_ROCKNUM
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    rock
+)
+
+add_test_compareECLFiles(
+  CASENAME
+    rocktab_tabdims_ntrocc
+  FILENAME
+    ROCKTAB_TABDIMS_NTROCC
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    rock
+)
+
+add_test_compareECLFiles(
+  CASENAME
     rocktabh
   FILENAME
     ROCKTABH
