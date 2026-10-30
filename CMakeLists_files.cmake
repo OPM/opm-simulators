@@ -856,6 +856,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilmodules.hpp
   opm/models/blackoil/blackoilnewtonmethod.hpp
   opm/models/blackoil/blackoilnewtonmethodparams.hpp
+  opm/models/blackoil/blackoilnewtonupdate.hpp
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
   opm/models/blackoil/blackoilpolymerparams.hpp
