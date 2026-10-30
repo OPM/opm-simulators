@@ -83,6 +83,10 @@ struct TracerReorderRetrySteps { static constexpr int value = 10; };
 // in the gravity term of the phase potential across a face
 struct SaturationWeightedDensity { static constexpr bool value = false; };
 
+// Which phases contribute when computing defaulted threshold pressures
+// from the initial solution.
+struct ThresholdPressureDefaultPhases { static constexpr auto value = "mobile"; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
