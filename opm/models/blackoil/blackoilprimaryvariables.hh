@@ -1165,7 +1165,10 @@ private:
     inline static Scalar pressureScale_ = 1.0;
 
     // Oil saturation below which gasOilRatioOfPresentComponents_() is used
-    // to initialise Rs when the gas phase disappears.
+    // to initialise Rs when the gas phase disappears.  Not sensitive: in a
+    // field case with oil entering water-filled cells and in the regression
+    // tests, values from 0.05 to 0.3 performed equally.  Below about 0.05
+    // the field case had linear solver failures again.
     static constexpr Scalar maxOilSaturationForComponentRs_ = 0.1;
 };
 
