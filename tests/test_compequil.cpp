@@ -49,6 +49,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -341,6 +342,27 @@ void reportFlashedCells(const BasicEquilFixture<FS>& fix,
                                           liquidFraction,
                                           fix.eclState.getInitConfig().getEquil().size(),
                                           Opm::Parallel::Communication{});
+}
+
+// The least and most share of the smaller phase, in percent, that a two-phase
+// warning gives as "holding <least>% to <most>% of the hydrocarbon moles".
+std::pair<Scalar, Scalar> reportedShares(const std::string& messages)
+{
+    constexpr std::string_view holding = "holding ";
+    constexpr std::string_view to = "% to ";
+    constexpr std::string_view moles = "% of the hydrocarbon moles";
+    const auto start = messages.find(holding);
+    BOOST_REQUIRE(start != std::string::npos);
+    const char* const first = messages.c_str() + start + holding.size();
+    char* stop = nullptr;
+    const Scalar least = std::strtod(first, &stop);
+    BOOST_REQUIRE(stop != first);
+    BOOST_REQUIRE(std::string_view(stop).starts_with(to));
+    const char* const second = stop + to.size();
+    const Scalar most = std::strtod(second, &stop);
+    BOOST_REQUIRE(stop != second);
+    BOOST_CHECK(std::string_view(stop).starts_with(moles));
+    return {least, most};
 }
 
 } // Anonymous namespace
@@ -1757,10 +1779,15 @@ BOOST_AUTO_TEST_CASE(CompvdTwoZoneWarnsAboutSplitGapCells)
     BOOST_REQUIRE_EQUAL(split.size(), std::size_t{4});
     BOOST_CHECK_EQUAL(split.front(), 2032.5);
     BOOST_CHECK_EQUAL(split.back(), 2047.5);
-    BOOST_CHECK(warnings.messages.str().find("cells between 2032.50 m and 2047.50 m split "
-                                             "into gas and liquid at their initial pressure, "
-                                             "with the smaller phase holding 7.72% to 38.9% of "
-                                             "the hydrocarbon moles") != std::string::npos);
+    const auto messages = warnings.messages.str();
+    BOOST_CHECK(messages.find("cells between 2032.50 m and 2047.50 m split into gas and liquid "
+                              "at their initial pressure, with the smaller phase holding ")
+                != std::string::npos);
+    // The shares follow the flash numerics, so they are checked to 1% rather
+    // than to their last printed digit.
+    const auto [least, most] = reportedShares(messages);
+    BOOST_CHECK_CLOSE(least, 7.72, 1.0);
+    BOOST_CHECK_CLOSE(most, 38.9, 1.0);
 }
 
 BOOST_AUTO_TEST_CASE(TwoPhaseWarningEndsAtTheWaterContact)
