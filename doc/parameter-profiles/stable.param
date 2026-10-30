@@ -1,0 +1,59 @@
+# Profile: prefer trajectory stability and quality of the accepted solution over speed.
+#
+#   flow CASE.DATA --parameter-file=doc/parameter-profiles/stable.param
+#
+# Every entry cites a measurement from a 508-deck A/B campaign on the opm-tests suite
+# (2026-07/08, serial, macOS/AppleClang; re-validate in parallel and on other platforms).
+# "Accuracy" below means the residual size of ACCEPTED states -- the simulator's own
+# measure, necessary but not sufficient for closeness to the physical answer.
+
+# --- Convergence acceptance -------------------------------------------------------------
+
+# Two-level CNV acceptance: both levels 10x tighter than the defaults, the gap 10x
+# instead of 100x, the relaxation onset stated explicitly, and the relaxed tolerance
+# 1.0 never applies. Costs ~8% more Newton iterations and buys 2-3x tighter accepted
+# states (accepted-CNV p90 1.56e-2 -> 6.85e-3, mass-balance median 3.6e-9 -> 1.2e-9;
+# tighter on 186 decks, looser on 25).
+# CAVEAT: dispersion/fingering decks and CO2/H2 storage with salt precipitation pay far
+# more under these values (their vanishing-pore-volume cells make the strict CNV
+# criterion ill-posed) -- use the defaults for those classes.
+MinStrictCnvIter=10
+ToleranceCnv=1e-3
+ToleranceCnvRelaxed=1e-2
+
+# --- Well solve ---------------------------------------------------------------------------
+
+# The default inner-iteration cap of 50 is consumed by control switching, not by Newton:
+# wells on a control boundary hit it constantly (one Norne variant 1,995 times per run),
+# and "successes" at exactly iteration 50 are states rescued by the relaxed tolerance.
+# Raising the cap: aggregate cost -0.15% over 508 decks, failed substeps unchanged,
+# -71% on that Norne variant. A symptom treatment until the switching logic improves.
+MaxInnerIterWells=200
+
+# --- Diagnostics --------------------------------------------------------------------------
+
+# Per-substep (INFOSTEP) and per-iteration (INFOITER) convergence history; the most
+# useful diagnostic in the simulator, off by default. Costs a little I/O.
+OutputExtraConvergenceInfo=steps,iterations
+
+# --- Pending pull requests (enable once merged) --------------------------------------------
+#
+# NewtonRelaxRecovery=2      PR #7299: let the Newton oscillation damping release once
+#                            residuals contract again. The strongest single entry of the
+#                            campaign: Newton -3.65%, failed substeps -19%, accepted-CNV
+#                            p90 1.53e-2 -> 1.09e-2, no status regressions.
+# CnvPoreVolumeFloorFraction=0.01
+#                            PR #7301: bound the CNV criterion for vanishing-pore-volume
+#                            cells; removes the caveat on the CNV block above for the
+#                            dispersion/salt-precipitation classes.
+
+# --- Measured and deliberately NOT set ------------------------------------------------------
+#
+# ToleranceWells=1e-5        promising on a small panel but interacts non-additively with
+#                            the stricter CNV above (one gaslift deck: 424 Newton with
+#                            strict wells alone, 529 with strict CNV alone, 2,367 with
+#                            both) -- do not combine without measuring.
+# RelaxedMaxPvFraction=0     do not close the CNV escape hatch globally: it helps radial
+#                            grids (-58%) but explodes dispersion decks (+1744%).
+# DsMax, ConvergenceMonitoring, EnableWellOperabilityCheckIter: all measured net-negative
+#                            suite-wide at every setting tried.
