@@ -84,6 +84,7 @@
 #include <cassert>
 #include <functional>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -811,6 +812,22 @@ checkGroupHigherConstraints(const Group& group,
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         std::vector<Scalar> rates_available =
             this->groupStateHelper().getGroupRatesAvailableForHigherLevelControl(group, /*is_injector=*/true);
+        // A group on individual control without any group controlled wells has its entire rate
+        // counted as reduction, i.e. nothing is 'available' and the check below can never trigger.
+        // Its wells would however respond to a higher level target if the group were released to
+        // FLD, as they do for a group under NONE control. In that case the full group rate is used,
+        // otherwise such a group (e.g. latched on its own limit) hides all higher level targets.
+        std::optional<std::vector<Scalar>> rates_full;
+        const auto full_group_rates = [this, &group, &rates_full]() -> const std::vector<Scalar>& {
+            if (!rates_full.has_value()) {
+                rates_full.emplace(this->numPhases(), 0.0);
+                for (int phasePos = 0; phasePos < this->numPhases(); ++phasePos) {
+                    (*rates_full)[phasePos] = this->comm_.sum(
+                        this->groupStateHelper().sumWellSurfaceRates(group, phasePos, /*is_injector=*/true));
+                }
+            }
+            return *rates_full;
+        };
         for (const Phase phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
             const auto currentControl = this->groupState().injection_control(group.name(), phase);
             bool group_is_oscillating = false;
@@ -843,11 +860,17 @@ checkGroupHigherConstraints(const Group& group,
             // Check higher up only if under individual (not FLD) control.
             if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
                 const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
+                const bool use_full_rates = currentControl != Group::InjectionCMode::NONE
+                    && this->groupStateHelper().groupControlledWells(
+                        group.name(), /*always_included_child=*/"", /*is_production_group=*/false, phase) == 0;
+                const std::vector<Scalar>& rates = use_full_rates
+                    ? full_group_rates()
+                    : rates_available;
                 const auto [is_changed, scaling_factor] = this->groupStateHelper().checkGroupConstraintsInj(
                     group.name(),
                     group.parent(),
                     parentGroup,
-                    rates_available.data(),
+                    rates.data(),
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
