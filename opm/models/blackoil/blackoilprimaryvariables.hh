@@ -44,6 +44,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <concepts>
 #include <limits>
 #include <stdexcept>
 #include <type_traits>
@@ -57,6 +58,22 @@ struct PressureScale
 { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
+
+namespace Opm::Concepts {
+
+// Identify black-oil phase-switching fluid systems for overload selection.
+template<class T>
+concept BlackOilPhaseSwitchingFluidSystem = requires(const T& fluidSystem) {
+    { fluidSystem.enableDissolvedGas() } -> std::convertible_to<bool>;
+    { fluidSystem.enableDissolvedGasInWater() } -> std::convertible_to<bool>;
+    { fluidSystem.enableVaporizedOil() } -> std::convertible_to<bool>;
+    { fluidSystem.enableVaporizedWater() } -> std::convertible_to<bool>;
+    fluidSystem.oilPvt();
+    fluidSystem.gasPvt();
+    fluidSystem.waterPvt();
+};
+
+} // namespace Opm::Concepts
 
 namespace Opm {
 
@@ -502,14 +519,12 @@ public:
                                      swMaximum, thresholdWaterFilledCell, eps);
     }
 
-    // Pass eps = 0.0 for the usual switching criterion. Keep eps required here
-    // so legacy calls with an explicit epsilon cannot match this overload.
-    template<class FluidSystemInstance>
+    template<Concepts::BlackOilPhaseSwitchingFluidSystem FluidSystemInstance>
     OPM_HOST_DEVICE bool adaptPrimaryVariables(const Problem& problem,
                                const FluidSystemInstance& fluidSystem,
                                unsigned globalDofIdx,
                                [[maybe_unused]] Scalar swMaximum,
-                               Scalar thresholdWaterFilledCell, Scalar eps)
+                               Scalar thresholdWaterFilledCell, Scalar eps = 0.0)
     {
         // this function accesses quite a few black-oil specific low-level functions
         // directly for better performance (instead of going the canonical way through
