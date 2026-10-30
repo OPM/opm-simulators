@@ -994,8 +994,9 @@ if(MPI_FOUND)
   )
 endif()
 
-# ROCK given before ROCKOPTS(3) = ROCKNUM has NTPVT records only, fewer than
-# the ROCKNUM regions it is allocated through. Flow must stop with an error.
+# Without ROCKOPTS and TABDIMS(13), ROCK has NTPVT records only, fewer than the
+# regions of the explicit ROCKNUM array it is allocated through. Flow must stop
+# with an error.
 add_test_runSimulator(
   CASENAME
     rocktab_rocknum_too_few_rock
