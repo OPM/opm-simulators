@@ -502,12 +502,14 @@ public:
                                      swMaximum, thresholdWaterFilledCell, eps);
     }
 
+    // Pass eps = 0.0 for the usual switching criterion. Keep eps required here
+    // so legacy calls with an explicit epsilon cannot match this overload.
     template<class FluidSystemInstance>
     OPM_HOST_DEVICE bool adaptPrimaryVariables(const Problem& problem,
                                const FluidSystemInstance& fluidSystem,
                                unsigned globalDofIdx,
                                [[maybe_unused]] Scalar swMaximum,
-                               Scalar thresholdWaterFilledCell, Scalar eps = 0.0)
+                               Scalar thresholdWaterFilledCell, Scalar eps)
     {
         // this function accesses quite a few black-oil specific low-level functions
         // directly for better performance (instead of going the canonical way through

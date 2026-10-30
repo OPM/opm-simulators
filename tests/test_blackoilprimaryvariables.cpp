@@ -253,7 +253,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesUsesExplicitFluidSystemTemperature)
         PrimaryVariables::GasMeaning::Sg, 0.2, -0.01,
         PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.e5);
     auto legacy = disappearing;
-    BOOST_REQUIRE(disappearing.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0));
+    auto legacyWithEps = disappearing;
+    BOOST_REQUIRE(disappearing.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0, 0.0));
     BOOST_CHECK(disappearing.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
     BOOST_CHECK_CLOSE(disappearing[Indices::compositionSwitchIdx], 0.35, 1.e-12);
 
@@ -261,13 +262,17 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesUsesExplicitFluidSystemTemperature)
     BOOST_REQUIRE(legacy.adaptPrimaryVariables(problem, 0, 1.0, 1.0));
     BOOST_CHECK_CLOSE(legacy[Indices::compositionSwitchIdx], 0.25, 1.e-12);
 
+    // An integer cell index and explicit epsilon must select the legacy overload.
+    BOOST_REQUIRE(legacyWithEps.adaptPrimaryVariables(problem, 0, 1.0, 1.0, 0.0));
+    BOOST_CHECK_CLOSE(legacyWithEps[Indices::compositionSwitchIdx], 0.25, 1.e-12);
+
     // Rs = 0.325 is below the instance's saturation limit of 0.35, so gas
     // must stay absent. The wrong temperature lowers the limit to 0.30 and
     // incorrectly switches this cell to gas saturation.
     auto undersaturated = makePrimaryVariables(
         PrimaryVariables::GasMeaning::Rs, 0.2, 0.325,
         PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.e5);
-    BOOST_CHECK(!undersaturated.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0));
+    BOOST_CHECK(!undersaturated.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0, 0.0));
     BOOST_CHECK(undersaturated.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
     BOOST_CHECK_CLOSE(undersaturated[Indices::compositionSwitchIdx], 0.325, 1.e-12);
 }
