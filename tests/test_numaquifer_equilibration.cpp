@@ -136,8 +136,7 @@ private:
 unsigned elementIndex(const Simulator& simulator, const int i, const int j, const int k)
 {
     const auto& vanguard = simulator.vanguard();
-    const auto& dims = vanguard.cartesianDimensions();
-    const auto cart = i + dims[0] * (j + dims[1] * k);
+    const unsigned cart = vanguard.cartesianIndex({i, j, k});
     for (unsigned elemIdx = 0; elemIdx < simulator.model().numGridDof(); ++elemIdx) {
         if (vanguard.cartesianIndex(elemIdx) == cart) {
             return elemIdx;
