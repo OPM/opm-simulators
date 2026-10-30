@@ -215,6 +215,15 @@ private:
  * the vapour and liquid rows give separate zone compositions, and a contact
  * outside their gap is rejected.
  *
+ * With EQUIL item 10 = 1, each zone's pressure follows the EOS density of one
+ * hydrocarbon phase. At that pressure and temperature, a cell's mixture can
+ * split into gas and liquid. The pressure gradient then matches neither
+ * phase's density, so the gas and liquid in such a cell are not in hydrostatic
+ * equilibrium and may move up or down once the simulation starts.
+ * twoPhaseCheckRegions() marks the type-1 cells, except those below the
+ * water-oil contact when the water phase is active, and reportTwoPhaseCells()
+ * warns about those that the initial flash splits.
+ *
  * Only cell-centre initialization is supported (EQUIL item 9 = 0).
  * Gas-oil contact capillary pressure must be zero: the downstream flash uses
  * a single pressure for all phases.
@@ -323,12 +332,21 @@ public:
                                           numSamplePoints, r));
         }
 
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         fluidStates_.resize(cellCenterDepth.size());
         referencePressures_.resize(cellCenterDepth.size());
+        twoPhaseCheckRegions_.assign(cellCenterDepth.size(), -1);
         for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
+            const auto& reg = regions[eqlnum[cell]];
             const auto pvtRegion = pvtnum.empty() ? 0u : static_cast<unsigned>(pvtnum[cell]);
-            referencePressures_[cell] = assignCell(fluidStates_[cell], regions[eqlnum[cell]],
+            referencePressures_[cell] = assignCell(fluidStates_[cell], reg,
                                                    pvtRegion, cellCenterDepth[cell], cell);
+            // The type 3 gas is saturated at the contact, so the lower pressure
+            // above it splits that gas slightly. Below the water-oil contact
+            // the pore space holds water.
+            if ((reg.initType == 1) && !(waterActive && (cellCenterDepth[cell] > reg.zwoc))) {
+                twoPhaseCheckRegions_[cell] = eqlnum[cell];
+            }
         }
     }
 
@@ -343,6 +361,16 @@ public:
     /// fluidStates() retains the independently integrated phase pressures.
     const std::vector<Scalar>& referencePressures() const
     { return referencePressures_; }
+
+    /// Zero-based equilibration region of each type-1 cell whose initial flash
+    /// is checked for a split into gas and liquid, or -1 for the other cells.
+    /// With the water phase active, cells below the water-oil contact are not
+    /// checked. See reportTwoPhaseCells().
+    std::vector<int>& twoPhaseCheckRegions()
+    { return twoPhaseCheckRegions_; }
+
+    const std::vector<int>& twoPhaseCheckRegions() const
+    { return twoPhaseCheckRegions_; }
 
 private:
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
@@ -1304,7 +1332,91 @@ private:
     std::vector<Scalar> maxWater_;
     std::vector<FluidState> fluidStates_;
     std::vector<Scalar> referencePressures_;
+    std::vector<int> twoPhaseCheckRegions_;
 };
+
+/// Warn about the type-1 EQUIL cells that the initial flash splits into gas
+/// and liquid. For each region, a warning gives the depth range of those cells
+/// and the range of their smaller phase's share of the hydrocarbon moles,
+/// ignoring shares under 0.1%.
+///
+/// \param[in] checkRegions    Zero-based equilibration region of each checked
+///                            cell, or -1, see
+///                            InitialStateComputer::twoPhaseCheckRegions().
+/// \param[in] cellCenterDepth Depth of each cell centre.
+/// \param[in] liquidFraction  Liquid mole fraction of a checked cell's
+///                            hydrocarbon after the initial flash, 0 or 1 when
+///                            it stays one phase, given the cell index.
+/// \param[in] numRegions      Number of equilibration regions.
+/// \param[in] comm            Communicator for parallel runs.
+template <class Scalar, class LiquidFraction>
+void reportTwoPhaseCells(const std::vector<int>& checkRegions,
+                         const std::vector<Scalar>& cellCenterDepth,
+                         const LiquidFraction& liquidFraction,
+                         const std::size_t numRegions,
+                         const Parallel::Communication& comm)
+{
+    // The smallest mole fraction of the smaller phase that is reported. Gas
+    // just above a saturated gas-oil contact lies slightly below its dew point
+    // and condenses a trace of liquid well under it.
+    constexpr Scalar minReportedFraction{1.0e-3};
+
+    // Ranges of the depth and of the smaller phase's mole fraction of the split
+    // cells of each region, over all processes. A range is unaffected by the
+    // cells that several processes hold.
+    std::vector<Scalar> shallowest(numRegions, std::numeric_limits<Scalar>::max());
+    std::vector<Scalar> deepest(numRegions, std::numeric_limits<Scalar>::lowest());
+    std::vector<Scalar> leastFraction(numRegions, std::numeric_limits<Scalar>::max());
+    std::vector<Scalar> mostFraction(numRegions, std::numeric_limits<Scalar>::lowest());
+    for (std::size_t cell = 0; cell < checkRegions.size(); ++cell) {
+        if (checkRegions[cell] < 0) {
+            continue;
+        }
+        const Scalar liquid = liquidFraction(cell);
+        const Scalar fraction = std::min(liquid, Scalar{1} - liquid);
+        // Negated so that a NaN fraction is skipped too.
+        if (!(fraction >= minReportedFraction)) {
+            continue;
+        }
+        const auto r = static_cast<std::size_t>(checkRegions[cell]);
+        const Scalar depth = cellCenterDepth[cell];
+        shallowest[r] = std::min(shallowest[r], depth);
+        deepest[r] = std::max(deepest[r], depth);
+        leastFraction[r] = std::min(leastFraction[r], fraction);
+        mostFraction[r] = std::max(mostFraction[r], fraction);
+    }
+    const auto count = static_cast<int>(numRegions);
+    comm.min(shallowest.data(), count);
+    comm.max(deepest.data(), count);
+    comm.min(leastFraction.data(), count);
+    comm.max(mostFraction.data(), count);
+
+    // A single depth needs no range.
+    const auto depthRange = [](const Scalar top, const Scalar bottom) {
+        const auto shallow = fmt::format("{:.2f} m", top);
+        const auto deep = fmt::format("{:.2f} m", bottom);
+        return (shallow == deep) ? "at " + shallow : "between " + shallow + " and " + deep;
+    };
+    for (std::size_t r = 0; r < numRegions; ++r) {
+        if (shallowest[r] > deepest[r]) {
+            continue;
+        }
+        // A single share needs no range. A share lies between the cut-off and
+        // one half, so it cannot round to 0% or 100%.
+        const auto least = fmt::format("{:.3g}%", 100 * leastFraction[r]);
+        const auto most = fmt::format("{:.3g}%", 100 * mostFraction[r]);
+        OpmLog::warning(fmt::format("Equilibration region {}: cells {} split into gas and "
+                                    "liquid at their initial pressure, with the smaller phase "
+                                    "holding {} of the hydrocarbon moles. With EQUIL "
+                                    "item 10 = 1, that pressure comes from the density of a "
+                                    "single phase, so the gas and liquid in these cells are "
+                                    "not in hydrostatic equilibrium and may move up or down "
+                                    "once the simulation starts.",
+                                    r + 1,
+                                    depthRange(shallowest[r], deepest[r]),
+                                    (least == most) ? least : least + " to " + most));
+    }
+}
 
 } // namespace Opm::EQUIL::Comp
 

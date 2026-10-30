@@ -29,7 +29,10 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
+#include <opm/material/constraintsolvers/PTFlash.hpp>
+#include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
@@ -46,6 +49,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -274,6 +278,91 @@ Scalar waterDensity(const Scalar surfaceDensity, const Scalar bw, const Scalar c
 {
     const Scalar x = cw * (pressure - 75.0);
     return surfaceDensity * (1.0 + x + 0.5 * x * x) / bw;
+}
+
+// The depths of the cells whose bubble or dew point exceeds their pressure, so
+// that the flash splits them. The pressures here lie well above any lower dew
+// point.
+template <class FS>
+std::vector<Scalar> supersaturatedDepths(const BasicEquilFixture<FS>& fix,
+                                         const typename BasicEquilFixture<FS>::Computer& computer)
+{
+    using Saturation = Opm::SaturationPressure<Scalar, FS>;
+    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    std::vector<Scalar> depths;
+    for (std::size_t c = 0; c < computer.fluidStates().size(); ++c) {
+        const auto& fs = computer.fluidStates()[c];
+        const CompVec z{fs.moleFraction(0), fs.moleFraction(1), fs.moleFraction(2)};
+        const Scalar pressure = computer.referencePressures()[c];
+        Scalar saturation{};
+        CompVec incipient{};
+        if ((Saturation::bubblePressure(z, fs.temperature(0), eosType, saturation, incipient)
+             && (saturation > pressure))
+            || (Saturation::dewPressure(z, fs.temperature(0), eosType, saturation, incipient)
+                && (saturation > pressure))) {
+            depths.push_back(fix.depths[c]);
+        }
+    }
+    return depths;
+}
+
+// Flash the cells marked for the two-phase check at their initial state, as
+// the model's first flash does with its default settings, and report those
+// that split.
+template <class FS>
+void reportFlashedCells(const BasicEquilFixture<FS>& fix,
+                        const typename BasicEquilFixture<FS>::Computer& computer)
+{
+    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    const auto liquidFraction = [&computer, eosType](const std::size_t c) {
+        const auto& initial = computer.fluidStates()[c];
+        Opm::CompositionalFluidState<Scalar, FS> fs;
+        fs.setTemperature(initial.temperature(0));
+        fs.setPressure(FS::oilPhaseIdx, computer.referencePressures()[c]);
+        fs.setPressure(FS::gasPhaseIdx, computer.referencePressures()[c]);
+        // The model raises every component to at least 1e-8 before its flash.
+        CompVec z{};
+        Scalar sum = 0.0;
+        for (int comp = 0; comp < 3; ++comp) {
+            z[comp] = std::max(initial.moleFraction(comp), Scalar{1.0e-8});
+            sum += z[comp];
+        }
+        for (int comp = 0; comp < 3; ++comp) {
+            fs.setMoleFraction(comp, z[comp] / sum);
+            fs.setKvalue(comp, fs.wilsonK_(comp));
+        }
+        fs.setLvalue(-1.0);
+        Opm::PTFlash<Scalar, FS>::flash_solve_scalar(fs, Opm::PTFlashMethod::SsiNewton,
+                                                     1.0e-8, eosType);
+        return fs.L();
+    };
+    const std::vector<Scalar> depths(fix.depths.begin(), fix.depths.end());
+    Opm::EQUIL::Comp::reportTwoPhaseCells(computer.twoPhaseCheckRegions(),
+                                          depths,
+                                          liquidFraction,
+                                          fix.eclState.getInitConfig().getEquil().size(),
+                                          Opm::Parallel::Communication{});
+}
+
+// The least and most share of the smaller phase, in percent, that a two-phase
+// warning gives as "holding <least>% to <most>% of the hydrocarbon moles".
+std::pair<Scalar, Scalar> reportedShares(const std::string& messages)
+{
+    constexpr std::string_view holding = "holding ";
+    constexpr std::string_view to = "% to ";
+    constexpr std::string_view moles = "% of the hydrocarbon moles";
+    const auto start = messages.find(holding);
+    BOOST_REQUIRE(start != std::string::npos);
+    const char* const first = messages.c_str() + start + holding.size();
+    char* stop = nullptr;
+    const Scalar least = std::strtod(first, &stop);
+    BOOST_REQUIRE(stop != first);
+    BOOST_REQUIRE(std::string_view(stop).starts_with(to));
+    const char* const second = stop + to.size();
+    const Scalar most = std::strtod(second, &stop);
+    BOOST_REQUIRE(stop != second);
+    BOOST_CHECK(std::string_view(stop).starts_with(moles));
+    return {least, most};
 }
 
 } // Anonymous namespace
@@ -1645,6 +1734,129 @@ BOOST_AUTO_TEST_CASE(WaterContactAboveCells)
             }
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(Type1WarnsAboutTwoPhaseCells)
+{
+    // Type 1 integrates this column with the liquid root. At 200 bar the six
+    // methane-rich cells at the top lie below their bubble point, so the flash
+    // splits them. At 245 bar only the top cell does, and at 300 bar none.
+    for (const auto& [pressure, numSplit, report] :
+         {std::tuple{"200", std::size_t{6}, "cells between 2002.50 m and 2027.50 m split"},
+          std::tuple{"245", std::size_t{1}, "cells at 2002.50 m split"},
+          std::tuple{"300", std::size_t{0}, "split into gas and liquid"}}) {
+        BOOST_TEST_CONTEXT("Datum pressure " << pressure << " bar") {
+            const EquilFixture fix(deckString("EQUIL\n 2050 " + std::string{pressure}
+                                              + " 2300 0 2000 0 /\n"));
+            WarningCapture warnings;
+            const auto computer = fix.compute(std::vector<int>(20, 0));
+            reportFlashedCells(fix, computer);
+            BOOST_REQUIRE_EQUAL(supersaturatedDepths(fix, computer).size(), numSplit);
+            BOOST_CHECK_EQUAL(warnings.messages.str().find(report) != std::string::npos,
+                              numSplit > 0);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CompvdTwoZoneWarnsAboutSplitGapCells)
+{
+    // At 300 bar the vapour and liquid rows are single-phase, but the blends
+    // between them above the contact at 2050 m are not. The deeper three of
+    // those gas-zone cells lie below their bubble point rather than a dew point.
+    // The upper two of them split mostly into vapour and the lower two mostly
+    // into liquid; the warning gives the share of the smaller phase.
+    const EquilFixture fix(deckString(
+        "EQUIL\n 2072.5 300 2300 0 2050 0 /\n", "EQLDIMS\n/\n", "",
+        "COMPVD\n"
+        " 2000   0 0.95 0.05  0  150.0\n"
+        " 2030   0 0.95 0.05  0  150.0\n"
+        " 2070   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"));
+    WarningCapture warnings;
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    reportFlashedCells(fix, computer);
+    const auto split = supersaturatedDepths(fix, computer);
+    BOOST_REQUIRE_EQUAL(split.size(), std::size_t{4});
+    BOOST_CHECK_EQUAL(split.front(), 2032.5);
+    BOOST_CHECK_EQUAL(split.back(), 2047.5);
+    const auto messages = warnings.messages.str();
+    BOOST_CHECK(messages.find("cells between 2032.50 m and 2047.50 m split into gas and liquid "
+                              "at their initial pressure, with the smaller phase holding ")
+                != std::string::npos);
+    // The shares follow the flash numerics, so they are checked to 1% rather
+    // than to their last printed digit.
+    const auto [least, most] = reportedShares(messages);
+    BOOST_CHECK_CLOSE(least, 7.72, 1.0);
+    BOOST_CHECK_CLOSE(most, 38.9, 1.0);
+}
+
+BOOST_AUTO_TEST_CASE(TwoPhaseWarningEndsAtTheWaterContact)
+{
+    // At 50 bar every cell lies below its bubble point, but below the
+    // water-oil contact at 2050 m the pore space holds water.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2010 50 2050 0 2000 0 /\n"));
+    WarningCapture warnings;
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    std::vector<int> checked(20, -1);
+    std::fill_n(checked.begin(), 10, 0);
+    BOOST_CHECK_EQUAL_COLLECTIONS(computer.twoPhaseCheckRegions().begin(),
+                                  computer.twoPhaseCheckRegions().end(),
+                                  checked.begin(), checked.end());
+    reportFlashedCells(fix, computer);
+    BOOST_REQUIRE_EQUAL(supersaturatedDepths(fix, computer).size(), std::size_t{20});
+    BOOST_CHECK(warnings.messages.str().find("cells between 2002.50 m and 2047.50 m split "
+                                             "into gas and liquid") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(Type3GasCapIsNotReportedAsTwoPhase)
+{
+    // Type 3 fills the gas cap with the vapour in equilibrium with the contact
+    // liquid. The pressure falls above the contact, taking that vapour just
+    // below its dew point, so every such gas cap splits slightly. Only type 1
+    // is reported.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 /\n"));
+    WarningCapture warnings;
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    BOOST_CHECK(std::ranges::all_of(computer.twoPhaseCheckRegions(),
+                                    [](const int region) { return region < 0; }));
+    reportFlashedCells(fix, computer);
+    BOOST_REQUIRE(!supersaturatedDepths(fix, computer).empty());
+    BOOST_CHECK(warnings.messages.str().find("split into gas and liquid") == std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(SaturatedType1GasCapIsNotReportedAsTwoPhase)
+{
+    // Type 1 with the gas cap type 3 builds: the vapour rows hold the vapour in
+    // equilibrium with the contact liquid, and the datum at the contact holds
+    // the bubble point of that liquid. The pressure falls above the contact, so
+    // every gas cell condenses a liquid mole fraction of about 1e-4, too little
+    // to report.
+    const CompVec liquid{0.0, 0.5, 0.5};
+    Scalar psat{};
+    CompVec vapour{};
+    // A fixture sets up the fluid system that the bubble point needs.
+    const EquilFixture init(deckString("EQUIL\n 2050 150 2300 0 2050 0 /\n"));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
+                                       init.eclState.compositionalConfig().eosType(0),
+                                       psat, vapour));
+
+    const std::string vapourRow = std::to_string(vapour[0]) + " " + std::to_string(vapour[1])
+                                  + " " + std::to_string(vapour[2]) + "  0  150.0\n";
+    const EquilFixture fix(deckString(
+        "EQUIL\n 2050 " + std::to_string(psat / barsa) + " 2300 0 2050 0 /\n",
+        "EQLDIMS\n/\n", "",
+        "COMPVD\n"
+        " 2000   " + vapourRow +
+        " 2049.5 " + vapourRow +
+        " 2050.5 0 0.5 0.5  1  150.0\n"
+        " 2100   0 0.3 0.7  1  150.0 /\n"));
+    WarningCapture warnings;
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    reportFlashedCells(fix, computer);
+    const auto split = supersaturatedDepths(fix, computer);
+    BOOST_REQUIRE_EQUAL(split.size(), std::size_t{10});
+    BOOST_CHECK_EQUAL(split.back(), 2047.5);
+    BOOST_CHECK(warnings.messages.str().find("split into gas and liquid") == std::string::npos);
 }
 
 namespace {

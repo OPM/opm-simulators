@@ -27,6 +27,26 @@ add_test_compare_parallel_simulation(
 
 add_test_compare_parallel_simulation(
   CASENAME
+    equil_1d_compvd_water_gascap_row_gap
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_ROW_GAP
+  SIMULATOR
+    flow_comp
+  # The cells in the COMPVD row gap start two-phase. The two-rank run must
+  # complete, which runSimulator/comp_equil_two_phase_warning_parallel does not
+  # check, and match the serial run within the compositional tolerances.
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-5
+  DIR
+    compositional/equilibration
+  MPI_PROCS
+    2
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     sshift_compositional
   FILENAME
     SIMPLE_COMP_SSHIFT

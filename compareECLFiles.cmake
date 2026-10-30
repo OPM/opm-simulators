@@ -951,6 +951,49 @@ if(MPI_FOUND)
   )
 endif()
 
+# Type-1 equilibration leaves the four cells in the COMPVD row gap two-phase,
+# and the check of the initial flash must report them, also when two ranks
+# split the column. The shares are left out, since they follow the flash
+# numerics more closely than the depths do.
+set(comp_equil_two_phase_warning_regex
+    "cells between 2576\\.50 m and 2591\\.50 m split into gas and liquid")
+add_test_runSimulator(
+  CASENAME
+    comp_equil_two_phase_warning
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_ROW_GAP
+  SIMULATOR
+    flow_comp
+  DIR
+    compositional/equilibration
+)
+set_tests_properties(
+  runSimulator/comp_equil_two_phase_warning
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "${comp_equil_two_phase_warning_regex}"
+)
+
+if(MPI_FOUND)
+  add_test_runSimulator(
+    CASENAME
+      comp_equil_two_phase_warning_parallel
+    FILENAME
+      EQUIL_1D_COMPVD_WATER_GASCAP_ROW_GAP
+    SIMULATOR
+      flow_comp
+    DIR
+      compositional/equilibration
+    PROCS
+      2
+  )
+  set_tests_properties(
+    runSimulator/comp_equil_two_phase_warning_parallel
+    PROPERTIES
+      PASS_REGULAR_EXPRESSION "${comp_equil_two_phase_warning_regex}"
+      TIMEOUT 60
+  )
+endif()
+
 add_test_runSimulator(
   CASENAME
     tuning_trgmbe
