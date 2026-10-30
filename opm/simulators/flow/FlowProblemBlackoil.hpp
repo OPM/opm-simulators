@@ -33,12 +33,18 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
+#include <opm/simulators/flow/NumericalAquiferEquilibrationCheck.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/flow/HybridNewton.hpp>
@@ -51,6 +57,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -58,6 +65,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm {
@@ -393,6 +401,9 @@ public:
             };
         }
 
+        // Checked once the initial solution has been applied.
+        this->checkAquiferEquilibration_ = !initconfig.restartRequested() && initconfig.hasEquil();
+
         // TODO: move to the end for later refactoring of the function finishInit()
         //
         // deal with DRSDT
@@ -560,6 +571,11 @@ public:
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         this->thresholdPressures_.finishInit();
+
+        if (this->checkAquiferEquilibration_) {
+            this->checkAquiferEquilibration_ = false;
+            this->checkNumericalAquiferEquilibration_();
+        }
 
         // For CpGrid with LGRs, ecl-output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
@@ -1600,6 +1616,124 @@ protected:
         this->updateRockCompTransMultVal_();
     }
 
+    // Driving pressure difference, from the aquifer cell to the connected
+    // cell, of largest magnitude among the phases which flow across the
+    // connection in the initial solution.  The pressure differences,
+    // including threshold pressures, and the (directional) upstream
+    // mobilities are evaluated as in the flux assembly.  A phase which is
+    // absent in the upstream cell is not considered to flow.  Zero if no
+    // phase flows.
+    Scalar initialFlowPressureDifference_(const unsigned cellIdx,
+                                          const unsigned aquIdx,
+                                          const FaceDir::DirEnum faceDir) const
+    {
+        using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+
+        const auto& model = this->model();
+        const auto& iqCell = model.intensiveQuantities(cellIdx, /*timeIdx=*/0);
+        const auto& iqAqu = model.intensiveQuantities(aquIdx, /*timeIdx=*/0);
+
+        const Scalar distZg = (this->dofCenterDepth(cellIdx) - this->dofCenterDepth(aquIdx))
+            * this->gravity_[dim - 1];
+        const Scalar thpresCellToAqu = this->thresholdPressure(cellIdx, aquIdx);
+        const Scalar thpresAquToCell = this->thresholdPressure(aquIdx, cellIdx);
+
+        Scalar largest = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            constexpr unsigned cellLocalIdx = 0;
+            constexpr unsigned aquLocalIdx = 1;
+            short upIdx = cellLocalIdx;
+            short dnIdx = aquLocalIdx;
+            Evaluation pressureDifference = 0.0;
+            ExtensiveQuantities::calculatePhasePressureDiff_(upIdx, dnIdx, pressureDifference,
+                                                             iqCell, iqAqu, phaseIdx,
+                                                             cellLocalIdx, aquLocalIdx,
+                                                             model.dofTotalVolume(cellIdx),
+                                                             model.dofTotalVolume(aquIdx),
+                                                             cellIdx, aquIdx, distZg,
+                                                             thpresCellToAqu, thpresAquToCell,
+                                                             this->moduleParams());
+
+            // pressureDifference is positive for flow from the aquifer cell.
+            const Scalar dp = getValue(pressureDifference);
+            const auto& up = (upIdx == static_cast<short>(cellLocalIdx)) ? iqCell : iqAqu;
+            if (dp != 0.0 &&
+                getValue(up.fluidState().saturation(phaseIdx)) > 0.0 &&
+                getValue(up.mobility(phaseIdx, faceDir)) > 0.0 &&
+                std::abs(dp) > std::abs(largest))
+            {
+                largest = dp;
+            }
+        }
+        return largest;
+    }
+
+    // Stops the simulation, unless explicitly allowed, if fluid flows
+    // initially through numerical aquifers between cells of different
+    // equilibration regions.
+    void checkNumericalAquiferEquilibration_() const
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& eclState = vanguard.eclState();
+        if (!eclState.aquifer().hasNumericalAquifer() ||
+            !eclState.fieldProps().has_int("EQLNUM"))
+        {
+            return;
+        }
+
+        std::unordered_map<std::size_t, std::size_t> aquiferOfCell;
+        for (const auto& [cartIdx, cell] : eclState.aquifer().numericalAquifers().allAquiferCells()) {
+            aquiferOfCell.emplace(cartIdx, cell->aquifer_id);
+        }
+
+        const auto eqlnum = this->lookUpData_.template
+            assignFieldPropsIntOnLeaf<int>(eclState.fieldProps(), "EQLNUM", /*needsTranslation=*/false);
+
+        // Each connection to an aquifer cell is visited from the interior
+        // cell on the other side, and connections between two aquifer
+        // cells from the cell with the lower Cartesian index.
+        std::vector<NumericalAquiferEquilibrationMismatch> mismatches;
+        const auto& gridView = this->gridView();
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            const unsigned cellIdx = this->elementMapper().index(elem);
+            const auto cellCart = vanguard.cartesianIndex(cellIdx);
+            const bool cellIsAquifer = aquiferOfCell.contains(cellCart);
+            for (const auto& intersection : intersections(gridView, elem)) {
+                if (!intersection.neighbor()) {
+                    continue;
+                }
+                const unsigned aquIdx = this->elementMapper().index(intersection.outside());
+                const auto aquCart = vanguard.cartesianIndex(aquIdx);
+                const auto aquifer = aquiferOfCell.find(aquCart);
+                if (aquifer == aquiferOfCell.end() ||
+                    (cellIsAquifer && cellCart > aquCart) ||
+                    eqlnum[aquIdx] == eqlnum[cellIdx] ||
+                    !(this->transmissibility(cellIdx, aquIdx) > 0.0))
+                {
+                    continue;
+                }
+
+                // Same face direction as in the flux assembly (ecfvstencil).
+                const int dirId = intersection.indexInInside();
+                const auto faceDir = (dirId < 0) ? FaceDir::DirEnum::Unknown
+                                                 : FaceDir::FromIntersectionIndex(dirId);
+
+                const Scalar dp = this->initialFlowPressureDifference_(cellIdx, aquIdx, faceDir);
+                if (std::abs(dp) > numericalAquiferEquilibrationTolerance) {
+                    mismatches.push_back({aquifer->second, eqlnum[aquIdx], eqlnum[cellIdx], dp});
+                }
+            }
+        }
+
+        checkNumericalAquiferEquilibration(mismatches, eclState, vanguard.grid().comm(),
+                                           Parameters::Get<Parameters::AllowInconsistentAquiferEquilibration>());
+    }
+
     bool satfuncConsistencyRequirementsMet() const
     {
         if (const auto nph = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
@@ -1686,6 +1820,10 @@ protected:
     std::unique_ptr<DamarisWriterType> damarisWriter_;
 #endif
     MixingRateControls<FluidSystem> mixControls_;
+
+    // Whether to check numerical aquifers for initial flow between
+    // equilibration regions once the initial solution has been applied.
+    bool checkAquiferEquilibration_{false};
 
     //! \brief Blackoil part of the begin-of-timestep snapshot; see
     //!        FlowProblem::PrevTimestepState.

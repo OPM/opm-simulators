@@ -69,6 +69,12 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::CheckSatfuncConsistency>
         ("Whether or not to check saturation function consistency requirements");
 
+    Parameters::Register<Parameters::AllowInconsistentAquiferEquilibration>
+        ("Allow the simulation to start when numerical aquifers connect cells of "
+         "different equilibration regions (EQLNUM) which are not in hydrostatic "
+         "equilibrium with each other, giving an initial transient. "
+         "Otherwise the simulation stops and the deck changes resolving this are reported.");
+
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
 

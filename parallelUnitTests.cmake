@@ -196,6 +196,17 @@ foreach(NPROC 2 3 4)
 endforeach()
 
 foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_numaquifer_equilibration_check_np${NPROC}
+    EXE_TARGET
+      test_NumericalAquiferEquilibrationCheck
+    DRIVER_ARGS
+      -n ${NPROC}
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
+
+foreach(NPROC 2 3 4)
   opm_add_test(test_parallel_satfunc_consistency_checks_np${NPROC}
     EXE_TARGET
       test_SatfuncConsistencyChecks_parallel

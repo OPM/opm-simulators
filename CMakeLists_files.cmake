@@ -136,6 +136,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NlddReporting.cpp
   opm/simulators/flow/NonlinearSolver.cpp
+  opm/simulators/flow/NumericalAquiferEquilibrationCheck.cpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RFTContainer.cpp
   opm/simulators/flow/RSTConv.cpp
@@ -499,6 +500,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_control_retention.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
+  tests/test_numaquifer_equilibration.cpp
   tests/test_equil.cpp
   tests/test_explicitinitialsaturations.cpp
   tests/test_extbocontainer.cpp
@@ -546,6 +548,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_SatfuncCheckPoint.cpp
   tests/test_SatfuncConsistencyChecks.cpp
   tests/test_SatfuncConsistencyChecks_parallel.cpp
+  tests/test_NumericalAquiferEquilibrationCheck.cpp
   tests/test_SatfuncConsistencyCheckManager.cpp
   tests/test_stoppedwells.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
@@ -701,6 +704,9 @@ list (APPEND TEST_DATA_FILES
   tests/COMP_EXPLICIT_SOIL_SGAS.DATA
   tests/drsdt_initial_rs.DATA
   tests/equil_base.DATA
+  tests/numaquifer_equil_immobile.DATA
+  tests/numaquifer_equil_mismatch.DATA
+  tests/numaquifer_equil_tolerance.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
   tests/equil_capillary_swatinit.DATA
@@ -1132,6 +1138,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NewtonIterationContext.hpp
   opm/simulators/flow/NlddReporting.hpp
   opm/simulators/flow/NonlinearSolver.hpp
+  opm/simulators/flow/NumericalAquiferEquilibrationCheck.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/OutputCompositionalModule.hpp
   opm/simulators/flow/OutputExtractor.hpp
