@@ -150,6 +150,12 @@ namespace Opm {
                         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                             attr.rs += fs.Rs().value() * hydrocarbonPV;
                             attr.rv += fs.Rv().value() * hydrocarbonPV;
+                            const Scalar oilPV = pv_cell * fs.saturation(FluidSystem::oilPhaseIdx).value();
+                            const Scalar gasPV = pv_cell * fs.saturation(FluidSystem::gasPhaseIdx).value();
+                            attr.rs_oil += fs.Rs().value() * oilPV;
+                            attr.oil_pv += oilPV;
+                            attr.rv_gas += fs.Rv().value() * gasPV;
+                            attr.gas_pv += gasPV;
                         }
                         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
@@ -385,6 +391,10 @@ namespace Opm {
                     , rvw(data[5])
                     , pv(data[6])
                     , saltConcentration(data[7])
+                    , rs_oil(data[8])
+                    , oil_pv(data[9])
+                    , rv_gas(data[10])
+                    , gas_pv(data[11])
                 {}
 
                 Attributes(const Attributes& rhs)
@@ -399,7 +409,7 @@ namespace Opm {
                     return *this;
                 }
 
-                std::array<Scalar,8> data;
+                std::array<Scalar,12> data;
                 Scalar& pressure;
                 Scalar& temperature;
                 Scalar& rs;
@@ -408,6 +418,11 @@ namespace Opm {
                 Scalar& rvw;
                 Scalar& pv;
                 Scalar& saltConcentration;
+                // Oil (gas) volume weighted Rs (Rv) and corresponding weights.
+                Scalar& rs_oil;
+                Scalar& oil_pv;
+                Scalar& rv_gas;
+                Scalar& gas_pv;
             };
 
             void sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
