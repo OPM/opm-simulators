@@ -84,6 +84,7 @@
 #include <cassert>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -600,10 +601,12 @@ groupEconomicWaterGasRatios(const int reportStep, const bool committed)
     }
     const int water = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
     const int gas = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-    // Before the first accepted step, committed rates are initialization
-    // guesses, not a solved physical baseline. Refine consecutive trial solves
+    // Before the first accepted step of any report step, committed rates may
+    // be fresh initialization guesses for a newly opened well or a stale
+    // solved state carried through a schedule-driven control change, not a
+    // solved baseline for this report step. Refine consecutive trial solves
     // there; timeStepSucceeded() clears report_step_starts_ on acceptance.
-    const bool use_committed = committed && (reportStep != 0 || !this->report_step_starts_);
+    const bool use_committed = committed && !this->report_step_starts_;
     auto& state = use_committed ? this->last_valid_wgstate_ : this->active_wgstate_;
     // Rollback occurs inside the next solver step, after the adaptive loop
     // samples its baseline. Never sample the previous rejected candidate here.
@@ -666,7 +669,14 @@ groupEconomicWaterGasRatios(const int reportStep, const bool committed)
                                            - closedRate(closedRate, group, gas));
         if (wr <= 0) {
             ratios[name] = 0;
-        } else if (gr > 0 && std::isfinite(wr) && std::isfinite(gr)) {
+        } else if (gr <= 0) {
+            // Zero or negative gas with positive water matches the
+            // "maximum WGR" treatment in
+            // GroupEconomicLimitsChecker::groupRatioDetails(): report an
+            // effectively infinite ratio rather than omitting the group,
+            // so a finite-to-zero-gas transition still triggers a retry.
+            ratios[name] = std::numeric_limits<Scalar>::max();
+        } else if (std::isfinite(wr) && std::isfinite(gr)) {
             ratios[name] = (wr / gr) / *limit;
         }
     }

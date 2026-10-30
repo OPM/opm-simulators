@@ -694,7 +694,7 @@ macro(opm-simulators_tests_hook)
       )
       set_tests_properties(gecon_wgr_timestep_control PROPERTIES
         LABELS "regression;economic_limits"
-        TIMEOUT 960
+        TIMEOUT 1260
         PROCESSORS 1
       )
     else()

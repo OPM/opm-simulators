@@ -155,6 +155,50 @@ def check_reopening(args):
     print('Scheduled reopening and economic reclosure passed')
 
 
+def check_control_change(args):
+    """A later WCONPROD edit must not pin retries to the old solved rates."""
+    output = Path(tempfile.mkdtemp(prefix='control-change-', dir=str(args.output.resolve())))
+    print('GECON control-change artifacts: {}'.format(output), flush=True)
+    text = args.deck.read_text()
+    text = re.sub(r"(INCLUDE\s*\n\s*)'([^']+)'",
+                  lambda match: match[1] + "'" + str((args.deck.parent / match[2]).resolve()) + "'",
+                  text, flags=re.IGNORECASE)
+    marker = "  20 'JAN' 2020 /"
+    require(text.count(marker) == 1, 'Cannot locate day-19 GECON report boundary')
+    # Reduce the wet producer's target by a factor of ten. Keep this run short:
+    # only the first accepted step after the edit is relevant to this regression.
+    text = text[:text.index(marker)] + marker + (
+        "\n/\nWCONPROD\n 'B-3H' 'OPEN' 'GRAT' 2* 3.0E5 2* 100 /\n/\n"
+        "TSTEP\n 1 /\nEND\n")
+    deck = output / 'GECON-02.DATA'
+    deck.write_text(text)
+    with (output / 'console.log').open('w') as log:
+        subprocess.run(
+            [str(args.flow), str(deck), '--output-dir=' + str(output),
+             '--threads-per-process=1', '--initial-time-step-in-days=1',
+             '--group-economic-wgr-step-tolerance=0.001'],
+            stdout=log, stderr=subprocess.STDOUT, check=True, timeout=300)
+    rows = read_summary(args.summary, output)
+    require(bool(rows) and abs(rows[-1]['TIME'] - 20) < 1e-8,
+            'Control-change run did not finish')
+    before = [row for row in rows if abs(row['TIME'] - 19) < 1e-8]
+    after = [row for row in rows if row['TIME'] > 19]
+    require(len(before) == 1 and bool(after), 'Missing control-change neighbours')
+    require(before[0]['WGPR:B-3H'] > 1e6,
+            'Producer was not on its original gas target before the edit')
+    require(0 < after[0]['WGPR:B-3H'] <= 3.0e5 + 1,
+            'Scheduled WCONPROD target edit did not take effect')
+    require(after[0]['WWPR:B-3H'] > 0,
+            'Control-change regression did not exercise a wet producer')
+    require(before[0]['FGPR'] > 0 and after[0]['FGPR'] > 0,
+            'Missing group gas rate around the target edit')
+    jump = abs(after[0]['FWPR'] / after[0]['FGPR']
+               - before[0]['FWPR'] / before[0]['FGPR']) / 1e-6
+    require(jump > 0.001,
+            'Target edit did not exceed the stale-baseline WGR tolerance')
+    print('Scheduled WCONPROD change and first-step acceptance passed')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--flow', type=Path)
@@ -188,6 +232,7 @@ def main():
         require(abs(results[0][1] - results[1][1]) <= 0.5,
                 'Water production depends on the initial timestep by more than 0.5 m3')
         check_reopening(args)
+        check_control_change(args)
         print('Adaptive GECON WGR accuracy regression passed')
         return
     if not args.check_only:
