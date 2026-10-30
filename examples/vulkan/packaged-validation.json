@@ -1,0 +1,123 @@
+{
+  "protocol": "Single paired correctness runs, not repeated benchmarks. Failed comparisons do not establish speedups.",
+  "gpu_tests": {
+    "passed": 6,
+    "failed": 0,
+    "device": "Radeon 8060S"
+  },
+  "runs": [
+    {
+      "image_id": "d14fab9f370d078845e2395247a20209500a13a27e8e7d2d792d95e17e627f73",
+      "binary_sha256": "cb2a45c2264279222b540b3fc0c51d77eb8d27ad9cb55e3cea6e2cab433ca1e2",
+      "cpu_binary_sha256": "58cfacc87ac1732e36bc10d3302f494406dd0b521d29fbda4a454338f4dcdc87",
+      "threads": 16,
+      "linear_tolerance": 1e-08,
+      "max_iterations": 2000,
+      "case": "spe1-refined",
+      "checked": 72,
+      "passed": false,
+      "failed_checks": 18,
+      "failures": [
+        "BPR:1: maximum absolute difference 8.8969727",
+        "BPR:1,1,1: maximum absolute difference 8.8969727",
+        "BPR:10,10,3: maximum absolute difference 11.236816",
+        "BPR:20910: maximum absolute difference 11.236816",
+        "WBHP:INJ: maximum absolute difference 19.405273",
+        "WBHP:PROD: maximum absolute difference 19.271484",
+        "WGPR:PROD: maximum absolute difference 104.05859",
+        "WGPT:PROD: maximum absolute difference 232.82812",
+        "1/PRESSURE: maximum absolute difference 0.80957031",
+        "2/PRESSURE: maximum absolute difference 32.208496",
+        "2/SGAS: maximum absolute difference 0.045815706",
+        "2/RS: maximum absolute difference 0.22225499",
+        "3/PRESSURE: maximum absolute difference 8.8969727",
+        "3/SGAS: maximum absolute difference 0.037898272",
+        "3/RS: maximum absolute difference 0.069612741",
+        "4/PRESSURE: maximum absolute difference 3.6811523",
+        "4/SGAS: maximum absolute difference 0.021532288",
+        "4/RS: maximum absolute difference 0.081339121"
+      ],
+      "absolute_tolerance": 0.02,
+      "relative_tolerance": 1e-05,
+      "observed_runs": {
+        "cpu": {
+          "exit_code": 0,
+          "wall_seconds": 18.453836535976734
+        },
+        "vulkan": {
+          "exit_code": 0,
+          "wall_seconds": 15.955326460010838
+        }
+      }
+    },
+    {
+      "image_id": "d14fab9f370d078845e2395247a20209500a13a27e8e7d2d792d95e17e627f73",
+      "binary_sha256": "cb2a45c2264279222b540b3fc0c51d77eb8d27ad9cb55e3cea6e2cab433ca1e2",
+      "cpu_binary_sha256": "58cfacc87ac1732e36bc10d3302f494406dd0b521d29fbda4a454338f4dcdc87",
+      "threads": 16,
+      "linear_tolerance": 1e-08,
+      "max_iterations": 2000,
+      "case": "spe1",
+      "checked": 536,
+      "passed": true,
+      "failed_checks": 0,
+      "failures": [],
+      "absolute_tolerance": 0.02,
+      "relative_tolerance": 1e-05,
+      "observed_runs": {
+        "cpu": {
+          "exit_code": 0,
+          "wall_seconds": 1.3179522449499927
+        },
+        "vulkan": {
+          "exit_code": 0,
+          "wall_seconds": 1.9179579989868216
+        }
+      }
+    },
+    {
+      "image_id": "d14fab9f370d078845e2395247a20209500a13a27e8e7d2d792d95e17e627f73",
+      "binary_sha256": "cb2a45c2264279222b540b3fc0c51d77eb8d27ad9cb55e3cea6e2cab433ca1e2",
+      "cpu_binary_sha256": "58cfacc87ac1732e36bc10d3302f494406dd0b521d29fbda4a454338f4dcdc87",
+      "threads": 16,
+      "linear_tolerance": 1e-10,
+      "max_iterations": 2000,
+      "case": "spe1-refined",
+      "checked": 72,
+      "passed": false,
+      "failed_checks": 18,
+      "failures": [
+        "BPR:1: maximum absolute difference 8.9111328",
+        "BPR:1,1,1: maximum absolute difference 8.9111328",
+        "BPR:10,10,3: maximum absolute difference 11.236816",
+        "BPR:20910: maximum absolute difference 11.236816",
+        "WBHP:INJ: maximum absolute difference 19.405273",
+        "WBHP:PROD: maximum absolute difference 19.271484",
+        "WGPR:PROD: maximum absolute difference 104.05859",
+        "WGPT:PROD: maximum absolute difference 232.82812",
+        "1/PRESSURE: maximum absolute difference 0.80859375",
+        "2/PRESSURE: maximum absolute difference 32.208008",
+        "2/SGAS: maximum absolute difference 0.045815948",
+        "2/RS: maximum absolute difference 0.22224796",
+        "3/PRESSURE: maximum absolute difference 8.9111328",
+        "3/SGAS: maximum absolute difference 0.03789667",
+        "3/RS: maximum absolute difference 0.06964612",
+        "4/PRESSURE: maximum absolute difference 3.6992188",
+        "4/SGAS: maximum absolute difference 0.021530343",
+        "4/RS: maximum absolute difference 0.075569749"
+      ],
+      "absolute_tolerance": 0.02,
+      "relative_tolerance": 1e-05,
+      "observed_runs": {
+        "cpu": {
+          "exit_code": 0,
+          "wall_seconds": 21.323666539043188
+        },
+        "vulkan": {
+          "exit_code": 0,
+          "wall_seconds": 17.253032254055142
+        }
+      }
+    }
+  ]
+}
