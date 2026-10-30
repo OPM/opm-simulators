@@ -52,6 +52,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -304,6 +305,28 @@ int eclPositionalParameter(std::function<void(const std::string&, const std::str
     addKey("EclDeckFileName", argv[paramIdx]);
     seenParams.insert("EclDeckFileName");
     return 1;
+}
+
+std::optional<int> parseOmpNumThreads(std::string_view value)
+{
+    std::optional<int> first;
+    while (true) {
+        const auto comma = value.find(',');
+        const auto entry = trim_copy(std::string{value.substr(0, comma)});
+        const auto* end = entry.data() + entry.size();
+        int threads = 0;
+        const auto [ptr, ec] = std::from_chars(entry.data(), end, threads);
+        if (ec != std::errc() || ptr != end || threads < 1) {
+            return std::nullopt;
+        }
+        if (!first) {
+            first = threads;
+        }
+        if (comma == std::string_view::npos) {
+            return first;
+        }
+        value.remove_prefix(comma + 1);
+    }
 }
 
 template void hideUnusedParameters<double>();
