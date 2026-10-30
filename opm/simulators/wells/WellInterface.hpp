@@ -51,6 +51,7 @@ namespace Opm {
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WellReservoirResponse.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -200,6 +201,14 @@ public:
                                          const Scalar& bhp,
                                          std::vector<Scalar>& well_flux,
                                          DeferredLogger& deferred_logger) const = 0;
+
+    //! \brief As above, with the segment pressures of a multisegment well taken from the
+    //! given well state instead of the model's well state.
+    virtual void computeWellRatesWithBhp(const Simulator& simulator,
+                                         const WellStateType& well_state,
+                                         const Scalar& bhp,
+                                         std::vector<Scalar>& well_flux,
+                                         DeferredLogger& deferred_logger) const;
 
     virtual std::optional<Scalar>
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
@@ -438,6 +447,9 @@ protected:
     bool changed_to_stopped_this_step_ = false;
     bool thp_update_iterations = false;
     int number_of_well_reopenings_{0};
+    //! \brief Response of the connection cell pressures to the flow of a producer under thp
+    //! control, in this time step.
+    WellReservoirResponse<Scalar> reservoir_response_;
 
     Scalar wpolymer() const;
     Scalar wfoam() const;
@@ -567,6 +579,25 @@ protected:
     //! \brief Temperature and salt concentration of the first perforated cell,
     //! broadcast so that all processes of a distributed well get the values.
     FSInfo getFirstPerfCellConditions(const Simulator& simulator) const;
+
+    //! \brief Opens a stopped producer with a thp limit if it can flow within its bhp and
+    //! thp limits, with the well state set to the flowing solution. Returns false, leaving
+    //! the well stopped, otherwise. With the reservoir response, the inflow includes the drop
+    //! of the connection cell pressures that the flow of the well causes.
+    bool tryOpenProducerWithThpLimit(const Simulator& simulator,
+                                     const GroupStateHelperType& groupStateHelper,
+                                     const Scalar bhp_limit,
+                                     WellStateType& well_state,
+                                     const bool with_reservoir_response);
+
+    //! \brief Records a producer under thp control in reservoir_response_, at the start of
+    //! a Newton iteration.
+    void updateReservoirResponse(const Simulator& simulator,
+                                 const WellStateType& well_state,
+                                 DeferredLogger& deferred_logger);
+
+    //! \brief Whether a stopped producer is re-opened with the reservoir response.
+    bool reopensWithReservoirResponse(const WellStateType& well_state) const;
 };
 
 } // namespace Opm

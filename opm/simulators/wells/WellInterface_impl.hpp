@@ -481,6 +481,13 @@ namespace Opm
             }
             const Scalar bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
+                if (has_thp && this->isProducer() && !fixed_control) {
+                    // A bhp above the minimum of the bhp-curve does not guarantee that the
+                    // well can flow at its thp limit. A solve at a fixed bhp keeps this test.
+                    return this->tryOpenProducerWithThpLimit(
+                        simulator, groupStateHelper, static_cast<Scalar>(prod_controls.bhp_limit),
+                        well_state, /*with_reservoir_response=*/false);
+                }
                 this->openWell();
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
                 if (has_thp) {
@@ -1277,6 +1284,7 @@ namespace Opm
         // only use inner well iterations for the first newton iterations.
         const auto& iterCtx = simulator.problem().iterationContext();
         if (iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
+            this->updateReservoirResponse(simulator, well_state, deferred_logger);
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
@@ -1310,20 +1318,61 @@ namespace Opm
                 number_of_well_reopenings_++;
                 return;
             }
-            bool converged = this->iterateWellEquations(
-                simulator, dt, groupStateHelper, well_state
-            );
+            const bool stopped_before_solve = this->wellIsStopped();
+            bool converged = true;
+            // A producer that was stopped in one Newton iteration of this time step and flowing in
+            // the next, or the other way round, is only re-opened if it can flow with the drop of
+            // its connection cell pressures that its flow causes. The local solve works at the
+            // current cell pressures: it would re-open the well at a rate at which it stops again
+            // in the next iteration. Without control switching, it does not re-open stopped wells.
+            if (stopped_before_solve && this->param_.local_well_solver_control_switching_ &&
+                this->reopensWithReservoirResponse(well_state)) {
+                const auto& summary_state = simulator.vanguard().summaryState();
+                const Scalar bhp_limit =
+                    this->well_ecl_.productionControls(summary_state).bhp_limit;
+                if (!this->tryOpenProducerWithThpLimit(simulator, groupStateHelper, bhp_limit,
+                                                       well_state,
+                                                       /*with_reservoir_response=*/true)) {
+                    deferred_logger.debug(fmt::format("Well {} stays stopped: it cannot flow "
+                                                      "with the drop of its connection cell "
+                                                      "pressures.", this->name()));
+                    converged = this->solveWellWithZeroRate(simulator, dt, groupStateHelper,
+                                                            well_state);
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                }
+            } else {
+                converged = this->iterateWellEquations(simulator, dt, groupStateHelper, well_state);
+            }
+            // Re-openings by the local solve count as well: a producer with a thp limit is
+            // rarely re-opened below.
+            if (stopped_before_solve && !this->wellIsStopped()) {
+                this->number_of_well_reopenings_++;
+            }
 
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(groupStateHelper);
                 if (this->wellIsStopped() && !zero_target && nonzero_rate_original) {
                     // Well had non-zero rate, but was stopped during local well-solve. We re-open the well
                     // for the next global iteration, but if the zero rate persists, it will be stopped.
-                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations
-                    this->operability_status_.resetOperability();
-                    this->openWell();
-                    deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
-                    number_of_well_reopenings_++;
+                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations.
+                    // A producer with a thp limit is only re-opened if it can flow, as in the local
+                    // solve, since it would otherwise be stopped again.
+                    const auto& summary_state = simulator.vanguard().summaryState();
+                    bool reopened = true;
+                    if (this->isProducer() && this->wellHasTHPConstraints(summary_state)) {
+                        const Scalar bhp_limit = this->well_ecl_.productionControls(summary_state).bhp_limit;
+                        reopened = this->tryOpenProducerWithThpLimit(
+                            simulator, groupStateHelper, bhp_limit, well_state,
+                            this->reopensWithReservoirResponse(well_state));
+                    } else {
+                        this->operability_status_.resetOperability();
+                        this->openWell();
+                    }
+                    if (reopened) {
+                        deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
+                        this->number_of_well_reopenings_++;
+                    }
                 }
             } else {
                 // unsolvable wells are treated as not operable and will not be solved for in this iteration.
@@ -1581,6 +1630,19 @@ namespace Opm
     scaleSegmentRatesAndPressure([[maybe_unused]] WellStateType& well_state) const
     {
         // only relevant for MSW
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    computeWellRatesWithBhp(const Simulator& simulator,
+                            [[maybe_unused]] const WellStateType& well_state,
+                            const Scalar& bhp,
+                            std::vector<Scalar>& well_flux,
+                            DeferredLogger& deferred_logger) const
+    {
+        // only MSW takes values from the well state
+        this->computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
     }
 
     template<typename TypeTag>
@@ -2474,6 +2536,165 @@ namespace Opm
         } else {
             return false;
         }
+    }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    tryOpenProducerWithThpLimit(const Simulator& simulator,
+                                const GroupStateHelperType& groupStateHelper,
+                                const Scalar bhp_limit,
+                                WellStateType& well_state,
+                                const bool with_reservoir_response)
+    {
+        auto& deferred_logger = groupStateHelper.deferredLogger();
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const auto flows = [](const std::vector<Scalar>& q) {
+            return std::ranges::all_of(q, [](const Scalar r) { return r <= 0.0; }) &&
+                   std::ranges::any_of(q, [](const Scalar r) { return r < 0.0; });
+        };
+
+        // Rates without iterating the well equations, for the state being solved, which in a
+        // well test is a copy of the model's well state. The drop of the cell pressures with
+        // the reservoir response lowers the inflow as a higher bhp does.
+        const auto rates_at = [this, &simulator, &well_state, &deferred_logger,
+                               with_reservoir_response](const Scalar bhp_value) {
+            const Scalar drop = with_reservoir_response
+                ? this->reservoir_response_.pressureDrop(bhp_value) : Scalar{0};
+            std::vector<Scalar> q(this->number_of_phases_, 0.0);
+            this->computeWellRatesWithBhp(simulator, well_state, bhp_value + drop, q,
+                                          deferred_logger);
+            return q;
+        };
+        const auto frates_explicit = [this, &rates_at](const Scalar bhp_value) {
+            auto q = rates_at(bhp_value);
+            this->adaptRatesForVFP(q);
+            return q;
+        };
+        // The cell pressures of the stopped well bound the search.
+        Scalar max_pressure = this->maxPerfPress(simulator);
+        if (with_reservoir_response) {
+            max_pressure += this->reservoir_response_.stoppedPressureRise();
+        }
+
+        // The search for the bhp at the thp limit only covers bhp values above the bhp limit.
+        // At the bhp limit itself, the thp limit holds if the bhp-curve is not above it.
+        const auto search_bhp = [this, &well_state, &summary_state, &deferred_logger, &flows,
+                                 &frates_explicit, bhp_limit,
+                                 max_pressure]() -> std::optional<Scalar> {
+            const auto rates = frates_explicit(bhp_limit);
+            if (flows(rates) &&
+                WellBhpThpCalculator(*this).calculateBhpFromThp(
+                    well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(),
+                    deferred_logger) <= bhp_limit) {
+                return bhp_limit;
+            }
+            // Without iterations: they make each refusal costly.
+            return WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(
+                frates_explicit, summary_state, max_pressure,
+                this->getRefDensity(), this->getALQ(well_state),
+                this->getTHPConstraint(summary_state), deferred_logger);
+        };
+        const auto operability = this->operability_status_;
+        auto bhp = search_bhp();
+        if (!bhp && !operability.use_vfpexplicit) {
+            // As after a failed local solve, fall back to explicit fractions in the vfp lookup.
+            // A well re-opened with them keeps them for the rest of the time step.
+            this->operability_status_.use_vfpexplicit = true;
+            bhp = search_bhp();
+        }
+        if (!bhp) {
+            this->operability_status_ = operability;
+            return false;
+        }
+
+        // Start from the flowing solution. Opened with zero rates at the minimum of the
+        // bhp-curve instead, the local solve falls back to zero rate and stops the well
+        // again. The rates are computed for the open well, a stopped multisegment well
+        // has zero rates.
+        this->openWell();
+        this->operability_status_.resetOperability();
+        std::vector<Scalar> rates(this->number_of_phases_, 0.0);
+        if (with_reservoir_response) {
+            // Iterated rates would be those at the current cell pressures.
+            rates = rates_at(*bhp);
+        } else if (this->thp_update_iterations) {
+            this->computeWellRatesWithBhpIterations(simulator, *bhp, groupStateHelper, rates);
+            // The iterated rates can differ from the ones the search used. Allow the 0.1 bar
+            // the search accepts for an approximate crossing.
+            auto vfp_rates = rates;
+            this->adaptRatesForVFP(vfp_rates);
+            if (WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, vfp_rates, this->well_ecl_, summary_state,
+                                                                this->getRefDensity(), deferred_logger)
+                > *bhp + 0.1 * unit::barsa) {
+                // The iterated rates can still meet the thp limit at another bhp.
+                const auto frates = [this, &simulator, &groupStateHelper](const Scalar bhp_value) {
+                    std::vector<Scalar> q(this->number_of_phases_, 0.0);
+                    this->computeWellRatesWithBhpIterations(simulator, bhp_value, groupStateHelper, q);
+                    this->adaptRatesForVFP(q);
+                    return q;
+                };
+                bhp = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates, summary_state,
+                                                                           this->maxPerfPress(simulator),
+                                                                           this->getRefDensity(),
+                                                                           this->getALQ(well_state),
+                                                                           this->getTHPConstraint(summary_state),
+                                                                           deferred_logger);
+                if (bhp) {
+                    this->computeWellRatesWithBhpIterations(simulator, *bhp, groupStateHelper, rates);
+                }
+            }
+        } else {
+            this->computeWellRatesWithBhp(simulator, well_state, *bhp, rates, deferred_logger);
+        }
+        // The search accepts zero rates.
+        if (!bhp || !flows(rates)) {
+            this->stopWell();
+            this->operability_status_ = operability;
+            return false;
+        }
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.surface_rates = rates;
+        ws.bhp = *bhp;
+        ws.thp = this->getTHPConstraint(summary_state);
+        // The fractions stay those of the stopped well (ws.primaryvar): the ones of the
+        // explicit inflow at this bhp gave a worse start.
+        this->scaleSegmentRatesAndPressure(well_state);
+        this->updatePrimaryVariables(groupStateHelper);
+        return true;
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateReservoirResponse(const Simulator& simulator,
+                            const WellStateType& well_state,
+                            DeferredLogger& deferred_logger)
+    {
+        const auto& ws = well_state.well(this->index_of_well_);
+        if (!this->isProducer() || ws.production_cmode != Well::ProducerCMode::THP) {
+            return;
+        }
+        const int np = this->number_of_phases_;
+        this->updateIPR(simulator, deferred_logger);
+        std::vector<Scalar> rates(np);
+        for (int comp = 0; comp < np; ++comp) {
+            rates[comp] = -ws.surface_rates[FluidSystem::activeCompToActivePhaseIdx(comp)];
+        }
+        this->reservoir_response_.update(simulator.problem().iterationContext().iteration(),
+                                         this->wellIsStopped(),
+                                         {this->ipr_a_.begin(), this->ipr_a_.begin() + np},
+                                         {this->ipr_b_.begin(), this->ipr_b_.begin() + np},
+                                         rates);
+    }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    reopensWithReservoirResponse(const WellStateType& well_state) const
+    {
+        return this->reservoir_response_.ratio().has_value()
+            && well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP;
     }
 
     template<typename TypeTag>
