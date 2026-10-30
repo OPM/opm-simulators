@@ -582,6 +582,10 @@ public:
 
         // Add source term from deck
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
+        // Skip the per-cell Cartesian lookup when the deck has no SOURCE cells.
+        if (source.size() == 0) {
+            return;
+        }
         std::array<int,3> ijk;
         this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
 
