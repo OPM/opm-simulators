@@ -8,6 +8,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -52,9 +53,10 @@ public:
         return materialLawParams_;
     }
 
+    // No DRSDT/DRVDT limits.
     double maxGasDissolutionFactor(unsigned, unsigned) const
     {
-        return 1.0;
+        return std::numeric_limits<double>::max();
     }
 
     double maxOilSaturation(unsigned) const
@@ -67,7 +69,7 @@ public:
 
     double maxOilVaporizationFactor(unsigned, unsigned) const
     {
-        return 1.0;
+        return std::numeric_limits<double>::max();
     }
 
 private:
@@ -171,7 +173,15 @@ PrimaryVariables makePrimaryVariables(PrimaryVariables::GasMeaning gasMeaning,
     return priVars;
 }
 
-std::shared_ptr<OilPvt> makeConstantRsOilPvt(double rsSat, double bo = 1.25)
+// Typical black-oil values in SI units: Rs and Rv in sm3/sm3, Bo and Bg in
+// rm3/sm3 (Bg at a reservoir pressure of about 250 bar).  The PVT objects
+// below are independent of pressure.
+constexpr double typicalRs = 100.0;
+constexpr double typicalRv = 2.0e-4;
+constexpr double typicalBo = 1.3;
+constexpr double typicalBg = 0.005;
+
+std::shared_ptr<OilPvt> makeConstantRsOilPvt(double rsSat, double bo = typicalBo)
 {
     auto oilPvt = std::make_shared<OilPvt>();
     oilPvt->setApproach(Opm::OilPvtApproach::ConstantRsDeadOil);
@@ -186,7 +196,7 @@ std::shared_ptr<OilPvt> makeConstantRsOilPvt(double rsSat, double bo = 1.25)
     return oilPvt;
 }
 
-std::shared_ptr<GasPvt> makeWetGasPvt(double rvSat, double bg = 0.005)
+std::shared_ptr<GasPvt> makeWetGasPvt(double rvSat, double bg = typicalBg)
 {
     auto gasPvt = std::make_shared<GasPvt>();
     gasPvt->setApproach(Opm::GasPvtApproach::WetGas);
@@ -259,15 +269,15 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchesFromGasSaturationToRs)
     FluidSystem::setEnableVaporizedOil(false);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    const double rsSat = 0.25;
-    const double Bo = 1.25;
-    const double Bg = 0.005;
+    const double rsSat = typicalRs;
+    const double Bo = typicalBo;
+    const double Bg = typicalBg;
     FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat, Bo));
     FluidSystem::setGasPvt(makeWetGasPvt(0.0, Bg));
 
     Problem problem;
     const double sw = 0.95;
-    const double sg = -5.0e-6;
+    const double sg = -5.0e-4;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
@@ -301,8 +311,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsWithoutGasDe
     FluidSystem::setEnableVaporizedOil(false);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    FluidSystem::setOilPvt(makeConstantRsOilPvt(0.25));
-    FluidSystem::setGasPvt(makeWetGasPvt(0.0, 0.005));
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(typicalRs));
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0));
 
     Problem problem;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
@@ -319,7 +329,7 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsWithoutGasDe
 
     BOOST_CHECK(changed);
     BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
-    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], 0.25, 1e-6);
+    BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], typicalRs, 1e-6);
 }
 
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsLimitsRsToZero)
@@ -330,8 +340,8 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsLimitsRsToZero)
     FluidSystem::setEnableVaporizedOil(false);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    FluidSystem::setOilPvt(makeConstantRsOilPvt(0.25));
-    FluidSystem::setGasPvt(makeWetGasPvt(0.0, 0.005));
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(typicalRs));
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0));
 
     Problem problem;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
@@ -359,9 +369,9 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsAtLargeOilSa
     FluidSystem::setEnableVaporizedOil(false);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    const double rsSat = 0.25;
+    const double rsSat = typicalRs;
     FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat));
-    FluidSystem::setGasPvt(makeWetGasPvt(0.0, 0.005));
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0));
 
     // A Newton overshoot of Sg in a cell with much oil is not taken as a gas
     // deficit; the oil is initialised as saturated.
@@ -383,6 +393,45 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsKeepsSaturatedRsAtLargeOilSa
     BOOST_CHECK_CLOSE(priVars[Indices::compositionSwitchIdx], rsSat, 1e-10);
 }
 
+BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAtOilSaturationLimit)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(true);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    const double rsSat = typicalRs;
+    const double Bo = typicalBo;
+    const double Bg = typicalBg;
+    FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat, Bo));
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0, Bg));
+
+    // The component-based Rs is used for oil saturations (1 - Sw - Sg) below
+    // 0.1, and the saturated Rs from 0.1 on.
+    const double sg = -5.0e-4;
+    auto rsAfterSwitch = [&](const double so) {
+        Problem problem;
+        auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                            1.0 - so - sg,
+                                            sg,
+                                            PrimaryVariables::WaterMeaning::Sw,
+                                            PrimaryVariables::PressureMeaning::Po,
+                                            1.5e5);
+        const bool changed = priVars.adaptPrimaryVariables(problem,
+                                                           /*globalDofIdx=*/0,
+                                                           /*swMaximum=*/1.0,
+                                                           /*thresholdWaterFilledCell=*/1.1);
+        BOOST_CHECK(changed);
+        BOOST_CHECK(priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+        return priVars[Indices::compositionSwitchIdx];
+    };
+
+    const double soBelow = 0.0999;
+    BOOST_CHECK_CLOSE(rsAfterSwitch(soBelow), (rsSat * soBelow / Bo + sg / Bg) / (soBelow / Bo), 1e-10);
+    BOOST_CHECK_CLOSE(rsAfterSwitch(0.1001), rsSat, 1e-10);
+}
+
 BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAccountsForVaporizedOil)
 {
     FluidSystemGuard guard;
@@ -391,16 +440,16 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsAccountsForVaporizedOil)
     FluidSystem::setEnableVaporizedOil(true);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    const double rsSat = 0.25;
-    const double rvSat = 0.15;
-    const double Bo = 1.25;
-    const double Bg = 0.005;
+    const double rsSat = typicalRs;
+    const double rvSat = typicalRv;
+    const double Bo = typicalBo;
+    const double Bg = typicalBg;
     FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat, Bo));
     FluidSystem::setGasPvt(makeWetGasPvt(rvSat, Bg));
 
     Problem problem;
     const double sw = 0.95;
-    const double sg = -5.0e-6;
+    const double sg = -5.0e-4;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
@@ -430,10 +479,10 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsUsesHistoryDependentRv)
     FluidSystem::setEnableVaporizedOil(true);
     FluidSystem::setEnableVaporizedWater(false);
     FluidSystem::setReservoirTemperature(300.0);
-    const double rsSat = 0.25;
-    const double rvSat = 0.15;
-    const double Bo = 1.25;
-    const double Bg = 0.005;
+    const double rsSat = typicalRs;
+    const double rvSat = typicalRv;
+    const double Bo = typicalBo;
+    const double Bg = typicalBg;
     const double vapPar1 = 0.5;
     FluidSystem::setOilPvt(makeConstantRsOilPvt(rsSat, Bo));
     auto gasPvt = makeWetGasPvt(rvSat, Bg);
@@ -445,7 +494,7 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesSwitchToRsUsesHistoryDependentRv)
     Problem problem;
     problem.maxOilSaturation_ = 0.9;
     const double sw = 0.95;
-    const double sg = -5.0e-6;
+    const double sg = -5.0e-4;
     auto priVars = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
                                         sw,
                                         sg,
