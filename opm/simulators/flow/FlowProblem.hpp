@@ -1713,6 +1713,8 @@ protected:
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
+        materialLawManager_->setSwatinitScaleUpAtConnate
+            (Parameters::Get<Parameters::SwatinitPcScaleUpAtConnate>());
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
                                                    this-> template fieldPropIntTypeOnLeafAssigner_<int>(),
                                                    this-> lookupIdxOnLevelZeroAssigner_());
