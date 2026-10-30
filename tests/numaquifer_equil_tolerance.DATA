@@ -23,8 +23,11 @@ DY
  72*100 /
 DZ
  72*5 /
+BOX
+ 1 4 1 3 1 1 /
 TOPS
  12*2000 /
+ENDBOX
 PORO
  72*0.25 /
 PERMX

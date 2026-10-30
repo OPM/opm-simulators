@@ -1702,7 +1702,7 @@ protected:
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             const unsigned cellIdx = this->elementMapper().index(elem);
             const auto cellCart = vanguard.cartesianIndex(cellIdx);
-            const bool cellIsAquifer = aquiferOfCell.count(cellCart) > 0;
+            const bool cellIsAquifer = aquiferOfCell.contains(cellCart);
             for (const auto& intersection : intersections(gridView, elem)) {
                 if (!intersection.neighbor()) {
                     continue;

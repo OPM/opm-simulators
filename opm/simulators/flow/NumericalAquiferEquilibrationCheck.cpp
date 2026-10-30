@@ -22,6 +22,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/grid/common/CommunicationUtils.hpp>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferRegionSplit.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
@@ -32,7 +34,6 @@
 #include <cmath>
 #include <cstddef>
 #include <map>
-#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -58,16 +59,7 @@ gatherMismatches(const std::vector<Opm::NumericalAquiferEquilibrationMismatch>& 
         sendBuffer.push_back(m.pressureDifference);
     }
 
-    const int sendSize = static_cast<int>(sendBuffer.size());
-    std::vector<int> recvSizes(comm.size());
-    comm.allgather(&sendSize, 1, recvSizes.data());
-
-    std::vector<int> displacements(comm.size() + 1, 0);
-    std::partial_sum(recvSizes.begin(), recvSizes.end(), displacements.begin() + 1);
-
-    std::vector<double> recvBuffer(displacements.back());
-    comm.allgatherv(sendBuffer.data(), sendSize, recvBuffer.data(),
-                    recvSizes.data(), displacements.data());
+    const auto recvBuffer = Opm::allGatherv(sendBuffer, comm).first;
 
     std::vector<Opm::NumericalAquiferEquilibrationMismatch> all;
     all.reserve(recvBuffer.size() / numItems);
