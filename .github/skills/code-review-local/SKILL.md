@@ -75,7 +75,7 @@ Whichever mode applies, use the checklist's routing table to decide which domain
 
 ## Step 2 — Apply the checklist
 
-Work through `code-review`: blocking issues first, then the routed domain passes, then the cross-cutting passes. Grade every finding with that skill's severity/confidence rubric.
+Work through `code-review`: the intent and alternatives pass first (restate the goal from the PR body or commit messages, then search for other solutions and existing functionality before reading the diff line by line), then blocking issues, then the routed domain passes, then the cross-cutting passes. Grade every finding with that skill's severity/confidence rubric.
 
 ## Step 3 — Write the review
 
@@ -95,6 +95,8 @@ Output template:
 
 ```markdown
 ## Summary
+**Intent:** <one sentence: the problem this change solves, in your own words — the why, not the what>
+
 <2-3 sentences: what the change does, and the single thing that decides whether it's ready.>
 
 **Readiness: Ready | Ready after fixes | Needs major rework**
@@ -111,6 +113,10 @@ Output template:
 
 ## Questions
 - <what you need author knowledge for, e.g. mirror in MultisegmentWell? No severity here.>
+- <alternative solutions from the intent pass: "was X (path/file.hpp) considered?">
+
+## Follow-up opportunities
+- <new functionality from this change that other parts of OPM could adopt, with concrete locations — candidates for separate PRs, not requested here>
 
 ## Test coverage assessment
 - <what is covered, what is not, and whether the gap is acceptable>

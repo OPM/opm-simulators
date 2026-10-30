@@ -3,7 +3,9 @@ name: code-review
 description: >-
   The domain checklist for reviewing pull requests in OPM/opm-simulators,
   OPM/opm-common, OPM/opm-grid and OPM/opm-upscaling: severity/confidence
-  rubric, blocking-issue criteria, path-to-section routing, domain passes
+  rubric, intent/alternatives pass (other solutions, reuse of existing
+  functionality, follow-up opportunities), blocking-issue criteria,
+  path-to-section routing, domain passes
   (restart/serialization, deck/parser/keywords, wells/groups/networks,
   numerics, determinism, parallel/MPI, gpuistl), cross-cutting passes (C++
   hygiene, headers/build/CMake, performance, tests, style), and CI/merge
@@ -62,6 +64,22 @@ Apply the listed sections hard; skim the rest. Match review depth to the change 
 | `opm/upscaling/`, `opm/porsol/`, `opm/elasticity/` | Numerics, Build |
 | `CMakeLists*.cmake`, `CMakeLists.txt`, `jenkins/` | Build |
 | Anything with new/removed files | Build (file lists), Style |
+
+## Intent and alternatives
+
+This pass applies to every PR, whatever paths it touches, and runs before any line-level pass. Restate the PR's goal in one sentence: the *why* (the problem being solved), not the *what* (the code that changed). Take it from the PR body or commit messages; if neither states it, that is itself a Question. Then step back from the diff and ask, with that goal in mind:
+
+- **Different solution.** Could the problem be solved at another layer or by a fundamentally different approach — fixing the input/parser side instead of compensating in the simulator, a parameter or configuration instead of new code, removing the cause instead of handling the symptom? Would the alternative be simpler, more robust, or more maintainable?
+- **Existing functionality.** Does OPM already have something that does this, or nearly does? Search all four repos (opm-common, opm-grid, opm-simulators, opm-upscaling) for the *concept*, not just the new symbol names: helpers in `opm/common/utility/` and `opm/material/common/`, existing property/parameter mechanisms, similar code in sibling classes.
+- **Reuse the other way round.** Does the PR introduce something general enough that other parts of OPM should use it — duplicated code elsewhere it could replace, or sibling classes with the same problem (CPU/GPU twins, `StandardWell`/`MultisegmentWell`, the other PVT or material-law classes)? Name the concrete call sites you found.
+
+Grading:
+
+- New code that duplicates existing functionality which could be called as-is, with the existing location verified by grep/`Read` → **Should-fix**, High confidence. Name the existing symbol and file.
+- A plausible alternative design, or reuse that would need adapting the existing code → **Question**, phrased as "was X considered?" with the location of X. Never a Blocker: the author may have reasons you cannot see.
+- Wider use of the new functionality elsewhere in OPM → **Follow-up**. Not a finding: it never affects readiness and is not requested within this PR. This is the one place a review may point at code the diff does not touch.
+
+Only raise an alternative you can point to concretely — a file, a symbol, a mechanism. "This could be designed differently" without a pointer is noise. For a one-line fix, the one-sentence restatement of intent is enough unless something obvious stands out.
 
 ## Blocking issues
 
@@ -147,7 +165,7 @@ New GPU types go into `is_gpu_type` (`gpuistl/detail/gpu_type_detection.hpp`) / 
 
 **Noise budget.** Cross-cutting findings apply only to lines the diff actually touches — never to surrounding code the author did not modify.
 
-A nit has to be a real observation about a touched line. 
+A nit has to be a real observation about a touched line.
 
 ### C++ hygiene
 - Includes: include what you use; transitive includes don't count (`<cstddef>` for `std::size_t`, `<algorithm>`, `<utility>`, `<type_traits>`, `<stdexcept>`). Remove now-unused ones. Grouping/ordering per `CONTRIBUTING.md`; a `.cpp` includes its own header first.
@@ -210,4 +228,5 @@ A PR merges when it is approved **and** the build check is green; where referenc
 - Apply the whole checklist to a one-line fix, or comment on code the diff does not touch.
 - Demand refactors unrelated to the PR's scope, or block on preferences not tied to correctness, compatibility, determinism or performance.
 - Request changes over nits, or produce a wall of low-value comments.
+- Turn the intent/alternatives pass into a redesign request: an alternative design is a Question and wider reuse is a Follow-up, neither is grounds for `CHANGES_REQUESTED`.
 - Present a contested style preference as a project rule. Braced initialisers versus explicit constructors, and brace placement, are not settled across the project — leave them alone.
