@@ -459,10 +459,9 @@ copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
                        [maxVel](const auto hf) { return (hf > 0.0) ? maxVel : 0.0; });
     }
 
-    // Note: for the ALQ value, in the StandardWell, WellInterfaceGeneric::getALQ(well_state) is used.
-    // We might want to unify the way regarding AQL value.
+    // Use the ALQ from the well state, as in the StandardWell, since it is changed by gas lift optimization.
     WellBhpThpCalculator(well_)
-        .updateThp(rho, [this, &summary_state]() { return well_.wellEcl().alq_value(summary_state); },
+        .updateThp(rho, [this, &well_state]() { return well_.getALQ(well_state); },
                    well_state, summary_state, deferred_logger);
 }
 

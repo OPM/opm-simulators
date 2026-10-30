@@ -673,6 +673,55 @@ add_test_compareECLFiles(
     --solver-max-time-step-in-days=0.05
 )
 
+# Gas lift optimization. GASLIFT-01 is left out, GASLIFT-11 needs GLIFTLIM and
+# GASLIFT-15 restarts from GASLIFT-14.
+set(_gaslift_tests
+  GASLIFT-03
+  GASLIFT-04
+  GASLIFT-05
+  GASLIFT-06
+  GASLIFT-07
+  GASLIFT-08
+  GASLIFT-09
+  GASLIFT-10
+  GASLIFT-12
+  GASLIFT-13
+  GASLIFT-14
+)
+
+add_multiple_tests(
+  _gaslift_tests
+  ""
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gaslift
+)
+
+# Two-phase (oil-water) deck
+add_test_compareECLFiles(
+  CASENAME
+    gaslift_02
+  FILENAME
+    GASLIFT-02
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gaslift
+)
+
 set(_network_tuning_tests
   NETWORK-01
   NETWORK-01_STANDARD

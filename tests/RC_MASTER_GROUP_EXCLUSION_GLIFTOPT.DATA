@@ -1,0 +1,80 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Reservoir coupling master deck for the unit tests in
+-- tests/rescoup/test_rescoup_constraints.cpp.  No slave is started: the test
+-- sets the data the slaves would have reported, and the master group to slave
+-- mapping that spawning the slaves would have set from GRUPMAST.  The deck must
+-- be read with --parsing-strictness=low, as for a coupled run.
+--
+-- Group hierarchy, with gas lift limits (GLIFTOPT) on M3, P and FIELD and an efficiency
+-- factor of 0.5 on M2: as in RC_MASTER_GROUP_EXCLUSION_SIBLINGS.DATA, with an ORAT
+-- target of 400 on the plain group P.
+--
+--         FIELD (ORAT = 1000, LRAT = 2000, WATER RATE = 1000, GAS RATE = 1000)
+--             /           |       \
+--            P            M3       M4
+--     (ORAT = 400)
+--          /   \
+--        M1     M2
+--
+-- M1 and M2 are master groups of slave S1, M3 and M4 of slave S2.
+-- M1, M2, M3: available for higher-level control (item 8 = YES), with guide
+--             rates 100, 200, 300 for production and both injection phases.
+-- M4:         not available for higher-level control (item 8 = NO), on its
+--             own limits of 50.
+--
+-- The decks RC_MASTER_GROUP_EXCLUSION*.DATA differ only in the group hierarchy
+-- (GRUPTREE) and the controls on P.  The rest is in
+-- include/rc_master_group_exclusion_model.inc (the one-cell model) and
+-- include/rc_master_group_exclusion_controls.inc (the slaves and the group controls).
+--
+RUNSPEC
+
+TITLE
+RC_MASTER_GROUP_EXCLUSION_GLIFTOPT
+
+INCLUDE
+  'include/rc_master_group_exclusion_model.inc' /
+
+-- =============================================================================
+SCHEDULE
+-- =============================================================================
+
+GRUPTREE
+ 'P'  'FIELD' /
+ 'M1' 'P'     /
+ 'M2' 'P'     /
+ 'M3' 'FIELD' /
+ 'M4' 'FIELD' /
+/
+
+INCLUDE
+  'include/rc_master_group_exclusion_controls.inc' /
+
+-- Efficiency factor on M2, below P
+GEFAC
+ 'M2' 0.5 /
+/
+
+-- Gas lift limits at three levels (Sm3/day): on a master group itself (M3), on the
+-- ancestor P of M1 and M2 (also a limit on the total gas), and on FIELD.
+LIFTOPT
+ 12500.0 /
+
+GLIFTOPT
+ 'M3'    400.0   1* /
+ 'P'     1000.0  2500.0 /
+ 'FIELD' 1600.0  1* /
+/
+
+GCONPROD
+ 'P' 'ORAT' 400.0 1* 1* 1* 'RATE' /
+/
+
+TSTEP
+1 /
+
+END

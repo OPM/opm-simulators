@@ -298,9 +298,10 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxALQ_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_lift_gas();
+    // GasLiftGroupInfo holds the GLIFTOPT limit, combined with the limit a reservoir
+    // coupling master imposes on a slave group.
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxAlq(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
@@ -309,9 +310,9 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxTotalGas_(const Group& group)
 {
-    if (this->glo_.has_group(group.name())) {
-        const auto& gl_group = this->glo_.group(group.name());
-        return gl_group.max_total_gas();
+    // See getGroupMaxALQ_()
+    if (this->group_info_.hasGroup(group.name())) {
+        return this->group_info_.maxTotalGasRate(group.name());
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
@@ -416,15 +417,31 @@ optimizeGroup_(const Group& group)
 {
     OPM_TIMEFUNCTION();
     const auto& group_name = group.name();
+    if (!this->group_info_.hasGroup(group_name)) {
+        // The group has no rate limit, no lift-gas limit and no total-gas limit that
+        // gas lift knows of (e.g. a group under GRUP or RESV control), so there is
+        // nothing to optimize at this level.
+        if (this->debug) {
+            displayDebugMessage_("skipping (no limits relevant to gas lift)", group_name);
+        }
+        return;
+    }
     const auto prod_control = this->group_state_.production_control(group_name);
     const auto max_totalgas = getGroupMaxTotalGas_(group);
+    const auto max_alq = getGroupMaxALQ_(group);
     bool restricted_by_max_totalgas = false;
-    if (max_totalgas) {
+    bool restricted_by_max_alq = false;
+    if (max_totalgas || max_alq) {
         auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
-        restricted_by_max_totalgas = (gas_rate + alq) > max_totalgas;
+        restricted_by_max_totalgas = max_totalgas && (gas_rate + alq) > *max_totalgas;
+        // The lift gas carried over from the previous report step can be above the limit, for
+        // example when GLIFTOPT has lowered it, and stage 1 does not take lift gas away to meet
+        // a group limit.
+        restricted_by_max_alq = max_alq && alq > *max_alq;
     }
 
-    if (restricted_by_max_totalgas || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
+    if (restricted_by_max_totalgas || restricted_by_max_alq
+        || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
@@ -646,8 +663,10 @@ removeSurplusALQ_(const Group& group,
     assert(!dec_grads.empty());
     const auto max_glift = getGroupMaxALQ_(group);
     const auto max_totalgas = getGroupMaxTotalGas_(group);
-    const auto controls = group.productionControls(this->summary_state_);
-    //const auto &max_total_gas = gl_group.max_total_gas();
+    const auto oil_target = this->group_info_.oilTarget(group.name());
+    const auto gas_target = this->group_info_.gasTarget(group.name());
+    const auto water_target = this->group_info_.waterTarget(group.name());
+    const auto liquid_target = this->group_info_.liquidTarget(group.name());
     auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
     auto min_eco_grad = this->glo_.min_eco_gradient();
     bool stop_iteration = false;
@@ -657,17 +676,14 @@ removeSurplusALQ_(const Group& group,
         const std::string msg = fmt::format("Starting remove surplus iteration for group: {}. "
             "oil_rate = {}, oil_target = {}, gas_rate = {}, gas_target = {}, "
             "water_rate = {}, liquid_target = {}, alq = {}, max_alq = {}",
-            group.name(), oil_rate, controls.oil_target,
-            gas_rate, controls.gas_target, water_rate, controls.liquid_target,
+            group.name(), oil_rate, oil_target.value_or(-1),
+            gas_rate, gas_target.value_or(-1), water_rate, liquid_target.value_or(-1),
             alq, max_glift_str);
         displayDebugMessage_(msg);
     }
     SurplusState state {*this, group, this->well_state_, oil_rate, gas_rate, water_rate, alq,
                         static_cast<Scalar>(min_eco_grad),
-                        static_cast<Scalar>(controls.oil_target),
-                        static_cast<Scalar>(controls.gas_target),
-                        static_cast<Scalar>(controls.water_target),
-                        static_cast<Scalar>(controls.liquid_target),
+                        oil_target, gas_target, water_target, liquid_target,
                         max_glift, max_totalgas};
 
     while (!stop_iteration) {
@@ -1081,16 +1097,16 @@ template<typename Scalar, typename IndexTraits>
 bool GasLiftStage2<Scalar, IndexTraits>::SurplusState::
 checkGasTarget(Scalar delta_gas)
 {
-    if (this->group.has_control(Group::ProductionCMode::GRAT)) {
+    if (this->gas_target) {
         // the change in gas rate is added to the gas rate to make sure the
         // group still can produce its target
         // i.e. we want to find the solution that optimize gas lift while still
         // producing the given group limit
-        if (this->gas_target < (this->gas_rate + delta_gas) ) {
+        if (*this->gas_target < (this->gas_rate + delta_gas) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "gas rate {} is greater than gas target {}", this->group.name(),
-                    this->gas_rate, this->gas_target);
+                    this->gas_rate, *this->gas_target);
                 this->parent.displayDebugMessage_(msg);
             }
             return true;
@@ -1103,17 +1119,17 @@ template<typename Scalar, typename IndexTraits>
 bool GasLiftStage2<Scalar, IndexTraits>::SurplusState::
 checkLiquidTarget(Scalar delta_liquid)
 {
-    if (this->group.has_control(Group::ProductionCMode::LRAT)) {
+    if (this->liquid_target) {
         // the change in liquid rate is added to the liquid rate to make sure the
         // group still can produce its target
         // i.e. we want to find the solution that optimize gas lift while still
         // producing the given group limit
         auto liquid_rate = this->oil_rate + this->water_rate + delta_liquid;
-        if (this->liquid_target < (liquid_rate) ) {
+        if (*this->liquid_target < (liquid_rate) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "liquid rate {} is greater than liquid target {}", this->group.name(),
-                    liquid_rate, this->liquid_target);
+                    liquid_rate, *this->liquid_target);
                 this->parent.displayDebugMessage_(msg);
             }
             return true;
@@ -1126,16 +1142,16 @@ template<typename Scalar, typename IndexTraits>
 bool GasLiftStage2<Scalar, IndexTraits>::SurplusState::
 checkOilTarget(Scalar delta_oil)
 {
-    if (this->group.has_control(Group::ProductionCMode::ORAT)) {
+    if (this->oil_target) {
         // the change in oil rate is added to the oil rate to make sure the
         // group still can produce its target
         // i.e. we want to find the solution that optimize gas lift while still
         // producing the given group limit
-        if (this->oil_target < (this->oil_rate + delta_oil) ) {
+        if (*this->oil_target < (this->oil_rate + delta_oil) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "oil rate {} is greater than oil target {}", this->group.name(),
-                    this->oil_rate - delta_oil, this->oil_target);
+                    this->oil_rate - delta_oil, *this->oil_target);
                 this->parent.displayDebugMessage_(msg);
             }
             return true;
@@ -1148,16 +1164,16 @@ template<typename Scalar, typename IndexTraits>
 bool GasLiftStage2<Scalar, IndexTraits>::SurplusState::
 checkWaterTarget(Scalar delta_water)
 {
-    if (this->group.has_control(Group::ProductionCMode::WRAT)) {
+    if (this->water_target) {
         // the change in water rate is added to the water rate to make sure the
         // group still can produce its target
         // i.e. we want to find the solution that optimize gas lift while still
         // producing the given group limit
-        if (this->water_target < (this->water_rate + delta_water) ) {
+        if (*this->water_target < (this->water_rate + delta_water) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "water rate {} is greater than oil target {}", this->group.name(),
-                    this->water_rate, this->water_target);
+                    this->water_rate, *this->water_target);
                 this->parent.displayDebugMessage_(msg);
             }
             return true;
