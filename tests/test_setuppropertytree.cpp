@@ -27,6 +27,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
@@ -154,3 +155,41 @@ BOOST_AUTO_TEST_CASE(SystemCPRWEnablesAddWells)
 }
 
 BOOST_AUTO_TEST_SUITE_END() // SystemCPR
+
+// The CPR preconditioners smooth once after the pressure correction, and
+// before it as many times as CprPreSmooth asks.
+BOOST_AUTO_TEST_CASE(PreSmoothingFollowsCprPreSmooth)
+{
+    Opm::FlowLinearSolverParameters p;
+    BOOST_CHECK_EQUAL(Opm::setupCPR("cpr_trueimpes", p).get<int>("preconditioner.pre_smooth"), 0);
+    BOOST_CHECK_EQUAL(Opm::setupCPRW("cprw", p).get<int>("preconditioner.pre_smooth"), 0);
+
+    p.cpr_pre_smooth_ = 1;
+    const auto cpr = Opm::setupCPR("cpr_trueimpes", p);
+    const auto cprw = Opm::setupCPRW("cprw", p);
+    BOOST_CHECK_EQUAL(cpr.get<int>("preconditioner.pre_smooth"), 1);
+    BOOST_CHECK_EQUAL(cprw.get<int>("preconditioner.pre_smooth"), 1);
+    BOOST_CHECK_EQUAL(cpr.get<int>("preconditioner.post_smooth"), 1);
+    BOOST_CHECK_EQUAL(cprw.get<int>("preconditioner.post_smooth"), 1);
+}
+
+// CprPreSmooth reaches the solver parameters, and a negative value is rejected
+// instead of becoming a huge unsigned step count.
+BOOST_AUTO_TEST_CASE(CprPreSmoothIsReadAndValidated)
+{
+    for (const int value : {2, -1}) {
+        Opm::Parameters::reset();
+        Opm::FlowLinearSolverParameters::registerParameters();
+        Opm::Parameters::SetDefault<Opm::Parameters::CprPreSmooth>(value);
+        Opm::Parameters::endRegistration();
+
+        Opm::FlowLinearSolverParameters p;
+        if (value < 0) {
+            BOOST_CHECK_THROW(p.init(false), std::invalid_argument);
+        } else {
+            p.init(false);
+            BOOST_CHECK_EQUAL(p.cpr_pre_smooth_, value);
+        }
+    }
+    Opm::Parameters::reset();
+}

@@ -36,6 +36,7 @@
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -129,6 +130,15 @@ public:
 
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
+        // the CPR solves of compositional systems converge far more reliably
+        // when the fine smoother also runs before the pressure correction.
+        // Only ISTLSolver and its runtime proxy register the parameter;
+        // flowexp_comp uses another linear solver.
+        using Backend = GetPropType<TypeTag, Properties::LinearSolverBackend>;
+        if constexpr (std::is_same_v<Backend, ISTLSolver<TypeTag>>
+                      || std::is_same_v<Backend, ISTLSolverRuntimeOptionProxy<TypeTag>>) {
+            Parameters::SetDefault<Parameters::CprPreSmooth>(1);
+        }
 
         Parameters::Register<Parameters::NormalizeExplicitSwat>(
             "Treat the explicit initial saturations of compositional runs as "
