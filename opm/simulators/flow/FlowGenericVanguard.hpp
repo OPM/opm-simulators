@@ -78,6 +78,7 @@ struct PartitionMethod { static constexpr auto value = "zoltanwell"; };
 struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
 struct EdgeConformal { static constexpr bool value = false; };
+struct MinpvMergeCells { static constexpr bool value = false; };
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -258,6 +259,11 @@ public:
     bool edgeConformal() const
     { return edgeConformal_; }
 
+    /// Whether the cells that MINPV removes are merged into the cell below (the grid is PolyhedralGrid), and not collapsed with
+    /// the cells above and below connected across them.
+    bool minpvMergeCells() const
+    { return minpvMergeCells_; }
+
 #if HAVE_MPI
     bool addCorners() const
     { return addCorners_; }
@@ -372,6 +378,7 @@ protected:
 
     bool ownersFirst_;
     bool edgeConformal_;
+    bool minpvMergeCells_;
 
 #if HAVE_MPI
     bool addCorners_;
