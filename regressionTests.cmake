@@ -1710,6 +1710,23 @@ add_test_compareECLFiles(
     gconinje
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    gconinje_subgroup_latch_guide_rates
+  FILENAME
+    GCONINJE-04
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gconinje
+)
+
 set(_gconprod_cases
   T1L
   T1W

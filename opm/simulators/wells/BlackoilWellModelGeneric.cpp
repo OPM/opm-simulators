@@ -815,8 +815,10 @@ checkGroupHigherConstraints(const Group& group,
         // A group on individual control without any group controlled wells has its entire rate
         // counted as reduction, i.e. nothing is 'available' and the check below can never trigger.
         // Its wells would however respond to a higher level target if the group were released to
-        // FLD, as they do for a group under NONE control. In that case the full group rate is used,
-        // otherwise such a group (e.g. latched on its own limit) hides all higher level targets.
+        // FLD, as they do for a group under NONE control. In that case the group is checked as if
+        // released, i.e. with its full rate and participating in the guide rate distribution with
+        // all its wells. Otherwise such a group (e.g. latched on its own limit) hides all higher
+        // level targets.
         std::optional<std::vector<Scalar>> rates_full;
         const auto full_group_rates = [this, &group, &rates_full]() -> const std::vector<Scalar>& {
             if (!rates_full.has_value()) {
@@ -874,7 +876,8 @@ checkGroupHigherConstraints(const Group& group,
                     phase,
                     group.getGroupEfficiencyFactor(),
                     resv_coeff_inj,
-                    /*check_guide_rate*/true
+                    /*check_guide_rate*/true,
+                    /*assume_group_released*/use_full_rates
                 );
                 if (is_changed) {
                     auto& group_log = switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)];
