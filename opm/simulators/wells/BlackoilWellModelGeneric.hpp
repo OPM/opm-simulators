@@ -339,6 +339,12 @@ public:
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
 
+    // Normalized WGR values for active group economics, excluding wells already
+    // closed by well testing. Use committed state for the start of an attempt:
+    // active state may still contain a rejected solve until beginTimeStep().
+    // No state is added to restart files.
+    std::map<std::string, Scalar> groupEconomicWaterGasRatios(int reportStep, bool committed = false);
+
     GroupStateHelperType& groupStateHelper() { return group_state_helper_; }
     const GroupStateHelperType& groupStateHelper() const { return group_state_helper_; }
     std::pair<int, int> getGroupFipnumAndPvtreg() const;
