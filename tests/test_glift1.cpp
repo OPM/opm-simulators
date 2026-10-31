@@ -336,3 +336,478 @@ BOOST_AUTO_TEST_CASE(G2)
         well_model.endEpisode();
     }
 }
+
+namespace {
+
+// A gas lift well with a synthetic inflow and VFP response. The well has no
+// solution at the THP limit for ALQ values below min_flow_alq, as a well that
+// needs lift gas to flow against its THP limit, and none above max_flow_alq.
+// In between the lift gas lowers the bhp.
+template<class IndexTraits>
+class SyntheticGasLiftWell : public Opm::GasLiftSingleWellGeneric<double, IndexTraits>
+{
+    using Base = Opm::GasLiftSingleWellGeneric<double, IndexTraits>;
+
+public:
+    SyntheticGasLiftWell(const Opm::WellInterfaceGeneric<double, IndexTraits>& well,
+                         Opm::DeferredLogger& deferred_logger,
+                         Opm::WellState<double, IndexTraits>& well_state,
+                         const Opm::GroupState<double>& group_state,
+                         const Opm::SummaryState& summary_state,
+                         Opm::GasLiftGroupInfo<double, IndexTraits>& group_info,
+                         const Opm::Schedule& schedule,
+                         const int report_step_idx,
+                         typename Base::GLiftSyncGroups& sync_groups,
+                         const Opm::Parallel::Communication& comm,
+                         const double min_flow_alq,
+                         const double max_flow_alq)
+        : Base(deferred_logger, well_state, group_state, well.wellEcl(), summary_state,
+               group_info, schedule, report_step_idx, sync_groups, comm, /*glift_debug=*/false)
+        , well_(well)
+        , min_flow_alq_(min_flow_alq)
+        , max_flow_alq_(max_flow_alq)
+    {
+        this->optimize_ = true;
+        this->min_alq_ = 0.0;
+        this->max_alq_ = 20.0 * this->increment_;
+        this->orig_alq_ = 0.0;
+        this->alpha_w_ = 1.0;
+        this->alpha_g_ = 0.0;
+        this->max_iterations_ = 1000;
+        this->oil_pos_ = IndexTraits::oilPhaseIdx;
+        this->gas_pos_ = IndexTraits::gasPhaseIdx;
+        this->water_pos_ = IndexTraits::waterPhaseIdx;
+    }
+
+    double increment() const { return this->increment_; }
+    double maxAlq() const { return this->max_alq_; }
+    void setMaxAlq(const double alq) { this->max_alq_ = alq; }
+    void setOrigAlq(const double alq) { this->orig_alq_ = alq; }
+    void limitAlq() { this->limitAlqToMax_(); }
+    double initialOilRate() { return this->getInitialRatesWithLimit_().first->oil; }
+
+    const Opm::WellInterfaceGeneric<double, IndexTraits>& getWell() const override
+    {
+        return well_;
+    }
+
+private:
+    static constexpr double p_res = 200.0e5;
+
+    bool checkThpControl_() const override { return true; }
+
+    std::optional<double> computeBhpAtThpLimit_(double alq, double, bool) const override
+    {
+        if (alq < min_flow_alq_ - 1e-8 || alq > max_flow_alq_ + 1e-8) {
+            return std::nullopt; // no solution at the THP limit
+        }
+        return p_res - 10.0e5 - 1.0e5 * (alq - min_flow_alq_) / this->increment_;
+    }
+
+    typename Base::RatesAndBhp computeWellRates_(double bhp, bool bhp_is_limited, bool) const override
+    {
+        const double oil = 1.0e-8 * (p_res - bhp);
+        return {oil, 10.0 * oil, 0.0, bhp, bhp_is_limited};
+    }
+
+    const Opm::WellInterfaceGeneric<double, IndexTraits>& well_;
+    double min_flow_alq_;
+    double max_flow_alq_;
+};
+
+} // anonymous namespace
+
+BOOST_AUTO_TEST_CASE(WellTestALQ)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_welltest", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    well_model.beginReportStep(0);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+    well_model.prepareTimeStep(deferred_logger);
+    well_model.updateWellControls(deferred_logger);
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    const auto& comm = simulator->vanguard().grid().comm();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state,
+                                 simulator->episodeIndex(), iterCtx, deferred_logger,
+                                 well_state, group_state, comm, /*glift_debug=*/false};
+    group_info.initialize();
+
+    const auto increment = schedule.glo(0).gaslift_increment();
+    typename Synthetic::GLiftSyncGroups sync_groups;
+    const double no_limit = 1.0e6;
+    auto makeWell = [&](const double min_flow_alq, const double max_flow_alq) {
+        return Synthetic {well, deferred_logger, well_state, group_state, summary_state,
+                          group_info, schedule, simulator->episodeIndex(), sync_groups,
+                          comm, min_flow_alq, max_flow_alq};
+    };
+
+    // The well flows at ALQ = 0: no ALQ increase is needed to start the search.
+    {
+        auto glift = makeWell(0.0, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_GE(alq, 0.0);
+    }
+
+    // The well has no solution at the THP limit until it gets three increments of
+    // lift gas. The test must raise the ALQ until the well flows, not give up at 0.
+    {
+        const double min_flow_alq = 3.0 * increment;
+        auto glift = makeWell(min_flow_alq, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_GE(alq, min_flow_alq - 1e-8);
+        BOOST_CHECK_LE(alq, glift.maxAlq() + 1e-8);
+    }
+
+    // As above, but the well can only flow at that one ALQ, so a further increase
+    // is not possible. The ALQ that made the well flow is still a valid test ALQ.
+    {
+        const double min_flow_alq = 3.0 * increment;
+        auto glift = makeWell(min_flow_alq, min_flow_alq);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_CLOSE(alq, min_flow_alq, 1e-6);
+    }
+
+    // The maximum ALQ is not reached by whole increments and the well only flows at
+    // the maximum: the last increment is limited to the maximum, as in the optimization.
+    {
+        const double max_alq = 2.5 * increment;
+        auto glift = makeWell(max_alq, no_limit);
+        glift.setMaxAlq(max_alq);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(success);
+        BOOST_CHECK_CLOSE(alq, max_alq, 1e-6);
+    }
+
+    // The well cannot flow with any ALQ up to the maximum: the test fails.
+    {
+        auto glift = makeWell(100.0 * increment, no_limit);
+        const auto [alq, success] = glift.wellTestALQ();
+        BOOST_CHECK(!success);
+    }
+}
+
+// The ALQ set by gas lift optimization is kept to the next report step, unless the
+// well gets a new target from the schedule.
+BOOST_AUTO_TEST_CASE(AlqCarryOver)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT2.DATA", "test_glift1_alq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    const double day = 86400.0;
+    const double alq = 50000.0 / day;
+    auto alqOfWell = [&well_model]() {
+        return well_model.wellState().well("B-1H").alq_state.get();
+    };
+
+    // Report step 0: set an ALQ as the optimization would do
+    simulator->setEpisodeIndex(0);
+    well_model.beginReportStep(0);
+    BOOST_CHECK_SMALL(alqOfWell(), 1e-12);
+    well_model.wellState().well("B-1H").alq_state.set(alq);
+    well_model.commitWGState();
+
+    // Report step 1: no event for the well, the ALQ is kept
+    simulator->setEpisodeIndex(1);
+    well_model.beginReportStep(1);
+    BOOST_CHECK_CLOSE(alqOfWell(), alq, 1e-8);
+    well_model.commitWGState();
+
+    // Report step 2: WLIFTOPT lowers the maximum ALQ, which is no well event. The ALQ is
+    // kept here and limited to the maximum when the optimization starts.
+    simulator->setEpisodeIndex(2);
+    well_model.beginReportStep(2);
+    BOOST_CHECK_CLOSE(alqOfWell(), alq, 1e-8);
+    well_model.commitWGState();
+
+    // Report step 3: new target for the well, the ALQ is reset to the default
+    simulator->setEpisodeIndex(3);
+    well_model.beginReportStep(3);
+    BOOST_CHECK_SMALL(alqOfWell(), 1e-12);
+}
+
+// An ALQ above the maximum ALQ is limited before the optimization starts, also in the group rates.
+BOOST_AUTO_TEST_CASE(AlqLimitedToMax)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_maxalq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    // report step 5 has the group PLAT-A with a limit on the lift gas
+    simulator->setEpisodeIndex(5);
+    well_model.beginReportStep(5);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    const auto& comm = simulator->vanguard().grid().comm();
+    const double increment = schedule.glo(5).gaslift_increment();
+    const double max_alq = 20.0 * increment; // the maximum ALQ of the synthetic well
+    const double high_alq = 25.0 * increment;
+    typename Synthetic::GLiftSyncGroups sync_groups;
+
+    auto test = [&](const double start_alq, const double expected_alq, const bool init_groups = true) {
+        well_state.well("B-1H").alq_state.set(start_alq);
+        GLiftEclWells ecl_well_map;
+        Opm::BlackoilWellModelGasLift<TypeTag>::
+            initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+        const auto& iterCtx = simulator->problem().iterationContext();
+        GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                     deferred_logger, well_state, group_state, comm,
+                                     /*glift_debug=*/false};
+        // the group info is not initialized when only used for a well test
+        if (init_groups) {
+            group_info.initialize();
+        }
+        const double group_alq = init_groups ? group_info.alqRate("PLAT-A") : 0.0;
+        Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                         group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+        glift.setOrigAlq(start_alq);
+        glift.limitAlq();
+        BOOST_CHECK_CLOSE(well_state.well("B-1H").alq_state.get(), expected_alq, 1e-8);
+        if (init_groups) {
+            // the group ALQ follows the change of the well
+            BOOST_CHECK_SMALL(group_info.alqRate("PLAT-A") - group_alq - (expected_alq - start_alq), 1e-10);
+        }
+    };
+
+    // above the maximum: limited to the maximum
+    test(high_alq, max_alq);
+    // not above the maximum: unchanged
+    test(10.0 * increment, 10.0 * increment);
+    test(max_alq, max_alq);
+    // The rates of the optimization are computed with the limited ALQ, the group oil rate
+    // and the well potentials are moved from the rates of the well state to those rates.
+    {
+        const auto oil_pos = well_state.phaseUsageInfo().canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+        well_state.well("B-1H").alq_state.set(high_alq);
+        const double old_oil = well_state.well("B-1H").well_potentials[oil_pos];
+        GLiftEclWells ecl_well_map;
+        Opm::BlackoilWellModelGasLift<TypeTag>::
+            initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+        const auto& iterCtx = simulator->problem().iterationContext();
+        GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                     deferred_logger, well_state, group_state, comm,
+                                     /*glift_debug=*/false};
+        group_info.initialize();
+        const double group_oil = group_info.oilRate("PLAT-A");
+        Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                         group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+        glift.setOrigAlq(high_alq);
+        glift.limitAlq();
+        const double new_oil = glift.initialOilRate();
+        BOOST_CHECK(std::abs(new_oil - old_oil) > 1e-12); // the test needs the rates to differ
+        BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil - (new_oil - old_oil), 1e-10);
+        BOOST_CHECK_SMALL(well_state.well("B-1H").well_potentials[oil_pos] - new_oil, 1e-10);
+        // doing it again changes nothing
+        glift.initialOilRate();
+        BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil - (new_oil - old_oil), 1e-10);
+    }
+    // uninitialized group info (well test): the ALQ is limited without a group lookup
+    test(high_alq, max_alq, /*init_groups=*/false);
+}
+
+// The group rates of a well that is limited by its own target are those of the limited rates.
+// Reducing the ALQ to the maximum moves the group rates from the limited rates with the old ALQ
+// to the limited rates with the new, and does not subtract the potentials, which are above the target.
+// GLIFT3.DATA is GLIFT1.DATA with an ORAT limit on B-1H in report step 5.
+BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithWellTarget)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT3.DATA", "test_glift3_maxalq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    simulator->setEpisodeIndex(5);
+    well_model.beginReportStep(5);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    const auto& comm = simulator->vanguard().grid().comm();
+    const double increment = schedule.glo(5).gaslift_increment();
+    const double high_alq = 25.0 * increment; // above the maximum ALQ of the synthetic well
+    typename Synthetic::GLiftSyncGroups sync_groups;
+
+    const auto oil_pos = well_state.phaseUsageInfo().canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    const double target = well.wellEcl().productionControls(summary_state).oil_rate;
+    well_state.well("B-1H").alq_state.set(high_alq);
+    const double old_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    BOOST_REQUIRE_GT(old_pot, target);
+
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                 deferred_logger, well_state, group_state, comm,
+                                 /*glift_debug=*/false};
+    group_info.initialize();
+    const double group_oil = group_info.oilRate("PLAT-A");
+    Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                     group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+    glift.setOrigAlq(high_alq);
+    glift.limitAlq();
+    const double new_oil = glift.initialOilRate();
+    const double new_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    // The test needs the potential to be above the target also with the limited ALQ, and to
+    // differ from the old one
+    BOOST_REQUIRE_GT(new_pot, target);
+    BOOST_CHECK(std::abs(new_pot - old_pot) > 1e-12);
+    // Limited by the target before and after: the group oil rate does not change
+    BOOST_CHECK_SMALL(new_oil - target, 1e-10);
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+    // doing it again changes nothing
+    glift.initialOilRate();
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+}
+
+// When the ALQ is limited to the maximum and a group target limits the rate of the well, the
+// reconciled rates are the baseline of both the increase and the decrease pass of the
+// optimization: the second pass must not rebuild unlimited rates from the updated potentials,
+// the cached group rates are those of the first.
+// GLIFT4.DATA is GLIFT1.DATA with an ORAT target on PLAT-A in report step 5.  The oil rate of the
+// group is above it, and the potential of B-1H is set below the rate it has with the maximum ALQ,
+// so the group does not allow the well to increase its rate.
+BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithGroupTarget)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double, IndexTraits>;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+    using Synthetic = SyntheticGasLiftWell<IndexTraits>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT4.DATA", "test_glift4_maxalq", /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    simulator->setEpisodeIndex(5);
+    well_model.beginReportStep(5);
+    well_model.beginTimeStep();
+    auto logger_guard = well_model.groupStateHelper().pushLogger();
+    auto& deferred_logger = well_model.groupStateHelper().deferredLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& well = well_model.getWell("B-1H");
+    const auto& schedule = simulator->vanguard().schedule();
+    const auto& summary_state = simulator->vanguard().summaryState();
+    auto& well_state = well_model.wellState();
+    const auto& group_state = well_model.groupState();
+    const auto& comm = simulator->vanguard().grid().comm();
+    const double increment = schedule.glo(5).gaslift_increment();
+    const double high_alq = 25.0 * increment; // above the maximum ALQ of the synthetic well
+    typename Synthetic::GLiftSyncGroups sync_groups;
+
+    const auto oil_pos = well_state.phaseUsageInfo().canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    well_state.well("B-1H").alq_state.set(high_alq);
+    well_state.well("B-1H").well_potentials[oil_pos] = 0.01;
+    GLiftEclWells ecl_well_map;
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
+    const auto& iterCtx = simulator->problem().iterationContext();
+    GasLiftGroupInfo group_info {ecl_well_map, schedule, summary_state, 5, iterCtx,
+                                 deferred_logger, well_state, group_state, comm,
+                                 /*glift_debug=*/false};
+    group_info.initialize();
+    const double target = *group_info.oilTarget("PLAT-A");
+    const double initial_group_oil = group_info.oilRate("PLAT-A");
+    BOOST_REQUIRE_GT(initial_group_oil, target);
+    Synthetic glift {well, deferred_logger, well_state, group_state, summary_state,
+                     group_info, schedule, 5, sync_groups, comm, 0.0, 1.0e6};
+    glift.setOrigAlq(high_alq);
+    glift.limitAlq();
+    const double first = glift.initialOilRate();
+    const double group_oil = group_info.oilRate("PLAT-A");
+    const double new_pot = well_state.well("B-1H").well_potentials[oil_pos];
+    // the group limits the rate of the well in the first pass to the rate it had, which the group
+    // rate holds
+    BOOST_REQUIRE_LT(first, new_pot - 1e-6);
+    BOOST_CHECK_SMALL(first - 0.01, 1e-10);
+    BOOST_CHECK_SMALL(group_oil - initial_group_oil, 1e-10);
+    // the second pass starts from the same rates, and the group rates do not change
+    const double second = glift.initialOilRate();
+    BOOST_CHECK_SMALL(second - first, 1e-10);
+    BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, 1e-10);
+}

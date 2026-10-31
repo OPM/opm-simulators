@@ -83,6 +83,7 @@ GasLiftSingleWell(WellInterface<TypeTag>& well,
     //   default value is used.
     this->orig_alq_ = this->well_state_.well(this->well_name_).alq_state.get();
     if (this->optimize_) {
+        this->limitAlqToMax_();
         this->setAlqMinRate_(gl_well);
         // NOTE: According to item 4 in WLIFTOPT, this value does not
         //    have to be positive.
