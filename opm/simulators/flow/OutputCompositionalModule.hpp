@@ -438,6 +438,16 @@ public:
                           : Scalar{0};
                   }}
             },
+            // The maximum water-oil capillary pressure, scaled to hold the
+            // SWATINIT water.
+            Entry{ScalarEntry{&this->ppcw_,
+                  [&matLawManager = this->simulator_.problem().materialLawManager()]
+                  (const ExtractContext& ectx)
+                  {
+                      return matLawManager.
+                          oilWaterScaledEpsInfoDrainage(ectx.globalDofIdx).maxPcow;
+                  }}
+            },
         };
 
         this->extractors_ = Extractor::removeInactive(extractors);
