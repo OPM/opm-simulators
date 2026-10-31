@@ -121,6 +121,30 @@ foreach(case IN ITEMS
   )
 endforeach()
 
+# Exercise wells connected across layers, across rows, and along a deviated
+# path. The layered and deviated cases also vary connection depth.
+foreach(case IN ITEMS
+    SIMPLE_COMP_WATER_MOBILE_LAYERS
+    SIMPLE_COMP_WATER_MOBILE_ROWS
+    SIMPLE_COMP_WATER_MOBILE_DEVIATED)
+  add_test_compareECLFiles(
+    CASENAME
+      ${case}
+    FILENAME
+      ${case}
+    SIMULATOR
+      flow_comp
+    REFERENCE_SIMULATOR
+      flow_comp
+    ABS_TOL
+      1e-3
+    REL_TOL
+      ${rel_tol}
+    DIR
+      compositional/multi_connection_wells
+  )
+endforeach()
+
 add_test_compareECLFiles(
   CASENAME
     multz_barrier_compositional

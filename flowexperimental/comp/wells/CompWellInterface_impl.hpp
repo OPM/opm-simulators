@@ -35,11 +35,13 @@ CompWellInterface(const Well& well,
         well_cells_.resize(number_of_connection_);
         well_index_.resize(number_of_connection_);
         saturation_table_number_.resize(number_of_connection_, 0);
+        connection_depths_.resize(number_of_connection_);
         int connection_idx = 0;
         for (const auto& connection_data : well_connection_data) {
             well_cells_[connection_idx] = connection_data.cell_index;
             well_index_[connection_idx] = connection_data.connection_transmissibility_factor;
             saturation_table_number_[connection_idx] = connection_data.satnum_id;
+            connection_depths_[connection_idx] = well.getConnections()[connection_data.ecl_index].depth();
             ++connection_idx;
         }
         // TODO: saturation_table_number

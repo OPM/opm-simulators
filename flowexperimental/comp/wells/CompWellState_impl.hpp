@@ -195,7 +195,7 @@ report() const
         auto& well = res[ws.name];
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
-        well.dynamicStatus = ws.status;
+        well.dynamicStatus = ws.stopped ? Well::Status::STOP : ws.status;
         setSurfaceRates(well.rates, ws.surface_phase_rates);
 
         auto& curr = well.current_control;

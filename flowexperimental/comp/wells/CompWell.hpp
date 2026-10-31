@@ -170,6 +170,9 @@ private:
     const Scalar wellbore_volume_ {21.6*0.001};
     // hydrocarbon volume fraction below which the wellbore counts as holding water alone
     static constexpr Scalar min_hydrocarbon_fraction_ {1.e-8};
+    // Hydrostatic pressure offset of each connection from BHP, calculated
+    // from the wellbore density at the start of the time step.
+    std::vector<Scalar> connection_pressure_diffs_;
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
@@ -187,7 +190,13 @@ private:
 
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,
+                                       const int con_idx,
+                                       const bool allow_crossflow,
                                        std::vector<EvalWell>& con_rates) const;
+
+    // whether no connection would flow in the direction of the well at the
+    // current BHP
+    bool allDrawDownWrongDirection_(const Simulator& simulator) const;
 
     void updateWellboreContents();
 
@@ -228,7 +237,8 @@ private:
 
     bool updateWellControl(const SummaryState& summary_state,
                            SingleWellState& well_state,
-                           bool check_rate_limits) const;
+                           bool check_rate_limits,
+                           bool allow_stop);
 
     template <typename T>
     void
