@@ -149,7 +149,7 @@ makeWellboreFluidState(const T& pressure,
     fs.setTemperature(T(temperature));
 
     for (int i = 0; i < numComponents; ++i) {
-        fs.setKvalue(i, fs.wilsonK_(i));
+        fs.setKvalue(i, fs.wilsonK_(i, /*eosRegionIdx=*/0));
     }
     fs.setLvalue(T(-1.));
 
