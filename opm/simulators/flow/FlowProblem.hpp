@@ -917,6 +917,26 @@ public:
     std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
     { return thermalLawManager_; }
 
+    // Fused variant used by the intensive quantities: relperms and capillary
+    // pressures from one call, so a table-based satfunc representation can
+    // serve both from a single lookup pass. This default implementation is
+    // behaviorally identical to updateRelperms + MaterialLaw::capillaryPressures;
+    // the dispatch through asImp_() keeps derived-problem updateRelperms
+    // overrides effective, exactly as when the intensive quantities called it.
+    template <class FluidState, class ...Args>
+    void updateRelpermsAndCapillaryPressures(
+        std::array<Evaluation,numPhases> &mobility,
+        DirectionalMobilityPtr &dirMob,
+        std::array<Evaluation,numPhases> &pC,
+        FluidState &fluidState,
+        unsigned globalSpaceIdx) const
+    {
+        using ContainerT = std::array<Evaluation, numPhases>;
+        asImp_().template updateRelperms<FluidState, Args...>(mobility, dirMob, fluidState, globalSpaceIdx);
+        const auto& materialParams = materialLawParams(globalSpaceIdx);
+        MaterialLaw::template capillaryPressures<ContainerT, FluidState, Args...>(pC, materialParams, fluidState);
+    }
+
     template <class FluidState, class ...Args>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
@@ -1558,6 +1578,41 @@ protected:
                 func(dofIdx, iq);
         }
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
+    }
+
+    // The per-dof explicit updates in one sweep. changed[dof] is set when any of them
+    // modified that dof's state; returns false when none of them is active.
+    bool updateExplicitQuantitiesFused_(std::vector<char>& changed)
+    {
+        OPM_TIMEBLOCK(updateExplicitQuantitiesFused);
+        const bool doMaxWaterSat = !this->maxWaterSaturation_.empty();
+        const bool doMinPressure = !this->minRefPressure_.empty();
+        const bool doHysteresis = materialLawManager_->enableHysteresis();
+        const bool doMaxOilSat = this->vapparsActive(this->episodeIndex());
+
+        if (!doMaxWaterSat && !doMinPressure && !doHysteresis && !doMaxOilSat) {
+            return false;
+        }
+        changed.assign(this->simulator().model().solution(/*timeIdx=*/0).size(), 0);
+        this->updateProperty_("FlowProblem::updateExplicitQuantitiesFused_() failed:",
+                              [&](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  bool c = false;
+                                  if (doMaxWaterSat) {
+                                      c = this->updateMaxWaterSaturation_(compressedDofIdx, iq) || c;
+                                  }
+                                  if (doMinPressure) {
+                                      c = this->updateMinPressure_(compressedDofIdx, iq) || c;
+                                  }
+                                  if (doHysteresis) {
+                                      c = materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx) || c;
+                                  }
+                                  if (doMaxOilSat) {
+                                      c = this->updateMaxOilSaturation_(compressedDofIdx, iq) || c;
+                                  }
+                                  changed[compressedDofIdx] = c;
+                              });
+        return true;
     }
 
     bool updateMaxOilSaturation_()
