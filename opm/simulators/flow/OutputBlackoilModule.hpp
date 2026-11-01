@@ -618,7 +618,11 @@ public:
         const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
                                                    : *fipSched;
 
-        if (!substep && !this->forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
+        // Not computed for CpGrid with LGRs, see FlowProblemBlackoil::finishInit()
+        const bool haveInitialInplace = this->initialInplace() != nullptr;
+
+        if (!substep && !this->forceDisableFipOutput_ && haveInitialInplace &&
+            fipc.output(FIPConfig::OutputField::FIELD)) {
 
             this->logOutput_.timeStamp("BALANCE", elapsed, reportStepNum, currentDate);
 
@@ -656,7 +660,7 @@ public:
             return;
         }
 
-        if ((reportStepNum == 0) && (!substep) &&
+        if ((reportStepNum == 0) && (!substep) && (this->initialInplace() != nullptr) &&
             (this->schedule_.initialReportConfiguration().has_value()) &&
             (this->schedule_.initialReportConfiguration()->contains("CSVFIP"))) {
 
