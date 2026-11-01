@@ -2669,18 +2669,23 @@ protected:
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         this->readFluxBoundary_();
+
+        // Sized even without BCCON: a USEFLUX boundary also makes the boundary
+        // conditions non-trivial, and boundaryConditionIndex() is then read for
+        // every boundary face, e.g. by the tracer model.
+        const unsigned numElems = vanguard.gridView().size(/*codim=*/0);
+        bcindex_.resize(numElems, 0);
+
         const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
         if (bcconfig.size() > 0) {
             nonTrivialBoundaryConditions_ = true;
 
             std::size_t numCartDof = vanguard.cartesianSize();
-            unsigned numElems = vanguard.gridView().size(/*codim=*/0);
             std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
 
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
 
-            bcindex_.resize(numElems, 0);
             auto loopAndApply = [&cartesianToCompressedElemIdx,
                                  &vanguard](const auto& bcface,
                                             auto apply)
