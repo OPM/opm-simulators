@@ -1046,6 +1046,15 @@ public:
             this->bioeffects_ = this->eclWriter_->outputModule().getBioeffects().getSolution();
         }
 
+        // TEMPI is given on the input grid but read per leaf cell.
+        std::vector<double> tempiOnLeaf{};
+        if constexpr (energyModuleType != EnergyModules::NoTemperature) {
+            if (eclState.runspec().co2Storage() || eclState.runspec().h2Storage()) {
+                tempiOnLeaf = this->fieldPropDoubleOnLeafAssigner_()
+                    (eclState.fieldProps(), "TEMPI");
+            }
+        }
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = this->initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
@@ -1078,8 +1087,7 @@ public:
                 bool needTemperature = rspec.co2Storage() || rspec.h2Storage()
                     || rspec.co2Sol() || rspec.h2Sol();
                 if (needTemperature) {
-                    const auto& fp = simulator.vanguard().eclState().fieldProps();
-                    elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+                    elemFluidState.setTemperature(tempiOnLeaf[elemIdx]);
                 }
             }
 
@@ -1338,6 +1346,10 @@ protected:
 
         initialFluidStates_.resize(numDof);
 
+        // Input-grid arrays read per leaf cell: a refined cell takes its parent's value.
+        const auto fieldPropOnLeaf = [assign = this->fieldPropDoubleOnLeafAssigner_(), &fp]
+            (const std::string& kw) { return assign(fp, kw); };
+
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
         std::vector<double> pressureData;
@@ -1350,38 +1362,38 @@ protected:
         std::vector<double> saltpData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-            waterSaturationData = fp.get_double("SWAT");
+            waterSaturationData = fieldPropOnLeaf("SWAT");
         else
             waterSaturationData.resize(numDof);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = fp.get_double("SGAS");
+            gasSaturationData = fieldPropOnLeaf("SGAS");
         else
             gasSaturationData.resize(numDof);
 
-        pressureData = fp.get_double("PRESSURE");
+        pressureData = fieldPropOnLeaf("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_double("RS");
+            rsData = fieldPropOnLeaf("RS");
 
         if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
-            rswData = fp.get_double("RSW");
+            rswData = fieldPropOnLeaf("RSW");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_double("RV");
+            rvData = fieldPropOnLeaf("RV");
 
         if (FluidSystem::enableVaporizedWater())
-            rvwData = fp.get_double("RVW");
+            rvwData = fieldPropOnLeaf("RVW");
 
         // initial reservoir temperature
-        tempiData = fp.get_double("TEMPI");
+        tempiData = fieldPropOnLeaf("TEMPI");
 
         // initial salt concentration data
         if constexpr (enableBrine)
-            saltData = fp.get_double("SALT");
+            saltData = fieldPropOnLeaf("SALT");
 
         // initial precipitated salt saturation data
         if constexpr (enableSaltPrecipitation)
-            saltpData = fp.get_double("SALTP");
+            saltpData = fieldPropOnLeaf("SALTP");
 
         // calculate the initial fluid states
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
