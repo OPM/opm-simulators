@@ -600,15 +600,15 @@ macro(opm-simulators_tests_hook)
     if(USE_DEV_SIMULATOR_IN_TESTS)
       set(drsdt_simulator flow_blackoil)
     endif()
+    find_program(TEST_PYTHON_EXECUTABLE NAMES python3)
+    if(TARGET summary)
+      set(test_summary_tool $<TARGET_FILE:summary>)
+    else()
+      find_program(TEST_SUMMARY_EXECUTABLE NAMES summary
+        HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
+      set(test_summary_tool ${TEST_SUMMARY_EXECUTABLE})
+    endif()
     if(HAVE_OPM_TESTS)
-      find_program(REOPENING_PYTHON_EXECUTABLE NAMES python3)
-      if(TARGET summary)
-        set(reopening_summary $<TARGET_FILE:summary>)
-      else()
-        find_program(REOPENING_SUMMARY_EXECUTABLE NAMES summary
-          HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
-        set(reopening_summary ${REOPENING_SUMMARY_EXECUTABLE})
-      endif()
       if(TARGET rst_deck)
         set(reopening_rst_deck $<TARGET_FILE:rst_deck>)
       else()
@@ -616,12 +616,12 @@ macro(opm-simulators_tests_hook)
           HINTS ${opm-common_DIR}/bin ${opm-common_PREFIX}/bin)
         set(reopening_rst_deck ${REOPENING_RST_DECK_EXECUTABLE})
       endif()
-      if(REOPENING_PYTHON_EXECUTABLE AND reopening_summary AND reopening_rst_deck)
+      if(TEST_PYTHON_EXECUTABLE AND test_summary_tool AND reopening_rst_deck)
         add_test(NAME well_reopening_unrst_restart
-          COMMAND ${REOPENING_PYTHON_EXECUTABLE}
+          COMMAND ${TEST_PYTHON_EXECUTABLE}
             ${PROJECT_SOURCE_DIR}/tests/check_well_reopening_restart.py
             --flow $<TARGET_FILE:${drsdt_simulator}>
-            --summary ${reopening_summary}
+            --summary ${test_summary_tool}
             --rst-deck ${reopening_rst_deck}
             --deck ${OPM_TESTS_ROOT}/spe1/SPE1CASE1.DATA
             --output ${PROJECT_BINARY_DIR}/tests/results/well_reopening_restart)
@@ -639,6 +639,15 @@ macro(opm-simulators_tests_hook)
           -f drsdt_initial_rs
           -r ${PROJECT_BINARY_DIR}/tests/results/drsdt_initial_rs
     )
+    if(TEST_PYTHON_EXECUTABLE AND test_summary_tool)
+      add_test(NAME msw_acceleration_sign
+        COMMAND ${TEST_PYTHON_EXECUTABLE}
+          ${PROJECT_SOURCE_DIR}/tests/check_msw_acceleration.py
+          --flow $<TARGET_FILE:${drsdt_simulator}>
+          --summary ${test_summary_tool}
+          --deck ${PROJECT_SOURCE_DIR}/tests/msw_acceleration.DATA
+          --output ${PROJECT_BINARY_DIR}/tests/results/msw_acceleration)
+    endif()
   endif()
 
   if("3" IN_LIST OPM_COMPILE_COMPONENTS)

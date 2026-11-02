@@ -542,7 +542,7 @@ accelerationPressureLossContribution(const int seg,
                                      const Scalar area,
                                      const bool extra_reverse_flow_derivatives /*false*/) const
 {
-    // Compute the *signed* velocity head for given segment (sign is positive for flow towards surface, i.e., negative rate)
+    // Compute the velocity head for given segment; momentum flux does not depend on flow direction.
     // Optionally return derivatives for reversed flow case
     EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
@@ -565,8 +565,7 @@ accelerationPressureLossContribution(const int seg,
             mass_rate.clearDerivatives();
         }
     }
-    const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
-    return sign * mswellhelpers::velocityHead(area, mass_rate, density);
+    return mswellhelpers::velocityHead(area, mass_rate, density);
 }
 
 template <class FluidSystem, class Indices>

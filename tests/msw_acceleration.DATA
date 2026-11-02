@@ -1,0 +1,147 @@
+-- Acceleration-dominated multi-segment wells: one injector, one producer with
+-- identical horizontal pipes, in a 1D water-filled reservoir. Incompressible water.
+-- Reservoir gradient is made negligible and drawdown large, so both connections take
+-- about the same rate. Segment 1 top, 2 blank, 3 and 4 perforated, 4 is the closed end.
+-- Momentum balance: SPR(4) - SPR(3) = rho v4^2, SPR(3) - SPR(2) = rho (v3^2 - v4^2),
+-- SPR(2) - SPR(1) = 0, plus friction, for both flow directions.
+
+RUNSPEC
+TITLE
+ MSW acceleration sign
+
+DIMENS
+ 21 1 1 /
+OIL
+WATER
+GAS
+METRIC
+START
+ 1 'JAN' 2020 /
+TABDIMS
+ /
+WELLDIMS
+ 2 2 1 2 /
+WSEGDIMS
+ 2 6 1 /
+UNIFOUT
+
+GRID
+DX
+ 21*100 /
+DY
+ 21*100 /
+DZ
+ 21*10 /
+TOPS
+ 21*2000 /
+PORO
+ 21*0.3 /
+PERMX
+ 21*5000000 /
+PERMY
+ 21*5000000 /
+PERMZ
+ 21*5000000 /
+
+PROPS
+DENSITY
+ 800 1000 1 /
+PVTW
+ 200 1.0 0.0 0.5 0.0 /
+PVDO
+ 50 1.01 2.0
+ 400 0.99 2.0 /
+PVDG
+ 50 0.02 0.02
+ 400 0.005 0.02 /
+ROCK
+ 200 1e-5 /
+SWOF
+ 0.0 0.0 1.0 0
+ 1.0 1.0 0.0 0 /
+SGOF
+ 0.0 0.0 1.0 0
+ 1.0 1.0 0.0 0 /
+
+SOLUTION
+PRESSURE
+ 21*200 /
+SWAT
+ 21*1.0 /
+SGAS
+ 21*0.0 /
+
+SUMMARY
+SPR
+ 'INJ' /
+ 'PROD' /
+/
+SPRDH
+ 'INJ' /
+ 'PROD' /
+/
+SPRDF
+ 'INJ' /
+ 'PROD' /
+/
+SPRDA
+ 'INJ' /
+ 'PROD' /
+/
+SWFR
+ 'INJ' /
+ 'PROD' /
+/
+WBHP
+ /
+CWIR
+ 'INJ' 2 1 1 /
+ 'INJ' 3 1 1 /
+/
+CWPR
+ 'PROD' 19 1 1 /
+ 'PROD' 20 1 1 /
+/
+
+SCHEDULE
+WELSPECS
+ 'INJ'  'G' 2  1 2005 'WATER' /
+ 'PROD' 'G' 19 1 2005 'WATER' /
+/
+COMPDAT
+ 'INJ'  2  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'INJ'  3  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PROD' 19 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PROD' 20 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+/
+WELSEGS
+ 'INJ' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 1 3 1.5 2005 0.1 1e-7 /
+/
+WELSEGS
+ 'PROD' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 1 3 1.5 2005 0.1 1e-7 /
+/
+COMPSEGS
+ 'INJ' /
+ 2  1 1 1 0.9 1.1 /
+ 3  1 1 1 1.3 1.5 /
+/
+COMPSEGS
+ 'PROD' /
+ 19 1 1 1 0.9 1.1 /
+ 20 1 1 1 1.3 1.5 /
+/
+WCONINJE
+ 'INJ' 'WATER' 'OPEN' 'RATE' 10000 1* 400 /
+/
+WCONPROD
+ 'PROD' 'OPEN' 'LRAT' 3* 10000 1* 50 /
+/
+TSTEP
+ 2*1 /
+END
