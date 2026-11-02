@@ -155,6 +155,11 @@ public:
         return volume_ratios_[seg];
     }
 
+    void setLocalPerforationDepthDiff(const int local_perf_index, const Scalar diff)
+    {
+        local_perforation_depth_diffs_[local_perf_index] = diff;
+    }
+
     Scalar local_perforation_depth_diff(const int local_perf_index) const
     {
         return local_perforation_depth_diffs_[local_perf_index];

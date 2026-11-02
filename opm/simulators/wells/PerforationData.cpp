@@ -14,6 +14,7 @@ PerforationData<Scalar> PerforationData<Scalar>::serializationTestObject()
     result.ecl_index = 29;
     result.grid_id = 31;
     result.global_index = 37;
+    result.segment = 41;
     return result;
 }
 
@@ -26,7 +27,8 @@ bool PerforationData<Scalar>::operator==(const PerforationData& rhs) const
         && this->satnum_id == rhs.satnum_id
         && this->ecl_index == rhs.ecl_index
         && this->grid_id == rhs.grid_id
-        && this->global_index == rhs.global_index;
+        && this->global_index == rhs.global_index
+        && this->segment == rhs.segment;
 }
 
 template struct PerforationData<double>;

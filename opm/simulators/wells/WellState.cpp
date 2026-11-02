@@ -960,6 +960,20 @@ initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     n_activeperf++;
                 }
             }
+            // Auxiliary perforations follow the schedule ones, in local order.
+            for (std::size_t perf = 0; perf < ws.perf_data.size(); ++perf) {
+                if (ws.perf_data.ecl_index[perf] != AUX_PERFORATION_ECL_INDEX) {
+                    continue;
+                }
+                const int segment_index = segment_set.segmentNumberToIndex(ws.perf_data.segment[perf]);
+                if (segment_index >= 0) {
+                    segment_perforations[segment_index].push_back(n_activeperf);
+                }
+                active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
+                active_to_local.insert({n_activeperf, static_cast<int>(perf)});
+                n_activeperf_local++;
+                n_activeperf++;
+            }
             ws.parallel_info.get().setActivePerfToLocalPerfMap(active_to_local);
 
             // Check if the multi-segment well is distributed across several processes by comparing the local number
