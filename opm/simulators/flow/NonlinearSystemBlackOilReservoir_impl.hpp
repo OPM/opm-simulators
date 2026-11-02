@@ -609,9 +609,11 @@ NonlinearSystemBlackOilReservoir<TypeTag>::
 localConvergenceData(std::vector<Scalar>& R_sum,
                      std::vector<Scalar>& maxCoeff,
                      std::vector<Scalar>& B_avg,
-                     std::vector<int>& maxCoeffCell)
+                     std::vector<int>& maxCoeffCell,
+                     std::vector<Scalar>& maxCoeffTruePv)
 {
     OPM_TIMEBLOCK(localConvergenceData);
+    const Scalar pvFloor = this->cnvPvFloor();
     Scalar pvSumLocal = 0.0;
     Scalar numAquiferPvSumLocal = 0.0;
     const auto& model = this->simulator_.model();
@@ -639,8 +641,10 @@ localConvergenceData(std::vector<Scalar>& R_sum,
             numAquiferPvSumLocal += pvValue;
         }
 
-        this->getMaxCoeff(cell_idx, intQuants, fs, residual, pvValue,
-                          B_avg, R_sum, maxCoeff, maxCoeffCell);
+        this->getMaxCoeff(cell_idx, intQuants, fs, residual,
+                          std::max(pvValue, pvFloor),
+                          B_avg, R_sum, maxCoeff, maxCoeffCell,
+                          pvValue, &maxCoeffTruePv);
     }
 
     OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", this->grid_.comm());
@@ -655,9 +659,74 @@ localConvergenceData(std::vector<Scalar>& R_sum,
 }
 
 template <class TypeTag>
+typename NonlinearSystemBlackOilReservoir<TypeTag>::Scalar
+NonlinearSystemBlackOilReservoir<TypeTag>::
+computeCnvPvFloor() const
+{
+    OPM_TIMEBLOCK(computeCnvPvFloor);
+
+    const Scalar fraction = this->param_.cnv_pv_floor_fraction_;
+    if (!(fraction > 0.0)) {
+        return Scalar{0};
+    }
+
+    const auto& model = this->simulator().model();
+    const auto& problem = this->simulator().problem();
+    const auto& gridView = this->simulator().gridView();
+    const IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+    ElementContext elemCtx(this->simulator());
+
+    std::vector<Scalar> pvs;
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+        if (isNumericalAquiferCell(elem)) {
+            continue;
+        }
+        elemCtx.updatePrimaryStencil(elem);
+        const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+        const Scalar pv = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+                          model.dofTotalVolume(cell_idx);
+        if (pv > 0.0) {
+            pvs.push_back(pv);
+        }
+    }
+    OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::computeCnvPvFloor() failed: ",
+                               this->grid_.comm());
+
+    const auto& comm = this->grid_.comm();
+    const long int numCells = comm.sum(static_cast<long int>(pvs.size()));
+    if (numCells == 0) {
+        return Scalar{0};
+    }
+
+    // Find the global median by bisection (in log space) on the number of
+    // cells with a pore volume not exceeding the trial value. This is only
+    // done once, so the repeated reductions are cheap.
+    Scalar lo = comm.min(pvs.empty() ? std::numeric_limits<Scalar>::max()
+                                     : *std::min_element(pvs.begin(), pvs.end()));
+    Scalar hi = comm.max(pvs.empty() ? Scalar{0}
+                                     : *std::max_element(pvs.begin(), pvs.end()));
+    for (int it = 0; it < 100 && hi > lo * (1.0 + 1.0e-6); ++it) {
+        const Scalar mid = std::sqrt(lo * hi);
+        const long int numBelow =
+            comm.sum(static_cast<long int>(std::count_if(pvs.begin(), pvs.end(),
+                                                         [mid](const Scalar pv)
+                                                         { return pv <= mid; })));
+        if (2 * numBelow >= numCells) {
+            hi = mid;
+        }
+        else {
+            lo = mid;
+        }
+    }
+
+    return fraction * hi;
+}
+
+template <class TypeTag>
 typename NonlinearSystemBlackOilReservoir<TypeTag>::CnvPvSplitData
 NonlinearSystemBlackOilReservoir<TypeTag>::
-characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
+characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt, const Scalar pvOutlierCap)
 {
     OPM_TIMEBLOCK(computeCnvErrorPv);
 
@@ -695,6 +764,8 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
 
     ElementContext elemCtx(this->simulator());
 
+    const Scalar pvFloor = this->cnvPvFloor();
+
     std::vector<unsigned> ixCells;
 
     OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -710,12 +781,22 @@ characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0)
             * model.dofTotalVolume(cell_idx);
 
-        const auto maxCnv = maxCNV(residual[cell_idx], pvValue);
+        // The strict tolerance applies to the CNV measured with the
+        // floored pore volume, the relaxed tolerance to the CNV measured
+        // with the cell's own pore volume (see CnvPvFloorFraction).
+        const auto maxCnvTruePv = maxCNV(residual[cell_idx], pvValue);
+        const auto maxCnv = maxCNV(residual[cell_idx], std::max(pvValue, pvFloor));
 
-        const auto ix = (maxCnv > this->param_.tolerance_cnv_)
-            + (maxCnv > this->param_.tolerance_cnv_relaxed_);
+        const auto ix = (maxCnvTruePv > this->param_.tolerance_cnv_relaxed_)
+            ? 2 : static_cast<int>(maxCnv > this->param_.tolerance_cnv_);
 
-        splitPV[ix] += static_cast<double>(pvValue);
+        // Cap this cell's contribution to the pore-volume weighting used by
+        // the relaxed-tolerance decision (not the CNV test above, which
+        // always uses the true pvValue) so that a handful of outsized cells
+        // cannot dominate the eligible pore volume and mask a real,
+        // non-negligible region of unconverged cells -- see
+        // relaxed_pv_outlier_cap_multiplier_.
+        splitPV[ix] += static_cast<double>(std::min(pvValue, pvOutlierCap));
         ++cellCntPV[ix];
 
         // For dP and dS check, we need cell indices of [1] violations
@@ -755,10 +836,23 @@ getReservoirConvergence(const double reportTime,
 
     Vector R_sum(numComp, Scalar{0});
     Vector maxCoeff(numComp, std::numeric_limits<Scalar>::lowest());
+    Vector maxCoeffTruePv(numComp, std::numeric_limits<Scalar>::lowest());
     std::vector<int> maxCoeffCell(numComp, -1);
 
+    // The pore volume floor for the CNV measure is computed once, on the
+    // first convergence check (collective operation).
+    if (this->cnvPvFloor_ < 0.0) {
+        this->cnvPvFloor_ = this->computeCnvPvFloor();
+        if (this->terminal_output_ && this->cnvPvFloor_ > 0.0) {
+            OpmLog::debug(fmt::format("Pore volume floor used in the CNV measure: {:.6e} rm3 "
+                                      "({} times the median cell pore volume)",
+                                      this->cnvPvFloor_,
+                                      this->param_.cnv_pv_floor_fraction_));
+        }
+    }
+
     const auto [pvSumLocal, numAquiferPvSumLocal] =
-        this->localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
+        this->localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell, maxCoeffTruePv);
 
     // compute global sum and max of quantities
     const auto& [pvSum, numAquiferPvSum] =
@@ -766,10 +860,40 @@ getReservoirConvergence(const double reportTime,
                                    pvSumLocal,
                                    numAquiferPvSumLocal,
                                    R_sum, maxCoeff, B_avg);
+    this->grid_.comm().max(maxCoeffTruePv.data(), maxCoeffTruePv.size());
 
-    auto cnvSplitData = this->characteriseCnvPvSplit(B_avg, dt);
-    report.setCnvPoreVolSplit(cnvSplitData.cnvPvSplit,
-                              pvSum - numAquiferPvSum);
+    // Cap each cell's contribution to the relaxed-tolerance pore-volume
+    // weighting at a multiple of the mean eligible (non-aquifer) cell pore
+    // volume. This generalizes the numerical-aquifer exclusion above to any
+    // outsized cell: without it, a handful of large cells (e.g. a big
+    // boundary/tank cell that isn't flagged as a numerical aquifer) can
+    // inflate the eligible pore volume so that the "97% converged" test
+    // passes even though a real, non-negligible region of cells remains
+    // unconverged. this->global_nc_ (total cell count, aquifer cells
+    // included) is used as a cheap stand-in for the eligible cell count;
+    // since numerical aquifers are always a small handful of cells, this
+    // only ever understates the true mean eligible pore volume very
+    // slightly, which biases the resulting cap conservatively (smaller,
+    // i.e. stricter).
+    const Scalar eligiblePvRaw = pvSum - numAquiferPvSum;
+    const Scalar meanEligibleCellPv = (this->global_nc_ > 0)
+        ? eligiblePvRaw / static_cast<Scalar>(this->global_nc_)
+        : Scalar{0};
+    const Scalar pvOutlierCap = (this->param_.relaxed_pv_outlier_cap_multiplier_ > 0.0)
+        ? this->param_.relaxed_pv_outlier_cap_multiplier_ * meanEligibleCellPv
+        : std::numeric_limits<Scalar>::max();
+
+    auto cnvSplitData = this->characteriseCnvPvSplit(B_avg, dt, pvOutlierCap);
+
+    // The eligible pore volume used for (and reported alongside) the
+    // relaxation test is the sum of the possibly-capped per-cell
+    // contributions above, not the raw pvSum - numAquiferPvSum -- see the
+    // comment on pvOutlierCap.
+    const auto& cnvPvSplitPv = cnvSplitData.cnvPvSplit.first;
+    const Scalar cappedEligiblePv =
+        static_cast<Scalar>(cnvPvSplitPv[0] + cnvPvSplitPv[1] + cnvPvSplitPv[2]);
+
+    report.setCnvPoreVolSplit(cnvSplitData.cnvPvSplit, cappedEligiblePv);
 
     // For each iteration, we need to determine whether to use the
     // relaxed tolerances.  To disable the usage of relaxed
@@ -791,8 +915,9 @@ getReservoirConvergence(const double reportTime,
     // the cnv for the last iterations.  For positive values we use
     // the relaxed tolerance after the given number of iterations.
     // We also use relaxed tolerances for cells with total
-    // pore-volume less than relaxed_max_pv_fraction_.  Default
-    // value of relaxed_max_pv_fraction_ is 0.03
+    // pore-volume less than relaxed_max_pv_fraction_.  This is
+    // disabled by default (relaxed_max_pv_fraction_ = 0); tiny cells
+    // are instead handled by the pore volume floor in the CNV measure.
     const bool relax_final_iteration_cnv =
         this->param_.min_strict_cnv_iter_ < 0 && iterCtx.iteration() == maxIter;
 
@@ -802,16 +927,40 @@ getReservoirConvergence(const double reportTime,
     // Note trailing parentheses here, just before the final
     // semicolon.  This is an immediately invoked function
     // expression which calculates a single boolean value.
+    //
+    // Two independent guards must both hold for relaxation to be granted:
+    //  - the (outlier-capped) pore volume of violating cells is a small
+    //    fraction of the (outlier-capped) eligible pore volume -- as
+    //    before, but now robust to a handful of oversized cells inflating
+    //    the denominator (see pvOutlierCap above);
+    //  - the *number* of violating cells is not too large a fraction of
+    //    the eligible cell count. This is a secondary safety net (disabled
+    //    by default via relaxed_max_cell_count_fraction_ == 1.0) in case a
+    //    non-negligible number of cells are still violating strict CNV
+    //    even though their capped pore-volume share looks negligible.
     const auto relax_pv_fraction_cnv =
-        [&report, this, eligible = pvSum - numAquiferPvSum]()
+        [&report, this]()
     {
         const auto& cnvPvSplit = report.cnvPvSplit().first;
+        const auto& cnvCellCountSplit = report.cnvPvSplit().second;
 
         // [1]: tol < cnv <= relaxed
         // [2]: relaxed < cnv
-        Scalar cnvPvSum = static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]);
-        return cnvPvSum < this->param_.relaxed_max_pv_fraction_ * eligible &&
+        const Scalar cnvPvSum = static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]);
+        const Scalar eligiblePv = static_cast<Scalar>(report.eligiblePoreVolume());
+
+        const bool pv_fraction_ok =
+            cnvPvSum < this->param_.relaxed_max_pv_fraction_ * eligiblePv &&
             cnvPvSum > 0.0;
+
+        const auto violatingCellCount = cnvCellCountSplit[1] + cnvCellCountSplit[2];
+        const auto eligibleCellCount =
+            cnvCellCountSplit[0] + cnvCellCountSplit[1] + cnvCellCountSplit[2];
+        const bool cell_count_ok = eligibleCellCount == 0 ||
+            static_cast<Scalar>(violatingCellCount) <
+                this->param_.relaxed_max_cell_count_fraction_ * static_cast<Scalar>(eligibleCellCount);
+
+        return pv_fraction_ok && cell_count_ok;
     }();
 
     // If tolerances for solution changes are met, we use the
@@ -901,6 +1050,27 @@ getReservoirConvergence(const double reportTime,
                     OpmLog::debug(message);
                 }
             });
+    }
+
+    // CNV is measured with a floored pore volume (see CnvPvFloorFraction),
+    // so tiny cells cannot dictate convergence. Their CNV measured with the
+    // cells' own pore volumes must still not exceed the relaxed tolerance.
+    if (this->cnvPvFloor() > 0.0) {
+        for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+            const Scalar cnvTruePv = B_avg[compIdx] * dt * maxCoeffTruePv[compIdx];
+            const Scalar tol = (has_energy_ && compIdx == contiEnergyEqIdx)
+                ? this->param_.tolerance_cnv_energy_relaxed_
+                : tolerance_cnv_relaxed;
+            if (std::isnan(cnvTruePv)) {
+                report.setReservoirFailed({CR::ReservoirFailure::Type::Cnv, CR::Severity::NotANumber, compIdx});
+            }
+            else if (cnvTruePv > maxResidualAllowed()) {
+                report.setReservoirFailed({CR::ReservoirFailure::Type::Cnv, CR::Severity::TooLarge, compIdx});
+            }
+            else if (cnvTruePv > tol) {
+                report.setReservoirFailed({CR::ReservoirFailure::Type::Cnv, CR::Severity::Normal, compIdx});
+            }
+        }
     }
 
     // Compute the Newton convergence per cell.
@@ -1019,8 +1189,9 @@ convergencePerCell(const std::vector<Scalar>& B_avg,
         elemCtx.updatePrimaryStencil(elem);
 
         const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-        const auto pvValue = this->simulator_.problem().referencePorosity(cell_idx, /*timeIdx=*/0) *
-                             this->simulator_.model().dofTotalVolume(cell_idx);
+        const auto pvValue = std::max(this->cnvPvFloor(),
+                                      this->simulator_.problem().referencePorosity(cell_idx, /*timeIdx=*/0) *
+                                      this->simulator_.model().dofTotalVolume(cell_idx));
         for (int compIdx = 0; compIdx < numComp; ++compIdx) {
             const auto tol = (has_energy_ && compIdx == contiEnergyEqIdx) ? tol_cnv_energy : tol_cnv;
             const Scalar cnv = std::abs(B_avg[compIdx] * residual[cell_idx][compIdx]) * dt / pvValue;
@@ -1141,8 +1312,20 @@ getMaxCoeff(const unsigned cell_idx,
             std::vector<Scalar>& B_avg,
             std::vector<Scalar>& R_sum,
             std::vector<Scalar>& maxCoeff,
-            std::vector<int>& maxCoeffCell)
+            std::vector<int>& maxCoeffCell,
+            const Scalar pvTrue,
+            std::vector<Scalar>* maxCoeffTruePv)
 {
+    // maxCoeff uses pvValue (possibly floored, see CnvPvFloorFraction),
+    // maxCoeffTruePv, if requested, uses the cell's own pore volume pvTrue.
+    const auto updateMaxCoeff = [&](const unsigned idx, const Scalar absR)
+    {
+        maxCoeff[idx] = std::max(maxCoeff[idx], absR / pvValue);
+        if (maxCoeffTruePv != nullptr) {
+            (*maxCoeffTruePv)[idx] = std::max((*maxCoeffTruePv)[idx], absR / pvTrue);
+        }
+    };
+
     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
     {
         if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -1156,11 +1339,10 @@ getMaxCoeff(const unsigned cell_idx,
         const auto R2 = modelResid[cell_idx][compIdx];
 
         R_sum[compIdx] += R2;
-        const Scalar Rval = std::abs(R2) / pvValue;
-        if (Rval > maxCoeff[compIdx]) {
-            maxCoeff[compIdx] = Rval;
+        if (std::abs(R2) / pvValue > maxCoeff[compIdx]) {
             maxCoeffCell[compIdx] = cell_idx;
         }
+        updateMaxCoeff(compIdx, std::abs(R2));
     }
 
     if constexpr (has_solvent_) {
@@ -1168,36 +1350,31 @@ getMaxCoeff(const unsigned cell_idx,
             1.0 / intQuants.solventInverseFormationVolumeFactor().value();
         const auto R2 = modelResid[cell_idx][contiSolventEqIdx];
         R_sum[contiSolventEqIdx] += R2;
-        maxCoeff[contiSolventEqIdx] = std::max(maxCoeff[contiSolventEqIdx],
-                                               std::abs(R2) / pvValue);
+        updateMaxCoeff(contiSolventEqIdx, std::abs(R2));
     }
     if constexpr (has_extbo_) {
         B_avg[contiZfracEqIdx] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
         const auto R2 = modelResid[cell_idx][contiZfracEqIdx];
         R_sum[ contiZfracEqIdx ] += R2;
-        maxCoeff[contiZfracEqIdx] = std::max(maxCoeff[contiZfracEqIdx],
-                                             std::abs(R2) / pvValue);
+        updateMaxCoeff(contiZfracEqIdx, std::abs(R2));
     }
     if constexpr (has_polymer_) {
         B_avg[contiPolymerEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
         const auto R2 = modelResid[cell_idx][contiPolymerEqIdx];
         R_sum[contiPolymerEqIdx] += R2;
-        maxCoeff[contiPolymerEqIdx] = std::max(maxCoeff[contiPolymerEqIdx],
-                                               std::abs(R2) / pvValue);
+        updateMaxCoeff(contiPolymerEqIdx, std::abs(R2));
     }
     if constexpr (has_foam_) {
         B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
         const auto R2 = modelResid[cell_idx][contiFoamEqIdx];
         R_sum[contiFoamEqIdx] += R2;
-        maxCoeff[contiFoamEqIdx] = std::max(maxCoeff[contiFoamEqIdx],
-                                            std::abs(R2) / pvValue);
+        updateMaxCoeff(contiFoamEqIdx, std::abs(R2));
     }
     if constexpr (has_brine_) {
         B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
         const auto R2 = modelResid[cell_idx][contiBrineEqIdx];
         R_sum[contiBrineEqIdx] += R2;
-        maxCoeff[contiBrineEqIdx] = std::max(maxCoeff[contiBrineEqIdx],
-                                             std::abs(R2) / pvValue);
+        updateMaxCoeff(contiBrineEqIdx, std::abs(R2));
     }
 
     if constexpr (has_polymermw_) {
@@ -1209,45 +1386,38 @@ getMaxCoeff(const unsigned cell_idx,
         // TODO: there should be a more general way to determine the scaling-down coefficient
         const auto R2 = modelResid[cell_idx][contiPolymerMWEqIdx] / 100.;
         R_sum[contiPolymerMWEqIdx] += R2;
-        maxCoeff[contiPolymerMWEqIdx] = std::max(maxCoeff[contiPolymerMWEqIdx],
-                                                 std::abs(R2) / pvValue);
+        updateMaxCoeff(contiPolymerMWEqIdx, std::abs(R2));
     }
 
     if constexpr (has_energy_) {
         B_avg[contiEnergyEqIdx] += 1.0;
         const auto R2 = modelResid[cell_idx][contiEnergyEqIdx];
         R_sum[contiEnergyEqIdx] += R2;
-        maxCoeff[contiEnergyEqIdx] = std::max(maxCoeff[contiEnergyEqIdx],
-                                              std::abs(R2) / pvValue);
+        updateMaxCoeff(contiEnergyEqIdx, std::abs(R2));
     }
 
     if constexpr (has_bioeffects_) {
         B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
         const auto R1 = modelResid[cell_idx][contiMicrobialEqIdx];
         R_sum[contiMicrobialEqIdx] += R1;
-        maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx],
-                                                std::abs(R1) / pvValue);
+        updateMaxCoeff(contiMicrobialEqIdx, std::abs(R1));
         B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
         const auto R2 = modelResid[cell_idx][contiBiofilmEqIdx];
         R_sum[contiBiofilmEqIdx] += R2;
-        maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx],
-                                               std::abs(R2) / pvValue);
+        updateMaxCoeff(contiBiofilmEqIdx, std::abs(R2));
         if constexpr (has_micp_) {
             B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
             const auto R3 = modelResid[cell_idx][contiOxygenEqIdx];
             R_sum[contiOxygenEqIdx] += R3;
-            maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx],
-                                                std::abs(R3) / pvValue);
+            updateMaxCoeff(contiOxygenEqIdx, std::abs(R3));
             B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
             const auto R4 = modelResid[cell_idx][contiUreaEqIdx];
             R_sum[contiUreaEqIdx] += R4;
-            maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx],
-                                                std::abs(R4) / pvValue);
+            updateMaxCoeff(contiUreaEqIdx, std::abs(R4));
             B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
             const auto R5 = modelResid[cell_idx][contiCalciteEqIdx];
             R_sum[contiCalciteEqIdx] += R5;
-            maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
-                                                std::abs(R5) / pvValue);
+            updateMaxCoeff(contiCalciteEqIdx, std::abs(R5));
             }
     }
 }
