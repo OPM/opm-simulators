@@ -120,6 +120,12 @@ partiallySupported()
             },
          },
          {
+            "GINJGAS",
+            {
+               {4,{true, allow_values<std::string> {}, "GINJGAS(MAKEUPGAS): make-up gas stream is not supported and should be defaulted"}}, // MAKEUPGAS
+            },
+         },
+         {
             "GRIDOPTS",
             {
                {1,{true, allow_values<std::string> {"NO", "YES"}, "GRIDOPTS(TRANMULT): should be set to either NO or YES"}}, // TRANMULT
@@ -407,6 +413,12 @@ partiallySupported()
             "FOAMROCK",
             {
                {1,{true, allow_values<int> {1}, "FOAMROCK(ADINDX): only the default(1) value is supported"}}, // ADSORPTION_INDEX
+            },
+         },
+         {
+            "GINJGAS",
+            {
+               {5,{true, allow_values<int> {0}, "GINJGAS(STAGE): separator stage is not supported and should be defaulted"}}, // STAGE
             },
          },
          {

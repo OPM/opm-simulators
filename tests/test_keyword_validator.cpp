@@ -669,8 +669,8 @@ flowKeywordValidator()
 BOOST_AUTO_TEST_CASE(compositional_keywords_are_not_flagged_as_unsupported)
 {
     // These are consumed by the compositional simulator: COMPS and NCOMPS set
-    // the component count, and WELLSTRE/WINJGAS supply the injection stream
-    // composition. The production tables must not report them.
+    // the component count, and WELLSTRE/WINJGAS/GINJGAS supply the injection
+    // stream composition. The production tables must not report them.
     const auto keywords_string = std::string {R"(
 RUNSPEC
 COMPS
@@ -685,11 +685,14 @@ WELLSTRE
 WINJGAS
   INJ STREAM ISTR /
 /
+GINJGAS
+  G1 STREAM ISTR /
+/
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto validator = flowKeywordValidator();
     std::vector<ValidationError> errors;
-    for (const auto* name : {"COMPS", "NCOMPS", "WELLSTRE", "WINJGAS"}) {
+    for (const auto* name : {"COMPS", "NCOMPS", "WELLSTRE", "WINJGAS", "GINJGAS"}) {
         validator.validateDeckKeyword(deck[name].back(), errors);
     }
     BOOST_CHECK(get_error_report(errors, true, true).empty());
@@ -817,19 +820,18 @@ WINJGAS
     BOOST_CHECK_EQUAL(errors.size(), 2);
 }
 
-BOOST_AUTO_TEST_CASE(ginjgas_is_warned_about_but_not_critical)
+BOOST_AUTO_TEST_CASE(ginjgas_makeup_gas_and_stage_items_are_flagged)
 {
+    // As for WINJGAS, MAKEUPGAS and STAGE are ignored and must be reported.
     const auto deck = Parser {}.parseString(R"(
 SCHEDULE
 GINJGAS
-  'GI*' STREAM ISTR /
+  'GI*' STREAM ISTR GASA 2 /
 /
 )");
     std::vector<ValidationError> errors;
     flowKeywordValidator().validateDeckKeyword(deck["GINJGAS"].back(), errors);
-
-    BOOST_REQUIRE_EQUAL(errors.size(), 1);
-    BOOST_CHECK(!errors.front().critical);
+    BOOST_CHECK_EQUAL(errors.size(), 2);
 }
 
 
