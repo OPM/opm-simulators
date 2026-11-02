@@ -6,7 +6,8 @@ This document is the first, reservoir-centred pass over Flow's simulation-time
 data flow. It describes the default black-oil TPFA, Newton, CPU ISTL path. It
 does not describe deck parsing, initialisation, grid construction, partition
 construction, TPSA, NLDD, compositional Flow, GPU assembly, or reservoir
-coupling except where those variants leave visible seams in the default path.
+coupling. Variant seams are mentioned only where needed to explain the default
+path; reservoir coupling remains outside this review.
 
 The well/group/network/gas-lift system is treated as one subsystem. Its
 external contract is described here; its internal control and state
@@ -14,13 +15,17 @@ transitions are covered in the companion
 [well, group, network, and gas-lift data-flow
 document](flow-well-group-network-gaslift-data-flow.md).
 
-The source snapshot inspected was:
+Updated against `master` on 2026-11-02. Source revisions inspected:
 
-- `opm-simulators`: `7df63fb1f821`
-- `opm-common`: `8f6a6adec072`
+- `opm-simulators`: `a67baa7d52` (2026-10-29)
+- `opm-common`: `0cac91afdb`
 
-The conclusions are based primarily on source inspection. Two serial runs with
-the available `flow 2026.10-pre` binary completed successfully as smoke tests:
+The original simulator snapshot was `7df63fb1f821`; this update follows the
+intervening changes within the same scope, especially default timestep rollback.
+
+The update is based on source inspection, without a new build or simulation.
+In the original investigation, two serial runs with the available
+`flow 2026.10-pre` binary completed successfully as smoke tests:
 
 - `SPE1CASE2`, with 300 active cells, standard wells, and adaptive
   timestepping;
@@ -73,11 +78,12 @@ The most important findings are:
    hysteresis, irreversible rock history, VAPPARS history, mixing limits,
    well/group state, and aquifer state live in other owners.
 
-2. **Commit and rollback are protocols, not objects.** Reservoir rollback is
-   `solution(0) = solution(1)`. Well rollback is `resetWGState()`. Aquifer
-   history is committed in `endTimeStep()`. Hysteresis and other explicit
-   reservoir histories are advanced at the beginning of the next attempt.
-   Correctness depends on lifecycle call order.
+2. **Commit and rollback remain a distributed protocol.** With
+   `EnableStateRollback=true` (now the default), explicit reservoir histories,
+   mixing controls, well/NUPCOL bookkeeping, and Newton switching history have
+   timestep snapshots. Reservoir rollback still copies `solution(1)` to
+   `solution(0)`; well entry still calls `resetWGState()`, and aquifer history
+   is committed in `endTimeStep()`. Snapshot timing and lifecycle order matter.
 
 3. **`Simulator` and `Problem` act as service locators.** Components routinely
    reach through chains such as `simulator_.model().linearizer()` or
@@ -128,6 +134,7 @@ Simulator
 │   ├── EclMaterialLawManager
 │   │   └── per-cell MaterialLawParams
 │   │       └── hysteresis dynamic state
+│   ├── prev_timestep_state_             pre-explicit-update history snapshot
 │   ├── explicit reservoir-history arrays
 │   │   ├── maxOilSaturation_
 │   │   ├── maxWaterSaturation_
@@ -138,6 +145,7 @@ Simulator
 │   │   ├── active_wgstate_
 │   │   ├── last_valid_wgstate_
 │   │   ├── nupcol_wgstate_
+│   │   ├── prev_timestep_state_         WG/NUPCOL and open/close snapshot
 │   │   ├── per-well equation systems
 │   │   ├── cellRates_
 │   │   ├── network_
@@ -174,24 +182,33 @@ loop to `AdaptiveTimeStepping`.
 The nonlinear solver owns a `NonlinearSystemBlackOilReservoir`. That object is
 reused after its first creation; a nearby TUNING comment saying the solver is
 re-created each report step is stale relative to the current ownership code.
+Restart setup now also applies the current schedule TUNING to both the time
+stepper and nonlinear-model parameters when tuning is enabled; a restart need
+not have a new TUNING_CHANGE event to establish those parameters.
 
 ### Start of a timestep attempt
 
 `NonlinearSolver::step()` first calls
 `NonlinearSystemBlackOilReservoir::prepareStep()`, whose base implementation
-does the following:
+does the following (the Newton switching snapshot is handled by the
+black-oil override before the base call):
 
 ```text
+with default state rollback enabled:
+    capture Newton wasSwitched_ on a fresh step, restore it on a retry
 if previous attempt failed:
     FlowProblem::updateFailed()
+        restore explicit reservoir histories and black-oil mixing controls
+        wellModel.updateFailed(): restore WG/NUPCOL and open/close bookkeeping
+                                 reset network state; retarget helper
         FIBlackOilModel::updateFailed()
             solution[0] = solution[1]
             invalidate/recompute current intensive quantities
 else:
     FlowProblem::advanceTimeLevel()
         solution[1] = solution[0]
-        shift storage cache
-        shift intensive-quantity cache
+        shift storage cache and intensive-quantity cache
+        wellModel.advanceTimeLevel(): capture WG/NUPCOL/bookkeeping; commit network
 
 set simulation time and dt
 reset NewtonIterationContext
@@ -200,16 +217,21 @@ FlowProblem::beginTimeStep()
 
 `FlowProblem::beginTimeStep()` then:
 
-1. Updates explicit reservoir histories from the restored/accepted current
+1. With state rollback enabled, captures `first_step_`, polymer adsorption,
+   saturation/pressure histories, rock transmissibility multipliers,
+   material-law hysteresis, and black-oil `mixControls_` **before** updating them.
+2. Updates explicit reservoir histories from the restored/accepted current
    state: hysteresis, maximum saturations, minimum pressure, mixing limits, and
    rock-compaction multipliers as enabled.
-2. Invalidates/recomputes intensive quantities when those histories change.
-3. Updates boundary-condition data when needed.
-4. Calls `beginTimeStep()` on wells, aquifers, tracers, and the sequential
+3. Invalidates/recomputes intensive quantities when those histories change.
+4. Updates boundary-condition data when needed.
+5. Calls `beginTimeStep()` on wells, aquifers, tracers, and the sequential
    temperature model.
 
-This order is the effective state transaction. There is no object representing
-“accepted timestep state”; instead, each subsystem follows its own convention.
+A retry restores the pre-explicit-update snapshot, captures it again, and
+reapplies the entry update using the retry dt. This prevents the failed
+attempt from advancing path-dependent history twice. There is still no single
+object representing the accepted simulation state.
 
 ### One Newton iteration
 
@@ -267,17 +289,27 @@ When solve or acceptance fails, `AdaptiveTimeStepping` sets
 The next `prepareStep()` performs the rollback:
 
 ```text
-reservoir: solution[0] <- solution[1]
-wells:     beginTimeStep() calls resetWGState()
+Newton:    restore wasSwitched_ from the fresh-step snapshot
+histories: restore pre-entry explicit history, material-law state, mixControls_
+wells:     updateFailed() restores WG/NUPCOL, closure and WCYCLE bookkeeping,
+           and network; beginTimeStep() also resets active from last-valid WG
+reservoir: solution[0] <- solution[1], including primary-variable meanings
+caches:    current intensive quantities rebuilt after history/solution restore
+entry:     recapture and reapply explicit histories; reconstruct well objects
 aquifers:  no accepted cumulative history was written because endTimeStep()
            was not called; beginTimeStep() refreshes previous connection pressure
-histories: recomputed from restored current intensive quantities
-caches:    current intensive quantities invalidated/rebuilt
 ```
 
-This is correct only because tentative state mutations are either restored on
-the next `beginTimeStep()` or deferred until `endTimeStep()`. That requirement
-is not encoded in a common interface.
+These snapshots are attempt-local and are not restart serialization. Disabling
+`EnableStateRollback` retains solution rollback and the well entry reset, but
+skips the explicit history, well bookkeeping, and Newton-switch snapshots.
+
+Retry does not unconditionally erase the linear solver: its reuse policy is
+retained, and backends discard failed preconditioner setups themselves. With
+`TruncateTimeStepToFloat` enabled (default false), successful non-final substeps
+advance the timer and estimate the next dt from the truncated model dt; the
+report-ending step retains exact report timing. This makes accepted step-size
+replay more reproducible without defining a common state transaction.
 
 ## Reservoir state and property evaluation
 
@@ -329,7 +361,16 @@ also reads:
 - the global simulator in some extension paths.
 
 The cache must be invalidated after every primary-variable update and after a
-dynamic property-history update.
+dynamic property-history update. In this default model `intensiveQuantities()`
+returns a cached const reference; disabling the IQ cache is rejected. Other
+models can return properties by value, but that variant is outside this path.
+`FlowProblem::materialLawManager()` now returns a reference, avoiding shared
+pointer copies without changing the manager's ownership of history.
+
+ROCKTABH adds elastic reload curves anchored at `minRefPressure_` alongside the
+virgin compaction curves. Thus the minimum-pressure history now affects
+reversible reload as well as irreversible compaction; its rollback and IQ
+invalidation remain part of the same explicit-history protocol.
 
 ### Static, dynamic, derived, and workspace data
 
@@ -376,12 +417,10 @@ Consequences:
   material-law parameter object.
 - Output extracts hysteresis state through the material-law manager instead of
   reading the reservoir solution.
-- In the newer source snapshot described by the
-  [focused hysteresis investigation](flow-hysteresis-state.md), Flow calls
-  `EclMaterialLawManager`'s begin-timestep capture/restore when
-  `EnableStateRollback` is enabled. The option defaults to false. The focused
-  investigation also separates historical fields from calculated coefficients
-  and assesses a smaller snapshot.
+- Flow calls the material-law manager's begin-timestep capture/restore by
+  default. The [focused hysteresis investigation](flow-hysteresis-state.md)
+  describes compact conventional snapshots, full WAG sidecars, and the
+  distinction between historical fields and calculated coefficients.
 - Directional material-law parameters multiply the capture/restore surface.
 
 A simpler target is:
@@ -467,7 +506,7 @@ The first-pass boundary of the subsystem is:
 | Linearisation | reservoir Jacobian and residual | Schur-complement modification |
 | Post solve | reservoir update at perforation cells | recovered well update; mutation of active well/group state |
 | Successful step | accepted reservoir state, time, dt | potentials, limits, cumulative state; commit active to last-valid state |
-| Failed retry | retry lifecycle only | next `beginTimeStep()` resets active from last-valid state |
+| Failed retry | `updateFailed()` then timestep entry | restore attempt snapshots; reset active from last-valid WG; reconstruct wells |
 
 The external interface already shows why this subsystem needs a separate deep
 investigation: “well state” is not one object or one phase. The generic model
@@ -502,7 +541,9 @@ TpfaLinearizer-owned matrix/residual
 
 It may also mutate the input matrix's overlap rows, retains raw pointers to the
 matrix and RHS between `prepare()` and `solve()`, and caches solver hierarchy
-state across calls.
+state across calls. Quasi-IMPES weight recalculation now reads the live matrix
+through `getMatrix()` rather than a matrix captured by value, so reuse of the
+solver hierarchy does not freeze those weights at an earlier linearization.
 
 A clearer interface would combine the call protocol:
 
@@ -537,13 +578,14 @@ into `Simulator`, `Problem`, and `WellModel`.
 | intensive-quantity cache | `FvBaseDiscretization` | derived per-cell/time cache | cache update/invalidation | shifted at time-level advance; reconstructed after restart |
 | storage cache | `FvBaseDiscretization` | derived accumulation cache | first assembly, rebuild | shifted at time-level advance; reconstructed after restart |
 | Jacobian and residual | `TpfaLinearizer` | per-Newton workspace | reservoir assembly, wells | reset each assembly; not physical restart state |
-| explicit saturation/pressure history | `FlowGenericProblem` | accepted physical history | timestep-entry update functions | relies on update ordering; serialized selectively |
-| hysteresis dynamic state | per-cell material-law params in `EclMaterialLawManager` | accepted physical history embedded in parameters | `updateHysteresis_()` | special parameter serialization; implicit retry semantics |
-| mixing-rate controls/history | `FlowProblemBlackoil::mixControls_` and related objects | accepted physical/control history | timestep entry and schedule changes | serialized through problem-specific path |
+| explicit saturation/pressure history | `FlowGenericProblem` | accepted physical history | timestep-entry update functions | default pre-entry snapshot/restore in `FlowProblem`; serialized selectively |
+| hysteresis dynamic state | per-cell material-law params in `EclMaterialLawManager` | accepted physical history embedded in parameters | `updateHysteresis_()` | default compact/full-WAG timestep snapshot; separate parameter serialization |
+| mixing-rate controls/history | `FlowProblemBlackoil::mixControls_` and related objects | accepted physical/control history | timestep entry and schedule changes | default pre-entry snapshot/restore; serialized through problem-specific path |
 | drift compensation | `FlowProblem::drift_` | accepted derived/history state | successful `endTimeStep()` | serialized |
 | active well/group state | `BlackoilWellModelGeneric::active_wgstate_` | tentative Newton/timestep state | well assembly, controls, `postSolve()` | committed to last-valid on success; serialized |
 | last-valid well/group state | `BlackoilWellModelGeneric::last_valid_wgstate_` | accepted rollback state | `commitWGState()` | copied to active on timestep entry; serialized |
-| NUPCOL well/group state | `BlackoilWellModelGeneric::nupcol_wgstate_` | frozen iteration-policy state | `updateNupcolWGState()` | neither the canonical active nor accepted state |
+| NUPCOL well/group state | `BlackoilWellModelGeneric::nupcol_wgstate_` | frozen iteration-policy state | `updateNupcolWGState()` | default fresh-step snapshot/restore; serialized separately |
+| Newton switching history | `BlackOilNewtonMethod::wasSwitched_` | phase-switch oscillation control | Newton updates | captured on fresh step, restored on retry by default |
 | per-well equation blocks | individual well objects | per-Newton assembly workspace | well assembly | reused by source, Schur, and recovery phases |
 | connection cell-rate cache | `BlackoilWellModel::cellRates_` | per-Newton derived cache | well assembly | rebuilt after well equations |
 | well reconstructed solution cache | `BlackoilWellModel` | solve/post-solve workspace | system solve path | consumed during post-solve |
@@ -607,8 +649,8 @@ Examples:
 - `postSolve()` must precede reservoir update;
 - hysteresis must update only after current solution has been accepted or
   restored;
-- well rollback occurs on the next attempt's `beginTimeStep()`, not at the
-  failure point.
+- default well rollback starts in the next `prepareStep()` through
+  `updateFailed()`, followed by the separate `beginTimeStep()` reset and rebuild.
 
 ### 4. “Parameters”, “model”, and “state” are overloaded words
 
@@ -763,9 +805,9 @@ These can be considered before moving state ownership:
 
 ## Runtime validation still worth adding
 
-The smoke run validated the selected executable path, not every state
-transition. A small opt-in lifecycle tracer would make the source conclusions
-regression-testable. It should log only:
+The original smoke runs validated the older executable path, not the updated
+source or every state transition. A small opt-in lifecycle tracer would make
+the source conclusions regression-testable. It should log only:
 
 - report step, substep, attempt, and Newton iteration;
 - state generation identifiers for solution, history, IQ cache, well state,

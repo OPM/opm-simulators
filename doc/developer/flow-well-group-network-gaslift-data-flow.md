@@ -13,14 +13,19 @@ The main path considered is black-oil Flow with TPFA, Newton, standard or
 multisegment wells, and the extended production network. This is a structural
 investigation rather than a description of every supported control keyword or
 the detailed mathematics of every well and gas-lift algorithm. Reservoir
-coupling, NLDD, GPU-specific extraction, polymer/filter-cake details, well
-testing, and actions are mentioned only where they expose an important
-interface or state-management property.
+coupling remains outside this review. NLDD, GPU-specific extraction,
+polymer/filter-cake details, well testing, and actions are mentioned only where
+they expose an important interface or state-management property. The production
+network remains the network scope; shared storage seams are noted without
+expanding this into an injection-network investigation.
 
-The source snapshot inspected was:
+Updated against `master` on 2026-11-02. Source revisions inspected:
 
-- `opm-simulators`: `e015dec306f6`
-- `opm-common`: `c68d905fcdc4`
+- `opm-simulators`: `a67baa7d52` (2026-10-29)
+- `opm-common`: `0cac91afdb`
+
+The original simulator snapshot was `e015dec306f6`. This revision follows
+intervening changes to the same subsystem boundaries.
 
 The conclusions are based on source inspection. No new simulation result is
 used as evidence in this pass.
@@ -80,11 +85,11 @@ The main findings are:
    solves, and gas-lift optimization. Return values usually report only that
    something changed, not what changed.
 
-4. **There are three copies of well/group/test state with different temporal
-   meanings.** `active_wgstate_` is tentative, `last_valid_wgstate_` is the
-   accepted rollback point, and `nupcol_wgstate_` freezes selected values after
-   the NUPCOL window. Network pressures have their own active/accepted pair.
-   Correctness depends on knowing which copy each calculation reads.
+4. **Well/group/test state has several temporal views.** `active_wgstate_`
+   is tentative, `last_valid_wgstate_` is the accepted rollback point, and
+   `nupcol_wgstate_` freezes selected allocation inputs. Default state rollback
+   additionally captures active and NUPCOL state at fresh-step entry. Network
+   pressures have their own active/accepted pairs. Each has a distinct reader.
 
 5. **The production network is an explicit fixed-point iteration outside the
    global Jacobian.** Rates determine node pressures, node pressures become
@@ -108,12 +113,12 @@ The main findings are:
    changes, network imbalance, and gas-lift allocations each have different
    collective communication rules.
 
-9. **Rollback is mostly coherent but still protocol-driven.** The accepted
-   `WGState` and network pressure state are restored at the next timestep
-   attempt. However, timestep-local well objects also contain mutable
-   operability, dynamic limits, equation caches, and switching logs that are
-   rebuilt or reinitialized by a separate sequence. The pre-step network
-   rebalance itself contains a TODO questioning backup behavior.
+9. **Rollback is explicit by default but still protocol-driven.**
+   `updateFailed()` restores fresh-step WG/NUPCOL and open/close bookkeeping;
+   `beginTimeStep()` also resets accepted WG/network state and reconstructs
+   well objects. Operability, dynamic limits, equation caches, and switching
+   logs are rebuilt through that sequence. The pre-step network rebalance
+   still has a TODO about a backup around its own local solve.
 
 10. **A simpler interface should begin with explicit state snapshots and
     phase results, not by merging more classes.** Separating accepted physical
@@ -143,6 +148,7 @@ FlowProblemBlackoil
     │   └── WellTestState
     ├── last_valid_wgstate_                     accepted/rollback copy
     ├── nupcol_wgstate_                         iteration-policy snapshot
+    ├── prev_timestep_state_                    fresh-step WG/NUPCOL/bookkeeping
     ├── well_container_                         timestep-local WellInterface objects
     │   ├── StandardWell or MultisegmentWell
     │   ├── primary variables and operability state
@@ -150,8 +156,8 @@ FlowProblemBlackoil
     ├── GroupStateHelper                        broad service facade
     ├── GuideRate and GuideRateHandler
     ├── BlackoilWellModelNetwork
-    │   ├── current and accepted node pressures
-    │   ├── current and accepted branch data
+    │   ├── current and accepted node pressures, per network domain
+    │   ├── current and accepted branch data, per network domain
     │   └── auto-choke group-THP cache
     ├── BlackoilWellModelGasLift
     │   └── last optimization time
@@ -184,6 +190,8 @@ The important state stores and lifetimes are:
 | `active_wgstate_` | Tentative well, group, and well-test state for the current timestep attempt | Mutated throughout facility calculations; copied from `last_valid_wgstate_` on attempt entry |
 | `last_valid_wgstate_` | Last accepted well/group/test state | Replaced at report-step setup, selected topology changes, and successful timestep completion |
 | `nupcol_wgstate_` | Snapshot used to freeze selected control-allocation inputs | Refreshed during the NUPCOL window and for specified REIN/VREP rate changes; serialized separately |
+| `prev_timestep_state_` | Active WG, NUPCOL, dynamic-closure set, and WCYCLE open/close times before a fresh step | Captured in `advanceTimeLevel()`, restored by `updateFailed()` with default state rollback; not serialized |
+| `retry_shut_wells_` | Explicit solver-directed retry closures | Blocks reopening while retrying; cleared on timestep success; not serialized |
 | `well_container_` | Timestep-local numerical well objects | Recreated at timestep entry; not the primary restart/rollback representation |
 | Per-well B/C/D and residual | Linearization at the latest well assembly point | Cleared/reassembled; valid only for the matching reservoir/control state |
 | `cellRates_` | Per-cell view of latest connection rates | Rebuilt after well equation assembly |
@@ -247,6 +255,11 @@ well structure and `WellState` are initialized here, but `well_container_` is
 created at timestep start.
 
 ### Start or retry of a timestep
+
+With `EnableStateRollback=true` (now the default), a fresh-step
+`advanceTimeLevel()` captures active WG, NUPCOL, dynamic-closure bookkeeping,
+and WCYCLE open/close times, and commits network state. On retry,
+`updateFailed()` restores these and retargets `GroupStateHelper`.
 
 `BlackoilWellModel::beginTimeStep()` first handles a possible topology change
 caused within a report step, then calls `resetWGState()`. The reset copies
@@ -313,7 +326,9 @@ this network outer loop. It is carried into the convergence report so the
 global Newton process performs another iteration. Network imbalance and ALQ
 changes determine the local outer-loop continuation.
 
-If the configured maximum network outer iterations is reached while the
+At the configured maximum network outer iterations, an imbalance already
+within the NETBALAN pressure tolerance exits quietly even if ALQ/control
+feedback caused the loop to continue. If pressure is still unbalanced and the
 network is expected to balance on the next Newton iteration,
 `network_needs_more_balancing_force_another_newton_iteration_` is set. Thus
 network fixed-point convergence can deliberately control global Newton
@@ -388,23 +403,31 @@ equations.
 
 At a successful timestep, `timeStepSucceeded()` updates well-throughput and
 connection histories, injection multipliers, potentials, well-test/economic
-state, productivity indices, and selected group modes. It then calls
+state, productivity indices, representative phase-mixing ratios, and selected
+group modes. It also clears solver retry-closure markers. It then calls
 `commitWGState()`, which copies the active WG state to the accepted copy and
 commits network node and branch data.
 
-If a later timestep attempt fails, the reservoir state is rolled back by the
-reservoir lifecycle and the next well `beginTimeStep()` restores the accepted
-WG/network copies. No explicit `BlackoilWellModel::updateFailed()` mutation is
-needed for that copy; retry entry performs the reset.
+If a later attempt fails, default `BlackoilWellModel::updateFailed()` restores
+the fresh-step active/NUPCOL snapshots and bookkeeping and resets network
+state. The next `beginTimeStep()` still resets active from `last_valid_wgstate_`
+and reconstructs numerical well objects. With state rollback disabled, only
+that latter reset/rebuild protocol remains.
+
+Solver-directed retry closures are deliberate policy changes: forcing a well
+shut records it in `retry_shut_wells_` and commits WG state for the retry. An
+explicit OPEN request may reopen a restored physical closure, but may not undo
+a retry closure. This distinction now uses a dedicated set rather than
+inferring retry intent from timestamps.
 
 The transaction boundary is nevertheless incomplete as an abstraction:
 
 - `WGState` is copied as one unit, but network state is committed separately.
-- The NUPCOL snapshot is a third copy with a policy-specific lifetime.
+- NUPCOL has a policy-specific lifetime and its own fresh-step rollback copy.
 - Well computational objects contain mutable state that is not represented by
   `WGState` and is re-established through creation and initialization calls.
-- Guide-rate data, filter-cake/injection histories, open/close bookkeeping,
-  and caches have their own lifecycle rules.
+- Open/close bookkeeping is now captured explicitly; guide-rate data,
+  filter-cake/injection histories, and caches retain separate lifecycle rules.
 - `guideRate_`, the auto-choke cache, and `last_glift_opt_time_` are serialized
   but are not members of the accepted WG snapshot. Their retry behavior comes
   from recomputation or algorithm-specific rules rather than a uniform restore.
@@ -443,6 +466,8 @@ including:
 - group target and fallback target;
 - retained network THP limit;
 - ALQ value and gas-lift increment/decrement counters;
+- representative produced-fluid ratios `rs_rep`, `rv_rep`, `rsw_rep`,
+  `rvw_rep`, used to split reported total surface rates;
 - event and WELDRAW state.
 
 The `WellInterface` object separately owns or tracks:
@@ -551,6 +576,7 @@ The extended network consumes:
 - globally aggregated production/injection rates at network leaf groups;
 - VFP production properties and unit system;
 - cached auto-choke group THP values;
+- scheduled/summary-evaluated GCONSUMP net gas consumption or import at nodes;
 - current well and group state.
 
 It produces:
@@ -578,6 +604,15 @@ aggregate leaf rates
        repeat
 ```
 
+GCONSUMP consumption minus import modifies gas flow leaving the selected
+network node; it is a network-flow input rather than a reservoir source term.
+
+Invalid VFP pressure results are marked, including affected downstream nodes.
+The update retains prior pressures where available, leaves the existing well
+THP limit in place, and raises the imbalance so another balance can be tried.
+Producer VFP lookup still permits extrapolation; invalidity is a separate
+result flag, not a blanket prohibition on extrapolation.
+
 The globally reduced maximum node-pressure change is compared with the
 NETBALAN pressure tolerance. After sufficiently many outer iterations the
 tolerance can be relaxed by a factor of ten. Balancing is scheduled either at
@@ -604,9 +639,12 @@ and feeds a group-level result back into both group and well representations.
 
 ### Current, accepted, and reported pressure
 
-The network owns tentative and accepted maps for node pressures and branch
-data. They participate in `commitWGState()`/`resetWGState()` through separate
-network calls.
+The network now owns tentative and accepted pressure/branch maps per domain
+(production, gas injection, water injection), avoiding name collisions. Legacy
+production maps are synchronized with the production domain. Both forms
+participate in network commit/reset and serialization. Invalid-node sets are
+iteration workspace and are not serialized. The production path described
+here otherwise keeps its fixed-point contract.
 
 For output, `assignNodeAndBranchValues()` exports the stored, damped runtime
 values and also calls the pressure computation once more to produce a
@@ -713,13 +751,21 @@ The well model serializes considerably more than `WGState`:
 - gas-lift optimization time.
 
 Within `SingleWellState`, network THP, ALQ, group targets, primary variables,
-perforations, and segments are serialized. `GroupState` serializes its main
-rate/control/reduction maps, network leaf rates, group THP, constraint targets,
+perforations, segments, and representative phase-mixing ratios are serialized.
+`GroupState` serializes its main rate/control/reduction maps, network leaf rates, group THP, constraint targets,
 and well counts. Some construction and derived/global lookup information in
 `WellState` is deliberately reconstructed instead of serialized.
 
+Attempt-only `prev_timestep_state_` and `retry_shut_wells_` are not part of
+this serialization. In-memory retry and restart therefore remain distinct.
+
 Output has separate extraction paths:
 
+- On timestep success, `consolidatePhaseMixingRates()` reduces perforation
+  rates over the well communicator into representative produced-fluid ratios.
+  `WellState::report()` uses those ratios and total surface rates to derive
+  bounded free/dissolved/vaporised parts; it no longer reports the raw summed
+  well phase-mixing rates.
 - `wellData()` reports `WellState`, then enriches it with guide rates,
   targets, dynamic status, tracers/species, and shut-connection data;
 - `groupAndNetworkData()` maps `GroupState` controls and guide rates into

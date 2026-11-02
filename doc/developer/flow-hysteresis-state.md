@@ -9,9 +9,11 @@ as an initial refactoring target, then considers moving the authoritative
 history out of material-law parameters. No implementation change or numerical
 comparison was made for this analysis.
 
-Inspected source revisions: `opm-simulators` `14daa38a6131` and `opm-common`
-`7091cb2018bf`. The previous data-flow document describes an older revision;
-in particular, optional timestep snapshot/restore is now wired into Flow.
+Updated against `master` on 2026-11-02: `opm-simulators` `a67baa7d52`
+(2026-10-29) and `opm-common` `0cac91afdb`. The original inspected revisions
+were `14daa38a6131` and `7091cb2018bf`; the compact snapshot discussion was
+subsequently updated for opm-common#5398. This source-only refresh accounts for
+default rollback and the revised WAG history, without a new numerical run.
 
 ## Assessment
 
@@ -117,18 +119,22 @@ history value actually changed. The manager's per-cell `updateHysteresis()`
 does return a change flag, but the Flow wrapper discards it. This is a
 separate opportunity from shrinking the snapshot.
 
-Rollback now has two modes:
+Rollback has two modes:
 
-- With `EnableStateRollback=false` (the default), failed-step handling restores
-  the reservoir primary variables; hysteresis history is not copied back
-  explicitly. At retry entry, history is advanced again from the restored
-  solution. This relies on the update behavior and call order.
-- With `EnableStateRollback=true`, `FlowProblem::beginTimeStep()` captures a
-  snapshot before updating explicit history, and `updateFailed()` restores it.
-  The manager captures base and directional hysteresis state. The same option
-  also captures other explicit histories in `FlowProblem` and affects Newton
-  state rollback. The manager snapshot is a timestep-only object and is not
-  restart-serialized.
+- With `EnableStateRollback=true` (now the default),
+  `FlowProblem::beginTimeStep()` captures a snapshot before updating explicit
+  history, and `updateFailed()` restores it before restoring the reservoir
+  solution and rebuilding current intensive quantities. Retry entry captures
+  that restored history again and reapplies the update using the retry dt.
+  The manager covers base and directional hysteresis state. The same option
+  snapshots other explicit histories, black-oil mixing controls, well/NUPCOL
+  bookkeeping, and Newton phase-switch history. Newton now restores the
+  fresh-step `wasSwitched_` history rather than clearing it on each attempt.
+- With `EnableStateRollback=false`, primary variables are still restored, but
+  hysteresis is not explicitly copied back; retry updates history again from
+  the restored solution. This retains the older ordering-dependent behavior.
+
+The manager snapshot is timestep-only and is not restart-serialized.
 
 The manager snapshot now holds arrays of `EclHysteresisCompactState` for each
 applicable two-phase system and direction. Each common entry has four scalar
@@ -171,7 +177,7 @@ from the material-law parameter object.
 | `KrndHy`, `KrwdHy`, `Krwd_sncrt` | Drop after validation | Direct drainage-curve evaluations at `krnSwMdc` or at the reconstructed `Sncrt`. Respect model 4 and wetting-fix branches. |
 | `isDrain`, `krnSwWAG`, `krnSwDrainRevert`, `krnSwDrainStart`, `krnSwDrainStartNxt`, `krnSwImbStart`, `swatImbStart`, `swatImbStartNxt` | Keep initially for WAG | Current branch and reversal coordinates are path-dependent. Some individual entries may later be eliminated by an invariant proof. |
 | `nState` | Keep initially for WAG | It records cycle progression. Evaluation distinguishes cycle 1, cycle 2, and later cycles; the update increments the count. A saturated 1/2/3+ representation is plausible but needs a test of all uses. |
-| `SncrtWAG`, `cTransf`, `krnImbStart`, `krnImbStartNxt` | Keep initially for WAG | These are calculated, but the formulas can depend on the previous scanning branch or only run at a particular transition. Recomputing from today's extrema is not generally equivalent. |
+| `SncrtWAG`, `SncrtWAGPrev`, `SncrtWAGImb`, `baseWAG`, `aTransf`, `cTransf`, `krnImbStart`, `krnImbStartNxt` | Keep initially for WAG | These record trapped saturation at earlier cycles/reversals and the active free-gas mapping or curve anchors. Their formulas depend on earlier scanning branches or particular transitions; today's extrema are insufficient. |
 | `krnDrainStart`, `krnDrainStartNxt`, `krnSwImbStart` | Candidate second pass for WAG | They appear derivable from retained reversal coordinates and drainage-curve evaluations/inversion. Prove validity at *every* WAG branch transition and after restore before dropping. |
 | `wasDrain` | Candidate second pass for WAG | `update()` assigns it from the prior `isDrain_` immediately before `updateDynamicParams_()` uses it. It may be reducible to a local transition variable, but capture/restore and equality behavior must be checked. |
 
@@ -184,20 +190,35 @@ and exact numerical equivalence also matter.
 For non-WAG paths, the implemented snapshot has the four historic
 saturation values in the first two rows (`krnSwMdc`, `krwSwMdc`, `pcSwMdc`,
 `pcSwMic`) and two status flags (`initialImb`, `isDrain`). This compares with
-23 scalar fields, an integer, and status booleans in the previous full
-snapshot. The calculated Carlson/Killough fields are restored by a separate
+23 scalar fields, an integer, and status booleans in the original full
+snapshot. The current WAG full state has 27 scalars, including the four
+additional trapped-saturation/free-gas mapping fields above. The calculated
+Carlson/Killough fields are restored by a separate
 `updateConventionalDerivedParams_()` path. The WAG branch of
 `updateDynamicParams_()` advances cycles, so restore never calls it for
-non-WAG state. Drainage-curve values at the initial `krnSwMdc = 2` sentinel
-remain zero, as they were before the first physical update; the conventional
-coefficients computed at finalization are recomputed using the same formulas.
+non-WAG state. Restore rebuilds drainage-curve values only for
+`krnSwMdc < 2`; it does not explicitly reset them at the initial
+`krnSwMdc = 2` sentinel. A rollback test spanning the first physical update
+should therefore check sentinel behavior as well as ordinary curve
+transitions. Conventional coefficients use the finalization formulas.
 
-For `double`, the previous full-state scalar portion alone was 23 × 8 = 184
-bytes per active two-phase-law snapshot. Four scalar history values are 32 bytes;
+For `double`, the original full-state scalar portion alone was 23 × 8 = 184
+bytes per active two-phase-law snapshot (the current WAG full state has
+27 × 8 = 216 scalar bytes). Four scalar history values are 32 bytes;
 flags and struct padding add to both figures. These are per-law snapshot
 figures, not total simulator-memory savings, because the configuration and
 current evaluation caches remain. Splitting out a compact non-WAG type is
 what avoids allocating the unused WAG fields in each snapshot.
+
+The revised WAG curves retain trapped saturation at the preceding cycle and
+latest drainage-to-imbibition reversal. Free-gas conversion now applies on
+later imbibition cycles too, using `baseWAG_`, `aTransf_`, and `cTransf_` frozen
+for the active curve. Drainage onset accounts for gas arriving after water
+and the water-saturation threshold; new drainage can start at the trapped-gas
+saturation. These changes reinforce the need to preserve the full WAG
+sidecar, including the new fields, rather than reconstruct it from extrema.
+The conventional compact snapshot and its separate restore path remain
+unchanged; WAG capture/restore includes all four added scalars.
 
 ## Consequences of moving history out of parameters
 
