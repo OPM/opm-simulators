@@ -1125,9 +1125,19 @@ updateSummaryRegionValues(const Inplace& inplace,
             miscSummaryData["FHPV"] = inplace.get(Inplace::Phase::HydroCarbonPV);
         }
 
-        if (this->summaryConfig_.hasKeyword("FOE") && this->initialInplace_) {
-            miscSummaryData["FOE"] = (this->initialInplace_.value().get(Inplace::Phase::OIL) - inplace.get(Inplace::Phase::OIL))
-                / this->initialInplace_.value().get(Inplace::Phase::OIL);
+        // Field level recovery efficiency: fraction of the initial in-place
+        // volume of a phase that has been removed from the reservoir.
+        for (const auto& [key, phase] : { std::pair{"FOE", Inplace::Phase::OIL},
+                                          std::pair{"FGE", Inplace::Phase::GAS} })
+        {
+            if (!this->summaryConfig_.hasKeyword(key) || !this->initialInplace_) {
+                continue;
+            }
+
+            const auto initial = this->initialInplace_.value().get(phase);
+            miscSummaryData[key] = (initial < 1.0e-15)
+                ? 0.0
+                : (initial - inplace.get(phase)) / initial;
         }
 
         if (this->summaryConfig_.hasKeyword("FPR")) {
