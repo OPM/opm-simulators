@@ -239,7 +239,7 @@ private:
      void initWellContainer();
 
      void initWellConnectionData();
-     void initWellState();
+     void initWellState(unsigned report_step);
 
      void assemble(const double dt);
 

@@ -32,6 +32,8 @@
 
 namespace Opm {
 
+class ScheduleState;
+
 template <typename Scalar>
 class CompConnectionData
 {
@@ -102,7 +104,12 @@ public:
 
     void update_injector_targets(const Well& well,
                                  const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                                 const ScheduleState& schedule_state,
                                  const SummaryState& st);
+
+    // The WELLSTRE composition an oil or gas injector injects.
+    static const std::vector<double>& injectionStream(const ScheduleState& schedule_state,
+                                                      const Well& well);
 
     void copyRuntimeStateFrom(const SingleCompWellState& other, bool keep_control);
 
