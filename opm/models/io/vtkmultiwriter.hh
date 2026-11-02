@@ -193,7 +193,8 @@ public:
         curTime_ = t;
         curOutFileName_ = fileName_();
 
-        curWriter_ = std::make_unique<VtkWriter>(gridView_, Dune::VTK::conforming);
+        // float32 cannot resolve UTM coordinates
+        curWriter_ = std::make_unique<VtkWriter>(gridView_, Dune::VTK::conforming, Dune::VTK::Precision::float64);
         ++curWriterNum_;
     }
 
