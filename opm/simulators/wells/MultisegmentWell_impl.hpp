@@ -1238,7 +1238,7 @@ namespace Opm
 
         WellInterface<TypeTag>::getMobility(simulator, local_perf_index, mob, obtain, deferred_logger);
 
-        if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
+        if (this->well_ecl_.hasActiveInjMult()) {
             const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
             const Connection& con = this->well_ecl_.getConnections()[perf_ecl_index];
             const int seg = this->segmentNumberToIndex(con.segment());
