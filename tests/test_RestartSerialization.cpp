@@ -68,6 +68,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <limits>
 
 namespace Opm::Properties {
     namespace TTag {
@@ -348,6 +349,8 @@ class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric<double, Ind
 public:
     using BlackoilWellModelGeneric<double, IndexTraits>::closedWellStatus;
 
+    void setReportStepStarts(bool value) { report_step_starts_ = value; }
+
     BlackoilWellModelGenericTest(Schedule& schedule,
                                  BlackoilWellModelGasLiftGeneric<double, IndexTraits>& gaslift,
                                  const SummaryState& summaryState,
@@ -516,6 +519,123 @@ COMPDAT
     state.open_completions("W1");
     well.updateCrossFlow(false);
     BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
+}
+
+
+BOOST_AUTO_TEST_CASE(EconomicWgrCommittedRetryBaseline)
+{
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 1 1 1 /
+OIL
+WATER
+GAS
+GRID
+DX
+ 100 /
+DY
+ 100 /
+DZ
+ 10 /
+TOPS
+ 1000 /
+PORO
+ 0.3 /
+PERMX
+ 100 /
+PERMY
+ 100 /
+PERMZ
+ 10 /
+SCHEDULE
+WELSPECS
+ 'W1' 'G1' 1 1 1* 'GAS' /
+/
+COMPDAT
+ 'W1' 1 1 1 1 'OPEN' 1* 1.0 0.2 /
+/
+WCONPROD
+ 'W1' 'OPEN' 'GRAT' 2* 1000 2* 100 /
+/
+GECON
+ 'FIELD' 4* 1e-6 'WELL' 'NO' /
+/
+TSTEP
+ 1 /
+WCONPROD
+ 'W1' 'OPEN' 'GRAT' 2* 500 2* 100 /
+/
+)");
+    Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    // Exercise initialization and a later report boundary with a target edit.
+    for (const int reportStep : {0, 1}) {
+        BOOST_TEST_CONTEXT("report step " << reportStep) {
+            Opm::SummaryState summary;
+            Opm::PhaseUsage pu;
+            pu.initFromState(es);
+            Opm::Parallel::Communication comm;
+            Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+            Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, pu, comm, false};
+            Opm::ParallelWellInfo<double> pinfo{"W1"};
+            pinfo.communicateFirstPerforation(true);
+            std::vector<std::reference_wrapper<Opm::ParallelWellInfo<double>>> pinfos{pinfo};
+            std::vector<std::vector<Opm::PerforationData<double>>> perforations(1);
+            model.groupStateHelper().setReportStep(reportStep);
+            model.wellState().init({1e7}, {300}, schedule, schedule.getWells(reportStep), pinfos,
+                                   reportStep, nullptr, perforations, summary, false);
+            const auto water = pu.canonicalToActivePhaseIdx(Opm::IndexTraits::waterPhaseIdx);
+            const auto gas = pu.canonicalToActivePhaseIdx(Opm::IndexTraits::gasPhaseIdx);
+            model.wellState().well(0).surface_rates[water] = -2e-6;
+            model.wellState().well(0).surface_rates[gas] = -1;
+            model.commitWGState();
+
+            // A rejected solve changes active rates before beginTimeStep restores them.
+            model.wellState().well(0).surface_rates[water] = -9e-6;
+            // Before the first acceptance of each report step, sample trial rates.
+            model.setReportStepStarts(true);
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 9.0, 1e-10);
+            model.wellState().well(0).surface_rates[water] = -8e-6;
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 8.0, 1e-10);
+            model.wellState().well(0).surface_rates[water] = -9e-6;
+            model.setReportStepStarts(false);
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 2.0, 1e-10);
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"), 9.0, 1e-10);
+            // Repeated retry sampling must neither consume nor modify committed state.
+            model.wellState().well(0).surface_rates[water] = -5e-6;
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 2.0, 1e-10);
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"), 5.0, 1e-10);
+
+            model.wellTestState().close_well("W1", Opm::WellTestConfig::Reason::ECONOMIC, 1.0);
+            BOOST_CHECK(model.groupEconomicWaterGasRatios(reportStep).empty());
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 2.0, 1e-10);
+            model.commitWGState();
+            BOOST_CHECK_EQUAL(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 0.0);
+            model.wellTestState().open_well("W1");
+            BOOST_CHECK(model.groupEconomicWaterGasRatios(reportStep).empty());
+            BOOST_CHECK_EQUAL(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 0.0);
+            model.commitWGState();
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"), 5.0, 1e-10);
+
+            model.wellState().well(0).surface_rates[water] = 0;
+            model.wellState().well(0).surface_rates[gas] = 0;
+            BOOST_CHECK_EQUAL(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"), 0.0);
+            model.wellState().well(0).surface_rates[water] = -1e-6;
+            // A finite committed baseline must retain a zero-gas trial endpoint.
+            // The adaptive stepper needs both samples to reject the transition.
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 5.0, 1e-10);
+            BOOST_CHECK_EQUAL(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"),
+                              std::numeric_limits<double>::max());
+            model.wellState().well(0).surface_rates[gas] = 1;
+            BOOST_CHECK_EQUAL(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"),
+                              std::numeric_limits<double>::max());
+            // A subsequent retry with finite gas uses the same committed baseline.
+            model.wellState().well(0).surface_rates[gas] = -1;
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep, true).at("FIELD"), 5.0, 1e-10);
+            BOOST_CHECK_CLOSE(model.groupEconomicWaterGasRatios(reportStep).at("FIELD"), 1.0, 1e-10);
+        }
+    }
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>

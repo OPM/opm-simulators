@@ -118,6 +118,8 @@ void registerAdaptiveParameters()
          "'newtoniterationcount', "
          "'general3rdorder', "
          "and 'hardcoded'");
+    Parameters::Register<Parameters::GroupEconomicWgrStepTolerance>
+        ("Maximum change in group WGR per step as a fraction of the GECON limit (0 disables)");
     Parameters::Register<Parameters::TimeStepControlTolerance>
         ("The tolerance used by the time step size control algorithm");
     Parameters::Register<Parameters::TimeStepControlTargetIterations>
