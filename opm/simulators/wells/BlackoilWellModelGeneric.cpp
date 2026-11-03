@@ -2192,7 +2192,7 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::initInjMult()
 {
     for (auto& well : this->well_container_generic_) {
-        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+        if (well->wellEcl().hasActiveInjMult()) {
             const auto& ws = this->wellState().well(well->indexOfWell());
             const auto& perf_data = ws.perf_data;
 
@@ -2232,7 +2232,7 @@ void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateInjMult(DeferredLogger& deferred_logger)
 {
     for (const auto& well : this->well_container_generic_) {
-        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+        if (well->wellEcl().hasActiveInjMult()) {
             well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
         }
     }
