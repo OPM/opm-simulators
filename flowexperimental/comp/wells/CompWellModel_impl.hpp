@@ -154,6 +154,11 @@ createWellContainer()
             || well_connection_data_[w].empty()) {
             continue;
         }
+        // A stopped well without crossflow has no flow in any connection, as if shut.
+        if (comp_well_states_[well_name].status == WellStatus::STOP
+            && !wells_ecl_[w].getAllowCrossFlow()) {
+            continue;
+        }
 
         // as for the black-oil wells, the PVT region of the first connection cell
         const unsigned pvt_region_idx

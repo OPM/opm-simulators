@@ -115,6 +115,10 @@ public:
 
     void copyRuntimeStateFrom(const SingleCompWellState& other, bool keep_control);
 
+    // stopped by the schedule or at its BHP limit: zero surface rate, floating BHP
+    bool isStopped() const
+    { return status == WellStatus::STOP || stopped; }
+
     Scalar get_total_surface_rate() const;
 };
 

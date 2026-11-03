@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <span>
 
 namespace Opm {
@@ -105,6 +106,10 @@ initSingleWell(const Well& well,
                            schedule_state, summary_state);
     } else {
         initSingleProducer(well, cell_pressures, temperature, cell_mole_fractions, conn_data, summary_state);
+    }
+    // The targets seed the surface rates of an open well; a stopped well has none.
+    if (well.getStatus() == WellStatus::STOP) {
+        std::ranges::fill(this->wells_[well.name()].surface_phase_rates, Scalar{0.});
     }
 
 }

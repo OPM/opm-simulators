@@ -450,7 +450,7 @@ assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
     EvalWell control_eq;
-    if (well_state.stopped) {
+    if (well_state.isStopped()) {
         control_eq = this->primary_variables_.getTotalRate();
     } else if (this->well_ecl_.isProducer()) {
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -710,7 +710,7 @@ updateWellState(const CompWell::BVectorWell& xw,
                 SingleWellState& well_state)
 {
     updatePrimaryVariablesNewton(xw);
-    if (well_state.stopped) {
+    if (well_state.isStopped()) {
         this->primary_variables_.setTotalRate(0.);
     }
     updateWellStateFromPrimaryVariables(well_state);
@@ -836,6 +836,10 @@ updateWellControl(const SummaryState& summary_state,
                   const bool check_rate_limits,
                   const bool allow_status_change) const
 {
+    // A well stopped by the schedule stays stopped until the schedule opens it.
+    if (well_state.status == WellStatus::STOP) {
+        return false;
+    }
     const bool producer = this->well_ecl_.isProducer();
     const Scalar bhp_limit = producer
         ? this->well_ecl_.productionControls(summary_state).bhp_limit
