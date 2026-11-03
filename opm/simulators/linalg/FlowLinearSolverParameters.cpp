@@ -47,6 +47,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     linear_solver_print_json_definition_ = Parameters::Get<Parameters::LinearSolverPrintJsonDefinition>();
     cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
     cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
+    cpr_reuse_ratio_ = Parameters::Get<Parameters::CprReuseRatio>();
     gpu_aware_mpi_ = Parameters::Get<Parameters::GpuAwareMpi>();
 
     if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
@@ -153,9 +154,13 @@ void FlowLinearSolverParameters::registerParameters()
          "1: recreate once every timestep, "
          "2: recreate if last linear solve took more than 10 iterations, "
          "3: never recreate, "
-         "4: recreated every CprReuseInterval");
+         "4: recreated every CprReuseInterval, "
+         "5: recreated when a linear solve needs more than CprReuseRatio times the "
+         "iterations of the first solve after the last recreation, or after CprReuseInterval solves");
+    Parameters::Register<Parameters::CprReuseRatio>
+        ("Iteration growth that triggers recreation when CprReuseSetup is 5");
     Parameters::Register<Parameters::CprReuseInterval>
-        ("Reuse preconditioner interval. Used when CprReuseSetup is set to 4, "
+        ("Reuse preconditioner interval. Used when CprReuseSetup is set to 4 or 5, "
          "then the preconditioner will be fully recreated instead of reused "
          "every N linear solve, where N is this parameter");
     Parameters::Register<Parameters::AcceleratorMode>

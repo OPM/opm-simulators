@@ -464,6 +464,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
 
             iterations_ = result.iterations;
+            if (referenceIterations_ < 0) {
+                referenceIterations_ = iterations_;
+            }
+            ++solvesSinceCreate_;
 
             // Check convergence, iterations etc.
             return checkConvergence(result);
@@ -543,6 +547,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                          forceSerial_,
                                                          comm_.get());
                 numWellEquations_ = this->numWellEquations();
+                referenceIterations_ = -1;
+                solvesSinceCreate_ = 0;
             }
             else
             {
@@ -614,6 +620,16 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const int step = this->parameters_[activeSolverNum_].cpr_reuse_interval_;
                 const bool create = ((solveCount_ % step) == 0);
                 return create;
+            }
+            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 5) {
+                // Recreate when the solves have degraded since the last recreation.
+                if (solvesSinceCreate_ >= this->parameters_[activeSolverNum_].cpr_reuse_interval_) {
+                    return true;
+                }
+                const double ratio = this->parameters_[activeSolverNum_].cpr_reuse_ratio_;
+                return referenceIterations_ >= 0
+                    && this->iterations() > ratio * referenceIterations_
+                    && this->iterations() >= referenceIterations_ + 2;
             }
             // If here, we have an invalid parameter.
             const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
@@ -741,6 +757,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // set when initPrepare detects a different matrix object; cleared by
         // shouldCreateSolver() (hence mutable in an otherwise const query)
         mutable bool force_recreate_ = false;
+        // iterations of the first solve after the last (re)creation, and solves since then
+        int referenceIterations_ = -1;
+        int solvesSinceCreate_ = 0;
     }; // end ISTLSolver
 
 } // namespace Opm
