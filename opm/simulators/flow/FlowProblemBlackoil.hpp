@@ -70,6 +70,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <optional>
 #include <vector>
 
 namespace Opm {
@@ -1764,13 +1765,6 @@ private:
     {
         using Evaluation = typename FlowProblemType::Evaluation;
 
-        const auto pressureEnabled = (static_cast<int>(fluxData.header.mode)
-                                      & static_cast<int>(EclIO::FluxFile::Mode::Pressure)) != 0;
-        if (!pressureEnabled || !this->fluxBoundary_) {
-            return;
-        }
-
-        const auto& allFaces = this->fluxBoundary_->faces();
         const auto volume = this->model().dofTotalVolume(globalDofIdx);
         if (!(volume > 0.0)) {
             return;
@@ -1779,6 +1773,112 @@ private:
         const auto& intQuants = this->model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fsIn = intQuants.fluidState();
         const auto pvtRegionIn = this->pvtRegionIndex(globalDofIdx);
+
+        std::array<Evaluation, numPhases> surfaceRate{};
+        Evaluation energyRate = 0.0;
+        const auto upstreamRates = [&](const unsigned phaseIdx,
+                                       const Evaluation& reservoirRate,
+                                       const auto& fs)
+        {
+            const auto b = fs.invB(phaseIdx);
+            surfaceRate[phaseIdx] += reservoirRate * b;
+
+            if (!FluidSystem::phaseIsActive(oilPhaseIdx)
+                || !FluidSystem::phaseIsActive(gasPhaseIdx))
+            {
+                return;
+            }
+            if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                surfaceRate[gasPhaseIdx] += reservoirRate * b * fs.Rs();
+            }
+            if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                surfaceRate[oilPhaseIdx] += reservoirRate * b * fs.Rv();
+            }
+        };
+
+        const auto onFaceBegin = [&](const auto&, const auto&)
+        {
+            surfaceRate.fill(0.0);
+            energyRate = 0.0;
+        };
+
+        const auto onPhase = [&](const unsigned phaseIdx, const Evaluation& q, const bool inflow, const auto& exFs)
+        {
+            if (inflow) {
+                upstreamRates(phaseIdx, q, exFs);
+                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+                    energyRate += q * exFs.density(phaseIdx)
+                        * FluidSystem::enthalpy(exFs, phaseIdx, exFs.pvtRegionIndex());
+                }
+            }
+            else {
+                upstreamRates(phaseIdx, q, fsIn);
+                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+                    energyRate += q * fsIn.density(phaseIdx) * fsIn.enthalpy(phaseIdx);
+                }
+            }
+        };
+
+        const auto onFaceEnd = [&](const auto& face, const auto& exFs)
+        {
+            if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
+                if (face.thermalTransmissibility > 0.0) {
+                    energyRate += intQuants.totalThermalConductivity() * face.thermalTransmissibility
+                        * (exFs.temperature(0) - fsIn.temperature(0));
+                }
+                rate[Indices::contiEnergyEqIdx] += energyRate / volume;
+            }
+
+            const auto add = [&](const unsigned phaseIdx, const unsigned compIdx)
+            {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    return;
+                }
+
+                auto componentRate = surfaceRate[phaseIdx] / volume;
+                if constexpr (!getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                    componentRate *= FluidSystem::referenceDensity(phaseIdx, pvtRegionIn);
+                }
+
+                rate[FluidSystem::canonicalToActiveCompIdx(compIdx)] += componentRate;
+            };
+
+            add(oilPhaseIdx, oilCompIdx);
+            add(waterPhaseIdx, waterCompIdx);
+            add(gasPhaseIdx, gasCompIdx);
+        };
+
+        this->forEachFluxNncPressurePhase_(globalDofIdx, timeIdx, faces, fluxData, fluxStep,
+                                           onFaceBegin, onPhase, onFaceEnd);
+    }
+
+    //! \brief The two-point flux of each phase across the NNC boundary faces
+    //!   of a cell in a pressure-mode sector (see addFluxNncPressureSource_):
+    //!   onPhase(phaseIdx, q, inflow, exFs) gets the reservoir volume rate q
+    //!   into the cell, positive inflow, with the derivatives of the cell's
+    //!   state. onFaceBegin and onFaceEnd get each face and its exterior fluid
+    //!   state.
+    template <class OnFaceBegin, class OnPhase, class OnFaceEnd>
+    void forEachFluxNncPressurePhase_(const unsigned globalDofIdx,
+                                      const unsigned timeIdx,
+                                      const std::vector<int>& faces,
+                                      const EclIO::FluxFile::Data& fluxData,
+                                      const EclIO::FluxFile::ReportStep& fluxStep,
+                                      OnFaceBegin&& onFaceBegin,
+                                      OnPhase&& onPhase,
+                                      OnFaceEnd&& onFaceEnd) const
+    {
+        using Evaluation = typename FlowProblemType::Evaluation;
+
+        const auto pressureEnabled = (static_cast<int>(fluxData.header.mode)
+                                      & static_cast<int>(EclIO::FluxFile::Mode::Pressure)) != 0;
+        if (!pressureEnabled || !this->fluxBoundary_) {
+            return;
+        }
+
+        const auto& allFaces = this->fluxBoundary_->faces();
+        const auto& intQuants = this->model().intensiveQuantities(globalDofIdx, timeIdx);
+        const auto& fsIn = intQuants.fluidState();
         const auto zIn = this->dofCenterDepth(globalDofIdx);
         const auto g = this->gravity()[dimWorld - 1];
         const auto numPhaseSlots = static_cast<std::size_t>(fluxData.header.numPhases);
@@ -1820,28 +1920,7 @@ private:
                 MaterialLaw::relativePermeabilities(krEx, this->materialLawParams(globalDofIdx), exFs);
             }
 
-            std::array<Evaluation, numPhases> surfaceRate{};
-            Evaluation energyRate = 0.0;
-            const auto upstreamRates = [&](const unsigned phaseIdx,
-                                           const Evaluation& reservoirRate,
-                                           const auto& fs)
-            {
-                const auto b = fs.invB(phaseIdx);
-                surfaceRate[phaseIdx] += reservoirRate * b;
-
-                if (!FluidSystem::phaseIsActive(oilPhaseIdx)
-                    || !FluidSystem::phaseIsActive(gasPhaseIdx))
-                {
-                    return;
-                }
-                if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
-                    surfaceRate[gasPhaseIdx] += reservoirRate * b * fs.Rs();
-                }
-                if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
-                    surfaceRate[oilPhaseIdx] += reservoirRate * b * fs.Rv();
-                }
-            };
-
+            onFaceBegin(face, exFs);
             for (unsigned activePhaseIdx = 0;
                  activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx)
             {
@@ -1865,52 +1944,123 @@ private:
 
                 if (inflow) {
                     const Scalar mobility = krEx[phaseIdx] / exFs.viscosity(phaseIdx);
-                    const Evaluation q = face.transmissibility * mobility * dp;
-                    upstreamRates(phaseIdx, q, exFs);
-                    if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
-                        energyRate += q * exFs.density(phaseIdx)
-                            * FluidSystem::enthalpy(exFs, phaseIdx, exFs.pvtRegionIndex());
-                    }
+                    onPhase(phaseIdx, Evaluation(face.transmissibility * mobility * dp), true, exFs);
                 }
                 else {
                     const auto trans = face.transmissibility
                         * getValue(intQuants.rockCompTransMultiplier());
-                    const Evaluation q = trans * intQuants.mobility(phaseIdx) * dp;
-                    upstreamRates(phaseIdx, q, fsIn);
-                    if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
-                        energyRate += q * fsIn.density(phaseIdx) * fsIn.enthalpy(phaseIdx);
-                    }
+                    onPhase(phaseIdx, Evaluation(trans * intQuants.mobility(phaseIdx) * dp), false, exFs);
                 }
             }
-
-            if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
-                if (face.thermalTransmissibility > 0.0) {
-                    energyRate += intQuants.totalThermalConductivity() * face.thermalTransmissibility
-                        * (exFs.temperature(0) - fsIn.temperature(0));
-                }
-                rate[Indices::contiEnergyEqIdx] += energyRate / volume;
-            }
-
-            const auto add = [&](const unsigned phaseIdx, const unsigned compIdx)
-            {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    return;
-                }
-
-                auto componentRate = surfaceRate[phaseIdx] / volume;
-                if constexpr (!getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
-                    componentRate *= FluidSystem::referenceDensity(phaseIdx, pvtRegionIn);
-                }
-
-                rate[FluidSystem::canonicalToActiveCompIdx(compIdx)] += componentRate;
-            };
-
-            add(oilPhaseIdx, oilCompIdx);
-            add(waterPhaseIdx, waterCompIdx);
-            add(gasPhaseIdx, gasCompIdx);
+            onFaceEnd(face, exFs);
         }
     }
 
+public:
+    //! \brief The energy terms of the flows across the NNC boundary faces of
+    //!   a cell in a sector run (USEFLUX), which enter the flow equations as
+    //!   sources (addFluxNncSource_), for the sequential temperature model
+    //!   (TEMP): the energy the inflows bring, the reservoir volume (pressure
+    //!   mode) and mass (flux mode) rates of each phase that carry the cell's
+    //!   enthalpy (the outflows, negative, and in flux mode inflows without a
+    //!   recorded exterior temperature), and the thermal transmissibilities of
+    //!   the faces with the sum of their products with the exterior
+    //!   temperatures.
+    struct FluxNncEnergyTerms
+    {
+        Scalar inflowEnergyRate = 0.0;
+        std::array<Scalar, numPhases> cellEnthalpyVolumeRate{};
+        std::array<Scalar, numPhases> cellEnthalpyMassRate{};
+        Scalar thermalTransmissibility = 0.0;
+        Scalar thermalTransmissibilityTimesTemperature = 0.0;
+    };
+
+    std::optional<FluxNncEnergyTerms> fluxNncEnergyTerms(const unsigned globalDofIdx) const
+    {
+        const auto& faces = this->fluxNncFacesAt_(globalDofIdx);
+        const auto* fluxData = this->fluxBoundaryData_();
+        const auto* fluxStep = this->fluxBoundaryReportStep_();
+        if (faces.empty() || (fluxData == nullptr) || (fluxStep == nullptr) || !this->fluxBoundary_) {
+            return std::nullopt;
+        }
+
+        FluxNncEnergyTerms terms;
+        const auto& allFaces = this->fluxBoundary_->faces();
+        const auto addConduction = [&](const std::size_t f)
+        {
+            if (f < allFaces.size() && f < fluxStep->temperature.size()
+                && allFaces[f].thermalTransmissibility > 0.0)
+            {
+                terms.thermalTransmissibility += allFaces[f].thermalTransmissibility;
+                terms.thermalTransmissibilityTimesTemperature +=
+                    allFaces[f].thermalTransmissibility * fluxStep->temperature[f];
+            }
+        };
+
+        const auto fluxEnabled = (static_cast<int>(fluxData->header.mode)
+                                  & static_cast<int>(EclIO::FluxFile::Mode::Flux)) != 0;
+        if (!fluxEnabled) {
+            const auto onFaceBegin = [&](const auto& face, const auto&)
+            {
+                addConduction(static_cast<std::size_t>(&face - allFaces.data()));
+            };
+            const auto onPhase = [&](const unsigned phaseIdx, const auto& q, const bool inflow, const auto& exFs)
+            {
+                if (inflow) {
+                    terms.inflowEnergyRate += getValue(q) * getValue(exFs.density(phaseIdx))
+                        * getValue(FluidSystem::enthalpy(exFs, phaseIdx, exFs.pvtRegionIndex()));
+                }
+                else {
+                    terms.cellEnthalpyVolumeRate[phaseIdx] += getValue(q);
+                }
+            };
+            const auto onFaceEnd = [](const auto&, const auto&) {};
+            this->forEachFluxNncPressurePhase_(globalDofIdx, /*timeIdx*/ 0, faces, *fluxData, *fluxStep,
+                                               onFaceBegin, onPhase, onFaceEnd);
+            return terms;
+        }
+
+        const auto faceCount = static_cast<std::size_t>(fluxData->header.numBoundaryFaces);
+        const auto phaseCount = static_cast<std::size_t>(fluxData->header.numPhases);
+        if ((phaseCount == 0) || (fluxStep->massRates.size() != faceCount * phaseCount)) {
+            return terms;
+        }
+
+        const auto pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
+        const auto& fsIn = this->model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0).fluidState();
+        for (const auto faceIndex : faces) {
+            if ((faceIndex < 0) || (static_cast<std::size_t>(faceIndex) >= faceCount)) {
+                continue;
+            }
+            const auto f = static_cast<std::size_t>(faceIndex);
+            addConduction(f);
+
+            std::size_t phaseSlot = 0;
+            for (const auto& [phase, phaseIdx] : {std::pair{EclIO::FluxFile::Phase::Oil, unsigned{oilPhaseIdx}},
+                                                  std::pair{EclIO::FluxFile::Phase::Water, unsigned{waterPhaseIdx}},
+                                                  std::pair{EclIO::FluxFile::Phase::Gas, unsigned{gasPhaseIdx}}}) {
+                if (!fluxData->header.hasPhase(phase)) {
+                    continue;
+                }
+                const Scalar massIn = fluxStep->massRates[f * phaseCount + phaseSlot];
+                ++phaseSlot;
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                if (massIn > 0.0 && f < fluxStep->temperature.size()) {
+                    auto fs = fsIn;
+                    fs.setTemperature(fluxStep->temperature[f]);
+                    terms.inflowEnergyRate += massIn * getValue(FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx));
+                }
+                else {
+                    terms.cellEnthalpyMassRate[phaseIdx] += massIn;
+                }
+            }
+        }
+        return terms;
+    }
+
+private:
     template <class ScalarFluidState>
     RateVector fluxPhaseVolToMassRate_(const RateVector& phaseVolRate,
                                        const ScalarFluidState& insideFs,

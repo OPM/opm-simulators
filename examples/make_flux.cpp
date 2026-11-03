@@ -1969,14 +1969,18 @@ void fillPressureStepData(Opm::FluxDumper::ReportStepData& step,
         if (gasActive) {
             step.sgas.push_back(cells.required(sgas, exterior, "SGAS"));
         }
+        // The restart file holds these in the deck's units; the simulator reads them as SI
         if (includeRs) {
-            step.rs.push_back(cells.valueOr(rs, exterior));
+            step.rs.push_back(unitSystem.to_si(Opm::UnitSystem::measure::gas_oil_ratio,
+                                               cells.valueOr(rs, exterior)));
         }
         if (includeRv) {
-            step.rv.push_back(cells.valueOr(rv, exterior));
+            step.rv.push_back(unitSystem.to_si(Opm::UnitSystem::measure::oil_gas_ratio,
+                                               cells.valueOr(rv, exterior)));
         }
         if (hasTemperature) {
-            step.temperature.push_back(cells.valueOr(temperature, exterior));
+            step.temperature.push_back(unitSystem.to_si(Opm::UnitSystem::measure::temperature,
+                                                        cells.valueOr(temperature, exterior)));
         }
     }
 }

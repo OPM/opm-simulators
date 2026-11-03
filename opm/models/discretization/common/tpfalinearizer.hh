@@ -413,6 +413,14 @@ public:
     { return floresInfo_; }
 
     /*!
+     * \brief Return constant reference to the boundary faces with boundary conditions.
+     *
+     * (This object is only non-empty if the problem has non-trivial boundary conditions.)
+     */
+    const auto& getBoundaryInfo() const
+    { return boundaryInfo_; }
+
+    /*!
      * \brief Return constant reference to the velocityInfo.
      *
      * (This object is only non-empty if dispersion, bioeffects, or block

@@ -682,6 +682,12 @@ protected:
             }
         }
 
+        // Boundary terms, e.g. at the boundary of a sector run (USEFLUX)
+        if (simulator_.problem().nonTrivialBoundaryConditions()) {
+            OPM_TIMEBLOCK(TemperatureModel_assembleEquations_boundary);
+            this->assembleBoundaryTerms_();
+        }
+
         // Well terms
         {
             OPM_TIMEBLOCK(TemperatureModel_assembleEquations_wells);
@@ -704,6 +710,132 @@ protected:
         //        (*this->energyMatrix_)[row][row][0][0] = 1.0;
         //    }
         //}
+    }
+
+    // The energy that crosses the faces with boundary conditions: the enthalpy that the flow of the
+    // flow equations carries across them (upwinded as there), and heat conduction to the exterior
+    // temperature. Without it, the fluid that leaves (or enters) the domain across a boundary takes no
+    // (or brings no) enthalpy along, and the temperature of the cells at the boundary drifts to keep
+    // their energy.
+    void assembleBoundaryTerms_()
+    {
+        using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+        using FlowEvaluation = GetPropType<TypeTag, Properties::Evaluation>;
+
+        const auto& problem = simulator_.problem();
+        for (const auto& bdyInfo : simulator_.model().linearizer().getBoundaryInfo()) {
+            const auto& bcdata = bdyInfo.bcdata;
+            if (bcdata.type == BCType::NONE) {
+                continue;
+            }
+
+            const unsigned globI = bdyInfo.cell;
+            const auto& intQuantsIn = intQuants_[globI];
+            const auto& fsIn = intQuantsIn.fluidStateTemp();
+            const auto& exFs = bcdata.exFluidState;
+            const unsigned exPvtRegionIdx = exFs.pvtRegionIndex();
+
+            Evaluation energyFlux = 0.0;
+
+            // Convective flux: positive out of the domain
+            if (bcdata.type == BCType::FREE || bcdata.type == BCType::DIRICHLET) {
+                std::array<short, numPhases> upIdx{};
+                std::array<short, numPhases> dnIdx{};
+                std::array<FlowEvaluation, numPhases> volumeFlux{};
+                std::array<FlowEvaluation, numPhases> pressureDifference{};
+                const auto& flowIntQuants = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+                ExtensiveQuantities::calculateBoundaryGradients_(problem,
+                                                                 globI,
+                                                                 flowIntQuants,
+                                                                 bcdata.boundaryFaceIndex,
+                                                                 bcdata.faceArea,
+                                                                 bcdata.faceZCoord,
+                                                                 exFs,
+                                                                 upIdx,
+                                                                 dnIdx,
+                                                                 volumeFlux,
+                                                                 pressureDifference);
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const Scalar reservoirVolumeRate = getValue(volumeFlux[phaseIdx]) * bcdata.faceArea;
+                    if (upIdx[phaseIdx] == 0) {
+                        energyFlux += fsIn.enthalpy(phaseIdx) * fsIn.density(phaseIdx) * reservoirVolumeRate;
+                    }
+                    else {
+                        energyFlux += getValue(FluidSystem::enthalpy(exFs, phaseIdx, exPvtRegionIdx))
+                            * getValue(exFs.density(phaseIdx)) * reservoirVolumeRate;
+                    }
+                }
+            }
+            else if (bcdata.type == BCType::RATE) {
+                // Mass rates of the components, each carried by the phase it belongs to
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const unsigned activeCompIdx =
+                        FluidSystem::canonicalToActiveCompIdx(FluidSystem::solventComponentIndex(phaseIdx));
+                    const Scalar massRate = bcdata.massRate[activeCompIdx] * bcdata.faceArea;
+                    if (massRate > 0.0) {
+                        energyFlux += fsIn.enthalpy(phaseIdx) * massRate;
+                    }
+                    else {
+                        energyFlux += getValue(FluidSystem::enthalpy(exFs, phaseIdx, exPvtRegionIdx)) * massRate;
+                    }
+                }
+            }
+
+            // Conductive flux to the exterior temperature
+            const Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globI, bcdata.boundaryFaceIndex);
+            const auto& lambda = intQuantsIn.totalThermalConductivity();
+            if (alpha > 0.0 && lambda > 0.0) {
+                const Evaluation deltaT = getValue(exFs.temperature(/*phaseIdx*/ 0)) - fsIn.temperature(/*phaseIdx*/ 0);
+                energyFlux += deltaT * lambda * (-alpha) * bcdata.faceArea;
+            }
+
+            energyFlux *= scalingFactor_;
+            this->energyVector_[globI][0] += getValue(energyFlux);
+            MatrixBlockTemp bMat;
+            bMat[0][0] = energyFlux.derivative(temperatureIdx);
+            *diagMatAddress_[globI] += bMat;
+        }
+
+        // The boundary faces that are NNCs, whose flows enter the flow equations as sources
+        if constexpr (requires { problem.fluxNncEnergyTerms(0u); }) {
+            const unsigned numCells = simulator_.model().numTotalDof();
+            for (unsigned globI = 0; globI < numCells; ++globI) {
+                const auto terms = problem.fluxNncEnergyTerms(globI);
+                if (!terms) {
+                    continue;
+                }
+                const auto& intQuantsIn = intQuants_[globI];
+                const auto& fsIn = intQuantsIn.fluidStateTemp();
+
+                // Into the cell
+                Evaluation energySource = terms->inflowEnergyRate;
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    energySource += fsIn.enthalpy(phaseIdx)
+                        * (fsIn.density(phaseIdx) * terms->cellEnthalpyVolumeRate[phaseIdx]
+                           + terms->cellEnthalpyMassRate[phaseIdx]);
+                }
+                const auto& lambda = intQuantsIn.totalThermalConductivity();
+                if (terms->thermalTransmissibility > 0.0 && lambda > 0.0) {
+                    energySource += lambda * (terms->thermalTransmissibilityTimesTemperature
+                                              - terms->thermalTransmissibility * fsIn.temperature(/*phaseIdx*/ 0));
+                }
+
+                energySource *= scalingFactor_;
+                this->energyVector_[globI][0] -= getValue(energySource);
+                MatrixBlockTemp bMat;
+                bMat[0][0] = -energySource.derivative(temperatureIdx);
+                *diagMatAddress_[globI] += bMat;
+            }
+        }
     }
 
     template<class Well>
