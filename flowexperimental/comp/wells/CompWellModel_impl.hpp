@@ -100,7 +100,7 @@ beginReportStep(unsigned report_step)
     }
 
     initWellConnectionData();
-    initWellState();
+    initWellState(report_step);
     // Save the initial accepted state for this report step.
     last_valid_comp_well_states_.copyDynamicStateFrom(comp_well_states_);
 }
@@ -250,7 +250,7 @@ initWellConnectionData()
 template <typename TypeTag>
 void
 CompWellModel<TypeTag>::
-initWellState()
+initWellState(const unsigned report_step)
 {
     // TODO: the following might need to be adjusted based on understanding
     const auto pressIx = []()
@@ -310,6 +310,7 @@ initWellState()
     // across report steps, so that schedule-derived targets do not replace it.
     this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, well_temperatures, cell_mole_fractions, this->well_connection_data_,
+                                 this->schedule_[report_step],
                                  this->summary_state_,
                                  this->locally_owned_wells_,
                                  this->report_step_start_events_,

@@ -73,6 +73,7 @@ template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
 update_injector_targets(const Well& well,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                        const ScheduleState& schedule_state,
                         const SummaryState& st)
 {
     const auto& inj_controls = well.injectionControls(st);
@@ -114,9 +115,7 @@ update_injector_targets(const Well& well,
             break;
         case InjectorType::GAS:
         case InjectorType::OIL: {
-            const auto& injection = well.getInjectionProperties();
-            const auto& inj_composition = inj_controls.injector_type == InjectorType::OIL
-                ? injection.oilInjComposition() : injection.gasInjComposition();
+            const auto& inj_composition = injectionStream(schedule_state, well);
             assert(this->total_molar_fractions.size() == inj_composition.size());
             // TODO: this might not be correct when crossing flow is involved
             this->total_molar_fractions = inj_composition;
@@ -187,6 +186,20 @@ update_producer_targets(const Well& well,
     default:
         break;
     }
+}
+
+template <typename FluidSystem>
+const std::vector<double>&
+SingleCompWellState<FluidSystem>::
+injectionStream(const ScheduleState& schedule_state, const Well& well)
+{
+    const auto* stream = well.injectorType() == InjectorType::OIL
+        ? schedule_state.oil_injection_stream(well.name())
+        : schedule_state.gas_injection_stream(well.name());
+    if (stream == nullptr) {
+        OPM_THROW(std::runtime_error, "Injector " + well.name() + " has no injection stream");
+    }
+    return *stream;
 }
 
 template <typename FluidSystem>

@@ -51,6 +51,7 @@ public:
               const std::vector<Scalar>& well_temperatures,
               const std::vector<std::vector<Scalar>>& cell_mole_fractions,
               const std::vector<std::vector<CompConnectionData> >& well_connection_data,
+              const ScheduleState& schedule_state,
               const SummaryState& sumary_state,
               const std::vector<bool>& locally_owned_wells,
               const WellGroupEvents& events,
@@ -81,6 +82,7 @@ private:
                    const std::vector<Scalar>& well_temperatures,
                    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<std::vector<CompConnectionData> >& well_connection_data,
+                   const ScheduleState& schedule_state,
                    const SummaryState& summary_state,
                    const std::vector<bool>& locally_owned_wells);
 
@@ -89,6 +91,7 @@ private:
                         const Scalar temperature,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const std::vector<CompConnectionData >& conn_data,
+                        const ScheduleState& schedule_state,
                         const SummaryState& summary_state);
 
     void initSingleInjector(const Well& well,
@@ -96,6 +99,7 @@ private:
                             const Scalar temperature,
                             const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                             const std::vector<CompConnectionData>& conn_data,
+                            const ScheduleState& schedule_state,
                             const SummaryState& summary_state);
 
     void initSingleProducer(const Well& well,
