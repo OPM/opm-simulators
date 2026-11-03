@@ -99,6 +99,7 @@ protected:
     // TODO: should it called trans_index
     std::vector<Scalar> well_index_;
     std::vector<int> saturation_table_number_;
+    std::vector<Scalar> connection_depths_;
 
     // std::string name_;
 
