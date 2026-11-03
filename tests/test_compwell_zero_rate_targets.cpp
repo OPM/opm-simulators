@@ -26,27 +26,10 @@
 
 #include <flowexperimental/comp/flow_comp.hpp>
 
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <opm/common/utility/FileSystem.hpp>
-#include <opm/io/eclipse/ESmry.hpp>
-
-#if HAVE_DUNE_FEM
-#include <dune/fem/misc/mpimanager.hh>
-#else
-#include <dune/common/parallel/mpihelper.hh>
-#endif
+#include "RunDeckHelper.hpp"
 
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <memory>
 #include <ranges>
 #include <string>
 #include <utility>
@@ -231,47 +214,18 @@ TSTEP
 END
 )";
 
-struct MpiFixture
-{
-    MpiFixture()
-    {
-        auto& suite = boost::unit_test::framework::master_test_suite();
-#if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(suite.argc, suite.argv);
-#else
-        Dune::MPIHelper::instance(suite.argc, suite.argv);
-#endif
-        Opm::FlowGenericVanguard::setCommunication(
-            std::make_unique<Opm::Parallel::Communication>());
-    }
-};
+using TypeTag = Opm::Properties::TTag::FlowCompProblem<3, true>;
 
 } // namespace
 
-BOOST_GLOBAL_FIXTURE(MpiFixture);
+using RunDeckFixture = Opm::RunDeckFixture;
+BOOST_GLOBAL_FIXTURE(RunDeckFixture);
 
 BOOST_AUTO_TEST_CASE(ZeroSurfaceRatesUnderZeroTargets)
 {
     // a directory of its own, so that concurrent runs leave each other's files alone
-    const auto dir = std::filesystem::temp_directory_path()
-        / Opm::unique_path("compwell_zero_rate_targets-%%%%%%%%");
-    std::filesystem::create_directories(dir);
-    const auto deck_file = dir / "ZERO_RATE_TARGETS.DATA";
-    std::ofstream(deck_file) << deck;
-
-    std::vector<std::string> args = {"test_compwell_zero_rate_targets", deck_file.string(),
-                                     "--output-dir=" + dir.string()};
-    std::vector<char*> argv;
-    std::ranges::transform(args, std::back_inserter(argv),
-                           [](std::string& arg) { return arg.data(); });
-    argv.push_back(nullptr);
-    Opm::Parameters::reset();
-    const int status = Opm::Main(static_cast<int>(args.size()), argv.data(), /*ownMPI=*/false)
-                           .runStatic<Opm::Properties::TTag::FlowCompProblem<3, true>>();
-    BOOST_REQUIRE_EQUAL(status, EXIT_SUCCESS);
-
-    const Opm::EclIO::ESmry smry(dir / "ZERO_RATE_TARGETS.SMSPEC");
-    smry.loadData();
+    const Opm::TemporaryDirectory dir("compwell_zero_rate_targets");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "ZERO_RATE_TARGETS", deck);
 
     // each well with a zero rate target and the WMCTL value of its control
     const std::vector<std::pair<std::string, float>> wells = {
@@ -298,6 +252,4 @@ BOOST_AUTO_TEST_CASE(ZeroSurfaceRatesUnderZeroTargets)
             BOOST_CHECK_GT(smry.get("WBHP:" + well).back(), 85.0f);
         }
     }
-
-    std::filesystem::remove_all(dir);
 }
