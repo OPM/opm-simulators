@@ -392,7 +392,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     // standard wells ignore it and pressure-controlled MSWs keep a unit diagonal.
     prm.put("preconditioner.well_coarse_diagonal", "row_sum"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
-    prm.put("preconditioner.pre_smooth", 0);
+    prm.put("preconditioner.pre_smooth", p.cpr_pre_smooth_);
     prm.put("preconditioner.post_smooth", 1);
     //prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
     prm.put("preconditioner.finesmoother.type", (p.linsolver_ == "mixed-cprw")?"mixed-ilu0":"paroverilu0"s);
@@ -424,7 +424,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     } else {
         prm.put("preconditioner.weight_type", "trueimpesanalytic"s);
     }
-    prm.put("preconditioner.pre_smooth", 0);
+    prm.put("preconditioner.pre_smooth", p.cpr_pre_smooth_);
     prm.put("preconditioner.post_smooth", 1);
     // Choose finesmoother based on accelerator backend
     if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {

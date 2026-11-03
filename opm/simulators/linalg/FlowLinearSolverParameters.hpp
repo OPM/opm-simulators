@@ -82,6 +82,7 @@ struct NlddLocalLinearSolver { static constexpr auto value = "ilu0"; };
 struct LinearSolverPrintJsonDefinition { static constexpr auto value = true; };
 struct CprReuseSetup { static constexpr int value = 4; };
 struct CprReuseInterval { static constexpr int value = 30; };
+struct CprPreSmooth { static constexpr int value = 0; };
 struct AcceleratorMode { static constexpr auto value = "none"; };
 struct GpuDeviceId { static constexpr int value = 0; };
 struct OpenclPlatformId { static constexpr int value = 0; };
@@ -114,6 +115,7 @@ struct FlowLinearSolverParameters
     bool linear_solver_print_json_definition_;
     int cpr_reuse_setup_;
     int cpr_reuse_interval_;
+    int cpr_pre_smooth_;
     std::string accelerator_mode_;
     int gpu_device_id_;
     int opencl_platform_id_;

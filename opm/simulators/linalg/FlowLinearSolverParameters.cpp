@@ -27,6 +27,11 @@
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <stdexcept>
+#include <string>
+
 namespace Opm {
 
 void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
@@ -47,6 +52,13 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     linear_solver_print_json_definition_ = Parameters::Get<Parameters::LinearSolverPrintJsonDefinition>();
     cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
     cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
+    cpr_pre_smooth_ = Parameters::Get<Parameters::CprPreSmooth>();
+    if (cpr_pre_smooth_ < 0) {
+        // The two-level preconditioner stores the smoothing count as an unsigned value.
+        OPM_THROW(std::invalid_argument,
+                  "Invalid value " + std::to_string(cpr_pre_smooth_)
+                  + " for --cpr-pre-smooth, which must not be negative.");
+    }
     gpu_aware_mpi_ = Parameters::Get<Parameters::GpuAwareMpi>();
 
     if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
@@ -158,6 +170,12 @@ void FlowLinearSolverParameters::registerParameters()
         ("Reuse preconditioner interval. Used when CprReuseSetup is set to 4, "
          "then the preconditioner will be fully recreated instead of reused "
          "every N linear solve, where N is this parameter");
+    Parameters::Register<Parameters::CprPreSmooth>
+        ("Number of smoothing steps before the pressure correction in the named "
+         "CPR solver configurations (cpr, cprw, mixed-cprw, hybrid, "
+         "cpr_quasiimpes, cpr_trueimpes and cpr_trueimpesanalytic). One step "
+         "always follows the correction. System CPR, JSON configurations and "
+         "the --accelerator-mode solvers do not use it");
     Parameters::Register<Parameters::AcceleratorMode>
         ("Choose a linear solver. Valid options are: cusparse, opencl, amgcl, "
          "rocalution, rocsparse, and none");
@@ -210,6 +228,7 @@ void FlowLinearSolverParameters::reset()
     linear_solver_print_json_definition_ = true;
     cpr_reuse_setup_          = 4;
     cpr_reuse_interval_       = 30;
+    cpr_pre_smooth_           = 0;
     accelerator_mode_         = "none";
     gpu_device_id_            = 0;
     opencl_platform_id_       = 0;
