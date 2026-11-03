@@ -2,7 +2,10 @@
 """Check MSW segment pressures against a momentum balance, for both flow directions.
 
 An injector and a producer have identical horizontal pipes, so the only pressure
-terms are acceleration and friction.
+terms are acceleration and friction. Fluid leaving through the wall keeps its axial
+momentum, so p + rho v^2 / 2 is conserved in the injector. Fluid entering has none,
+so p + rho v^2 is conserved in the producer. INJB and PRODB split into two branches
+at segment 3. Where flow divides, the branches enter as their flow-weighted mean.
 """
 import argparse
 import math
@@ -15,6 +18,12 @@ import sys
 DENSITY = 1000.0  # kg/m3, tests/msw_acceleration.DATA
 DIAMETER = 0.1  # m
 TOLERANCE = 1e-3  # bar
+TARGET_RATE = 10000.0  # sm3/day, tests/msw_acceleration.DATA
+RATE_TOLERANCE = 10.0  # sm3/day
+
+# Segment: (outlet, inlets). Segment 2 is blank.
+PIPE = {2: (1, [3]), 3: (2, [4]), 4: (3, [])}
+BRANCHED = {2: (1, [3]), 3: (2, [4, 5]), 4: (3, []), 5: (3, [])}
 
 
 def momentum_flux(rate):
@@ -38,27 +47,36 @@ def main():
 
     smspec = args.output / (args.deck.stem.upper() + '.SMSPEC')
     failed = False
-    for well in ('INJ', 'PROD'):
-        keys = [f'{v}:{well}:{s}' for v in ('SPR', 'SPRDF', 'SWFR') for s in (1, 2, 3, 4)]
+    for well, coefficient, segments in (('INJ', 0.5, PIPE), ('PROD', 1.0, PIPE),
+                                        ('INJB', 0.5, BRANCHED), ('PRODB', 1.0, BRANCHED)):
+        keys = [f'{v}:{well}:{s}' for v in ('SPR', 'SPRDF', 'SWFR') for s in (1, *segments)]
         out = subprocess.run([args.summary, smspec, *keys],
                              env=env, check=True, capture_output=True, text=True).stdout
         last = [float(x) for x in out.strip().splitlines()[-1].split()]
         val = dict(zip(keys, last[-len(keys):]))
 
-        # Segment 4 is the closed end, segment 2 is blank.
-        for seg, inlet in ((4, None), (3, 4), (2, 3)):
-            flux = momentum_flux(abs(val[f'SWFR:{well}:{seg}']))
-            if inlet is not None:
-                flux -= momentum_flux(abs(val[f'SWFR:{well}:{inlet}']))
+        # A shut well has zero flux and friction, so it satisfies every balance below.
+        rate = abs(val[f'SWFR:{well}:2'])
+        print(f'{well} rate: {rate:.1f} target {TARGET_RATE:.1f}')
+        if abs(rate - TARGET_RATE) > RATE_TOLERANCE:
+            print(f'{well}: does not deliver its target rate')
+            failed = True
+
+        for seg, (outlet, inlets) in segments.items():
+            rates = [abs(val[f'SWFR:{well}:{inlet}']) for inlet in inlets]
+            inlet_flux = sum(momentum_flux(r) for r in rates)
+            if coefficient < 1.0 and len(inlets) > 1:
+                inlet_flux = sum(r * momentum_flux(r) for r in rates) / sum(rates)
+            flux = momentum_flux(abs(val[f'SWFR:{well}:{seg}'])) - inlet_flux
             friction = val[f'SPRDF:{well}:{seg}']
-            expected = flux + friction
-            measured = val[f'SPR:{well}:{seg}'] - val[f'SPR:{well}:{seg - 1}']
-            print(f'{well} {seg}-{seg - 1}: measured {measured:.4f} expected {expected:.4f}'
+            expected = coefficient * flux + friction
+            measured = val[f'SPR:{well}:{seg}'] - val[f'SPR:{well}:{outlet}']
+            print(f'{well} {seg}-{outlet}: measured {measured:.4f} expected {expected:.4f}'
                   f' flux {flux:.4f} friction {friction:.4f}')
             if abs(measured - expected) > TOLERANCE:
                 failed = True
-            # Keeps the check sensitive to the acceleration term.
-            if seg != 2 and abs(flux) < 10 * abs(friction):
+            # The balance only tests the acceleration term if it outweighs friction.
+            if seg != 2 and abs(coefficient * flux) < 10 * abs(friction):
                 print(f'{well} {seg}: acceleration does not dominate')
                 failed = True
     return 1 if failed else 0
