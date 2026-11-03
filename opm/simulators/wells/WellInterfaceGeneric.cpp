@@ -265,11 +265,13 @@ WellInterfaceGeneric<Scalar, IndexTraits>::
 getInjMult(const int local_perf_index,
            const Scalar bhp,
            const Scalar perf_pres,
-           DeferredLogger& dlogger) const
+           DeferredLogger& dlogger,
+           Scalar* dmult_dpres) const
 {
     assert(!this->isProducer());
 
     Scalar multiplier = 1.;
+    Scalar slope = 0.;
 
     const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
@@ -286,6 +288,7 @@ getInjMult(const int local_perf_index,
         const auto gradient = injmult.multiplier_gradient;
         if (pres > frac_press) {
             multiplier = 1. + (pres - frac_press) * gradient;
+            slope = gradient;
         }
         const Scalar osc_threshold = param_.inj_mult_osc_threshold_;
         const Scalar prev_multiplier = this->inj_multiplier_[perf_ecl_index] > 0 ? this->inj_multiplier_[perf_ecl_index] : 1.0;
@@ -309,15 +312,22 @@ getInjMult(const int local_perf_index,
                 }
             }
             multiplier = multiplier * damp_factor + (1.0 - damp_factor) * prev_multiplier;
+            slope *= damp_factor;
         }
         // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
         // to mimic keeping the existing fracturing open
-        if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
-            multiplier = std::max(multiplier, this->prev_inj_multiplier_[perf_ecl_index]);
+        if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR
+            && this->prev_inj_multiplier_[perf_ecl_index] > multiplier) {
+            multiplier = this->prev_inj_multiplier_[perf_ecl_index];
+            slope = 0.;
         }
 
         this->inj_multiplier_[perf_ecl_index] = multiplier;
         this->inj_multiplier_previter_[perf_ecl_index] = prev_multiplier;
+    }
+
+    if (dmult_dpres != nullptr) {
+        *dmult_dpres = slope;
     }
 
     return multiplier;

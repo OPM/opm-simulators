@@ -1275,7 +1275,17 @@ namespace Opm
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
                                                                * this->segments_.local_perforation_depth_diff(local_perf_index);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
-            const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger);
+            Scalar dmult_dpres = 0.;
+            Value multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger, &dmult_dpres);
+            if constexpr (!std::is_same_v<Value, Scalar>) {
+                // WREV evaluates the multiplier at the segment pressure, the other modes at the perforation
+                EvalWell pres = this->primary_variables_.getSegmentPressure(seg);
+                if (this->well_ecl_.getInjMultMode() != Well::InjMultMode::WREV) {
+                    pres += this->gravity() * this->segments_.density(seg)
+                                            * this->segments_.local_perforation_depth_diff(local_perf_index);
+                }
+                multiplier += dmult_dpres * (pres - pres.value());
+            }
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }

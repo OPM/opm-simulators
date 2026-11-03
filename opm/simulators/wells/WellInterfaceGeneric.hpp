@@ -181,7 +181,9 @@ public:
 
     // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
     // it might change in the future
-    Scalar getInjMult(const int local_perf_index, const Scalar bhp, const Scalar perf_pres, DeferredLogger& dlogger) const;
+    // dmult_dpres, if given, receives the multiplier's derivative with respect to the pressure it is evaluated at
+    Scalar getInjMult(const int local_perf_index, const Scalar bhp, const Scalar perf_pres, DeferredLogger& dlogger,
+                      Scalar* dmult_dpres = nullptr) const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
