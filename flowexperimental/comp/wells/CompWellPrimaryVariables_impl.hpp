@@ -172,6 +172,15 @@ updateNewton(const BVectorWell& dwells,
 template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
+setTotalRate(const Scalar rate)
+{
+    value_[QTotal] = rate;
+    updateEvaluation();
+}
+
+template <typename FluidSystem, typename Indices>
+void
+CompWellPrimaryVariables<FluidSystem, Indices>::
 moveHalfwayTo(const CompWellPrimaryVariables& other)
 {
     for (std::size_t idx = 0; idx < numWellEq; ++idx) {

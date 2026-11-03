@@ -472,6 +472,21 @@ getWellConvergence() const
 }
 
 template <typename TypeTag>
+bool
+CompWellModel<TypeTag>::
+updateWellStatusAtConvergence()
+{
+    const auto& summary_state = simulator_.vanguard().summaryState();
+    int changed = 0;
+    for (const auto& well : this->well_container_) {
+        if (well->updateWellStatusAtConvergence(summary_state, comp_well_states_[well->name()])) {
+            changed = 1;
+        }
+    }
+    return comm_.max(changed) == 1;
+}
+
+template <typename TypeTag>
 data::Wells
 CompWellModel<TypeTag>::
 wellData() const

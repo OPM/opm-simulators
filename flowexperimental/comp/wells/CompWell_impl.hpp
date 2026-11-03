@@ -417,7 +417,9 @@ assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
     EvalWell control_eq;
-    if (this->well_ecl_.isProducer()) {
+    if (well_state.stopped) {
+        control_eq = this->primary_variables_.getTotalRate();
+    } else if (this->well_ecl_.isProducer()) {
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
         assembleControlEqProd(well_state, prod_controls, control_eq);
     } else {
@@ -575,11 +577,17 @@ iterateWellEq(const Simulator& simulator,
 {
     constexpr int max_iter = 200;
     const auto& summary_state = simulator.vanguard().summaryState();
+    // A well is only stopped or reopened from a converged reservoir state: here in the
+    // first Newton iteration, from the previous time step, and in
+    // updateWellStatusAtConvergence(). Close to its limit, the sign of its rate in the
+    // other iterations says little about the converged one.
+    const bool allow_status_change = simulator.problem().iterationContext().iteration() == 0;
 
     for (int it = 0; it <= max_iter; ++it) {
         // Check the bhp limit in every iteration, not only after convergence: a well on a rate
         // target it cannot reach within its bhp limit might otherwise never converge.
-        updateWellControl(summary_state, well_state, /*check_rate_limits=*/false);
+        updateWellControl(summary_state, well_state, /*check_rate_limits=*/false,
+                          allow_status_change);
 
         if (!assembleWellEqWithBackoff(simulator, well_state, dt)) {
             // Newton steps from the last assembled state keep failing; leave
@@ -593,7 +601,8 @@ iterateWellEq(const Simulator& simulator,
         // the latest total rate with the previous surface split.
         const bool converged = this->getConvergence();
         if (converged
-            && !updateWellControl(summary_state, well_state, /*check_rate_limits=*/true)) {
+            && !updateWellControl(summary_state, well_state, /*check_rate_limits=*/true,
+                                  allow_status_change)) {
             // The last assembly is at the current well state.
             updateConnectionQuantities(simulator, well_state);
             return true;
@@ -668,6 +677,9 @@ updateWellState(const CompWell::BVectorWell& xw,
                 SingleWellState& well_state)
 {
     updatePrimaryVariablesNewton(xw);
+    if (well_state.stopped) {
+        this->primary_variables_.setTotalRate(0.);
+    }
     updateWellStateFromPrimaryVariables(well_state);
 }
 
@@ -772,10 +784,58 @@ addWellContributions(SparseMatrixAdapter& jacobian) const
 template <typename TypeTag>
 bool
 CompWell<TypeTag>::
+updateWellStatusAtConvergence(const SummaryState& summary_state,
+                              SingleWellState& well_state) const
+{
+    // The well equations converged without a control change, so only a stop or a
+    // reopening is left.
+    const bool stopped = well_state.stopped;
+    updateWellControl(summary_state, well_state, /*check_rate_limits=*/true,
+                      /*allow_status_change=*/true);
+    return well_state.stopped != stopped;
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
 updateWellControl(const SummaryState& summary_state,
                   SingleWellState& well_state,
-                  const bool check_rate_limits) const
+                  const bool check_rate_limits,
+                  const bool allow_status_change) const
 {
+    const bool producer = this->well_ecl_.isProducer();
+    const Scalar bhp_limit = producer
+        ? this->well_ecl_.productionControls(summary_state).bhp_limit
+        : this->well_ecl_.injectionControls(summary_state).bhp_limit;
+    if (well_state.stopped) {
+        // Once converged, a stopped well's BHP is where it has no net flow.
+        // Beyond its limit, the well can flow at the limit and reopens there.
+        const bool can_flow = producer ? well_state.bhp > bhp_limit : well_state.bhp < bhp_limit;
+        if (!check_rate_limits || !allow_status_change || !can_flow) {
+            return false;
+        }
+        well_state.stopped = false;
+        well_state.bhp = bhp_limit;
+        if (producer) {
+            well_state.production_cmode = WellProducerCMode::BHP;
+        } else {
+            well_state.injection_cmode = WellInjectorCMode::BHP;
+        }
+        OpmLog::debug(fmt::format("Well {} can flow again and is reopened", this->name()));
+        return true;
+    }
+    // A well on BHP control whose surface rate has the wrong sign cannot flow at
+    // its limit and is stopped. This is checked before the well equations
+    // converge, since an injector whose cell is above its limit may not converge.
+    const bool bhp_control = producer ? well_state.production_cmode == WellProducerCMode::BHP
+                                      : well_state.injection_cmode == WellInjectorCMode::BHP;
+    const Scalar total_rate = well_state.get_total_surface_rate();
+    if (allow_status_change && bhp_control && (producer ? total_rate > 0. : total_rate < 0.)) {
+        well_state.stopped = true;
+        OpmLog::debug(fmt::format("Well {} cannot flow at its bhp limit and is stopped",
+                                  this->name()));
+        return true;
+    }
     std::string from;
     if (this->well_ecl_.isInjector()) {
         from = WellInjectorCMode2String(well_state.injection_cmode);
@@ -788,7 +848,6 @@ updateWellControl(const SummaryState& summary_state,
         const auto current_control = well_state.production_cmode;
 
         if (production_controls.hasControl(Well::ProducerCMode::BHP) && current_control != WellProducerCMode::BHP) {
-            const Scalar bhp_limit = production_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
             if (current_bhp < bhp_limit) {
                 well_state.bhp = bhp_limit;
@@ -840,7 +899,6 @@ updateWellControl(const SummaryState& summary_state,
         const auto injection_controls = this->well_ecl_.injectionControls(summary_state);
         const auto current_control = well_state.injection_cmode;
         if (injection_controls.hasControl(Well::InjectorCMode::BHP) && current_control != WellInjectorCMode::BHP) {
-            const Scalar bhp_limit = injection_controls.bhp_limit;
             const Scalar current_bhp = well_state.bhp;
             OpmLog::debug(fmt::format("Well {} BHP control check: current_bhp={:.6e}, bhp_limit={:.6e}, exceeds_limit={}",
                                       this->well_ecl_.name(), current_bhp, bhp_limit, (current_bhp > bhp_limit)));

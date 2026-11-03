@@ -147,6 +147,11 @@ public:
 
     bool getConvergence() const override;
 
+    // Stops or reopens the well when its status does not fit the converged
+    // state of a time step, and returns whether it did.
+    bool updateWellStatusAtConvergence(const SummaryState& summary_state,
+                                       SingleWellState& well_state) const;
+
     void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
@@ -232,7 +237,8 @@ private:
 
     bool updateWellControl(const SummaryState& summary_state,
                            SingleWellState& well_state,
-                           bool check_rate_limits) const;
+                           bool check_rate_limits,
+                           bool allow_status_change) const;
 
     template <typename T>
     void

@@ -141,6 +141,10 @@ initialLinearization(SimulatorReportSingle& report,
     const bool wellConverged = this->wellModel().getWellConvergence();
     report.converged = convrep.converged() && wellConverged &&
                        this->simulator_.problem().iterationContext().iteration() >= minIter;
+    // a well stopped or reopened here needs more iterations with its new status
+    if (report.converged && this->wellModel().updateWellStatusAtConvergence()) {
+        report.converged = false;
+    }
 
     this->convergence_reports_.back().report.push_back(std::move(convrep));
     report.update_time += perfTimer.stop();
