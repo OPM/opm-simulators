@@ -70,6 +70,50 @@ add_test_compare_parallel_simulation(
     --linear-solver-reduction=1e-3
 )
 
+# The first aquifer cell and the reservoir are on rank 0 and the second
+# aquifer cell on rank 1, so the aquifer itself crosses the rank boundary.
+add_test_compare_parallel_simulation(
+  CASENAME
+    comp_numerical_aquifer
+  FILENAME
+    COMP_NUMERICAL_AQUIFER
+  SIMULATOR
+    flow_comp
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-4
+  DIR
+    compositional/aquifers
+  MPI_PROCS
+    2
+  TEST_ARGS
+    --external-partition=${OPM_TESTS_ROOT}/compositional/aquifers/COMP_NUMERICAL_AQUIFER.partition
+)
+
+# The whole aquifer is on rank 1, so its connection to the reservoir
+# crosses the rank boundary.
+add_test_compare_parallel_simulation(
+  CASENAME
+    comp_numerical_aquifer_aqucon
+  FILENAME
+    COMP_NUMERICAL_AQUIFER
+  POSTFIX
+    aqucon
+  SIMULATOR
+    flow_comp
+  ABS_TOL
+    1e-3
+  REL_TOL
+    1e-4
+  DIR
+    compositional/aquifers
+  MPI_PROCS
+    2
+  TEST_ARGS
+    --external-partition=${OPM_TESTS_ROOT}/compositional/aquifers/COMP_NUMERICAL_AQUIFER_AQUCON.partition
+)
+
 add_test_compare_parallel_simulation(
   CASENAME
     oil_into_water_zone_compositional
