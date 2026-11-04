@@ -50,6 +50,7 @@
 #include <numbers>
 #include <utility>
 
+#include <cmath>
 #include <fmt/format.h>
 
 namespace Opm
@@ -669,7 +670,10 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->productionControlsWithWeldraw(summary_state, ws) : Well::ProductionControls(0);
         const auto pmode_orig = ws.production_cmode;
         const auto imode_orig = ws.injection_cmode;
+        // keep the well state to be able to restore it if the solve fails badly
+        const auto ws_before_solve = ws;
         bool converged = false;
+        bool solve_threw = false;
         try {
             // TODO: the following two functions will be refactored to be one to reduce the code duplication
             if (!this->param_.local_well_solver_control_switching_){
@@ -691,6 +695,20 @@ namespace Opm
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
             converged = false;
+            solve_threw = true;
+        }
+        if (!converged) {
+            // A solve that threw or left non-finite values can leave the well in a diverged state,
+            // which would otherwise be the starting point for the next solve of the well. Restore
+            // the state from before the solve. Other unconverged solves keep their (partial) progress.
+            const auto all_finite = [](const auto& values)
+            { return std::ranges::all_of(values, [](const Scalar v) { return std::isfinite(v); }); };
+            const bool state_finite = all_finite(ws.surface_rates) && all_finite(ws.segments.rates) &&
+                                      all_finite(ws.segments.pressure) && all_finite(ws.primaryvar) &&
+                                      std::isfinite(ws.bhp) && std::isfinite(ws.thp);
+            if (solve_threw || !state_finite) {
+                well_state.well(this->indexOfWell()) = ws_before_solve;
+            }
         }
         if (converged) {
             // Add debug info for switched controls
