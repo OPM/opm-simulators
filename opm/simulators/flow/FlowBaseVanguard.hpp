@@ -177,7 +177,8 @@ public:
     /*!
      * \brief Return compressed index from cartesian index
      *
-     * \return compressed index of cell is in interior, -1 otherwise
+     * \return compressed index of cell if it is on this process, interior
+     *         or overlap, -1 otherwise
      *
      */
     int compressedIndex(int cartesianCellIdx) const

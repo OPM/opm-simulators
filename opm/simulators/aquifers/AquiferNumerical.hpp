@@ -73,20 +73,20 @@ public:
     {
         this->cell_to_aquifer_cell_idx_.resize(this->simulator_.gridView().size(/*codim=*/0), -1);
 
-        auto aquifer_on_process = false;
         for (std::size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto* cell = aquifer.getCellPrt(idx);
 
-            // Due to parallelisation, the cell might not exist in the current process
-            const int compressed_idx = simulator.vanguard().compressedIndexForInterior(cell->global_index);
+            // Include overlap cells so that internal aquifer faces remain identifiable
+            // when their cells are owned by different processes.
+            const int compressed_idx = simulator.vanguard().compressedIndex(cell->global_index);
             if (compressed_idx >= 0) {
                 this->cell_to_aquifer_cell_idx_[compressed_idx] = idx;
-                aquifer_on_process = true;
             }
-        }
 
-        if (aquifer_on_process) {
-            this->checkConnectsToReservoir();
+            if (idx == 0) {
+                this->connects_to_reservoir_
+                    = simulator.vanguard().compressedIndexForInterior(cell->global_index) >= 0;
+            }
         }
     }
 
@@ -188,28 +188,6 @@ public:
     }
 
 private:
-    void checkConnectsToReservoir()
-    {
-        ElementContext elem_ctx(this->simulator_);
-        auto elemIt = std::find_if(this->simulator_.gridView().template begin</*codim=*/0>(),
-                                   this->simulator_.gridView().template end</*codim=*/0>(),
-            [&elem_ctx, this](const auto& elem) -> bool
-        {
-            elem_ctx.updateStencil(elem);
-
-            const auto cell_index = elem_ctx
-                .globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-            return this->cell_to_aquifer_cell_idx_[cell_index] == 0;
-        });
-
-        assert ((elemIt != this->simulator_.gridView().template end</*codim=*/0>())
-                && "Internal error locating numerical aquifer's connecting cell");
-
-        this->connects_to_reservoir_ =
-            elemIt->partitionType() == Dune::InteriorEntity;
-    }
-
     Scalar calculateAquiferPressure() const
     {
         auto capture = std::vector<Scalar>(this->init_pressure_.size(), 0.0);
