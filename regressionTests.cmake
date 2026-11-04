@@ -3079,6 +3079,7 @@ add_multiple_tests(
 )
 
 set(_winjdam_cases
+  WINJDAM_GAS
   WINJDAM_MSW
   WINJDAM_STDW
 )
