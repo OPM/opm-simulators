@@ -57,11 +57,11 @@ protected:
     static constexpr int WQTotal= PrimaryVariables::WQTotal;
     static constexpr int numWellConservationEq = PrimaryVariables::numWellConservationEq;
 
-    static constexpr bool has_wfrac_variable = PrimaryVariables::has_wfrac_variable;
-    static constexpr bool has_gfrac_variable = PrimaryVariables::has_gfrac_variable;
-    static constexpr int WFrac = PrimaryVariables::WFrac;
-    static constexpr int GFrac = PrimaryVariables::GFrac;
-    static constexpr int SFrac = PrimaryVariables::SFrac;
+    static constexpr bool has_wfrac_variable() { return PrimaryVariables::has_wfrac_variable(); }
+    static constexpr bool has_gfrac_variable() { return PrimaryVariables::has_gfrac_variable(); }
+    static constexpr int WFrac() { return PrimaryVariables::WFrac(); }
+    static constexpr int GFrac() { return PrimaryVariables::GFrac(); }
+    static constexpr int SFrac() { return PrimaryVariables::SFrac(); }
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numDerivatives>;

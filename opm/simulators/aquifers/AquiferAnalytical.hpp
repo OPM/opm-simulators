@@ -80,7 +80,7 @@ public:
                                           FluidSystem,
                                           energyModuleType != EnergyModules::NoTemperature,
                                           energyModuleType == EnergyModules::FullyImplicitThermal,
-                                          BlackoilIndices::gasEnabled,
+                                          BlackoilIndices::mayHaveGas,
                                           enableVapwat,
                                           enableBrine,
                                           enableSaltPrecipitation,

@@ -927,7 +927,7 @@ namespace Opm
                                                use_well_weights,
                                                contract_d_diagonal,
                                                *this,
-                                               this->SPres,
+                                               this->SPres(),
                                                well_state);
     }
 
@@ -1486,7 +1486,7 @@ namespace Opm
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
-        rhs[0][SPres] = -1.0;
+        rhs[0][SPres()] = -1.0;
 
         const BVectorWell x_well = this->linSys_.solve(rhs);
         constexpr int num_eq = MSWEval::numWellEq;
@@ -2018,7 +2018,7 @@ namespace Opm
                     const EvalWell accumulation_term_energy =
                         energy_scaling_factor_ * regularization_factor * (segment_energy - segment_initial_energy_[seg]) / dt;
                     MultisegmentWellAssemble(*this).
-                        assembleAccumulationTerm(seg, MSWEval::PrimaryVariables::Temperature, accumulation_term_energy, this->linSys_);
+                        assembleAccumulationTerm(seg, MSWEval::PrimaryVariables::Temperature(), accumulation_term_energy, this->linSys_);
                 }
             }
             // considering the contributions due to flowing out from the segment
@@ -2050,7 +2050,7 @@ namespace Opm
                         this->computeSegmentEnergyRate(seg, seg_upwind, upwind_fs,
                                                        "energy outflow assembly", deferred_logger);
                     MultisegmentWellAssemble(*this).
-                        assembleOutflowTerm(seg, seg_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
+                        assembleOutflowTerm(seg, seg_upwind, MSWEval::PrimaryVariables::Temperature(), energy_rate, this->linSys_);
                 }
             }
 
@@ -2077,7 +2077,7 @@ namespace Opm
                             this->computeSegmentEnergyRate(inlet, inlet_upwind, upwind_fs,
                                                            "energy inflow assembly", deferred_logger);
                         MultisegmentWellAssemble(*this).
-                            assembleInflowTerm(seg, inlet, inlet_upwind, MSWEval::PrimaryVariables::Temperature, energy_rate, this->linSys_);
+                            assembleInflowTerm(seg, inlet, inlet_upwind, MSWEval::PrimaryVariables::Temperature(), energy_rate, this->linSys_);
                     }
                 }
             }
@@ -2781,7 +2781,7 @@ namespace Opm
         // (energy_scaling_factor_).
         MultisegmentWellAssemble(*this).
             assemblePerforationEq(seg, local_perf_index,
-                                  MSWEval::PrimaryVariables::Temperature,
+                                  MSWEval::PrimaryVariables::Temperature(),
                                   Indices::contiEnergyEqIdx,
                                   energy_scaling_factor_ * energy_flux,
                                   this->linSys_);

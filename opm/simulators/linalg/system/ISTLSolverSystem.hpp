@@ -61,8 +61,7 @@ protected:
                   "ISTLSolverSystem (with system_cpr preconditioner) only supports "
                   "3-equation blackoil models. This model has different equation count.");
 
-    constexpr static std::size_t pressureIndex
-        = Indices::pressureSwitchIdx;
+    static constexpr std::size_t activePressureIndex() { return Indices::activePressureSwitchIdx(); }
 
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
@@ -441,7 +440,7 @@ private:
         // Derive weights from the reservoir sub-block config (which uses CPR internally)
         auto resSolverPrm = prm.get_child("preconditioner.reservoir_solver");
         std::function<ResVector<Scalar>()> resWeightCalc
-            = this->getWeightsCalculator(resSolverPrm, pressureIndex);
+            = this->getWeightsCalculator(resSolverPrm, activePressureIndex());
 
         // The well part of the weights is filled here too: the CPRW pressure
         // stage restricts the well rows with it, and re-reads it on every
@@ -465,7 +464,7 @@ private:
             sysOpPar_ = std::make_unique<SystemParOp<Scalar>>(sysMatrix_, *systemComm_);
 
             sysFlexSolverPar_ = std::make_unique<Dune::FlexibleSolver<SystemParOp<Scalar>>>(
-                *sysOpPar_, *systemComm_, prm, sysWeightCalc, pressureIndex);
+                *sysOpPar_, *systemComm_, prm, sysWeightCalc, activePressureIndex());
 
             sysSolver_ = sysFlexSolverPar_.get();
             sysPrecond_ = &sysFlexSolverPar_->preconditioner();
@@ -476,7 +475,7 @@ private:
             sysOp_ = std::make_unique<SystemSeqOp<Scalar>>(sysMatrix_);
 
             sysFlexSolverSeq_ = std::make_unique<Dune::FlexibleSolver<SystemSeqOp<Scalar>>>(
-                *sysOp_, prm, sysWeightCalc, pressureIndex);
+                *sysOp_, prm, sysWeightCalc, activePressureIndex());
 
             sysSolver_ = sysFlexSolverSeq_.get();
             sysPrecond_ = &sysFlexSolverSeq_->preconditioner();

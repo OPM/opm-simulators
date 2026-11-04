@@ -169,7 +169,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using ElementChunksType = ElementChunks<GridView, Dune::Partitions::All>;
         using FluidState = typename GetPropType<TypeTag, Properties::IntensiveQuantities>::FluidState;
 
-        constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
+        static constexpr std::size_t activePressureIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
 
         static constexpr bool enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>();
         constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
@@ -533,12 +533,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     }
                 }
                 std::function<Vector()> weightCalculator
-                    = this->getWeightsCalculator(prm_[activeSolverNum_], pressureIndex);
+                    = this->getWeightsCalculator(prm_[activeSolverNum_], activePressureIndex());
                 OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),
                                                          isParallel(),
                                                          prm_[activeSolverNum_],
-                                                         pressureIndex,
+                                                         activePressureIndex(),
                                                          weightCalculator,
                                                          forceSerial_,
                                                          comm_.get());

@@ -87,7 +87,7 @@ class BlackOilSolventModule<TypeTag, true>
 
     using TabulatedFunction = typename BlackOilSolventParams<Scalar>::TabulatedFunction;
 
-    static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
+    static constexpr unsigned solventSaturationIdx = Indices::activeSolventSaturationIdx();
     static constexpr unsigned contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr unsigned enableSolvent = true;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
@@ -545,7 +545,7 @@ class BlackOilSolventIntensiveQuantities<TypeTag, /*enableSolventV=*/true>
     using SolventModule = BlackOilSolventModule<TypeTag, true>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
+    static constexpr unsigned solventSaturationIdx = Indices::activeSolventSaturationIdx();
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
@@ -679,12 +679,12 @@ public:
 
             // oil is the reference phase for pressure
             if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg) {
-                pgMisc = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx,
+                pgMisc = priVars.makeEvaluation(Indices::activePressureSwitchIdx(), timeIdx,
                                                 linearizationType);
             }
             else {
                 const Evaluation& po =
-                    priVars.makeEvaluation(Indices::pressureSwitchIdx,
+                    priVars.makeEvaluation(Indices::activePressureSwitchIdx(),
                                            timeIdx, linearizationType);
                 pgMisc = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
             }

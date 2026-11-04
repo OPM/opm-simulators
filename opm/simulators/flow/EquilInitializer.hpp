@@ -76,13 +76,13 @@ class EquilInitializer
 
     enum { dimWorld = GridView::dimensionworld };
     static constexpr bool enableDissolution =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     static constexpr bool enableDissolvedGas =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
 
@@ -153,11 +153,11 @@ public:
             if constexpr (enableDissolvedGas) {
                 if (FluidSystem::enableDissolvedGas())
                     fluidState.setRs(initialState.rs()[elemIdx]);
-                else if (Indices::gasEnabled && Indices::oilEnabled)
+                else if (Indices::gasIsActive() && Indices::oilIsActive())
                     fluidState.setRs(0.0);
                 if (FluidSystem::enableVaporizedOil())
                     fluidState.setRv(initialState.rv()[elemIdx]);
-                else if (Indices::gasEnabled && Indices::oilEnabled)
+                else if (Indices::gasIsActive() && Indices::oilIsActive())
                     fluidState.setRv(0.0);
             }
 

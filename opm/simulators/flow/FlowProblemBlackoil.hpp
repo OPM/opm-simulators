@@ -133,7 +133,7 @@ private:
     using typename FlowProblemType::DimMatrix;
 
     static constexpr bool enableDissolvedGas =
-        Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max();
+        Indices::hasCompositionSwitch;
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableGeochemistry = getPropValue<TypeTag, Properties::EnableGeochemistry>() };
@@ -795,11 +795,11 @@ public:
                 Valgrind::CheckDefined(pc);
                 for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
                     const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
-                    if (Indices::oilEnabled)
+                    if (Indices::oilIsActive())
                         fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                    else if (Indices::gasEnabled)
+                    else if (Indices::gasIsActive())
                         fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                    else if (Indices::waterEnabled)
+                    else if (Indices::waterIsActive())
                         //single (water) phase
                         fluidState.setPressure(phaseIdx, pressure);
                 }
@@ -1454,11 +1454,11 @@ protected:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                if (Indices::oilEnabled)
+                if (Indices::oilIsActive())
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                else if (Indices::gasEnabled)
+                else if (Indices::gasIsActive())
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                else if (Indices::waterEnabled)
+                else if (Indices::waterIsActive())
                     //single (water) phase
                     dofFluidState.setPressure(phaseIdx, pressure);
             }
@@ -1466,11 +1466,11 @@ protected:
             if constexpr (enableDissolvedGas) {
                 if (FluidSystem::enableDissolvedGas())
                     dofFluidState.setRs(rsData[dofIdx]);
-                else if (Indices::gasEnabled && Indices::oilEnabled)
+                else if (Indices::gasIsActive() && Indices::oilIsActive())
                     dofFluidState.setRs(0.0);
                 if (FluidSystem::enableVaporizedOil())
                     dofFluidState.setRv(rvData[dofIdx]);
-                else if (Indices::gasEnabled && Indices::oilEnabled)
+                else if (Indices::gasIsActive() && Indices::oilIsActive())
                     dofFluidState.setRv(0.0);
             }
 
@@ -1555,7 +1555,7 @@ protected:
         if constexpr (!enableSolvent)
             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
-        rate[Indices::solventSaturationIdx] = bc.rate;
+        rate[Indices::activeSolventSaturationIdx()] = bc.rate;
     }
 
     void handlePolymerBC(const BCState::BCFace& bc, RateVector& rate) const override

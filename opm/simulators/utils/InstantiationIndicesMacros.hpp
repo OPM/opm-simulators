@@ -25,6 +25,7 @@
 
 #include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoildyntwophaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 /**
@@ -78,6 +79,7 @@
     INSTANTIATE_CLASS(CLASS,T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
     INSTANTIATE_CLASS(CLASS,T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
     INSTANTIATE_CLASS(CLASS,T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,2u>) \
+    INSTANTIATE_CLASS(CLASS,T,BlackOilDynTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u>) \
     INSTANTIATE_CLASS(CLASS,T,BlackOilVariableAndEquationIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
     INSTANTIATE_CLASS(CLASS,T,BlackOilVariableAndEquationIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
     INSTANTIATE_CLASS(CLASS,T,BlackOilVariableAndEquationIndices<0u,0u,0u,0u,false,true,0u,0u>)             \

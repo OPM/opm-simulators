@@ -47,7 +47,7 @@ public:
     using Vector = Parent::Vector;
     using Preconditioner = Parent::AbstractPreconditionerType;
 
-    static constexpr auto pressureIndex = Parent::pressureIndex;
+    static constexpr auto pressureIndex = Parent::activePressureIndex();
 
     TestISTLSolver(const Simulator& simulator,
                    const std::string& preconditionerType,

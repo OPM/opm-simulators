@@ -58,6 +58,11 @@ public:
     static constexpr bool gasEnabled = true;
     static constexpr bool oilEnabled = true;
 
+    //! Accessors used by code shared with the black-oil model
+    static constexpr bool waterIsActive() { return waterEnabled; }
+    static constexpr bool gasIsActive() { return gasEnabled; }
+    static constexpr bool oilIsActive() { return oilEnabled; }
+
     //! number of active phases
     static constexpr int numPhases = enableWater ? 3 : 2;
 
@@ -71,6 +76,7 @@ public:
 
     //! Index of the pressure, under the name the flow linear solver uses
     static constexpr int pressureSwitchIdx = pressure0Idx;
+    static constexpr int activePressureSwitchIdx() { return pressureSwitchIdx; }
 
     //! Index of the molefraction of the first component
     static constexpr int z0Idx = pressure0Idx + 1;

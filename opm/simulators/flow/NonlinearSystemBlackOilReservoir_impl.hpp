@@ -345,7 +345,7 @@ relativeChange() const
         const auto& priVarsNew = this->simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
         Scalar pressureNew;
-        pressureNew = priVarsNew[Indices::pressureSwitchIdx];
+        pressureNew = priVarsNew[Indices::activePressureSwitchIdx()];
 
         Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
         Scalar oilSaturationNew = 1.0;
@@ -353,7 +353,7 @@ relativeChange() const
             FluidSystem::numActivePhases() > 1 &&
             priVarsNew.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
-            saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSwitchIdx];
+            saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::activeWaterSwitchIdx()];
             oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
         }
 
@@ -361,8 +361,8 @@ relativeChange() const
             FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             priVarsNew.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
-            assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
-            saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
+            assert(Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max());
+            saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::activeCompositionSwitchIdx()];
             oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
         }
 
@@ -373,7 +373,7 @@ relativeChange() const
         const auto& priVarsOld = this->simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
         Scalar pressureOld;
-        pressureOld = priVarsOld[Indices::pressureSwitchIdx];
+        pressureOld = priVarsOld[Indices::activePressureSwitchIdx()];
 
         Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
         Scalar oilSaturationOld = 1.0;
@@ -386,15 +386,15 @@ relativeChange() const
         if (FluidSystem::numActivePhases() > 1) {
             if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
                 saturationsOld[FluidSystem::waterPhaseIdx] =
-                    priVarsOld[Indices::waterSwitchIdx];
+                    priVarsOld[Indices::activeWaterSwitchIdx()];
                 oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
             }
 
             if (priVarsOld.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
             {
-                assert(Indices::compositionSwitchIdx != std::numeric_limits<unsigned>::max());
+                assert(Indices::activeCompositionSwitchIdx() != std::numeric_limits<unsigned>::max());
                 saturationsOld[FluidSystem::gasPhaseIdx] =
-                    priVarsOld[Indices::compositionSwitchIdx];
+                    priVarsOld[Indices::activeCompositionSwitchIdx()];
                 oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
             }
 
@@ -536,7 +536,7 @@ NonlinearSystemBlackOilReservoir<TypeTag>::
 getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
 {
     static constexpr bool enableSolvent =
-        Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
+        Indices::activeSolventSaturationIdx() != std::numeric_limits<unsigned>::max();
     static constexpr bool enableBrine =
         Indices::saltConcentrationIdx != std::numeric_limits<unsigned>::max();
 
@@ -550,24 +550,24 @@ getMaxSolutionUpdate(const std::vector<unsigned>& ixCells)
     for (const auto& ix : ixCells) {
         const auto& value = solUpd_[ix];
         for (unsigned pvIdx = 0; pvIdx < value.size(); ++pvIdx) {
-            if (pvIdx == Indices::pressureSwitchIdx) {
+            if (pvIdx == Indices::activePressureSwitchIdx()) {
                 dPMax = std::max(dPMax, std::abs(value[pvIdx]));
             }
-            else if ((pvIdx == Indices::waterSwitchIdx
+            else if ((pvIdx == Indices::activeWaterSwitchIdx()
                        && value.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
-                      || (pvIdx == Indices::compositionSwitchIdx
+                      || (pvIdx == Indices::activeCompositionSwitchIdx()
                           && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
-                      || (enableSolvent && pvIdx == Indices::solventSaturationIdx
+                      || (enableSolvent && pvIdx == Indices::activeSolventSaturationIdx()
                           && value.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss)
                       || (enableBrine && enableSaltPrecipitation && pvIdx == Indices::saltConcentrationIdx
                           && value.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) ) {
                 dSMax = std::max(dSMax, std::abs(value[pvIdx]));
             }
-            else if (pvIdx == Indices::compositionSwitchIdx
+            else if (pvIdx == Indices::activeCompositionSwitchIdx()
                      && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
                 dRsMax = std::max(dRsMax, std::abs(value[pvIdx]));
             }
-            else if (pvIdx == Indices::compositionSwitchIdx
+            else if (pvIdx == Indices::activeCompositionSwitchIdx()
                      && value.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 dRvMax = std::max(dRvMax, std::abs(value[pvIdx]));
             }

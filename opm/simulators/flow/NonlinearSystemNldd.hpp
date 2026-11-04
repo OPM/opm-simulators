@@ -1041,7 +1041,7 @@ private:
                     const Scalar press_sum =
                         std::accumulate(domain.interior_cells.begin(), domain.interior_cells.end(), Scalar{0},
                                         [&solution](const auto acc, const auto c)
-                                        { return acc + solution[c][Indices::pressureSwitchIdx]; });
+                                        { return acc + solution[c][Indices::activePressureSwitchIdx()]; });
                     const Scalar avgpress = press_sum / domain.interior_cells.size();
                     measure_per_domain[domain.index] = avgpress;
                 }
@@ -1053,7 +1053,7 @@ private:
                     measure_per_domain[domain.index] =
                         std::accumulate(domain.interior_cells.begin(), domain.interior_cells.end(), Scalar{0},
                                         [&solution](const auto acc, const auto c)
-                                        { return std::max(acc, solution[c][Indices::pressureSwitchIdx]); });
+                                        { return std::max(acc, solution[c][Indices::activePressureSwitchIdx()]); });
                 }
                 break;
             }

@@ -77,7 +77,7 @@ public:
     using GPUVector = Opm::gpuistl::GpuVector<real_type>;
     using GPUVectorInt = Opm::gpuistl::GpuVector<int>;
 
-    constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
+    static constexpr std::size_t activePressureIndex() { return GetPropType<TypeTag, Properties::Indices>::activePressureSwitchIdx(); }
 
 
 #if HAVE_MPI
@@ -368,13 +368,13 @@ private:
                 if (transpose) {
                     weightsCalculator = [this]() -> GPUVector& {
                         Amg::getQuasiImpesWeights<real_type, true>(
-                            *m_matrix, pressureIndex, *m_weights, *m_diagonalIndices);
+                            *m_matrix, activePressureIndex(), *m_weights, *m_diagonalIndices);
                         return *m_weights;
                     };
                 } else {
                     weightsCalculator = [this]() -> GPUVector& {
                         Amg::getQuasiImpesWeights<real_type, false>(
-                            *m_matrix, pressureIndex, *m_weights, *m_diagonalIndices);
+                            *m_matrix, activePressureIndex(), *m_weights, *m_diagonalIndices);
                         return *m_weights;
                     };
                 }
@@ -390,7 +390,7 @@ private:
                 weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
-                    Amg::getTrueImpesWeights(pressureIndex,
+                    Amg::getTrueImpesWeights(activePressureIndex(),
                                              m_cpuWeights,
                                              elemCtx, m_simulator.model(),
                                              m_element_chunks,
@@ -411,7 +411,7 @@ private:
                 weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
                     // Use the CPU implementation to calculate the weights
                     ElementContext elemCtx(m_simulator);
-                    Amg::getTrueImpesWeightsAnalytic(pressureIndex,
+                    Amg::getTrueImpesWeightsAnalytic(activePressureIndex(),
                                                      m_cpuWeights,
                                                      elemCtx, m_simulator.model(),
                                                      m_element_chunks,
@@ -441,7 +441,7 @@ private:
             );
             std::function<GPUVector&()> weightsCalculator = getWeightsCalculator();
             m_gpuSolver = std::make_unique<SolverType>(
-                *m_matrix, isParallel(), m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, m_comm.get());
+                *m_matrix, isParallel(), m_propertyTree, activePressureIndex(), weightsCalculator, m_forceSerial, m_comm.get());
         } else {
             m_matrix->updateNonzeroValues(M, true);
             m_gpuSolver->update();
