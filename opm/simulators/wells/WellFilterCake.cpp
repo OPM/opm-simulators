@@ -154,12 +154,14 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
         return conc_volume_factor.empty() ? Scalar{1} : conc_volume_factor[perf];
     };
 
-    // Compute xflow-factor
+    // Compute xflow-factor from the surface rates of the injected phase,
+    // which are conserved between connections, unlike reservoir volumes
+    // at different cell conditions.
     Scalar xfact = 1.0;
     Scalar q_sum = 0.0;
     Scalar qpos_sum = 0.0;
     for (int perf = 0; perf < nperf; ++perf) {
-        const auto crate = connection_rates[perf * np + inj_phase_index] * volume_factor(perf);
+        const auto crate = connection_rates[perf * np + inj_phase_index];
         qpos_sum += std::max(Scalar{0.}, crate);
         q_sum += crate;
     }
