@@ -40,7 +40,7 @@ void ConnFractureData<Scalar>::resize(std::size_t num_perf)
     this->inj_pressure.resize(num_perf);
     this->inj_bhp.resize(num_perf);
     this->inj_wellrate.resize(num_perf);
-    this->water_rate.resize(num_perf);
+    this->injected_rate.resize(num_perf);
 }
 
 template<class Scalar>
@@ -60,7 +60,8 @@ ConnFractureData<Scalar>::serializationTestObject()
     result.inj_pressure = {250.0};
     result.inj_bhp = {200.0};
     result.inj_wellrate = {150.0};
-    result.water_rate = {123.4};
+    result.injected_rate = {123.4};
+    result.injected_phase = 2;
     return result;
 }
 
@@ -79,7 +80,8 @@ bool ConnFractureData<Scalar>::operator==(const ConnFractureData& rhs) const
         && (this->inj_pressure == rhs.inj_pressure)
         && (this->inj_bhp == rhs.inj_bhp)
         && (this->inj_wellrate == rhs.inj_wellrate)
-        && (this->water_rate == rhs.water_rate)
+        && (this->injected_rate == rhs.injected_rate)
+        && (this->injected_phase == rhs.injected_phase)
         ;
 }
 
