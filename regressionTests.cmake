@@ -3080,6 +3080,7 @@ add_multiple_tests(
 
 set(_winjdam_cases
   WINJDAM_GAS
+  WINJDAM_GAS_MSW
   WINJDAM_MSW
   WINJDAM_STDW
 )
