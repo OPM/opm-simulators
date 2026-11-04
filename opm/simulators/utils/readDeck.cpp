@@ -42,6 +42,10 @@
 #include <opm/io/eclipse/rst/state.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Deck/DeckItem.hpp>
+#include <opm/input/eclipse/Deck/DeckKeyword.hpp>
+#include <opm/input/eclipse/Deck/DeckRecord.hpp>
+#include <opm/input/eclipse/Utility/Typetools.hpp>
 
 #include <opm/input/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
@@ -112,6 +116,67 @@ namespace {
 
         Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id)
             ->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
+    }
+
+    // In a sector run, FPR is the parent's field pressure at its own report
+    // steps (or covers the sector's cells only), while FPRFLUX averages over
+    // the whole parent model at every time step of this run. A UDQ or ACTIONX
+    // condition that reads FPR is to follow the field pressure as it develops
+    // in this run, as it did in the parent, so it reads FPRFLUX instead: an
+    // ACTIONX on FPR that fired in the parent between two of its report steps
+    // would otherwise never fire here. Returns what was changed, as UDQ
+    // quantities and ACTIONX names.
+    std::vector<std::string> readFprFluxInUdqAndActions(Opm::Deck& deck)
+    {
+        static const std::regex fpr { R"((^|[^A-Za-z0-9_])FPR(?![A-Za-z0-9_]))", std::regex::icase };
+
+        const auto substitute = [](Opm::DeckItem& item)
+        {
+            bool changed = false;
+            Opm::DeckItem updated(item.name(), Opm::RawString{});
+            for (const auto& value : std::as_const(item).getData<Opm::RawString>()) {
+                const auto replaced = std::regex_replace(value, fpr, "$1FPRFLUX");
+                changed = changed || (replaced != value);
+                updated.push_back(Opm::RawString { replaced });
+            }
+            if (changed) {
+                item = std::move(updated);
+            }
+            return changed;
+        };
+
+        std::vector<std::string> changed;
+        for (auto& keyword : deck) {
+            if (keyword.name() == "UDQ") {
+                for (std::size_t r = 0; r < keyword.size(); ++r) {
+                    auto& record = keyword.getRecord(r);
+                    auto& action = record.getItem("ACTION");
+                    if (!action.hasValue(0)) {
+                        continue;
+                    }
+                    std::string name = action.get<Opm::RawString>(0);
+                    name.erase(0, name.find_first_not_of(" \t'"));
+                    std::transform(name.begin(), name.end(), name.begin(),
+                                   [](unsigned char c) { return std::toupper(c); });
+                    if (name.rfind("DEFI", 0) != 0) {
+                        continue;
+                    }
+                    if (substitute(record.getItem("DATA"))) {
+                        changed.push_back("UDQ " + record.getItem("QUANTITY").getTrimmedString(0));
+                    }
+                }
+            }
+            else if (keyword.name() == "ACTIONX") {
+                bool conditionChanged = false;
+                for (std::size_t r = 1; r < keyword.size(); ++r) {
+                    conditionChanged = substitute(keyword.getRecord(r).getItem("CONDITION")) || conditionChanged;
+                }
+                if (conditionChanged) {
+                    changed.push_back("ACTIONX " + keyword.getRecord(0).getItem("NAME").getTrimmedString(0));
+                }
+            }
+        }
+        return changed;
     }
 
     // A sector cut out of the full model usually lists only its own wells. The
@@ -419,7 +484,7 @@ namespace {
         }
 
         auto parser = Opm::Parser { python };
-        const auto deck = readDeckFile(deckFilename, checkDeck,
+        auto deck = readDeckFile(deckFilename, checkDeck,
                                        parser, *parseContext,
                                        treatCriticalAsNonCritical,
                                        errorGuard);
@@ -441,6 +506,19 @@ namespace {
         // the grid, so doing this afterwards would leave connections pointing
         // at cells that no longer exist.
         applyUseFluxActnum(*eclipseState);
+
+        if (eclipseState->getIOConfig().getUseFlux()) {
+            if (const auto changed = readFprFluxInUdqAndActions(deck); !changed.empty()) {
+                std::string list;
+                for (const auto& item : changed) {
+                    list += (list.empty() ? "" : ", ") + item;
+                }
+                Opm::OpmLog::info(fmt::format("USEFLUX: FPR is evaluated as FPRFLUX, the field pressure "
+                                              "averaged over the whole parent model, in {} UDQ definition(s) "
+                                              "and ACTIONX condition(s): {}. The FPR summary vector is still "
+                                              "the parent's.", changed.size(), list));
+            }
+        }
 
         // A fracture model reads its seeds out of the deck during the run, not
         // only at setup, so a FRAC run has to retain the Schedule keywords
