@@ -500,6 +500,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_group_control_retention.cpp
   tests/test_group_higher_constraints.cpp
   tests/test_drsdt_initial_rs.cpp
+  tests/test_edit_depth.cpp
   tests/test_numaquifer_equilibration.cpp
   tests/test_equil.cpp
   tests/test_explicitinitialsaturations.cpp
@@ -705,6 +706,7 @@ list (APPEND TEST_DATA_FILES
   tests/COMP_EXPLICIT_SOIL_RTEMP.DATA
   tests/COMP_EXPLICIT_SOIL_SGAS.DATA
   tests/drsdt_initial_rs.DATA
+  tests/edit_depth.DATA
   tests/equil_base.DATA
   tests/numaquifer_equil_immobile.DATA
   tests/numaquifer_equil_mismatch.DATA
