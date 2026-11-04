@@ -41,9 +41,20 @@ class FractionCalculator
 public:
     using GroupStateHelperType = GroupStateHelper<Scalar, IndexTraits>;
 
-    //! \param released_group Optional group, on individual control without group controlled
-    //!        wells, to be treated as if released to FLD with all its wells under group control,
-    //!        i.e. the group participates in the guide rate distribution of its ancestors.
+    /// @brief Construct a calculator of guide rate fractions of group targets.
+    /// @param schedule The schedule.
+    /// @param groupStateHelper Helper giving access to the group and well states.
+    /// @param summary_state Summary state, used when evaluating well controls.
+    /// @param report_step Index of the current report step.
+    /// @param guide_rate Guide rates of the wells and groups.
+    /// @param target Guide rate target used when evaluating guide rates.
+    /// @param is_producer Whether fractions of production (true) or injection (false)
+    ///        targets are computed.
+    /// @param injection_phase Injection phase, only used if @p is_producer is false.
+    /// @param assumed_fld_group Optional name of a group on individual control without group
+    ///        controlled wells. The group is treated as if it was under FLD control with all its
+    ///        open wells under group control, i.e. it participates in the guide rate distribution
+    ///        of its ancestors. Empty if no group should be treated this way.
     FractionCalculator(const Schedule& schedule,
                        const GroupStateHelperType& groupStateHelper,
                        const SummaryState& summary_state,
@@ -52,7 +63,7 @@ public:
                        const GuideRateModel::Target target,
                        const bool is_producer,
                        const Phase injection_phase,
-                       const std::string& released_group = "");
+                       const std::string& assumed_fld_group = "");
     Scalar fraction(const std::string& name,
                     const std::string& control_group_name,
                     const bool always_include_this);
@@ -73,9 +84,9 @@ private:
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     bool hasFieldOrNoneControl(const std::string& group_name) const;
-    bool isReleasedGroupMember(const std::string& name);
-    bool isReleasedGroupOrAncestor(const std::string& group_name);
-    int releasedGroupControlledWells(const std::string& group_name);
+    bool isAssumedFldGroupMember(const std::string& name);
+    bool isAssumedFldGroupOrAncestor(const std::string& group_name);
+    int assumedFldGroupControlledWells(const std::string& group_name);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const GroupStateHelperType& groupStateHelper() const { return groupStateHelper_; }
 
@@ -87,7 +98,7 @@ private:
     GuideRateModel::Target target_;
     bool is_producer_;
     Phase injection_phase_;
-    std::string released_group_;
+    std::string assumed_fld_group_;
 };
 
 } // namespace Opm::GroupStateHelpers

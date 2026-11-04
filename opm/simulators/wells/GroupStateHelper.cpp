@@ -115,7 +115,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                                const Scalar efficiency_factor,
                                                                const std::vector<Scalar>& resv_coeff,
                                                                const bool check_guide_rate,
-                                                               const bool assume_group_released) const
+                                                               const bool assume_fld_control) const
 {
     // When called for a well ('name' is a well name), 'parent'
     // will be the name of 'group'. But if we recurse, 'name' and
@@ -127,7 +127,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
 
     // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
     // is potentially available for control by an ancestor, i.e. full rates minus reduction rates.
-    // If assume_group_released is true, it is the full group rates.
+    // If assume_fld_control is true, it is the full group rates.
 
     auto current_group_control = this->groupState().injection_control(group.name(), injection_phase);
 
@@ -147,7 +147,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                               efficiency_factor * group.getGroupEfficiencyFactor(),
                                               resv_coeff,
                                               check_guide_rate,
-                                              assume_group_released);
+                                              assume_fld_control);
     }
 
     // This can be false for FLD-controlled groups, we must therefore
@@ -169,7 +169,7 @@ GroupStateHelper<Scalar, IndexTraits>::checkGroupConstraintsInj(const std::strin
                                                  this->getInjectionGuideTargetMode(injection_phase),
                                                  /*is_producer=*/false,
                                                  injection_phase,
-                                                 /*released_group=*/assume_group_released ? name : std::string{}};
+                                                 /*assumed_fld_group=*/assume_fld_control ? name : std::string{}};
 
     auto local_fraction_lambda = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 

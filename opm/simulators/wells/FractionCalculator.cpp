@@ -45,7 +45,7 @@ FractionCalculator(const Schedule& schedule,
                    const GuideRateModel::Target target,
                    const bool is_producer,
                    const Phase injection_phase,
-                   const std::string& released_group)
+                   const std::string& assumed_fld_group)
     : schedule_(schedule)
     , groupStateHelper_(groupStateHelper)
     , summary_state_(summary_state)
@@ -54,7 +54,7 @@ FractionCalculator(const Schedule& schedule,
     , target_(target)
     , is_producer_(is_producer)
     , injection_phase_(injection_phase)
-    , released_group_(released_group)
+    , assumed_fld_group_(assumed_fld_group)
 {
 }
 
@@ -169,7 +169,7 @@ guideRateSum(const Group& group,
         } else {
             included |= this->groupStateHelper().wellState().isInjectionGrup(child_well);
         }
-        included |= this->isReleasedGroupMember(child_well);
+        included |= this->isAssumedFldGroupMember(child_well);
         if (included) {
             number_of_included_well_or_groups++;
             total_guide_rate += guideRate(child_well, always_included_child, always_use_potentials);
@@ -248,12 +248,12 @@ groupControlledWells(const std::string& group_name,
             }
         }
     }
-    if (num_wells == 0 && !released_group_.empty()) {
-        if (this->isReleasedGroupMember(group_name)) {
-            return this->releasedGroupControlledWells(group_name);
+    if (num_wells == 0 && !assumed_fld_group_.empty()) {
+        if (this->isAssumedFldGroupMember(group_name)) {
+            return this->assumedFldGroupControlledWells(group_name);
         }
-        if (this->isReleasedGroupOrAncestor(group_name)) {
-            return this->releasedGroupControlledWells(released_group_);
+        if (this->isAssumedFldGroupOrAncestor(group_name)) {
+            return this->assumedFldGroupControlledWells(assumed_fld_group_);
         }
     }
     return num_wells;
@@ -271,15 +271,15 @@ hasFieldOrNoneControl(const std::string& group_name) const
     return (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
 }
 
-// Returns true if 'name' (a well or group) is below the released group and would be under
-// group control if the released group was switched to FLD and its wells to GRUP, i.e. an open
-// well of the relevant type or a group under FLD/NONE control, with only FLD/NONE groups
-// between it and the released group.
+// Returns true if 'name' (a well or group) is below the assumed FLD group and would be under
+// group control if that group was switched to FLD and its wells to GRUP, i.e. an open well of
+// the relevant type or a group under FLD/NONE control, with only FLD/NONE groups between it
+// and the assumed FLD group.
 template<typename Scalar, typename IndexTraits>
 bool FractionCalculator<Scalar, IndexTraits>::
-isReleasedGroupMember(const std::string& name)
+isAssumedFldGroupMember(const std::string& name)
 {
-    if (released_group_.empty() || name == released_group_) {
+    if (assumed_fld_group_.empty() || name == assumed_fld_group_) {
         return false;
     }
     if (schedule_.hasWell(name, report_step_)) {
@@ -307,7 +307,7 @@ isReleasedGroupMember(const std::string& name)
         return false;
     }
     std::string current = parent(name);
-    while (current != released_group_) {
+    while (current != assumed_fld_group_) {
         if (current == "FIELD" || current.empty() || !this->hasFieldOrNoneControl(current)) {
             return false;
         }
@@ -318,33 +318,33 @@ isReleasedGroupMember(const std::string& name)
 
 template<typename Scalar, typename IndexTraits>
 bool FractionCalculator<Scalar, IndexTraits>::
-isReleasedGroupOrAncestor(const std::string& group_name)
+isAssumedFldGroupOrAncestor(const std::string& group_name)
 {
-    if (released_group_.empty()) {
+    if (assumed_fld_group_.empty()) {
         return false;
     }
-    std::string current = released_group_;
+    std::string current = assumed_fld_group_;
     while (current != group_name && current != "FIELD" && !current.empty()) {
         current = parent(current);
     }
     return current == group_name;
 }
 
-// Number of wells below the given group (the released group or one of its members) that
-// would be under group control if the released group was switched to FLD.
+// Number of wells below the given group (the assumed FLD group or one of its members) that
+// would be under group control if the assumed FLD group was switched to FLD.
 template<typename Scalar, typename IndexTraits>
 int FractionCalculator<Scalar, IndexTraits>::
-releasedGroupControlledWells(const std::string& group_name)
+assumedFldGroupControlledWells(const std::string& group_name)
 {
     const Group& group = schedule_.getGroup(group_name, report_step_);
     int num_wells = 0;
     for (const std::string& child_group : group.groups()) {
-        if (this->isReleasedGroupMember(child_group)) {
-            num_wells += this->releasedGroupControlledWells(child_group);
+        if (this->isAssumedFldGroupMember(child_group)) {
+            num_wells += this->assumedFldGroupControlledWells(child_group);
         }
     }
     for (const std::string& child_well : group.wells()) {
-        if (this->isReleasedGroupMember(child_well)) {
+        if (this->isAssumedFldGroupMember(child_well)) {
             ++num_wells;
         }
     }
