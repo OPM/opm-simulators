@@ -156,7 +156,7 @@ public:
     {
         DeferredLogger local_deferredLogger;
 
-        // Tracers of the same phase and with the same diffusion coefficient (TRDIFxxx) are
+        // Tracers of the same phase and with the same diffusion coefficients (TRDIFxxx) are
         // solved together in a batch, with a common system matrix and separate right-hand
         // sides. Tracers with different diffusion coefficients get separate batches.
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
@@ -180,12 +180,16 @@ public:
                 }
             }
 
+            // Molecular diffusion coefficients of the free tracer and of the tracer in solution
+            // (TRDIFxxx). Tracers without solution part (e.g. water tracers) only have the free one.
             const auto& tracerConfig = this->eclState_.tracer()[tracerIdx];
-            const Scalar D = tracerConfig.free_diffusion_coefficient;
-            const std::string diffKeyword = "TRDIF" + this->name(tracerIdx);
-            if (D != 0.0 || tracerConfig.solution_diffusion_coefficient != 0.0) {
+            const Scalar freeD = tracerConfig.free_diffusion_coefficient;
+            const Scalar solutionD = hasSolutionPart_(phaseIdx) ? tracerConfig.solution_diffusion_coefficient
+                                                                : freeD;
+            if (freeD != 0.0 || solutionD != 0.0) {
                 // The diffusion of the tracers needs the diffusivity of the faces, which is only
                 // available if diffusion is compiled in and activated with DIFFUSE.
+                const std::string diffKeyword = "TRDIF" + this->name(tracerIdx);
                 if constexpr (!enableDiffusion) {
                     throw std::runtime_error(diffKeyword + " is given for tracer " + this->name(tracerIdx) +
                                              ", but this simulator was built without diffusion");
@@ -195,19 +199,18 @@ public:
                                              ", which requires the DIFFUSE keyword");
                 }
             }
-            // The solution tracer is solved with the same diffusion coefficient as the free tracer
-            if (hasSolutionPart_(phaseIdx) &&
-                tracerConfig.solution_diffusion_coefficient != tracerConfig.free_diffusion_coefficient) {
-                throw std::runtime_error(diffKeyword + ": a diffusion coefficient of the tracer in solution "
-                                         "that differs from the one of the free tracer is not supported");
-            }
             auto batch = std::ranges::find_if(this->tbatch,
-                                              [phaseIdx, D](const auto& tr)
-                                              { return tr.phaseIdx_ == phaseIdx && tr.diffusionCoefficient_ == D; });
+                                              [phaseIdx, freeD, solutionD](const auto& tr)
+                                              {
+                                                  return tr.phaseIdx_ == phaseIdx &&
+                                                         tr.freeDiffusionCoefficient_ == freeD &&
+                                                         tr.solutionDiffusionCoefficient_ == solutionD;
+                                              });
             if (batch == this->tbatch.end()) {
                 this->tbatch.emplace_back(phaseIdx);
                 batch = std::prev(this->tbatch.end());
-                batch->diffusionCoefficient_ = D;
+                batch->freeDiffusionCoefficient_ = freeD;
+                batch->solutionDiffusionCoefficient_ = solutionD;
             }
             batch->addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
 
@@ -582,24 +585,29 @@ protected:
         const auto& [sFlux, isUpS] = computeFlux_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
 
         // Fickian coefficients of the free and the solution tracer: diffusion (the geometric diffusivity
-        // scaled by the molecular diffusion coefficient of the tracer batch, TRDIFxxx) plus dispersion
-        // (DISPERC). Only evaluated if diffusion or dispersion is active, as this requires extra
-        // quantities for every face.
-        const bool hasDiffusion = enableDiffusion && tr.diffusionCoefficient_ != 0.0;
+        // scaled by the molecular diffusion coefficient of the free and the solution tracer of the
+        // batch, TRDIFxxx) plus dispersion (DISPERC). Only evaluated if diffusion or dispersion is
+        // active, as this requires extra quantities for every face.
+        const bool hasSolutionPart = hasSolutionPart_(tr.phaseIdx_);
         const bool hasDispersion = enableDispersion && this->dispersionActive_;
-        const bool hasFickian = hasDiffusion || hasDispersion;
-        const bool hasFickianSolution = hasFickian && hasSolutionPart_(tr.phaseIdx_);
+        const bool hasDiffusionFree = enableDiffusion && tr.freeDiffusionCoefficient_ != 0.0;
+        const bool hasDiffusionSolution = enableDiffusion && hasSolutionPart &&
+                                          tr.solutionDiffusionCoefficient_ != 0.0;
+        const bool hasFickianFree = hasDiffusionFree || hasDispersion;
+        const bool hasFickianSolution = hasDiffusionSolution || (hasDispersion && hasSolutionPart);
         TracerEvaluation fickianFree = 0.0;
         TracerEvaluation fickianSolution = 0.0;
-        if (hasDiffusion) {
-            fickianFree += computeDiffusivity_<Free>(tr.phaseIdx_, elemCtx, scvfIdx, 0) * tr.diffusionCoefficient_;
-            if (hasFickianSolution) {
-                fickianSolution += computeDiffusivity_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0) * tr.diffusionCoefficient_;
-            }
+        if (hasDiffusionFree) {
+            fickianFree += computeDiffusivity_<Free>(tr.phaseIdx_, elemCtx, scvfIdx, 0) *
+                           tr.freeDiffusionCoefficient_;
+        }
+        if (hasDiffusionSolution) {
+            fickianSolution += computeDiffusivity_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0) *
+                               tr.solutionDiffusionCoefficient_;
         }
         if (hasDispersion) {
             fickianFree += computeDispersivity_<Free>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
-            if (hasFickianSolution) {
+            if (hasSolutionPart) {
                 fickianSolution += computeDispersivity_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
             }
         }
@@ -614,7 +622,7 @@ protected:
             tr.residual_[tIdx][I][Solution] += sFlux.value()*tr.concentration_[tIdx][sGlobalUpIdx][Solution]; // residual + flux
 
             // Fickian flux J = -(D + D_disp) * grad(c), implicit in the tracer concentration
-            if (hasFickian) {
+            if (hasFickianFree) {
                 const Scalar gradientFree = tr.concentration_[tIdx][J][Free] - tr.concentration_[tIdx][I][Free];
                 tr.residual_[tIdx][I][Free] -= fickianFree.value() * gradientFree;
             }
@@ -642,7 +650,7 @@ protected:
 
         // Diffusion and dispersion: d(residual_I)/d(c_I) = +D and d(residual_I)/d(c_J) = -D,
         // for every face irrespective of the flow direction.
-        if (hasFickian) {
+        if (hasFickianFree) {
             (*tr.mat)[I][I][Free][Free] += fickianFree.derivative(0);
             (*tr.mat)[I][J][Free][Free] -= fickianFree.derivative(0);
         }
@@ -1508,8 +1516,10 @@ protected:
         std::vector<TV> storageOfTimeIndex1_;
         std::vector<TV> residual_;
         std::unique_ptr<TracerMatrix> mat;
-        // Molecular diffusion coefficient [m2/s] (TRDIFxxx), common to all tracers in the batch
-        Scalar diffusionCoefficient_ = 0.0;
+        // Molecular diffusion coefficients [m2/s] of the free tracer and of the tracer in solution
+        // (TRDIFxxx), common to all tracers in the batch
+        Scalar freeDiffusionCoefficient_ = 0.0;
+        Scalar solutionDiffusionCoefficient_ = 0.0;
         // Change of the free and solution volume of the phase of the batch in the current time step
         std::array<std::vector<Scalar>, 2> dVol_;
 

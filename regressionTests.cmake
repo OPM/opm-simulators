@@ -2967,6 +2967,23 @@ add_test_compareECLFiles(
 
 add_test_compareECLFiles(
   CASENAME
+    diff2_gt_tracer_solution
+  FILENAME
+    DIFF2_GT_TRACER_SOLUTION
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gasoildiffuse
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    tracer
+)
+
+add_test_compareECLFiles(
+  CASENAME
     tracer_multiphase
   FILENAME
     TRACER_2WT_2GT
