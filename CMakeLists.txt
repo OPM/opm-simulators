@@ -378,6 +378,7 @@ macro(opm-simulators_sources_hook)
       tests/gpuistl/test_gpuLiveOilPvt.cu
       tests/gpuistl/test_gpuTabulatedFunctions.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
+      tests/gpuistl/test_gpuBlackOilFluidSystemSpe1.cu
       tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_GpuSparseTable.cu
       tests/gpuistl/test_MiniMatrix.cu
@@ -518,6 +519,7 @@ macro(opm-simulators_tests_hook)
                  gpu_safe_call
                  gpu_smart_pointers
                  gpuBlackOilFluidSystem
+                 gpuBlackOilFluidSystemSpe1
                  GpuBuffer
                  gpuConstantCompressibilityWaterPvt
                  GpuDILU
