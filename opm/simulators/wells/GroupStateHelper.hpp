@@ -206,6 +206,29 @@ public:
 
     void accumulateGroupEfficiencyFactor(const Group& group, Scalar& factor) const;
 
+    /// @brief Check whether a well or group violates an injection constraint of an ancestor group.
+    /// @details Starting at @p group, the group tree is traversed upwards while the groups are
+    ///          under FLD or NONE control and available for higher level control. The rate of
+    ///          @p name is then checked against its guide rate share of the target of the first
+    ///          group found with a control of its own.
+    /// @param name Name of the well or group to check.
+    /// @param parent Name of the group @p name belongs to. Unchanged in the recursion.
+    /// @param group Group to check; the parent of @p name in the initial call, and an ancestor
+    ///        further up in the recursion.
+    /// @param rates Surface injection rates of @p name for all active phases. For a group, the
+    ///        rates available for higher level control, i.e. the group rates minus its reduction
+    ///        rates, or the full group rates if @p assume_fld_control is true.
+    /// @param injection_phase Injection phase to check.
+    /// @param efficiency_factor Efficiency factor of @p name, accumulated with the efficiency
+    ///        factors of the groups between @p name and @p group.
+    /// @param resv_coeff Coefficients converting surface rates to reservoir rates.
+    /// @param check_guide_rate Whether to also check if @p name exceeds the guide rate fraction
+    ///        of any group between it and the controlling group.
+    /// @param assume_fld_control If true, @p name is a group on individual control without
+    ///        group controlled wells, and its guide rate share is computed as if it was under FLD
+    ///        control with all its wells under group control.
+    /// @return Whether a constraint is violated, and the factor by which the rate of @p name
+    ///         must be scaled to honour it.
     std::pair<bool, Scalar> checkGroupConstraintsInj(const std::string& name,
                                                      const std::string& parent,
                                                      const Group& group,
@@ -213,7 +236,8 @@ public:
                                                      const Phase injection_phase,
                                                      const Scalar efficiency_factor,
                                                      const std::vector<Scalar>& resv_coeff,
-                                                     const bool check_guide_rate) const;
+                                                     const bool check_guide_rate,
+                                                     const bool assume_fld_control = false) const;
 
     std::pair<bool, Scalar> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,
