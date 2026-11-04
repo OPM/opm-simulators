@@ -67,7 +67,8 @@ namespace Properties
     template <class TypeTag, template <class> class Storage>
     struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyProblemGPUTrue<Storage>> {
         using type = Opm::
-            BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage>;
+            BlackOilFluidSystemNonStatic<double, Opm::BlackOilDefaultFluidSystemIndices, Storage,
+                                         Opm::Co2StorePvtApproaches>;
     };
 } // namespace Properties
 

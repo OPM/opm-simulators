@@ -178,7 +178,8 @@ struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyKernelBaseGPU>
     using type = ::Opm::BlackOilFluidSystemNonStatic<
         GetPropType<TTag::FlowProblem, Properties::Scalar>,
         ::Opm::BlackOilDefaultFluidSystemIndices,
-        ::Opm::gpuistl::GpuView>;
+        ::Opm::gpuistl::GpuView,
+        ::Opm::Co2StorePvtApproaches>;
 };
 
 template <class TypeTag>
@@ -187,7 +188,8 @@ struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyDummyProblemGPU>
     using type = ::Opm::BlackOilFluidSystemNonStatic<
         GetPropType<TTag::FlowProblem, Properties::Scalar>,
         ::Opm::BlackOilDefaultFluidSystemIndices,
-        ::Opm::gpuistl::GpuView>;
+        ::Opm::gpuistl::GpuView,
+        ::Opm::Co2StorePvtApproaches>;
 };
 
 // -----------------------------------------------------------------------

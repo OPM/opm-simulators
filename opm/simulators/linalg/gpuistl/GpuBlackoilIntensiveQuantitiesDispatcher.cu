@@ -84,7 +84,8 @@ using DispatcherCpuFluidSystem = Opm::BlackOilFluidSystem<DispatcherScalar>;
 using DispatcherFluidSystemView
     = Opm::BlackOilFluidSystemNonStatic<DispatcherScalar,
                                         Opm::BlackOilDefaultFluidSystemIndices,
-                                        Opm::gpuistl::GpuView>;
+                                        Opm::gpuistl::GpuView,
+                                        Opm::Co2StorePvtApproaches>;
 
 using DispatcherGpuPrimaryVariables
     = Opm::BlackOilPrimaryVariables<DispatcherGpuTag, Opm::gpuistl::MiniVector>;
@@ -238,7 +239,8 @@ struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     using DynamicCpuFluidSystem
         = std::remove_reference_t<decltype(DispatcherCpuFluidSystem::getNonStaticInstance())>;
     using FluidSystemBuffer
-        = decltype(Opm::gpuistl::copy_to_gpu(std::declval<DynamicCpuFluidSystem&>()));
+        = decltype(Opm::gpuistl::copy_to_gpu<typename DispatcherFluidSystemView::PvtApproachesType>(
+            std::declval<DynamicCpuFluidSystem&>()));
     using ManagedFluidSystemView
         = std::unique_ptr<DispatcherFluidSystemView,
                           Opm::gpuistl::GpuManagedDeleter<DispatcherFluidSystemView>>;
@@ -287,7 +289,8 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
         // would retain the first deck's PVT tables across later simulations.
         impl_->fluidSystemBuffer
             = std::make_unique<typename Impl::FluidSystemBuffer>(
-                Opm::gpuistl::copy_to_gpu(dynamicCpuFluidSystem));
+                Opm::gpuistl::copy_to_gpu<typename DispatcherFluidSystemView::PvtApproachesType>(
+                    dynamicCpuFluidSystem));
         auto fsView = Opm::gpuistl::make_view(*impl_->fluidSystemBuffer);
 
         impl_->managedFluidSystemView
