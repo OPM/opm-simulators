@@ -156,7 +156,7 @@ public:
     {
         DeferredLogger local_deferredLogger;
 
-        // Tracers of the same phase and with the same diffusion coefficient (TRCDIFF) are
+        // Tracers of the same phase and with the same diffusion coefficient (TRDIFxxx) are
         // solved together in a batch, with a common system matrix and separate right-hand
         // sides. Tracers with different diffusion coefficients get separate batches.
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
@@ -180,18 +180,26 @@ public:
                 }
             }
 
-            const Scalar D = this->eclState_.tracer()[tracerIdx].diffusion_coefficient;
-            if (D != 0.0) {
+            const auto& tracerConfig = this->eclState_.tracer()[tracerIdx];
+            const Scalar D = tracerConfig.free_diffusion_coefficient;
+            const std::string diffKeyword = "TRDIF" + this->name(tracerIdx);
+            if (D != 0.0 || tracerConfig.solution_diffusion_coefficient != 0.0) {
                 // The diffusion of the tracers needs the diffusivity of the faces, which is only
                 // available if diffusion is compiled in and activated with DIFFUSE.
                 if constexpr (!enableDiffusion) {
-                    throw std::runtime_error("TRCDIFF is given for tracer " + this->name(tracerIdx) +
+                    throw std::runtime_error(diffKeyword + " is given for tracer " + this->name(tracerIdx) +
                                              ", but this simulator was built without diffusion");
                 }
                 if (!this->eclState_.getSimulationConfig().isDiffusive()) {
-                    throw std::runtime_error("TRCDIFF is given for tracer " + this->name(tracerIdx) +
+                    throw std::runtime_error(diffKeyword + " is given for tracer " + this->name(tracerIdx) +
                                              ", which requires the DIFFUSE keyword");
                 }
+            }
+            // The solution tracer is solved with the same diffusion coefficient as the free tracer
+            if (hasSolutionPart_(phaseIdx) &&
+                tracerConfig.solution_diffusion_coefficient != tracerConfig.free_diffusion_coefficient) {
+                throw std::runtime_error(diffKeyword + ": a diffusion coefficient of the tracer in solution "
+                                         "that differs from the one of the free tracer is not supported");
             }
             auto batch = std::ranges::find_if(this->tbatch,
                                               [phaseIdx, D](const auto& tr)
@@ -435,7 +443,7 @@ protected:
      * @brief Diffusive coefficient of a face for the Fickian flux
      *        J = -D_mol * A * diffusivity * w * (c_J - c_I). The geometric (porosity weighted)
      *        face diffusivity multiplies the molecular diffusion coefficient D_mol of the tracer
-     *        (TRCDIFF), and w is the face average of the saturation times the inverse formation
+     *        (TRDIFxxx), and w is the face average of the saturation times the inverse formation
      *        volume factor of the carrier phase of the tracer (see carrierFraction_()). The
      *        coefficient is zero unless the carrier is present in both cells (see carrierPresent_()).
      */
@@ -574,7 +582,7 @@ protected:
         const auto& [sFlux, isUpS] = computeFlux_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
 
         // Fickian coefficients of the free and the solution tracer: diffusion (the geometric diffusivity
-        // scaled by the molecular diffusion coefficient of the tracer batch, TRCDIFF) plus dispersion
+        // scaled by the molecular diffusion coefficient of the tracer batch, TRDIFxxx) plus dispersion
         // (DISPERC). Only evaluated if diffusion or dispersion is active, as this requires extra
         // quantities for every face.
         const bool hasDiffusion = enableDiffusion && tr.diffusionCoefficient_ != 0.0;
@@ -1500,7 +1508,7 @@ protected:
         std::vector<TV> storageOfTimeIndex1_;
         std::vector<TV> residual_;
         std::unique_ptr<TracerMatrix> mat;
-        // Molecular diffusion coefficient [m2/s] (TRCDIFF), common to all tracers in the batch
+        // Molecular diffusion coefficient [m2/s] (TRDIFxxx), common to all tracers in the batch
         Scalar diffusionCoefficient_ = 0.0;
         // Change of the free and solution volume of the phase of the batch in the current time step
         std::array<std::vector<Scalar>, 2> dVol_;
