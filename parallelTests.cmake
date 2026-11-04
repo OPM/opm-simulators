@@ -1066,6 +1066,26 @@ add_test_compare_parallel_simulation(
 
 add_test_compare_parallel_simulation(
   CASENAME
+    winjdam_gas_msw
+  FILENAME
+    WINJDAM_GAS_MSW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    ${rel_tol_parallel}
+  DIR
+    winjdam
+  TEST_ARGS
+    --enable-tuning=true
+    --linear-solver-reduction=1e-7
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     3_a_mpi_multflt_mod2
   FILENAME
     3_A_MPI_MULTFLT_SCHED_MODEL2
