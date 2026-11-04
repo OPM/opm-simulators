@@ -43,7 +43,8 @@ struct ConnFractureData {
         serializer(inj_pressure);
         serializer(inj_bhp);
         serializer(inj_wellrate);
-        serializer(water_rate);
+        serializer(injected_rate);
+        serializer(injected_phase);
     }
 
     static ConnFractureData serializationTestObject();
@@ -62,7 +63,11 @@ struct ConnFractureData {
     std::vector<Scalar> inj_pressure;
     std::vector<Scalar> inj_bhp;
     std::vector<Scalar> inj_wellrate;
-    std::vector<Scalar> water_rate;
+    //! Surface rate of the injected phase routed into the fracture.
+    std::vector<Scalar> injected_rate;
+    //! Canonical index of the injected phase, -1 until a fracture split
+    //! has been computed for the well.
+    int injected_phase{-1};
 };
 
 }

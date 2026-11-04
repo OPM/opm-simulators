@@ -21,20 +21,23 @@
 #define OPM_WELL_FRACTURE_FLOW_SPLIT_HPP_INCLUDED
 
 #include <opm/material/common/MathToolbox.hpp>
+#include <opm/simulators/wells/InjectedPhase.hpp>
 
 #include <cassert>
 
 namespace Opm {
 
-/// Split each injector connection's water flow between the matrix and a
+/// Split each injector connection's flow of the injected phase (water, gas
+/// or oil) between the matrix and a
 /// fracture crossing the connection, based on the ratio of the regular
 /// connection transmissibility to the fracture contribution registered via
 /// WellInterfaceGeneric::addFracturePerforations().
 ///
 /// Fills, per connection, the filtrate flow factor (matrix share) and the
-/// fracture water rate, and accumulates the total fracture-routed rate of
-/// the well (SingleWellState::frac_rate).  Wells without registered
-/// fracture contributions are skipped.
+/// fracture rate of the injected phase (surface volumes), and accumulates the
+/// total fracture-routed rate of the well (SingleWellState::frac_rate).
+/// Wells without registered fracture contributions, and MULTI injectors,
+/// are skipped.
 template <class FluidSystem, class Scalar, class Simulator,
           class WellContainer, class WellState>
 void updateWellFractureFlowSplit(const Simulator& simulator,
@@ -52,6 +55,12 @@ void updateWellFractureFlowSplit(const Simulator& simulator,
             continue; // no fracture crosses this well
         }
 
+        const auto inj_type = well->wellEcl().injectorType();
+        const auto inj_phase = injectedActivePhaseIdx(well->phaseUsage(), inj_type);
+        if (!inj_phase.has_value()) {
+            continue; // MULTI injector or injected phase not active
+        }
+
         const auto& wellstate_nupcol = nupcol_well_state.well(well->indexOfWell());
         auto& single_wellstate = well_state.well(well->indexOfWell());
         auto& perf_data = single_wellstate.perf_data;
@@ -60,6 +69,9 @@ void updateWellFractureFlowSplit(const Simulator& simulator,
 
         const int nperf = static_cast<int>(well->wellIndex().size());
         assert(static_cast<int>(fracture_indices.size()) == nperf);
+        using IndexTraits = typename FluidSystem::IndexTraitsType;
+        fracture_data.injected_phase =
+            static_cast<int>(*injectedCanonicalPhaseIdx<IndexTraits>(inj_type));
 
         Scalar total_flow_fracture = 0.0;
         const int np = well_state.numPhases();
@@ -78,12 +90,12 @@ void updateWellFractureFlowSplit(const Simulator& simulator,
             const Scalar fracture_wi = fracture_indices[perf].wellIndex(perf_pressure);
             const Scalar effective_wi = matrix_wi + fracture_wi;
 
-            auto& fracture_rate = fracture_data.water_rate[perf];
+            auto& fracture_rate = fracture_data.injected_rate[perf];
             if (effective_wi > 0.0) {
                 const Scalar matrix_frac = matrix_wi / effective_wi;
                 filtrate_data.flow_factor[perf] = matrix_frac;
                 fracture_rate = (1.0 - matrix_frac)
-                    * perf_data.phase_rates[perf*np + FluidSystem::waterPhaseIdx];
+                    * perf_data.phase_rates[perf*np + *inj_phase];
                 total_flow_fracture += fracture_rate;
             }
             else {
