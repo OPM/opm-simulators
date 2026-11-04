@@ -23,6 +23,7 @@
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
 #include <opm/grid/utility/RegionMapping.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
@@ -117,86 +118,117 @@ namespace Opm {
                     attributes_hpv.insert({reg, Attributes()});
                 }
 
-                ElementContext elemCtx( simulator );
                 const auto& gridView = simulator.gridView();
                 const auto& comm = gridView.comm();
-
-                OPM_BEGIN_PARALLEL_TRY_CATCH();
-                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& fs = intQuants.fluidState();
-                    // use pore volume weighted averages.
-                    const Scalar pv_cell =
-                            simulator.model().dofTotalVolume(simulator.vanguard().gridEquilIdxToGridIdx(cellIdx))
-                            * intQuants.porosity().value();
-
-                    // only count oil and gas filled parts of the domain
-                    Scalar hydrocarbon = 1.0;
-                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
-                    }
-
-                    const int reg = rmap_.region(cellIdx);
-                    assert(reg >= 0);
-
-                    // sum p, rs, rv, and T.
-                    const Scalar hydrocarbonPV = pv_cell*hydrocarbon;
-                    if (hydrocarbonPV > 0.) {
-                        auto& attr = attributes_hpv[reg];
-                        attr.pv += hydrocarbonPV;
-                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                            attr.rs += fs.Rs().value() * hydrocarbonPV;
-                            attr.rv += fs.Rv().value() * hydrocarbonPV;
-                        }
-                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
-                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
-                        } else {
-                            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-                            attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
-                            attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
-                        }
-                        attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
-                        if (FluidSystem::enableDissolvedGasInWater()) {
-                            attr.rsw += fs.Rsw().value() * hydrocarbonPV; // scale with total volume?
-                        }
-                        if (FluidSystem::enableVaporizedWater()) {
-                            attr.rvw += fs.Rvw().value() * hydrocarbonPV; // scale with total volume?
-                        }
-                    }
-
-                    if (pv_cell > 0.) {
-                        auto& attr = attributes_pv[reg];
-                        attr.pv += pv_cell;
-                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                            attr.rs += fs.Rs().value() * pv_cell;
-                            attr.rv += fs.Rv().value() * pv_cell;
-                        }
-                        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
-                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
-                        } else {
-                            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-                            attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
-                            attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
-                        }
-                        attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
-                        if (FluidSystem::enableDissolvedGasInWater()) {
-                            attr.rsw += fs.Rsw().value() * pv_cell;
-                        }
-                        if (FluidSystem::enableVaporizedWater()) {
-                            attr.rvw += fs.Rvw().value() * pv_cell;
-                        }
+                // The region attributes are updated independently by each thread.
+                std::vector<decltype(attributes_pv)> threadPv(ThreadManager::maxThreads());
+                std::vector<decltype(attributes_hpv)> threadHpv(ThreadManager::maxThreads());
+                for (unsigned thread = 0; thread < ThreadManager::maxThreads(); ++thread) {
+                    for (const auto& reg : rmap_.activeRegions()) {
+                        threadPv[thread].emplace(reg, Attributes());
+                        threadHpv[thread].emplace(reg, Attributes());
                     }
                 }
 
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+                simulator.model().withInteriorElementChunks([&](const auto& chunks) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+                    for (const auto& chunk : chunks) {
+                        ElementContext elemCtx(simulator);
+                        auto& localPv = threadPv[ThreadManager::threadId()];
+                        auto& localHpv = threadHpv[ThreadManager::threadId()];
+                        for (const auto& elem : chunk) {
+                            elemCtx.updatePrimaryStencil(elem);
+                            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                            const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                            const auto& fs = intQuants.fluidState();
+                            // use pore volume weighted averages.
+                            const Scalar pv_cell =
+                                    simulator.model().dofTotalVolume(simulator.vanguard().gridEquilIdxToGridIdx(cellIdx))
+                                    * intQuants.porosity().value();
+
+                            // only count oil and gas filled parts of the domain
+                            Scalar hydrocarbon = 1.0;
+                            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                                hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
+                            }
+
+                            const int reg = rmap_.region(cellIdx);
+                            assert(reg >= 0);
+
+                            // sum p, rs, rv, and T.
+                            const Scalar hydrocarbonPV = pv_cell*hydrocarbon;
+                            if (hydrocarbonPV > 0.) {
+                                auto& attr = localHpv[reg];
+                                attr.pv += hydrocarbonPV;
+                                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                                    attr.rs += fs.Rs().value() * hydrocarbonPV;
+                                    attr.rv += fs.Rv().value() * hydrocarbonPV;
+                                }
+                                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                                    attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                                    attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                                } else {
+                                    assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+                                    attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
+                                    attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
+                                }
+                                attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
+                                if (FluidSystem::enableDissolvedGasInWater()) {
+                                    attr.rsw += fs.Rsw().value() * hydrocarbonPV; // scale with total volume?
+                                }
+                                if (FluidSystem::enableVaporizedWater()) {
+                                    attr.rvw += fs.Rvw().value() * hydrocarbonPV; // scale with total volume?
+                                }
+                            }
+
+                            if (pv_cell > 0.) {
+                                auto& attr = localPv[reg];
+                                attr.pv += pv_cell;
+                                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                                    attr.rs += fs.Rs().value() * pv_cell;
+                                    attr.rv += fs.Rv().value() * pv_cell;
+                                }
+                                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                                    attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                                    attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                                } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                                     attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
+                                     attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
+                                } else {
+                                    assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+                                    attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
+                                    attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
+                                }
+                                attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
+                                if (FluidSystem::enableDissolvedGasInWater()) {
+                                    attr.rsw += fs.Rsw().value() * pv_cell;
+                                }
+                                if (FluidSystem::enableVaporizedWater()) {
+                                    attr.rvw += fs.Rvw().value() * pv_cell;
+                                }
+                            }
+                        }
+                    }
+                });
+
                 OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ", simulator.vanguard().grid().comm());
+
+                for (unsigned thread = 0; thread < ThreadManager::maxThreads(); ++thread) {
+                    for (const auto& reg : rmap_.activeRegions()) {
+                        const auto& pv = threadPv[thread].at(reg);
+                        const auto& hpv = threadHpv[thread].at(reg);
+                        auto& pvTotal = attributes_pv.at(reg);
+                        auto& hpvTotal = attributes_hpv.at(reg);
+                        for (std::size_t i = 0; i < pv.data.size(); ++i) {
+                            pvTotal.data[i] += pv.data[i];
+                            hpvTotal.data[i] += hpv.data[i];
+                        }
+                    }
+                }
 
                 this->sumRates(attributes_hpv,
                                attributes_pv,
