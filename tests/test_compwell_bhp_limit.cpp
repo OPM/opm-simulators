@@ -308,3 +308,48 @@ TSTEP
         }
     }
 }
+
+// A second injector next to the first one, at a higher BHP limit, pushes the
+// first one's cell above its limit during a time step. The first injector
+// should stop in that time step rather than produce.
+BOOST_AUTO_TEST_CASE(InjectorStopsInTheTimeStepItsCellRisesAboveItsLimit)
+{
+    const Opm::TemporaryDirectory dir("compwell_bhp_limit_injector_neighbour");
+
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "INJECTOR_NEIGHBOUR", deck(R"(WELSPECS
+INJ2 FIELD 2 1 1* GAS /
+/
+COMPDAT
+INJ2 2 1 1 1 OPEN 2* 0.0151 /
+/
+WINJGAS
+INJ2 STREAM ISTR /
+/
+WCONINJE
+INJ2 GAS OPEN BHP 10000000 1* 300 /
+/
+TSTEP
+10*0.1 /
+)"));
+    const auto& time = smry.get("TIME");
+    const auto& cell_pressure = smry.get("BPR:1,1,1");
+
+    // The injector flows until its neighbour opens, and its cell then rises
+    // above its limit.
+    BOOST_REQUIRE_GT(time.size(), first_step);
+    BOOST_CHECK_GT(smry.get("WGIR:INJ")[first_step - 1], 1.0f);
+    BOOST_CHECK_LT(cell_pressure[first_step - 1], 150.0f);
+    BOOST_CHECK_GT(cell_pressure.back(), 150.0f);
+
+    for (auto step = first_step; step < time.size(); ++step) {
+        BOOST_TEST_CONTEXT("injector at day " << time[step]) {
+            BOOST_CHECK_SMALL(smry.get("WOPR:INJ")[step], 1.0e-6f);
+            BOOST_CHECK_SMALL(smry.get("WGPR:INJ")[step], 1.0e-6f);
+            if (cell_pressure[step] > 150.0f) {
+                BOOST_CHECK_SMALL(smry.get("WOIR:INJ")[step], 1.0e-6f);
+                BOOST_CHECK_SMALL(smry.get("WGIR:INJ")[step], 1.0e-6f);
+                BOOST_CHECK_EQUAL(smry.get("WSTAT:INJ")[step], wstat_stop);
+            }
+        }
+    }
+}

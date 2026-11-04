@@ -188,7 +188,12 @@ updateSurfaceQuantities(const Simulator& simulator)
     if constexpr (waterEnabled) {
         surface_water_density = tables.getDensityTable()[this->pvt_region_idx_].water;
     }
-    if (this->isWaterInjector_()) {
+    // The surface fluid is the upstream one: the injection stream while an
+    // injector injects, and the wellbore fluid while it produces. Otherwise the
+    // reservoir fluid a producing injector takes in could not leave the wellbore.
+    const bool injecting = this->well_ecl_.isInjector()
+        && getValue(this->primary_variables_.getTotalRate()) >= 0.;
+    if (injecting && this->isWaterInjector_()) {
         // The stream is water alone, so the hydrocarbon surface split carries
         // no weight and needs no flash.
         if constexpr (waterEnabled) {
@@ -197,7 +202,7 @@ updateSurfaceQuantities(const Simulator& simulator)
                 = surface_water_density;
             this->surface_conditions_.volume_fractions_[FluidSystem::waterPhaseIdx] = 1.;
         }
-    } else if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
+    } else if (injecting) { // we look for well stream for injection composition
         const auto& schedule_state = simulator.vanguard().schedule()[simulator.episodeIndex()];
         const auto& inj_composition
             = SingleWellState::injectionStream(schedule_state, this->well_ecl_);
