@@ -47,6 +47,7 @@
 #include <opm/simulators/aquifers/NumericalAquiferAuxCells.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
+#include <opm/simulators/flow/FluxParameters.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
@@ -754,6 +755,13 @@ public:
         }
 
         this->readBoundaryConditions_();
+
+        if (const auto* fluxData = this->fluxBoundaryData_(); fluxData != nullptr) {
+            const auto& actions = fluxData->parentActions;
+            this->actionHandler_.setupFluxActionReplay(actions.names, actions.times,
+                                                       actions.wellCount, actions.wells,
+                                                       Parameters::Get<Parameters::FluxReplayActions>());
+        }
 
         // compute and set eq weights based on initial b values
         this->computeAndSetEqWeights_();

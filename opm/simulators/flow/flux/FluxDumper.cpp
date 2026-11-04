@@ -169,6 +169,11 @@ void FluxDumper::setParentWells(EclIO::FluxFile::ParentWells parentWells)
     this->data_.parentWells = std::move(parentWells);
 }
 
+void FluxDumper::setParentActions(EclIO::FluxFile::ParentActions parentActions)
+{
+    this->data_.parentActions = std::move(parentActions);
+}
+
 std::vector<double> FluxDumper::aggregateRates(
     const Sampling sampling,
     const std::vector<std::vector<double>>& rateSnapshots,

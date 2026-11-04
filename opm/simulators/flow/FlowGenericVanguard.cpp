@@ -509,6 +509,17 @@ void FlowGenericVanguard::registerParameters_()
          "are merged into their neighbours like pinched cells, and corner points "
          "closer than this along a pillar become one node. The PINCH threshold "
          "is used when it is larger.");
+    Parameters::Register<Parameters::FluxReplayActions>
+        ("In a USEFLUX (sector) run, trigger each ACTIONX whose condition reads "
+         "quantities the sector cannot compute itself (field, group and region "
+         "quantities, wells and cells outside the sector, and UDQs of these) when "
+         "the parent run triggered it, with the wells it matched, as recorded in "
+         "the FLUX file by make_flux. The others are evaluated as usual. When "
+         "false, every ACTIONX condition is evaluated in the sector run.");
+    Parameters::Register<Parameters::FluxFprAsFprflux>
+        ("In a USEFLUX (sector) run, evaluate FPR as FPRFLUX, the field pressure "
+         "averaged over the whole parent model, in UDQ definitions and ACTIONX "
+         "conditions. The FPR summary vector is still the parent's.");
     Parameters::Register<Parameters::LgrBackend>
         ("How LGRs are refined: 'conforming' (default), the corner-point "
          "builder that also handles graded boxes, block MINPV, faults and "

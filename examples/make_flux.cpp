@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -54,6 +55,8 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <ctime>
+#include <regex>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -78,6 +81,8 @@ struct Options {
     std::string mode = "pressure";
     std::string sampling = "averaged";
     std::string summary;
+    std::string parentPrt;
+    bool noParentActions = false;
     std::string parsingStrictness = "normal";
     std::vector<std::string> summaryDefines;
     double summaryMinInterval = 0.0;    //!< Days; zero keeps every summary step.
@@ -166,6 +171,11 @@ void printUsage()
         << "                                       --smry-define=WBHP:P1,WBHP:P2 and\n"
         << "                                       --smry-define=WBHP:P1,50.0 are valid.\n"
         << "                                       Repeatable.\n"
+        << "  --parent-prt=<CASE.PRT>              The parent's PRT file, from which the\n"
+        << "                                       ACTIONX it triggered are recorded, for a\n"
+        << "                                       sector run to replay (default: the PRT\n"
+        << "                                       next to the parent).\n"
+        << "  --no-parent-actions                  Do not record the parent's ACTIONX.\n"
         << "  --no-summary                         Ignore SMSPEC/FSMSPEC summary data\n"
         << "  --summary-min-interval=<days>        Thin the embedded summary to samples at\n"
         << "                                       least this far apart, plus every report\n"
@@ -213,6 +223,12 @@ Options parseOptions(int argc, char** argv)
         }
         else if (startsWith(arg, "--parent=")) {
             opt.parent = valueAfterEquals(arg);
+        }
+        else if (startsWith(arg, "--parent-prt=")) {
+            opt.parentPrt = valueAfterEquals(arg);
+        }
+        else if (arg == "--no-parent-actions") {
+            opt.noParentActions = true;
         }
         else if (startsWith(arg, "--mapping=")) {
             opt.mapping = valueAfterEquals(arg);
@@ -392,6 +408,66 @@ std::optional<fs::path> latestSeparateRestart(const fs::path& rootPath,
     }
 
     return latest;
+}
+
+//! The ACTIONX the parent triggered, from the messages in its PRT file:
+//!   Action NAME triggered at DD-Mon-YYYY HH:MM:SS (report interval A to B). Wells: W1, W2
+//! Times are in seconds since the start of the run; the PRT has them to the
+//! second.
+Opm::EclIO::FluxFile::ParentActions readParentActions(const fs::path& prtPath, const std::time_t startTime)
+{
+    Opm::EclIO::FluxFile::ParentActions actions;
+    std::ifstream prt(prtPath);
+    if (!prt) {
+        return actions;
+    }
+
+    static const std::regex triggered {
+        R"(^Action (\S+) triggered at (\d{2})-([A-Za-z]{3})-(\d{4}) (\d{2}):(\d{2}):(\d{2}) \(report interval \d+ to \d+\)\.(?: Wells?: (.*))?)"
+    };
+    static const std::array<std::string, 12> months {
+        "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+    };
+
+    std::string line;
+    std::smatch match;
+    while (std::getline(prt, line)) {
+        if ((line.rfind("Action ", 0) != 0) || !std::regex_search(line, match, triggered)) {
+            continue;
+        }
+
+        const auto month = std::find(months.begin(), months.end(), toUpper(match[3].str()));
+        if (month == months.end()) {
+            continue;
+        }
+
+        std::tm tm{};
+        tm.tm_mday = std::stoi(match[2].str());
+        tm.tm_mon = static_cast<int>(month - months.begin());
+        tm.tm_year = std::stoi(match[4].str()) - 1900;
+        tm.tm_hour = std::stoi(match[5].str());
+        tm.tm_min = std::stoi(match[6].str());
+        tm.tm_sec = std::stoi(match[7].str());
+
+        std::vector<std::string> wells;
+        if (match[8].matched) {
+            std::stringstream list(match[8].str());
+            std::string well;
+            while (std::getline(list, well, ',')) {
+                const auto first = well.find_first_not_of(' ');
+                const auto last = well.find_last_not_of(" \r");
+                if (first != std::string::npos) {
+                    wells.push_back(well.substr(first, last - first + 1));
+                }
+            }
+        }
+
+        actions.names.push_back(match[1].str());
+        actions.times.push_back(static_cast<double>(timegm(&tm) - startTime));
+        actions.wellCount.push_back(static_cast<int>(wells.size()));
+        actions.wells.insert(actions.wells.end(), wells.begin(), wells.end());
+    }
+    return actions;
 }
 
 ParentInput resolveParentInput(const Options& opt)
@@ -2540,6 +2616,27 @@ int run(const Options& opt)
     // others in, their rates coming from the embedded summary.
     const auto parentWells = Opm::describeFluxParentWells(schedule);
 
+    // The ACTIONX the parent triggered, for a sector run to replay those that
+    // depend on what it cannot compute exactly
+    Opm::EclIO::FluxFile::ParentActions parentActions;
+    if (!opt.noParentActions) {
+        fs::path prtPath = opt.parentPrt.empty() ? fs::path{} : fs::path{opt.parentPrt};
+        if (prtPath.empty()) {
+            prtPath = parentInput.rootPath;
+            prtPath += ".PRT";
+        }
+        parentActions = readParentActions(prtPath, Opm::TimeService::to_time_t(schedule.getStartTime()));
+        if (fs::exists(prtPath)) {
+            std::cout << "Recorded " << parentActions.names.size()
+                      << " ACTIONX trigger(s) of the parent from '" << prtPath.string() << "'.\n";
+        }
+        else {
+            std::cout << "Note: no parent PRT file '" << prtPath.string()
+                      << "'; the parent's ACTIONX triggers are not recorded, and a sector run\n"
+                      << "      evaluates every ACTIONX condition itself.\n";
+        }
+    }
+
     for (const auto* regionPtr : selectedRegions) {
         const auto& region = *regionPtr;
 
@@ -2617,6 +2714,7 @@ int run(const Options& opt)
 
         dumper.setThresholdPressure(thresholdPressure);
         dumper.setParentWells(parentWells);
+        dumper.setParentActions(parentActions);
 
         outputPaths.push_back(outputPathForRegion(opt.output, region.regionId, multipleRegions));
     }

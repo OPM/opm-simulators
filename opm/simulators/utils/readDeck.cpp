@@ -28,6 +28,9 @@
 
 #include <opm/simulators/utils/readDeck.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/flow/FluxParameters.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
@@ -507,7 +510,9 @@ namespace {
         // at cells that no longer exist.
         applyUseFluxActnum(*eclipseState);
 
-        if (eclipseState->getIOConfig().getUseFlux()) {
+        if (eclipseState->getIOConfig().getUseFlux()
+            && Opm::Parameters::Get<Opm::Parameters::FluxFprAsFprflux>(/*errorIfNotRegistered*/ false))
+        {
             if (const auto changed = readFprFluxInUdqAndActions(deck); !changed.empty()) {
                 std::string list;
                 for (const auto& item : changed) {
@@ -515,8 +520,8 @@ namespace {
                 }
                 Opm::OpmLog::info(fmt::format("USEFLUX: FPR is evaluated as FPRFLUX, the field pressure "
                                               "averaged over the whole parent model, in {} UDQ definition(s) "
-                                              "and ACTIONX condition(s): {}. The FPR summary vector is still "
-                                              "the parent's.", changed.size(), list));
+                                              "and ACTIONX condition(s) (--flux-fpr-as-fprflux=true): {}. The FPR "
+                                              "summary vector is still the parent's.", changed.size(), list));
             }
         }
 

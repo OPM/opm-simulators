@@ -138,6 +138,7 @@ public:
     //!   this one.
     void setThresholdPressure(std::vector<double> thresholdPressure);
     void setParentWells(EclIO::FluxFile::ParentWells parentWells);
+    void setParentActions(EclIO::FluxFile::ParentActions parentActions);
 
     const EclIO::FluxFile::Data& data() const;
     const std::vector<FluxRegions::BoundaryFace>& regionBoundaryFaces() const;

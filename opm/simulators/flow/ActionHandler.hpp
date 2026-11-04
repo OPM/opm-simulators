@@ -27,8 +27,10 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Opm::Action {
@@ -124,6 +126,33 @@ public:
                               const TransFunc& updateTrans,
                               bool& commit_wellstate);
 
+    //! \brief In a sector run (USEFLUX), trigger the ACTIONX whose
+    //!        conditions read quantities the sector does not compute itself
+    //!        when the parent run triggered them, instead of evaluating them.
+    //!
+    //! \details An action is evaluated in this run when every quantity its
+    //!   conditions read is one the sector computes: a constant or the date, a
+    //!   well, connection or segment quantity of wells inside the sector, a
+    //!   group quantity of a group whose wells are all inside it, a block
+    //!   quantity of one of its cells, or a UDQ defined from these only.
+    //!   Everything else (field and region quantities, wells and cells outside
+    //!   the sector, and UDQs of these) is the parent's at the parent's
+    //!   sampling, and a condition on it, in particular one the parent met
+    //!   between two of its samples or only just, may come out otherwise. Such
+    //!   actions are triggered at the end of the time step in which the
+    //!   parent triggered them, with the wells it matched. Writes to the PRT
+    //!   which actions are replayed and which are not, and why.
+    //!
+    //! \param[in] triggerNames, triggerTimes, triggerWellCounts, triggerWells
+    //!   The parent's triggers, from the FLUX file (FluxFile::ParentActions):
+    //!   times in seconds since the start of the run.
+    //! \param[in] replay Whether replay is enabled (--flux-replay-actions).
+    void setupFluxActionReplay(const std::vector<std::string>& triggerNames,
+                               const std::vector<double>& triggerTimes,
+                               const std::vector<int>& triggerWellCounts,
+                               const std::vector<std::string>& triggerWells,
+                               bool replay);
+
 private:
     /// Static properties such as permeability and transmissibility.
     EclipseState& ecl_state_;
@@ -142,6 +171,27 @@ private:
 
     /// MPI communicator object linking all simulation ranks.
     Parallel::Communication comm_;
+
+    struct ReplayTrigger
+    {
+        double time;
+        std::vector<std::string> wells;
+    };
+
+    /// The parent's triggers of each replayed action, by time.
+    std::unordered_map<std::string, std::vector<ReplayTrigger>> replayTriggers_;
+
+    /// Index of the first trigger of each replayed action not replayed yet.
+    std::unordered_map<std::string, std::size_t> replayNext_;
+
+    /// The actions that are replayed rather than evaluated.
+    std::unordered_set<std::string> replayed_;
+
+    /// Why the sector does not compute a quantity, or nothing when it does.
+    std::optional<std::string> parentQuantityReason_(const std::string& quantity,
+                                                     const std::vector<std::string>& args,
+                                                     const std::unordered_set<std::string>& sectorWells,
+                                                     std::unordered_map<std::string, std::optional<std::string>>& udqMemo) const;
 };
 
 } // namespace Opm

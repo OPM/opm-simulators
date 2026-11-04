@@ -45,6 +45,8 @@
 #include <utility>
 #include <vector>
 
+#include <opm/simulators/flow/FluxParameters.hpp>
+
 namespace Opm::Parameters {
 
 struct AllowDistributedWells { static constexpr bool value = false; };
