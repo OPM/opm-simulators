@@ -27,6 +27,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/InjectedPhase.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -43,11 +44,16 @@ updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                WellState<Scalar, IndexTraits>& well_state,
                const double dt,
                const Scalar conc,
-               const std::size_t water_index,
+               const std::vector<Scalar>& conc_volume_factor,
                DeferredLogger& deferred_logger)
 {
-    if (! well.isInjector() || well.wellEcl().injectorType() != InjectorType::WATER)
+    if (! well.isInjector())
         return;
+
+    const auto inj_phase = injectedActivePhaseIdx(well.phaseUsage(),
+                                                  well.wellEcl().injectorType());
+    if (!inj_phase.has_value())
+        return; // MULTI injector: no single filtrate carrier phase
 
     assert (conc > 0.);
     auto& ws = well_state.well(well.indexOfWell());
@@ -59,7 +65,8 @@ updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
 
     ws.filtrate_conc = conc;
 
-    updateSkinFactorsAndMultipliers(well, well_state, dt, water_index, deferred_logger);
+    updateSkinFactorsAndMultipliers(well, well_state, dt, *inj_phase,
+                                    conc_volume_factor, deferred_logger);
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -123,7 +130,8 @@ void WellFilterCake<Scalar, IndexTraits>::
 updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                   WellState<Scalar, IndexTraits>& well_state,
                   const double dt,
-                  const std::size_t water_index,
+                  const int inj_phase_index,
+                  const std::vector<Scalar>& conc_volume_factor,
                   DeferredLogger& deferred_logger)
 {
     const auto nperf = well.numLocalPerfs();
@@ -140,17 +148,23 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
     const auto conc = ws.filtrate_conc;
     const std::size_t np = well_state.numPhases();
 
+    // Volume of injected fluid, in the concentration basis, per surface
+    // volume of the injected phase at a connection.
+    const auto volume_factor = [&conc_volume_factor](const int perf) -> Scalar {
+        return conc_volume_factor.empty() ? Scalar{1} : conc_volume_factor[perf];
+    };
+
     // Compute xflow-factor
     Scalar xfact = 1.0;
-    Scalar qw_sum = 0.0;
-    Scalar qwpos_sum = 0.0;
+    Scalar q_sum = 0.0;
+    Scalar qpos_sum = 0.0;
     for (int perf = 0; perf < nperf; ++perf) {
-        const auto crate = connection_rates[perf * np + water_index];
-        qwpos_sum += std::max(Scalar{0.}, crate);
-        qw_sum += crate;
+        const auto crate = connection_rates[perf * np + inj_phase_index] * volume_factor(perf);
+        qpos_sum += std::max(Scalar{0.}, crate);
+        q_sum += crate;
     }
-    if (qwpos_sum > qw_sum && qwpos_sum > 1.0e-12) {
-        xfact = std::max(Scalar{0.}, qw_sum) / qwpos_sum;
+    if (qpos_sum > q_sum && qpos_sum > 1.0e-12) {
+        xfact = std::max(Scalar{0.}, q_sum) / qpos_sum;
     }
 
 
@@ -161,8 +175,9 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
             continue;
 
         // Use xflow-factor to ensure mass balance of injected filtrate
-        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
-        const Scalar filtrate_rate = water_rates * conc * xfact;
+        const Scalar inj_rate = std::max(Scalar{0.}, connection_rates[perf * np + inj_phase_index])
+                                * volume_factor(perf);
+        const Scalar filtrate_rate = inj_rate * conc * xfact;
         const Scalar filtrate_particle_volume = filtrate_rate * dt;
         auto& filtrate_data = perf_data.filtrate_data;
         filtrate_data.rates[perf] = filtrate_rate;

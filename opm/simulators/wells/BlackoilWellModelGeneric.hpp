@@ -576,8 +576,13 @@ protected:
     void updateInjMult(DeferredLogger& deferred_logger);
     void updateInjFCMult(DeferredLogger& deferred_logger);
 
+    //! \brief Inverse formation volume factor of a canonical phase in a
+    //! (local) cell, used to convert filtration concentrations given on a
+    //! reservoir volume basis (WINJFCNC item 3 = RES).
+    using InvBFunction = std::function<Scalar(int cell_index, unsigned canonical_phase)>;
+
     void updateFiltrationModelsPostStep(const double dt,
-                                        const std::size_t water_index,
+                                        const InvBFunction& inv_b,
                                         DeferredLogger& deferred_logger);
 
     void updateFiltrationModelsPreStep(DeferredLogger& deferred_logger);

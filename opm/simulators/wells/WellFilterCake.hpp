@@ -50,12 +50,17 @@ public:
   }
 
     //! \brief Post-step filtration model updates
-    //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers
+    //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers.
+    //! The filtrate is carried by the injected phase of the well (water, gas or oil injectors;
+    //! MULTI injectors are ignored).
+    //! \param conc_volume_factor Per local perforation: volume of injected fluid in the
+    //!        concentration basis per surface volume (1 for a surface basis, B for a reservoir
+    //!        basis).  An empty vector means a surface basis.
     void updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                 WellState<Scalar, IndexTraits>& well_state,
                 const double dt,
                 const Scalar conc,
-                const std::size_t water_index,
+                const std::vector<Scalar>& conc_volume_factor,
                 DeferredLogger& deferred_logger);
 
     //! \brief Pre-step filtration model updates
@@ -81,7 +86,8 @@ private:
     void updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                                          WellState<Scalar, IndexTraits>& well_state,
                                          const double dt,
-                                         const std::size_t water_index,
+                                         const int inj_phase_index,
+                                         const std::vector<Scalar>& conc_volume_factor,
                                          DeferredLogger& deferred_logger);
     template<class Conn>
     void updateMultiplier(const Conn& conn, const int perf);

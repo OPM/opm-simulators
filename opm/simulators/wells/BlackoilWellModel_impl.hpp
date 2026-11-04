@@ -728,15 +728,26 @@ namespace Opm {
             well->updateConnectionDFactor(simulator_, this->wellState().well(well->indexOfWell()));
         }
 
-        if (Indices::waterEnabled) {
-            if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
-                // Split injector connection flow between matrix and fracture
-                // for wells with registered fracture contributions.
-                updateWellFractureFlowSplit<FluidSystem, Scalar>(
-                    this->simulator_, this->well_container_,
-                    this->wellState(), this->nupcolWellState());
-            }
-            this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
+        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            // Split injector connection flow between matrix and fracture
+            // for wells with registered fracture contributions.
+            updateWellFractureFlowSplit<FluidSystem, Scalar>(
+                this->simulator_, this->well_container_,
+                this->wellState(), this->nupcolWellState());
+        }
+        {
+            // Filtration (WINJDAM/WINJFCNC) is carried by the injected phase of
+            // each injector (water, gas or oil).
+            const auto inv_b = [this](const int cell_index, const unsigned canonical_phase) -> Scalar
+            {
+                if (!FluidSystem::phaseIsActive(canonical_phase)) {
+                    return Scalar{1};
+                }
+                const auto& intQuants = this->simulator_.model()
+                    .intensiveQuantities(cell_index, /*timeIdx=*/0);
+                return getValue(intQuants.fluidState().invB(canonical_phase));
+            };
+            this->updateFiltrationModelsPostStep(dt, inv_b, local_deferredLogger);
         }
 
         // WINJMULT: At the end of the time step, update the inj_multiplier saved in WellState for later use
