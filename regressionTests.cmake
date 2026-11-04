@@ -1727,6 +1727,23 @@ add_test_compareECLFiles(
     gconinje
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    gconinje_subgroup_latch_gas
+  FILENAME
+    GCONINJE-05
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    gconinje
+)
+
 set(_gconprod_cases
   T1L
   T1W
