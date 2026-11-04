@@ -519,6 +519,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_FluxDumper.cpp
   tests/test_FluxRegions.cpp
   tests/test_ParentSummary.cpp
+  tests/test_InjectedPhase.cpp
   tests/test_injection_topup_phase_validation.cpp
   tests/test_interregflows.cpp
   tests/test_invert.cpp
@@ -1350,6 +1351,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/GroupStateHelper.hpp
   opm/simulators/wells/GuideRateHandler.hpp
+  opm/simulators/wells/InjectedPhase.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
   opm/simulators/wells/MultisegmentWell_impl.hpp
