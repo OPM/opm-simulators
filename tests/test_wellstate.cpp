@@ -63,6 +63,7 @@
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <ctime>
@@ -70,6 +71,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 BOOST_GLOBAL_FIXTURE(MPIFixture);
@@ -898,6 +900,176 @@ BOOST_AUTO_TEST_CASE(ReportConnections_LgrGridField_NonLgrWells)
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------
+// Routing of the fracture-routed injection rate (SingleWellState::frac_rate
+// and ConnFractureData::injected_rate) to the summary slot of the injected
+// phase: wat_frac, oil_frac or gas_frac.
+
+namespace {
+    // One injector in a two-cell grid with the given phases (RUNSPEC
+    // keywords, one per line) injecting the given phase.
+    Opm::Deck makeInjectorDeck(const std::string& phases, const std::string& injPhase)
+    {
+        return Opm::Parser{}.parseString(std::string{R"(
+RUNSPEC
+)"} + phases + R"(
+METRIC
+DIMENS
+    2 1 1 /
+
+START
+  1 JAN 2000 /
+
+GRID
+DXV
+  2*100 /
+DYV
+  1*100 /
+DZV
+  1*10 /
+DEPTHZ
+  6*1000 /
+PORO
+  2*0.20 /
+PERMX
+  2*100 /
+PERMY
+  2*100 /
+PERMZ
+  2*20 /
+
+SCHEDULE
+WELSPECS
+  'INJ' 'G' 1 1 1000 ')" + injPhase + R"(' /
+/
+COMPDAT
+  'INJ' 1 1 1 1 'OPEN' 1* 100 0.1 /
+/
+WCONINJE
+  'INJ' ')" + injPhase + R"(' 'OPEN' 'RATE' 100 1* 400 /
+/
+
+END
+)");
+    }
+
+    struct FractureRateReport
+    {
+        PhaseUsage pu{};
+        Opm::data::Rates well{};
+        Opm::data::Rates connection{};
+    };
+
+    // Reports the injector after storing a fracture split as
+    // updateWellFractureFlowSplit() does: the injected canonical phase
+    // (-1: not yet determined), the well's total fracture-routed rate and
+    // the fracture-routed rate of each connection.
+    FractureRateReport reportFractureRates(const std::string& phases,
+                                           const std::string& injPhase,
+                                           const int injectedPhase,
+                                           const double wellRate,
+                                           const double connRate)
+    {
+        const auto setup = Setup { makeInjectorDeck(phases, injPhase) };
+        auto pinfos = std::vector<Opm::ParallelWellInfo<double>>{};
+        auto wstate = buildWellState(setup, 0, pinfos);
+
+        auto& ws = wstate.well("INJ");
+        ws.frac_rate = wellRate;
+
+        auto& fracture_data = ws.perf_data.fracture_data;
+        fracture_data.resize(ws.perf_data.size());
+        fracture_data.injected_phase = injectedPhase;
+        std::fill(fracture_data.injected_rate.begin(),
+                  fracture_data.injected_rate.end(), connRate);
+
+        const auto rpt = wstate.report(setup.grid.c_grid()->global_cell,
+                                       [](const int) { return false; });
+
+        const auto& xw = rpt.at("INJ");
+        BOOST_REQUIRE_EQUAL(xw.connections.size(), std::size_t{1});
+
+        return { setup.pu, xw.rates, xw.connections.front().rates };
+    }
+
+    // The expected slot carries the rates.  At well level the fracture
+    // slots of the other active phases are reported as zero, inactive
+    // phases have none; at connection level only the expected slot is set.
+    void checkFractureRateSlot(const FractureRateReport& rpt,
+                               const Opm::data::Rates::opt expected,
+                               const double wellRate,
+                               const double connRate)
+    {
+        using Opt = Opm::data::Rates::opt;
+        const auto slots = std::array {
+            std::pair { Opt::wat_frac, IndexTraits::waterPhaseIdx },
+            std::pair { Opt::oil_frac, IndexTraits::oilPhaseIdx },
+            std::pair { Opt::gas_frac, IndexTraits::gasPhaseIdx },
+        };
+
+        for (const auto& [opt, phase] : slots) {
+            BOOST_TEST_CONTEXT("canonical phase " << phase) {
+                if (opt == expected) {
+                    BOOST_CHECK_CLOSE(rpt.well.get(opt), wellRate, 1.0e-12);
+                    BOOST_CHECK_CLOSE(rpt.connection.get(opt), connRate, 1.0e-12);
+                }
+                else {
+                    if (rpt.pu.phaseIsActive(phase)) {
+                        BOOST_CHECK_EQUAL(rpt.well.get(opt), 0.0);
+                    }
+                    else {
+                        BOOST_CHECK(!rpt.well.has(opt));
+                    }
+                    BOOST_CHECK(!rpt.connection.has(opt));
+                }
+            }
+        }
+    }
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(FractureRate_WaterInjector)
+{
+    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "WATER",
+                                         IndexTraits::waterPhaseIdx, 12.5, 2.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 12.5, 2.5);
+}
+
+BOOST_AUTO_TEST_CASE(FractureRate_OilInjector)
+{
+    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "OIL",
+                                         IndexTraits::oilPhaseIdx, 13.5, 3.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::oil_frac, 13.5, 3.5);
+}
+
+BOOST_AUTO_TEST_CASE(FractureRate_GasInjector)
+{
+    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "GAS",
+                                         IndexTraits::gasPhaseIdx, 1.25e4, 4.5e3);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 1.25e4, 4.5e3);
+}
+
+BOOST_AUTO_TEST_CASE(FractureRate_UndeterminedPhaseReportsWater)
+{
+    // No split computed yet (injected_phase == -1): the historical water slot.
+    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "GAS", -1, 14.5, 5.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 14.5, 5.5);
+}
+
+BOOST_AUTO_TEST_CASE(FractureRate_GasInjector_GasWater)
+{
+    // Gas is active phase 1 here, not its canonical index 2.
+    const auto rpt = reportFractureRates("WATER\nGAS", "GAS",
+                                         IndexTraits::gasPhaseIdx, 2.5e4, 6.5e3);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 2.5e4, 6.5e3);
+}
+
+BOOST_AUTO_TEST_CASE(FractureRate_WaterInjector_GasWater)
+{
+    const auto rpt = reportFractureRates("WATER\nGAS", "WATER",
+                                         IndexTraits::waterPhaseIdx, 15.5, 7.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 15.5, 7.5);
 }
 
 // ---------------------------------------------------------------------
