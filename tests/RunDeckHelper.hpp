@@ -25,12 +25,13 @@
 
 #include "config.h"
 
+#include "TemporaryDirectory.hpp"
+
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#include <opm/common/utility/FileSystem.hpp>
 #include <opm/io/eclipse/ESmry.hpp>
 
 #if HAVE_DUNE_FEM
@@ -48,7 +49,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <vector>
 
 namespace Opm {
@@ -72,39 +72,6 @@ struct RunDeckFixture
 #endif
         FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
     }
-};
-
-/*!
- * \brief A uniquely named directory under the system's temporary directory
- *
- * The directory and its contents are removed when the object goes out of
- * scope, also when a test case ends early on a failed requirement or an
- * exception.
- */
-class TemporaryDirectory
-{
-public:
-    explicit TemporaryDirectory(const std::string& prefix)
-        : path_(std::filesystem::temp_directory_path() / unique_path(prefix + "-%%%%%%%%"))
-    {
-        std::filesystem::create_directories(path_);
-    }
-
-    ~TemporaryDirectory()
-    {
-        // A destructor must not throw; a directory left behind is harmless.
-        std::error_code ec;
-        std::filesystem::remove_all(path_, ec);
-    }
-
-    TemporaryDirectory(const TemporaryDirectory&) = delete;
-    TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
-
-    const std::filesystem::path& path() const
-    { return path_; }
-
-private:
-    std::filesystem::path path_;
 };
 
 /*!
