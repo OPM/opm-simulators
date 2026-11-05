@@ -81,7 +81,6 @@ public:
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
-        serializer(frac_rate);
         serializer(segments);
         serializer(events);
         serializer(injection_cmode);
@@ -170,7 +169,6 @@ public:
     std::vector<Scalar> surface_rates;
     std::vector<Scalar> reservoir_rates;
     std::vector<Scalar> prev_surface_rates;
-    Scalar frac_rate{0.0};
     PerfData<Scalar> perf_data;
     std::optional<GroupTarget> group_target;
     std::optional<GroupTarget> group_target_fallback;
@@ -228,6 +226,10 @@ public:
 
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;
+
+    //! Surface rate of the injected phase routed into fractures, summed
+    //! over all connections of the well (all ranks of a distributed well).
+    Scalar sum_fracture_rate() const;
 
 private:
     Scalar sum_connection_rates(const std::vector<Scalar>& connection_rates) const;

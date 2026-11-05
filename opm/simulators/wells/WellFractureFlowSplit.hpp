@@ -23,6 +23,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/simulators/wells/InjectedPhase.hpp>
 
+#include <algorithm>
 #include <cassert>
 
 namespace Opm {
@@ -34,35 +35,48 @@ namespace Opm {
 /// WellInterfaceGeneric::addFracturePerforations().
 ///
 /// Fills, per connection, the filtrate flow factor (matrix share) and the
-/// fracture rate of the injected phase (surface volumes), and accumulates the
-/// total fracture-routed rate of the well (SingleWellState::frac_rate).
-/// Wells without registered fracture contributions, and MULTI injectors,
-/// are skipped.
+/// fracture rate of the injected phase (surface volumes); the well total is
+/// summed over all ranks when reported (SingleWellState::sum_fracture_rate).
+/// The results of the previous step are reset first, since they carry over
+/// to the next report step, so that wells without registered fracture
+/// contributions, producers and MULTI injectors report no fracture flow.
 template <class FluidSystem, class Scalar, class Simulator,
           class WellContainer, class WellState>
 void updateWellFractureFlowSplit(const Simulator& simulator,
                                  const WellContainer& well_container,
                                  WellState& well_state)
 {
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+
     for (const auto& well : well_container) {
+        auto& single_wellstate = well_state.well(well->indexOfWell());
+        auto& perf_data = single_wellstate.perf_data;
+        auto& filtrate_data = perf_data.filtrate_data;
+        auto& fracture_data = perf_data.fracture_data;
+
+        // fracture_data is only sized once a fracture model claims the well.
+        std::ranges::fill(fracture_data.injected_rate, Scalar{0});
+        std::ranges::fill(filtrate_data.flow_factor, Scalar{1});
+        fracture_data.injected_phase = -1;
+
         if (!well->isInjector()) {
             continue;
         }
 
-        const auto& fracture_indices = well->wellIndexFracture();
-        if (fracture_indices.empty()) {
-            continue; // no fracture crosses this well
-        }
-
+        // Set even without fractured connections on this rank: the owner
+        // reports the total of a distributed well under this phase.
         const auto inj_type = well->wellEcl().injectorType();
         const auto inj_phase = injectedActivePhaseIdx(well->phaseUsage(), inj_type);
         if (!inj_phase.has_value()) {
             continue; // MULTI injector or injected phase not active
         }
-        auto& single_wellstate = well_state.well(well->indexOfWell());
-        auto& perf_data = single_wellstate.perf_data;
-        auto& filtrate_data = perf_data.filtrate_data;
-        auto& fracture_data = perf_data.fracture_data;
+        fracture_data.injected_phase =
+            static_cast<int>(*injectedCanonicalPhaseIdx<IndexTraits>(inj_type));
+
+        const auto& fracture_indices = well->wellIndexFracture();
+        if (fracture_indices.empty()) {
+            continue; // no fracture crosses this well's local connections
+        }
 
         const int nperf = static_cast<int>(well->wellIndex().size());
         assert(static_cast<int>(fracture_indices.size()) == nperf);
@@ -70,11 +84,7 @@ void updateWellFractureFlowSplit(const Simulator& simulator,
         if (static_cast<int>(fracture_data.injected_rate.size()) != nperf) {
             fracture_data.resize(nperf);
         }
-        using IndexTraits = typename FluidSystem::IndexTraitsType;
-        fracture_data.injected_phase =
-            static_cast<int>(*injectedCanonicalPhaseIdx<IndexTraits>(inj_type));
 
-        Scalar total_flow_fracture = 0.0;
         const int np = well_state.numPhases();
 
         auto obtain = [](const auto& value) { return getValue(value); };
@@ -103,15 +113,12 @@ void updateWellFractureFlowSplit(const Simulator& simulator,
                 filtrate_data.flow_factor[perf] = matrix_frac;
                 fracture_rate = (1.0 - matrix_frac)
                     * perf_data.phase_rates[perf*np + *inj_phase];
-                total_flow_fracture += fracture_rate;
             }
             else {
                 filtrate_data.flow_factor[perf] = 0.0;
                 fracture_rate = 0.0;
             }
         }
-
-        single_wellstate.frac_rate = total_flow_fracture;
     }
 }
 
