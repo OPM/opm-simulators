@@ -68,6 +68,7 @@
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/GroupEconomicLimitsChecker.hpp>
+#include <opm/simulators/wells/InjectedPhase.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
@@ -2234,20 +2235,45 @@ void BlackoilWellModelGeneric<Scalar, IndexTraits>::initInjMult()
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateFiltrationModelsPostStep(const double dt,
-                               const std::size_t water_index,
+                               const InvBFunction& inv_b,
                                DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
-            const Scalar conc = well->wellEcl().evalFilterConc(this->summaryState_);
+            // Zero unless updated below (no concentration, MULTI injector);
+            // the cake and the totals carry over.
+            auto& ws = this->wellState().well(well->indexOfWell());
+            std::ranges::fill(ws.perf_data.filtrate_data.rates, Scalar{0});
+
+            const auto& well_ecl = well->wellEcl();
+            const Scalar conc = well_ecl.evalFilterConc(this->summaryState_);
             if (conc > 0.) {
+                // Concentration on a reservoir volume basis: convert the
+                // connection surface rates of the injected phase with the
+                // formation volume factor of the connection cell.
+                std::vector<Scalar> conc_volume_factor;
+                const auto phase = injectedCanonicalPhaseIdx<IndexTraits>(well_ecl.injectorType());
+                if (well_ecl.getFilterConcBasis() == Well::FilterConcBasis::RESERVOIR
+                    && phase.has_value())
+                {
+                    const auto& perf_data = well->perforationData();
+                    conc_volume_factor.resize(well->numLocalPerfs(), Scalar{1});
+                    for (int perf = 0; perf < well->numLocalPerfs(); ++perf) {
+                        const Scalar b = inv_b(perf_data[perf].cell_index, *phase);
+                        if (b > 0.) {
+                            conc_volume_factor[perf] = 1. / b;
+                        }
+                    }
+                }
+
                 // Update filter cake build-ups (external to the wellbore)
                 auto retval = this->filter_cake_
                         .emplace(std::piecewise_construct,
                                  std::forward_as_tuple(well->name()),
                                  std::tuple{});
                 auto& fc = retval.first->second;
-                fc.updatePostStep(*well, this->wellState(), dt, conc, water_index, deferred_logger);
+                fc.updatePostStep(*well, this->wellState(), dt, conc,
+                                  conc_volume_factor, deferred_logger);
             }
         }
     }

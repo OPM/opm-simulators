@@ -206,6 +206,21 @@ splitSurfaceRates(const SingleWellState& ws, const int waterPos, const int oilPo
     return res;
 }
 
+// Summary rate slot for the injected phase routed into a fracture.  A well
+// whose split has not been computed yet (phase -1) reports as water, the
+// historical behaviour.
+template<class IndexTraits>
+Opm::data::Rates::opt fractureRateOption(const int injected_phase)
+{
+    if (injected_phase == static_cast<int>(IndexTraits::gasPhaseIdx)) {
+        return Opm::data::Rates::opt::gas_frac;
+    }
+    if (injected_phase == static_cast<int>(IndexTraits::oilPhaseIdx)) {
+        return Opm::data::Rates::opt::oil_frac;
+    }
+    return Opm::data::Rates::opt::wat_frac;
+}
+
 } // Anonymous namespace
 
 namespace Opm {
@@ -632,7 +647,9 @@ report(const int*                            globalCellIdxMap,
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
-        const auto frac_rate = ws.frac_rate;
+        const auto frac_rate = ws.sum_fracture_rate();
+        const auto frac_rate_opt =
+            fractureRateOption<IndexTraits>(ws.perf_data.fracture_data.injected_phase);
         const auto& wname = this->name(well_index);
 
         auto dummyWell = data::Well{};
@@ -651,7 +668,7 @@ report(const int*                            globalCellIdxMap,
         if (pu.phaseIsActive(waterPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(waterPhaseIdx);
             well.rates.set(rt::wat, wv[phase_pos]);
-            well.rates.set(rt::wat_frac, frac_rate);
+            well.rates.set(rt::wat_frac, (frac_rate_opt == rt::wat_frac) ? frac_rate : 0.0);
             well.rates.set(rt::reservoir_water, reservoir_rates[phase_pos]);
             well.rates.set(rt::productivity_index_water, wpi[phase_pos]);
             well.rates.set(rt::well_potential_water, well_potentials[phase_pos]);
@@ -661,6 +678,7 @@ report(const int*                            globalCellIdxMap,
         if (pu.phaseIsActive(oilPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(oilPhaseIdx);
             well.rates.set(rt::oil, wv[phase_pos]);
+            well.rates.set(rt::oil_frac, (frac_rate_opt == rt::oil_frac) ? frac_rate : 0.0);
             well.rates.set(rt::reservoir_oil, reservoir_rates[phase_pos]);
             well.rates.set(rt::productivity_index_oil, wpi[phase_pos]);
             well.rates.set(rt::well_potential_oil, well_potentials[phase_pos]);
@@ -684,6 +702,7 @@ report(const int*                            globalCellIdxMap,
         if (pu.phaseIsActive(gasPhaseIdx)) {
             const int phase_pos = pu.canonicalToActivePhaseIdx(gasPhaseIdx);
             well.rates.set(rt::gas, wv[phase_pos]);
+            well.rates.set(rt::gas_frac, (frac_rate_opt == rt::gas_frac) ? frac_rate : 0.0);
             well.rates.set(rt::reservoir_gas, reservoir_rates[phase_pos]);
             well.rates.set(rt::productivity_index_gas, wpi[phase_pos]);
             well.rates.set(rt::well_potential_gas, well_potentials[phase_pos]);
@@ -1502,8 +1521,8 @@ reportConnectionFracture(const std::size_t well_index,
         fracture.inj_bhp = data.inj_bhp[i];
         fracture.inj_wellrate = data.inj_wellrate[i];
 
-        connections[i].rates.set(data::Rates::opt::wat_frac,
-                                 data.water_rate[i]);
+        connections[i].rates.set(fractureRateOption<IndexTraits>(data.injected_phase),
+                                 data.injected_rate[i]);
     }
 }
 

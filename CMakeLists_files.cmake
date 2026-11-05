@@ -515,6 +515,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
   tests/test_ignore_keywords.cpp
+  tests/test_InjectedPhase.cpp
   tests/test_injection_topup_phase_validation.cpp
   tests/test_interregflows.cpp
   tests/test_invert.cpp
@@ -1358,6 +1359,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/GroupStateHelper.hpp
   opm/simulators/wells/GuideRateHandler.hpp
+  opm/simulators/wells/InjectedPhase.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
   opm/simulators/wells/MultisegmentWell_impl.hpp
