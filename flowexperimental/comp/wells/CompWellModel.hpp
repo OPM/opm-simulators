@@ -191,6 +191,10 @@ public:
 
     bool getWellConvergence() const;
 
+    // Stops or reopens the wells whose status does not fit the converged state
+    // of a time step; returns whether any did, so that the iterations go on.
+    bool updateWellStatusAtConvergence();
+
     // WellConnectionAuxiliaryModule uses these to put the connection cells into
     // the sparsity pattern
     int compressedIndexForInterior(std::size_t cartesian_cell_idx) const;

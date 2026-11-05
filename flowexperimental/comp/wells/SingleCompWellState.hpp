@@ -77,6 +77,8 @@ public:
     bool producer;
 
     WellStatus status{WellStatus::OPEN};
+    // the well cannot flow at its BHP limit: zero surface rate, floating BHP
+    bool stopped{false};
     Scalar bhp{0};
     Scalar temperature{0};
 
@@ -112,6 +114,10 @@ public:
                                                       const Well& well);
 
     void copyRuntimeStateFrom(const SingleCompWellState& other, bool keep_control);
+
+    // stopped by the schedule or at its BHP limit: zero surface rate, floating BHP
+    bool isStopped() const
+    { return status == WellStatus::STOP || stopped; }
 
     Scalar get_total_surface_rate() const;
 };

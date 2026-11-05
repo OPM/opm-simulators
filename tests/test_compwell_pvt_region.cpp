@@ -26,30 +26,13 @@
 
 #include <flowexperimental/comp/flow_comp.hpp>
 
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <opm/common/utility/FileSystem.hpp>
-#include <opm/io/eclipse/ESmry.hpp>
-
-#if HAVE_DUNE_FEM
-#include <dune/fem/misc/mpimanager.hh>
-#else
-#include <dune/common/parallel/mpihelper.hh>
-#endif
+#include "RunDeckHelper.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <map>
-#include <memory>
-#include <ranges>
 #include <string>
 #include <vector>
 
@@ -235,27 +218,14 @@ END
 const std::vector<std::string> wells = {"INJ", "INJ_W", "PROD"};
 const std::vector<std::string> vectors = {"WBHP", "WOPR", "WWPR", "WGPR", "WWIR", "WGIR"};
 
+using TypeTag = Opm::Properties::TTag::FlowCompProblem<3, true>;
+
 // Runs the deck and returns the summary vectors of every well, keyed by
 // VECTOR:WELL.
 std::map<std::string, std::vector<float>>
 run(const std::filesystem::path& dir, const std::string& name, const std::string& deck_text)
 {
-    const auto deck_file = dir / (name + ".DATA");
-    std::ofstream(deck_file) << deck_text;
-
-    std::vector<std::string> args = {"test_compwell_pvt_region", deck_file.string(),
-                                     "--output-dir=" + dir.string()};
-    std::vector<char*> argv;
-    std::ranges::transform(args, std::back_inserter(argv),
-                           [](std::string& arg) { return arg.data(); });
-    argv.push_back(nullptr);
-    Opm::Parameters::reset();
-    const int status = Opm::Main(static_cast<int>(args.size()), argv.data(), /*ownMPI=*/false)
-                           .runStatic<Opm::Properties::TTag::FlowCompProblem<3, true>>();
-    BOOST_REQUIRE_EQUAL(status, EXIT_SUCCESS);
-
-    const Opm::EclIO::ESmry smry(dir / (name + ".SMSPEC"));
-    smry.loadData();
+    const auto smry = Opm::runDeck<TypeTag>(dir, name, deck_text);
     std::map<std::string, std::vector<float>> result;
     for (const auto& well : wells) {
         for (const auto& vector : vectors) {
@@ -266,36 +236,20 @@ run(const std::filesystem::path& dir, const std::string& name, const std::string
     return result;
 }
 
-struct MpiFixture
-{
-    MpiFixture()
-    {
-        auto& suite = boost::unit_test::framework::master_test_suite();
-#if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(suite.argc, suite.argv);
-#else
-        Dune::MPIHelper::instance(suite.argc, suite.argv);
-#endif
-        Opm::FlowGenericVanguard::setCommunication(
-            std::make_unique<Opm::Parallel::Communication>());
-    }
-};
-
 } // namespace
 
-BOOST_GLOBAL_FIXTURE(MpiFixture);
+using RunDeckFixture = Opm::RunDeckFixture;
+BOOST_GLOBAL_FIXTURE(RunDeckFixture);
 
 // The wells take their water properties from the PVT region of their
 // connection cell, so the unused region of the two-region deck changes nothing.
 BOOST_AUTO_TEST_CASE(WaterOfTheConnectionCellPvtRegion)
 {
     // a directory of its own, so that concurrent runs leave each other's files alone
-    const auto dir = std::filesystem::temp_directory_path()
-        / Opm::unique_path("compwell_pvt_region-%%%%%%%%");
-    std::filesystem::create_directories(dir);
+    const Opm::TemporaryDirectory dir("compwell_pvt_region");
 
-    const auto one_region = run(dir, "ONE_REGION", deck(false));
-    const auto two_regions = run(dir, "TWO_REGIONS", deck(true));
+    const auto one_region = run(dir.path(), "ONE_REGION", deck(false));
+    const auto two_regions = run(dir.path(), "TWO_REGIONS", deck(true));
 
     // water flows through both the injector and the producer
     BOOST_CHECK_GT(std::ranges::max(one_region.at("WWIR:INJ_W")), 0.4f);
@@ -313,6 +267,4 @@ BOOST_AUTO_TEST_CASE(WaterOfTheConnectionCellPvtRegion)
             }
         }
     }
-
-    std::filesystem::remove_all(dir);
 }

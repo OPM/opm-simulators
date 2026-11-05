@@ -154,6 +154,11 @@ createWellContainer()
             || well_connection_data_[w].empty()) {
             continue;
         }
+        // A stopped well without crossflow has no flow in any connection, as if shut.
+        if (comp_well_states_[well_name].status == WellStatus::STOP
+            && !wells_ecl_[w].getAllowCrossFlow()) {
+            continue;
+        }
 
         // as for the black-oil wells, the PVT region of the first connection cell
         const unsigned pvt_region_idx
@@ -469,6 +474,21 @@ getWellConvergence() const
         converged = converged && well->getConvergence();
     }
     return comm_.min(converged) == 1;
+}
+
+template <typename TypeTag>
+bool
+CompWellModel<TypeTag>::
+updateWellStatusAtConvergence()
+{
+    const auto& summary_state = simulator_.vanguard().summaryState();
+    int changed = 0;
+    for (const auto& well : this->well_container_) {
+        if (well->updateWellStatusAtConvergence(summary_state, comp_well_states_[well->name()])) {
+            changed = 1;
+        }
+    }
+    return comm_.max(changed) == 1;
 }
 
 template <typename TypeTag>
