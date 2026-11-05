@@ -390,9 +390,11 @@ protected:
             : std::pair{A * v, false};
     }
 
-    // Phase that carries the tracer of the given type: the phase of the tracer for the free
-    // tracer, the gas phase for the solution tracer of an oil tracer (vaporized oil) and the
-    // oil phase for the solution tracer of a gas tracer (dissolved gas).
+    /**
+     * @brief Phase that carries the tracer of the given type: the phase of the tracer for the free
+     *        tracer, the gas phase for the solution tracer of an oil tracer (vaporized oil) and the
+     *        oil phase for the solution tracer of a gas tracer (dissolved gas).
+     */
     template<TracerTypeIdx Index>
     static int carrierPhaseIdx_(const int tracerPhaseIdx)
     {
@@ -405,20 +407,24 @@ protected:
         }
     }
 
-    // Whether the tracers of the phase have a solution part (vaporized oil, dissolved gas)
+    /**
+     * @brief Whether the tracers of the phase have a solution part (vaporized oil, dissolved gas)
+     */
     static bool hasSolutionPart_(const int tracerPhaseIdx)
     {
         return (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) ||
                (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas());
     }
 
-    // Surface volume of the tracer carrier per unit pore volume of a cell: the inverse formation
-    // volume factor of the carrier phase, times Rv or Rs for the solution tracer (the dissolved
-    // component per surface volume of the carrier) and, optionally, the saturation of the carrier.
+    /**
+     * @brief Surface volume of the tracer carrier per unit pore volume of a cell: the inverse formation
+     *        volume factor of the carrier phase, times Rv or Rs for the solution tracer (the dissolved
+     *        component per surface volume of the carrier) and, optionally, the saturation of the carrier.
+     */
     template<TracerTypeIdx Index, class FluidState>
-    static Scalar carrierFraction_(const int tracerPhaseIdx,
-                                   const FluidState& fs,
-                                   const bool saturationWeighted)
+    static Scalar carrierSurfaceVolume_(const int tracerPhaseIdx,
+                                        const FluidState& fs,
+                                        const bool saturationWeighted)
     {
         const int phaseIdx = carrierPhaseIdx_<Index>(tracerPhaseIdx);
         Scalar w = decay<Scalar>(fs.invB(phaseIdx));
@@ -432,14 +438,16 @@ protected:
         return w;
     }
 
-    // Whether the carrier of the tracer is present in a cell, i.e. there is carrier phase (and, for
-    // the solution tracer, dissolved or vaporized component) to hold tracer. The Fickian flux across
-    // a face is zero unless this is the case in both cells: averaging over the two cells would
-    // otherwise couple the tracer into a cell where its concentration has no meaning.
+    /**
+     * @brief Whether the carrier of the tracer is present in a cell, i.e. there is carrier phase (and, for
+     *        the solution tracer, dissolved or vaporized component) to hold tracer. The Fickian flux across
+     *        a face is zero unless this is the case in both cells: averaging over the two cells would
+     *        otherwise couple the tracer into a cell where its concentration has no meaning.
+     */
     template<TracerTypeIdx Index, class FluidState>
     static bool carrierPresent_(const int tracerPhaseIdx, const FluidState& fs)
     {
-        return carrierFraction_<Index>(tracerPhaseIdx, fs, /*saturationWeighted=*/true) > 0.0;
+        return carrierSurfaceVolume_<Index>(tracerPhaseIdx, fs, /*saturationWeighted=*/true) > 0.0;
     }
 
     /**
@@ -447,7 +455,7 @@ protected:
      *        J = -D_mol * A * diffusivity * w * (c_J - c_I). The geometric (porosity weighted)
      *        face diffusivity multiplies the molecular diffusion coefficient D_mol of the tracer
      *        (TRDIFxxx), and w is the face average of the saturation times the inverse formation
-     *        volume factor of the carrier phase of the tracer (see carrierFraction_()). The
+     *        volume factor of the carrier phase of the tracer (see carrierSurfaceVolume_()). The
      *        coefficient is zero unless the carrier is present in both cells (see carrierPresent_()).
      */
     template<TracerTypeIdx Index>
@@ -466,8 +474,8 @@ protected:
             const auto& outFs = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx).fluidState();
             if (carrierPresent_<Index>(tracerPhaseIdx, inFs) && carrierPresent_<Index>(tracerPhaseIdx, outFs)) {
                 v = decay<Scalar>(extQuants.diffusivity()) *
-                    0.5 * (carrierFraction_<Index>(tracerPhaseIdx, inFs, /*saturationWeighted=*/true) +
-                           carrierFraction_<Index>(tracerPhaseIdx, outFs, /*saturationWeighted=*/true));
+                    0.5 * (carrierSurfaceVolume_<Index>(tracerPhaseIdx, inFs, /*saturationWeighted=*/true) +
+                           carrierSurfaceVolume_<Index>(tracerPhaseIdx, outFs, /*saturationWeighted=*/true));
             }
         }
 
@@ -479,7 +487,7 @@ protected:
      *        J = -(w * |u| * disp) * (c_J - c_I), where disp is the geometric dispersivity
      *        (DISPERC, as in the blackoil dispersion module), |u| the average max-norm filter
      *        velocity of the carrier phase in the two cells, and w the face average of the
-     *        inverse formation volume factor of the carrier phase (see carrierFraction_()).
+     *        inverse formation volume factor of the carrier phase (see carrierSurfaceVolume_()).
      *        The saturation is already in the filter velocity. Zero unless DISPERC is in the deck
      *        and the carrier is present in both cells (see carrierPresent_()).
      */
@@ -505,8 +513,8 @@ protected:
                     const Scalar normVelocityAvg = 0.5 * (inIq.normVelocityCell(phaseIdx) +
                                                           outIq.normVelocityCell(phaseIdx));
                     const Scalar weight =
-                        0.5 * (carrierFraction_<Index>(tracerPhaseIdx, inIq.fluidState(), /*saturationWeighted=*/false) +
-                               carrierFraction_<Index>(tracerPhaseIdx, outIq.fluidState(), /*saturationWeighted=*/false));
+                        0.5 * (carrierSurfaceVolume_<Index>(tracerPhaseIdx, inIq.fluidState(), /*saturationWeighted=*/false) +
+                               carrierSurfaceVolume_<Index>(tracerPhaseIdx, outIq.fluidState(), /*saturationWeighted=*/false));
                     const Scalar dispersivity =
                         simulator_.problem().dispersivity(elemCtx.globalSpaceIndex(inIdx, timeIdx),
                                                           elemCtx.globalSpaceIndex(outIdx, timeIdx));
