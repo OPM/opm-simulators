@@ -573,14 +573,17 @@ public:
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the
         // tmpdispersivity).
+        // Only work if dispersion is enabled run-time by DISPERC in the deck.
         if constexpr (enableDispersion) {
-            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
-            DispersionModule::ExtensiveQuantities::update(
-                normVelocityAvg, intQuantsIn, intQuantsEx);
-            const Scalar dispersivity = nbInfo.dispersivity;
-            const Scalar tmpdispersivity = dispersivity / faceArea;
-            DispersionModule::addDispersiveFlux(
-                flux, intQuantsIn, intQuantsEx, tmpdispersivity, normVelocityAvg);
+            if (FluidSystem::enableDispersion()) {
+                typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+                DispersionModule::ExtensiveQuantities::update(
+                    normVelocityAvg, intQuantsIn, intQuantsEx);
+                const Scalar dispersivity = nbInfo.dispersivity;
+                const Scalar tmpdispersivity = dispersivity / faceArea;
+                DispersionModule::addDispersiveFlux(
+                    flux, intQuantsIn, intQuantsEx, tmpdispersivity, normVelocityAvg);
+            }
         }
 
         // apply the scaling for the urea equation in MICP

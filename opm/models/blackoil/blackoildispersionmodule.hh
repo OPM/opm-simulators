@@ -106,7 +106,7 @@ public:
                                   unsigned spaceIdx, unsigned timeIdx)
     {
         // Only work if dispersion is enabled by DISPERC in the deck
-        if (!context.simulator().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
+        if (!FluidSystem::enableDispersion()) {
             return;
         }
         const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
@@ -311,7 +311,7 @@ protected:
     void update_(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         // Only work if dispersion is enabled by DISPERC in the deck
-        if (!elemCtx.simulator().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
+        if (!FluidSystem::enableDispersion()) {
             return;
         }
         const auto& problem = elemCtx.simulator().problem();
