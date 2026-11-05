@@ -903,7 +903,7 @@ BOOST_AUTO_TEST_CASE(ReportConnections_LgrGridField_NonLgrWells)
 }
 
 // ---------------------------------------------------------------------
-// Routing of the fracture-routed injection rate (SingleWellState::frac_rate
+// Routing of the fracture-routed injection rate (SingleWellState::sum_fracture_rate()
 // and ConnFractureData::injected_rate) to the summary slot of the injected
 // phase: wat_frac, oil_frac or gas_frac.
 
@@ -964,12 +964,11 @@ END
 
     // Reports the injector after storing a fracture split as
     // updateWellFractureFlowSplit() does: the injected canonical phase
-    // (-1: not yet determined), the well's total fracture-routed rate and
-    // the fracture-routed rate of each connection.
+    // (-1: not yet determined) and the fracture-routed rate of each
+    // connection.  The well total is the sum over its (single) connection.
     FractureRateReport reportFractureRates(const std::string& phases,
                                            const std::string& injPhase,
                                            const int injectedPhase,
-                                           const double wellRate,
                                            const double connRate)
     {
         const auto setup = Setup { makeInjectorDeck(phases, injPhase) };
@@ -977,8 +976,6 @@ END
         auto wstate = buildWellState(setup, 0, pinfos);
 
         auto& ws = wstate.well("INJ");
-        ws.frac_rate = wellRate;
-
         auto& fracture_data = ws.perf_data.fracture_data;
         fracture_data.resize(ws.perf_data.size());
         fracture_data.injected_phase = injectedPhase;
@@ -1032,44 +1029,44 @@ END
 BOOST_AUTO_TEST_CASE(FractureRate_WaterInjector)
 {
     const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "WATER",
-                                         IndexTraits::waterPhaseIdx, 12.5, 2.5);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 12.5, 2.5);
+                                         IndexTraits::waterPhaseIdx, 2.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 2.5, 2.5);
 }
 
 BOOST_AUTO_TEST_CASE(FractureRate_OilInjector)
 {
     const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "OIL",
-                                         IndexTraits::oilPhaseIdx, 13.5, 3.5);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::oil_frac, 13.5, 3.5);
+                                         IndexTraits::oilPhaseIdx, 3.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::oil_frac, 3.5, 3.5);
 }
 
 BOOST_AUTO_TEST_CASE(FractureRate_GasInjector)
 {
     const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "GAS",
-                                         IndexTraits::gasPhaseIdx, 1.25e4, 4.5e3);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 1.25e4, 4.5e3);
+                                         IndexTraits::gasPhaseIdx, 4.5e3);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 4.5e3, 4.5e3);
 }
 
 BOOST_AUTO_TEST_CASE(FractureRate_UndeterminedPhaseReportsWater)
 {
     // No split computed yet (injected_phase == -1): the historical water slot.
-    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "GAS", -1, 14.5, 5.5);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 14.5, 5.5);
+    const auto rpt = reportFractureRates("OIL\nWATER\nGAS", "GAS", -1, 5.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 5.5, 5.5);
 }
 
 BOOST_AUTO_TEST_CASE(FractureRate_GasInjector_GasWater)
 {
     // Gas is active phase 1 here, not its canonical index 2.
     const auto rpt = reportFractureRates("WATER\nGAS", "GAS",
-                                         IndexTraits::gasPhaseIdx, 2.5e4, 6.5e3);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 2.5e4, 6.5e3);
+                                         IndexTraits::gasPhaseIdx, 6.5e3);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::gas_frac, 6.5e3, 6.5e3);
 }
 
 BOOST_AUTO_TEST_CASE(FractureRate_WaterInjector_GasWater)
 {
     const auto rpt = reportFractureRates("WATER\nGAS", "WATER",
-                                         IndexTraits::waterPhaseIdx, 15.5, 7.5);
-    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 15.5, 7.5);
+                                         IndexTraits::waterPhaseIdx, 7.5);
+    checkFractureRateSlot(rpt, Opm::data::Rates::opt::wat_frac, 7.5, 7.5);
 }
 
 // ---------------------------------------------------------------------

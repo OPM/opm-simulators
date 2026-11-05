@@ -252,6 +252,14 @@ Scalar SingleWellState<Scalar, IndexTraits>::sum_filtrate_total() const
 }
 
 template<typename Scalar, typename IndexTraits>
+Scalar SingleWellState<Scalar, IndexTraits>::sum_fracture_rate() const
+{
+    if (this->producer) return 0.;
+
+    return this->sum_connection_rates(this->perf_data.fracture_data.injected_rate);
+}
+
+template<typename Scalar, typename IndexTraits>
 void SingleWellState<Scalar, IndexTraits>::
 update_producer_targets(const Well& ecl_well, const SummaryState& st)
 {
@@ -414,7 +422,6 @@ bool SingleWellState<Scalar, IndexTraits>::operator==(const SingleWellState& rhs
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&
-           this->frac_rate == rhs.frac_rate &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
            this->segments == rhs.segments &&

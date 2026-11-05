@@ -647,7 +647,7 @@ report(const int*                            globalCellIdxMap,
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
-        const auto frac_rate = ws.frac_rate;
+        const auto frac_rate = ws.sum_fracture_rate();
         const auto frac_rate_opt =
             fractureRateOption<IndexTraits>(ws.perf_data.fracture_data.injected_phase);
         const auto& wname = this->name(well_index);
