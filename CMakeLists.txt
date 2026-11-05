@@ -369,6 +369,7 @@ macro(opm-simulators_sources_hook)
       opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
       tests/gpuistl/test_blackoilintensivequantities_gpu.cu
+      tests/gpuistl/test_blackoilintensivequantities_gpu_threephase.cu
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
@@ -500,6 +501,7 @@ macro(opm-simulators_tests_hook)
                  AmgxInterface
                  AmgxPreconditioner
                  blackoilintensivequantities_gpu
+                 blackoilintensivequantities_gpu_threephase
                  blackoilfluidstategpu
                  conditional_storage
                  cublas_handle

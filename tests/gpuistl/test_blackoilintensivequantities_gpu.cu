@@ -93,7 +93,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <new>
 #include <string>
 #include <string_view>
 #include <sstream>
@@ -341,36 +340,6 @@ updateAllCellsKernel(GpuProblem problem,
     outIntensiveQuantities[i] = intensiveQuantities;
 }
 
-template <class T>
-class ManagedGpuObject
-{
-public:
-    explicit ManagedGpuObject(const T& value)
-    {
-        OPM_GPU_SAFE_CALL(cudaMallocManaged(&object_, sizeof(T)));
-        new (object_) T(value);
-    }
-
-    ~ManagedGpuObject()
-    {
-        if (object_ != nullptr) {
-            object_->~T();
-            (void)cudaFree(object_);
-        }
-    }
-
-    ManagedGpuObject(const ManagedGpuObject&) = delete;
-    ManagedGpuObject& operator=(const ManagedGpuObject&) = delete;
-
-    T& operator*() { return *object_; }
-    const T& operator*() const { return *object_; }
-    T* operator->() { return object_; }
-    const T* operator->() const { return object_; }
-
-private:
-    T* object_ = nullptr;
-};
-
 /// One-shot global initialization of MPI, communicator, and parameter
 /// registration. Safe to call from multiple BOOST test cases; only the
 /// first call performs the work.
@@ -459,7 +428,8 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     // BlackOilFluidState pointer dereference is valid both on host and on
     // device.
     using FluidSystemViewType = std::decay_t<decltype(dynamicGpuFluidSystemView)>;
-    ManagedGpuObject<FluidSystemViewType> managedFluidSystemView(dynamicGpuFluidSystemView);
+    auto managedFluidSystemView
+        = Opm::gpuistl::make_gpu_managed_unique_ptr<FluidSystemViewType>(dynamicGpuFluidSystemView);
 
     using CpuMaterialLawManager = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
     using Traits = typename CpuMaterialLawManager::MaterialLaw::Traits;
@@ -799,7 +769,8 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     using FluidSystemViewType = std::decay_t<decltype(dynamicGpuFluidSystemView)>;
-    ManagedGpuObject<FluidSystemViewType> managedFluidSystemView(dynamicGpuFluidSystemView);
+    auto managedFluidSystemView
+        = Opm::gpuistl::make_gpu_managed_unique_ptr<FluidSystemViewType>(dynamicGpuFluidSystemView);
 
     BOOST_TEST_MESSAGE(std::format(
         "GPU fluid-system view phase activation: O={} W={} G={}",
