@@ -180,7 +180,10 @@ void printUsage()
         << "  --summary-min-interval=<days>        Thin the embedded summary to samples at\n"
         << "                                       least this far apart, plus every report\n"
         << "                                       step. Rates are averaged over whatever\n"
-        << "                                       each sample covers. Default 0 keeps\n"
+        << "                                       each sample covers, from their\n"
+        << "                                       cumulatives where the parent has them,\n"
+        << "                                       which is exact even with RPTONLY.\n"
+        << "                                       Default 0 keeps\n"
         << "                                       every step the parent wrote, which is\n"
         << "                                       independent of the restart cadence.\n"
         << "  --help                               Show this message\n"
@@ -1502,9 +1505,12 @@ struct SummarySampleOut {
 //! Retains a step when it closes a report step, when it is the first, or when
 //! at least \p minInterval seconds have passed since the last one retained --
 //! the same rule a live DUMPFLUX run applies. A rate in a retained sample is
-//! the time average over every step since the previous retained one, so that a
-//! reduced run holding it across that interval reproduces the parent's
-//! production over it exactly. Everything else is the value at the sample.
+//! the time average since the previous retained one, so that a reduced run
+//! holding it across that interval reproduces the parent's production over it
+//! exactly. It is taken from the rate's cumulative (WGIT for WGIR, ...) where
+//! the parent has one, which is exact even when the parent wrote its summary
+//! at report steps only (RPTONLY), and otherwise from the rates of the steps
+//! the parent wrote. Everything else is the value at the sample.
 std::vector<SummarySampleOut> embeddedSummarySamples(const SummaryPayload& payload,
                                                      const double minInterval)
 {
@@ -1514,6 +1520,41 @@ std::vector<SummarySampleOut> embeddedSummarySamples(const SummaryPayload& paylo
     for (std::size_t i = 0; i < payload.keys.size(); ++i) {
         isRate[i] = Opm::ParentSummary::keyType(payload.keys[i]) == Opm::SummaryConfigNode::Type::Rate;
     }
+
+    // The cumulative of each rate: the vector name with the R of the rate
+    // replaced by T (WOPR -> WOPT, GGIRH -> GGITH), same entity.
+    std::unordered_map<std::string, std::size_t> keyIndex;
+    for (std::size_t i = 0; i < payload.keys.size(); ++i) {
+        keyIndex.emplace(payload.keys[i], i);
+    }
+    std::vector<std::optional<std::size_t>> totalOf(payload.keys.size());
+    for (std::size_t i = 0; i < payload.keys.size(); ++i) {
+        if (!isRate[i]) {
+            continue;
+        }
+        const auto& key = payload.keys[i];
+        const auto colon = key.find(':');
+        auto name = key.substr(0, colon);
+        const auto entity = (colon == std::string::npos) ? std::string{} : key.substr(colon);
+        const auto historyR = name.size() > 2 ? name.size() - 2 : std::string::npos;
+        if (!name.empty() && name.back() == 'R') {
+            name.back() = 'T';
+        }
+        else if ((historyR != std::string::npos) && (name.compare(historyR, 2, "RH") == 0)) {
+            name[historyR] = 'T';
+        }
+        else {
+            continue;
+        }
+        const auto total = keyIndex.find(name + entity);
+        if ((total != keyIndex.end())
+            && (Opm::ParentSummary::keyType(total->first) == Opm::SummaryConfigNode::Type::Total))
+        {
+            totalOf[i] = total->second;
+        }
+    }
+    std::vector<double> lastRetainedValues;
+    double lastRetainedDays = 0.0;
 
     std::vector<SummarySampleOut> samples;
     std::vector<double> rateIntegral(payload.keys.size(), 0.0);
@@ -1544,16 +1585,29 @@ std::vector<SummarySampleOut> embeddedSummarySamples(const SummaryPayload& paylo
             continue;
         }
 
+        const bool first = samples.empty();
         auto& sample = samples.emplace_back();
         sample.time = time;
         sample.values = values;
         if (accumulated > 0.0) {
+            const auto days = payload.times[n] - lastRetainedDays;
             for (std::size_t i = 0; i < values.size(); ++i) {
-                if (isRate[i]) {
-                    sample.values[i] = rateIntegral[i] / accumulated;
+                if (!isRate[i]) {
+                    continue;
+                }
+                sample.values[i] = rateIntegral[i] / accumulated;
+                // Not for the first sample: a restarted parent's totals do not
+                // start from zero.
+                if (const auto t = totalOf[i]; t.has_value() && !first && (days > 0.0)) {
+                    const auto produced = values[*t] - lastRetainedValues[*t];
+                    if (produced >= 0.0) {
+                        sample.values[i] = produced / days;
+                    }
                 }
             }
         }
+        lastRetainedValues = values;
+        lastRetainedDays = payload.times[n];
 
         std::fill(rateIntegral.begin(), rateIntegral.end(), 0.0);
         accumulated = 0.0;
