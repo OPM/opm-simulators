@@ -1116,6 +1116,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowProblemBlackoilProperties.hpp
   opm/simulators/flow/FlowProblemComp.hpp
   opm/simulators/flow/FlowProblemCompProperties.hpp
+  opm/simulators/flow/FlowProblemNohystTypeTag.hpp
   opm/simulators/flow/FlowProblemParameters.hpp
   opm/simulators/flow/FlowProblemTPSA.hpp
   opm/simulators/flow/FlowsContainer.hpp
