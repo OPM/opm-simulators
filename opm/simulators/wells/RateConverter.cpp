@@ -91,6 +91,16 @@ sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
         std::ranges::transform(ra.data, ra.data.begin(),
                                [pv_sum](const auto d) { return d / pv_sum; });
         ra.pv = pv_sum;
+        // Use the oil (gas) phase volume weighted averages of Rs (Rv), i.e.
+        // the average solution ratios of the oil (gas) actually present,
+        // rather than hydrocarbon pore volume weighted ones, which also
+        // include cells without that phase.
+        if (ra.oil_pv > 0.) {
+            ra.rs = ra.rs_oil / ra.oil_pv;
+        }
+        if (ra.gas_pv > 0.) {
+            ra.rv = ra.rv_gas / ra.gas_pv;
+        }
     }
 }
 
