@@ -999,7 +999,6 @@ END
                                const double wellRate,
                                const double connRate)
     {
-        using Opt = Opm::data::Rates::opt;
         const auto slots = std::array {
             std::pair { Opt::wat_frac, IndexTraits::waterPhaseIdx },
             std::pair { Opt::oil_frac, IndexTraits::oilPhaseIdx },
