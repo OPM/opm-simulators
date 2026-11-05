@@ -156,6 +156,9 @@ template<class Scalar> class WellContributions;
                 beginReportStep(simulator_.episodeIndex());
             }
 
+            //! The report step's first sub-step is already done.
+            void continueReportStep() { this->report_step_starts_ = false; }
+
             void beginTimeStep();
 
             void updateFailed();

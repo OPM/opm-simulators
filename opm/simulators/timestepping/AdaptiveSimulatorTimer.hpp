@@ -131,6 +131,17 @@ namespace Opm
 
         int reportStepSubstepOffset() const { return report_step_substep_offset_; }
 
+        /// Continue from a position saved within the report step.
+        void restoreSubStep(double time, double dt, int step, std::vector<double> steps)
+        {
+            current_time_ = time;
+            dt_ = dt;
+            current_step_ = step;
+            steps_ = std::move(steps);
+        }
+
+        const std::vector<double>& stepsTaken() const { return steps_; }
+
         /// return copy of object
         std::unique_ptr<SimulatorTimerInterface> clone() const override;
 

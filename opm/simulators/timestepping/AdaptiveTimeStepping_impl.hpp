@@ -207,6 +207,32 @@ step(const SimulatorTimer& simulator_timer,
 }
 
 template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+takeSettingsFrom(AdaptiveTimeStepping<TypeTag>& other)
+{
+    // A controller of another type has no history that applies.
+    if (this->time_step_control_type_ != other.time_step_control_type_) {
+        this->time_step_control_type_ = other.time_step_control_type_;
+        this->time_step_control_ = std::move(other.time_step_control_);
+    }
+    this->restart_factor_ = other.restart_factor_;
+    this->growth_factor_ = other.growth_factor_;
+    this->max_growth_ = other.max_growth_;
+    this->max_time_step_ = other.max_time_step_;
+    this->min_time_step_ = other.min_time_step_;
+    this->ignore_convergence_failure_ = other.ignore_convergence_failure_;
+    this->solver_restart_max_ = other.solver_restart_max_;
+    this->solver_verbose_ = other.solver_verbose_;
+    this->timestep_verbose_ = other.timestep_verbose_;
+    this->full_timestep_initially_ = other.full_timestep_initially_;
+    this->timestep_after_event_ = other.timestep_after_event_;
+    this->use_newton_iteration_ = other.use_newton_iteration_;
+    this->min_time_step_before_shutting_problematic_wells_
+        = other.min_time_step_before_shutting_problematic_wells_;
+}
+
+template<class TypeTag>
 template<class Serializer>
 void
 AdaptiveTimeStepping<TypeTag>::
@@ -584,8 +610,11 @@ runStepOriginal_()
     const auto elapsed = this->simulator_timer_.simulationTimeElapsed();
     const auto original_time_step = this->simulator_timer_.currentStepLength();
     const auto report_step = this->simulator_timer_.reportStepNum();
-    maybeUpdateTuning_(elapsed, suggestedNextTimestep_(), /*substep=*/0);
-    maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
+    const auto resume = std::exchange(this->adaptive_time_stepping_.resume_position_, std::nullopt);
+    if (!resume) {
+        maybeUpdateTuning_(elapsed, suggestedNextTimestep_(), /*substep=*/0);
+        maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
+    }
 
     AdaptiveSimulatorTimer substep_timer{
         this->simulator_timer_.startDateTime(),
@@ -595,6 +624,15 @@ runStepOriginal_()
         report_step,
         maxTimeStep_()
     };
+    if (resume) {
+        const auto& [time, dt, step, steps] = *resume;
+        substep_timer.restoreSubStep(time, dt, step, steps);
+        // The step limit of the loading run applies from the first step.
+        if (dt > maxTimeStep_()) {
+            substep_timer.provideTimeStepEstimate(dt);
+        }
+        this->solver_.model().simulator().problem().setNextTimeStepSize(substep_timer.currentStepLength());
+    }
     SubStepIteration<Solver> substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
     return substepIteration.run();
 }
@@ -1056,6 +1094,10 @@ run()
             }
         }
         problem.setNextTimeStepSize(this->substep_timer_.currentStepLength());
+        if (this->adaptive_time_stepping_.sub_step_callback_
+            && !this->substep_timer_.done() && !this->substep_timer_.lastStepFailed()) {
+            this->adaptive_time_stepping_.sub_step_callback_(this->substep_timer_);
+        }
     }
     updateSuggestedNextStep_();
     return report;

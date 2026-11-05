@@ -67,6 +67,7 @@ struct SaveStep { static constexpr auto* value = ""; };
 struct SaveFile { static constexpr auto* value = ""; };
 struct LoadFile { static constexpr auto* value = ""; };
 struct LoadStep { static constexpr int value = -1; };
+struct SaveAtDay { static constexpr double value = -1.0; };
 struct Slave { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
@@ -334,6 +335,13 @@ protected:
      * flag is cleared after, so subsequent calls skip the dump.
      */
     std::unique_ptr<Solver> createSolver(WellModel& wellModel);
+
+    //! Write a checkpoint after the first accepted sub-step that reaches SaveAtDay.
+    void saveAtDay_(SimulatorTimer& timer, const AdaptiveSimulatorTimer& subStepTimer);
+
+    //! Position stored with a checkpoint; none for one written at the end of a report step.
+    typename TimeStepper::SubStepPosition subStepPosition_{0.0, 0.0, -1, {}};
+    bool savedAtDay_{false};
 
     const EclipseState& eclState() const { return simulator_.vanguard().eclState(); }
 
