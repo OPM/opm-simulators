@@ -66,6 +66,12 @@ class BlackOilEnergyModule
 template <class TypeTag, EnergyModules activeModule>
 class BlackOilEnergyIntensiveQuantities
 {
+public:
+    BlackOilEnergyIntensiveQuantities() = default;
+
+    template <class OtherTypeTag>
+    BlackOilEnergyIntensiveQuantities(const BlackOilEnergyIntensiveQuantities<OtherTypeTag, activeModule>&)
+    {}
 };
 
 template <class TypeTag, EnergyModules activeModule>
