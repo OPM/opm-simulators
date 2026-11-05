@@ -60,6 +60,9 @@ struct PerforationData
     /// identified via globalCellIdxMap[active_idx] alone (which returns
     /// the level-0 ancestor's Cartesian, shared by all siblings).
     std::size_t global_index{};
+    /// \brief Segment number (1-based) of a multi-segment well's perforation that
+    ///        has no schedule connection; 0 otherwise.
+    int segment{};
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -71,6 +74,7 @@ struct PerforationData
       serializer(ecl_index);
       serializer(grid_id);
       serializer(global_index);
+      serializer(segment);
     }
 };
 

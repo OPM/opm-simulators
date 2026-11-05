@@ -138,6 +138,19 @@ namespace Opm
         // specified perforation depth
         this->initMatrixAndVectors(this->parallel_well_info_);
 
+        // A perforation without schedule connection sits at its cell's depth.
+        for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
+            const auto& perf = this->perforationData()[local_perf_index];
+            if (perf.ecl_index != AUX_PERFORATION_ECL_INDEX) {
+                continue;
+            }
+            const int seg = this->segmentNumberToIndex(perf.segment);
+            const int active_perf = this->parallel_well_info_.localPerfToActivePerf(local_perf_index);
+            this->perf_depth_[active_perf] = depth_arg[this->well_cells_[local_perf_index]];
+            this->segments_.setLocalPerforationDepthDiff(local_perf_index,
+                                                         this->perf_depth_[active_perf] - this->segmentSet()[seg].depth());
+        }
+
         // calculate the depth difference between the perforations and the perforated grid block
         for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
             // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
@@ -828,8 +841,13 @@ namespace Opm
         for ( const auto& perf : *this->perf_data_){
             auto allPerfID = perf.ecl_index;
 
-            auto connPICalc = [&wellPICalc, allPerfID](const Scalar mobility) -> Scalar
+            const Scalar auxCF = perf.connection_transmissibility_factor;
+            auto connPICalc = [&wellPICalc, allPerfID, auxCF](const Scalar mobility) -> Scalar
             {
+                // No schedule connection, hence no standard connection factor.
+                if (allPerfID == AUX_PERFORATION_ECL_INDEX) {
+                    return auxCF * mobility;
+                }
                 return wellPICalc.connectionProdIndStandard(allPerfID, mobility);
             };
 
@@ -1245,8 +1263,9 @@ namespace Opm
 
         WellInterface<TypeTag>::getMobility(simulator, local_perf_index, mob, obtain, deferred_logger);
 
-        if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
-            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
+        const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
+        if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE &&
+            perf_ecl_index != AUX_PERFORATION_ECL_INDEX) {
             const Connection& con = this->well_ecl_.getConnections()[perf_ecl_index];
             const int seg = this->segmentNumberToIndex(con.segment());
             // from the reference results, it looks like MSW uses segment pressure instead of BHP here

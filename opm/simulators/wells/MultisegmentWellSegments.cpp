@@ -38,6 +38,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
@@ -136,6 +137,24 @@ MultisegmentWellSegments(const int numSegments,
                 local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
             i_perf_wells++;
         }
+    }
+
+    // Auxiliary perforations follow the schedule ones.  Their depth is the
+    // segment's until init() knows the cell depths.
+    const auto& perf_data = well_.perforationData();
+    for (std::size_t local_perf = 0; local_perf < perf_data.size(); ++local_perf) {
+        if (perf_data[local_perf].ecl_index != AUX_PERFORATION_ECL_INDEX) {
+            continue;
+        }
+        const int segment_index = segment_set.segmentNumberToIndex(perf_data[local_perf].segment);
+        if (segment_index < 0) {
+            OPM_THROW(std::logic_error,
+                      fmt::format("Well {} has an auxiliary perforation without "
+                                  "associated segment.", well_.wellEcl().name()));
+        }
+        perforations_[segment_index].push_back(i_perf_wells);
+        well.perfDepth()[i_perf_wells] = segment_set[segment_index].depth();
+        i_perf_wells++;
     }
 
     // initialize the segment_inlets_

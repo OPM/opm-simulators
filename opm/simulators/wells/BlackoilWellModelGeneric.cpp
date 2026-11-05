@@ -39,6 +39,7 @@
 
 #include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
 #include <opm/input/eclipse/Schedule/MSW/makeMSWellFromStandardWell.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
@@ -583,14 +584,17 @@ initializeWellPerfData(const int report_step)
         if (const auto auxPos = this->auxiliary_perforations_.find(well.name());
             (auxPos != this->auxiliary_perforations_.end()) && !auxPos->second.empty())
         {
-            if (well.isMultiSegment()) {
-                OPM_THROW(std::runtime_error,
-                          fmt::format("Well {} is multi-segment; perforations of "
-                                      "auxiliary degrees of freedom are not supported "
-                                      "for multi-segment wells yet.", well.name()));
-            }
-
             for (const auto& aux : auxPos->second) {
+                if (well.isMultiSegment() &&
+                    (well.getSegments().segmentNumberToIndex(aux.segment) < 0))
+                {
+                    OPM_THROW(std::runtime_error,
+                              fmt::format("Well {} is multi-segment; a perforation of an "
+                                          "auxiliary degree of freedom names segment {}, "
+                                          "which the well does not have.",
+                                          well.name(), aux.segment));
+                }
+
                 auto& pd = well_perf_data_[well_index].emplace_back(aux);
                 pd.ecl_index = AUX_PERFORATION_ECL_INDEX;
                 if (pd.satnum_id == 0 && well_perf_data_[well_index].size() > 1) {

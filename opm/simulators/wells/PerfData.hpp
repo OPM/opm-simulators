@@ -77,6 +77,7 @@ public:
         serializer(ecl_index);
         serializer(grid_id);
         serializer(global_index);
+        serializer(segment);
         serializer(water_throughput);
         serializer(skin_pressure);
         serializer(water_velocity);
@@ -115,6 +116,7 @@ public:
     std::vector<std::size_t> ecl_index{};
     std::vector<int> grid_id{};
     std::vector<std::size_t> global_index{};
+    std::vector<int> segment{};
     std::vector<Scalar> gas_mass_rates{};
     std::vector<Scalar> wat_mass_rates{};
 
