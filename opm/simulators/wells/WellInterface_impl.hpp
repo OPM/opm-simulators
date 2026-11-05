@@ -2170,8 +2170,9 @@ namespace Opm
         // multiplier would wrongly scale both parallel paths.
         if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
             const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-            const auto& connection = this->well_ecl_.getConnections()[perf_ecl_index];
-            if (connection.filterCakeActive()) {
+            // Aux perforations have no schedule connection.
+            if (perf_ecl_index != AUX_PERFORATION_ECL_INDEX
+                && this->well_ecl_.getConnections()[perf_ecl_index].filterCakeActive()) {
                 const Scalar mult = this->inj_fc_multiplier_[perf];
                 for (auto& tw : Tw) {
                     tw *= mult;
