@@ -21,6 +21,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -405,11 +406,25 @@ public:
 
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectHardcoded();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPID();
+    //! Take limits and factors from other; the step suggestion and controller history stay.
+    void takeSettingsFrom(AdaptiveTimeStepping<TypeTag>& other);
+
+    //! Time, step length, sub-step number and steps taken; a negative number means none.
+    using SubStepPosition = std::tuple<double, double, int, std::vector<double>>;
+    //! Called after each accepted sub-step that does not end the report step.
+    void setSubStepCallback(std::function<void(const AdaptiveSimulatorTimer&)> callback)
+    { sub_step_callback_ = std::move(callback); }
+    //! The next report step run continues from this position instead of its start.
+    void resumeAt(const SubStepPosition& position) { resume_position_ = position; }
+
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPIDIt();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectSimple();
     static AdaptiveTimeStepping<TypeTag> serializationTestObject3rdOrder();
 
 private:
+    std::function<void(const AdaptiveSimulatorTimer&)> sub_step_callback_;
+    std::optional<SubStepPosition> resume_position_;
+
     void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step,
                                                               const bool is_event);
 

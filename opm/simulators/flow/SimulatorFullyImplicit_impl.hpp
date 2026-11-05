@@ -347,7 +347,21 @@ runStep(SimulatorTimer& timer)
         timer.currentStepLength());
     simulator_.setEpisodeIndex(timer.currentStepNum());
 
+    using ProblemType = std::remove_cvref_t<decltype(simulator_.problem())>;
+    bool withinReportStep = false;
     if (serializer_.shouldLoad()) {
+#if HAVE_HDF5
+        if constexpr (requires { ProblemType::loadKeepsRunSettings; }) {
+            HDF5Serializer reader(serializer_.loadFile(), HDF5File::OpenMode::READ, grid().comm());
+            reader.read(subStepPosition_, "/report_step/" + std::to_string(serializer_.loadStep()),
+                        "substep_position", HDF5File::DataSetMode::ROOT_ONLY);
+            withinReportStep = std::get<2>(subStepPosition_) >= 0;
+        }
+#endif
+        // Sets what an episode start sets outside the saved state; the load then replaces the rest.
+        if (withinReportStep) {
+            simulator_.problem().beginEpisode();
+        }
         wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
         serializer_.loadState();
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
@@ -356,7 +370,17 @@ runStep(SimulatorTimer& timer)
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/1);
             simulator_.model().rebuildStorageCache(/*timeIdx=*/1);
         }
+        // beginReportStep() clears a rebuild that was still due at the save.
+        const bool rebuildWells = wellModel_().wellStructureChanged();
         wellModel_().beginReportStep(timer.currentStepNum());
+        if (rebuildWells) {
+            wellModel_().markWellStructureChanged();
+        }
+        if (withinReportStep) {
+            wellModel_().continueReportStep();
+            adaptiveTimeStepping_->resumeAt(subStepPosition_);
+            std::get<2>(subStepPosition_) = -1;
+        }
     }
 
     // Run a multiple steps of the solver depending on the time step control.
@@ -374,7 +398,17 @@ runStep(SimulatorTimer& timer)
         restoreStateHook_(timer.currentStepNum());
     }
 
-    this->solver_->model().beginReportStep();
+    if (!withinReportStep) {
+        this->solver_->model().beginReportStep();
+    }
+
+    if constexpr (requires { ProblemType::loadKeepsRunSettings; }) {
+        if (adaptiveTimeStepping_ && Parameters::Get<Parameters::SaveAtDay>() >= 0.0) {
+            adaptiveTimeStepping_->setSubStepCallback(
+                [this, &timer](const AdaptiveSimulatorTimer& subStepTimer)
+                { this->saveAtDay_(timer, subStepTimer); });
+        }
+    }
 
     const bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
 
@@ -627,7 +661,19 @@ loadState([[maybe_unused]] HDF5Serializer& serializer,
           [[maybe_unused]] const std::string& groupName)
 {
 #if HAVE_HDF5
-    serializer.read(*this, groupName, "simulator_data");
+    using ProblemType = std::remove_cvref_t<decltype(simulator_.problem())>;
+    if constexpr (requires { ProblemType::loadKeepsRunSettings; }) {
+        // Solver settings come from this run, only the state from the file.
+        auto runStepper = std::move(adaptiveTimeStepping_);
+        const auto runParam = modelParam_;
+        serializer.read(*this, groupName, "simulator_data");
+        modelParam_ = runParam;
+        if (adaptiveTimeStepping_ && runStepper) {
+            adaptiveTimeStepping_->takeSettingsFrom(*runStepper);
+        }
+    } else {
+        serializer.read(*this, groupName, "simulator_data");
+    }
 #endif
 }
 
@@ -639,6 +685,52 @@ saveState([[maybe_unused]] HDF5Serializer& serializer,
 {
 #if HAVE_HDF5
     serializer.write(*this, groupName, "simulator_data");
+    using ProblemType = std::remove_cvref_t<decltype(simulator_.problem())>;
+    if constexpr (requires { ProblemType::loadKeepsRunSettings; }) {
+        serializer.write(subStepPosition_, groupName, "substep_position",
+                         HDF5File::DataSetMode::ROOT_ONLY);
+    }
+#endif
+}
+
+template<class TypeTag>
+void
+SimulatorFullyImplicit<TypeTag>::
+saveAtDay_([[maybe_unused]] SimulatorTimer& timer,
+           [[maybe_unused]] const AdaptiveSimulatorTimer& subStepTimer)
+{
+#if HAVE_HDF5
+    const double saveTime = Parameters::Get<Parameters::SaveAtDay>() * unit::day;
+    if (savedAtDay_ || subStepTimer.simulationTimeElapsed() < saveTime) {
+        return;
+    }
+    savedAtDay_ = true;
+
+    // Stored under the report step's successor, as a save at its end would be.
+    const std::string groupName = "/report_step/" + std::to_string(timer.currentStepNum() + 1);
+    auto comm = grid().comm();
+    if (comm.rank() == 0) {
+        std::filesystem::remove(serializer_.saveFile());
+    }
+    comm.barrier();
+    HDF5Serializer writer(serializer_.saveFile(), HDF5File::OpenMode::APPEND, comm);
+    const auto header = getHeader();
+    writer.writeHeader(header[0], header[1], header[2], header[3], header[4], comm.size());
+    if (comm.size() > 1) {
+        const auto& cellMapping = getCellMapping();
+        std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
+        writer.write(hash, "/", "grid_checksum");
+    }
+    subStepPosition_ = {subStepTimer.simulationTimeElapsed(), subStepTimer.currentStepLength(),
+                        subStepTimer.currentStepNum(), subStepTimer.stepsTaken()};
+    saveState(writer, groupName);
+    std::get<2>(subStepPosition_) = -1;
+    writer.write(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
+    if (terminalOutput_) {
+        OpmLog::info(fmt::format("Serialized state written within report step {} at day {}",
+                                 timer.currentStepNum(),
+                                 subStepTimer.simulationTimeElapsed() / unit::day));
+    }
 #endif
 }
 

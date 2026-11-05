@@ -340,6 +340,8 @@ public:
     }
 
     bool reportStepStarts() const { return report_step_starts_; }
+    bool wellStructureChanged() const { return wellStructureChangedDynamically_; }
+    void markWellStructureChanged() { wellStructureChangedDynamically_ = true; }
 
     void updateClosedWellsThisStep(const std::string& well_name) const
     {

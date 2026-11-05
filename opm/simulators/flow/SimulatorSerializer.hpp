@@ -76,6 +76,9 @@ public:
     //! \brief Returns step to load.
     int loadStep() const { return loadStep_; }
 
+    const std::string& saveFile() const { return saveFile_; }
+    const std::string& loadFile() const { return loadFile_; }
+
     //! \brief Save data to file if appropriate.
     void save(SimulatorTimer& timer);
 
