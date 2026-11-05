@@ -1313,6 +1313,10 @@ namespace Opm
 
             auto connPICalc = [&wellPICalc, allPerfID](const Scalar mobility) -> Scalar
             {
+                // No schedule connection, hence no standard connection factor.
+                if (allPerfID == AUX_PERFORATION_ECL_INDEX) {
+                    return Scalar{0};
+                }
                 return wellPICalc.connectionProdIndStandard(allPerfID, mobility);
             };
 

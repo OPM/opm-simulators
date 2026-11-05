@@ -977,10 +977,14 @@ public:
 
         // Add source term from deck
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
-        std::array<int,3> ijk;
-        this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
+        std::array<int,3> ijk{};
+        // Auxiliary DOFs have no Cartesian position and no deck source.
+        const bool isGridDof = globalDofIdx < this->model().numGridDof();
+        if (isGridDof) {
+            this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
+        }
 
-        if (source.hasSource(ijk)) {
+        if (isGridDof && source.hasSource(ijk)) {
             const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
             static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
             static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
