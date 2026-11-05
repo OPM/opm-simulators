@@ -28,6 +28,9 @@
 
 #include <opm/simulators/wells/PerforationData.hpp>
 
+#include <algorithm>
+#include <cmath>
+
 namespace Opm {
 
 template<typename Scalar, typename IndexTraits>
@@ -64,6 +67,31 @@ SingleWellState(const std::string& name_,
         this->perf_data.grid_id[perf] = perf_input[perf].grid_id;
         this->perf_data.global_index[perf] = perf_input[perf].global_index;
     }
+}
+
+template<typename Scalar, typename IndexTraits>
+bool SingleWellState<Scalar, IndexTraits>::isFinite() const
+{
+    const auto all_finite = [](const std::vector<Scalar>& values)
+    { return std::ranges::all_of(values, [](const Scalar v) { return std::isfinite(v); }); };
+
+    return std::isfinite(this->bhp) && std::isfinite(this->thp) &&
+           all_finite(this->surface_rates) &&
+           all_finite(this->segments.rates) &&
+           all_finite(this->segments.pressure) &&
+           all_finite(this->primaryvar);
+}
+
+template<typename Scalar, typename IndexTraits>
+bool SingleWellState<Scalar, IndexTraits>::
+restoreIfDiverged(const SingleWellState& snapshot, const bool solve_threw)
+{
+    if (!solve_threw && this->isFinite()) {
+        return false;
+    }
+
+    *this = snapshot;
+    return true;
 }
 
 template<typename Scalar, typename IndexTraits>
