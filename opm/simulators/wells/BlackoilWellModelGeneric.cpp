@@ -2214,6 +2214,11 @@ updateFiltrationModelsPostStep(const double dt,
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
+            // Zero unless updated below (no concentration, MULTI injector);
+            // the cake and the totals carry over.
+            auto& ws = this->wellState().well(well->indexOfWell());
+            std::ranges::fill(ws.perf_data.filtrate_data.rates, Scalar{0});
+
             const auto& well_ecl = well->wellEcl();
             const Scalar conc = well_ecl.evalFilterConc(this->summaryState_);
             if (conc > 0.) {

@@ -165,6 +165,10 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar, IndexTraits>&
         qpos_sum += std::max(Scalar{0.}, crate);
         q_sum += crate;
     }
+    // Sum over all ranks of a distributed well.
+    const auto& comm = ws.parallel_info.get().communication();
+    q_sum = comm.sum(q_sum);
+    qpos_sum = comm.sum(qpos_sum);
     if (qpos_sum > q_sum && qpos_sum > 1.0e-12) {
         xfact = std::max(Scalar{0.}, q_sum) / qpos_sum;
     }
