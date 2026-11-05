@@ -103,8 +103,11 @@ public:
                             Equations& eqns) const;
 
     //! \brief Assembles a trivial equation.
+    //! \details Takes the rate as an Evaluation rather than a value, so the
+    //!          Jacobian entry comes from its derivative. A hard-coded 1 is
+    //!          only correct while the rate primary variable is unscaled.
     void assembleTrivialEq(const int seg,
-                           const Scalar value,
+                           const EvalWell& rate,
                            Equations& eqns) const;
 
     //! \brief Assemble accumulation term.
