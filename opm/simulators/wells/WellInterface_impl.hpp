@@ -697,17 +697,20 @@ namespace Opm
             converged = false;
             solve_threw = true;
         }
-        if (!converged) {
-            // A solve that threw or left non-finite values can leave the well in a diverged state,
-            // which would otherwise be the starting point for the next solve of the well. Restore
-            // the state from before the solve. Other unconverged solves keep their (partial) progress.
-            const auto all_finite = [](const auto& values)
-            { return std::ranges::all_of(values, [](const Scalar v) { return std::isfinite(v); }); };
-            const bool state_finite = all_finite(ws.surface_rates) && all_finite(ws.segments.rates) &&
-                                      all_finite(ws.segments.pressure) && all_finite(ws.primaryvar) &&
-                                      std::isfinite(ws.bhp) && std::isfinite(ws.thp);
-            if (solve_threw || !state_finite) {
-                well_state.well(this->indexOfWell()) = ws_before_solve;
+        // A solve that threw or left non-finite values can leave the well in a diverged state, which would
+        // otherwise be the starting point for the next solve of the well. This is also checked when the solve
+        // reports convergence, as the convergence check might not detect non-finite residuals.
+        // Unconverged solves with a finite state keep their (partial) progress.
+        if (well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_solve, solve_threw)) {
+            converged = false;
+            // The primary variables used by the assembly, and the cached well equations whose residuals
+            // are checked at the start of the next solve, are still from the failed iterate.
+            this->updatePrimaryVariables(groupStateHelper);
+            try {
+                this->assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
+                                                     well_state, /*solving_with_zero_rate=*/false);
+            } catch (const NumericalProblem&) {
+                // keep the cached equations, the next solve of the well handles non-finite residuals
             }
         }
         if (converged) {
