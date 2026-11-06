@@ -316,6 +316,8 @@ struct scanner_state_t {
   const char *cur; // points into scanner_t::src[]
   int lineno;      // current line number
   const char *line_start;
+  int bracket_level; // depth of [ ] (OPM: restore with the cursor)
+  int brace_level;   // depth of { } (OPM: restore with the cursor)
 };
 
 // A scan token
@@ -2954,6 +2956,8 @@ static scanner_state_t scan_mark(scanner_t *sp) {
   mark.cur = sp->cur;
   mark.lineno = sp->lineno;
   mark.line_start = sp->line_start;
+  mark.bracket_level = sp->bracket_level;
+  mark.brace_level = sp->brace_level;
   return mark;
 }
 
@@ -2963,6 +2967,8 @@ static void scan_restore(scanner_t *sp, scanner_state_t mark) {
   sp->cur = mark.cur;
   sp->lineno = mark.lineno;
   sp->line_start = mark.line_start;
+  sp->bracket_level = mark.bracket_level;
+  sp->brace_level = mark.brace_level;
 }
 
 // Return the next token

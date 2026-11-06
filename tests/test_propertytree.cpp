@@ -696,4 +696,34 @@ BOOST_AUTO_TEST_CASE(Write_Comments)
     BOOST_CHECK_EQUAL(asJson(u), asJson(t));
 }
 
+BOOST_AUTO_TEST_CASE(Nesting_Limit_After_Table_Headers)
+{
+    // The parser limits the nesting depth of arrays to 30 to protect
+    // against stack overflow.  Table headers must not affect this limit.
+    const auto document = [](const int numHeaders, const int depth)
+    {
+        auto toml = std::string{};
+        for (auto i = 0; i < numHeaders; ++i) {
+            toml += "[table" + std::to_string(i) + "]\n";
+        }
+        return toml + "x = " + std::string(depth, '[') + std::string(depth, ']') + '\n';
+    };
+
+    BOOST_CHECK_NO_THROW(Opm::PropertyTree::fromTomlString(document(0, 30)));
+    BOOST_CHECK_NO_THROW(Opm::PropertyTree::fromTomlString(document(1, 30)));
+    BOOST_CHECK_NO_THROW(Opm::PropertyTree::fromTomlString(document(5, 30)));
+
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString(document(0, 31)), std::runtime_error);
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString(document(1, 31)), std::runtime_error);
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString(document(200, 200)), std::runtime_error);
+
+    // The same holds for inline tables.
+    auto inlineTables = std::string { "[a]\n[b]\nx = " };
+    for (auto i = 0; i < 31; ++i) {
+        inlineTables += "{ y = ";
+    }
+    inlineTables += "1" + std::string(31, '}') + '\n';
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString(inlineTables), std::runtime_error);
+}
+
 BOOST_AUTO_TEST_SUITE_END() // Toml
