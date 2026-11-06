@@ -166,20 +166,18 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
     BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
 
     double GpuComputedVal = 0.0;
-    double* gpuComputedValPtr = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuComputedValPtr, sizeof(double)));
-    getReservoirTemperature<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    auto gpuComputedValPtr = Opm::gpuistl::make_gpu_unique_ptr<double>();
+    getReservoirTemperature<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
     BOOST_CHECK_CLOSE(FluidSystem::reservoirTemperature(), GpuComputedVal, 1e-10);
 
-    getReferenceDensityFromGasPvt<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    getReferenceDensityFromGasPvt<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
     BOOST_CHECK_CLOSE(FluidSystem::gasPvt().gasReferenceDensity(0), GpuComputedVal, 1e-10);
 
-    getReferenceDensity<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    getReferenceDensity<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
     BOOST_CHECK_CLOSE(FluidSystem::referenceDensity(0, 0), GpuComputedVal, 1e-10);
 
 
-    OPM_GPU_SAFE_CALL(cudaFree(gpuComputedValPtr));
 }

@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 
 #include <type_traits>
 #include <vector>
@@ -130,7 +131,7 @@ BOOST_AUTO_TEST_CASE(TestDataPointer)
     auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
 
     std::vector<double> hostBuffer(data.size(), 0.0);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(hostBuffer.data(), bufferOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(hostBuffer.data(), bufferOnGPU.data(), data.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), hostBuffer.begin(), hostBuffer.end());
 }
 

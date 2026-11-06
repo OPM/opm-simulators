@@ -346,29 +346,16 @@ class ManagedGpuObject
 {
 public:
     explicit ManagedGpuObject(const T& value)
-    {
-        OPM_GPU_SAFE_CALL(cudaMallocManaged(&object_, sizeof(T)));
-        new (object_) T(value);
-    }
-
-    ~ManagedGpuObject()
-    {
-        if (object_ != nullptr) {
-            object_->~T();
-            (void)cudaFree(object_);
-        }
-    }
-
-    ManagedGpuObject(const ManagedGpuObject&) = delete;
-    ManagedGpuObject& operator=(const ManagedGpuObject&) = delete;
+        : object_(Opm::gpuistl::make_gpu_managed_unique_ptr<T>(value))
+    {}
 
     T& operator*() { return *object_; }
     const T& operator*() const { return *object_; }
-    T* operator->() { return object_; }
-    const T* operator->() const { return object_; }
+    T* operator->() { return object_.get(); }
+    const T* operator->() const { return object_.get(); }
 
 private:
-    T* object_ = nullptr;
+    std::unique_ptr<T, Opm::gpuistl::GpuManagedDeleter<T>> object_;
 };
 
 /// One-shot global initialization of MPI, communicator, and parameter
@@ -563,10 +550,8 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
 
     // Bring GPU intensive quantities back and compare cells (sampled by sampleStride).
     std::vector<IntensiveQuantitiesGpu> gpuIntensiveQuantitiesHost(numCells, gpuIntensiveQuantitiesPrototype);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIntensiveQuantitiesHost.data(),
-                                 intensiveQuantitiesBuffer.data(),
-                                 numCells * sizeof(IntensiveQuantitiesGpu),
-                                 cudaMemcpyDeviceToHost));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(
+        gpuIntensiveQuantitiesHost.data(), intensiveQuantitiesBuffer.data(), numCells);
     BOOST_REQUIRE_EQUAL(gpuIntensiveQuantitiesHost.size(), numCells);
 
     constexpr double tol = 1e-6;
@@ -921,10 +906,8 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
     }
 
     std::vector<IntensiveQuantitiesGpu> gpuIntensiveQuantitiesHost(numCells, gpuIntensiveQuantitiesPrototype);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuIntensiveQuantitiesHost.data(),
-                                 intensiveQuantitiesBuffer.data(),
-                                 numCells * sizeof(IntensiveQuantitiesGpu),
-                                 cudaMemcpyDeviceToHost));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(
+        gpuIntensiveQuantitiesHost.data(), intensiveQuantitiesBuffer.data(), numCells);
 
     constexpr double tol = 1e-6;
     constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;

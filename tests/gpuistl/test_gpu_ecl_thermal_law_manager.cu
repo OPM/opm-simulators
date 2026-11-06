@@ -37,6 +37,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <array>
 #include <vector>
@@ -164,34 +165,21 @@ BOOST_AUTO_TEST_CASE(SpecrockAndThconrEvaluateMatchesCpu)
     };
 
     // -- Run the kernel.
-    Scalar* dT = nullptr;
-    Scalar* dSg = nullptr;
-    Scalar* dEnergy = nullptr;
-    Scalar* dConductivity = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&dT, numCells * sizeof(Scalar)));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&dSg, numCells * sizeof(Scalar)));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&dEnergy, numCells * sizeof(Scalar)));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&dConductivity, numCells * sizeof(Scalar)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(dT, hostTemperatures.data(),
-                                 numCells * sizeof(Scalar), cudaMemcpyHostToDevice));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(dSg, hostGasSaturations.data(),
-                                 numCells * sizeof(Scalar), cudaMemcpyHostToDevice));
+    auto dT = Opm::gpuistl::make_gpu_unique_ptr_array<Scalar>(numCells);
+    auto dSg = Opm::gpuistl::make_gpu_unique_ptr_array<Scalar>(numCells);
+    auto dEnergy = Opm::gpuistl::make_gpu_unique_ptr_array<Scalar>(numCells);
+    auto dConductivity = Opm::gpuistl::make_gpu_unique_ptr_array<Scalar>(numCells);
+    Opm::gpuistl::detail::gpuMemcpyHostToDevice(dT.get(), hostTemperatures.data(), numCells);
+    Opm::gpuistl::detail::gpuMemcpyHostToDevice(dSg.get(), hostGasSaturations.data(), numCells);
 
-    evaluateThermalKernel<<<1, 32>>>(viewManager, dT, dSg, dEnergy, dConductivity, numCells);
+    evaluateThermalKernel<<<1, 32>>>(viewManager, dT.get(), dSg.get(), dEnergy.get(), dConductivity.get(), numCells);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
 
     std::array<Scalar, numCells> hostEnergyResult {};
     std::array<Scalar, numCells> hostConductivityResult {};
-    OPM_GPU_SAFE_CALL(cudaMemcpy(hostEnergyResult.data(), dEnergy,
-                                 numCells * sizeof(Scalar), cudaMemcpyDeviceToHost));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(hostConductivityResult.data(), dConductivity,
-                                 numCells * sizeof(Scalar), cudaMemcpyDeviceToHost));
-
-    OPM_GPU_SAFE_CALL(cudaFree(dT));
-    OPM_GPU_SAFE_CALL(cudaFree(dSg));
-    OPM_GPU_SAFE_CALL(cudaFree(dEnergy));
-    OPM_GPU_SAFE_CALL(cudaFree(dConductivity));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(hostEnergyResult.data(), dEnergy.get(), numCells);
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(hostConductivityResult.data(), dConductivity.get(), numCells);
 
     // -- Compare against the CPU manager.
     for (std::size_t i = 0; i < numCells; ++i) {
