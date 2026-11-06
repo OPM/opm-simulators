@@ -28,6 +28,7 @@
 #define EWOMS_OVERLAPPING_OPERATOR_HH
 
 #include <dune/istl/operators.hh>
+#include <opm/simulators/linalg/RowAccumulatedSpMV.hpp>
 #include <dune/common/version.hh>
 
 namespace Opm {
@@ -57,7 +58,7 @@ public:
     //! apply operator to x:  \f$ y = A(x) \f$
     void apply(const DomainVector& x, RangeVector& y) const override
     {
-        A_.mv(x, y);
+        detail::mv(A_, x, y);
         y.sync();
     }
 
@@ -65,7 +66,7 @@ public:
     void applyscaleadd(field_type alpha, const DomainVector& x,
                                RangeVector& y) const override
     {
-        A_.usmv(alpha, x, y);
+        detail::usmv(alpha, A_, x, y);
         y.sync();
     }
 

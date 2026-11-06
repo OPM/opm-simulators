@@ -29,6 +29,7 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/RowAccumulatedSpMV.hpp>
 #include <dune/common/shared_ptr.hh>
 #include <dune/istl/paamg/smoother.hh>
 
@@ -248,7 +249,7 @@ public:
     void apply( const X& x, Y& y ) const override
     {
       OPM_TIMEBLOCK(apply);
-      A_.mv(x, y);
+      detail::mv(A_, x, y);
 
       // add well model modification to y
       wellOper_.apply(x, y);
@@ -258,7 +259,7 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
       OPM_TIMEBLOCK(applyscaleadd);
-      A_.usmv(alpha, x, y);
+      detail::usmv(alpha, A_, x, y);
 
       // add scaled well model modification to y
       wellOper_.applyscaleadd(alpha, x, y);
@@ -332,13 +333,7 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedMv(A_, x, y, interiorSize_);
 
         // add well model modification to y
         wellOper_.apply(x, y);
@@ -350,12 +345,7 @@ public:
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedUsmv(alpha, A_, x, y, interiorSize_);
         // add scaled well model modification to y
         wellOper_.applyscaleadd(alpha, x, y);
 
@@ -441,13 +431,7 @@ public:
 
     void apply( const X& x, Y& y ) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedMv(*A_, x, y, interiorSize_);
 
         ghostLastProject( y );
     }
@@ -455,12 +439,7 @@ public:
     // y += \alpha * A * x
     void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
-        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
-        }
+        detail::rowAccumulatedUsmv(alpha, *A_, x, y, interiorSize_);
 
         ghostLastProject( y );
     }
