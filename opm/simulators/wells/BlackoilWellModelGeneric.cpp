@@ -61,6 +61,7 @@
 
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
@@ -83,6 +84,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cassert>
+#include <exception>
 #include <functional>
 #include <iterator>
 #include <optional>
@@ -499,6 +501,7 @@ initializeWellPerfData()
     this->conn_idx_map_.reserve(wells_ecl_.size());
 
     int well_index = 0;
+    std::exception_ptr firstError;
 
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
@@ -580,12 +583,33 @@ initializeWellPerfData()
 
         parallelWellInfo.endReset();
 
-        checker.checkAllConnectionsFound();
+        // Both checks communicate over this well's ranks. A later well may have
+        // a different, overlapping set of ranks, so finish every well's
+        // collectives before reporting an error to the outer parallel handler.
+        try {
+            parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
+        } catch (const std::logic_error&) {
+            if (!firstError) {
+                firstError = std::current_exception();
+            }
+        }
 
-        parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
+        try {
+            checker.checkAllConnectionsFound();
+        } catch (const std::runtime_error&) {
+            if (!firstError) {
+                firstError = std::current_exception();
+            }
+        }
 
         ++well_index;
     }
+
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    if (firstError) {
+        std::rethrow_exception(firstError);
+    }
+    OPM_END_PARALLEL_TRY_CATCH("initializeWellPerfData() failed: ", comm_);
 }
 
 template<typename Scalar, typename IndexTraits>
