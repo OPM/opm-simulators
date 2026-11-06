@@ -710,7 +710,9 @@ namespace Opm
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             const EvalWell volume_ratio =
                 this->segments_.computeVolumeRatio(seg, segmentPvt(segment_fluid_state_[seg]),
-                                                   this->primary_variables_, deferred_logger);
+                                                   this->primary_variables_,
+                                                   this->param_.continuous_fluid_properties_ms_wells_,
+                                                   deferred_logger);
             const Scalar surface_volume = getSegmentSurfaceVolume(seg, volume_ratio).value();
             for (int comp_idx = 0; comp_idx < this->num_conservation_quantities_; ++comp_idx) {
                 segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
@@ -1165,6 +1167,7 @@ namespace Opm
         }
         this->segments_.computeFluidProperties(segment_pvt_,
                                                this->primary_variables_,
+                                               this->param_.continuous_fluid_properties_ms_wells_,
                                                deferred_logger);
     }
 
