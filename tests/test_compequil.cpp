@@ -148,7 +148,8 @@ struct BasicEquilFixture
     Computer compute(const std::vector<int>& eqlnum,
                      const std::vector<Scalar>& connateWater = {},
                      const std::vector<Scalar>& maxWater = {},
-                     const std::vector<int>& pvtnum = {}) const
+                     const std::vector<int>& pvtnum = {},
+                     const int numSamplePoints = 100) const
     {
         return Computer(eclState,
                         eclState.compositionalConfig().eosType(0),
@@ -157,7 +158,7 @@ struct BasicEquilFixture
                         pvtnum,
                         Opm::Parallel::Communication{},
                         gravity,
-                        /*numSamplePoints=*/100,
+                        numSamplePoints,
                         connateWater,
                         maxWater);
     }
@@ -1876,6 +1877,442 @@ BOOST_AUTO_TEST_CASE(SaturatedType1GasCapIsNotReportedAsTwoPhase)
     BOOST_REQUIRE_EQUAL(split.size(), std::size_t{10});
     BOOST_CHECK_EQUAL(split.back(), 2047.5);
     BOOST_CHECK(warnings.messages.str().find("split into gas and liquid") == std::string::npos);
+}
+
+namespace {
+
+using ReportRow = Opm::EQUIL::Comp::CompositionVersusDepthRow<Scalar, 3>;
+using ReportColumn = Scalar ReportRow::*;
+
+constexpr std::size_t numReportDepths = 50;
+
+// How closely a report column interpolated between rows meets a pressure of
+// the cells. The report integrates its columns over its own depths, which
+// moves them by up to 1.5e-4 bar from the cells' with the default sample
+// points.
+constexpr Scalar reportPressureTolerance = 2.0e-4 * barsa;
+
+// The composition versus depth report rows of a single region spanning the
+// column, with the given water end-points.
+template <class Computer>
+std::vector<ReportRow> solvdRows(const Computer& computer,
+                                 const Scalar swl = 0.0,
+                                 const Scalar swu = 1.0)
+{
+    using ReportRegion = typename Computer::ReportRegion;
+    const std::vector<ReportRegion> regions{ReportRegion{2000.0, 2100.0, swl, swu, 0}};
+    auto rows = computer.compositionVersusDepth(regions);
+    BOOST_REQUIRE_EQUAL(rows.size(), std::size_t{1});
+    BOOST_REQUIRE_EQUAL(rows.front().size(), numReportDepths);
+    return std::move(rows.front());
+}
+
+// The depth of report row i of a column from 2000 m to 2100 m.
+Scalar reportDepth(const std::size_t i)
+{
+    return 2000.0 + 100.0 * static_cast<Scalar>(i) / (numReportDepths - 1);
+}
+
+// A column of the rows interpolated linearly to a depth between two rows.
+Scalar atDepth(const std::vector<ReportRow>& rows,
+               const ReportColumn column,
+               const Scalar depth)
+{
+    const auto above = std::ranges::find_if(rows, [depth](const auto& row) {
+        return row.depth > depth;
+    }) - 1;
+    const auto& upper = *above;
+    const auto& lower = *(above + 1);
+    const Scalar t = (depth - upper.depth) / (lower.depth - upper.depth);
+    return (1.0 - t) * upper.*column + t * lower.*column;
+}
+
+// Check that the pressure of a column rises with depth as its density
+// implies, over every ten rows from row first up to row last. The density is
+// that of the column only where the column sets the pressure.
+void checkHydrostatic(const std::vector<ReportRow>& rows,
+                      const ReportColumn pressure,
+                      const ReportColumn density,
+                      const std::size_t first = 0,
+                      const std::size_t last = numReportDepths - 1)
+{
+    for (std::size_t i = first; i + 10 <= last; i += 10) {
+        Scalar meanDensity = 0.0;
+        for (std::size_t j = i; j < i + 10; ++j) {
+            meanDensity += 0.5 * (rows[j].*density + rows[j + 1].*density) / 10.0;
+        }
+        const Scalar implied = (rows[i + 10].*pressure - rows[i].*pressure)
+                             / (gravity * (rows[i + 10].depth - rows[i].depth));
+        BOOST_TEST_CONTEXT("Rows " << i << " to " << i + 10) {
+            BOOST_CHECK_CLOSE(implied, meanDensity, 0.01);
+        }
+    }
+}
+
+// The numbers on each line of a printed report that holds numbers only, in
+// order: the rows of the main table followed by those of the oil, gas and
+// total compositions.
+std::vector<std::vector<Scalar>> printedRows(const std::string& report)
+{
+    std::vector<std::vector<Scalar>> rows;
+    std::istringstream lines(report);
+    std::string line;
+    while (std::getline(lines, line)) {
+        std::istringstream fields(line);
+        std::vector<Scalar> row;
+        Scalar value{};
+        while (fields >> value) {
+            row.push_back(value);
+        }
+        // Headings, units and rules do not consist of numbers alone.
+        if (!row.empty() && fields.eof()) {
+            rows.push_back(std::move(row));
+        }
+    }
+    return rows;
+}
+
+// A printed value is the value rounded to the given number of decimals.
+void checkPrinted(const Scalar printed, const Scalar value, const int decimals)
+{
+    BOOST_CHECK_LE(std::abs(printed - value), 0.5 * std::pow(10.0, -decimals) + 1.0e-9);
+}
+
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(SolvdReportOfType1Column)
+{
+    // A single liquid column with the total composition of ZMFVD: the oil and
+    // gas columns coincide, and all three compositions are the total
+    // composition. Type 1 reports no bubble point, and ZMFVD states no
+    // saturation pressure.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    const auto rows = solvdRows(computer);
+
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_TEST_CONTEXT("Row " << i) {
+            const auto& row = rows[i];
+            BOOST_CHECK_CLOSE(row.depth, reportDepth(i), 1.0e-12);
+            BOOST_CHECK_EQUAL(row.poil, row.pgas);
+            BOOST_CHECK_EQUAL(row.deno, row.deng);
+            BOOST_CHECK_EQUAL(row.pwat, 0.0);
+            BOOST_CHECK_EQUAL(row.denw, 0.0);
+            BOOST_CHECK_EQUAL(row.soil, 1.0);
+            BOOST_CHECK_EQUAL(row.swat, 0.0);
+            BOOST_CHECK_EQUAL(row.sgas, 0.0);
+            BOOST_CHECK_EQUAL(row.psat, 0.0);
+            BOOST_CHECK_EQUAL(row.statedPsat, 0.0);
+            const CompVec z = tableComposition(reportDepth(i));
+            for (int comp = 0; comp < 3; ++comp) {
+                BOOST_CHECK_SMALL(row.oil[comp] - z[comp], 1.0e-12);
+                BOOST_CHECK_EQUAL(row.gas[comp], row.oil[comp]);
+                BOOST_CHECK_EQUAL(row.total[comp], row.oil[comp]);
+            }
+        }
+    }
+
+    // The report extends the column the cells hold, from the top to the bottom
+    // of the region.
+    for (std::size_t c = 0; c < fix.depths.size(); ++c) {
+        BOOST_CHECK_SMALL(atDepth(rows, &ReportRow::poil, fix.depths[c])
+                          - computer.referencePressures()[c], reportPressureTolerance);
+    }
+
+    // Its pressure gradient follows its density.
+    checkHydrostatic(rows, &ReportRow::poil, &ReportRow::deno);
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCap)
+{
+    // The gas cap over the contact at 2050 m holds the vapour in equilibrium
+    // with the contact liquid. Above the contact the report gives that liquid
+    // and its bubble point; below it, the liquid of each depth with its own
+    // bubble point and incipient vapour. The oil and gas columns meet at the
+    // contact, so the lighter gas lies above the oil pressure over it and
+    // below it under it. Past the contact each column carries the composition
+    // reported for its phase: the oil column the contact liquid, and the gas
+    // column the incipient vapour.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    const auto rows = solvdRows(computer);
+
+    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    const CompVec contactLiquid = tableComposition(2050.0);
+    Scalar contactPsat{};
+    CompVec contactVapour{};
+    BOOST_REQUIRE(SatP::bubblePressure(contactLiquid, 373.15, eosType,
+                                       contactPsat, contactVapour));
+
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_TEST_CONTEXT("Row " << i) {
+            const auto& row = rows[i];
+            const Scalar depth = reportDepth(i);
+            BOOST_CHECK_GT(row.deno, row.deng);
+            if (depth < 2050.0) {
+                BOOST_CHECK_EQUAL(row.sgas, 1.0);
+                BOOST_CHECK_LT(row.poil, row.pgas);
+                BOOST_CHECK_CLOSE(row.psat, contactPsat, 1.0e-8);
+                for (int comp = 0; comp < 3; ++comp) {
+                    BOOST_CHECK_SMALL(row.oil[comp] - contactLiquid[comp], 1.0e-12);
+                    BOOST_CHECK_SMALL(row.gas[comp] - contactVapour[comp], 1.0e-12);
+                    BOOST_CHECK_EQUAL(row.total[comp], row.gas[comp]);
+                }
+            }
+            else {
+                BOOST_CHECK_EQUAL(row.soil, 1.0);
+                BOOST_CHECK_GT(row.poil, row.pgas);
+                BOOST_CHECK_LT(row.psat, contactPsat);
+                const CompVec liquid = tableComposition(depth);
+                Scalar psat{};
+                CompVec vapour{};
+                BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15, eosType, psat, vapour));
+                BOOST_CHECK_CLOSE(row.psat, psat, 1.0e-8);
+                for (int comp = 0; comp < 3; ++comp) {
+                    BOOST_CHECK_SMALL(row.oil[comp] - liquid[comp], 1.0e-12);
+                    BOOST_CHECK_SMALL(row.gas[comp] - vapour[comp], 1.0e-12);
+                    BOOST_CHECK_EQUAL(row.total[comp], row.oil[comp]);
+                }
+            }
+        }
+    }
+    BOOST_CHECK_SMALL(atDepth(rows, &ReportRow::poil, 2050.0) - contactPsat,
+                      reportPressureTolerance);
+    BOOST_CHECK_SMALL(atDepth(rows, &ReportRow::pgas, 2050.0) - contactPsat,
+                      reportPressureTolerance);
+    // Rows 0 to 24 lie in the gas zone, 25 to 49 in the oil zone.
+    checkHydrostatic(rows, &ReportRow::pgas, &ReportRow::deng, 0, 24);
+    checkHydrostatic(rows, &ReportRow::poil, &ReportRow::deno, 25, 49);
+
+    // Above the contact the oil density is that of the contact liquid at the
+    // gas pressure, not that of the much lighter gas-zone mixture.
+    BOOST_CHECK_CLOSE(rows.front().deno, atDepth(rows, &ReportRow::deno, 2049.0), 0.1);
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportOfType3GasCapWithTemperatureGradient)
+{
+    // The reservoir warms with depth, with the contact at the 100 C of the
+    // isothermal case. Above the contact the reported contact liquid takes
+    // the bubble point of each depth's temperature, as the liquid below it
+    // does.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2050 0 3* 3 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "ZMFVD\n"
+                                      " 2000   0 0.7 0.3\n"
+                                      " 2100   0 0.3 0.7  /\n",
+                                      "RTEMPVD\n 2000 90\n 2100 110 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    const auto rows = solvdRows(computer);
+
+    const auto eosType = fix.eclState.compositionalConfig().eosType(0);
+    const CompVec contactLiquid = tableComposition(2050.0);
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_TEST_CONTEXT("Row " << i) {
+            const Scalar depth = reportDepth(i);
+            const CompVec liquid = (depth < 2050.0) ? contactLiquid : tableComposition(depth);
+            const Scalar temperature = 363.15 + 0.2 * (depth - 2000.0);
+            Scalar psat{};
+            CompVec vapour{};
+            BOOST_REQUIRE(SatP::bubblePressure(liquid, temperature, eosType, psat, vapour));
+            BOOST_CHECK_CLOSE(rows[i].psat, psat, 1.0e-8);
+        }
+    }
+    BOOST_CHECK_GT(std::abs(rows.front().psat - atDepth(rows, &ReportRow::psat, 2049.0)),
+                   0.1 * barsa);
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportOfWaterZone)
+{
+    // Water fills the pore space below the water-oil contact at 2050 m and
+    // leaves the connate water above it. The water column meets the oil
+    // column at the contact and is the heavier of the two.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2010 150 2050 0 2000 0 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0),
+                                      std::vector<Scalar>(20, connateSw),
+                                      std::vector<Scalar>(20, 1.0));
+    const auto rows = solvdRows(computer, connateSw, 1.0);
+
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_TEST_CONTEXT("Row " << i) {
+            const auto& row = rows[i];
+            BOOST_CHECK_GT(row.denw, row.deno);
+            if (reportDepth(i) > 2050.0) {
+                BOOST_CHECK_EQUAL(row.swat, 1.0);
+                BOOST_CHECK_EQUAL(row.soil, 0.0);
+                BOOST_CHECK_GT(row.pwat, row.poil);
+            }
+            else {
+                BOOST_CHECK_EQUAL(row.swat, connateSw);
+                BOOST_CHECK_EQUAL(row.soil, 1.0 - connateSw);
+                BOOST_CHECK_LT(row.pwat, row.poil);
+            }
+            BOOST_CHECK_EQUAL(row.sgas, 0.0);
+        }
+    }
+    BOOST_CHECK_SMALL(atDepth(rows, &ReportRow::pwat, 2050.0)
+                      - atDepth(rows, &ReportRow::poil, 2050.0), reportPressureTolerance);
+    checkHydrostatic(rows, &ReportRow::pwat, &ReportRow::denw, 25, 49);
+
+    // Without a gas cap the rows below the contact give no total composition,
+    // while the oil and gas columns keep theirs.
+    for (std::size_t i = 25; i < numReportDepths; ++i) {
+        const auto& row = rows[i];
+        for (int comp = 0; comp < 3; ++comp) {
+            BOOST_CHECK_EQUAL(row.total[comp], 0.0);
+        }
+        BOOST_CHECK_CLOSE(row.oil[0] + row.oil[1] + row.oil[2], 1.0, 1.0e-10);
+        BOOST_CHECK_CLOSE(row.gas[0] + row.gas[1] + row.gas[2], 1.0, 1.0e-10);
+    }
+
+    // The water density is taken at the oil pressure above the contact and at
+    // the water pressure below it, so it changes with either at the same rate.
+    const auto compressibility = [&rows](const std::size_t from, const std::size_t to,
+                                         const ReportColumn pressure) {
+        return (rows[to].denw - rows[from].denw)
+             / (rows[to].*pressure - rows[from].*pressure);
+    };
+    BOOST_CHECK_CLOSE(compressibility(0, 24, &ReportRow::poil),
+                      compressibility(25, 49, &ReportRow::pwat), 0.1);
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportGivesTheWaterZoneCompositionUnderAGasCap)
+{
+    // A gas cap above 2020 m and water below 2050 m: only a datum in the oil
+    // zone between them gives the rows below the water the total composition.
+    for (const auto& [datum, expected] : {std::pair{2030.0, true},
+                                          std::pair{2010.0, false},
+                                          std::pair{2070.0, false}}) {
+        BOOST_TEST_CONTEXT("Datum at " << datum << " m") {
+            const WaterEquilFixture fix(waterDeckString(
+                "EQUIL\n " + std::to_string(datum) + " 150 2050 0 2020 0 /\n"));
+            const auto computer = fix.compute(std::vector<int>(20, 0),
+                                              std::vector<Scalar>(20, connateSw),
+                                              std::vector<Scalar>(20, 1.0));
+            const auto rows = solvdRows(computer, connateSw, 1.0);
+            for (std::size_t i = 25; i < numReportDepths; ++i) {
+                BOOST_REQUIRE_EQUAL(rows[i].swat, 1.0);
+                const CompVec z = tableComposition(reportDepth(i));
+                for (int comp = 0; comp < 3; ++comp) {
+                    BOOST_CHECK_SMALL(rows[i].total[comp] - (expected ? z[comp] : 0.0),
+                                      1.0e-12);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportGivesTheCompvdSaturationPressure)
+{
+    // The last COMPVD column, interpolated between the rows.
+    const EquilFixture fix(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n",
+                                      "EQLDIMS\n/\n", "",
+                                      "COMPVD\n"
+                                      " 2000 0 0.7 0.3  1  140.0\n"
+                                      " 2100 0 0.3 0.7  1  160.0 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0));
+    const auto rows = solvdRows(computer);
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_CHECK_CLOSE(rows[i].statedPsat,
+                          (140.0 + 0.2 * (reportDepth(i) - 2000.0)) * barsa, 1.0e-10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportFollowsTheCellsWithFewSamplePoints)
+{
+    // A gas zone over a liquid one, equilibrated with few sample points from a
+    // datum in the liquid. Each reported column starts where the
+    // equilibration anchored it, so its steps do not cross the composition
+    // change at the contact where the cells' own column does not either.
+    const CompVec liquid{0.0, 0.5, 0.5};
+    Scalar psat{};
+    CompVec vapour{};
+    // A fixture sets up the fluid system that the bubble point needs.
+    const EquilFixture init(deckString("EQUIL\n 2050 150 2300 0 2050 0 /\n"));
+    BOOST_REQUIRE(SatP::bubblePressure(liquid, 373.15,
+                                       init.eclState.compositionalConfig().eosType(0),
+                                       psat, vapour));
+
+    const std::string vapourRow = std::to_string(vapour[0]) + " " + std::to_string(vapour[1])
+                                  + " " + std::to_string(vapour[2]) + "  0  150.0\n";
+    const EquilFixture fix(deckString(
+        "EQUIL\n 2075 " + std::to_string(psat / barsa + 2.0) + " 2300 0 2050 0 /\n",
+        "EQLDIMS\n/\n", "",
+        "COMPVD\n"
+        " 2000   " + vapourRow +
+        " 2049.5 " + vapourRow +
+        " 2050.5 0 0.5 0.5  1  150.0\n"
+        " 2100   0 0.5 0.5  1  150.0 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0), {}, {}, {},
+                                      /*numSamplePoints=*/10);
+    const auto rows = solvdRows(computer);
+    for (std::size_t c = 0; c < fix.depths.size(); ++c) {
+        const auto column = (fix.depths[c] < 2050.0) ? &ReportRow::pgas : &ReportRow::poil;
+        BOOST_TEST_CONTEXT("Cell at " << fix.depths[c] << " m") {
+            // Ten sample points over its own depths move a column by up to
+            // 0.0015 bar, against 0.077 bar for one that crosses the contact.
+            BOOST_CHECK_SMALL(atDepth(rows, column, fix.depths[c])
+                              - computer.referencePressures()[c], 0.002 * barsa);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(SolvdReportPrintsTheRows)
+{
+    // The printed report names the region, its saturation table, the units
+    // and the components, and gives every row in the deck's units at the
+    // precision of its column: the main table, then the oil, gas and total
+    // compositions.
+    const WaterEquilFixture fix(waterDeckString("EQUIL\n 2030 150 2050 0 2020 0 /\n"));
+    const auto computer = fix.compute(std::vector<int>(20, 0),
+                                      std::vector<Scalar>(20, connateSw),
+                                      std::vector<Scalar>(20, 1.0));
+    const auto rows = solvdRows(computer, connateSw, 1.0);
+    std::array<std::string_view, 3> names{};
+    for (unsigned c = 0; c < names.size(); ++c) {
+        names[c] = WaterFluidSystem::componentName(c);
+    }
+    const auto report = Opm::EQUIL::Comp::formatCompositionVersusDepth(
+        2, 3, rows, names, fix.eclState.getDeckUnitSystem());
+
+    BOOST_CHECK(report.find("equilibration region 2 (saturation table 3)") != std::string::npos);
+    for (const auto unit : {"BARSA", "KG/M3"}) {
+        BOOST_CHECK(report.find(unit) != std::string::npos);
+    }
+    for (const auto name : names) {
+        BOOST_CHECK(report.find(name) != std::string::npos);
+    }
+
+    const auto printed = printedRows(report);
+    BOOST_REQUIRE_EQUAL(printed.size(), 4 * numReportDepths);
+    for (std::size_t i = 0; i < numReportDepths; ++i) {
+        BOOST_TEST_CONTEXT("Row " << i) {
+            const auto& row = rows[i];
+            const auto& main = printed[i];
+            BOOST_REQUIRE_EQUAL(main.size(), std::size_t{12});
+            checkPrinted(main[0], row.depth, 2);
+            checkPrinted(main[1], row.poil / barsa, 3);
+            checkPrinted(main[2], row.pwat / barsa, 3);
+            checkPrinted(main[3], row.pgas / barsa, 3);
+            checkPrinted(main[4], row.deno, 3);
+            checkPrinted(main[5], row.denw, 3);
+            checkPrinted(main[6], row.deng, 3);
+            checkPrinted(main[7], row.soil, 4);
+            checkPrinted(main[8], row.swat, 4);
+            checkPrinted(main[9], row.sgas, 4);
+            checkPrinted(main[10], row.psat / barsa, 2);
+            checkPrinted(main[11], row.statedPsat / barsa, 2);
+            for (const auto& [t, fractions] : {std::pair{1, &ReportRow::oil},
+                                               std::pair{2, &ReportRow::gas},
+                                               std::pair{3, &ReportRow::total}}) {
+                const auto& composition = printed[t * numReportDepths + i];
+                BOOST_REQUIRE_EQUAL(composition.size(), std::size_t{4});
+                checkPrinted(composition[0], row.depth, 2);
+                for (int comp = 0; comp < 3; ++comp) {
+                    checkPrinted(composition[comp + 1], (row.*fractions)[comp], 5);
+                }
+            }
+        }
+    }
 }
 
 namespace {
