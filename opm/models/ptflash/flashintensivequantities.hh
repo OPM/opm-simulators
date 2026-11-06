@@ -208,7 +208,14 @@ public:
                                       elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
         }
         const auto& eos_type = problem.getEosType();
-        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity);
+        // FACTLI, for problems that provide it.
+        if constexpr (requires { problem.liCorrelationFactor(0u); }) {
+            FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity,
+                               problem.liCorrelationFactor(elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
+        }
+        else {
+            FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eos_type, flashVerbosity);
+        }
 
         if (flashVerbosity >= 5) {
             std::string phaseCompositions;
