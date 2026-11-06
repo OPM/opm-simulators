@@ -484,8 +484,7 @@ namespace {
                                0, depth, ctf_props, k - topConn, false);
         }
 
-        return std::make_shared<Opm::WellConnections>
-            (Opm::Connection::Order::INPUT, i, j, conns);
+        return std::make_shared<Opm::WellConnections>(i, j, conns);
     }
 
     Opm::Well producerWell()
@@ -494,13 +493,12 @@ namespace {
             "P", "G", 0, 0, 2, 2, 2000.5,
             Opm::WellType { true, Opm::Phase::OIL }, // Oil producer
             Opm::Well::ProducerCMode::ORAT,
-            Opm::Connection::Order::INPUT,
             Opm::UnitSystem::newMETRIC(),
             0.0, true, true, 0,
             Opm::Well::GasInflowEquation::STD
         };
 
-        w.updateConnections(centreConnections(2, 6), true);
+        w.updateConnections(centreConnections(2, 6), Opm::Connection::Order::INPUT, true);
 
         return w;
     }
