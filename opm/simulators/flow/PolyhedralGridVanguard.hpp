@@ -332,7 +332,12 @@ protected:
 
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
-        this->updateCellDepths_();
+        // In a parallel run the depths are updated by loadBalance() once the field properties
+        // are distributed. The DEPTH property is needed on all processes, and updating the
+        // depths is a collective operation, so it cannot be done on some of them only.
+        if (!parallel) {
+            this->updateCellDepths_();
+        }
     }
 
     std::unique_ptr<Grid> createGridFromInput_() const
