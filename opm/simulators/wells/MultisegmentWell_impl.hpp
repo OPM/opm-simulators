@@ -364,12 +364,24 @@ namespace Opm
                             std::vector<Scalar>& well_flux,
                             DeferredLogger& deferred_logger) const
     {
+        computeWellRatesWithBhp(simulator, simulator.problem().wellModel().wellState(),
+                                bhp, well_flux, deferred_logger);
+    }
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    computeWellRatesWithBhp(const Simulator& simulator,
+                            const WellStateType& well_state,
+                            const Scalar& bhp,
+                            std::vector<Scalar>& well_flux,
+                            DeferredLogger& deferred_logger) const
+    {
         const int np = this->number_of_phases_;
 
         well_flux.resize(np, 0.0);
         const bool allow_cf = this->getAllowCrossFlow();
         const int nseg = this->numberOfSegments();
-        const WellStateType& well_state = simulator.problem().wellModel().wellState();
         const auto& ws = well_state.well(this->indexOfWell());
         auto segments_copy = ws.segments;
         segments_copy.scale_pressure(bhp);
@@ -2245,6 +2257,7 @@ namespace Opm
             // approximation.
             std::vector<Scalar> rates(3);
             computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
+            this->adaptRatesForVFP(rates);
             return rates;
         };
 
@@ -2269,6 +2282,7 @@ namespace Opm
            // solution
            std::vector<Scalar> rates(3);
            computeWellRatesWithBhpIterations(simulator, bhp, groupStateHelper, rates);
+           this->adaptRatesForVFP(rates);
            return rates;
        };
 
