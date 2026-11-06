@@ -49,6 +49,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/ZmfvdTable.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/flow/equil/EquilCompReport.hpp>
 #include <opm/simulators/flow/equil/PressureFunction.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -267,6 +268,8 @@ public:
                          const std::vector<Scalar>& connateWater = {},
                          const std::vector<Scalar>& maxWater = {})
         : eosType_(eosType)
+        , gravity_(gravity)
+        , numSamplePoints_(numSamplePoints)
         , connateWater_(connateWater)
         , maxWater_(maxWater)
     {
@@ -324,12 +327,11 @@ public:
 
         const auto pvtRegions =
             pvtRegionsOfEachRegion(eqlnum, pvtnum, records.size(), numPvtRegions, comm);
-        std::vector<Region> regions;
-        regions.reserve(records.size());
+        regions_.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
-            regions.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
-                                          cellCenterDepth, eqlnum, pvtnum, comm, gravity,
-                                          numSamplePoints, r));
+            regions_.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
+                                           cellCenterDepth, eqlnum, pvtnum, comm, gravity,
+                                           numSamplePoints, r));
         }
 
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
@@ -337,7 +339,7 @@ public:
         referencePressures_.resize(cellCenterDepth.size());
         twoPhaseCheckRegions_.assign(cellCenterDepth.size(), -1);
         for (std::size_t cell = 0; cell < cellCenterDepth.size(); ++cell) {
-            const auto& reg = regions[eqlnum[cell]];
+            const auto& reg = regions_[eqlnum[cell]];
             const auto pvtRegion = pvtnum.empty() ? 0u : static_cast<unsigned>(pvtnum[cell]);
             referencePressures_[cell] = assignCell(fluidStates_[cell], reg,
                                                    pvtRegion, cellCenterDepth[cell], cell);
@@ -372,6 +374,66 @@ public:
     const std::vector<int>& twoPhaseCheckRegions() const
     { return twoPhaseCheckRegions_; }
 
+    /// An equilibration region as the composition versus depth report shows
+    /// it: the depth range of its cells, and the water end-points and PVT
+    /// region of the cell that represents it.
+    struct ReportRegion
+    {
+        Scalar top{};
+        Scalar bottom{};
+        /// Connate and maximum water saturation of the representative cell.
+        Scalar swl{};
+        Scalar swu{1};
+        /// Zero-based PVT region whose water column is reported.
+        unsigned pvtRegion{};
+    };
+
+    /// One depth of the composition versus depth report.
+    using ReportRow = CompositionVersusDepthRow<Scalar, FluidSystem::numComponents>;
+
+    /// The rows of the report of the RPTSOL mnemonic SOLVD, which
+    /// formatCompositionVersusDepth() prints. For each equilibration region
+    /// with cells, they give at evenly spaced depths from the top to the
+    /// bottom of the region the pressure and density of the oil, water and
+    /// gas columns, the nominal saturations ahead of the flash, the bubble
+    /// point of the liquid and the saturation pressure COMPVD states, and the
+    /// oil, gas and total compositions. The water saturations are the
+    /// end-points of the cell that represents the region; cells with other
+    /// end-points start from their own.
+    ///
+    /// Each column is integrated anew over the reported depths from the depth
+    /// and pressure the equilibration anchored it at, which leaves the initial
+    /// state as it is. The densities are those at the pressure a cell at that
+    /// depth starts from: the water pressure below the water-oil contact, and
+    /// otherwise the pressure of the gas or oil column the depth lies in. With
+    /// EQUIL item 10 = 1 a region holds one total composition, shown in all
+    /// three composition tables, and no bubble point is reported. With type 3
+    /// the oil composition is the liquid at each depth below the contact and
+    /// the contact liquid above it, and the gas composition is the gas of the
+    /// gas zone above the contact and the incipient vapour of the liquid below
+    /// it. Past the contact the oil and gas columns carry these compositions.
+    /// The bubble point is that of the oil composition at the temperature of
+    /// each depth. Rows without hydrocarbon give a total composition only when
+    /// the datum lies in an oil zone under a gas cap.
+    ///
+    /// \param[in] regions Depth range, water end-points and PVT region of each
+    ///                    equilibration region.
+    ///
+    /// \return The rows of each equilibration region, none for a region
+    ///         without cells.
+    std::vector<std::vector<ReportRow>>
+    compositionVersusDepth(const std::vector<ReportRegion>& regions) const
+    {
+        std::vector<std::vector<ReportRow>> rows(regions_.size());
+        for (std::size_t r = 0; r < regions_.size(); ++r) {
+            // A region without cells has no columns.
+            if (regions_[r].oilPressure.has_value()) {
+                rows[r] = reportRows(regions_[r], regions.at(r));
+            }
+        }
+        return rows;
+    }
+
 private:
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
@@ -394,6 +456,9 @@ private:
     /// The equilibrated vertical distributions within one region.
     struct Region {
         int initType{1};                            // EQUIL item 10
+        /// EQUIL items 1 and 5 as the deck gives them.
+        Scalar datum{};
+        Scalar statedGoc{};
         /// Zero-based PVT regions of the region's cells on all processes.
         std::vector<unsigned> pvtRegions;
         /// Gas-oil contact. A two-zone COMPVD table may move it, see zoneBoundary().
@@ -415,6 +480,10 @@ private:
         std::vector<TabulatedFunction> vaporVdTable;
         /// Equilibrium vapour at the contact for type 3 without gas-zone rows.
         CompVec vaporComposition{};
+        /// The saturation pressure each COMPVD row states, versus depth.
+        std::optional<TabulatedFunction> statedSaturationPressure;
+        /// Shallowest and deepest cell centre, padded as for the integration.
+        std::array<Scalar, 2> span{};
         /// Overall composition for type 1, or liquid composition for type 3.
         std::vector<TabulatedFunction> compositionVdTable;
         TabulatedFunction tempVdTable;
@@ -472,6 +541,37 @@ private:
         }
         std::ranges::transform(z, z.begin(), [sum](const Scalar zc) { return zc / sum; });
         return z;
+    }
+
+    /// The composition of a region's gas column versus depth: the total
+    /// composition for type 1, and for type 3 the gas-zone rows of a two-zone
+    /// COMPVD table or else the equilibrium vapour of the contact liquid.
+    static typename ODE::CompositionFunction gasColumnComposition(const Region& reg)
+    {
+        if (reg.initType == 1) {
+            return [&reg](const Scalar depth) { return composition(reg, depth); };
+        }
+        if (reg.twoZone) {
+            return [&reg](const Scalar depth) { return vaporComposition(reg, depth); };
+        }
+        return [vapor = reg.vaporComposition](const Scalar) { return vapor; };
+    }
+
+    /// The saturation pressure stated by each COMPVD row, versus depth.
+    static TabulatedFunction saturationPressureTable(const CompvdTable& compvd)
+    {
+        const auto& depthCol = compvd.getDepthColumn();
+        const auto& psatCol = compvd.getSaturationPressureColumn();
+        std::vector<Scalar> depths(depthCol.begin(), depthCol.end());
+        std::vector<Scalar> psat(psatCol.begin(), psatCol.end());
+        // As for the composition, a single row needs a second sample point.
+        if (depths.size() == 1) {
+            depths.push_back(depths.front() + constantTableSpan);
+            psat.push_back(psat.front());
+        }
+        TabulatedFunction table;
+        table.setXYContainers(depths, psat);
+        return table;
     }
 
     /// Build per-component composition interpolants from the selected \p rows.
@@ -709,6 +809,8 @@ private:
         }
 
         reg.zgoc = record.gasOilContactDepth();
+        reg.datum = record.datumDepth();
+        reg.statedGoc = reg.zgoc;
 
         // With one composition keyword, a missing regional record inherits the
         // nearest preceding record. If both keywords are present, each region
@@ -764,6 +866,7 @@ private:
             const auto& compvd =
                 tables.getCompvdTables().template getTable<CompvdTable>(*compvdAt);
             reg.statedPhaseIdx = statedPhase(compvd, regionIdx);
+            reg.statedSaturationPressure = saturationPressureTable(compvd);
 
             if (reg.statedPhaseIdx.has_value()) {
                 // One phase named: all rows form one composition profile, and
@@ -841,6 +944,7 @@ private:
         if (span[1] - span[0] < minimumSpanExtent) {
             span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
         }
+        reg.span = span;
 
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         std::vector<unsigned> waterPvtRegions;
@@ -1229,17 +1333,7 @@ private:
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, waterContactSpan(reg, span));
 
-        // Integrate a two-zone gas column with the same depth-dependent
-        // composition assigned to its cells. Otherwise use the equilibrium
-        // vapour composition at the contact throughout the gas column.
-        typename ODE::CompositionFunction gasComposition;
-        if (reg.twoZone) {
-            gasComposition = [&reg](const Scalar depth) { return vaporComposition(reg, depth); };
-        }
-        else {
-            gasComposition = [vapor](const Scalar) { return vapor; };
-        }
-        const ODE gasOde(gasComposition,
+        const ODE gasOde(gasColumnComposition(reg),
                          reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
         reg.gasPressure.emplace(gasOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
@@ -1327,12 +1421,172 @@ private:
         return press;
     }
 
+    /// Depths per region in the composition versus depth report.
+    static constexpr int numReportDepths{50};
+
+    /// The bubble point and incipient vapour of \p liquid at the temperature
+    /// of \p depth, or no value when the calculation does not converge.
+    std::optional<std::pair<Scalar, CompVec>> bubblePoint(const Region& reg,
+                                                          const CompVec& liquid,
+                                                          const Scalar depth) const
+    {
+        Scalar psat{};
+        CompVec vapour{};
+        const Scalar temp = Details::evalDepthTable(reg.tempVdTable, depth);
+        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
+                                                                     psat, vapour)) {
+            return std::nullopt;
+        }
+        return std::pair{psat, vapour};
+    }
+
+    std::vector<ReportRow> reportRows(const Region& reg, const ReportRegion& where) const
+    {
+        // Past a type 3 contact each column carries the composition the report
+        // gives its phase there: the contact liquid above the contact, and the
+        // incipient vapour of the liquid below it.
+        const bool type3 = (reg.initType == 3);
+        const CompVec contactLiquid = type3 ? composition(reg, reg.zgoc) : CompVec{};
+        const auto gasZoneComposition = gasColumnComposition(reg);
+        const typename ODE::CompositionFunction oilComposition =
+            [&reg, type3, contactLiquid](const Scalar depth) {
+                return (type3 && isInGasZone(reg, depth)) ? contactLiquid
+                                                          : composition(reg, depth);
+            };
+        const typename ODE::CompositionFunction gasComposition =
+            [this, &reg, type3, gasZoneComposition](const Scalar depth) -> CompVec {
+                if (!type3 || isInGasZone(reg, depth)) {
+                    return gasZoneComposition(depth);
+                }
+                const auto bubble = bubblePoint(reg, composition(reg, depth), depth);
+                return bubble.has_value() ? bubble->second : gasZoneComposition(depth);
+            };
+        // The columns' hydrostatic gradients, and with unit gravity their densities.
+        const ODE oilOde(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, eosType_,
+                         gravity_);
+        const ODE oilDensity(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, eosType_,
+                             Scalar{1});
+        const ODE gasOde(gasComposition, reg.tempVdTable, FluidSystem::gasPhaseIdx,
+                         eosType_, gravity_);
+        const ODE gasDensity(gasComposition, reg.tempVdTable, FluidSystem::gasPhaseIdx,
+                             eosType_, Scalar{1});
+
+        // Each column starts where the equilibration anchored the one it
+        // extends, so the zone the cells take from it is integrated alike and
+        // no step crosses a contact the cells' column does not.
+        const std::array<Scalar, 2> span{where.top, where.bottom};
+        const PressFunc oilColumn(oilOde, reg.oilPressure->initialCondition(),
+                                  numSamplePoints_, span);
+        std::optional<PressFunc> gasColumn;
+        if (reg.gasPressure.has_value()) {
+            gasColumn.emplace(gasOde, reg.gasPressure->initialCondition(),
+                              numSamplePoints_, span);
+        }
+
+        // The water of the representative PVT region, or of the region's first
+        // one when that has no column. A fluid system without a water phase
+        // has no water state to evaluate.
+        constexpr bool hasWaterPhase = FluidSystem::numPhases > FluidSystem::waterPhaseIdx;
+        std::optional<WaterPressFunc> waterColumn;
+        std::optional<WaterODE> waterDensity;
+        if constexpr (hasWaterPhase) {
+            auto water = reg.waterPressure.find(where.pvtRegion);
+            if (water == reg.waterPressure.end()) {
+                water = reg.waterPressure.begin();
+            }
+            if (water != reg.waterPressure.end()) {
+                const WaterODE waterOde(reg.tempVdTable, eosType_, water->first, gravity_);
+                waterColumn.emplace(waterOde, water->second.initialCondition(),
+                                    numSamplePoints_, span);
+                waterDensity.emplace(reg.tempVdTable, eosType_, water->first, Scalar{1});
+            }
+        }
+
+        // Rows without hydrocarbon give the total composition only when the
+        // datum lies in an oil zone under a gas cap, and none otherwise.
+        const bool totalWithoutHydrocarbon = (reg.statedGoc > where.top)
+            && (reg.statedGoc <= reg.datum) && (reg.datum < reg.zwoc);
+
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        std::vector<ReportRow> rows(numReportDepths);
+        for (int i = 0; i < numReportDepths; ++i) {
+            auto& row = rows[i];
+            const Scalar depth = where.top + (where.bottom - where.top) * i / (numReportDepths - 1);
+            row.depth = depth;
+
+            const bool inGasZone = isInGasZone(reg, depth);
+            row.poil = oilColumn.value(depth);
+            row.pgas = gasColumn.has_value() ? gasColumn->value(depth) : row.poil;
+            if constexpr (hasWaterPhase) {
+                if (waterColumn.has_value()) {
+                    row.pwat = waterColumn->value(depth);
+                }
+            }
+
+            // All densities are taken at the one pressure that assignCell()
+            // gives a cell at this depth, as the run starts from that state.
+            const bool inWaterZone = (depth > reg.zwoc) && waterColumn.has_value();
+            const Scalar cellPressure = inWaterZone ? row.pwat
+                                      : (inGasZone && gasColumn.has_value()) ? row.pgas
+                                      : row.poil;
+            row.deno = oilDensity(depth, cellPressure);
+            row.deng = gasColumn.has_value() ? gasDensity(depth, cellPressure) : row.deno;
+            if constexpr (hasWaterPhase) {
+                if (waterColumn.has_value()) {
+                    row.denw = (*waterDensity)(depth, cellPressure);
+                }
+            }
+
+            // The nominal saturations that assignCell() gives a cell at this depth.
+            if (waterActive) {
+                row.swat = (depth > reg.zwoc) ? where.swu : where.swl;
+            }
+            const auto hydrocarbonPhase = inGasZone ? FluidSystem::gasPhaseIdx
+                                                    : reg.nominalPhaseIdx;
+            (hydrocarbonPhase == FluidSystem::gasPhaseIdx ? row.sgas : row.soil)
+                = Scalar{1} - row.swat;
+
+            if (reg.statedSaturationPressure.has_value()) {
+                row.statedPsat = Details::evalDepthTable(*reg.statedSaturationPressure, depth);
+            }
+
+            if (!type3) {
+                row.oil = row.gas = row.total = composition(reg, depth);
+            }
+            else if (inGasZone) {
+                row.oil = contactLiquid;
+                row.gas = row.total = gasZoneComposition(depth);
+                // The contact liquid's bubble point at the temperature of this
+                // depth; zero, as below, when it does not converge.
+                if (const auto bubble = bubblePoint(reg, contactLiquid, depth);
+                    bubble.has_value()) {
+                    row.psat = bubble->first;
+                }
+            }
+            else {
+                row.oil = row.total = composition(reg, depth);
+                // Reported as zero when the bubble point does not converge.
+                if (const auto bubble = bubblePoint(reg, row.oil, depth); bubble.has_value()) {
+                    row.psat = bubble->first;
+                    row.gas = bubble->second;
+                }
+            }
+            if ((row.soil + row.sgas == 0) && !totalWithoutHydrocarbon) {
+                row.total = CompVec{};
+            }
+        }
+        return rows;
+    }
+
     CompositionalConfig::EOSType eosType_;
+    Scalar gravity_;
+    int numSamplePoints_;
     /// Per-cell scaled water saturation endpoints. The saturation functions are
     /// selected by SATNUM and scaled per cell, so neither can be read off the
     /// equilibration region.
     std::vector<Scalar> connateWater_;
     std::vector<Scalar> maxWater_;
+    std::vector<Region> regions_;
     std::vector<FluidState> fluidStates_;
     std::vector<Scalar> referencePressures_;
     std::vector<int> twoPhaseCheckRegions_;

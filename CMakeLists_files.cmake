@@ -1178,6 +1178,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Transmissibility_impl.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/simulators/flow/VtkTracerModule.hpp
+  opm/simulators/flow/equil/EquilCompReport.hpp
   opm/simulators/flow/equil/EquilibrationHelpers.hpp
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp
