@@ -93,9 +93,12 @@ public:
     std::vector<std::vector<Scalar> > phase_molar_fractions;
 
     CompConnectionData<Scalar> connection_data;
-    // hydrostatic pressure offset of each connection from the BHP in the last
-    // time step; empty until the well is solved with its current connections
-    std::vector<Scalar> connection_pressure_diffs;
+    // density of the wellbore fluid between each connection and the one above
+    // it in the last time step the well was solved, and the cells and depths
+    // of those connections; all empty before that
+    std::vector<Scalar> connection_densities;
+    std::vector<std::size_t> connection_density_cells;
+    std::vector<Scalar> connection_density_depths;
 
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};

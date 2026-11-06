@@ -161,6 +161,43 @@ TSTEP
 END
 )";
 
+// The reference depth moves from the top of the reservoir to the top
+// connection after three time steps.
+const std::string ref_depth_change = R"(WELSPECS
+PROD FIELD 1 1 0 GAS /
+/
+WCONPROD
+PROD OPEN BHP 5* 70 /
+/
+TSTEP
+3*0.1 /
+WELSPECS
+PROD FIELD 1 1 5 GAS /
+/
+TSTEP
+3*0.1 /
+END
+)";
+
+// The producer is connected to the top two layers, and after three time steps
+// to the top and bottom ones.
+const std::string connection_move = R"(COMPDAT
+PROD 1 1 3 3 SHUT 2* 0.0151 /
+/
+WCONPROD
+PROD OPEN BHP 5* 70 /
+/
+TSTEP
+3*0.1 /
+COMPDAT
+PROD 1 1 2 2 SHUT 2* 0.0151 /
+PROD 1 1 3 3 OPEN 2* 0.0151 /
+/
+TSTEP
+3*0.1 /
+END
+)";
+
 // the density [kg/m^3] of the wellbore column between two connections
 float columnDensity(const float upper, const float lower)
 {
@@ -229,4 +266,61 @@ BOOST_AUTO_TEST_CASE(ColumnDensityApproachesItsNewValueGradually)
             BOOST_CHECK_CLOSE(*it / *(it - 1), 2.0f / 3.0f, 5.0f);
         }
     }
+}
+
+// The damping keeps the densities of the wellbore, not offsets from the old
+// reference depth, so the connection at the new one is at the BHP from the
+// first time step on.
+BOOST_AUTO_TEST_CASE(OffsetsFollowNewReferenceDepth)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_ref_depth");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "REFDEPTH", deck + ref_depth_change);
+
+    const auto& time = smry.get("TIME");
+    const auto& bhp = smry.get("WBHP:PROD");
+    const auto& top = smry.get("CPR:PROD:1,1,1");
+    std::size_t moved = 0;
+    for (std::size_t step = 0; step < time.size(); ++step) {
+        BOOST_TEST_CONTEXT("producer at day " << time[step]) {
+            if (time[step] < 0.35f) {
+                // 5 m of wellbore fluid above the top connection
+                BOOST_CHECK_GT(top[step] - bhp[step], 0.01f);
+            } else {
+                BOOST_CHECK_SMALL(top[step] - bhp[step], 1.0e-4f);
+                ++moved;
+            }
+        }
+    }
+    BOOST_CHECK_EQUAL(moved, 3u);
+}
+
+// The densities of the last time step count only for the connections they were
+// taken at. After the lower connection moves from the oil layer to the gas
+// layer below it, the well has as many connections as before, but the column
+// above that connection holds the gas from the first time step on, not a blend
+// with the oil of the old section.
+BOOST_AUTO_TEST_CASE(DensitiesRestartWhenConnectionsMove)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_connection_move");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "CONNECTIONMOVE", deck + connection_move);
+
+    const auto& time = smry.get("TIME");
+    const auto& top = smry.get("CPR:PROD:1,1,1");
+    const auto& middle = smry.get("CPR:PROD:1,1,2");
+    const auto& bottom = smry.get("CPR:PROD:1,1,3");
+    std::size_t moved = 0;
+    for (std::size_t step = 0; step < time.size(); ++step) {
+        BOOST_TEST_CONTEXT("producer at day " << time[step]) {
+            if (time[step] < 0.35f) {
+                BOOST_CHECK_GT(columnDensity(top[step], middle[step]), 200.0f);
+            } else {
+                // the connections are two layers apart
+                const float gas_column = columnDensity(top[step], bottom[step]) / 2.0f;
+                BOOST_CHECK_GT(gas_column, 50.0f);
+                BOOST_CHECK_LT(gas_column, 100.0f);
+                ++moved;
+            }
+        }
+    }
+    BOOST_CHECK_EQUAL(moved, 3u);
 }
