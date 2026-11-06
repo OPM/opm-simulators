@@ -121,7 +121,8 @@ using FluidState = Opm::BlackOilFluidState<Scalar, FluidSystem>;
 using Evaluation = Opm::DenseAd::Evaluation<double, 2>;
 // using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 using BlackOilFluidSystemView
-    = Opm::BlackOilFluidSystemNonStatic<Scalar, Opm::BlackOilDefaultFluidSystemIndices, Opm::gpuistl::GpuView>;
+    = Opm::BlackOilFluidSystemNonStatic<Scalar, Opm::BlackOilDefaultFluidSystemIndices, Opm::gpuistl::GpuView,
+                                        Opm::Co2StorePvtApproaches>;
 
 namespace Opm
 {
@@ -186,7 +187,7 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationGPU)
 
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
     testCreationGPU<<<1, 1>>>(dynamicGpuFluidSystemView);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
@@ -213,7 +214,7 @@ BOOST_AUTO_TEST_CASE(TestPrimaryVariablesMakeEvaluationGPU)
     primaryVariablesCPU.assignNaive(fluidState);
 
     // Now we need the dynamic fluid system on the GPU
-    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     // Now we create teh primary variables object that we will pass to the GPU kernel

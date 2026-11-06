@@ -452,7 +452,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     auto& cpuProblem = sim->problem();
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    auto dynamicGpuFluidSystemBuffer  = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemBuffer  = ::Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     // Place the FluidSystemView in unified memory so that the device-side
@@ -795,7 +795,7 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
         dynamicFluidSystem.phaseIsActive(FluidSystem::waterPhaseIdx),
         dynamicFluidSystem.phaseIsActive(FluidSystem::gasPhaseIdx)));
 
-    auto dynamicGpuFluidSystemBuffer  = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemBuffer  = ::Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     using FluidSystemViewType = std::decay_t<decltype(dynamicGpuFluidSystemView)>;
