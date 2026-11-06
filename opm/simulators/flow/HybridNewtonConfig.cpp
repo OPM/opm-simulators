@@ -29,6 +29,8 @@
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace Opm {
 
@@ -48,14 +50,17 @@ HybridNewtonConfig::HybridNewtonConfig(const PropertyTree& model_config)
     cell_indices = loadCellIndicesFromFile(cell_indices_file);
     n_cells = cell_indices.size();
 
-    // Load apply times
-    auto applyTimesOpt = model_config.get_child_optional("apply_times");
-    if (!applyTimesOpt) {
+    // Load apply times.  Accepts an array, e.g. [0.0, 86400.0], an object
+    // with one entry per time, e.g. {"0": 0.0, "1": 86400.0}, or a single
+    // number.
+    auto applyTimes = model_config.get_child_items_as_vector<double>("apply_times");
+    if (!applyTimes) {
         throw std::runtime_error("Missing 'apply_times' in HybridNewton config");
     }
 
-    for (const auto& key : applyTimesOpt->get_child_keys()) {
-        apply_times.push_back(applyTimesOpt->get_child(key).get<double>(""));
+    apply_times = std::move(*applyTimes);
+    if (apply_times.empty() && !model_config.get<std::string>("apply_times").empty()) {
+        apply_times.push_back(model_config.get<double>("apply_times"));
     }
 
     if (apply_times.empty()) {

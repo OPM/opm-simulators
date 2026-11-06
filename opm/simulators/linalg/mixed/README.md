@@ -86,6 +86,13 @@ and modifying the following `mixed-cprw.json` file to your liking
 }
 ```
 
+The same specification may also be given in TOML format, in a file ending with `.toml`.
+A documented TOML file holding the `mixed-cprw` settings, which can be used as a starting
+point, is written to `linear-solver.toml` by
+```
+build/bin/flow --linear-solver=mixed-cprw --write-toml-example=linear-solver
+```
+
 The legacy mixed-precision implementation is still available. Unlike the current
 implementation, it does not leverage the ISTL-framework and consequently only works in serial.
 It is considered a developer option and is a little faster than the serial version of the

@@ -25,6 +25,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace boost::property_tree {
@@ -43,17 +44,43 @@ public:
     /// Should typically be populated in put() before use.
     PropertyTree();
 
+    /// Callback providing an explanatory comment for an entry when writing
+    /// TOML.
+    ///
+    /// Called with the full hierarchical key of the entry, using periods
+    /// ('.') to separate hierarchy levels.  Should return the comment text,
+    /// possibly spanning multiple lines, or an empty string for no comment.
+    using TomlCommentProvider = std::function<std::string(const std::string& key)>;
+
     /// Constructor
     ///
     /// Loads a property tree from an external source expected to be a text
-    /// file in JSON.
+    /// file in either TOML or JSON format.  Files whose name ends in
+    /// ".toml" are parsed as TOML (https://toml.io), all other files are
+    /// parsed as JSON.
     ///
-    /// \param[in] jsonFile Name of file containing external property tree,
-    /// linearised into JSON format.
-    explicit PropertyTree(const std::string& jsonFile);
+    /// \param[in] file Name of file containing external property tree,
+    /// linearised into TOML or JSON format.
+    explicit PropertyTree(const std::string& file);
 
     /// Construct a property tree from a JSON string held in memory.
     static PropertyTree fromJsonString(const std::string& json);
+
+    /// Construct a property tree from a TOML string held in memory.
+    ///
+    /// All TOML values are stored in their textual representation, exactly
+    /// as for trees loaded from JSON.  TOML arrays are stored as child
+    /// nodes with empty keys, like JSON arrays.
+    static PropertyTree fromTomlString(const std::string& toml);
+
+    /// Whether or not a file name designates a TOML file, i.e., whether it
+    /// ends in ".toml".
+    static bool isTomlFileName(std::string_view fileName);
+
+    /// Whether or not a file name designates a configuration file that may
+    /// be loaded by the file constructor, i.e., whether it ends in ".json"
+    /// or ".toml".
+    static bool isConfigFileName(std::string_view fileName);
 
     /// Copy constructor.
     ///
@@ -163,6 +190,21 @@ public:
     /// output--i.e., whether or not to insert new lines and spaces for
     /// human readability.
     void write_json(std::ostream& os, bool pretty) const;
+
+    /// Emit a textual representation of the property tree in TOML form
+    ///
+    /// Leaf values that look like booleans, integers or floating point
+    /// numbers are written as such, all other values are written as
+    /// strings.  Sub trees are written as TOML tables.
+    ///
+    /// \param[in,out] os Output stream.  Typically a stream opened on a
+    /// file.
+    ///
+    /// \param[in] comments Optional callback providing an explanatory
+    /// comment that is written immediately before each key/value pair and
+    /// each table header.
+    void write_toml(std::ostream& os,
+                    const TomlCommentProvider& comments = {}) const;
 
 protected:
     /// Converting constructor.

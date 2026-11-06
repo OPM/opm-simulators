@@ -234,10 +234,11 @@ namespace
 } // anonymous namespace
 
 /// Set up a property tree intended for FlexibleSolver by either reading
-/// the tree from a JSON file or creating a tree giving the default solver
-/// and preconditioner. If the latter, the parameters --linear-solver-reduction,
-/// --linear-solver-maxiter and --linear-solver-verbosity are used, but if reading
-/// from file the data in the JSON file will override any other options.
+/// the tree from a TOML or JSON file or creating a tree giving the default
+/// solver and preconditioner. If the latter, the parameters
+/// --linear-solver-reduction, --linear-solver-maxiter and
+/// --linear-solver-verbosity are used, but if reading from file the data in
+/// the file will override any other options.
 PropertyTree
 setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
                   bool linearSolverMaxIterSet,
@@ -247,16 +248,17 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     std::string conf = p.linsolver_;
 
     // Get configuration from file.
-    if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
+    if (PropertyTree::isConfigFileName(conf)) {
         if ( !std::filesystem::exists(conf) ) {
-            OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
+            OPM_THROW(std::invalid_argument, "Linear solver configuration file " + conf + " does not exist.");
         }
         PropertyTree tree;
         try {
             tree = PropertyTree(conf);
         }
-        catch (...) {
-            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
+        catch (const std::exception& e) {
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from file "
+                      + conf + ": " + e.what());
         }
         validateSystemCPRTree(tree);
         return tree;
@@ -357,7 +359,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     // No valid configuration option found.
     OPM_THROW(std::invalid_argument,
               conf + " is not a valid setting for --linear-solver-configuration."
-              " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr");
+              " Please use ilu0, dilu, isai, cpr, cprw, cpr_trueimpes, cpr_quasiimpes, cpr_trueimpesanalytic, or system_cpr,"
+              " or the name of a .toml or .json file holding a full solver configuration.");
 }
 
 std::string
@@ -487,7 +490,7 @@ setupTpsa(std::string conf, const FlowLinearSolverParameters& p)
                   fmt::format(
                       "No valid settings found for --tpsa-linear-solver={}! Valid preset "
                       "options are: hypre, ilu0, dilu or amg. Alternatively, give "
-                      "the name of a .json file holding a full solver configuration.", conf)
+                      "the name of a .toml or .json file holding a full solver configuration.", conf)
             );
     }
 
@@ -705,7 +708,7 @@ void validateSystemCPRTree(const PropertyTree& prm)
     for (const char* sub : {"reservoir_solver", "reservoir_smoother", "well_solver"}) {
         if (!prm.get_child_optional(std::string("preconditioner.") + sub).has_value()) {
             OPM_THROW(std::invalid_argument,
-                      fmt::format("system_cpr JSON configuration is missing the required "
+                      fmt::format("system_cpr configuration is missing the required "
                                   "'preconditioner.{}' sub-tree.", sub));
         }
     }
