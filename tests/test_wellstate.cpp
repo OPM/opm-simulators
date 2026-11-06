@@ -68,6 +68,7 @@
 #include <cstddef>
 #include <ctime>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -1245,6 +1246,137 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
         BOOST_CHECK_EQUAL(segments.pressure[i], 1.+(i+1));
 
     BOOST_CHECK_EQUAL( segments.size(), well.getSegments().size() );
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(SingleWellStateIsFinite)
+{
+    // The inner well solve rolls the well state back to a snapshot if the state is not finite
+    // after the solve, so this is what separates a diverged state from an unconverged one.
+    const Setup setup{ "msw.data" };
+    std::vector<Opm::ParallelWellInfo<double>> pinfo;
+    auto wstate = buildWellState(setup, 0, pinfo);
+    auto ws = wstate.well("PROD01");
+
+    ws.primaryvar.assign(4 * ws.segments.size(), 1.0);
+    BOOST_REQUIRE(!ws.surface_rates.empty());
+    BOOST_REQUIRE(!ws.segments.rates.empty());
+    BOOST_REQUIRE(!ws.segments.pressure.empty());
+    BOOST_CHECK(ws.isFinite());
+
+    // A finite but unconverged state, for example huge values, is not rolled back.
+    auto large = ws;
+    large.bhp = 1.0e30;
+    large.segments.rates[0] = -1.0e30;
+    large.primaryvar[0] = 1.0e30;
+    BOOST_CHECK(large.isFinite());
+
+    // Any non-finite value in the rates, pressures or primary variables is found.
+    const auto check_not_finite = [&ws](const auto& poison)
+    {
+        for (const double bad : {std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::infinity(),
+                                 -std::numeric_limits<double>::infinity()}) {
+            auto bad_ws = ws;
+            poison(bad_ws, bad);
+            BOOST_CHECK(!bad_ws.isFinite());
+        }
+    };
+    check_not_finite([](auto& w, const double v) { w.bhp = v; });
+    check_not_finite([](auto& w, const double v) { w.thp = v; });
+    check_not_finite([](auto& w, const double v) { w.surface_rates.back() = v; });
+    check_not_finite([](auto& w, const double v) { w.segments.rates.back() = v; });
+    check_not_finite([](auto& w, const double v) { w.segments.pressure.back() = v; });
+    check_not_finite([](auto& w, const double v) { w.primaryvar.back() = v; });
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(SingleWellStateRestoreIfDiverged)
+{
+    // The state of a well is rolled back to a snapshot from before an inner well solve when the solve threw,
+    // or when the state is not finite after the solve. A solve that did not converge but left a finite state
+    // keeps its progress.
+    const Setup setup{ "msw.data" };
+    std::vector<Opm::ParallelWellInfo<double>> pinfo;
+    auto wstate = buildWellState(setup, 0, pinfo);
+    auto snapshot = wstate.well("PROD01");
+    snapshot.primaryvar.assign(4 * snapshot.segments.size(), 1.0);
+    snapshot.production_cmode = Opm::Well::ProducerCMode::ORAT;
+    BOOST_REQUIRE(snapshot.isFinite());
+
+    // The state after the solve: the iterations changed the control, rates, pressures and primary variables.
+    const auto iterate = [&snapshot]()
+    {
+        auto ws = snapshot;
+        ws.production_cmode = Opm::Well::ProducerCMode::BHP;
+        ws.bhp += 1.0e5;
+        ws.thp += 1.0e5;
+        for (auto& rate : ws.surface_rates) { rate -= 1.0; }
+        for (auto& rate : ws.segments.rates) { rate -= 1.0; }
+        for (auto& pressure : ws.segments.pressure) { pressure += 1.0e5; }
+        for (auto& value : ws.primaryvar) { value += 0.5; }
+        return ws;
+    };
+
+    // an unconverged solve with a finite state keeps its progress
+    {
+        auto ws = iterate();
+        const auto progress = ws;
+        BOOST_REQUIRE(!(progress == snapshot));
+        BOOST_CHECK(!ws.restoreIfDiverged(snapshot, /*solve_threw=*/false));
+        BOOST_CHECK(ws == progress);
+        BOOST_CHECK(ws.production_cmode == Opm::Well::ProducerCMode::BHP);
+    }
+
+    // so does a state with huge, but finite, values
+    {
+        auto ws = iterate();
+        ws.bhp = 1.0e30;
+        ws.segments.rates[0] = -1.0e30;
+        ws.primaryvar[0] = 1.0e30;
+        const auto huge = ws;
+        BOOST_CHECK(!ws.restoreIfDiverged(snapshot, false));
+        BOOST_CHECK(ws == huge);
+    }
+
+    // an unchanged state is not restored
+    {
+        auto ws = snapshot;
+        BOOST_CHECK(!ws.restoreIfDiverged(snapshot, false));
+        BOOST_CHECK(ws == snapshot);
+    }
+
+    // a solve that threw restores the complete state, also if the state is finite
+    {
+        auto ws = iterate();
+        BOOST_REQUIRE(ws.isFinite());
+        BOOST_CHECK(ws.restoreIfDiverged(snapshot, /*solve_threw=*/true));
+        BOOST_CHECK(ws == snapshot);
+        BOOST_CHECK(ws.production_cmode == Opm::Well::ProducerCMode::ORAT);
+    }
+
+    // a state that is not finite is restored completely, also when the solve did not throw
+    // (for instance if it was reported as converged)
+    const auto check_restored = [&](const auto& poison)
+    {
+        for (const double bad : {std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::infinity()}) {
+            auto ws = iterate();
+            poison(ws, bad);
+            BOOST_REQUIRE(!ws.isFinite());
+            BOOST_CHECK(ws.restoreIfDiverged(snapshot, /*solve_threw=*/false));
+            BOOST_CHECK(ws == snapshot);
+            BOOST_CHECK(ws.isFinite());
+        }
+    };
+    check_restored([](auto& ws, const double v) { ws.bhp = v; });
+    check_restored([](auto& ws, const double v) { ws.thp = v; });
+    check_restored([](auto& ws, const double v) { ws.surface_rates.back() = v; });
+    check_restored([](auto& ws, const double v) { ws.segments.rates.back() = v; });
+    check_restored([](auto& ws, const double v) { ws.segments.pressure.back() = v; });
+    check_restored([](auto& ws, const double v) { ws.primaryvar.back() = v; });
 }
 
 // ---------------------------------------------------------------------

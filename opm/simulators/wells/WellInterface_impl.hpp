@@ -50,6 +50,7 @@
 #include <numbers>
 #include <utility>
 
+#include <cmath>
 #include <fmt/format.h>
 
 namespace Opm
@@ -669,7 +670,10 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->productionControlsWithWeldraw(summary_state, ws) : Well::ProductionControls(0);
         const auto pmode_orig = ws.production_cmode;
         const auto imode_orig = ws.injection_cmode;
+        // keep the well state to be able to restore it if the solve fails badly
+        const auto ws_before_solve = ws;
         bool converged = false;
+        bool solve_threw = false;
         try {
             // TODO: the following two functions will be refactored to be one to reduce the code duplication
             if (!this->param_.local_well_solver_control_switching_){
@@ -691,6 +695,23 @@ namespace Opm
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
             converged = false;
+            solve_threw = true;
+        }
+        // A solve that threw or left non-finite values can leave the well in a diverged state, which would
+        // otherwise be the starting point for the next solve of the well. This is also checked when the solve
+        // reports convergence, as the convergence check might not detect non-finite residuals.
+        // Unconverged solves with a finite state keep their (partial) progress.
+        if (well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_solve, solve_threw)) {
+            converged = false;
+            // The primary variables used by the assembly, and the cached well equations whose residuals
+            // are checked at the start of the next solve, are still from the failed iterate.
+            this->updatePrimaryVariables(groupStateHelper);
+            try {
+                this->assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
+                                                     well_state, /*solving_with_zero_rate=*/false);
+            } catch (const NumericalProblem&) {
+                // keep the cached equations, the next solve of the well handles non-finite residuals
+            }
         }
         if (converged) {
             // Add debug info for switched controls
