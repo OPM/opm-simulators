@@ -228,12 +228,18 @@ namespace Dune
         }
 #endif
 
-        for(; matrix!=coarsestMatrix; ++aggregatesMap) {
+        std::size_t level = 0;
+        for(; matrix!=coarsestMatrix; ++aggregatesMap, ++level) {
+          const bool fineRedistributed = matrix.isRedistributed();
           const Matrix& fine = (matrix.isRedistributed() ? matrix.getRedistributed() : *matrix).getmat();
           ++matrix;
           ++info;
           ++redistInfo;
-          productBuilder.calculate(fine, *(*aggregatesMap), const_cast<Matrix&>(matrix->getmat()), *info, copyFlags);
+          if (!fineRedistributed) {
+            numericGalerkinProduct_(level, fine, *(*aggregatesMap), const_cast<Matrix&>(matrix->getmat()), *info);
+          } else {
+            productBuilder.calculate(fine, *(*aggregatesMap), const_cast<Matrix&>(matrix->getmat()), *info, copyFlags);
+          }
 #if HAVE_MPI
           if(matrix.isRedistributed()) {
             redistributeMatrixAmg(const_cast<Matrix&>(matrix->getmat()),
@@ -250,6 +256,58 @@ namespace Dune
        */
       template<class C>
       void updateSolver(C& criterion, const Operator& /* matrix */, const PI& pinfo);
+
+    private:
+      using GalerkinBlock = typename M::matrix_type::block_type;
+
+      // Same result as Dune's BaseGalerkinProduct::calculate (same summation order), but the
+      // coarse block of every fine nonzero is looked up once per hierarchy and then reused:
+      // the aggregates, and hence the coarse pattern, are fixed between rebuilds.
+      template<class Mat, class AggMap, class Info>
+      void numericGalerkinProduct_(std::size_t level, const Mat& fine, const AggMap& aggregates,
+                                   Mat& coarse, const Info& pinfo)
+      {
+        OPM_TIMEBLOCK(numericGalerkinProduct);
+        constexpr auto isolated = std::decay_t<AggMap>::ISOLATED;
+        if (galerkinMaps_.size() <= level) {
+          galerkinMaps_.resize(level + 1);
+        }
+        auto& map = galerkinMaps_[level];
+        if (map.size() != fine.nonzeroes()) {
+          map.clear();
+          map.reserve(fine.nonzeroes());
+          for (auto row = fine.begin(); row != fine.end(); ++row) {
+            const auto ar = aggregates[row.index()];
+            for (auto col = row->begin(); col != row->end(); ++col) {
+              const auto ac = aggregates[col.index()];
+              map.push_back(ar != isolated && ac != isolated ? &coarse[ar][ac] : nullptr);
+            }
+          }
+        }
+        coarse = static_cast<typename Mat::field_type>(0);
+        std::size_t k = 0;
+        for (auto row = fine.begin(); row != fine.end(); ++row) {
+          for (auto col = row->begin(); col != row->end(); ++col, ++k) {
+            if (GalerkinBlock* b = map[k]) {
+              *b += *col;
+            }
+          }
+        }
+        // Owner diagonal values on copy lines, as in BaseGalerkinProduct::calculate.
+        std::vector<GalerkinBlock> diag(coarse.N(), GalerkinBlock(0));
+        for (auto row = coarse.begin(); row != coarse.end(); ++row) {
+          diag[row.index()] = coarse[row.index()][row.index()];
+        }
+        pinfo.copyOwnerToAll(diag, diag);
+        for (auto row = coarse.begin(); row != coarse.end(); ++row) {
+          coarse[row.index()][row.index()] = diag[row.index()];
+        }
+      }
+
+      /** @brief Per level: coarse block of each fine nonzero (nullptr if isolated); cleared on rebuild. */
+      std::vector<std::vector<GalerkinBlock*>> galerkinMaps_;
+
+    public:
 
       /**
        * @brief Update the coarse solver and the hierarchies.
@@ -508,6 +566,7 @@ namespace Dune
       OPM_TIMEBLOCK(createHierarchies);
       Timer watch;
       matrices_.reset(new OperatorHierarchy(matrix, pinfo));
+      galerkinMaps_.clear();
 
       matrices_->template build<NegateSet<typename PI::OwnerSet> >(criterion);
 
