@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/ExplicitInitialSaturations.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
+#include <opm/simulators/flow/equil/EquilCompReport.hpp>
 #include <opm/simulators/flow/equil/InitStateEquilComp.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -50,6 +51,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <dune/grid/common/rangegenerators.hh>
 
@@ -57,11 +59,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Opm::Parameters {
@@ -489,6 +494,11 @@ protected:
             connateWater,
             maxWater);
 
+        const auto& rptsol = vanguard.schedule().initialReportConfiguration();
+        if (rptsol.has_value() && rptsol->contains("SOLVD") && (rptsol->at("SOLVD") > 0)) {
+            reportCompositionVersusDepth_(initialState, eqlnum);
+        }
+
         initialFluidStates_ = std::move(initialState.fluidStates());
         twoPhaseCheckRegions_ = std::move(initialState.twoPhaseCheckRegions());
         // The current flash has one pressure for all phases. Adapt the
@@ -842,6 +852,128 @@ private:
                                          vanguard.eclState().getInitConfig().getEquil().size(),
                                          vanguard.gridView().comm());
         twoPhaseCheckRegions_.reset();
+    }
+
+    /// Print the composition versus depth of each equilibration region, as
+    /// RPTSOL's SOLVD mnemonic requests. A region spans the mean depths of its
+    /// cells' top and bottom faces, with numerical aquifer cells at their
+    /// aquifer depths. It is represented by its last cell in input order
+    /// other than a numerical aquifer cell, whose saturation table and scaled
+    /// water end-points give the water saturations and whose PVT region gives
+    /// the water column.
+    void reportCompositionVersusDepth_(const EQUIL::Comp::InitialStateComputer<FluidSystem>& initialState,
+                                       const std::vector<int>& eqlnum) const
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& comm = vanguard.gridView().comm();
+        const auto numRegions = vanguard.eclState().getInitConfig().getEquil().size();
+        const auto count = static_cast<int>(numRegions);
+        const auto& depths = vanguard.cellCenterDepths();
+        const auto aquiferCells =
+            vanguard.eclState().aquifer().numericalAquifers().allAquiferCells();
+
+        // Half the distance between the mean depths of a hexahedron's top and
+        // bottom faces, or between the extreme corners of another cell.
+        const auto halfThickness = [](const auto& geometry) {
+            const auto depth = [&geometry](const int corner) -> Scalar
+            { return geometry.corner(corner)[dimWorld - 1]; };
+            if (geometry.corners() == 8) {
+                Scalar topFace = 0;
+                Scalar bottomFace = 0;
+                for (int corner = 0; corner < 4; ++corner) {
+                    topFace += depth(corner);
+                    bottomFace += depth(corner + 4);
+                }
+                return std::abs(bottomFace - topFace) / 8;
+            }
+            Scalar shallowest = std::numeric_limits<Scalar>::max();
+            Scalar deepest = std::numeric_limits<Scalar>::lowest();
+            for (int corner = 0; corner < geometry.corners(); ++corner) {
+                shallowest = std::min(shallowest, depth(corner));
+                deepest = std::max(deepest, depth(corner));
+            }
+            return (deepest - shallowest) / 2;
+        };
+
+        // The last cell in input order represents a region, a numerical
+        // aquifer cell only if the region has no other: those rank first.
+        const auto representativeRank = [&aquiferCells,
+                                          numCartesian = vanguard.cartesianSize()](const auto cartesianCell)
+        {
+            return static_cast<int>(cartesianCell)
+                + (aquiferCells.contains(cartesianCell) ? 0 : numCartesian);
+        };
+
+        std::vector<Scalar> top(numRegions, std::numeric_limits<Scalar>::max());
+        std::vector<Scalar> bottom(numRegions, std::numeric_limits<Scalar>::lowest());
+        std::vector<int> lastCell(numRegions, -1);
+        for (const auto& element : elements(vanguard.gridView())) {
+            const auto cell = this->elementMapper().index(element);
+            const auto r = static_cast<std::size_t>(eqlnum[cell]);
+            const auto cartesianCell = vanguard.cartesianIndex(cell);
+            // A numerical aquifer cell sits at its aquifer depth.
+            const Scalar half = aquiferCells.contains(cartesianCell)
+                ? Scalar{0} : halfThickness(element.geometry());
+            top[r] = std::min(top[r], depths[cell] - half);
+            bottom[r] = std::max(bottom[r], depths[cell] + half);
+            lastCell[r] = std::max(lastCell[r], representativeRank(cartesianCell));
+        }
+        comm.min(top.data(), count);
+        comm.max(bottom.data(), count);
+        comm.max(lastCell.data(), count);
+
+        const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        std::vector<int> satTable(numRegions, -1);
+        std::vector<int> pvtRegion(numRegions, -1);
+        std::vector<Scalar> swl(numRegions, std::numeric_limits<Scalar>::lowest());
+        std::vector<Scalar> swu(numRegions, std::numeric_limits<Scalar>::lowest());
+        for (const auto& element : elements(vanguard.gridView())) {
+            const auto cell = this->elementMapper().index(element);
+            const auto r = static_cast<std::size_t>(eqlnum[cell]);
+            if (representativeRank(vanguard.cartesianIndex(cell)) == lastCell[r]) {
+                satTable[r] = this->materialLawManager().satnumRegionIdx(cell);
+                pvtRegion[r] = this->pvtnum_.empty() ? 0 : this->pvtnum_[cell];
+                if (waterActive) {
+                    const auto& eps = this->materialLawManager().oilWaterScaledEpsInfoDrainage(cell);
+                    swl[r] = eps.Swl;
+                    swu[r] = eps.Swu;
+                }
+            }
+        }
+        comm.max(satTable.data(), count);
+        comm.max(pvtRegion.data(), count);
+        comm.max(swl.data(), count);
+        comm.max(swu.data(), count);
+
+        if (comm.rank() != 0) {
+            return;
+        }
+        using ReportRegion = typename EQUIL::Comp::InitialStateComputer<FluidSystem>::ReportRegion;
+        std::vector<ReportRegion> regions(numRegions);
+        for (std::size_t r = 0; r < numRegions; ++r) {
+            // A region without cells is left out of the report.
+            if (satTable[r] < 0) {
+                continue;
+            }
+            regions[r] = ReportRegion{top[r], bottom[r],
+                                      waterActive ? swl[r] : Scalar{0},
+                                      waterActive ? swu[r] : Scalar{1},
+                                      static_cast<unsigned>(pvtRegion[r])};
+        }
+        std::array<std::string_view, FluidSystem::numComponents> componentNames{};
+        for (unsigned c = 0; c < componentNames.size(); ++c) {
+            componentNames[c] = FluidSystem::componentName(c);
+        }
+        const auto rows = initialState.compositionVersusDepth(regions);
+        std::string report;
+        for (std::size_t r = 0; r < numRegions; ++r) {
+            if (!rows[r].empty()) {
+                report += EQUIL::Comp::formatCompositionVersusDepth(
+                    r + 1, satTable[r] + 1, rows[r], componentNames,
+                    vanguard.eclState().getDeckUnitSystem());
+            }
+        }
+        OpmLog::note(report);
     }
 
     void handleSolventBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
