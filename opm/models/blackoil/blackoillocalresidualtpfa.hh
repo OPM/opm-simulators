@@ -670,8 +670,9 @@ public:
         if constexpr (enableFullyImplicitThermal) {
             Evaluation heatFlux;
             // avoid overload of functions with same number of elements in eclproblem
+            // Per unit area like the interior heat flux: the caller multiplies by the face area.
             Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(
-                globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+                globalSpaceIdx, bdyInfo.boundaryFaceIndex) / bdyInfo.faceArea;
             unsigned inIdx = 0; // dummy
             // always calculated with derivatives of this cell
             EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
@@ -724,6 +725,7 @@ public:
             } else {
                 alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             }
+            alpha /= bdyInfo.faceArea;
             unsigned inIdx = 0; // dummy
             // always calculated with derivatives of this cell
             EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
